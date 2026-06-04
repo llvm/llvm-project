@@ -1167,10 +1167,13 @@ float16x8_t test_vdivq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B]] to <4 x i16>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP1]] to <8 x i8>
-// CHECK-NEXT:    [[VMAX_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x half>
-// CHECK-NEXT:    [[VMAX1_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
-// CHECK-NEXT:    [[VMAX2_I:%.*]] = call <4 x half> @llvm.aarch64.neon.fmax.v4f16(<4 x half> [[VMAX_I]], <4 x half> [[VMAX1_I]])
-// CHECK-NEXT:    ret <4 x half> [[VMAX2_I]]
+// CHECK-NEXT:    [[VMAX_V_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x half>
+// CHECK-NEXT:    [[VMAX_V1_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
+// CHECK-NEXT:    [[VMAX_V2_I:%.*]] = call <4 x half> @llvm.maximum.v4f16(<4 x half> [[VMAX_V_I]], <4 x half> [[VMAX_V1_I]])
+// CHECK-NEXT:    [[VMAX_V3_I:%.*]] = bitcast <4 x half> [[VMAX_V2_I]] to <8 x i8>
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[VMAX_V3_I]] to <4 x i16>
+// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP4]] to <4 x half>
+// CHECK-NEXT:    ret <4 x half> [[TMP5]]
 //
 float16x4_t test_vmax_f16(float16x4_t a, float16x4_t b) {
   return vmax_f16(a, b);
@@ -1183,10 +1186,13 @@ float16x4_t test_vmax_f16(float16x4_t a, float16x4_t b) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <8 x i16>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[VMAX_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x half>
-// CHECK-NEXT:    [[VMAX1_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
-// CHECK-NEXT:    [[VMAX2_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmax.v8f16(<8 x half> [[VMAX_I]], <8 x half> [[VMAX1_I]])
-// CHECK-NEXT:    ret <8 x half> [[VMAX2_I]]
+// CHECK-NEXT:    [[VMAXQ_V_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x half>
+// CHECK-NEXT:    [[VMAXQ_V1_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
+// CHECK-NEXT:    [[VMAXQ_V2_I:%.*]] = call <8 x half> @llvm.maximum.v8f16(<8 x half> [[VMAXQ_V_I]], <8 x half> [[VMAXQ_V1_I]])
+// CHECK-NEXT:    [[VMAXQ_V3_I:%.*]] = bitcast <8 x half> [[VMAXQ_V2_I]] to <16 x i8>
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[VMAXQ_V3_I]] to <8 x i16>
+// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP4]] to <8 x half>
+// CHECK-NEXT:    ret <8 x half> [[TMP5]]
 //
 float16x8_t test_vmaxq_f16(float16x8_t a, float16x8_t b) {
   return vmaxq_f16(a, b);
@@ -1231,10 +1237,13 @@ float16x8_t test_vmaxnmq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B]] to <4 x i16>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP1]] to <8 x i8>
-// CHECK-NEXT:    [[VMIN_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x half>
-// CHECK-NEXT:    [[VMIN1_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
-// CHECK-NEXT:    [[VMIN2_I:%.*]] = call <4 x half> @llvm.aarch64.neon.fmin.v4f16(<4 x half> [[VMIN_I]], <4 x half> [[VMIN1_I]])
-// CHECK-NEXT:    ret <4 x half> [[VMIN2_I]]
+// CHECK-NEXT:    [[VMIN_V_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x half>
+// CHECK-NEXT:    [[VMIN_V1_I:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
+// CHECK-NEXT:    [[VMIN_V2_I:%.*]] = call <4 x half> @llvm.minimum.v4f16(<4 x half> [[VMIN_V_I]], <4 x half> [[VMIN_V1_I]])
+// CHECK-NEXT:    [[VMIN_V3_I:%.*]] = bitcast <4 x half> [[VMIN_V2_I]] to <8 x i8>
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[VMIN_V3_I]] to <4 x i16>
+// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP4]] to <4 x half>
+// CHECK-NEXT:    ret <4 x half> [[TMP5]]
 //
 float16x4_t test_vmin_f16(float16x4_t a, float16x4_t b) {
   return vmin_f16(a, b);
@@ -1247,10 +1256,13 @@ float16x4_t test_vmin_f16(float16x4_t a, float16x4_t b) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <8 x i16>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP1]] to <16 x i8>
-// CHECK-NEXT:    [[VMIN_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x half>
-// CHECK-NEXT:    [[VMIN1_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
-// CHECK-NEXT:    [[VMIN2_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmin.v8f16(<8 x half> [[VMIN_I]], <8 x half> [[VMIN1_I]])
-// CHECK-NEXT:    ret <8 x half> [[VMIN2_I]]
+// CHECK-NEXT:    [[VMINQ_V_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <8 x half>
+// CHECK-NEXT:    [[VMINQ_V1_I:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
+// CHECK-NEXT:    [[VMINQ_V2_I:%.*]] = call <8 x half> @llvm.minimum.v8f16(<8 x half> [[VMINQ_V_I]], <8 x half> [[VMINQ_V1_I]])
+// CHECK-NEXT:    [[VMINQ_V3_I:%.*]] = bitcast <8 x half> [[VMINQ_V2_I]] to <16 x i8>
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[VMINQ_V3_I]] to <8 x i16>
+// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i16> [[TMP4]] to <8 x half>
+// CHECK-NEXT:    ret <8 x half> [[TMP5]]
 //
 float16x8_t test_vminq_f16(float16x8_t a, float16x8_t b) {
   return vminq_f16(a, b);

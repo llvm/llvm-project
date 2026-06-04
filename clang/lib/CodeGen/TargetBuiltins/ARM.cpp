@@ -722,14 +722,14 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vld4q_dup_v, arm_neon_vld4dup, 0),
   NEONMAP1(vld4q_lane_v, arm_neon_vld4lane, 0),
   NEONMAP1(vld4q_v, arm_neon_vld4, 0),
-  NEONMAP2(vmax_v, arm_neon_vmaxu, arm_neon_vmaxs, Add1ArgType | UnsignedAlts),
+  NEONMAP3(vmax_v, umax, smax, maximum, Add1ArgType | UnsignedAlts | FloatAlts),
   NEONMAP1(vmaxnm_v, arm_neon_vmaxnm, Add1ArgType),
   NEONMAP1(vmaxnmq_v, arm_neon_vmaxnm, Add1ArgType),
-  NEONMAP2(vmaxq_v, arm_neon_vmaxu, arm_neon_vmaxs, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vmin_v, arm_neon_vminu, arm_neon_vmins, Add1ArgType | UnsignedAlts),
+  NEONMAP3(vmaxq_v, umax, smax, maximum, Add1ArgType | UnsignedAlts | FloatAlts),
+  NEONMAP3(vmin_v, umin, smin, minimum, Add1ArgType | UnsignedAlts | FloatAlts),
   NEONMAP1(vminnm_v, arm_neon_vminnm, Add1ArgType),
   NEONMAP1(vminnmq_v, arm_neon_vminnm, Add1ArgType),
-  NEONMAP2(vminq_v, arm_neon_vminu, arm_neon_vmins, Add1ArgType | UnsignedAlts),
+  NEONMAP3(vminq_v, umin, smin, minimum, Add1ArgType | UnsignedAlts | FloatAlts),
   NEONMAP1(vmmlaq_s32, arm_neon_smmla, 0),
   NEONMAP1(vmmlaq_u32, arm_neon_ummla, 0),
   NEONMAP0(vmovl_v),
@@ -1004,6 +1004,7 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vstl1q_lane_f64, NEON::BI__builtin_neon_vstl1q_lane_s64 },
   { NEON::BI__builtin_neon_vstl1q_lane_p64, NEON::BI__builtin_neon_vstl1q_lane_s64 },
 };
+// clang-format on
 
 #undef NEONMAP0
 #undef NEONMAP1
@@ -1012,11 +1013,11 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
 #define SVEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
   {                                                                            \
     #NameBase, SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, 0,   \
-        TypeModifier                                                           \
+        0, TypeModifier                                                        \
   }
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
-  { #NameBase, SVE::BI__builtin_sve_##NameBase, 0, 0, TypeModifier }
+  { #NameBase, SVE::BI__builtin_sve_##NameBase, 0, 0, 0, TypeModifier }
 static const ARMVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"
@@ -1030,11 +1031,11 @@ static const ARMVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
 #define SMEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
   {                                                                            \
     #NameBase, SME::BI__builtin_sme_##NameBase, Intrinsic::LLVMIntrinsic, 0,   \
-        TypeModifier                                                           \
+        0, TypeModifier                                                        \
   }
 
 #define SMEMAP2(NameBase, TypeModifier)                                        \
-  { #NameBase, SME::BI__builtin_sme_##NameBase, 0, 0, TypeModifier }
+  { #NameBase, SME::BI__builtin_sme_##NameBase, 0, 0, 0, TypeModifier }
 static const ARMVectorIntrinsicInfo AArch64SMEIntrinsicMap[] = {
 #define GET_SME_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sme_builtin_cg.inc"
@@ -1183,9 +1184,9 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
 
 Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     unsigned BuiltinID, unsigned LLVMIntrinsic, unsigned AltLLVMIntrinsic,
-    const char *NameHint, unsigned Modifier, const CallExpr *E,
-    SmallVectorImpl<llvm::Value *> &Ops, Address PtrOp0, Address PtrOp1,
-    llvm::Triple::ArchType Arch) {
+    unsigned FloatLLVMIntrinsic, const char *NameHint, unsigned Modifier,
+    const CallExpr *E, SmallVectorImpl<llvm::Value *> &Ops, Address PtrOp0,
+    Address PtrOp1, llvm::Triple::ArchType Arch) {
 
   // Extract the trailing immediate argument that encodes the type discriminator
   // for this overloaded intrinsic.
@@ -1218,6 +1219,8 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   unsigned Int = LLVMIntrinsic;
   if ((Modifier & UnsignedAlts) && !Usgn)
     Int = AltLLVMIntrinsic;
+  if ((Modifier & FloatAlts) && Floating)
+    Int = FloatLLVMIntrinsic;
 
   switch (BuiltinID) {
   default: break;
@@ -2725,7 +2728,8 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   if (Builtin)
     return EmitCommonNeonBuiltinExpr(
         Builtin->BuiltinID, Builtin->LLVMIntrinsic, Builtin->AltLLVMIntrinsic,
-        Builtin->NameHint, Builtin->TypeModifier, E, Ops, PtrOp0, PtrOp1, Arch);
+        Builtin->FloatLLVMIntrinsic, Builtin->NameHint, Builtin->TypeModifier,
+        E, Ops, PtrOp0, PtrOp1, Arch);
 
   unsigned Int;
   switch (BuiltinID) {
@@ -5418,7 +5422,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (Builtin)
     return EmitCommonNeonBuiltinExpr(
         Builtin->BuiltinID, Builtin->LLVMIntrinsic, Builtin->AltLLVMIntrinsic,
-        Builtin->NameHint, Builtin->TypeModifier, E, Ops,
+        Builtin->FloatLLVMIntrinsic, Builtin->NameHint, Builtin->TypeModifier,
+        E, Ops,
         /*never use addresses*/ Address::invalid(), Address::invalid(), Arch);
 
   if (Value *V = EmitAArch64TblBuiltinExpr(*this, BuiltinID, E, Ops, Arch))
@@ -6199,24 +6204,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Int = usgn ? Intrinsic::aarch64_neon_umull : Intrinsic::aarch64_neon_smull;
     if (Type.isPoly()) Int = Intrinsic::aarch64_neon_pmull;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmull");
-  case NEON::BI__builtin_neon_vmax_v:
-  case NEON::BI__builtin_neon_vmaxq_v:
-    // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.
-    Int = usgn ? Intrinsic::aarch64_neon_umax : Intrinsic::aarch64_neon_smax;
-    if (Ty->isFPOrFPVectorTy()) Int = Intrinsic::aarch64_neon_fmax;
-    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmax");
   case NEON::BI__builtin_neon_vmaxh_f16: {
-    Int = Intrinsic::aarch64_neon_fmax;
+    Int = Intrinsic::maximum;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vmax");
   }
-  case NEON::BI__builtin_neon_vmin_v:
-  case NEON::BI__builtin_neon_vminq_v:
-    // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.
-    Int = usgn ? Intrinsic::aarch64_neon_umin : Intrinsic::aarch64_neon_smin;
-    if (Ty->isFPOrFPVectorTy()) Int = Intrinsic::aarch64_neon_fmin;
-    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmin");
   case NEON::BI__builtin_neon_vminh_f16: {
-    Int = Intrinsic::aarch64_neon_fmin;
+    Int = Intrinsic::minimum;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vmin");
   }
   case NEON::BI__builtin_neon_vabd_v:

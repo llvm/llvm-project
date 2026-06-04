@@ -36,10 +36,11 @@ enum {
   VectorizeArgTypes = (1 << 4),
 
   InventFloatType = (1 << 5),
-  UnsignedAlts = (1 << 6),
+  UnsignedAlts = (1 << 6), ///< Alternate intrinsic for signed types
+  FloatAlts = (1 << 7),    ///< Alternate intrinsic for floating-point types
 
-  Use64BitVectors = (1 << 7),
-  Use128BitVectors = (1 << 8),
+  Use64BitVectors = (1 << 8),
+  Use128BitVectors = (1 << 9),
 
   Vectorize1ArgType = Add1ArgType | VectorizeArgTypes,
   VectorRet = AddRetType | VectorizeRetType,
@@ -54,6 +55,7 @@ struct ARMVectorIntrinsicInfo {
   unsigned BuiltinID;
   unsigned LLVMIntrinsic;
   unsigned AltLLVMIntrinsic;
+  unsigned FloatLLVMIntrinsic;
   uint64_t TypeModifier;
 
   bool operator<(unsigned RHSBuiltinID) const {
@@ -64,17 +66,33 @@ struct ARMVectorIntrinsicInfo {
   }
 };
 
+/// Builtin to be custom-lowered in EmitCommonNeonBuiltinExpr().
 #define NEONMAP0(NameBase)                                                     \
-  {#NameBase, NEON::BI__builtin_neon_##NameBase, 0, 0, 0}
+  { #NameBase, NEON::BI__builtin_neon_##NameBase, 0, 0, 0, 0 }
 
+/// Construct a builtin->intrinsic mapping.
 #define NEONMAP1(NameBase, LLVMIntrinsic, TypeModifier)                        \
-  {#NameBase, NEON::BI__builtin_neon_##NameBase,                               \
-   llvm::Intrinsic::LLVMIntrinsic, 0, TypeModifier}
+  {                                                                            \
+    #NameBase, NEON::BI__builtin_neon_##NameBase,                              \
+        llvm::Intrinsic::LLVMIntrinsic, 0, 0, TypeModifier                     \
+  }
 
+/// Construct a builtin->intrinsic mapping with 2 alternatives.
 #define NEONMAP2(NameBase, LLVMIntrinsic, AltLLVMIntrinsic, TypeModifier)      \
-  {#NameBase, NEON::BI__builtin_neon_##NameBase,                               \
-   llvm::Intrinsic::LLVMIntrinsic, llvm::Intrinsic::AltLLVMIntrinsic,          \
-   TypeModifier}
+  {                                                                            \
+    #NameBase, NEON::BI__builtin_neon_##NameBase,                              \
+        llvm::Intrinsic::LLVMIntrinsic, llvm::Intrinsic::AltLLVMIntrinsic, 0,  \
+        TypeModifier                                                           \
+  }
+
+/// Construct a builtin->intrinsic mapping with 3 alternatives.
+#define NEONMAP3(NameBase, LLVMIntrinsic, AltLLVMIntrinsic,                    \
+                 FloatLLVMIntrinsic, TypeModifier)                             \
+  {                                                                            \
+    #NameBase, NEON::BI__builtin_neon_##NameBase,                              \
+        llvm::Intrinsic::LLVMIntrinsic, llvm::Intrinsic::AltLLVMIntrinsic,     \
+        llvm::Intrinsic::FloatLLVMIntrinsic, TypeModifier                      \
+  }
 
 // clang-format off
 const inline ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
@@ -233,6 +251,10 @@ const inline ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP1(vld1q_x2_v, aarch64_neon_ld1x2, 0),
   NEONMAP1(vld1q_x3_v, aarch64_neon_ld1x3, 0),
   NEONMAP1(vld1q_x4_v, aarch64_neon_ld1x4, 0),
+  NEONMAP3(vmax_v, umax, smax, maximum, Add1ArgType | UnsignedAlts | FloatAlts),
+  NEONMAP3(vmaxq_v, umax, smax, maximum, Add1ArgType | UnsignedAlts | FloatAlts),
+  NEONMAP3(vmin_v, umin, smin, minimum, Add1ArgType | UnsignedAlts | FloatAlts),
+  NEONMAP3(vminq_v, umin, smin, minimum, Add1ArgType | UnsignedAlts | FloatAlts),
   NEONMAP1(vmmlaq_f16_f16, aarch64_neon_fmmla, 0),
   NEONMAP1(vmmlaq_f32_f16, aarch64_neon_fmmla, 0),
   NEONMAP1(vmmlaq_s32, aarch64_neon_smmla, 0),

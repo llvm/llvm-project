@@ -4827,12 +4827,11 @@ public:
   llvm::Value *EmitCMSEClearRecord(llvm::Value *V, llvm::ArrayType *ATy,
                                    QualType RTy);
 
-  llvm::Value *
-  EmitCommonNeonBuiltinExpr(unsigned BuiltinID, unsigned LLVMIntrinsic,
-                            unsigned AltLLVMIntrinsic, const char *NameHint,
-                            unsigned Modifier, const CallExpr *E,
-                            SmallVectorImpl<llvm::Value *> &Ops, Address PtrOp0,
-                            Address PtrOp1, llvm::Triple::ArchType Arch);
+  llvm::Value *EmitCommonNeonBuiltinExpr(
+      unsigned BuiltinID, unsigned LLVMIntrinsic, unsigned AltLLVMIntrinsic,
+      unsigned FloatLLVMIntrinsic, const char *NameHint, unsigned Modifier,
+      const CallExpr *E, SmallVectorImpl<llvm::Value *> &Ops, Address PtrOp0,
+      Address PtrOp1, llvm::Triple::ArchType Arch);
 
   llvm::Function *LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
                                           unsigned Modifier, llvm::Type *ArgTy,

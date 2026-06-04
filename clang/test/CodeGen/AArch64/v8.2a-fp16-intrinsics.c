@@ -508,7 +508,7 @@ int64_t test_vcvth_n_u64_f16(float16_t a) {
 }
 
 // CHECK-LABEL: test_vmaxh_f16
-// CHECK:  [[MAX:%.*]] = call half @llvm.aarch64.neon.fmax.f16(half %a, half %b)
+// CHECK:  [[MAX:%.*]] = call half @llvm.maximum.f16(half %a, half %b)
 // CHECK:  ret half [[MAX]]
 float16_t test_vmaxh_f16(float16_t a, float16_t b) {
   return vmaxh_f16(a, b);
@@ -522,7 +522,7 @@ float16_t test_vmaxnmh_f16(float16_t a, float16_t b) {
 }
 
 // CHECK-LABEL: test_vminh_f16
-// CHECK:  [[MIN:%.*]] = call half @llvm.aarch64.neon.fmin.f16(half %a, half %b)
+// CHECK:  [[MIN:%.*]] = call half @llvm.minimum.f16(half %a, half %b)
 // CHECK:  ret half [[MIN]]
 float16_t test_vminh_f16(float16_t a, float16_t b) {
   return vminh_f16(a, b);
