@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26
-// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26 -DTEST_MACRO
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- --target=x86_64-linux -fno-delayed-template-parsing -Wno-array-compare-cxx26
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- --target=x86_64-linux -fno-delayed-template-parsing -Wno-array-compare-cxx26 -DTEST_MACRO
 
 typedef __INT64_TYPE__ I64;
 
