@@ -1957,21 +1957,14 @@ template <typename T0, typename T1, typename T2> struct Shuffle_match {
   }
 };
 
-struct Mask_match {
+struct m_Mask {
   ArrayRef<int> &MaskRef;
-  Mask_match(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
+  m_Mask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
   bool match(ArrayRef<int> Mask) const {
     MaskRef = Mask;
     return true;
   }
 };
-
-inline Mask_match m_Mask(ArrayRef<int> &MaskRef) { return Mask_match(MaskRef); }
-
-template <typename Pattern>
-inline auto m_Mask(ArrayRef<int> &MaskRef, const Pattern &P) {
-  return m_CombineAnd(P, m_Mask(MaskRef));
-}
 
 struct m_ZeroMask {
   bool match(ArrayRef<int> Mask) const {

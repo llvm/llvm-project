@@ -980,8 +980,9 @@ static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
   Value *ShufVec;
   ArrayRef<int> SplatMask;
   if (match(Trunc.getOperand(0),
-            m_OneUse(m_Shuffle(m_Value(ShufVec), m_Poison(),
-                               m_Mask(SplatMask, m_SplatMask())))) &&
+            m_OneUse(
+                m_Shuffle(m_Value(ShufVec), m_Poison(),
+                          m_CombineAnd(m_SplatMask(), m_Mask(SplatMask))))) &&
       ElementCount::isKnownGE(
           cast<VectorType>(Trunc.getOperand(0)->getType())->getElementCount(),
           cast<VectorType>(ShufVec->getType())->getElementCount())) {
