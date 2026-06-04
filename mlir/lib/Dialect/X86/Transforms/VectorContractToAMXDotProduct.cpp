@@ -264,18 +264,20 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
           ValueRange iterArgs) {
         subviewOffset[subviewOffset.size() - 2] = iv;
 
-        auto ipVectorType = VectorType::get({2, (16 * (offset / 2))}, ipType);
+        // Retrive two rows of vector (32) for int8 and f8 type. For bf16,
+        // retrive one row of vector (32).
+        auto vectorType = VectorType::get({2, (16 * (offset / 2))}, ipType);
         if (ipType.isBF16())
-          ipVectorType = VectorType::get((16 * offset), ipType);
+          vectorType = VectorType::get((16 * offset), ipType);
 
         int64_t srcRank = (dyn_cast<ShapedType>(matB.getType())).getRank();
         Value padding = ub::PoisonOp::create(rewriter, loc, ipType);
-        auto map = AffineMap::getMinorIdentityMap(
-            srcRank, ipVectorType.getRank(), rewriter.getContext());
-        SmallVector<bool> inBounds(ipVectorType.getRank(), true);
+        auto map = AffineMap::getMinorIdentityMap(srcRank, vectorType.getRank(),
+                                                  rewriter.getContext());
+        SmallVector<bool> inBounds(vectorType.getRank(), true);
         Value vec1 = vector::TransferReadOp::create(
-            rewriter, loc, ipVectorType, matB, ValueRange(subviewOffset),
-            padding, map, inBounds);
+            rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
+            map, inBounds);
 
         if (!ipType.isBF16())
           vec1 = vector::ShapeCastOp::create(
@@ -287,8 +289,8 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
         subviewOffset[subviewOffset.size() - 2] = incIV;
 
         Value vec2 = vector::TransferReadOp::create(
-            rewriter, loc, ipVectorType, matB, ValueRange(subviewOffset),
-            padding, map, inBounds);
+            rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
+            map, inBounds);
         if (!ipType.isBF16())
           vec2 = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get((16 * offset), ipType), vec2);
@@ -991,17 +993,17 @@ struct VectorContractToAMXDotProduct
       amx::TileStoreOp::create(rewriter, loc, resultBuffer, ValueRange{c0, c0},
                                dp);
 
-      auto ipVectorType = mlir::VectorType::get({16, 16}, opType);
+      auto vectorType = mlir::VectorType::get({16, 16}, opType);
       int64_t srcRank =
           (dyn_cast<ShapedType>(resultBuffer.getType())).getRank();
       Value padding = ub::PoisonOp::create(rewriter, loc, opType);
-      auto map = AffineMap::getMinorIdentityMap(srcRank, ipVectorType.getRank(),
+      auto map = AffineMap::getMinorIdentityMap(srcRank, vectorType.getRank(),
                                                 rewriter.getContext());
-      SmallVector<bool> inBounds(ipVectorType.getRank(), true);
+      SmallVector<bool> inBounds(vectorType.getRank(), true);
 
       Value vecRow = vector::TransferReadOp::create(
-          rewriter, loc, ipVectorType, resultBuffer, ValueRange{c0, c0},
-          padding, map, inBounds);
+          rewriter, loc, vectorType, resultBuffer, ValueRange{c0, c0}, padding,
+          map, inBounds);
 
       Value resultOp = contractionUsersAfterYield(contractOp.getResult());
       if (auto vecType = llvm::dyn_cast<VectorType>(resultOp.getType()))
@@ -1479,17 +1481,17 @@ struct VectorContractToAMXDotProduct
         Value indexOp_i = arith::ConstantIndexOp::create(rewriter, loc, i);
         Value indexOp_j = arith::ConstantIndexOp::create(rewriter, loc, j);
 
-        auto ipVectorType = mlir::VectorType::get({16, 16}, opType);
+        auto vectorType = mlir::VectorType::get({16, 16}, opType);
 
         int64_t srcRank =
             (dyn_cast<ShapedType>(resultBuffer.getType())).getRank();
         Value padding = ub::PoisonOp::create(rewriter, loc, opType);
-        auto map = AffineMap::getMinorIdentityMap(
-            srcRank, ipVectorType.getRank(), rewriter.getContext());
-        SmallVector<bool> inBounds(ipVectorType.getRank(), true);
+        auto map = AffineMap::getMinorIdentityMap(srcRank, vectorType.getRank(),
+                                                  rewriter.getContext());
+        SmallVector<bool> inBounds(vectorType.getRank(), true);
 
         auto vec1 = vector::TransferReadOp::create(
-            rewriter, loc, ipVectorType, resultBuffer,
+            rewriter, loc, vectorType, resultBuffer,
             ValueRange{indexOp_i, indexOp_j}, padding, map, inBounds);
         writeResults.push_back(vec1);
       }
