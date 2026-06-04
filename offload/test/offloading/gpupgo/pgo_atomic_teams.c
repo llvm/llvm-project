@@ -46,8 +46,10 @@ int main() {
 
 // LLVM-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}_omp_outlined:
 // LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
-// LLVM-PGO: Counters: 4
-// LLVM-PGO: Block counts: [{{.*}}, 0, {{.*}}, 0]
+// On GPU SPMD the combined `target teams distribute parallel for` skips the
+// outer team loop, so the teams-region outlined function has one PGO counter.
+// LLVM-PGO: Counters: 1
+// LLVM-PGO: Block counts: [{{.*}}]
 
 // LLVM-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}_omp_outlined_omp_outlined:
 // LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
