@@ -48,14 +48,16 @@
 ; CHECK-DEVICE-LIB: define {{.*}}addFive{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}unusedFunc{{.*}}
 ;
-; Test that an absolute path as a positional argument includes all archive members.
-; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc %t/libfoo.a --dry-run -o a.spv --print-linked-module 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB-ALL
-; CHECK-DEVICE-LIB-ALL: define {{.*}}foo_func1{{.*}}
-; CHECK-DEVICE-LIB-ALL: define {{.*}}foo_func2{{.*}}
-; CHECK-DEVICE-LIB-ALL: define {{.*}}bar_func1{{.*}}
-; CHECK-DEVICE-LIB-ALL: define {{.*}}addFive{{.*}}
-; CHECK-DEVICE-LIB-ALL: define {{.*}}unusedFunc{{.*}}
+; Test that an absolute path as a positional argument still performs lazy member extraction.
+; libdevice.a has two members (addFive.bc and unusedFunc.bc).
+; Since foo.bc needs addFive, only addFive.bc member is extracted; unusedFunc.bc is not.
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc %t/libdevice.a --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB-POS
+; CHECK-DEVICE-LIB-POS: define {{.*}}foo_func1{{.*}}
+; CHECK-DEVICE-LIB-POS: define {{.*}}foo_func2{{.*}}
+; CHECK-DEVICE-LIB-POS: define {{.*}}bar_func1{{.*}}
+; CHECK-DEVICE-LIB-POS: define {{.*}}addFive{{.*}}
+; CHECK-DEVICE-LIB-POS-NOT: define {{.*}}unusedFunc{{.*}}
 
 ;--- foo.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
