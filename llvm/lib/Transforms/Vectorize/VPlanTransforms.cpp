@@ -3138,6 +3138,26 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
     }
   }
 
+  // Fold the following splice patterns into vp.reverse for reverse accesses:
+  //   vector.reverse(splice.left(poison, x, evl))  -> vp.reverse(x, true, evl)
+  //   splice.right(vector.reverse(x), poison, evl) -> vp.reverse(x, true, evl)
+  for (VPUser *U : collectUsersRecursively(EVL)) {
+    VPValue *X;
+    if (!match(U, m_Reverse(m_Intrinsic<Intrinsic::vector_splice_left>(
+                      m_Poison(), m_VPValue(X), m_Specific(EVL)))) &&
+        !match(U, m_Intrinsic<Intrinsic::vector_splice_right>(
+                      m_Reverse(m_VPValue(X)), m_Poison(), m_Specific(EVL))))
+      continue;
+
+    auto *Def = cast<VPSingleDefRecipe>(U);
+    auto *VPReverse = new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse, {X, Plan.getTrue(), EVL},
+        X->getScalarType(), {}, {}, Def->getDebugLoc());
+    VPReverse->insertBefore(Def);
+    Def->replaceAllUsesWith(VPReverse);
+    Def->eraseFromParent();
+  }
+
   for (VPRecipeBase *R : reverse(OldRecipes)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
     R->eraseFromParent();
