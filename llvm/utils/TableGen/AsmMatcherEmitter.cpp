@@ -2537,6 +2537,8 @@ static void emitGetRegClassFromMatchKindFunc(AsmMatcherInfo &Info,
   OS << "[[maybe_unused]] static const MCRegisterClass "
         "*getRegClassFromMatchKind(MatchClassKind Kind) {\n";
   OS << "  switch (Kind) {\n";
+
+  // Emit the straightforward RegisterClass mapping.
   for (const auto &CI : Info.Classes) {
     if (CI.isRegisterClass() && !CI.ValueName.empty() &&
         isDefinedRegisterClass(Info, CI.ClassName)) {
@@ -2545,6 +2547,50 @@ static void emitGetRegClassFromMatchKindFunc(AsmMatcherInfo &Info,
          << Info.Target.getName() << "::" << CI.ClassName << "RegClassID];\n";
     }
   }
+
+  // Next Collect RegisterOperand MCK_* -> RegisterClass mappings and emit
+  // it for all non-ambiguous RegisterOperands.
+  // Many targets reuse the same ParserMatchClass for different register
+  // classes so we can't emit a these unconditionally.
+  std::map<const ClassInfo *, const ClassInfo *> UserClassToRegClassMap;
+  for (const Record *RO :
+       Info.Records.getAllDerivedDefinitions("RegisterOperand")) {
+    const RecordVal *R = RO->getValue("ParserMatchClass");
+    if (!R)
+      continue;
+    const DefInit *DI = dyn_cast<DefInit>(R->getValue());
+    if (!DI)
+      continue;
+    const Record *PMC = DI->getDef();
+    const Record *RC = RO->getValueAsDef("RegClass");
+    if (!RC || !RC->isSubClassOf("RegisterClassLike"))
+      continue;
+    auto PMC_It = Info.AsmOperandClasses.find(PMC);
+    auto RC_It = Info.RegisterClassClasses.find(RC);
+    if (PMC_It == Info.AsmOperandClasses.end() ||
+        RC_It == Info.RegisterClassClasses.end())
+      continue;
+    const ClassInfo *UserCI = PMC_It->second;
+    const ClassInfo *RegCI = RC_It->second;
+
+    auto It = UserClassToRegClassMap.find(UserCI);
+    if (It == UserClassToRegClassMap.end()) {
+      UserClassToRegClassMap[UserCI] = RegCI;
+    } else if (It->second && It->second != RegCI) {
+      // TODO: Warn about ambiguous ParserMatchClass mapping when we can.
+      // Many targets currently have ambiguous mappings.
+      It->second = nullptr; // Mark as ambiguous
+    }
+  }
+  for (const auto [UserCI, RegCI] : UserClassToRegClassMap) {
+    if (RegCI && isDefinedRegisterClass(Info, RegCI->ClassName)) {
+      OS << "  case " << UserCI->Name << ":\n";
+      OS << "    return &" << Info.Target.getName() << "MCRegisterClasses["
+         << Info.Target.getName() << "::" << RegCI->ClassName
+         << "RegClassID];\n";
+    }
+  }
+
   OS << "  default:\n";
   OS << "    return nullptr;\n";
   OS << "  }\n";

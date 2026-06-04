@@ -23,7 +23,7 @@ S g;
 // The dtor region must bitcast `@g`'s narrowed pointer back to `!rec_S`
 // before the dtor call.
 
-// CIR: !rec_S = !cir.record<struct "S"
+// CIR: !rec_S = !cir.struct<"S"
 // CIR: cir.global external @g = #cir.zero : ![[NARROW_TY:rec_anon_struct[0-9]*]] dtor {
 // CIR:   %[[ADDR:.+]] = cir.get_global @g : !cir.ptr<![[NARROW_TY]]>
 // CIR:   %[[CAST:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<![[NARROW_TY]]> -> !cir.ptr<!rec_S>

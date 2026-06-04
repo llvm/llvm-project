@@ -1176,8 +1176,12 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);
 
-  if (BuiltinID == AArch64::BI__getReg)
+  if (BuiltinID == AArch64::BI__getReg || BuiltinID == AArch64::BI__setReg ||
+      BuiltinID == AArch64::BI__getRegFp || BuiltinID == AArch64::BI__setRegFp)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 31);
+
+  if (BuiltinID == AArch64::BI__prefetch2)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
 
   if (BuiltinID == AArch64::BI__break)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);

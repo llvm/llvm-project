@@ -158,6 +158,7 @@
 
 using namespace llvm;
 using namespace SCEVPatternMatch;
+using namespace LoopVectorizationUtils;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -314,6 +315,17 @@ cl::opt<unsigned> NumberOfStoresToPredicate(
     "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
     cl::desc("Max number of stores to be predicated behind an if."));
 
+// TODO: Move size-based thresholds out of legality checking, make cost based
+// decisions instead of hard thresholds.
+static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
+    "vectorize-scev-check-threshold", cl::init(16), cl::Hidden,
+    cl::desc("The maximum number of SCEV checks allowed."));
+
+static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
+    "pragma-vectorize-scev-check-threshold", cl::init(128), cl::Hidden,
+    cl::desc("The maximum number of SCEV checks allowed with a "
+             "vectorize(enable) pragma"));
+
 static cl::opt<bool> EnableIndVarRegisterHeur(
     "enable-ind-var-reg-heur", cl::init(true), cl::Hidden,
     cl::desc("Count the induction variable only once when interleaving"));
@@ -390,6 +402,12 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     "enable-early-exit-vectorization", cl::init(true), cl::Hidden,
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
+
+static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
+    "enable-early-exit-vectorization-with-side-effects", cl::init(false),
+    cl::Hidden,
+    cl::desc("Enable vectorization of early exit loops with uncountable exits "
+             "and side effects"));
 
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
@@ -717,82 +735,11 @@ static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
   return I->getDebugLoc();
 }
 
-/// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
-/// is passed, the message relates to that particular instruction.
-#ifndef NDEBUG
-static void debugVectorizationMessage(const StringRef Prefix,
-                                      const StringRef DebugMsg,
-                                      Instruction *I) {
-  dbgs() << "LV: " << Prefix << DebugMsg;
-  if (I != nullptr)
-    dbgs() << " " << *I;
-  else
-    dbgs() << '.';
-  dbgs() << '\n';
-}
-#endif
-
-/// Create an analysis remark that explains why vectorization failed
-///
-/// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
-/// RemarkName is the identifier for the remark.  If \p I is passed it is an
-/// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
-/// the location of the remark. If \p DL is passed, use it as debug location for
-/// the remark. \return the remark object that can be streamed to.
-static OptimizationRemarkAnalysis
-createLVAnalysis(const char *PassName, StringRef RemarkName,
-                 const Loop *TheLoop, Instruction *I, DebugLoc DL = {}) {
-  BasicBlock *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
-  // If debug location is attached to the instruction, use it. Otherwise if DL
-  // was not provided, use the loop's.
-  if (I && I->getDebugLoc())
-    DL = I->getDebugLoc();
-  else if (!DL)
-    DL = TheLoop->getStartLoc();
-
-  return OptimizationRemarkAnalysis(PassName, RemarkName, DL, CodeRegion);
-}
-
 namespace llvm {
 
 /// Return the runtime value for VF.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
   return B.CreateElementCount(Ty, VF);
-}
-
-void reportVectorizationFailure(const StringRef DebugMsg,
-                                const StringRef OREMsg, const StringRef ORETag,
-                                OptimizationRemarkEmitter *ORE,
-                                const Loop *TheLoop, Instruction *I) {
-  LLVM_DEBUG(debugVectorizationMessage("Not vectorizing: ", DebugMsg, I));
-  LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
-  ORE->emit(createLVAnalysis(LV_NAME, ORETag, TheLoop, I)
-            << "loop not vectorized: " << OREMsg);
-}
-
-void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
-                             OptimizationRemarkEmitter *ORE,
-                             const Loop *TheLoop, Instruction *I, DebugLoc DL) {
-  LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
-  LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
-  ORE->emit(createLVAnalysis(LV_NAME, ORETag, TheLoop, I, DL) << Msg);
-}
-
-/// Report successful vectorization of the loop. In case an outer loop is
-/// vectorized, prepend "outer" to the vectorization remark.
-static void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                                VectorizationFactor VF, unsigned IC) {
-  LLVM_DEBUG(debugVectorizationMessage(
-      "Vectorizing: ", TheLoop->isInnermost() ? "innermost loop" : "outer loop",
-      nullptr));
-  StringRef LoopType = TheLoop->isInnermost() ? "" : "outer ";
-  ORE->emit([&]() {
-    return OptimizationRemark(LV_NAME, "Vectorized", TheLoop->getStartLoc(),
-                              TheLoop->getHeader())
-           << "vectorized " << LoopType << "loop (vectorization width: "
-           << ore::NV("VectorizationFactor", VF.Width)
-           << ", interleaved count: " << ore::NV("InterleaveCount", IC) << ")";
-  });
 }
 
 } // end namespace llvm
@@ -862,13 +809,6 @@ public:
   /// The calculated cost is saved with widening decision in order to
   /// avoid redundant calculations.
   void setCostBasedWideningDecision(ElementCount VF);
-
-  /// A call may be vectorized in different ways depending on whether we have
-  /// vectorized variants available and whether the target supports masking.
-  /// This function analyzes all calls in the function at the supplied VF,
-  /// makes a decision based on the costs of available options, and stores that
-  /// decision in a map for use in planning and plan execution.
-  void setVectorizedCallDecision(ElementCount VF);
 
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
@@ -944,8 +884,6 @@ public:
     CM_Interleave,
     CM_GatherScatter,
     CM_Scalarize,
-    CM_VectorCall,
-    CM_IntrinsicCall,
     /// A widening decision that has been invalidated after replacing the
     /// corresponding recipe during VPlan transforms.
     /// TODO: Remove once the legacy exit cost computation is retired.
@@ -1010,29 +948,6 @@ public:
     return WideningDecisions[InstOnVF].second;
   }
 
-  struct CallWideningDecision {
-    InstWidening Kind;
-    Function *Variant;
-    Intrinsic::ID IID;
-    InstructionCost Cost;
-  };
-
-  void setCallWideningDecision(CallInst *CI, ElementCount VF, InstWidening Kind,
-                               Function *Variant, Intrinsic::ID IID,
-                               InstructionCost Cost) {
-    assert(!VF.isScalar() && "Expected vector VF");
-    CallWideningDecisions[{CI, VF}] = {Kind, Variant, IID, Cost};
-  }
-
-  CallWideningDecision getCallWideningDecision(CallInst *CI,
-                                               ElementCount VF) const {
-    assert(!VF.isScalar() && "Expected vector VF");
-    auto I = CallWideningDecisions.find({CI, VF});
-    if (I == CallWideningDecisions.end())
-      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, 0};
-    return I->second;
-  }
-
   /// Return True if instruction \p I is an optimizable truncate whose operand
   /// is an induction variable. Such a truncate will be removed by adding a new
   /// induction variable with the destination type.
@@ -1076,7 +991,6 @@ public:
       return;
     setCostBasedWideningDecision(VF);
     collectLoopUniforms(VF);
-    setVectorizedCallDecision(VF);
     collectLoopScalars(VF);
     collectInstsToScalarize(VF);
   }
@@ -1359,7 +1273,6 @@ public:
   /// Invalidates decisions already taken by the cost model.
   void invalidateCostModelingDecisions() {
     WideningDecisions.clear();
-    CallWideningDecisions.clear();
     Uniforms.clear();
     Scalars.clear();
   }
@@ -1537,20 +1450,13 @@ private:
 
   DecisionList WideningDecisions;
 
-  using CallDecisionList =
-      DenseMap<std::pair<CallInst *, ElementCount>, CallWideningDecision>;
-
-  CallDecisionList CallWideningDecisions;
-
   /// Returns true if \p V is expected to be vectorized and it needs to be
   /// extracted.
   bool needsExtract(Value *V, ElementCount VF) const {
     Instruction *I = dyn_cast<Instruction>(V);
     if (VF.isScalar() || !I || !TheLoop->contains(I) ||
         TheLoop->isLoopInvariant(I) ||
-        getWideningDecision(I, VF) == CM_Scalarize ||
-        (isa<CallInst>(I) &&
-         getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize))
+        getWideningDecision(I, VF) == CM_Scalarize)
       return false;
 
     // Assume we can vectorize V (and hence we need extraction) if the
@@ -2146,10 +2052,6 @@ struct CSEDenseMapInfo {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
 
-  static inline Instruction *getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const Instruction *I) {
     assert(canHandle(I) && "Unknown instruction!");
     return hash_combine(I->getOpcode(),
@@ -2157,8 +2059,7 @@ struct CSEDenseMapInfo {
   }
 
   static bool isEqual(const Instruction *LHS, const Instruction *RHS) {
-    if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
-        LHS == getTombstoneKey() || RHS == getTombstoneKey())
+    if (LHS == getEmptyKey() || RHS == getEmptyKey())
       return LHS == RHS;
     return LHS->isIdenticalTo(RHS);
   }
@@ -2201,19 +2102,31 @@ static unsigned estimateElementCount(ElementCount VF,
   return EstimatedVF;
 }
 
+/// Returns true iff \p CI has a library vector variant usable at \p VF: a
+/// mapping with matching VF, masked if required, whose vector function is
+/// declared in the module. Such variants are priced by
+/// VPWidenCallRecipe::computeCost rather than by scalarization.
+static bool hasVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
+                                       bool MaskRequired,
+                                       const TargetLibraryInfo *TLI) {
+  if (!TLI || CI.isNoBuiltin())
+    return false;
+  return any_of(VFDatabase::getMappings(CI), [&](const VFInfo &Info) {
+    return Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()) &&
+           CI.getModule()->getFunction(Info.VectorName);
+  });
+}
+
 InstructionCost
 LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                                               ElementCount VF) const {
-  // We only need to calculate a cost if the VF is scalar; for actual vectors
-  // we should already have a pre-calculated cost at each VF.
-  if (!VF.isScalar())
-    return getCallWideningDecision(CI, VF).Cost;
+  // Vector library variants are priced by VPWidenCallRecipe::computeCost and
+  // should not reach this function.
+  assert((VF.isScalar() ||
+          !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI)) &&
+         "getVectorCallCost does not price vector library variants");
 
   Type *RetTy = CI->getType();
-  if (RecurrenceDescriptor::isFMulAddIntrinsic(CI))
-    if (auto RedCost = getReductionPatternCost(CI, VF, RetTy))
-      return *RedCost;
-
   SmallVector<Type *, 4> Tys;
   for (auto &ArgOp : CI->args())
     Tys.push_back(ArgOp->getType());
@@ -2221,12 +2134,18 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
   InstructionCost ScalarCallCost = TTI.getCallInstrCost(
       CI->getCalledFunction(), RetTy, Tys, Config.CostKind);
 
-  // If this is an intrinsic we may have a lower cost for it.
+  // Cost of the scalar call (scalar VF) or its scalarization (vector VF). The
+  // scalarization cost is only meaningful for fixed VFs.
+  InstructionCost Cost = VF.isScalable()
+                             ? InstructionCost::getInvalid()
+                             : ScalarCallCost * VF.getKnownMinValue() +
+                                   getScalarizationOverhead(CI, VF);
+
   if (getVectorIntrinsicIDForCall(CI, TLI)) {
     InstructionCost IntrinsicCost = getVectorIntrinsicCost(CI, VF);
-    return std::min(ScalarCallCost, IntrinsicCost);
+    return std::min(Cost, IntrinsicCost);
   }
-  return ScalarCallCost;
+  return Cost;
 }
 
 static Type *maybeVectorizeType(Type *Ty, ElementCount VF) {
@@ -2490,10 +2409,14 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   switch(I->getOpcode()) {
   default:
     return true;
-  case Instruction::Call:
+  case Instruction::Call: {
     if (VF.isScalar())
       return true;
-    return getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize;
+    auto *CI = cast<CallInst>(I);
+    // A vector intrinsic or library variant lowering avoids scalarization.
+    return !getVectorIntrinsicIDForCall(CI, TLI) &&
+           !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI);
+  }
   case Instruction::Load:
   case Instruction::Store: {
     bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
@@ -2532,8 +2455,9 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   if (Legal->blockNeedsPredication(I->getParent()))
     return true;
 
-  // If we're not folding the tail by masking, predication is unnecessary.
-  if (!foldTailByMasking())
+  // If we're not folding the tail by masking and not vectorizing a loop with
+  // uncountable exits and side effects, predication is unnecessary.
+  if (!foldTailByMasking() && !Legal->hasUncountableExitWithSideEffects())
     return false;
 
   // All that remain are instructions with side-effects originally executed in
@@ -3026,7 +2950,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
   if (TC.isScalar()) {
-    reportVectorizationFailure("Single iteration (non) loop",
+    reportVectorizationFailure(
+        "Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -3048,8 +2973,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return FixedScalableVFPair::getNone();
   }
 
-  assert(WideningDecisions.empty() && CallWideningDecisions.empty() &&
-         Uniforms.empty() && Scalars.empty() &&
+  assert(WideningDecisions.empty() && Uniforms.empty() && Scalars.empty() &&
          "No cost-modeling decisions should have been taken at this point");
 
   switch (EpilogueLoweringStatus) {
@@ -3340,7 +3264,6 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
                                 const TargetTransformInfo &TTI) {
   assert(VF.isVector() && "Checking a scalar VF?");
-  VPTypeAnalysis TypeInfo(Plan);
   DenseSet<VPRecipeBase *> EphemeralRecipes;
   collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
   // Set of already visited types.
@@ -3420,7 +3343,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       // operand.
       VPValue *ToCheck =
           R.getNumDefinedValues() >= 1 ? R.getVPValue(0) : R.getOperand(1);
-      Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
+      Type *ScalarTy = ToCheck->getScalarType();
       if (!Visited.insert({ScalarTy}).second)
         continue;
       Type *WideTy = toVectorizedTy(ScalarTy, VF);
@@ -4108,15 +4031,6 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0) {
           for (const auto &[I, IC] : ScalarCosts)
             ScalarCostsVF.insert({I, IC});
-          // Check if we decided to scalarize a call. If so, update the widening
-          // decision of the call to CM_Scalarize with the computed scalar cost.
-          for (const auto &[I, Cost] : ScalarCosts) {
-            auto *CI = dyn_cast<CallInst>(I);
-            if (!CI || !CallWideningDecisions.contains({CI, VF}))
-              continue;
-            CallWideningDecisions[{CI, VF}].Kind = CM_Scalarize;
-            CallWideningDecisions[{CI, VF}].Cost = Cost;
-          }
         }
         // Remember that BB will remain after vectorization.
         PredicatedBBsAfterVectorization[VF].insert(BB);
@@ -4979,163 +4893,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   }
 }
 
-void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
-  assert(!VF.isScalar() &&
-         "Trying to set a vectorization decision for a scalar VF");
-
-  auto ForcedScalar = ForcedScalars.find(VF);
-  for (BasicBlock *BB : TheLoop->blocks()) {
-    // For each instruction in the old loop.
-    for (Instruction &I : *BB) {
-      CallInst *CI = dyn_cast<CallInst>(&I);
-
-      if (!CI)
-        continue;
-
-      InstructionCost ScalarCost = InstructionCost::getInvalid();
-      InstructionCost VectorCost = InstructionCost::getInvalid();
-      InstructionCost IntrinsicCost = InstructionCost::getInvalid();
-      Function *ScalarFunc = CI->getCalledFunction();
-      Type *ScalarRetTy = CI->getType();
-      SmallVector<Type *, 4> Tys, ScalarTys;
-      for (auto &ArgOp : CI->args())
-        ScalarTys.push_back(ArgOp->getType());
-
-      // Estimate cost of scalarized vector call. The source operands are
-      // assumed to be vectors, so we need to extract individual elements from
-      // there, execute VF scalar calls, and then gather the result into the
-      // vector return value.
-      if (VF.isFixed()) {
-        InstructionCost ScalarCallCost = TTI.getCallInstrCost(
-            ScalarFunc, ScalarRetTy, ScalarTys, Config.CostKind);
-
-        // Compute costs of unpacking argument values for the scalar calls and
-        // packing the return values to a vector.
-        InstructionCost ScalarizationCost = getScalarizationOverhead(CI, VF);
-        ScalarCost = ScalarCallCost * VF.getKnownMinValue() + ScalarizationCost;
-      } else {
-        // There is no point attempting to calculate the scalar cost for a
-        // scalable VF as we know it will be Invalid.
-        assert(!getScalarizationOverhead(CI, VF).isValid() &&
-               "Unexpected valid cost for scalarizing scalable vectors");
-        ScalarCost = InstructionCost::getInvalid();
-      }
-
-      // Honor ForcedScalars and UniformAfterVectorization decisions.
-      // TODO: For calls, it might still be more profitable to widen. Use
-      // VPlan-based cost model to compare different options.
-      if (VF.isVector() && ((ForcedScalar != ForcedScalars.end() &&
-                             ForcedScalar->second.contains(CI)) ||
-                            isUniformAfterVectorization(CI, VF))) {
-        setCallWideningDecision(CI, VF, CM_Scalarize, nullptr,
-                                Intrinsic::not_intrinsic, ScalarCost);
-        continue;
-      }
-
-      bool MaskRequired = isMaskRequired(CI);
-      // Compute corresponding vector type for return value and arguments.
-      Type *RetTy = toVectorizedTy(ScalarRetTy, VF);
-      for (Type *ScalarTy : ScalarTys)
-        Tys.push_back(toVectorizedTy(ScalarTy, VF));
-
-      // An in-loop reduction using an fmuladd intrinsic is a special case;
-      // we don't want the normal cost for that intrinsic.
-      if (RecurrenceDescriptor::isFMulAddIntrinsic(CI))
-        if (auto RedCost = getReductionPatternCost(CI, VF, RetTy)) {
-          setCallWideningDecision(CI, VF, CM_IntrinsicCall, nullptr,
-                                  getVectorIntrinsicIDForCall(CI, TLI),
-                                  *RedCost);
-          continue;
-        }
-
-      // Find the cost of vectorizing the call, if we can find a suitable
-      // vector variant of the function.
-      VFInfo FuncInfo;
-      Function *VecFunc = nullptr;
-      // Search through any available variants for one we can use at this VF.
-      for (VFInfo &Info : VFDatabase::getMappings(*CI)) {
-        // Must match requested VF.
-        if (Info.Shape.VF != VF)
-          continue;
-
-        // Must take a mask argument if one is required
-        if (MaskRequired && !Info.isMasked())
-          continue;
-
-        // Check that all parameter kinds are supported
-        bool ParamsOk = true;
-        for (VFParameter Param : Info.Shape.Parameters) {
-          switch (Param.ParamKind) {
-          case VFParamKind::Vector:
-            break;
-          case VFParamKind::OMP_Uniform: {
-            Value *ScalarParam = CI->getArgOperand(Param.ParamPos);
-            // Make sure the scalar parameter in the loop is invariant.
-            if (!PSE.getSE()->isSCEVable(ScalarParam->getType()) ||
-                !PSE.getSE()->isLoopInvariant(PSE.getSCEV(ScalarParam),
-                                              TheLoop))
-              ParamsOk = false;
-            break;
-          }
-          case VFParamKind::OMP_Linear: {
-            Value *ScalarParam = CI->getArgOperand(Param.ParamPos);
-            // Find the stride for the scalar parameter in this loop and see if
-            // it matches the stride for the variant.
-            // TODO: do we need to figure out the cost of an extract to get the
-            // first lane? Or do we hope that it will be folded away?
-            ScalarEvolution *SE = PSE.getSE();
-            if (!SE->isSCEVable(ScalarParam->getType()) ||
-                !match(SE->getSCEV(ScalarParam),
-                       m_scev_AffineAddRec(
-                           m_SCEV(), m_scev_SpecificSInt(Param.LinearStepOrPos),
-                           m_SpecificLoop(TheLoop))))
-              ParamsOk = false;
-            break;
-          }
-          case VFParamKind::GlobalPredicate:
-            break;
-          default:
-            ParamsOk = false;
-            break;
-          }
-        }
-
-        if (!ParamsOk)
-          continue;
-
-        // Found a suitable candidate, stop here.
-        VecFunc = CI->getModule()->getFunction(Info.VectorName);
-        FuncInfo = Info;
-        break;
-      }
-
-      if (TLI && VecFunc && !CI->isNoBuiltin())
-        VectorCost = TTI.getCallInstrCost(nullptr, RetTy, Tys, Config.CostKind);
-
-      // Find the cost of an intrinsic; some targets may have instructions that
-      // perform the operation without needing an actual call.
-      Intrinsic::ID IID = getVectorIntrinsicIDForCall(CI, TLI);
-      if (IID != Intrinsic::not_intrinsic)
-        IntrinsicCost = getVectorIntrinsicCost(CI, VF);
-
-      InstructionCost Cost = ScalarCost;
-      InstWidening Decision = CM_Scalarize;
-
-      if (VectorCost.isValid() && VectorCost <= Cost) {
-        Cost = VectorCost;
-        Decision = CM_VectorCall;
-      }
-
-      if (IntrinsicCost.isValid() && IntrinsicCost <= Cost) {
-        Cost = IntrinsicCost;
-        Decision = CM_IntrinsicCall;
-      }
-
-      setCallWideningDecision(CI, VF, Decision, VecFunc, IID, Cost);
-    }
-  }
-}
-
 bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) {
   if (!Legal->isInvariant(Op))
     return false;
@@ -5518,9 +5275,6 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Reversed;
       case LoopVectorizationCostModel::CM_Unknown:
         llvm_unreachable("Instr did not go through cost modelling?");
-      case LoopVectorizationCostModel::CM_VectorCall:
-      case LoopVectorizationCostModel::CM_IntrinsicCall:
-        llvm_unreachable_internal("Instr has invalid widening decision");
       case LoopVectorizationCostModel::CM_InvalidatedDecision:
         return TTI::CastContextHint::None;
       }
@@ -5873,22 +5627,6 @@ bool VPCostContext::isMaskRequired(Instruction *I) const {
   return CM.isMaskRequired(I);
 }
 
-std::optional<VPCostContext::CallWideningKind>
-VPCostContext::getLegacyCallKind(CallInst *CI, ElementCount VF) const {
-  if (VF.isScalar())
-    return CallWideningKind::Scalarize;
-  switch (CM.getCallWideningDecision(CI, VF).Kind) {
-  case LoopVectorizationCostModel::CM_Scalarize:
-    return CallWideningKind::Scalarize;
-  case LoopVectorizationCostModel::CM_IntrinsicCall:
-    return CallWideningKind::Intrinsic;
-  case LoopVectorizationCostModel::CM_VectorCall:
-    return CallWideningKind::VectorVariant;
-  default:
-    return std::nullopt;
-  }
-}
-
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -5945,45 +5683,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       });
       Cost += InductionCost;
       CostCtx.SkipCostComputation.insert(IVInst);
-    }
-  }
-
-  /// Compute the cost of all exiting conditions of the loop using the legacy
-  /// cost model. This is to match the legacy behavior, which adds the cost of
-  /// all exit conditions. Note that this over-estimates the cost, as there will
-  /// be a single condition to control the vector loop.
-  SmallVector<BasicBlock *> Exiting;
-  CM.TheLoop->getExitingBlocks(Exiting);
-  SetVector<Instruction *> ExitInstrs;
-  // Collect all exit conditions.
-  for (BasicBlock *EB : Exiting) {
-    auto *Term = dyn_cast<CondBrInst>(EB->getTerminator());
-    if (!Term || CostCtx.skipCostComputation(Term, VF.isVector()))
-      continue;
-    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
-      ExitInstrs.insert(CondI);
-    }
-  }
-  // Compute the cost of all instructions only feeding the exit conditions.
-  for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
-    Instruction *CondI = ExitInstrs[I];
-    if (!OrigLoop->contains(CondI) ||
-        !CostCtx.SkipCostComputation.insert(CondI).second)
-      continue;
-    InstructionCost CondICost = CostCtx.getLegacyCost(CondI, VF);
-    LLVM_DEBUG({
-      dbgs() << "Cost of " << CondICost << " for VF " << VF
-             << ": exit condition instruction " << *CondI << "\n";
-    });
-    Cost += CondICost;
-    for (Value *Op : CondI->operands()) {
-      auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
-          any_of(OpI->users(), [&ExitInstrs](User *U) {
-            return !ExitInstrs.contains(cast<Instruction>(U));
-          }))
-        continue;
-      ExitInstrs.insert(OpI);
     }
   }
 
@@ -6276,6 +5975,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF(),
       MaxRuntimeStep);
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
+  // Limit expansions to VPInstruction to when not vectorizing the epilogue.
+  // Currently this code path still relies on code re-using SCEVs expanded
+  // directly to IR instructions.
+  if (EpilogueVecKind == EpilogueVectorizationKind::None)
+    VPlanTransforms::expandSCEVsToVPInstructions(BestVPlan, *PSE.getSE());
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::simplifyKnownEVL(BestVPlan, BestVF, PSE);
@@ -6287,8 +5991,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
-                         OrigLoop->getParentLoop(),
-                         Legal->getWidestInductionType());
+                         OrigLoop->getParentLoop());
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -6633,7 +6336,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (CM.isMaskRequired(HI->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(Opcode, HGramOps, VPI->getDebugLoc());
+  return new VPHistogramRecipe(Opcode, HGramOps, cast<VPIRMetadata>(*VPI),
+                               VPI->getDebugLoc());
 }
 
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
@@ -6647,12 +6351,12 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
-      if (auto *Blend = vputils::findUserOf<VPBlendRecipe>(Val))
+      if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
         Val = Blend;
-      assert(
-          vputils::findUserOf<VPReductionPHIRecipe>(Val)->getBackedgeValue() ==
-              Val &&
-          "Store isn't backedge value?");
+      [[maybe_unused]] auto *Rdx =
+          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+      assert((!Rdx || Rdx->getBackedgeValue() == Val) &&
+             "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
           SI, {Val, Addr}, true /* IsUniform */, nullptr /*Mask*/, *VPI, *VPI,
           VPI->getDebugLoc());
@@ -6819,6 +6523,20 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                    LAI->getSymbolicStrides());
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
+
+  // Add surviving induction predicates to PSE and check constraints.
+  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+  bool OptForSize =
+      !ForceVectorization &&
+      (CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
+       CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+  unsigned SCEVCheckThreshold = ForceVectorization
+                                    ? PragmaVectorizeSCEVCheckThreshold
+                                    : VectorizeSCEVCheckThreshold;
+  if (!RUN_VPLAN_PASS(VPlanTransforms::finalizeSCEVPredicates, *VPlan0, PSE,
+                      OptForSize, SCEVCheckThreshold, ORE, OrigLoop))
+    return nullptr;
+
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -6835,8 +6553,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
     return nullptr;
   }
 
-  RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
-                 CM.foldTailByMasking());
+  // If we're handling uncountable exits in the scalar tail after a vector
+  // loop with an in-loop mask, then the middle check has already been
+  // created to compare against the actual number of lanes executed.
+  if (EEStyle != UncountableExitStyle::MaskedHandleExitInScalarLoop)
+    RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
+                   CM.foldTailByMasking());
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
@@ -7086,8 +6808,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
-                          OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
                    Range);
     RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
@@ -7101,15 +6821,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                  InterleaveGroups, CM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
-  // legal and profitable. Use a new VPCostContext to ensure type inference
-  // reflects the current plan state.
-  // TODO: Remove this VPCostContext scope once VPTypeAnalysis is removed.
-  {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
-                          OrigLoop);
-    RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
-                   *OrigLoop, CostCtx, Range);
-  }
+  // legal and profitable.
+  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
+                 *OrigLoop, CostCtx, Range);
 
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
@@ -7138,7 +6852,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 void LoopVectorizationPlanner::addReductionResultComputation(
     VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
-  VPTypeAnalysis TypeInfo(*Plan);
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
@@ -7154,7 +6867,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
-    Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+    Type *PhiTy = PhiR->getScalarType();
 
     // Convert a VPBlendRecipe backedge to a select.
     if (auto *Blend = dyn_cast<VPBlendRecipe>(PhiR->getBackedgeValue())) {
@@ -7731,7 +7444,9 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       });
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {
-    Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
+    assert(MainPlan.getVectorLoopRegion()->getCanonicalIV() &&
+           "canonical IV must exist");
+    Type *Ty = VectorTC->getScalarType();
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
     ResumePhi = ScalarPHBuilder.createScalarPhi(
         {VectorTC, MainPlan.getZero(Ty)}, {}, "vec.epilog.resume.val");
@@ -8174,6 +7889,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
     }
+    if (LVL.hasUncountableExitWithSideEffects() &&
+        !EnableEarlyExitVectorizationWithSideEffects) {
+      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                                 "early exit and side effects is not enabled",
+                                 "UncountableEarlyExitSideEffectLoopsDisabled",
+                                 ORE, L);
+      return false;
+    }
   }
 
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
@@ -8246,8 +7969,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       TTI->isFPVectorizationPotentiallyUnsafe()) {
     reportVectorizationFailure(
         "Potentially unsafe FP op prevents vectorization",
-        "loop not vectorized due to unsafe FP support.",
-        "UnsafeFP", ORE, L);
+        "loop not vectorized due to unsafe FP support.", "UnsafeFP", ORE, L);
     Hints.emitRemarkWithHints();
     return false;
   }
@@ -8441,6 +8163,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IC = 1;
   }
 
+  // FIXME: Enable interleaving for EE-with-side-effects.
+  if (InterleaveLoop && LVL.hasUncountableExitWithSideEffects()) {
+    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
+    IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
+                  "Unable to interleave due to early exit with side effects."};
+    InterleaveLoop = false;
+    IC = 1;
+  }
+
   // Emit diagnostic messages, if any.
   if (!VectorizeLoop && !InterleaveLoop) {
     // Do not vectorize or interleaving the loop.
@@ -8490,7 +8221,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     });
   } else {
     // Report the vectorization decision.
-    reportVectorization(ORE, L, VF, IC);
+    reportVectorization(ORE, L, VF.Width, IC);
   }
   if (ORE->allowExtraAnalysis(LV_NAME))
     checkMixedPrecision(L, ORE);

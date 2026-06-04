@@ -1997,7 +1997,7 @@ struct TrieEntryWithOffset {
 
 static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
                              const bool is_arm, addr_t text_seg_base_addr,
-                             std::vector<llvm::StringRef> &nameSlices,
+                             std::string &prefix,
                              std::set<lldb::addr_t> &resolver_addresses,
                              std::vector<TrieEntryWithOffset> &reexports,
                              std::vector<TrieEntryWithOffset> &ext_symbols) {
@@ -2043,14 +2043,9 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
       add_this_entry = true;
     }
     if (add_this_entry) {
-      std::string name;
-      if (!nameSlices.empty()) {
-        for (auto name_slice : nameSlices)
-          name.append(name_slice.data(), name_slice.size());
-      }
-      if (name.size() > 1) {
+      if (prefix.size() > 1) {
         // Skip the leading '_'
-        e.entry.name.SetCStringWithLength(name.c_str() + 1, name.size() - 1);
+        e.entry.name.SetString(llvm::StringRef(prefix).drop_front());
       }
       if (import_name) {
         // Skip the leading '_'
@@ -2071,19 +2066,19 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
   const uint8_t childrenCount = data.GetU8(&children_offset);
   for (uint8_t i = 0; i < childrenCount; ++i) {
     const char *cstr = data.GetCStr(&children_offset);
-    if (cstr)
-      nameSlices.push_back(llvm::StringRef(cstr));
-    else
+    if (!cstr)
       return false; // Corrupt data
+    const size_t prevSize = prefix.size();
+    prefix.append(cstr);
     lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
     if (childNodeOffset) {
       if (!ParseTrieEntries(data, childNodeOffset, is_arm, text_seg_base_addr,
-                            nameSlices, resolver_addresses, reexports,
+                            prefix, resolver_addresses, reexports,
                             ext_symbols)) {
         return false;
       }
     }
-    nameSlices.pop_back();
+    prefix.resize(prevSize);
   }
   return true;
 }
@@ -2230,10 +2225,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   llvm::DenseSet<addr_t> symbols_added;
 
   // We are using a llvm::DenseSet for "symbols_added" so we must be sure we
-  // do not add the tombstone or empty keys to the set.
+  // do not add the empty key to the set.
   auto add_symbol_addr = [&symbols_added](lldb::addr_t file_addr) {
-    // Don't add the tombstone or empty keys.
-    if (file_addr == UINT64_MAX || file_addr == UINT64_MAX - 1)
+    // Don't add the empty key.
+    if (file_addr == UINT64_MAX)
       return;
     symbols_added.insert(file_addr);
   };
@@ -2659,9 +2654,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
     if (text_segment_sp)
       text_segment_file_addr = text_segment_sp->GetFileAddress();
-    std::vector<llvm::StringRef> nameSlices;
-    ParseTrieEntries(dyld_trie_data, 0, is_arm, text_segment_file_addr,
-                     nameSlices, resolver_addresses, reexport_trie_entries,
+    std::string prefix;
+    ParseTrieEntries(dyld_trie_data, 0, is_arm, text_segment_file_addr, prefix,
+                     resolver_addresses, reexport_trie_entries,
                      external_sym_trie_entries);
   }
 
