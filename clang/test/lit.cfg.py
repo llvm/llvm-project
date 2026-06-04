@@ -200,19 +200,6 @@ def run_clang_repl(args):
 
     return clang_repl_out
 
-# Add clang resource directory as a substitution
-if config.clang:
-    try:
-        clang_exe_cmd = subprocess.Popen(
-            [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE
-        )
-    except OSError:
-        print("could not exec clang")
-
-    clang_resource_dir = clang_exe_cmd.stdout.read().decode("ascii")
-    clang_exe_cmd.wait()
-
-    config.substitutions.append(("%clang-resource-dir", clang_resource_dir.strip()))
 
 def have_host_jit_feature_support(feature_name):
     return "true" in run_clang_repl("--host-supports-" + feature_name)
@@ -424,6 +411,20 @@ if config.enable_backtrace:
 
 if config.enable_threads:
     config.available_features.add("thread_support")
+
+# Add clang resource directory as a substitution
+if config.clang:
+    try:
+        clang_exe_cmd = subprocess.Popen(
+            [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE
+        )
+    except OSError:
+        print("could not exec clang")
+
+    clang_resource_dir = clang_exe_cmd.stdout.read().decode("ascii")
+    clang_exe_cmd.wait()
+
+    config.substitutions.append(("%clang-resource-dir", clang_resource_dir.strip()))
 
 # Check if we should allow outputs to console.
 run_console_tests = int(lit_config.params.get("enable_console", "0"))
