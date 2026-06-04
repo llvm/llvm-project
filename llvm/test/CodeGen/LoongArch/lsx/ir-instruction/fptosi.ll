@@ -32,26 +32,18 @@ define void @fptosi_v2f64_v2i32(ptr %res, ptr %in){
 ; LA32-LABEL: fptosi_v2f64_v2i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    vreplvei.d $vr1, $vr0, 0
-; LA32-NEXT:    ftintrz.w.d $fa1, $fa1
-; LA32-NEXT:    vreplvei.d $vr0, $vr0, 1
-; LA32-NEXT:    ftintrz.w.d $fa0, $fa0
-; LA32-NEXT:    fst.s $fa0, $a0, 4
-; LA32-NEXT:    fst.s $fa1, $a0, 0
+; LA32-NEXT:    vftintrz.w.d $vr0, $vr0, $vr0
+; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 1
+; LA32-NEXT:    st.w $a1, $a0, 4
+; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
+; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: fptosi_v2f64_v2i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    vreplvei.d $vr1, $vr0, 0
-; LA64-NEXT:    ftintrz.w.d $fa1, $fa1
-; LA64-NEXT:    movfr2gr.s $a1, $fa1
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA64-NEXT:    vreplvei.d $vr0, $vr0, 1
-; LA64-NEXT:    ftintrz.w.d $fa0, $fa0
-; LA64-NEXT:    movfr2gr.s $a1, $fa0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA64-NEXT:    vstelm.d $vr1, $a0, 0, 0
+; LA64-NEXT:    vftintrz.w.d $vr0, $vr0, $vr0
+; LA64-NEXT:    vstelm.d $vr0, $a0, 0, 0
 ; LA64-NEXT:    ret
   %v0 = load <2 x double>, ptr %in
   %v1 = fptosi <2 x double> %v0 to <2 x i32>
@@ -64,23 +56,8 @@ define void @fptosi_v4f64_v4i32(ptr %res, ptr %in){
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 16
-; CHECK-NEXT:    vreplvei.d $vr2, $vr0, 0
-; CHECK-NEXT:    ftintrz.w.d $fa2, $fa2
-; CHECK-NEXT:    movfr2gr.s $a1, $fa2
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 1
-; CHECK-NEXT:    ftintrz.w.d $fa0, $fa0
-; CHECK-NEXT:    movfr2gr.s $a1, $fa0
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 1
-; CHECK-NEXT:    vreplvei.d $vr0, $vr1, 0
-; CHECK-NEXT:    ftintrz.w.d $fa0, $fa0
-; CHECK-NEXT:    movfr2gr.s $a1, $fa0
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 2
-; CHECK-NEXT:    vreplvei.d $vr0, $vr1, 1
-; CHECK-NEXT:    ftintrz.w.d $fa0, $fa0
-; CHECK-NEXT:    movfr2gr.s $a1, $fa0
-; CHECK-NEXT:    vinsgr2vr.w $vr2, $a1, 3
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vftintrz.w.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x double>, ptr %in
   %v1 = fptosi <4 x double> %v0 to <4 x i32>

@@ -512,6 +512,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::BITCAST);
     setTargetDAGCombine(ISD::VSELECT);
+    setTargetDAGCombine(ISD::FP_TO_SINT);
+    setTargetDAGCombine(ISD::FP_TO_UINT);
   }
 
   // Set DAG combine for 'LASX' feature.
@@ -7784,6 +7786,97 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Using [X]VFTINTRZ_W_D for double to signed 32-bit integer conversion.
+// For example:
+//   v4i32 = fp_to_sint (concat_vectors v2f64, v2f64)
+// Can be combined into:
+//   v4i32 = VFTINTRZ_W_D v2f64. v2f64
+static SDValue performFP_TO_INTCombine(SDNode *N, SelectionDAG &DAG,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const LoongArchSubtarget &Subtarget) {
+  if (!Subtarget.hasExtLSX())
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT DstVT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT;
+
+  if (!DstVT.isVector() || !DstVT.isSimple() || !SrcVT.isSimple())
+    return SDValue();
+
+  unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+  unsigned SrcBits = SrcVT.getSizeInBits();
+  unsigned DstEltBits = DstVT.getScalarSizeInBits();
+  unsigned NumElts = DstVT.getVectorNumElements();
+  unsigned BlockBits = Subtarget.hasExtLASX() ? 256 : 128;
+
+  if (!isPowerOf2_32(NumElts) || !isPowerOf2_32(DstEltBits))
+    return SDValue();
+
+  if (SrcBits % BlockBits != 0 && SrcBits != 128)
+    return SDValue();
+
+  if (DstEltBits < 32) {
+    MVT PromoteVT = MVT::getVectorVT(MVT::getIntegerVT(32), NumElts);
+    SDValue Conv = DAG.getNode(N->getOpcode(), DL, PromoteVT, Src);
+    return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Conv);
+  }
+
+  if (SrcEltBits != 64 || DstEltBits != 32)
+    return SDValue();
+
+  if (!IsSigned) {
+    // LASX already has pattern for double convert to uint32.
+    if (Subtarget.hasExtLASX())
+      return SDValue();
+    MVT TmpVT = MVT::getVectorVT(MVT::i64, NumElts);
+    SDValue Tmp = DAG.getNode(ISD::FP_TO_SINT, DL, TmpVT, Src);
+    return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Tmp);
+  }
+
+  SmallVector<SDValue, 8> Blocks;
+  unsigned BlockNumElts = BlockBits / 64;
+  MVT BlockVT = MVT::getVectorVT(MVT::f64, BlockNumElts);
+  if (Src.getOpcode() == ISD::CONCAT_VECTORS &&
+      Src.getOperand(0).getValueType() == BlockVT) {
+    for (unsigned i = 0; i < Src.getNumOperands(); i++)
+      Blocks.push_back(Src.getOperand(i));
+  } else if (SrcBits > BlockBits) {
+    // Wider than one register: extract each BlockBits-wide sub-vector.
+    for (unsigned i = 0; i < SrcBits / BlockBits; i++)
+      Blocks.push_back(
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, BlockVT, Src,
+                      DAG.getVectorIdxConstant(i * BlockNumElts, DL)));
+  } else {
+    BlockBits = SrcBits;
+    Blocks.push_back(Src);
+  }
+
+  MVT NativeVT = BlockBits == 256 ? MVT::v8i32 : MVT::v4i32;
+  SmallVector<SDValue, 4> Parts;
+  for (unsigned i = 0; i < Blocks.size(); i += 2) {
+    SDValue Lo = Blocks[i];
+    SDValue Hi = Blocks.size() > 1 ? Blocks[i + 1] : Lo;
+    SDValue Res = DAG.getNode(LoongArchISD::VFTINTRZ, DL, NativeVT, Hi, Lo);
+
+    if (BlockBits == 256) {
+      SDValue Undef = DAG.getUNDEF(Res.getValueType());
+      SmallVector<int, 8> Mask = {0, 1, 4, 5, 2, 3, 6, 7};
+      Res = DAG.getVectorShuffle(Res.getValueType(), DL, Res, Undef, Mask);
+      Res = DAG.getBitcast(NativeVT, Res);
+    }
+
+    Parts.push_back(Res);
+  }
+
+  if (Blocks.size() == 1)
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, DstVT, Parts[0],
+                       DAG.getVectorIdxConstant(0, DL));
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Parts);
+}
+
 // Try to widen AND, OR and XOR nodes to VT in order to remove casts around
 // logical operations, like in the example below.
 //   or (and (truncate x, truncate y)),
@@ -8069,6 +8162,9 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performEXTENDCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
     return performSINT_TO_FPCombine(N, DAG, DCI, Subtarget);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return performFP_TO_INTCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BR_CC:

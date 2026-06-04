@@ -2120,6 +2120,10 @@ def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
                (XVFTINTRZ_LU_D v4f64:$vj)),
               sub_128)>;
 
+// XVFTINTRZ_W_D
+def : Pat<(v8i32 (loongarch_vftintrz_w_d (v4f64 LASX256:$xj), (v4f64 LASX256:$xk))),
+          (XVFTINTRZ_W_D LASX256:$xj, LASX256:$xk)>;
+
 // XVAVG_{B/H/W/D/BU/HU/WU/DU}, XVAVGR_{B/H/W/D/BU/HU/WU/DU}
 defm : PatXrXr<avgfloors, "XVAVG">;
 defm : PatXrXr<avgceils, "XVAVGR">;
