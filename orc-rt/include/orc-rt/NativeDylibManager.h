@@ -62,11 +62,13 @@ public:
   /// Lookup addresses of the given symbols in the given library.
   ///
   /// Each entry in Symbols pairs a name with a flag indicating whether the
-  /// symbol is required or weakly referenced. A missing required symbol
-  /// causes lookup to fail with an error. A missing weakly-referenced symbol
-  /// is returned as a zero address.
+  /// symbol is required or weakly referenced. A missing required symbol is
+  /// reported as an empty optional in the result vector; a missing
+  /// weakly-referenced symbol is reported as a present optional with a zero
+  /// (nullptr) address. This matches the resolve semantics of
+  /// llvm::orc::rt_bootstrap::SimpleExecutorDylibManager.
   using OnLookupCompleteFn =
-      move_only_function<void(Expected<std::vector<void *>>)>;
+      move_only_function<void(Expected<std::vector<std::optional<void *>>>)>;
   void lookup(OnLookupCompleteFn &&OnLookupComplete, void *Handle,
               SymbolLookupSet Symbols);
 

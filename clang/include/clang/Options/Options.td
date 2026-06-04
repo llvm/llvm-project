@@ -2184,6 +2184,10 @@ def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">,
   Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Put crash-report files in <dir>">, MetaVarName<"<dir>">;
+def fcrash_diagnostics_tar : Joined<["-"], "fcrash-diagnostics-tar=">,
+  Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
+  Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Put crash-report tarball at <path>">, MetaVarName<"<path>">;
 def fcreate_profile : Flag<["-"], "fcreate-profile">, Group<f_Group>;
 defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,
@@ -5623,6 +5627,10 @@ def mvector_strict_align : Flag<["-"], "mvector-strict-align">, Group<m_Group>,
   HelpText<"Force all vector memory accesses to be aligned (RISC-V only)">;
 def mno_vector_strict_align : Flag<["-"], "mno-vector-strict-align">, Group<m_Group>,
   HelpText<"Allow vector memory accesses to be unaligned (RISC-V only)">;
+def mzilsd_word_align : Flag<["-"], "mzilsd-word-align">, Group<m_Group>,
+  HelpText<"Allow Zilsd/Zclsd memory accesses to be 4-byte aligned (RISC-V only)">;
+def mzilsd_strict_align : Flag<["-"], "mzilsd-strict-align">, Group<m_Group>,
+  HelpText<"Force all Zilsd/Zclsd memory accesses to be 8-byte aligned (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;

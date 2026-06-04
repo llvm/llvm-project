@@ -4607,9 +4607,28 @@ genACC(Fortran::lower::AbstractConverter &converter,
             converter.getSymbolMap().lookupSymbol(symbol)) {
       // For simple variables, rebind the symbol directly.
       fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
-      fir::ExtendedValue cacheExv =
-          fir::substBase(hostExv, cacheOp.getAccVar());
-      converter.bindSymbol(symbol, cacheExv);
+      mlir::Value accVar = cacheOp.getAccVar();
+      if (mlir::isa<fir::BaseBoxType>(accVar.getType())) {
+        // acc.cache produces the cache descriptor; its eventual extents and
+        // strides are decided later by cache materialization, which may stage
+        // the section into packed or unpacked storage depending on the bounds
+        // and access pattern. We therefore cannot know the cached shape/strides
+        // here and must not re-impose the host array's shape on the descriptor.
+        // Re-declare with the original lower bounds only (lowered to a
+        // fir.shift, no extents): the resulting fir.rebox then preserves
+        // whatever extents and strides the materialized descriptor carries,
+        // rather than reshaping it back to the host's contiguous layout.
+        llvm::SmallVector<mlir::Value> lbounds =
+            fir::factory::getNonDefaultLowerBounds(builder, operandLocation,
+                                                   hostExv);
+        converter.bindSymbol(symbol, fir::BoxValue(accVar, lbounds,
+                                                   /*explicitParams=*/{},
+                                                   /*explicitExtents=*/{}));
+      } else {
+        // Raw reference (e.g. a contiguous, default-lower-bound array): the
+        // cached reads use the constant-stride path, so keep the host shape.
+        converter.bindSymbol(symbol, fir::substBase(hostExv, accVar));
+      }
     } else {
       // Derived type component reference.
       assert(designator && "expected designator for non-symbol cache operand");

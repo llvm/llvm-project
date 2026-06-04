@@ -1371,8 +1371,10 @@ areInnerLoopExitPHIsSupported(Loop *OuterL, Loop *InnerL,
     // from the loop latch.
     if (PHI.getNumIncomingValues() > 1)
       return false;
+    // The reduction LCSSA PHI's store user is rewritten by reduction2Memory();
+    // skip its user-check but keep validating the remaining LCSSA PHIs.
     if (&PHI == LcssaReduction)
-      return true;
+      continue;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
           if (!PN)
@@ -1472,25 +1474,28 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   }
   // Check if outer and inner loop contain legal instructions only.
   for (auto *BB : OuterLoop->blocks())
-    for (Instruction &I : *BB)
-      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // Functions which don't access memory and don't diverge do not prevent
-        // interchanging.
-        if ((CI->doesNotAccessMemory() && !CI->mayHaveSideEffects()) ||
-            isa<PseudoProbeInst>(CI))
-          continue;
-        LLVM_DEBUG(
-            dbgs() << "Loops with call instructions cannot be interchanged "
-                   << "safely.");
-        ORE->emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "CallInst",
-                                          CI->getDebugLoc(),
-                                          CI->getParent())
-                 << "Cannot interchange loops due to call instruction.";
-        });
+    for (Instruction &I : *BB) {
+      // Loads and stores are checked separately, so we can skip them here.
+      if (isa<LoadInst, StoreInst, PseudoProbeInst>(&I))
+        continue;
 
-        return false;
-      }
+      // We cannot ignore potential memory reads, e.g., loads inside the called
+      // function.
+      if (!I.mayHaveSideEffects() && !I.mayReadFromMemory())
+        continue;
+
+      LLVM_DEBUG(
+          dbgs()
+          << "Loops contain instructions that cannot be safely interchanged\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsafeInst",
+                                        I.getDebugLoc(), I.getParent())
+               << "Cannot interchange loops due to instruction that is "
+                  "potentially unsafe to interchange.";
+      });
+
+      return false;
+    }
 
   if (!findInductions(InnerLoop, InnerLoopInductions)) {
     LLVM_DEBUG(dbgs() << "Could not find inner loop induction variables.\n");
