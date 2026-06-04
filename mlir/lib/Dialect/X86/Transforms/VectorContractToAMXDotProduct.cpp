@@ -264,8 +264,8 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
           ValueRange iterArgs) {
         subviewOffset[subviewOffset.size() - 2] = iv;
 
-        // Retrive two rows of vector (32) for int8 and f8 type. For bf16,
-        // retrive one row of vector (32).
+        // Retrieve two rows of vector (32) for int8 and f8 type. For bf16,
+        // retrieve one row of vector (32).
         auto vectorType = VectorType::get({2, (16 * (offset / 2))}, ipType);
         if (ipType.isBF16())
           vectorType = VectorType::get((16 * offset), ipType);
