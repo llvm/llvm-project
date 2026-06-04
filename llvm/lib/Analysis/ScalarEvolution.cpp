@@ -2948,7 +2948,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
           continue;
 
         const SCEVMulExpr *OtherMul = cast<SCEVMulExpr>(Ops[AddOp]);
-        for (unsigned OMulOp = 0, oe = OtherMul->getNumOperands(); OMulOp != oe;
+        for (unsigned OMulOp = 0, OE = OtherMul->getNumOperands(); OMulOp != OE;
              ++OMulOp) {
           if (OtherMul->getOperand(OMulOp) == MulOpSCEV) {
             // (A*B*C) + (A*D*E)  -->  A * (B*C + D*E)
