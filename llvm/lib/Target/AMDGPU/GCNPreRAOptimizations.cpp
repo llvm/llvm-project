@@ -34,6 +34,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -279,6 +280,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
 
         ++InstrCount;
         const unsigned InstrLatency = SchedModel.computeInstrLatency(&MI);
+        const unsigned NumWaitStates = SIInstrInfo::getNumWaitStates(MI);
 
         // Handle MFMA instructions
         if (SIInstrInfo::isMFMA(MI)) {
@@ -316,6 +318,8 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
                        MaxLookbackWindow)
               RecentMFMAs.erase(RecentMFMAs.begin());
           }
+          // Increment cycle so that back-to-back MFMA is handled naturally
+          CurrentCycle += NumWaitStates;
           continue;
         }
 
@@ -325,7 +329,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
         // Skip non-relevant instructions, or skip until at least one MFMA is
         // encountered
         if (!ShouldCheckReuse || RecentMFMAs.empty()) {
-          CurrentCycle += InstrLatency;
+          CurrentCycle += NumWaitStates;
           continue;
         }
 
@@ -375,7 +379,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
             }
           }
         }
-        CurrentCycle += InstrLatency;
+        CurrentCycle += NumWaitStates;
       }
     }
   }
