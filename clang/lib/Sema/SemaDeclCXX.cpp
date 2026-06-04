@@ -4842,9 +4842,9 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
     // FIXME: Should we try to check the initialization anyway? It seems odd.
     if (ClassDecl->hasAnyDependentBases())
       Dependent = true;
-    // We may have a delegating initializer here, since that is also a type,
-    // that isn't a direct or virtual base of the instantiated type. That will
-    // be handled later.
+    // We may have a delegating initializer here but in a dependent context.
+    // Since that is also a type, that isn't a direct or virtual base of the
+    // instantiated type. That will be handled later.
     else if (!declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
       return Diag(BaseLoc, diag::err_not_direct_base_or_virtual)
              << BaseType << Context.getCanonicalTagType(ClassDecl)
