@@ -221,6 +221,13 @@ if platform.system() == "Darwin":
     except:
         pass
 
+    # Prevent tests from accidentally invoking the real dsymForUUID, which can
+    # make slow network requests. Tests that need a working dsymForUUID mock
+    # should override this.
+    config.environment["LLDB_APPLE_DSYMFORUUID_EXECUTABLE"] = os.path.join(
+        os.path.dirname(config.test_source_root), "Utils", "fake-dsymForUUID.sh"
+    )
+
 # Some shell tests dynamically link with python.dll and need to know the
 # location of the Python libraries. This ensures that we use the same
 # version of Python that was used to build lldb to run our tests.

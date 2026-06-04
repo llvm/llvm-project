@@ -221,6 +221,16 @@ if is_configured("llvm_include_dir"):
 if is_configured("llvm_tools_dir"):
     dotest_cmd += ["--env", "LLVM_TOOLS_DIR=" + config.llvm_tools_dir]
 
+# Prevent tests from accidentally invoking the real dsymForUUID, which can
+# make slow network requests. Tests that need a working dsymForUUID mock
+# should override this with their own script.
+if platform.system() == "Darwin":
+    dotest_cmd += [
+        "--env",
+        "LLDB_APPLE_DSYMFORUUID_EXECUTABLE="
+        + os.path.join(config.lldb_src_root, "test", "Utils", "fake-dsymForUUID.sh"),
+    ]
+
 # If we have a just-built libcxx, prefer it over the system one.
 if is_configured("has_libcxx") and config.has_libcxx:
     if platform.system() != "Windows":
