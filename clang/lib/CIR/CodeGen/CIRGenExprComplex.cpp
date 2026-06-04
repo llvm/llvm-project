@@ -333,7 +333,7 @@ mlir::Value ComplexExprEmitter::emitLoadOfLValue(LValue lv,
                                                  SourceLocation loc) {
   assert(lv.isSimple() && "non-simple complex l-value?");
   if (lv.getType()->isAtomicType())
-    cgf.cgm.errorNYI(loc, "emitLoadOfLValue with Atomic LV");
+    return cgf.emitAtomicLoad(lv, loc).getComplexValue();
 
   const Address srcAddr = lv.getAddress();
   return builder.createLoad(cgf.getLoc(loc), srcAddr, lv.isVolatileQualified());
@@ -357,8 +357,10 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 //===----------------------------------------------------------------------===//
 
 mlir::Value ComplexExprEmitter::VisitExpr(Expr *e) {
-  cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitExpr");
-  return {};
+  cgf.cgm.errorUnsupported(e, "complex expression");
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  return builder.getConstant(loc, cir::PoisonAttr::get(complexTy));
 }
 
 mlir::Value
@@ -413,8 +415,12 @@ mlir::Value ComplexExprEmitter::emitComplexToComplexCast(mlir::Value val,
     return val;
 
   // Get the src/dest element type.
-  QualType srcElemTy = srcType->castAs<ComplexType>()->getElementType();
-  QualType destElemTy = destType->castAs<ComplexType>()->getElementType();
+  QualType srcElemTy = srcType.getAtomicUnqualifiedType()
+                           ->castAs<ComplexType>()
+                           ->getElementType();
+  QualType destElemTy = destType.getAtomicUnqualifiedType()
+                            ->castAs<ComplexType>()
+                            ->getElementType();
 
   cir::CastKind castOpKind;
   if (srcElemTy->isFloatingType() && destElemTy->isFloatingType())
@@ -450,6 +456,7 @@ mlir::Value ComplexExprEmitter::emitScalarToComplexCast(mlir::Value val,
 
 mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
                                          QualType destTy) {
+  destTy = destTy.getAtomicUnqualifiedType();
   switch (ck) {
   case CK_Dependent:
     llvm_unreachable("dependent type must be resolved before the CIR codegen");
@@ -457,15 +464,11 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   // Atomic to non-atomic casts may be more than a no-op for some platforms
   // and for some types.
   case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
   case CK_NoOp:
   case CK_LValueToRValue:
   case CK_UserDefinedConversion:
     return Visit(op);
-
-  case CK_AtomicToNonAtomic: {
-    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast AtomicToNonAtomic");
-    return {};
-  }
 
   case CK_LValueBitCast: {
     LValue origLV = cgf.emitLValue(op);
@@ -810,15 +813,15 @@ ComplexExprEmitter::emitBinOps(const BinaryOperator *e, QualType promotionTy) {
 LValue ComplexExprEmitter::emitCompoundAssignLValue(
     const CompoundAssignOperator *e,
     mlir::Value (ComplexExprEmitter::*func)(const BinOpInfo &), RValue &value) {
-  QualType lhsTy = e->getLHS()->getType();
-  QualType rhsTy = e->getRHS()->getType();
-  SourceLocation exprLoc = e->getExprLoc();
-  mlir::Location loc = cgf.getLoc(exprLoc);
-
-  if (lhsTy->getAs<AtomicType>()) {
+  if (e->getLHS()->getType()->getAs<AtomicType>()) {
     cgf.cgm.errorNYI("emitCompoundAssignLValue AtmoicType");
     return {};
   }
+
+  QualType lhsTy = e->getLHS()->getType().getAtomicUnqualifiedType();
+  QualType rhsTy = e->getRHS()->getType();
+  SourceLocation exprLoc = e->getExprLoc();
+  mlir::Location loc = cgf.getLoc(exprLoc);
 
   BinOpInfo opInfo{loc};
   opInfo.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());

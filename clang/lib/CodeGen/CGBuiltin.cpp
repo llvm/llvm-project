@@ -315,6 +315,9 @@ Value *MakeBinaryAtomicValue(
 
   llvm::Value *Result =
       CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering);
+  // Consider atomics to be volatile in MS kernel mode.
+  if (CGF.CGM.getLangOpts().Kernel)
+    cast<llvm::AtomicRMWInst>(Result)->setVolatile(true);
   return EmitFromInt(CGF, Result, T, ValueType);
 }
 
@@ -754,8 +757,9 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
 
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
-  llvm::CallInst *Call = CGF.Builder.CreateFAbs(V);
-  Call->setDoesNotAccessMemory();
+  llvm::Value *Call = CGF.Builder.CreateFAbs(V);
+  if (auto *CallI = dyn_cast<llvm::CallInst>(Call))
+    CallI->setDoesNotAccessMemory();
   return Call;
 }
 
@@ -790,49 +794,14 @@ static Value *EmitSignBit(CodeGenFunction &CGF, Value *V) {
   return CGF.Builder.CreateICmpSLT(V, Zero);
 }
 
-/// Checks no arguments or results are passed indirectly in the ABI (i.e. via a
-/// hidden pointer). This is used to check annotating FP libcalls (that could
-/// set `errno`) with "int" TBAA metadata is safe. If any floating-point
-/// arguments are passed indirectly, setup for the call could be incorrectly
-/// optimized out.
-static bool HasNoIndirectArgumentsOrResults(CGFunctionInfo const &FnInfo) {
-  auto IsIndirect = [&](ABIArgInfo const &info) {
-    return info.isIndirect() || info.isIndirectAliased() || info.isInAlloca();
-  };
-  return !IsIndirect(FnInfo.getReturnInfo()) &&
-         llvm::none_of(FnInfo.arguments(),
-                       [&](CGFunctionInfoArgInfo const &ArgInfo) {
-                         return IsIndirect(ArgInfo.info);
-                       });
-}
-
 static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
                               const CallExpr *E, llvm::Constant *calleeValue) {
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
   llvm::CallBase *callOrInvoke = nullptr;
   CGFunctionInfo const *FnInfo = nullptr;
-  RValue Call =
-      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot(),
-                   /*Chain=*/nullptr, &callOrInvoke, &FnInfo);
-
-  if (unsigned BuiltinID = FD->getBuiltinID()) {
-    // Check whether a FP math builtin function, such as BI__builtin_expf
-    ASTContext &Context = CGF.getContext();
-    bool ConstWithoutErrnoAndExceptions =
-        Context.BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
-    // Restrict to target with errno, for example, MacOS doesn't set errno.
-    // TODO: Support builtin function with complex type returned, eg: cacosh
-    if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
-        !CGF.Builder.getIsFPConstrained() && Call.isScalar() &&
-        HasNoIndirectArgumentsOrResults(*FnInfo)) {
-      // Emit "int" TBAA metadata on FP math libcalls.
-      clang::QualType IntTy = Context.IntTy;
-      TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
-      CGF.CGM.DecorateInstructionWithTBAA(callOrInvoke, TBAAInfo);
-    }
-  }
-  return Call;
+  return CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot(),
+                      /*Chain=*/nullptr, &callOrInvoke, &FnInfo);
 }
 
 /// Emit a call to llvm.{sadd,uadd,ssub,usub,smul,umul}.with.overflow.*
@@ -2833,6 +2802,10 @@ private:
     }
 
     for (auto *Field : R->fields()) {
+      // Treat unnamed bitfields as padding.
+      if (Field->isUnnamedBitField())
+        continue;
+
       auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
       if (Field->isBitField()) {
         OccuppiedIntervals.push_back(BitInterval{
@@ -7137,7 +7110,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // always just emit into it.
   TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
   if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
-    Address DestPtr = CreateMemTempWithoutCast(E->getType(), "agg.tmp");
+    Address DestPtr = CreateMemTemp(E->getType(), "agg.tmp");
     ReturnValue = ReturnValueSlot(DestPtr, false);
   }
 
