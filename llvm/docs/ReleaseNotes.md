@@ -80,6 +80,15 @@ Makes programs 10x faster by doing Special New Thing.
 * The standard textual output for floating-point literals is changed to take
   advantage of the new floating-point literals formats.
 
+* The resume/destroy functions emitted for the switch-resume ABI (C++20
+  coroutines) now use `CallingConv::C` instead of `CallingConv::Fast`. This
+  stabilizes the coroutine ABI across LLVM versions and aligns it with other
+  vendors. The change is observationally identical on targets where `fastcc`
+  and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
+  break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+
+* Fast math flags are now permitted on `uitofp` and `sitofp`.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -123,7 +132,19 @@ Makes programs 10x faster by doing Special New Thing.
   ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
   there are still issues with invalid compiler reasoning about some functions
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
+  distributed ThinLTO.
+
+* ``ConstantFP`` now supports vector types and is the canonical form returned by
+  ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
+
+* ``DenseMap`` and ``DenseSet`` ``erase`` now invalidates all iterators and
+  references into the container, not just the iterator for the erased element.
+  Use the new ``remove_if`` member to erase matching elements in a single pass
+  instead of erasing while iterating.
+
+* ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
+  refactored and no longer take a type. This API is also now precomputed in
+  TableGen to improve compile-time.
 
 ### Changes to building LLVM
 
@@ -145,6 +166,11 @@ Makes programs 10x faster by doing Special New Thing.
   disabled by default to maintain compatibility with Binutils and LLVM older
   toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
   type for TLS offsets.
+* A bug was fixed that caused LLVM IR inline assembly clobbers of the x29 and
+  x30 registers to be ignored when they were written using their xN names
+  instead of the ABI names FP and LR. Note that LLVM IR produced by Clang
+  always uses the ABI names, but other frontends may not.
+  ([#167783](https://github.com/llvm/llvm-project/pull/167783))
 
 ### Changes to the AMDGPU Backend
 
@@ -154,6 +180,12 @@ Makes programs 10x faster by doing Special New Thing.
   are now deprecated. Use `"amdgpu-waves-per-eu"` instead. The backend still
   honors the attributes; Clang emits a `-Wdeprecated-declarations` warning when
   the source attributes are used.
+* The `relaxed-buffer-oob-mode` subtarget feature has been replaced by two
+  module flags, `amdgpu.buffer.oob.mode` and `amdgpu.tbuffer.oob.mode`, which
+  control out-of-bounds semantics (see the AMDGPU User Guide). Frontends that
+  previously relied on the subtarget feature to enable misaligned buffer merging
+  must now set the corresponding module flag to `1` (relaxed). An absent flag is
+  treated as strict by the backend.
 
 ### Changes to the ARM Backend
 
@@ -201,8 +233,14 @@ Makes programs 10x faster by doing Special New Thing.
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
+* Support for the experimental `XRivosVizip` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
+* Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
+* Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
+* `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
+* Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
+* Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
 
 ### Changes to the WebAssembly Backend
 
@@ -269,7 +307,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
-* The `apropos` command now highlights matching keywords in its output when color is enabled.
+* The `apropos` command now:
+  * Highlights matching keywords in its output when color is enabled.
+  * Searches the components of settings paths. For example `apropos qemu-user` will now
+    show `platform.plugin.qemu-user` as one of the results.
 
 #### Deprecated APIs
 
@@ -317,6 +358,8 @@ Makes programs 10x faster by doing Special New Thing.
   If you are using such a system and cannot change LLDB version, or want to package
   an affected version in a way that is compatible with these systems, the issue
   contains details of backports that could be done to fix the affected versions.
+* When an ELF core file is loaded, LLDB now shows the command line that created the core file.
+  If you need to see it again, use the command `process status -v`.
 * LLDB now supports debugging Linux [Memory Protection Keys](https://docs.kernel.org/core-api/protection-keys.html)
   on AArch64 systems that have the Permission Overlay Extension (POE / FEAT_S1POE).
   See the [LLDB on AArch64 Linux](https://lldb.llvm.org/use/aarch64-linux.html#permission-overlay-extension-poe)
@@ -325,6 +368,9 @@ Makes programs 10x faster by doing Special New Thing.
 #### Windows
 
 * Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
+* Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
+  from the command-line and in the output window when using lldb-dap.
+
 
 ### Changes to BOLT
 

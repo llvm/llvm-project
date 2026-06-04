@@ -40,8 +40,6 @@ class UnrollState {
   VPlan &Plan;
   /// Unroll factor to unroll by.
   const unsigned UF;
-  /// Analysis for types.
-  VPTypeAnalysis TypeInfo;
 
   /// Unrolling may create recipes that should not be unrolled themselves.
   /// Those are tracked in ToSkip.
@@ -75,7 +73,7 @@ class UnrollState {
   }
 
 public:
-  UnrollState(VPlan &Plan, unsigned UF) : Plan(Plan), UF(UF), TypeInfo(Plan) {}
+  UnrollState(VPlan &Plan, unsigned UF) : Plan(Plan), UF(UF) {}
 
   void unrollBlock(VPBlockBase *VPB);
 
@@ -125,25 +123,22 @@ public:
 } // namespace
 
 static void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
-                                        unsigned Part, VPlan &Plan,
-                                        VPTypeAnalysis &TypeInfo) {
+                                        unsigned Part, VPlan &Plan) {
   if (Part == 0)
     return;
 
   VPBuilder Builder(Steps);
-  Type *BaseIVTy = TypeInfo.inferScalarType(Steps->getOperand(0));
+  Type *BaseIVTy = Steps->getOperand(0)->getScalarType();
   Type *IntStepTy =
       IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
   VPValue *StartIndex = Steps->getVFValue();
   if (Part > 1) {
     StartIndex = Builder.createOverflowingOp(
         Instruction::Mul,
-        {StartIndex,
-         Plan.getConstantInt(TypeInfo.inferScalarType(StartIndex), Part)});
+        {StartIndex, Plan.getConstantInt(StartIndex->getScalarType(), Part)});
   }
   StartIndex = Builder.createScalarSExtOrTrunc(
-      StartIndex, IntStepTy, TypeInfo.inferScalarType(StartIndex),
-      Steps->getDebugLoc());
+      StartIndex, IntStepTy, StartIndex->getScalarType(), Steps->getDebugLoc());
 
   if (BaseIVTy->isFloatingPointTy())
     StartIndex = Builder.createScalarCast(Instruction::SIToFP, StartIndex,
@@ -161,12 +156,12 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
     auto PartI = vp_depth_first_shallow(Copy->getEntry());
     auto Part0 = vp_depth_first_shallow(VPR->getEntry());
     for (const auto &[PartIVPBB, Part0VPBB] :
-         zip(VPBlockUtils::blocksOnly<VPBasicBlock>(PartI),
-             VPBlockUtils::blocksOnly<VPBasicBlock>(Part0))) {
+         zip(VPBlockUtils::blocksAs<VPBasicBlock>(PartI),
+             VPBlockUtils::blocksAs<VPBasicBlock>(Part0))) {
       for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
         remapOperands(&PartIR, Part);
         if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR))
-          addStartIndexForScalarSteps(Steps, Part, Plan, TypeInfo);
+          addStartIndexForScalarSteps(Steps, Part, Plan);
 
         addRecipeForPart(&Part0R, &PartIR, Part);
       }
@@ -178,7 +173,7 @@ void UnrollState::unrollWidenInductionByUF(
     VPWidenInductionRecipe *IV, VPBasicBlock::iterator InsertPtForPhi) {
   VPBasicBlock *PH = cast<VPBasicBlock>(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
-  Type *IVTy = TypeInfo.inferScalarType(IV);
+  Type *IVTy = IV->getScalarType();
   auto &ID = IV->getInductionDescriptor();
   FastMathFlags FMF;
   VPIRFlags::WrapFlagsTy WrapFlags(false, false);
@@ -191,8 +186,7 @@ void UnrollState::unrollWidenInductionByUF(
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
-  Type *VectorStepTy =
-      IVTy->isPointerTy() ? TypeInfo.inferScalarType(ScalarStep) : IVTy;
+  Type *VectorStepTy = IVTy->isPointerTy() ? ScalarStep->getScalarType() : IVTy;
   VPInstruction *VectorStep = Builder.createNaryOp(
       VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy, FMF,
       IV->getDebugLoc());
@@ -341,18 +335,20 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
-    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
-      VPBuilder Builder(VPR);
+    if (isa<VPVectorPointerRecipe, VPWidenCanonicalIVRecipe>(R)) {
+      VPBuilder Builder(&R);
       const DataLayout &DL = Plan.getDataLayout();
-      Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
-      Type *VFTy = Plan.getVF().getType();
+      Type *IndexTy =
+          isa<VPWidenCanonicalIVRecipe>(R)
+              ? Plan.getVectorLoopRegion()->getCanonicalIVType()
+              : DL.getIndexType(R.getVPSingleValue()->getScalarType());
+      Type *VFTy = Plan.getVF().getScalarType();
       VPValue *VF = Builder.createScalarZExtOrTrunc(
           &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
       // VFxUF does not wrap, so VF * Part also cannot wrap.
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
-      Copy->setOperand(0, VPR->getOperand(0));
       Copy->addOperand(VFxPart);
       continue;
     }
@@ -379,12 +375,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     remapOperands(Copy, Part);
 
     if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Copy))
-      addStartIndexForScalarSteps(ScalarIVSteps, Part, Plan, TypeInfo);
-
-    // Add operand indicating the part to generate code for, to recipes still
-    // requiring it.
-    if (isa<VPWidenCanonicalIVRecipe>(Copy))
-      Copy->addOperand(getConstantInt(Part));
+      addStartIndexForScalarSteps(ScalarIVSteps, Part, Plan);
 
     if (match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
@@ -397,6 +388,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
     // Materialize Part0 offset for VectorEndPointer.
     VEPR->materializeOffset();
+  }
+  if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
+    // Set Part0 step for WidenCanonicalIV.
+    WideCanIV->addOperand(getConstantInt(0));
   }
 }
 
@@ -507,7 +502,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
       }
     }
 
-    Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+    Type *TCTy = Plan.getTripCount()->getScalarType();
     Plan.getUF().replaceAllUsesWith(Plan.getConstantInt(TCTy, UF));
   });
   if (UF == 1) {
@@ -552,8 +547,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
 static void addLaneToStartIndex(VPScalarIVStepsRecipe *Steps, unsigned Lane,
                                 VPlan &Plan, VPRecipeBase *InsertPt) {
   assert(Lane > 0 && "Zero lane adds no offset to start index");
-  VPTypeAnalysis TypeInfo(Plan);
-  Type *BaseIVTy = TypeInfo.inferScalarType(Steps->getOperand(0));
+  Type *BaseIVTy = Steps->getOperand(0)->getScalarType();
 
   VPValue *OldStartIndex = Steps->getStartIndex();
   VPValue *LaneOffset;
@@ -674,7 +668,6 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
                                                        VPBlockBase *Entry,
                                                        ElementCount VF) {
   VPValue *Idx0 = Plan.getZero(IdxTy);
-  VPTypeAnalysis TypeInfo(Plan);
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry)) {
     for (VPRecipeBase &OldR : make_early_inc_range(cast<VPBasicBlock>(*VPB))) {
       assert(
@@ -720,7 +713,7 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         BranchOnMask->eraseFromParent();
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);
-        Type *PredTy = TypeInfo.inferScalarType(PredOp);
+        Type *PredTy = PredOp->getScalarType();
         VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(PredTy));
         VPPhi *NewPhi = Builder.createScalarPhi({Poison, PredOp}, OldDL);
         PredPhi->replaceAllUsesWith(NewPhi);
@@ -819,14 +812,13 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   // BuildVectors are recorded to be replaced later by chains of insert-element
   // and widen phi's.
   unsigned NumLanes = VF.getFixedValue();
-  VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPInstruction *> BuildVectors;
   for (auto &R : FirstLaneExiting->phis()) {
     auto *Phi = cast<VPPhi>(&R);
     if (vputils::onlyFirstLaneUsed(Phi))
       continue;
 
-    Type *ScalarTy = TypeInfo.inferScalarType(Phi);
+    Type *ScalarTy = Phi->getScalarType();
     bool IsStruct = isa<StructType>(ScalarTy);
     VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(ScalarTy));
     SmallVector<VPValue *> BVOps(NumLanes, Poison);

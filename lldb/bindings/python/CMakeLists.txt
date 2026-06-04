@@ -157,6 +157,18 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
                           ${lldb_python_target_dir}/native/ ${LIBLLDB_SYMLINK_OUTPUT_FILE})
 
+  # On Windows, DLLs must reside alongside the .pyd extension so the loader finds them.
+  # Without this, importing _lldb fails at runtime when vcpkg-provided DLLs are not on PATH.
+  if(WIN32 AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    file(GLOB _lldb_vcpkg_runtime_dlls
+      "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*.dll")
+    if(_lldb_vcpkg_runtime_dlls)
+      add_custom_command(TARGET ${swig_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          ${_lldb_vcpkg_runtime_dlls} "${lldb_python_target_dir}/native/"
+        COMMENT "Staging vcpkg runtime DLLs next to _lldb.pyd")
+    endif()
+  endif()
 
   if (NOT WIN32)
   add_dependencies(${swig_target} lldb-python-wrapper)
@@ -195,6 +207,17 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     add_llvm_install_targets(${python_scripts_install_target}
                              COMPONENT ${python_scripts_target}
                              DEPENDS ${python_scripts_target})
+    # Tools that link liblldb need the python scripts installed alongside.
+    # The list is populated by add_lldb_executable.
+    get_property(lldb_liblldb_tools GLOBAL PROPERTY LLDB_TOOLS_LINKING_LIBLLDB)
+    foreach(tool ${lldb_liblldb_tools})
+      if(TARGET install-${tool})
+        add_dependencies(install-${tool} ${python_scripts_install_target})
+      endif()
+      if(TARGET install-${tool}-stripped AND TARGET ${python_scripts_install_target}-stripped)
+        add_dependencies(install-${tool}-stripped ${python_scripts_install_target}-stripped)
+      endif()
+    endforeach()
   endif()
 
   # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching

@@ -15,6 +15,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -39,6 +40,7 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
@@ -65,7 +67,15 @@ static llvm::cl::opt<bool> strideIncludeLowerExtent(
 
 static llvm::cl::opt<bool> lowerDoLoopToAccLoop(
     "openacc-do-loop-to-acc-loop",
-    llvm::cl::desc("Whether to lower do loops as `acc.loop` operations."),
+    llvm::cl::desc(
+        "Whether to lower do loops inside OpenACC compute constructs "
+        "as `acc.loop` operations."),
+    llvm::cl::init(true));
+
+static llvm::cl::opt<bool> lowerDoLoopToAccLoopInAccRoutine(
+    "openacc-do-loop-to-acc-loop-in-acc-routine",
+    llvm::cl::desc("Whether to lower do loops inside explicit `!$acc routine` "
+                   "procedures as `acc.loop` operations."),
     llvm::cl::init(true));
 
 static llvm::cl::opt<bool> enableSymbolRemapping(
@@ -1060,6 +1070,7 @@ getReductionOperator(const Fortran::parser::ReductionOperator &op,
       converter.getLoweringOptions().getFPMaxminBehavior();
   switch (op.v) {
   case Fortran::parser::ReductionOperator::Operator::Plus:
+  case Fortran::parser::ReductionOperator::Operator::Minus:
     return mlir::acc::ReductionOperator::AccAdd;
   case Fortran::parser::ReductionOperator::Operator::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
@@ -1439,6 +1450,8 @@ static void privatizeIv(
                          Fortran::semantics::SymbolRef(sym));
 }
 
+static bool isInsideSeqOpenACCRoutine(fir::FirOpBuilder &builder);
+
 static void determineDefaultLoopParMode(
     Fortran::lower::AbstractConverter &converter, mlir::acc::LoopOp &loopOp,
     llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
@@ -1455,22 +1468,23 @@ static void determineDefaultLoopParMode(
   if (hasDefaultSeq || hasDefaultIndependent || hasDefaultAuto)
     return; // Default loop par mode is already specified.
 
-  mlir::Region *currentRegion =
-      converter.getFirOpBuilder().getBlock()->getParent();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Region *currentRegion = builder.getBlock()->getParent();
   mlir::Operation *parentOp = mlir::acc::getEnclosingComputeOp(*currentRegion);
   const bool isOrphanedLoop = !parentOp;
-  if (isOrphanedLoop ||
+  if ((isOrphanedLoop && !isInsideSeqOpenACCRoutine(builder)) ||
       mlir::isa_and_present<mlir::acc::ParallelOp>(parentOp)) {
     // As per OpenACC 3.3 standard section 2.9.6 independent clause:
     // A loop construct with no auto or seq clause is treated as if it has the
     // independent clause when it is an orphaned loop construct or its parent
     // compute construct is a parallel construct.
     independentDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
-  } else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentOp)) {
-    // Serial construct implies `seq` clause on loop. However, this
-    // conflicts with parallelism assignment if already set. Therefore check
-    // that first.
+        builder.getContext(), mlir::acc::DeviceType::None));
+  } else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentOp) ||
+             isInsideSeqOpenACCRoutine(builder)) {
+    // Serial construct or seq accelerator routine implies `seq` clause on loop.
+    // However, this conflicts with parallelism assignment if already set.
+    // Therefore check that first.
     bool hasDefaultGangWorkerOrVector =
         loopOp.hasVector() || loopOp.getVectorValue() || loopOp.hasWorker() ||
         loopOp.getWorkerValue() || loopOp.hasGang() ||
@@ -1479,8 +1493,7 @@ static void determineDefaultLoopParMode(
         loopOp.getGangValue(mlir::acc::GangArgType::Static);
     if (!hasDefaultGangWorkerOrVector)
       seqDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-          converter.getFirOpBuilder().getContext(),
-          mlir::acc::DeviceType::None));
+          builder.getContext(), mlir::acc::DeviceType::None));
     // Since the loop has some parallelism assigned - we cannot assign `seq`.
     // However, the `acc.loop` verifier will check that one of seq, independent,
     // or auto is marked. Seems reasonable to mark as auto since the OpenACC
@@ -1489,8 +1502,7 @@ static void determineDefaultLoopParMode(
     // ignore any gang, worker, or vector clauses on the loop construct"
     else
       autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-          converter.getFirOpBuilder().getContext(),
-          mlir::acc::DeviceType::None));
+          builder.getContext(), mlir::acc::DeviceType::None));
   } else {
     // As per OpenACC 3.3 standard section 2.9.7 auto clause:
     // When the parent compute construct is a kernels construct, a loop
@@ -1499,7 +1511,7 @@ static void determineDefaultLoopParMode(
     assert(mlir::isa_and_present<mlir::acc::KernelsOp>(parentOp) &&
            "Expected kernels construct");
     autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
+        builder.getContext(), mlir::acc::DeviceType::None));
   }
 }
 
@@ -1841,8 +1853,21 @@ void AccDataMap::remapDataOperandSymbols(
     }
     std::optional<fir::FortranVariableOpInterface> hostDef =
         symbolMap.lookupVariableDefinition(symbol);
-    assert(hostDef.has_value() && llvm::isa<hlfir::DeclareOp>(*hostDef) &&
-           "expected symbol to be mapped to hlfir.declare");
+    if (!hostDef.has_value() || !llvm::isa<hlfir::DeclareOp>(*hostDef)) {
+      // Privatized loop induction variables in explicit acc routine functions
+      // may not have a host hlfir.declare to clone. Bind the symbol directly
+      // to a declare of the acc.private result.
+      std::string uniqName = converter.mangleName(symbol.get());
+      fir::FortranVariableFlagsAttr attributes =
+          Fortran::lower::translateSymbolAttributes(builder.getContext(),
+                                                    symbol->GetUltimate());
+      auto declare = hlfir::DeclareOp::create(
+          builder, loc, value, uniqName, /*shape=*/nullptr,
+          /*typeparams=*/{}, /*dummyScope=*/nullptr, /*storage=*/nullptr,
+          /*storage_offset=*/0, attributes);
+      symbolMap.addVariableDefinition(symbol, declare, /*force=*/true);
+      continue;
+    }
     auto hostDeclare = llvm::cast<hlfir::DeclareOp>(*hostDef);
     // Replace base input and DummyScope inputs.
     mlir::Value hostInput = hostDeclare.getMemref();
@@ -3750,11 +3775,39 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(postDeallocOp);
 }
 
+static std::optional<Fortran::semantics::Symbol::Flag>
+getSingleAccDeclareMappingFlag(const Fortran::semantics::Symbol &ultimate,
+                               mlir::Location loc) {
+  std::optional<Fortran::semantics::Symbol::Flag> found;
+  for (Fortran::semantics::Symbol::Flag f : {
+           Fortran::semantics::Symbol::Flag::AccCreate,
+           Fortran::semantics::Symbol::Flag::AccCopyIn,
+           Fortran::semantics::Symbol::Flag::AccCopyInReadOnly,
+           Fortran::semantics::Symbol::Flag::AccCopy,
+           Fortran::semantics::Symbol::Flag::AccCopyOut,
+           Fortran::semantics::Symbol::Flag::AccDevicePtr,
+           Fortran::semantics::Symbol::Flag::AccDeviceResident,
+           Fortran::semantics::Symbol::Flag::AccLink,
+           Fortran::semantics::Symbol::Flag::AccPresent,
+       }) {
+    if (ultimate.test(f)) {
+      if (found.has_value()) {
+        fir::emitFatalError(
+            loc, "more than one ACC DECLARE data-mapping flag on a symbol");
+      }
+      found = f;
+    }
+  }
+  return found;
+}
+
 template <typename EntryOp, typename ExitOp>
-static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
-                           mlir::OpBuilder &modBuilder,
-                           const Fortran::parser::AccObjectList &accObjectList,
-                           mlir::acc::DataClause clause) {
+static void
+genGlobalCtors(Fortran::lower::AbstractConverter &converter,
+               mlir::OpBuilder &modBuilder,
+               const Fortran::parser::AccObjectList &accObjectList,
+               mlir::acc::DataClause clause,
+               Fortran::semantics::Symbol::Flag declareMappingFlag) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto genCtors = [&](const mlir::Location operandLocation,
                       const Fortran::semantics::Symbol &symbol) {
@@ -3824,23 +3877,76 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
               if (const auto *name =
                       Fortran::parser::GetDesignatorNameIfDataRef(designator)) {
                 genCtors(operandLocation, *name->symbol);
-              } else if (const auto *dr = std::get_if<Fortran::parser::DataRef>(
-                             &designator.u);
-                         dr &&
-                         std::holds_alternative<Fortran::common::Indirection<
-                             Fortran::parser::StructureComponent>>(dr->u)) {
+              } else if (const auto *structureComponent =
+                             Fortran::parser::Unwrap<
+                                 Fortran::parser::StructureComponent>(
+                                 designator)) {
                 const Fortran::semantics::Scope &scope =
                     converter.getCurrentScope();
-                if (scope.IsModule() || scope.IsSubmodule()) {
+                if (!scope.IsModule() && !scope.IsSubmodule()) {
                   TODO(operandLocation,
                        "OpenACC declare does not support a component reference "
-                       "in a module; `acc declare` the whole variable instead");
-                } else {
-                  TODO(operandLocation,
-                       "OpenACC declare does not support a component reference "
-                       "in this declaration context; `acc declare` the whole "
+                       "in this declaration context; ACC DECLARE the whole "
                        "variable instead");
                 }
+                const Fortran::parser::DataRef &baseRef =
+                    structureComponent->Base();
+                const auto *parentName{
+                    std::get_if<Fortran::parser::Name>(&baseRef.u)};
+                if (parentName && parentName->symbol &&
+                    structureComponent->Component().symbol) {
+                  const Fortran::semantics::Symbol &parentSym{
+                      *parentName->symbol};
+                  const Fortran::semantics::Symbol &compSym{
+                      *structureComponent->Component().symbol};
+                  if (parentSym.owner().kind() ==
+                          Fortran::semantics::Scope::Kind::Module &&
+                      parentSym.GetType()) {
+                    if (const Fortran::semantics::DerivedTypeSpec *derived{
+                            parentSym.GetType()->AsDerived()}) {
+                      if (Fortran::semantics::FindImmediateComponent(
+                              *derived,
+                              [&](const Fortran::semantics::Symbol &sym) {
+                                return sym == compSym ||
+                                       &sym.GetUltimate() ==
+                                           &compSym.GetUltimate();
+                              })) {
+                        const Fortran::semantics::Symbol &parentUlt{
+                            parentSym.GetUltimate()};
+                        if (!parentUlt.test(
+                                Fortran::semantics::Symbol::Flag::AccDeclare)) {
+                          TODO(operandLocation,
+                               "OpenACC declare: whole variable must appear in "
+                               "ACC DECLARE before a component reference; "
+                               "list the whole variable in this or an earlier "
+                               "clause");
+                        }
+                        std::optional<Fortran::semantics::Symbol::Flag>
+                            parentMapping{getSingleAccDeclareMappingFlag(
+                                parentUlt, operandLocation)};
+                        if (!parentMapping) {
+                          fir::emitFatalError(
+                              operandLocation,
+                              "parent of component reference has unexpected "
+                              "ACC DECLARE clause");
+                        }
+                        if (*parentMapping != declareMappingFlag) {
+                          TODO(operandLocation,
+                               "OpenACC declare: module structure component "
+                               "clause must match the whole variable's ACC "
+                               "DECLARE clause");
+                        }
+                        // Parent already has matching declare lowering; skip
+                        // duplicate ctor/dtor for %comp.
+                        return;
+                      }
+                    }
+                  }
+                }
+                TODO(
+                    operandLocation,
+                    "OpenACC declare does not support this component reference "
+                    "in a module; ACC DECLARE the whole variable instead");
               }
             },
             [&](const Fortran::parser::Name &name) {
@@ -3873,8 +3979,12 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
           listWithModifier.t);
   mlir::acc::DataClause dataClause =
       (modifier && (*modifier).v == mod) ? clauseWithModifier : clause;
+  Fortran::semantics::Symbol::Flag mappingFlag =
+      (modifier && (*modifier).v == mod)
+          ? Fortran::semantics::Symbol::Flag::AccCopyInReadOnly
+          : Fortran::semantics::Symbol::Flag::AccCopyIn;
   genGlobalCtors<EntryOp, ExitOp>(converter, modBuilder, accObjectList,
-                                  dataClause);
+                                  dataClause, mappingFlag);
 }
 
 template <typename EmitterFn>
@@ -4088,7 +4198,8 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
           std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
       genGlobalCtors<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
           converter, modBuilder, accObjectList,
-          mlir::acc::DataClause::acc_create);
+          mlir::acc::DataClause::acc_create,
+          Fortran::semantics::Symbol::Flag::AccCreate);
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
@@ -4102,12 +4213,14 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genGlobalCtors<mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeleteOp>(
           converter, modBuilder, deviceResidentClause->v,
-          mlir::acc::DataClause::acc_declare_device_resident);
+          mlir::acc::DataClause::acc_declare_device_resident,
+          Fortran::semantics::Symbol::Flag::AccDeviceResident);
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
       genGlobalCtors<mlir::acc::DeclareLinkOp, mlir::acc::DeclareLinkOp>(
           converter, modBuilder, linkClause->v,
-          mlir::acc::DataClause::acc_declare_link);
+          mlir::acc::DataClause::acc_declare_link,
+          Fortran::semantics::Symbol::Flag::AccLink);
     } else {
       llvm::report_fatal_error("unsupported clause on DECLARE directive");
     }
@@ -4494,9 +4607,28 @@ genACC(Fortran::lower::AbstractConverter &converter,
             converter.getSymbolMap().lookupSymbol(symbol)) {
       // For simple variables, rebind the symbol directly.
       fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
-      fir::ExtendedValue cacheExv =
-          fir::substBase(hostExv, cacheOp.getAccVar());
-      converter.bindSymbol(symbol, cacheExv);
+      mlir::Value accVar = cacheOp.getAccVar();
+      if (mlir::isa<fir::BaseBoxType>(accVar.getType())) {
+        // acc.cache produces the cache descriptor; its eventual extents and
+        // strides are decided later by cache materialization, which may stage
+        // the section into packed or unpacked storage depending on the bounds
+        // and access pattern. We therefore cannot know the cached shape/strides
+        // here and must not re-impose the host array's shape on the descriptor.
+        // Re-declare with the original lower bounds only (lowered to a
+        // fir.shift, no extents): the resulting fir.rebox then preserves
+        // whatever extents and strides the materialized descriptor carries,
+        // rather than reshaping it back to the host's contiguous layout.
+        llvm::SmallVector<mlir::Value> lbounds =
+            fir::factory::getNonDefaultLowerBounds(builder, operandLocation,
+                                                   hostExv);
+        converter.bindSymbol(symbol, fir::BoxValue(accVar, lbounds,
+                                                   /*explicitParams=*/{},
+                                                   /*explicitExtents=*/{}));
+      } else {
+        // Raw reference (e.g. a contiguous, default-lower-bound array): the
+        // cached reads use the constant-stride path, so keep the host shape.
+        converter.bindSymbol(symbol, fir::substBase(hostExv, accVar));
+      }
     } else {
       // Derived type component reference.
       assert(designator && "expected designator for non-symbol cache operand");
@@ -4726,6 +4858,34 @@ bool Fortran::lower::isInsideOpenACCComputeConstruct(
       mlir::acc::getEnclosingComputeOp(builder.getRegion()));
 }
 
+bool Fortran::lower::isInsideOpenACCRoutine(fir::FirOpBuilder &builder) {
+  return mlir::acc::isAccRoutine(builder.getFunction().getOperation());
+}
+
+static bool isInsideSeqOpenACCRoutine(fir::FirOpBuilder &builder) {
+  mlir::func::FuncOp funcOp = builder.getFunction();
+  if (!mlir::acc::isAccRoutine(funcOp.getOperation()))
+    return false;
+  auto routineInfo = funcOp->getAttrOfType<mlir::acc::RoutineInfoAttr>(
+      mlir::acc::getRoutineInfoAttrName());
+  if (!routineInfo)
+    return false;
+  for (mlir::SymbolRefAttr routineRef : routineInfo.getAccRoutines()) {
+    auto routineOp =
+        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::acc::RoutineOp>(
+            funcOp, routineRef.getLeafReference());
+    if (routineOp && routineOp.hasSeq())
+      return true;
+  }
+  return false;
+}
+
+bool Fortran::lower::shouldLowerDoConstructAsAccLoop(
+    fir::FirOpBuilder &builder) {
+  return (lowerDoLoopToAccLoop && isInsideOpenACCComputeConstruct(builder)) ||
+         (lowerDoLoopToAccLoopInAccRoutine && isInsideOpenACCRoutine(builder));
+}
+
 void Fortran::lower::setInsertionPointAfterOpenACCLoopIfInside(
     fir::FirOpBuilder &builder) {
   if (auto loopOp =
@@ -4809,7 +4969,8 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::SymMap &localSymbols,
     const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval) {
-  if (!lowerDoLoopToAccLoop)
+  if (!Fortran::lower::shouldLowerDoConstructAsAccLoop(
+          converter.getFirOpBuilder()))
     return nullptr;
 
   // Only convert loops which have induction variables that need privatized.
@@ -4868,13 +5029,17 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Operation *accRegionOp =
       mlir::acc::getEnclosingComputeOp(builder.getRegion());
-  mlir::acc::LoopParMode parMode =
-      mlir::isa_and_present<mlir::acc::ParallelOp>(accRegionOp) &&
-              doConstruct.IsDoConcurrent()
-          ? mlir::acc::LoopParMode::loop_independent
-      : mlir::isa_and_present<mlir::acc::SerialOp>(accRegionOp)
-          ? mlir::acc::LoopParMode::loop_seq
-          : mlir::acc::LoopParMode::loop_auto;
+  mlir::acc::LoopParMode parMode;
+  if (mlir::isa_and_present<mlir::acc::SerialOp>(accRegionOp) ||
+      isInsideSeqOpenACCRoutine(builder)) {
+    parMode = mlir::acc::LoopParMode::loop_seq;
+  } else if (doConstruct.IsDoConcurrent() &&
+             (mlir::isa_and_present<mlir::acc::ParallelOp>(accRegionOp) ||
+              isInsideOpenACCRoutine(builder))) {
+    parMode = mlir::acc::LoopParMode::loop_independent;
+  } else {
+    parMode = mlir::acc::LoopParMode::loop_auto;
+  }
 
   // Set the parallel mode based on the computed parMode
   auto deviceNoneAttr = mlir::acc::DeviceTypeAttr::get(

@@ -92,6 +92,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_VecInregOp(N);
     break;
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::ANY_EXTEND:
   case ISD::BITREVERSE:
   case ISD::BSWAP:
@@ -900,6 +901,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::STORE:
     Res = ScalarizeVecOp_STORE(cast<StoreSDNode>(N), OpNo);
     break;
+  case ISD::ATOMIC_STORE:
+    Res = ScalarizeVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
+    break;
   case ISD::STRICT_FP_ROUND:
     Res = ScalarizeVecOp_STRICT_FP_ROUND(N, OpNo);
     break;
@@ -1162,6 +1166,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
                       N->getMemOperand()->getFlags(), N->getAAInfo());
 }
 
+/// If the value to store is a vector that needs to be scalarized, it must be
+/// <1 x ty>.  Just store the element.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_ATOMIC_STORE(AtomicSDNode *N) {
+  SDValue ScalarVal = GetScalarizedVector(N->getVal());
+  return DAG.getAtomic(ISD::ATOMIC_STORE, SDLoc(N),
+                       N->getMemoryVT().getVectorElementType(), N->getChain(),
+                       ScalarVal, N->getBasePtr(), N->getMemOperand());
+}
+
 /// If the value to round is a vector that needs to be scalarized, it must be
 /// <1 x ty>. Convert the element instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo) {
@@ -1406,6 +1419,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::VP_ABS:
   case ISD::BITREVERSE:
   case ISD::VP_BITREVERSE:
@@ -3498,6 +3512,17 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
   SDValue EVL = N->getOperand(2);
   SDLoc DL(N);
 
+  // The stack round-trip uses a byte stride, so a sub-byte element (e.g. i1)
+  // would get stride 0 and alias every lane. Widen to a byte integer, reverse,
+  // then truncate back.
+  EVT OrigVT = VT;
+  if (!VT.getVectorElementType().isByteSized()) {
+    EVT WideEltVT = VT.getVectorElementType().changeTypeToInteger();
+    WideEltVT = WideEltVT.getRoundIntegerType(*DAG.getContext());
+    VT = VT.changeVectorElementType(*DAG.getContext(), WideEltVT);
+    Val = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Val);
+  }
+
   // Fallback to VP_STRIDED_STORE to stack followed by VP_LOAD.
   Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
 
@@ -3532,6 +3557,10 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 
   SDValue Load = DAG.getLoadVP(VT, DL, Store, StackPtr, Mask, EVL, LoadMMO);
 
+  // Truncate back if we widened above.
+  if (OrigVT != VT)
+    Load = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Load);
+
   std::tie(Lo, Hi) = DAG.SplitVector(Load, DL);
 }
 
@@ -3550,6 +3579,18 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
   // SelectionDAGBuilder. Promote EVL1 here if needed.
   if (getTypeAction(EVL1.getValueType()) == TargetLowering::TypePromoteInteger)
     EVL1 = ZExtPromotedInteger(EVL1);
+
+  // The stack splice addresses elements by byte offset/stride, which breaks for
+  // a sub-byte element (e.g. i1): getVectorElementPointer asserts and the
+  // stride is 0. Widen to a byte integer, splice, then truncate back.
+  EVT OrigVT = VT;
+  if (!VT.getVectorElementType().isByteSized()) {
+    EVT WideEltVT = VT.getVectorElementType().changeTypeToInteger();
+    WideEltVT = WideEltVT.getRoundIntegerType(*DAG.getContext());
+    VT = VT.changeVectorElementType(*DAG.getContext(), WideEltVT);
+    V1 = DAG.getNode(ISD::ANY_EXTEND, DL, VT, V1);
+    V2 = DAG.getNode(ISD::ANY_EXTEND, DL, VT, V2);
+  }
 
   Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
 
@@ -3599,8 +3640,12 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
     Load = DAG.getLoadVP(VT, DL, StoreV2, StackPtr2, Mask, EVL2, LoadMMO);
   }
 
+  // Truncate back if we widened above.
+  if (OrigVT != VT)
+    Load = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Load);
+
   EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(OrigVT);
   Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, Load,
                    DAG.getVectorIdxConstant(0, DL));
   Hi =
@@ -3754,6 +3799,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::FCOPYSIGN:         Res = SplitVecOp_FPOpDifferentTypes(N); break;
   case ISD::STORE:
     Res = SplitVecOp_STORE(cast<StoreSDNode>(N), OpNo);
+    break;
+  case ISD::ATOMIC_STORE:
+    Res = SplitVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
     break;
   case ISD::VP_STORE:
     Res = SplitVecOp_VP_STORE(cast<VPStoreSDNode>(N), OpNo);
@@ -4692,6 +4740,23 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
 }
 
+SDValue DAGTypeLegalizer::SplitVecOp_ATOMIC_STORE(AtomicSDNode *N) {
+  SDLoc DL(N);
+  SDValue StVal = N->getVal();
+  EVT VT = StVal.getValueType();
+
+  // Issue a single atomic store of an integer that spans the full memory
+  // width. Bitcasting the (illegal) vector value to that integer lets the
+  // type legalizer further legalize the BITCAST input as needed, while the
+  // ATOMIC_STORE itself uses only the legal integer type.
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+  EVT MemIntVT =
+      EVT::getIntegerVT(*DAG.getContext(), N->getMemoryVT().getSizeInBits());
+  SDValue AsInt = DAG.getBitcast(IntVT, StVal);
+  return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MemIntVT, N->getChain(), AsInt,
+                       N->getBasePtr(), N->getMemOperand());
+}
+
 SDValue DAGTypeLegalizer::SplitVecOp_CONCAT_VECTORS(SDNode *N) {
   SDLoc DL(N);
 
@@ -5383,6 +5448,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     [[fallthrough]];
 
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::VP_ABS:
   case ISD::BITREVERSE:
   case ISD::VP_BITREVERSE:
@@ -6596,6 +6662,23 @@ static SDValue coerceLoadedValue(SDValue LdOp, EVT FirstVT, EVT WidenVT,
   return LdOp;
 }
 
+/// Inverse of coerceLoadedValue: pull a FirstVT-sized scalar/vector out of the
+/// widened value so it can be issued in a single atomic store.
+static SDValue coerceStoredValue(SDValue StVal, EVT FirstVT, EVT WidenVT,
+                                 TypeSize FirstVTWidth, const SDLoc &dl,
+                                 SelectionDAG &DAG) {
+  TypeSize WidenWidth = WidenVT.getSizeInBits();
+  if (!FirstVT.isVector()) {
+    unsigned NumElts =
+        WidenWidth.getFixedValue() / FirstVTWidth.getFixedValue();
+    EVT NewVecVT = EVT::getVectorVT(*DAG.getContext(), FirstVT, NumElts);
+    SDValue VecOp = DAG.getNode(ISD::BITCAST, dl, NewVecVT, StVal);
+    return DAG.getExtractVectorElt(dl, FirstVT, VecOp, 0);
+  }
+  assert(FirstVT == WidenVT && "First value type must equal widen value type");
+  return StVal;
+}
+
 static std::optional<EVT> findMemType(SelectionDAG &DAG,
                                       const TargetLowering &TLI, unsigned Width,
                                       EVT WidenVT, unsigned Align,
@@ -6606,11 +6689,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_ATOMIC_LOAD(AtomicSDNode *LD) {
       TLI.getTypeToTransformTo(*DAG.getContext(), LD->getValueType(0));
   EVT LdVT = LD->getMemoryVT();
   SDLoc dl(LD);
-  assert(LdVT.isVector() && WidenVT.isVector() && "Expected vectors");
-  assert(LdVT.isScalableVector() == WidenVT.isScalableVector() &&
-         "Must be scalable");
-  assert(LdVT.getVectorElementType() == WidenVT.getVectorElementType() &&
-         "Expected equivalent element types");
 
   // Load information
   SDValue Chain = LD->getChain();
@@ -7433,6 +7511,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXTRACT_SUBVECTOR:  Res = WidenVecOp_EXTRACT_SUBVECTOR(N); break;
   case ISD::EXTRACT_VECTOR_ELT: Res = WidenVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::STORE:              Res = WidenVecOp_STORE(N); break;
+  case ISD::ATOMIC_STORE:
+    Res = WidenVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
+    break;
   case ISD::VP_STORE:           Res = WidenVecOp_VP_STORE(N, OpNo); break;
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     Res = WidenVecOp_VP_STRIDED_STORE(N, OpNo);
@@ -8047,6 +8128,36 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
   }
 
   report_fatal_error("Unable to widen vector store");
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_ATOMIC_STORE(AtomicSDNode *ST) {
+  EVT StVT = ST->getMemoryVT();
+  SDLoc dl(ST);
+
+  SDValue StVal = GetWidenedVector(ST->getVal());
+  EVT WidenVT = StVal.getValueType();
+
+  TypeSize StWidth = StVT.getSizeInBits();
+  TypeSize WidenWidth = WidenVT.getSizeInBits();
+  TypeSize WidthDiff = WidenWidth - StWidth;
+
+  // Find the vector type that can store the original memory width in one
+  // atomic operation. Pass StAlign=0 (like atomic loads); a real align would
+  // let findMemType widen the access past the value (e.g. <2 x i8> at align 4
+  // implies a 4-byte movl, writing undef bytes past its object).
+  std::optional<EVT> FirstVT =
+      findMemType(DAG, TLI, StWidth.getKnownMinValue(), WidenVT, /*StAlign=*/0,
+                  WidthDiff.getKnownMinValue());
+  if (!FirstVT)
+    return SDValue();
+
+  TypeSize FirstVTWidth = FirstVT->getSizeInBits();
+
+  SDValue StOp =
+      coerceStoredValue(StVal, *FirstVT, WidenVT, FirstVTWidth, dl, DAG);
+
+  return DAG.getAtomic(ISD::ATOMIC_STORE, dl, *FirstVT, ST->getChain(), StOp,
+                       ST->getBasePtr(), ST->getMemOperand());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo) {

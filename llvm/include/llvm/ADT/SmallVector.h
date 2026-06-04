@@ -1323,20 +1323,22 @@ using ValueTypeFromRangeType =
 /// when you want to iterate a range and then sort the results.
 template <unsigned Size, typename R>
 SmallVector<ValueTypeFromRangeType<R>, Size> to_vector(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<ValueTypeFromRangeType<R>, Size>(adl_begin(Range),
+                                                      adl_end(Range));
 }
 template <typename R>
 SmallVector<ValueTypeFromRangeType<R>> to_vector(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<ValueTypeFromRangeType<R>>(adl_begin(Range),
+                                                adl_end(Range));
 }
 
 template <typename Out, unsigned Size, typename R>
 SmallVector<Out, Size> to_vector_of(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<Out, Size>(adl_begin(Range), adl_end(Range));
 }
 
 template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<Out>(adl_begin(Range), adl_end(Range));
 }
 
 // Explicit instantiations
@@ -1349,10 +1351,6 @@ extern template class llvm::SmallVectorBase<uint64_t>;
 template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
   static SmallVector<T, N> getEmptyKey() {
     return {DenseMapInfo<T>::getEmptyKey()};
-  }
-
-  static SmallVector<T, N> getTombstoneKey() {
-    return {DenseMapInfo<T>::getTombstoneKey()};
   }
 
   static unsigned getHashValue(const SmallVector<T, N> &V) {

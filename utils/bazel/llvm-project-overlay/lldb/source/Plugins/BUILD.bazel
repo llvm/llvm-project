@@ -1254,6 +1254,7 @@ cc_library(
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
@@ -2303,6 +2304,7 @@ cc_library(
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginObjectFileELF",
+        ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Target",

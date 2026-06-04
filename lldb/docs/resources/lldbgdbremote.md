@@ -814,6 +814,11 @@ On macOS with debugserver, we expedite the frame pointer backchain for a thread
 the previous FP and PC), and follow the backchain. Most backtraces on macOS and
 iOS now don't require us to read any memory.
 
+An expedited register may have an empty string as its value (`"21":""`)
+which indicates that the register cannot be read at this current
+stop point, and lldb should not try to read the register value with
+a separate `p` read-register request, it will not succeed.
+
 **Priority To Implement:** Low
 
 This is a performance optimization, which speeds up debugging by avoiding
@@ -2174,14 +2179,26 @@ following forms:
   followed by a series of key/value pairs:
     * If key is a hex number, it is a register number and value is
       the hex value of the register in debuggee endian byte order.
+      An empty value indicates that the register cannot be fetched
+      at this stop point; lldb will not succeed if it sends a separate
+      read-register packet.
     * If key == "thread", then the value is the big endian hex
       thread-id of the stopped thread.
     * If key == "core", then value is a hex number of the core on
       which the stop was detected.
     * If key == "watch" or key == "rwatch" or key == "awatch", then
       value is the data address in big endian hex
-    * If key == "library", then value is ignore and "qXfer:libraries:read"
-      packets should be used to detect any newly loaded shared libraries
+    * If key == "library", then value is ignored and `qXfer:libraries:read`
+      packets should be used to detect any newly loaded shared libraries.
+      The server emits this whenever one or more shared libraries have been
+      loaded or unloaded since the last stop. On Linux/SVR4 systems
+      lldb-server does not emit `library:`, since the dynamic loader is
+      observable via a breakpoint on `_dl_debug_state`. Instead, the BP hit
+      serves as the notification (and clients use `qXfer:libraries-svr4:read`).
+      On Windows, where the kernel raises `LOAD_DLL_DEBUG_EVENT` /
+      `UNLOAD_DLL_DEBUG_EVENT` directly, lldb-server tracks pending events via
+      `NativeProcessProtocol::HasPendingLibraryEvents()` and emits `library:1;`
+      in the next stop reply.
 
 * `WAA` - `W` means the process exited and `AA` is the exit status.
 
@@ -2682,3 +2699,96 @@ omitting them will work fine; these numbers are always base 16.
 
 The length of the payload is not provided.  A reliable, 8-bit clean,
 transport layer is assumed.
+
+## Accelerator Packets
+
+The packets below support debugging hardware accelerators (e.g. GPUs,
+FPGAs) alongside the native host process via accelerator plugins installed
+in lldb-server.
+
+### jAcceleratorPluginInitialize
+
+This packet requests initialization data from all accelerator plugins
+installed in lldb-server. Accelerator plugins allow lldb-server to support
+debugging of hardware accelerators (e.g. GPUs, FPGAs) alongside the native
+host process.
+
+This packet requires the `accelerator-plugins+` feature from `qSupported`.
+It should be sent early in the session, after `qSupported` but before
+launching or attaching to an inferior process. If the hardware accelerator
+is not present, launching or attaching to the accelerator debug session
+will fail.
+
+```
+LLDB SENDS:    jAcceleratorPluginInitialize
+STUB REPLIES:  [<accelerator_action>,...]
+```
+
+Each `accelerator_action` is a JSON object with the following required fields:
+
+| Key            | Type    | Description |
+|----------------|---------|-------------|
+| `plugin_name`  | string  | Unique name identifying the accelerator plugin (e.g. `"mock"`, `"amdgpu"`). Each installed plugin has a globally unique name. |
+| `session_name` | string  | Human-readable label for the accelerator target, stored on the Target object to distinguish it from the CPU target (e.g. `"AMD GPU Session"`). May be empty. |
+| `identifier`   | integer | Identifier for this action, unique within the scope of its `plugin_name`. To refer to a specific action, use the combination of `plugin_name` and `identifier`. |
+
+There can be multiple accelerator plugins installed, each with a globally
+unique `plugin_name`. The response is a JSON array with one entry per
+installed plugin.
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginInitialize
+STUB REPLIES:  [{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identifier":0}]
+```
+
+If no accelerator plugins are installed, the server does not advertise the
+`accelerator-plugins+` feature and this packet should not be sent.
+
+Each `accelerator_action` may include a `breakpoints` array requesting
+breakpoints to be set in the native process. See
+`jAcceleratorPluginBreakpointHit` for the callback when those breakpoints
+are hit.
+
+In future patches, each `accelerator_action` will include additional fields
+such as connection info for secondary debug sessions and synchronization
+options.
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.
+
+### jAcceleratorPluginBreakpointHit
+
+Sent by the client when a breakpoint requested by an accelerator plugin
+is hit in the native process. This packet requires the
+`accelerator-plugins+` feature from `qSupported`.
+
+```
+LLDB SENDS:    jAcceleratorPluginBreakpointHit:<json>
+STUB REPLIES:  <json_response>
+```
+
+The request JSON has the following fields:
+
+| Key             | Type   | Description |
+|-----------------|--------|-------------|
+| `plugin_name`   | string | Name of the plugin that requested the breakpoint. |
+| `breakpoint`    | object | The `AcceleratorBreakpointInfo` that was hit, including its `identifier`. |
+| `symbol_values` | array  | Array of `{"name": "<name>", "value": <addr>}` for each symbol requested in the breakpoint's `symbol_names`. |
+
+The response JSON has the following fields:
+
+| Key                  | Type | Description |
+|----------------------|------|-------------|
+| `disable_bp`         | bool   | If true, the client should disable this breakpoint. |
+| `auto_resume_native` | bool   | If true, the native process should automatically resume after handling the hit. |
+| `actions`            | object | Optional `AcceleratorActions` for the client to perform. |
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginBreakpointHit:{"plugin_name":"mock","breakpoint":{"identifier":1,"symbol_names":[]},"symbol_values":[]}
+STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false,"actions":{"plugin_name":"mock","session_name":"","identifier":2,"breakpoints":[{"identifier":2,"by_name":{"function_name":"exit"},"symbol_names":[]}]}}
+```
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.

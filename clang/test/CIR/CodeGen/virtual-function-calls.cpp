@@ -13,14 +13,14 @@ struct A {
 // This should initialize the vtable pointer.
 A::A() {}
 
-// CIR: !rec_A = !cir.record<struct "A" {!cir.vptr}>
-// CIR: !rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR: !rec_A = !cir.struct<"A" {!cir.vptr}>
+// CIR: !rec_anon_struct = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
 
 // CIR: cir.global "private" external @_ZTV1A : !rec_anon_struct
 
 // LLVM: @_ZTV1A = external global { [3 x ptr] }
 
-// OGCG: @_ZTV1A = external unnamed_addr constant { [3 x ptr] }
+// OGCG: @_ZTV1A = external constant { [3 x ptr] }
 
 // CIR: cir.func{{.*}} @_ZN1AC2Ev(%arg0: !cir.ptr<!rec_A> {{.*}})
 // CIR:    %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["this", init]

@@ -772,16 +772,7 @@ define <4 x i8> @test_psslai_b(<4 x i8> %a) {
 define <2 x i16> @test_pssla_hs(<2 x i16> %a, i16 %shamt) {
 ; CHECK-LABEL: test_pssla_hs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmsltz.h a2, a0
-; CHECK-NEXT:    lui a3, 8
-; CHECK-NEXT:    plui.h a4, -512
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    pmv.hs a3, a3
-; CHECK-NEXT:    merge a2, a3, a4
-; CHECK-NEXT:    psll.hs a3, a0, a1
-; CHECK-NEXT:    psra.hs a1, a3, a1
-; CHECK-NEXT:    pmseq.h a0, a0, a1
-; CHECK-NEXT:    merge a0, a2, a3
+; CHECK-NEXT:    pssha.hs a0, a0, a1
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i16> poison, i16 %shamt, i32 0
   %b = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer
@@ -1710,7 +1701,7 @@ define <2 x i16> @test_ne_h(<2 x i16> %a, <2 x i16> %b) {
   ret <2 x i16> %res
 }
 
-define <2 x i16> @test_nez_h(<2 x i16> %a, <2 x i16> %b) {
+define <2 x i16> @test_nez_h(<2 x i16> %a) {
 ; CHECK-LABEL: test_nez_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmsnez.h a0, a0
@@ -1762,7 +1753,7 @@ define <2 x i16> @test_sge_h(<2 x i16> %a, <2 x i16> %b) {
   ret <2 x i16> %res
 }
 
-define <2 x i16> @test_sgez_h(<2 x i16> %a, <2 x i16> %b) {
+define <2 x i16> @test_sgez_h(<2 x i16> %a) {
 ; CHECK-LABEL: test_sgez_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmsltz.h a0, a0
@@ -1837,6 +1828,16 @@ define <4 x i8> @test_ne_b(<4 x i8> %a, <4 x i8> %b) {
   ret <4 x i8> %res
 }
 
+define <4 x i8> @test_nez_b(<4 x i8> %a) {
+; CHECK-LABEL: test_nez_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmsnez.b a0, a0
+; CHECK-NEXT:    ret
+  %cmp = icmp ne <4 x i8> %a, splat (i8 0)
+  %res = sext <4 x i1> %cmp to <4 x i8>
+  ret <4 x i8> %res
+}
+
 define <4 x i8> @test_slt_b(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: test_slt_b:
 ; CHECK:       # %bb.0:
@@ -1875,6 +1876,17 @@ define <4 x i8> @test_sge_b(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    ret
   %cmp = icmp sge <4 x i8> %a, %b
+  %res = sext <4 x i1> %cmp to <4 x i8>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_sgez_b(<4 x i8> %a) {
+; CHECK-LABEL: test_sgez_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmsltz.b a0, a0
+; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt <4 x i8> %a, splat (i8 -1)
   %res = sext <4 x i1> %cmp to <4 x i8>
   ret <4 x i8> %res
 }
@@ -2000,10 +2012,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB142_2
+; CHECK-NEXT:    bnez a3, .LBB144_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB142_2:
+; CHECK-NEXT:  .LBB144_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2014,10 +2026,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB143_2
+; CHECK-NEXT:    bnez a3, .LBB145_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB143_2:
+; CHECK-NEXT:  .LBB145_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
@@ -2049,9 +2061,7 @@ define <4 x i8> @test_vselect_v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 define <2 x i16> @test_bswap_v2i16(<2 x i16> %a) {
 ; CHECK-LABEL: test_bswap_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrli.h a1, a0, 8
-; CHECK-NEXT:    pslli.h a0, a0, 8
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ppairoe.b a0, a0, a0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)
   ret <2 x i16> %res
@@ -2060,54 +2070,25 @@ define <2 x i16> @test_bswap_v2i16(<2 x i16> %a) {
 define <4 x i8> @test_bitreverse_v4i8(<4 x i8> %a) {
 ; CHECK-LABEL: test_bitreverse_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrli.b a1, a0, 4
-; CHECK-NEXT:    pli.b a2, 15
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    pli.b a2, 51
-; CHECK-NEXT:    pslli.b a0, a0, 4
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    psrli.b a1, a0, 2
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    pli.b a2, 85
-; CHECK-NEXT:    pslli.b a0, a0, 2
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    psrli.b a1, a0, 1
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    pslli.b a0, a0, 1
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    rev a0, a0
+; CHECK-NEXT:    rev8 a0, a0
 ; CHECK-NEXT:    ret
   %res = call <4 x i8> @llvm.bitreverse.v4i8(<4 x i8> %a)
   ret <4 x i8> %res
 }
 
 define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) {
-; CHECK-LABEL: test_bitreverse_v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrli.h a1, a0, 8
-; CHECK-NEXT:    pslli.h a0, a0, 8
-; CHECK-NEXT:    pli.b a2, 15
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    psrli.h a1, a0, 4
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    pli.b a2, 51
-; CHECK-NEXT:    pslli.h a0, a0, 4
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    psrli.h a1, a0, 2
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    pli.b a2, 85
-; CHECK-NEXT:    pslli.h a0, a0, 2
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    psrli.h a1, a0, 1
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    pslli.h a0, a0, 1
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    ret
+; RV32-LABEL: test_bitreverse_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    rev a0, a0
+; RV32-NEXT:    ppairoe.h a0, a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_bitreverse_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    rev a0, a0
+; RV64-NEXT:    rev16 a0, a0
+; RV64-NEXT:    ret
   %res = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %res
 }

@@ -43,7 +43,8 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 8)
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -151,7 +152,8 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 8)
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[ENTRY:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -280,45 +282,58 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ;
 ; NO-VP-LABEL: @multiple_reverse_vector_pointer(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    br label [[VECTOR_PH:%.*]]
+; NO-VP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP5]], 4
+; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[UMAX]]
+; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
+; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
+; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
+; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 1024, [[N_VEC]]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
 ; NO-VP-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1024, [[INDEX]]
 ; NO-VP-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
-; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -15
-; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; NO-VP-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; NO-VP-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B:%.*]], <16 x i8> [[REVERSE]]
-; NO-VP-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 1 [[TMP3]], <16 x i1> splat (i1 true), <16 x i8> poison)
-; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[OFFSET_IDX]]
-; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP4]], i64 -15
-; NO-VP-NEXT:    [[REVERSE1:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_GATHER]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; NO-VP-NEXT:    store <16 x i8> [[REVERSE1]], ptr [[TMP6]], align 1
+; NO-VP-NEXT:    [[TMP11:%.*]] = sub nuw nsw i64 [[TMP3]], 1
+; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 0, [[TMP11]]
+; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP8]]
+; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP9]], align 1
+; NO-VP-NEXT:    [[REVERSE:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_LOAD]])
+; NO-VP-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[B:%.*]], <vscale x 16 x i8> [[REVERSE]]
+; NO-VP-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> align 1 [[TMP10]], <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> poison)
 ; NO-VP-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[D:%.*]], i64 [[OFFSET_IDX]]
-; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -15
-; NO-VP-NEXT:    store <16 x i8> [[REVERSE1]], ptr [[TMP9]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; NO-VP-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
+; NO-VP-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP7]], i64 [[TMP8]]
+; NO-VP-NEXT:    [[REVERSE1:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_GATHER]])
+; NO-VP-NEXT:    store <vscale x 16 x i8> [[REVERSE1]], ptr [[TMP12]], align 1
+; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[D1:%.*]], i64 [[OFFSET_IDX]]
+; NO-VP-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i64 [[TMP8]]
+; NO-VP-NEXT:    store <vscale x 16 x i8> [[REVERSE1]], ptr [[TMP14]], align 1
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; NO-VP-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; NO-VP:       middle.block:
-; NO-VP-NEXT:    br label [[SCALAR_PH:%.*]]
+; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ 1024, [[ENTRY:%.*]] ]
 ; NO-VP-NEXT:    br label [[LOOP1:%.*]]
 ; NO-VP:       loop:
-; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP1]] ]
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP1]] ]
 ; NO-VP-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    [[X:%.*]] = load i8, ptr [[GEP_A]], align 1
 ; NO-VP-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[B]], i8 [[X]]
 ; NO-VP-NEXT:    [[Y:%.*]] = load i8, ptr [[GEP_B]], align 1
-; NO-VP-NEXT:    [[GEP_C:%.*]] = getelementptr i8, ptr [[C]], i64 [[IV]]
+; NO-VP-NEXT:    [[GEP_C:%.*]] = getelementptr i8, ptr [[D]], i64 [[IV]]
 ; NO-VP-NEXT:    store i8 [[Y]], ptr [[GEP_C]], align 1
-; NO-VP-NEXT:    [[GEP_D:%.*]] = getelementptr i8, ptr [[D]], i64 [[IV]]
+; NO-VP-NEXT:    [[GEP_D:%.*]] = getelementptr i8, ptr [[D1]], i64 [[IV]]
 ; NO-VP-NEXT:    store i8 [[Y]], ptr [[GEP_D]], align 1
 ; NO-VP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; NO-VP-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
-; NO-VP-NEXT:    br i1 [[CMP_NOT]], label [[EXIT:%.*]], label [[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
+; NO-VP-NEXT:    br i1 [[CMP_NOT]], label [[EXIT]], label [[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
 ; NO-VP:       exit:
 ; NO-VP-NEXT:    ret void
 ;
