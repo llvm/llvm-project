@@ -5329,8 +5329,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     if (CfiIndex.empty())
       return;
     for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
-      auto Defs = CfiIndex.forGuid(GUID);
-      llvm::append_range(Functions, Defs);
+      auto Names = CfiIndex.getNamesForGUID(GUID);
+      llvm::append_range(Functions, Names);
     }
     if (Functions.empty())
       return;
