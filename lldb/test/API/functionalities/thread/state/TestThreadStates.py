@@ -27,17 +27,15 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin("llvm.org/pr23669")
-    @expectedFailureNetBSD
     # This actually passes on Windows on Arm but it's hard to describe that
     # and xfail it everywhere else.
     @skipIfWindows
-    # thread states not properly maintained
-    @unittest.expectedFailure  # llvm.org/pr16712
     def test_state_after_expression(self):
         """Test thread state after expression."""
         self.build()
         self.thread_state_after_expression_test()
 
+    @skipIfDarwin  # rdar://28557237
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",
@@ -274,7 +272,7 @@ class ThreadStateTestCase(TestBase):
         # Stop the process
         self.runCmd("process interrupt")
 
-        self.assertStopReason(thread.GetState(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         # Check the thread state
         self.assertTrue(
@@ -297,12 +295,12 @@ class ThreadStateTestCase(TestBase):
             "Thread state is 'suspended' after expression evaluation.",
         )
 
-        self.assertStopReason(thread.GetState(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         # Run to breakpoint 2
         self.runCmd("continue")
 
-        self.assertStopReason(thread.GetState(), lldb.eStopReasonBreakpoint)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
 
         # Make sure both threads are stopped
         self.assertTrue(
