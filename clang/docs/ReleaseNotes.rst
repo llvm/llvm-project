@@ -959,7 +959,7 @@ SYCL Support
   device compilations.
 
 - SYCL runtime library linking is now supported on Windows. When ``-fsycl`` is
-  specified, the driver automatically adds ``/MD`` if no explicit CRT flag is
+  specified, Clang automatically adds ``/MD`` if no explicit CRT flag is
   present, links the appropriate debug (``LLVMSYCLd.lib``) or release
   (``LLVMSYCL.lib``) library, and rejects static CRT flags (``/MT``,
   ``/MTd``) with a diagnostic. Use ``-nolibsycl`` to suppress automatic
