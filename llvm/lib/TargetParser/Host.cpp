@@ -2459,7 +2459,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
 StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
                        {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},
-                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0}};
+                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0},
+                       {/*RISCV_HWPROBE_KEY_IMA_EXT_1=*/16, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
@@ -2527,6 +2528,9 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["zcf"] = ExtMask & (1ULL << 46);    // RISCV_HWPROBE_EXT_ZCF
   Features["zcmop"] = ExtMask & (1ULL << 47);  // RISCV_HWPROBE_EXT_ZCMOP
   Features["zawrs"] = ExtMask & (1ULL << 48);  // RISCV_HWPROBE_EXT_ZAWRS
+
+  uint64_t Ext1Mask = Query[3].Value;
+  Features["zicfiss"] = Ext1Mask & (1ULL << 0); // RISCV_HWPROBE_EXT_ZICFISS
 
   // Check whether the processor supports fast misaligned scalar memory access.
   // NOTE: RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF is only available on
