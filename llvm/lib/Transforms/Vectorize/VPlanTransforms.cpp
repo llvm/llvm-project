@@ -3155,7 +3155,7 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
         X->getScalarType(), {}, {}, Def->getDebugLoc());
     VPReverse->insertBefore(Def);
     Def->replaceAllUsesWith(VPReverse);
-    Def->eraseFromParent();
+    OldRecipes.push_back(Def);
   }
 
   for (VPRecipeBase *R : reverse(OldRecipes)) {

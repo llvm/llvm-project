@@ -35,7 +35,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_B:%.+]]> = getelementptr inbounds ir<[[B:%.+]]>, ir<[[IDX_PROM]]>
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_B:%.+]]> = vector-end-pointer ir<[[ARRAY_IDX_B]]>, vp<[[EVL]]>
 ; CHECK-NEXT:     WIDEN ir<[[LOAD_B:%.+]]> = vp.load vp<[[VEC_END_PTR_B]]>, vp<[[EVL]]>
-; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[SPLICE_B:%.+]]> = call llvm.vector.splice.left(ir<poison>, ir<[[LOAD_B]]>, vp<[[EVL]]>)
 ; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[VAL_B:%.+]]> = call llvm.experimental.vp.reverse(ir<[[LOAD_B]]>, ir<true>, vp<[[EVL]]>)
 ; CHECK-NEXT:     WIDEN ir<[[ADD_RESULT:%.+]]> = add vp<[[VAL_B]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_A:%.+]]> = getelementptr inbounds ir<[[A:%.+]]>, ir<[[IDX_PROM]]>
