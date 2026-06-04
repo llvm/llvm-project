@@ -6363,8 +6363,8 @@ bool llvm::UpgradeModuleFlags(Module &M) {
 bool llvm::UpgradeCFIFunctionsMetadata(Module &M) {
   NamedMDNode *CFIConsts = M.getNamedMetadata("cfi.functions");
   // If this metadata has operands, we expect all of them to be either from
-  // before or from after the version change, so we can bail out fast if the
-  // first (if any) operands is of the new format.
+  // before or from after the format change handled here, so we can bail out
+  // fast if the first (if any) operands is of the new format.
   auto MatchesVersion = [](const MDNode *Op) {
     return Op->getNumOperands() >= 3 &&
            isa<ConstantAsMetadata>(Op->getOperand(2)) &&
