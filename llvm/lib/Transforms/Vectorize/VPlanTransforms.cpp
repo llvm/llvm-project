@@ -7083,9 +7083,10 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
 void VPlanTransforms::simplifyReductionInitValue(VPlan &Plan,
                                                  VPCostContext &Ctx,
                                                  VFRange &Range) {
-  // Sub is handled specially in preparePlanForEpilogueVectorLoop, so we skip it here.
+  // Sub is handled specially in preparePlanForEpilogueVectorLoop, so we skip it
+  // here.
   if (Ctx.TTI.preferEpilogueVectorization(ElementCount::getFixed(1)))
-     return;
+    return;
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
