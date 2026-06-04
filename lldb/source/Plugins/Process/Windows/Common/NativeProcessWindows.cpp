@@ -53,7 +53,7 @@ NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            llvm::Error &E)
     : NativeProcessProtocol(
           LLDB_INVALID_PROCESS_ID,
-          PseudoTerminal::invalid_fd, // TODO: Implement on Windows
+          PseudoTerminal::invalid_fd, // NativeProcessWindows owns the ConPTY.
           delegate),
       ProcessDebugger(), m_arch(launch_info.GetArchitecture()),
       m_stdio_communication("lldb.NativeProcessWindows.stdio") {
