@@ -3584,7 +3584,7 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
     auto *BCDstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
     auto *BCSrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
     if (BCDstTy && BCSrcTy &&
-        BCDstTy->getNumElements() != BCSrcTy->getNumElements()) {
+        BCDstTy->getElementCount() != BCSrcTy->getElementCount()) {
       unsigned DstElts = BCDstTy->getNumElements();
       unsigned SrcElts = BCSrcTy->getNumElements();
       SmallVector<InstLane> NewItem;
@@ -3800,14 +3800,16 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         auto *BCDstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
         auto *BCSrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
         if (BCDstTy && BCSrcTy) {
-          unsigned DstElts = BCDstTy->getNumElements();
-          unsigned SrcElts = BCSrcTy->getNumElements();
-          if (DstElts == SrcElts) {
+          ElementCount DstEC = BCDstTy->getElementCount();
+          ElementCount SrcEC = BCSrcTy->getElementCount();
+          if (DstEC == SrcEC) {
             // Same element count - simple pass-through.
             Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
                                   &BitCast->getOperandUse(0));
             continue;
           }
+          unsigned DstElts = DstEC.getFixedValue();
+          unsigned SrcElts = SrcEC.getFixedValue();
           if (DstElts > SrcElts && DstElts % SrcElts == 0) {
             // Widening bitcast (e.g. <2 x i32> -> <4 x i16>). Compress
             // consecutive groups of R destination lanes into one source
