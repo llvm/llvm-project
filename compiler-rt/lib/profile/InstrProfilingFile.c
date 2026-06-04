@@ -41,10 +41,6 @@
 #include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
 
-/* HIP / offload collection hook implemented in InstrProfilingPlatformROCm.c.
- * It is a no-op when no offload profile data was registered. */
-extern int __llvm_profile_hip_collect_device_data(void);
-
 /* From where is profile name specified.
  * The order the enumerators define their
  * precedence. Re-order them may lead to
@@ -1201,11 +1197,6 @@ int __llvm_profile_write_file(void) {
   rc = writeFile(Filename);
   if (rc)
     PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
-
-  /* No-op when no HIP shadow variables or dynamic modules are registered,
-   * or when the HIP runtime is not loaded. Warning on failure is handled
-   * inside the callee so non-HIP programs do not see spurious noise. */
-  (void)__llvm_profile_hip_collect_device_data();
 
   // Restore SIGKILL.
   if (PDeathSig == 1)

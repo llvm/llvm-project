@@ -609,6 +609,22 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
   return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
 }
 
+CallBase *CallBase::removeOperandBundleAt(CallBase *CB, size_t Offset,
+                                          InsertPosition InsertPt) {
+  auto OpBundleCount = CB->getNumOperandBundles();
+  assert(Offset < OpBundleCount &&
+         "Trying to remove non-existant operand bundle");
+  SmallVector<OperandBundleDef> Bundles;
+  Bundles.reserve(OpBundleCount - 1);
+  size_t I = 0;
+  for (; I != Offset; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  ++I;
+  for (; I != OpBundleCount; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  return Create(CB, Bundles, InsertPt);
+}
+
 bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
@@ -4469,11 +4485,15 @@ FPExtInst *FPExtInst::cloneImpl() const {
 }
 
 UIToFPInst *UIToFPInst::cloneImpl() const {
-  return new UIToFPInst(getOperand(0), getType());
+  auto *Result = new UIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 SIToFPInst *SIToFPInst::cloneImpl() const {
-  return new SIToFPInst(getOperand(0), getType());
+  auto *Result = new SIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 FPToUIInst *FPToUIInst::cloneImpl() const {

@@ -665,7 +665,11 @@ private:
                       << " iterations of the first loop. \n");
 
     ValueToValueMapTy VMap;
-    peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
+    // LoopFusion is a function pass that neither requires nor preserves
+    // LCSSA, so peelLoop need not preserve it across its internal
+    // simplifyLoop call.
+    peelLoop(FC0.L, PeelCount, /*PeelLast=*/false, &LI, &SE, DT, &AC,
+             /*PreserveLCSSA=*/false, VMap);
     FC0.Peeled = true;
     LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
@@ -1141,11 +1145,17 @@ private:
 
     assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
-    if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
-      LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
-                           "dependency\n");
-      NumDA++;
-      return true;
+    if (DepResult->isScalar(CurLoopLevel, true)) {
+      if (DepResult->isInput() || DepResult->isOutput()) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant "
+                          << (DepResult->isInput() ? "input" : "output")
+                          << " dependency\n");
+        NumDA++;
+        return true;
+      }
+      LLVM_DEBUG(
+          dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
+      return false;
     }
 
     unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
@@ -1317,8 +1327,7 @@ private:
     // the loop
     if (FC0.GuardBranch->getSuccessor(0) == FC0.Preheader)
       return (FC1.GuardBranch->getSuccessor(0) == FC1.Preheader);
-    else
-      return (FC1.GuardBranch->getSuccessor(1) == FC1.Preheader);
+    return (FC1.GuardBranch->getSuccessor(1) == FC1.Preheader);
   }
 
   /// Modify the latch branch of FC to be unconditional since successors of the

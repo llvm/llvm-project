@@ -15,6 +15,7 @@ cc_library(
     name = "config",
     defines = select({
         "@platforms//os:linux": [
+            "COMPILER_RT_BUILD_PROFILE_ROCM=1",
             "COMPILER_RT_HAS_ATOMICS=1",
             "COMPILER_RT_HAS_FCNTL_LCK=1",
             "COMPILER_RT_HAS_UNAME=1",
@@ -30,6 +31,45 @@ cc_library(
 WIN32_ONLY_FILES = [
     "lib/profile/WindowsMMap.c",
 ]
+
+cc_library(
+    name = "sanitizer_common_headers",
+    hdrs = glob([
+        "lib/sanitizer_common/*.h",
+        "lib/sanitizer_common/*.inc",
+        "lib/sanitizer_common/*.inc.S",
+    ]),
+    includes = ["lib"],
+)
+
+cc_library(
+    name = "sanitizer_common",
+    srcs = glob(
+        [
+            "lib/sanitizer_common/*.cpp",
+        ],
+    ),
+    linkstatic = True,
+    deps = [
+        ":interception",
+        ":sanitizer_common_headers",
+    ],
+)
+
+cc_library(
+    name = "interception",
+    srcs = glob(["lib/interception/*.cpp"]),
+    hdrs = glob(["lib/interception/*.h"]),
+    copts = [
+        "-fomit-frame-pointer",
+        "-fvisibility=hidden",
+    ],
+    includes = ["lib"],
+    linkstatic = True,
+    deps = [
+        ":sanitizer_common_headers",
+    ],
+)
 
 cc_library(
     name = "profile",
@@ -54,6 +94,7 @@ cc_library(
     linkstatic = True,
     deps = [
         ":config",
+        ":interception",
     ],
 )
 
@@ -242,6 +283,14 @@ filegroup(
     ] + glob(["lib/builtins/aarch64/sme-libc-opt-*.S"]),
 )
 
+filegroup(
+    name = "builtins_aarch64_sme_os_srcs",
+    srcs = select({
+        "@platforms//os:macos": [":builtins_aarch64_apple_sme_srcs"],
+        "//conditions:default": [":builtins_aarch64_sme_srcs"],
+    }),
+)
+
 # A list of (pat, size, model) tuples for AArch64's outline atomics.
 AARCH64_OUTLINE_ATOMICS = [
     (pat, size, model)
@@ -292,6 +341,7 @@ filegroup(
     srcs = [
         "lib/builtins/cpu_model/aarch64.c",
         "lib/builtins/cpu_model/aarch64.h",
+        ":builtins_aarch64_sme_os_srcs",
     ] + [
         AARCH64_OUTLINE_ATOMICS_FMT.format(pat, size, model)
         for (pat, size, model) in AARCH64_OUTLINE_ATOMICS

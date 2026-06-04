@@ -181,12 +181,15 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
 }
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                           const GCNTargetMachine &TM)
+                           const GCNTargetMachine &TM, bool BufferOOBRelaxed,
+                           bool TBufferOOBRelaxed)
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
     TargetID(*this),
     InstrItins(getInstrItineraryForCPU(GPU)),
+    BufferOOBRelaxed(BufferOOBRelaxed),
+    TBufferOOBRelaxed(TBufferOOBRelaxed),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
     TLInfo(TM, *this),
     // Frame index expansion sometimes assumes the low bit of SP is 0
@@ -769,6 +772,19 @@ void GCNSubtarget::adjustSchedDependency(
 
   MachineInstr *DefI = Def->getInstr();
   MachineInstr *UseI = Use->getInstr();
+
+  // Check for false latency on $tensorcnt / $asynccnt dependencies
+  if (Dep.getReg() == AMDGPU::TENSORcnt || Dep.getReg() == AMDGPU::ASYNCcnt) {
+    unsigned UseOp = UseI->getOpcode();
+    // Do not adjust latency for load->s_wait
+    bool IsBarrierCase =
+        InstrInfo.isLDSDMA(*DefI) &&
+        (UseOp == AMDGPU::S_WAIT_TENSORCNT || UseOp == AMDGPU::S_WAIT_ASYNCCNT);
+    if (!IsBarrierCase) {
+      Dep.setLatency(1);
+      return;
+    }
+  }
 
   if (Register Reg = getRealSchedDependency(*DefI, DefOpIdx, *UseI, UseOpIdx)) {
     Dep.setReg(Reg);
