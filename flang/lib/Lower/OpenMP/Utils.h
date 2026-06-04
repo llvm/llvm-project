@@ -240,15 +240,20 @@ llvm::omp::TraitSelector
 mapTraitSelector(const parser::OmpTraitSelectorName &name,
                  llvm::omp::TraitSet set);
 
+/// Non-constant user condition expression and source for runtime lowering.
+struct DynamicUserCondition {
+  const parser::ScalarExpr *expr;
+  parser::CharBlock source;
+};
+
 /// Populate \p vmi from a parsed OpenMP context selector. Constant user
 /// conditions are folded into user_condition_true/false traits. A non-constant
-/// user condition is recorded as user_condition_unknown and returned through
-/// \p dynamicCondExpr for later lowering as a runtime condition.
-void makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
-                          const parser::modifier::OmpContextSelector &ctxSel,
-                          semantics::SemanticsContext &semaCtx,
-                          mlir::Location loc,
-                          const parser::ScalarExpr *&dynamicCondExpr);
+/// user condition is recorded as user_condition_unknown and returned for later
+/// lowering as a runtime condition.
+std::optional<DynamicUserCondition>
+makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
+                     const parser::modifier::OmpContextSelector &ctxSel,
+                     semantics::SemanticsContext &semaCtx, mlir::Location loc);
 
 } // namespace omp
 } // namespace lower

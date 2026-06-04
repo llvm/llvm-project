@@ -70,6 +70,7 @@ def simplify_uaddo : GICombineRule<
 
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      select_zero_true,
                                       combine_shuffle_vector,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
@@ -384,7 +385,8 @@ def AArch64PostLegalizerCombiner
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, overflow_combines,
-                        select_combines, fold_merge_to_zext, merge_combines,
+                        select_combines, select_zero_true, select_zero_false, select_not,
+                        fold_merge_to_zext, merge_combines,
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,

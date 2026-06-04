@@ -225,7 +225,11 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   // above.
   if (!RISCVVType::isValidVType(Imm) ||
       (RISCVVType::isAltFmt(Imm) &&
-       !(STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+       !(STI.hasFeature(RISCV::FeatureStdExtZvqwdota8i) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvqwdota16i) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfwdota16bf) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfqwdota8f) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
          STI.hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
          STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e) ||
          STI.hasFeature(RISCV::FeatureStdExtZvqwbdota8i) ||

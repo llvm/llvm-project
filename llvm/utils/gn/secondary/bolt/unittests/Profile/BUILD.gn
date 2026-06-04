@@ -5,6 +5,7 @@ unittest("ProfileTests") {
   deps = [ "//bolt/lib/Profile" ]
   sources = [
     "DataAggregator.cpp",
+    "PerfScripts.cpp",
     "PerfSpeEvents.cpp",
   ]
 }

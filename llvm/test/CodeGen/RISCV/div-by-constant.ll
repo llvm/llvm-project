@@ -376,14 +376,14 @@ define i32 @sdiv_constant_srai(i32 %a) nounwind {
   ret i32 %1
 }
 
-; This constant requires an add and an srai after the mul.
+; This constant requires an add and an srai after the mul. We can use mulhsu in
+; place of mulh+add.
 define i32 @sdiv_constant_add_srai(i32 %a) nounwind {
 ; RV32-LABEL: sdiv_constant_add_srai:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a1, 599186
 ; RV32-NEXT:    addi a1, a1, 1171
-; RV32-NEXT:    mulh a1, a0, a1
-; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    mulhsu a0, a0, a1
 ; RV32-NEXT:    srli a1, a0, 31
 ; RV32-NEXT:    srai a0, a0, 2
 ; RV32-NEXT:    add a0, a0, a1
@@ -483,6 +483,8 @@ define i64 @sdiv64_constant_srai(i64 %a) nounwind {
   ret i64 %1
 }
 
+; This constant requires an add and an srai after the mul. We can use mulhsu in
+; place of mulh+add.
 define i64 @sdiv64_constant_add_srai(i64 %a) nounwind {
 ; RV32-LABEL: sdiv64_constant_add_srai:
 ; RV32:       # %bb.0:
@@ -501,8 +503,7 @@ define i64 @sdiv64_constant_add_srai(i64 %a) nounwind {
 ; RV64-NEXT:    addi a1, a1, -1911
 ; RV64-NEXT:    slli a2, a1, 32
 ; RV64-NEXT:    add a1, a1, a2
-; RV64-NEXT:    mulh a1, a0, a1
-; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    mulhsu a0, a0, a1
 ; RV64-NEXT:    srli a1, a0, 63
 ; RV64-NEXT:    srai a0, a0, 3
 ; RV64-NEXT:    add a0, a0, a1

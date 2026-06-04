@@ -80,6 +80,9 @@ public:
   /// Check whether \p FileName is a perf.data file
   static bool checkPerfDataMagic(StringRef FileName);
 
+  /// Checks if a file starts with a specific magic string.
+  static bool checkInputFileMagic(StringRef FileName, StringLiteral MagicStr);
+
 private:
   struct LBREntry {
     uint64_t From;
@@ -90,6 +93,7 @@ private:
 
   friend struct PerfSpeEventsTestHelper;
   friend struct PreAggregatedTestHelper;
+  friend struct PerfScriptTestHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
@@ -176,14 +180,20 @@ private:
 
   /// Perf process spawning bookkeeping
   struct PerfProcessInfo {
-    static constexpr StringLiteral EventNamesStr[] = {"BUILDIDS", "MAIN", "MEM",
-                                                      "MMAP", "TASK"};
+    static constexpr StringLiteral PerfProcessTypeNames[] = {
+        "BUILDIDS", "MAIN", "MEM", "MMAP", "TASK"};
 
     enum PerfProcessType Type;
     bool IsFinished{false};
     sys::ProcessInfo PI{};
     SmallVector<char, 256> StdoutPath{};
     SmallVector<char, 256> StderrPath{};
+
+    /// Helper variables for parsing perfscript profile.
+    /// Length: Total size of the content from \p Offset.
+    uint64_t Length{0};
+    /// Position where content begins in the file.
+    uint64_t Offset{0};
   };
 
   /// Process info for spawned processes
@@ -474,13 +484,21 @@ private:
   /// an external tool.
   std::error_code parsePreAggregatedLBRSamples();
 
+  /// Coordinate reading pre-parsed perf-script:
+  /// - open file header to determine offset and length for each part,
+  /// - read perf script slices.
+  Error parsePerfScript();
+
+  /// Parse the header of the perf text file.
+  std::error_code parsePerfScriptFileHeader();
+
   /// Dump pre-parsed perf profile data into a single file.
   /// The generator relies on the aggregator work to spawn the required
-  /// perf-script jobs based on the the aggregation type, and merges
+  /// perf-script jobs based on the aggregation type, and merges
   /// their results into a single file.
-  /// This hybrid profile contains all required events such as BuildID,
+  /// This hybrid profile contains all required items such as BuildID,
   /// MMAP, TASK, MAIN (brstack or basic samples), or MEM for the aggregation.
-  /// The generator also creates a file header, where these events
+  /// The generator also creates a file header, where these data types
   /// are listed along with the length information of their contents.
   /// The given length numbers in the header are in bytes, they are used
   /// as an offset in the pre-parsed profile.
@@ -501,7 +519,8 @@ private:
   /// based on how it was collected by Linux Perf.
   ///
   /// Example how you can generate pre-parsed profile for 'basic' aggregation:
-  /// perf2bolt -p perf.data BINARY -o perf.text --ba --generate-perf-script
+  /// perf2bolt -p perf.data BINARY -o perf.text --ba
+  /// --profile-format=perfscript
   ///
   /// This is how a pre-parsed profile data looks like for Basic Aggregation:
   /// PERFTEXT;BUILDIDS=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;
@@ -517,7 +536,7 @@ private:
   /// ...
   /// 1234 mem-loads: efgh1234 efgh1234
   /// 1234 mem-loads: efgh4567 efgh8910
-  Error generatePerfTextData();
+  Error generatePerfScriptData();
 
   /// If \p Address falls into the binary address space based on memory
   /// mapping info \p MMI, then adjust it for further processing by subtracting
@@ -661,7 +680,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::PerfProcessType &T) {
-  OS << DataAggregator::PerfProcessInfo::EventNamesStr[T];
+  OS << DataAggregator::PerfProcessInfo::PerfProcessTypeNames[T];
   return OS;
 }
 } // namespace bolt

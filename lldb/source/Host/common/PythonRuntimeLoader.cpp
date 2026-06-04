@@ -133,12 +133,16 @@ private:
         if (m_path.empty())
           return;
 #if defined(_WIN32)
-        // liblldb.dll may link against python3.dll (stable ABI). Ensure it is
-        // loaded from the same directory as the version-specific runtime so
-        // the delay-load resolver can find it.
+        // liblldb.dll may link against (lib)python3.dll (stable ABI). Ensure
+        // it is loaded from the same directory as the version-specific runtime
+        // so the delay-load resolver can find it.
         llvm::SmallString<256> stable_abi_path(m_path);
         llvm::sys::path::remove_filename(stable_abi_path);
+#if defined(__MINGW32__)
+        llvm::sys::path::append(stable_abi_path, "libpython3.dll");
+#else
         llvm::sys::path::append(stable_abi_path, "python3.dll");
+#endif
         std::string err;
         llvm::sys::DynamicLibrary::getPermanentLibrary(stable_abi_path.c_str(),
                                                        &err);

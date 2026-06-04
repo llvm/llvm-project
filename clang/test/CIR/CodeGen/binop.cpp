@@ -134,10 +134,10 @@ void testFloatingPointBinOps(float a, float b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z23testFloatingPointBinOpsff(
-// CIR: cir.mul %{{.+}}, %{{.+}} : !cir.float
-// CIR: cir.div %{{.+}}, %{{.+}} : !cir.float
-// CIR: cir.add %{{.+}}, %{{.+}} : !cir.float
-// CIR: cir.sub %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.fmul %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.fdiv %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.fadd %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.fsub %{{.+}}, %{{.+}} : !cir.float
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(

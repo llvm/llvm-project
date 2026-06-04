@@ -154,7 +154,7 @@ void ExplicitFloatToBoolCastThenSplat(float2 Value) {
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[TMP0]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = uitofp i1 [[LOADEDV]] to float
+// CHECK-NEXT:    [[CONV:%.*]] = uitofp reassoc nnan ninf nsz arcp afn i1 [[LOADEDV]] to float
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <6 x float> poison, float [[CONV]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <6 x float> [[SPLAT_SPLATINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
 // CHECK-NEXT:    store <6 x float> [[SPLAT_SPLAT]], ptr [[M]], align 4
@@ -193,7 +193,7 @@ void ImplicitFloatToBoolCastThenSplat(float Value) {
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[TMP0]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = uitofp i1 [[LOADEDV]] to float
+// CHECK-NEXT:    [[CONV:%.*]] = uitofp reassoc nnan ninf nsz arcp afn i1 [[LOADEDV]] to float
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <6 x float> poison, float [[CONV]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <6 x float> [[SPLAT_SPLATINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
 // CHECK-NEXT:    store <6 x float> [[SPLAT_SPLAT]], ptr [[M]], align 4

@@ -931,6 +931,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
     OS << " dummy";
   if (!P.isLive())
     OS << " dead";
+  if (P.isBaseClass())
+    OS << " base-class";
   return OS;
 }
 

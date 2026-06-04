@@ -20,6 +20,12 @@ public:
 
   llvm::StringRef GetPluginName() override;
   std::optional<AcceleratorActions> GetInitializeActions() override;
+  llvm::Expected<AcceleratorBreakpointHitResponse>
+  BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
+
+private:
+  static constexpr int64_t kBreakpointIDInitialize = 1;
+  static constexpr int64_t kBreakpointIDExit = 2;
 };
 
 } // namespace lldb_server

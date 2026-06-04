@@ -1282,7 +1282,7 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
                                         /*CheckNUW=*/CheckNUW);
 
   uint32_t SOffset, ImmOffset;
-  if ((int)Offset > 0 &&
+  if (static_cast<int32_t>(Offset) > 0 &&
       TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
     if (getRegBank(Base, *MRI, *TRI) == &AMDGPU::VGPRRegBank) {
       VOffsetReg = Base;
@@ -1304,7 +1304,7 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
 
   // Handle the variable sgpr + vgpr case.
   MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI);
-  if (Add && (int)Offset >= 0 &&
+  if (Add && static_cast<int32_t>(Offset) >= 0 &&
       (!CheckNUW || Add->getFlag(MachineInstr::NoUWrap))) {
     Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), *MRI);
     Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), *MRI);
@@ -1845,7 +1845,7 @@ AMDGPURegisterBankInfo::splitBufferOffsets(MachineIRBuilder &B,
     // vgpr, even if adding the immediate offset makes it positive.
     unsigned Overflow = ImmOffset & ~MaxImm;
     ImmOffset -= Overflow;
-    if ((int32_t)Overflow < 0) {
+    if (static_cast<int32_t>(Overflow) < 0) {
       Overflow += ImmOffset;
       ImmOffset = 0;
     }

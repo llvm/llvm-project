@@ -103,6 +103,7 @@ TYPE_PARSER(construct<AccCollapseArg>(
 // Operator for reduction
 TYPE_PARSER(construct<ReductionOperator>(
     first("+" >> pure(ReductionOperator::Operator::Plus),
+        "-" >> pure(ReductionOperator::Operator::Minus),
         "*" >> pure(ReductionOperator::Operator::Multiply),
         "MAX" >> pure(ReductionOperator::Operator::Max),
         "MIN" >> pure(ReductionOperator::Operator::Min),

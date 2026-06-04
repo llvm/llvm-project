@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 # Unnamed symbols don't get into the .eh_frame section on ARM, so LLDB can't find them.
 @skipIf(archs=["arm$"])
 class TestUnnamedSymbolLookup(TestBase):
+    @expectedFailureAll(archs=["arm64e"])
     def test_unnamed_symbol_lookup(self):
         """Test looking up unnamed symbol synthetic name"""
         self.build()

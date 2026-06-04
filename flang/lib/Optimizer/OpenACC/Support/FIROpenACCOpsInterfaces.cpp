@@ -18,15 +18,25 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace fir::acc {
+namespace detail {
 
-mlir::Value ReductionInitOpFortranObjectViewModel::getViewSource(
-    mlir::Operation *op, mlir::OpResult resultView) const {
+void verifyFortranObjectViewResult(mlir::Operation *op,
+                                   mlir::OpResult resultView) {
   assert(resultView.getOwner() == op && "result value must be the op's result");
-  assert(op->getNumResults() == 1 &&
-         "definition of acc.reduction_init changed");
+  assert(op->getNumResults() == 1 && "only expected single-result");
+}
+
+} // namespace detail
+
+template <>
+mlir::Value
+AccFortranObjectViewModel<mlir::acc::ReductionInitOp>::getViewSource(
+    mlir::Operation *op, mlir::OpResult resultView) const {
+  detail::verifyFortranObjectViewResult(op, resultView);
   auto iface = mlir::cast<mlir::RegionBranchOpInterface>(op);
   llvm::SmallVector<mlir::Value, 1> resultValues;
   iface.getPredecessorValues(mlir::RegionSuccessor::parent(), /*index=*/0,
@@ -45,11 +55,12 @@ mlir::Value ReductionInitOpFortranObjectViewModel::getViewSource(
   return passThroughValue;
 }
 
-std::optional<std::int64_t>
-ReductionInitOpFortranObjectViewModel::getViewOffset(
+template <>
+mlir::Value
+AccFortranObjectViewModel<mlir::acc::UnwrapPrivateOp>::getViewSource(
     mlir::Operation *op, mlir::OpResult resultView) const {
-  assert(resultView.getOwner() == op && "result value must be the op's result");
-  return 0;
+  detail::verifyFortranObjectViewResult(op, resultView);
+  return mlir::cast<mlir::acc::UnwrapPrivateOp>(op).getViewSource();
 }
 
 template <>

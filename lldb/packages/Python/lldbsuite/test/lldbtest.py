@@ -1964,6 +1964,8 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
             expanded[method_name] = method
             continue
         for value_name in variant.get_enabled_values():
+            if _is_excluded_variant_combination(method, variant.name, value_name):
+                continue
             new_name = method_name + "_" + value_name
 
             @decorators.add_test_categories([value_name])
@@ -1991,6 +1993,30 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
 
 
 _test_variants = []
+
+
+# Variant value combinations that should never be generated. Each entry maps
+# `variant_name -> value`; a method copy is dropped when its already-set
+# variant attributes plus the new value being added match every key in the
+# entry. Add entries here for crosses that don't exercise anything new and
+# would only inflate the matrix on remote test runs.
+_excluded_variant_combinations = [
+    # Example (uncomment + adapt when registering a real cross to drop):
+    # {"swift_module_importer": "noclang", "swift_embedded": "swiftembed"},
+]
+
+
+def _is_excluded_variant_combination(method, variant_name, value_name):
+    """Return True if assigning *variant_name=value_name* to *method* would
+    produce a combination listed in `_excluded_variant_combinations`."""
+    for combo in _excluded_variant_combinations:
+        if combo.get(variant_name) != value_name:
+            continue
+        if all(
+            getattr(method, k, None) == v for k, v in combo.items() if k != variant_name
+        ):
+            return True
+    return False
 
 
 class LLDBTestCaseFactory(type):

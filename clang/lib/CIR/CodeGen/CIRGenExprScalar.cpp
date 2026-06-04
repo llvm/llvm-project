@@ -1990,12 +1990,22 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
                             cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
-  return cir::DivOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+    return builder.createFDiv(loc, ops.lhs, ops.rhs);
+  }
+  return cir::DivOp::create(builder, loc, cgf.convertType(ops.fullType),
+                            ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
-  return cir::RemOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+    return builder.createFRem(loc, ops.lhs, ops.rhs);
+  }
+  return cir::RemOp::create(builder, loc, cgf.convertType(ops.fullType),
+                            ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {

@@ -69,7 +69,7 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   // CHECK-NEXT: %[[F_LOAD:.*]] = cir.load{{.*}} %[[F_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[INT_TO_F:.*]] = cir.cast int_to_float %[[TEMP_LOAD]] : !s32i -> !cir.float
-  // CHECK-NEXT: %[[ADD:.*]] = cir.add %[[INT_TO_F]], %[[F_LOAD]] : !cir.float
+  // CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[INT_TO_F]], %[[F_LOAD]] : !cir.float
   // CHECK-NEXT: %[[F_TO_INT:.*]] = cir.cast float_to_int %[[ADD]] : !cir.float -> !s32i
   // CHECK-NEXT: cir.store{{.*}} %[[F_TO_INT]], %[[TEMP_ALLOCA]] : !s32i, !cir.ptr<!s32i>
   //
@@ -87,7 +87,7 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   // CHECK-NEXT: %[[Y_LOAD:.*]] = cir.load{{.*}} %[[Y_ALLOCA]] : !cir.ptr<!u32i>, !u32i
   // CHECK-NEXT: %[[INT_TO_F:.*]] = cir.cast int_to_float %[[Y_LOAD]] : !u32i -> !cir.float
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
-  // CHECK-NEXT: %[[DIV:.*]] = cir.div %[[TEMP_LOAD]], %[[INT_TO_F]] : !cir.float
+  // CHECK-NEXT: %[[DIV:.*]] = cir.fdiv %[[TEMP_LOAD]], %[[INT_TO_F]] : !cir.float
   // CHECK-NEXT: cir.store{{.*}} %[[DIV]], %[[TEMP_ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
   //
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
@@ -140,7 +140,7 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   //
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
   // CHECK-NEXT: %[[CALL:.*]] = cir.call {{.*}}(%[[OPS_ALLOCA]]) : (!cir.ptr<!rec_HasOps> {{.*}}) -> (!cir.float{{.*}})
-  // CHECK-NEXT: %[[SUB:.*]] = cir.sub %[[TEMP_LOAD]], %[[CALL]] : !cir.float
+  // CHECK-NEXT: %[[SUB:.*]] = cir.fsub %[[TEMP_LOAD]], %[[CALL]] : !cir.float
   // CHECK-NEXT: cir.store{{.*}} %[[SUB]], %[[TEMP_ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
   //
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float

@@ -3415,7 +3415,7 @@ def Sentinel : InheritableAttr {
   let Args = [DefaultIntArgument<"Sentinel", 0>,
               DefaultIntArgument<"NullPos", 0>];
 //  let Subjects = SubjectList<[Function, ObjCMethod, Block, Var]>;
-  let Documentation = [Undocumented];
+  let Documentation = [SentinelDocs];
 }
 
 def StdCall : DeclOrTypeAttr {

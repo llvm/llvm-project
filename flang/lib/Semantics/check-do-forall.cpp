@@ -709,6 +709,10 @@ private:
         }};
         supportedIdentifier = true;
         switch (reductionOperator.v) {
+        case parser::ReductionOperator::Operator::Minus:
+          context_.Say(currentStatementSourcePosition_,
+              "'-' is not a supported reduction operator in a DO CONCURRENT REDUCE locality specifier"_err_en_US);
+          break;
         case parser::ReductionOperator::Operator::Plus:
         case parser::ReductionOperator::Operator::Multiply:
           if (!(type->IsNumeric(TypeCategory::Complex) ||

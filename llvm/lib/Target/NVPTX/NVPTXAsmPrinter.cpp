@@ -1689,6 +1689,13 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         AggBuffer->addZeros(AllocSize);
         break;
       }
+      // A symbol-relative integer whose offset is applied outside the
+      // ptrtoint, e.g. add(ptrtoint(@g), C). It can't fold to a ConstantInt
+      // because it references a symbol; emit it through lowerConstantForGV, the
+      // same path scalar symbol-relative integer globals use.
+      AggBuffer->addSymbol(Cexpr, Cexpr);
+      AggBuffer->addZeros(AllocSize);
+      break;
     }
     llvm_unreachable("unsupported integer const type");
     break;
@@ -1715,9 +1722,14 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   case Type::FixedVectorTyID:
   case Type::StructTyID: {
     if (isa<ConstantAggregate>(CPV) || isa<ConstantDataSequential>(CPV)) {
+      // bufferAggregateConstant doesn't emit tail-padding, i.e. it writes
+      // `store_size` bytes, not `alloc_size` bytes.  Do it ourselves here.
+      unsigned StartPos = AggBuffer->getCurpos();
       bufferAggregateConstant(CPV, AggBuffer);
-      if (Bytes > AllocSize)
-        AggBuffer->addZeros(Bytes - AllocSize);
+      unsigned Written = AggBuffer->getCurpos() - StartPos;
+      unsigned SlotSize = std::max<int>(Bytes, AllocSize);
+      if (SlotSize > Written)
+        AggBuffer->addZeros(SlotSize - Written);
     } else if (isa<ConstantAggregateZero>(CPV))
       AggBuffer->addZeros(Bytes);
     else

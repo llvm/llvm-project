@@ -2,6 +2,8 @@
 // RUN: %libomptarget-compileoptxx-run-and-check-generic
 // UNSUPPORTED: intelgpu
 
+// See array_reductions.cpp for a clone of this file for array reductions.
+
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>

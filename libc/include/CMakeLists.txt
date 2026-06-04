@@ -117,6 +117,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
+    .llvm-libc-types.wchar_t
     .llvm-libc-macros.inttypes_macros
     .stdint
 )

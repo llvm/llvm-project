@@ -267,8 +267,12 @@ public:
             return true;
           if (isASafeCallArg(ArgOrigin))
             return true;
-          if (EFA.isACallToEnsureFn(ArgOrigin))
-            return true;
+          if (EFA.isACallToEnsureFn(ArgOrigin)) {
+            auto *MCE = dyn_cast<CXXMemberCallExpr>(ArgOrigin);
+            assert(MCE);
+            if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
+              return true;
+          }
           if (isSafeExpr(ArgOrigin))
             return true;
           return false;

@@ -25,6 +25,41 @@
 #include <arm_neon.h>
 
 //===------------------------------------------------------===//
+// 2.1.1.13.5  Maximum across vector (IEEE754)
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#maximum-across-vector-ieee754
+//===------------------------------------------------------===//
+
+//ALL-LABEL: @test_vmaxnmv_f32(
+float32_t test_vmaxnmv_f32(float32x2_t a) {
+  //CIR: cir.call @vmaxnmv_f32
+
+  // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+  // LLVM:  [[VMAXNMV_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v2f32(<2 x float> [[A]])
+  // LLVM: ret float [[VMAXNMV_F32_I]]
+  return vmaxnmv_f32(a);
+}
+
+// ALL-LABEL: @test_vmaxnmvq_f32(
+float32_t test_vmaxnmvq_f32(float32x4_t a) {
+  //CIR: cir.call @vmaxnmvq_f32
+
+  // LLVM-SAME: <4 x float> {{.*}}[[A:%.*]])
+  // LLVM:      [[VMAXNMVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v4f32(<4 x float> [[A]])
+  // LLVM:      ret float [[VMAXNMVQ_F32_I]]
+  return vmaxnmvq_f32(a);
+}
+
+// ALL-LABEL: @test_vmaxnmvq_f64(
+float64_t test_vmaxnmvq_f64(float64x2_t a) {
+  //CIR: cir.call @vmaxnmvq_f64
+
+  // LLVM-SAME: <2 x double> {{.*}}[[A:%.*]])
+  // LLVM:      [[VMAXNMVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fmaxnmv.f64.v2f64(<2 x double> [[A]])
+  // LLVM:      ret double [[VMAXNMVQ_F64_I]]
+  return vmaxnmvq_f64(a);
+}
+
+//===------------------------------------------------------===//
 // 2.1.3.2.7  Vector saturating rounding shift right and narrow
 // TODO: Implement SISD variants
 //===------------------------------------------------------===//

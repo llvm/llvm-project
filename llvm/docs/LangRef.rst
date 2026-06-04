@@ -4214,9 +4214,10 @@ Fast-Math Flags
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
 :ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`,
-:ref:`fpext <i_fpext>`), and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or
-:ref:`call <i_call>` instructions that return floating-point types may use the
-following flags to enable otherwise unsafe floating-point transformations.
+:ref:`fpext <i_fpext>`), :ref::`uitofp <i_uitofp>`, :ref::`sitofp <i_sitofp>`,
+and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or :ref:`call <i_call>`
+instructions that return floating-point types may use the following flags to
+enable otherwise unsafe floating-point transformations.
 
 ``fast``
    This flag is a shorthand for specifying all fast-math flags at once, and
@@ -13102,6 +13103,8 @@ Example:
       %Y = fptosi float 1.0E-247 to i1      ; yields undefined:1
       %Z = fptosi float 1.04E+17 to i8      ; yields undefined:1
 
+.. _i_uitofp:
+
 '``uitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -13110,7 +13113,7 @@ Syntax:
 
 ::
 
-      <result> = uitofp <ty> <value> to <ty2>             ; yields ty2
+      <result> = uitofp [fast-math flags]* [nneg] <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -13154,6 +13157,8 @@ Example:
       %a = uitofp nneg i32 256 to float    ; yields float:256.0
       %b = uitofp nneg i32 -256 to float   ; yields float poison
 
+.. _i_sitofp:
+
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -13162,7 +13167,7 @@ Syntax:
 
 ::
 
-      <result> = sitofp <ty> <value> to <ty2>             ; yields ty2
+      <result> = sitofp [fast-math flags]* <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""

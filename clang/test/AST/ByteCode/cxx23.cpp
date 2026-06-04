@@ -646,3 +646,17 @@ namespace DynamicCast {
   constexpr S s;
   constexpr int foo = (dynamic_cast<const S &>(s), 0);
 }
+
+#if __cplusplus >= 202302L
+namespace BrokenShuffleVector {
+  typedef float __m128 __attribute__((__vector_size__(16)));
+
+  static inline constexpr __m128 _mm_cvtps_pd(__m128 z) {
+    __builtin_convertvector(__builtin_shufflevector(z, z), __m128); // all-error {{first two arguments to '__builtin_shufflevector' must have the same type}} \
+                                                                    // all-warning {{expression result unused}}
+  }
+
+  constexpr __m128 kf1{1.0f, 2.0f, 3.0f, 4.0f};
+  constexpr __m128 v_mm_cvtps_pd = _mm_cvtps_pd(kf1); // all-error {{must be initialized by a constant expression}}
+}
+#endif

@@ -421,6 +421,37 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
 }
 
+// Regression: Value::setRawBits's NBytes parameter must be interpreted as a
+// byte count end-to-end. Before this was fixed, the parameter was named
+// NBits and the memcpy divided by 8, so a caller passing sizeof(T) (the
+// natural byte count) ended up copying only sizeof(T)/8 bytes -- leaving
+// the upper bytes uninitialised. The only in-tree caller compensated by
+// multiplying by 8, hiding the bug.
+TEST_F(InterpreterTest, ValueSetRawBitsCopiesByteCount) {
+  std::vector<const char *> Args;
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  // Explicit byte count: writing sizeof(long long) bytes must round-trip
+  // every byte. Pre-fix this copied 1 byte (8 / 8) and left the upper 7
+  // bytes stale.
+  Value V;
+  llvm::cantFail(Interp->ParseAndExecute("long long x = 0; x", &V));
+  ASSERT_EQ(V.getKind(), Value::K_LongLong);
+  long long Src = 0x0123456789ABCDEFLL;
+  V.setRawBits(&Src, sizeof(Src));
+  EXPECT_EQ(V.getLongLong(), Src);
+
+  // Default NBytes argument copies sizeof(Storage). Pre-fix this copied
+  // sizeof(Storage) / 8 bytes, dropping the high half of an 8-byte payload.
+  Value V2;
+  llvm::cantFail(Interp->ParseAndExecute("long long y = 0; y", &V2));
+  ASSERT_EQ(V2.getKind(), Value::K_LongLong);
+  unsigned char Buf[sizeof(long double)] = {};
+  std::memcpy(Buf, &Src, sizeof(Src));
+  V2.setRawBits(Buf);
+  EXPECT_EQ(V2.getLongLong(), Src);
+}
+
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
   std::vector<const char *> Args;
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
