@@ -23,30 +23,22 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-template <typename T> struct RefWrapper {
-  RefWrapper() = delete;
-  constexpr RefWrapper(T *p) : ptr{p} {}
-  constexpr RefWrapper(const RefWrapper &) = default;
-  RefWrapper &operator=(const RefWrapper &) = default;
-  operator T &() { return *ptr; }
-  T &get() { return *ptr; }
-  T *ptr;
-};
-
+// GetoptContext allows the getopt_r engine to update the required POSIX
+// global state (optind, optarg, etc.) directly in place when called by the
+// standard getopt() function. Using pointers avoids the overhead and
+// complexity of copying values to and from a state object, while still
+// allowing the engine to be used reentrantly by pointing it to caller-provided
+// local variables.
 struct GetoptContext {
-  RefWrapper<char *> optarg;
-  RefWrapper<int> optind;
-  RefWrapper<int> optopt;
-  RefWrapper<unsigned> optpos;
-
-  RefWrapper<int> opterr;
-
+  char **optarg;
+  int *optind;
+  int *optopt;
+  unsigned *optpos;
+  int *opterr;
   FILE *errstream;
 
-  GetoptContext &operator=(const GetoptContext &) = default;
-
   template <typename... Ts> void report_error(const char *fmt, Ts... ts) {
-    if (opterr)
+    if (opterr && *opterr)
       LIBC_NAMESPACE::fprintf(
           errstream ? errstream
                     : reinterpret_cast<FILE *>(LIBC_NAMESPACE::stderr),
@@ -93,30 +85,40 @@ struct OptstringParser {
 
 int getopt_r(int argc, char *const argv[], const char *optstring,
              GetoptContext &ctx) {
-  auto failure = [&ctx](int ret = -1) {
-    ctx.optpos.get() = 0;
+  // Alias the context members to local references for clean code
+  int &optind = *ctx.optind;
+  int &optopt = *ctx.optopt;
+  char *&optarg = *ctx.optarg;
+  unsigned &optpos = *ctx.optpos;
+
+  auto failure = [&optpos](int ret = -1) {
+    optpos = 0;
     return ret;
   };
 
-  if (ctx.optind >= argc || !argv[ctx.optind])
+  if (optind == 0) {
+    optind = 1;
+    optpos = 0;
+  }
+
+  if (optind >= argc || !argv[optind])
     return failure();
 
-  cpp::string_view current =
-      cpp::string_view{argv[ctx.optind]}.substr(ctx.optpos);
+  cpp::string_view current = cpp::string_view{argv[optind]}.substr(optpos);
 
-  auto move_forward = [&current, &ctx] {
+  auto move_forward = [&current, &optpos] {
     current = current.substr(1);
-    ctx.optpos.get()++;
+    optpos++;
   };
 
   // If optpos is nonzero, then we are already parsing a valid flag and these
   // need not be checked.
-  if (ctx.optpos == 0) {
+  if (optpos == 0) {
     if (current[0] != '-')
       return failure();
 
     if (current == "--") {
-      ctx.optind.get()++;
+      optind++;
       return failure();
     }
 
@@ -137,7 +139,7 @@ int getopt_r(int argc, char *const argv[], const char *optstring,
   auto match = find_match();
   if (!match) {
     ctx.report_error("%s: illegal option -- %c\n", argv[0], current[0]);
-    ctx.optopt.get() = current[0];
+    optopt = current[0];
     return failure('?');
   }
 
@@ -152,24 +154,24 @@ int getopt_r(int argc, char *const argv[], const char *optstring,
       // This const cast is fine because current was already holding a mutable
       // string, it just doesn't have the semantics to note that, we could use
       // span but it doesn't have string_view string niceties.
-      ctx.optarg.get() = const_cast<char *>(current.data());
+      optarg = const_cast<char *>(current.data());
     } else {
       // One char lookahead to see if we ran out of arguments. If so, return ':'
       // if the first character of optstring is ':'. optind must stay at the
       // current value so only increase it after we known there is another arg.
-      if (ctx.optind + 1 >= argc || !argv[ctx.optind + 1]) {
+      if (optind + 1 >= argc || !argv[optind + 1]) {
         ctx.report_error("%s: option requires an argument -- %c\n", argv[0],
                          match->c);
         return failure(optstring[0] == ':' ? ':' : '?');
       }
-      ctx.optarg.get() = argv[++ctx.optind];
+      optarg = argv[++optind];
     }
-    ctx.optind++;
-    ctx.optpos.get() = 0;
+    optind++;
+    optpos = 0;
   } else if (current.empty()) {
     // If this argument is now empty we are safe to move onto the next one.
-    ctx.optind++;
-    ctx.optpos.get() = 0;
+    optind++;
+    optpos = 0;
   }
 
   return match->c;
@@ -184,20 +186,17 @@ int optopt = 0;
 int opterr = 0;
 }
 
-static unsigned optpos;
+static unsigned optpos = 0;
 
 static GetoptContext ctx{&impl::optarg, &impl::optind, &impl::optopt,
                          &optpos,       &impl::opterr, /*errstream=*/nullptr};
 
-#ifndef LIBC_COPT_PUBLIC_PACKAGING
-// This is used exclusively in tests.
-void set_getopt_state(char **optarg_in, int *optind_in, int *optopt_in,
-                      unsigned *optpos_in, int *opterr_in, FILE *errstream) {
-  ctx = {optarg_in, optind_in, optopt_in, optpos_in, opterr_in, errstream};
-}
-#endif
-
 } // namespace impl
+
+LLVM_LIBC_FUNCTION(void, __llvm_libc_getopt_set_errorstream,
+                   (FILE * errstream)) {
+  impl::ctx.errstream = errstream;
+}
 
 LLVM_LIBC_FUNCTION(int, getopt,
                    (int argc, char *const argv[], const char *optstring)) {

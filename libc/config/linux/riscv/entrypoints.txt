@@ -1381,6 +1381,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.execv
     libc.src.unistd.fork
     libc.src.unistd.getopt
+    libc.src.unistd.__llvm_libc_getopt_set_errorstream
     libc.src.unistd.optarg
     libc.src.unistd.opterr
     libc.src.unistd.optind

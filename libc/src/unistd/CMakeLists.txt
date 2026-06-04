@@ -380,6 +380,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  __llvm_libc_getopt_set_errorstream
+  SRCS
+    getopt.cpp
+  HDRS
+    getopt.h
+  DEPENDS
+    libc.include.unistd
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.file
+    libc.src.stdio.fprintf
+    libc.src.stdio.stderr
+)
+
+add_entrypoint_object(
   swab
   SRCS
     swab.cpp
