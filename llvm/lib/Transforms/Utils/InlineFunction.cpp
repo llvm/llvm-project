@@ -23,7 +23,9 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#endif // EJIT_BARE_METAL
 #include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
@@ -2212,6 +2214,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
   }
 }
 
+#ifndef EJIT_BARE_METAL
 // In contextual profiling, when an inline succeeds, we want to remap the
 // indices of the callee into the index space of the caller. We can't just leave
 // them as-is because the same callee may appear in other places in this caller
@@ -2347,6 +2350,7 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
 
   return {std::move(CalleeCounterMap), std::move(CalleeCallsiteMap)};
 }
+#endif // EJIT_BARE_METAL
 
 // Inline. If successful, update the contextual profile (if a valid one is
 // given).
@@ -2368,6 +2372,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
                                         Function *ForwardVarArgsTo) {
+#ifndef EJIT_BARE_METAL
   if (!CtxProf.isInSpecializedModule())
     return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
                           ForwardVarArgsTo);
@@ -2456,6 +2461,12 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   };
   CtxProf.update(Updater, Caller);
   return Ret;
+}
+#else
+  (void)CtxProf;
+  return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
+                        ForwardVarArgsTo);
+#endif // EJIT_BARE_METAL
 }
 
 /// This function inlines the called function into the basic block of the
