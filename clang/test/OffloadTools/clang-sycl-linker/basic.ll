@@ -93,6 +93,20 @@
 ; RUN:   | FileCheck %s --check-prefix=NO-DIR-AS-LIB
 ; NO-DIR-AS-LIB: '{{.*}}libs': Is a directory
 ;
+; Test that providing only an empty archive results in "No input files could be resolved" error
+; RUN: rm -f %t/empty.a
+; RUN: llvm-ar rc %t/empty.a
+; RUN: not clang-sycl-linker --dry-run --whole-archive %t/empty.a -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NO-RESOLVED-INPUT
+; NO-RESOLVED-INPUT: No input files could be resolved
+;
+; Test that providing only a lazy archive with no extracted members results in "No input files could be resolved" error
+; RUN: rm -f %t/lazy.a
+; RUN: llvm-ar rc %t/lazy.a %t/libs/lib1.bc
+; RUN: not clang-sycl-linker --dry-run %t/lazy.a -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NO-RESOLVED-LAZY
+; NO-RESOLVED-LAZY: No input files could be resolved
+;
 ; Test AOT compilation for an Intel GPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel GPU).
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
