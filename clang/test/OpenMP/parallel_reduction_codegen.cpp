@@ -617,7 +617,7 @@ int main() {
 // CHECK1-NEXT:    store float 0.000000e+00, ptr [[T_VAR2]], align 4
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR3]])
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR14]])
-// CHECK1-NEXT:    store float 0x47EFFFFFE0000000, ptr [[T_VAR15]], align 4
+// CHECK1-NEXT:    store float f0x7F7FFFFF, ptr [[T_VAR15]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = load float, ptr [[T_VAR2]], align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = fptosi float [[TMP6]] to i32
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP0]], i64 0, i64 0
@@ -852,7 +852,7 @@ int main() {
 // CHECK1-NEXT:    store float 0.000000e+00, ptr [[T_VAR2]], align 4
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR3]])
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR14]])
-// CHECK1-NEXT:    store float 0x47EFFFFFE0000000, ptr [[T_VAR15]], align 4
+// CHECK1-NEXT:    store float f0x7F7FFFFF, ptr [[T_VAR15]], align 4
 // CHECK1-NEXT:    br label [[WHILE_COND:%.*]]
 // CHECK1:       while.cond:
 // CHECK1-NEXT:    br label [[WHILE_BODY:%.*]]

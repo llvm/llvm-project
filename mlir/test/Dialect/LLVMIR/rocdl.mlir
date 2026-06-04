@@ -111,6 +111,12 @@ func.func @rocdl.barrier() {
   llvm.return
 }
 
+func.func @rocdl.wave_barrier() {
+  // CHECK: rocdl.wave.barrier
+  rocdl.wave.barrier
+  llvm.return
+}
+
 func.func @rocdl.sched_barrier() {
   // CHECK: rocdl.sched.barrier
   rocdl.sched.barrier 0
@@ -785,6 +791,19 @@ llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3
   llvm.return
 }
 
+// CHECK-LABEL: @rocdl.global.store.async.from.lds
+llvm.func @rocdl.global.store.async.from.lds(%dst : !llvm.ptr<1>, %src: !llvm.ptr<3>) {
+  // CHECK: rocdl.global.store.async.from.lds.b8 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.store.async.from.lds.b32 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.store.async.from.lds.b64 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.store.async.from.lds.b128 %{{.*}}, %{{.*}}, 0, 0
+  rocdl.global.store.async.from.lds.b8 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.global.store.async.from.lds.b32 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.global.store.async.from.lds.b64 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.global.store.async.from.lds.b128 %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  llvm.return
+}
+
 llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>, %mask: i32) {
   // CHECK-LABEL @rocdl.cluster.load.async.to.lds
   // CHECK: rocdl.cluster.load.async.to.lds.b8 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
@@ -840,8 +859,8 @@ llvm.func @rocdl.raw.ptr.buffer.f32(%rsrc : !llvm.ptr<8>,
   // CHECK: rocdl.raw.ptr.buffer.store %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : vector<2xf32>
   // CHECK: rocdl.raw.ptr.buffer.store %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : vector<4xf32>
 
-  // CHECK: rocdl.raw.ptr.buffer.atomic.fadd %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
-  // CHECK: rocdl.raw.ptr.buffer.atomic.fmax %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
+  // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.atomic.fadd %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
+  // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.atomic.fmax %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
 
   %r1 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : f32
   %r2 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : vector<2xf32>
@@ -851,8 +870,8 @@ llvm.func @rocdl.raw.ptr.buffer.f32(%rsrc : !llvm.ptr<8>,
   rocdl.raw.ptr.buffer.store %vdata2, %rsrc, %offset, %soffset, %aux : vector<2xf32>
   rocdl.raw.ptr.buffer.store %vdata4, %rsrc, %offset, %offset, %aux : vector<4xf32>
 
-  rocdl.raw.ptr.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
-  rocdl.raw.ptr.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  %atomic_fadd = rocdl.raw.ptr.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  %atomic_fmax = rocdl.raw.ptr.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
 
   llvm.return
 }
@@ -882,12 +901,12 @@ llvm.func @rocdl.raw.ptr.buffer.i32(%rsrc : !llvm.ptr<8>,
                        %aux : i32, %vdata1 : i32,
                        %vdata2 : vector<2xi32>, %vdata4 : vector<4xi32>) {
   // CHECK-LABEL: rocdl.raw.ptr.buffer.i32
-  // CHECK: rocdl.raw.ptr.buffer.atomic.smax %{{.*}}, %{{.*}}, %{{.*}} %{{.*}}, %{{.*}} : i32
-  // CHECK: rocdl.raw.ptr.buffer.atomic.umin %{{.*}}, %{{.*}}, %{{.*}} %{{.*}}, %{{.*}} : i32
+  // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.atomic.smax %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i32
+  // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.atomic.umin %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i32
   // CHECK: %{{.*}} = rocdl.raw.ptr.buffer.atomic.cmpswap %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i32
 
-  rocdl.raw.ptr.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
-  rocdl.raw.ptr.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  %smax = rocdl.raw.ptr.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  %umin = rocdl.raw.ptr.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
   %val = rocdl.raw.ptr.buffer.atomic.cmpswap %vdata1, %vdata1, %rsrc, %offset, %soffset, %aux : i32
   llvm.return
 }
@@ -930,7 +949,8 @@ llvm.func @rocdl.raw.buffer.f32(%rsrc : vector<4xi32>,
   // CHECK: rocdl.raw.buffer.store %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<2xf32>
   // CHECK: rocdl.raw.buffer.store %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : vector<4xf32>
 
-  // CHECK: rocdl.raw.buffer.atomic.fadd %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : f32
+  // CHECK: %{{.*}} = rocdl.raw.buffer.atomic.fadd %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : f32
+  // CHECK: %{{.*}} = rocdl.raw.buffer.atomic.fmax %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : f32
 
   %r1 = rocdl.raw.buffer.load %rsrc, %offset, %soffset, %aux : f32
   %r2 = rocdl.raw.buffer.load %rsrc, %offset, %soffset, %aux : vector<2xf32>
@@ -940,8 +960,8 @@ llvm.func @rocdl.raw.buffer.f32(%rsrc : vector<4xi32>,
   rocdl.raw.buffer.store %vdata2, %rsrc, %offset, %soffset, %aux : vector<2xf32>
   rocdl.raw.buffer.store %vdata4, %rsrc, %offset, %offset, %aux : vector<4xf32>
 
-  rocdl.raw.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
-  rocdl.raw.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  %atomic_fadd = rocdl.raw.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  %atomic_fmax = rocdl.raw.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
 
   llvm.return
 }
@@ -952,12 +972,12 @@ llvm.func @rocdl.raw.buffer.i32(%rsrc : vector<4xi32>,
                        %aux : i32, %vdata1 : i32,
                        %vdata2 : vector<2xi32>, %vdata4 : vector<4xi32>) {
   // CHECK-LABEL: rocdl.raw.buffer.i32
-  // CHECK: rocdl.raw.buffer.atomic.smax %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
-  // CHECK: rocdl.raw.buffer.atomic.umin %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
+  // CHECK: %{{.*}} = rocdl.raw.buffer.atomic.smax %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
+  // CHECK: %{{.*}} = rocdl.raw.buffer.atomic.umin %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
   // CHECK: %{{.*}} = rocdl.raw.buffer.atomic.cmpswap(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : i32, vector<4xi32>
 
-  rocdl.raw.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
-  rocdl.raw.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  %smax = rocdl.raw.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  %umin = rocdl.raw.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
   %val = rocdl.raw.buffer.atomic.cmpswap(%vdata1, %vdata1, %rsrc, %offset, %soffset, %aux) : i32, vector<4xi32>
   llvm.return
 }
@@ -1312,6 +1332,26 @@ llvm.func @rocdl.permlane32.swap(%src : i32) -> !llvm.struct<(i32, i32)> {
   // CHECK: rocdl.permlane32.swap %{{.*}} %{{.*}}
   %res = rocdl.permlane32.swap %src, %src, 0, -1  : (i32, i32) -> !llvm.struct<(i32, i32)>
   llvm.return %res : !llvm.struct<(i32, i32)>
+}
+
+// -----
+
+llvm.func @rocdl.permlane16.var(%src : i32) -> i32 {
+  %sel = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK-LABEL: rocdl.permlane16.var
+  // CHECK: rocdl.permlane16.var %{{.*}}, %{{.*}}, %{{.*}}, false, true : (i32, i32, i32) -> i32
+  %ret = rocdl.permlane16.var %src, %src, %sel, false, true : (i32, i32, i32) -> i32
+  llvm.return %ret : i32
+}
+
+// -----
+
+llvm.func @rocdl.permlanex16.var(%src : i32) -> i32 {
+  %sel = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK-LABEL: rocdl.permlanex16.var
+  // CHECK: rocdl.permlanex16.var %{{.*}}, %{{.*}}, %{{.*}}, false, true : (i32, i32, i32) -> i32
+  %ret = rocdl.permlanex16.var %src, %src, %sel, false, true : (i32, i32, i32) -> i32
+  llvm.return %ret : i32
 }
 
 // -----

@@ -232,6 +232,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -680,6 +684,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_indices
 #    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
@@ -702,6 +710,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -802,10 +814,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -1158,6 +1166,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_memory
@@ -1644,6 +1656,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_indices
 #    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
@@ -1666,6 +1682,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -1781,10 +1801,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -2188,6 +2204,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_memory
@@ -2773,6 +2793,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_indices
 #    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
@@ -2795,6 +2819,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -2940,10 +2968,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -3458,6 +3482,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -4169,6 +4197,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_indices
 #    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
@@ -4191,6 +4223,10 @@
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_to_container
@@ -4360,10 +4396,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_spanstream
@@ -4944,6 +4976,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -5763,6 +5799,13 @@
 #    error "__cpp_lib_ranges_find_last should have the value 202207L in c++23"
 #  endif
 
+#  ifndef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_fold != 202207L
+#    error "__cpp_lib_ranges_fold should have the value 202207L in c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_indices
 #    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
@@ -5806,6 +5849,13 @@
 #  endif
 #  if __cpp_lib_ranges_starts_ends_with != 202106L
 #    error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_ranges_to_container
@@ -5990,10 +6040,6 @@
 
 #  ifdef __cpp_lib_span_at
 #    error "__cpp_lib_span_at should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -6655,6 +6701,13 @@
 #  endif
 #  if __cpp_lib_constexpr_list != 202502L
 #    error "__cpp_lib_constexpr_list should have the value 202502L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_map != 202502L
+#    error "__cpp_lib_constexpr_map should have the value 202502L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -7665,17 +7718,11 @@
 #    error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_concat
-#      error "__cpp_lib_ranges_concat should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_concat != 202403L
-#      error "__cpp_lib_ranges_concat should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_concat
-#      error "__cpp_lib_ranges_concat should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_concat
+#    error "__cpp_lib_ranges_concat should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_concat != 202403L
+#    error "__cpp_lib_ranges_concat should have the value 202403L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_contains
@@ -7697,6 +7744,13 @@
 #  endif
 #  if __cpp_lib_ranges_find_last != 202207L
 #    error "__cpp_lib_ranges_find_last should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_fold != 202207L
+#    error "__cpp_lib_ranges_fold should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_indices
@@ -7745,6 +7799,13 @@
 #  endif
 #  if __cpp_lib_ranges_starts_ends_with != 202106L
 #    error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_to_container
@@ -7968,13 +8029,6 @@
 #  endif
 #  if __cpp_lib_span_at != 202311L
 #    error "__cpp_lib_span_at should have the value 202311L in c++26"
-#  endif
-
-#  ifndef __cpp_lib_span_initializer_list
-#    error "__cpp_lib_span_initializer_list should be defined in c++26"
-#  endif
-#  if __cpp_lib_span_initializer_list != 202311L
-#    error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

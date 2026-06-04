@@ -430,8 +430,7 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
     const CallExpr *CE, CheckerContext &C, ProgramStateRef State) const {
 
   const Expr *Callee = CE->getCallee()->IgnoreParens();
-  const LocationContext *LCtx = C.getLocationContext();
-  SVal L = State->getSVal(Callee, LCtx);
+  SVal L = State->getSVal(Callee, C.getStackFrame());
 
   if (L.isUndef()) {
     if (!ChecksEnabled[CK_FunctionPointer]) {
@@ -700,18 +699,18 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
   // return different values depending on the return type and the architecture.
   QualType RetTy = Msg.getResultType();
   CanQualType CanRetTy = Ctx.getCanonicalType(RetTy);
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
 
   if (CanRetTy->isStructureOrClassType()) {
     // Structure returns are safe since the compiler zeroes them out.
     SVal V = C.getSValBuilder().makeZeroVal(RetTy);
-    C.addTransition(state->BindExpr(Msg.getOriginExpr(), LCtx, V));
+    C.addTransition(state->BindExpr(Msg.getOriginExpr(), SF, V));
     return;
   }
 
   // Other cases: check if sizeof(return type) > sizeof(void*)
-  if (CanRetTy != Ctx.VoidTy && C.getLocationContext()->getParentMap()
-                                  .isConsumedExpr(Msg.getOriginExpr())) {
+  if (CanRetTy != Ctx.VoidTy &&
+      C.getStackFrame()->getParentMap().isConsumedExpr(Msg.getOriginExpr())) {
     // Compute: sizeof(void *) and sizeof(return type)
     const uint64_t voidPtrSize = Ctx.getTypeSize(Ctx.VoidPtrTy);
     const uint64_t returnTypeSize = Ctx.getTypeSize(CanRetTy);
@@ -743,7 +742,7 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
     // of this case unless we have *a lot* more knowledge.
     //
     SVal V = C.getSValBuilder().makeZeroVal(RetTy);
-    C.addTransition(state->BindExpr(Msg.getOriginExpr(), LCtx, V));
+    C.addTransition(state->BindExpr(Msg.getOriginExpr(), SF, V));
     return;
   }
 

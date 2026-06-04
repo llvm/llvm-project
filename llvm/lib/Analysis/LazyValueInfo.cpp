@@ -1405,7 +1405,7 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     return getValueFromSimpleICmpCondition(SwappedPred, LHS, Offset, ICI,
                                            UseBlockValue);
 
-  if (match(LHS, m_Intrinsic<Intrinsic::ctpop>(m_Specific(Val))))
+  if (match(LHS, m_Ctpop(m_Specific(Val))))
     return getValueFromICmpCtpop(EdgePred, RHS);
 
   const APInt *Mask, *C;
@@ -2115,6 +2115,10 @@ Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *V,
   // return it quickly. But this is only a fastpath, and falling
   // through would still be correct.
   const DataLayout &DL = CxtI->getDataLayout();
+  // NOTE: This check is meant to determine whether a pointer is semantically a
+  // null pointer, not just whether its value equals ConstantPointerNull. If the
+  // semantics of ConstantPointerNull change in the future, this should be
+  // updated to use a semantic check (e.g. isKnownNonNull).
   if (V->getType()->isPointerTy() && C->isNullValue() &&
       isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
     Type *ResTy = CmpInst::makeCmpResultType(C->getType());

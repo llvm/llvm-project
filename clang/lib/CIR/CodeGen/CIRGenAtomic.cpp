@@ -110,8 +110,16 @@ public:
   /// copy the value across.
   Address convertToAtomicIntPointer(Address addr) const;
 
+  /// Turn an atomic-layout object into an r-value.
+  RValue convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                   bool asValue) const;
+
   /// Converts a rvalue to integer value.
   mlir::Value convertRValueToInt(RValue rvalue, bool cmpxchg = false) const;
+
+  RValue convertToValueOrAtomic(mlir::Value intVal, AggValueSlot resultSlot,
+                                SourceLocation loc, bool asValue,
+                                bool cmpxchg = false) const;
 
   /// Copy an atomic r-value into atomic-layout memory.
   void emitCopyIntoMemory(RValue rvalue) const;
@@ -128,11 +136,20 @@ public:
     return LValue::makeAddr(addr, getValueType(), lvalue.getBaseInfo());
   }
 
+  /// Emits atomic load.
+  /// \returns Loaded value.
+  RValue emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
+                        bool asValue, cir::MemOrder order, bool isVolatile);
+
   /// Creates temp alloca for intermediate operations on atomic value.
   Address createTempAlloca() const;
 
 private:
   bool requiresMemSetZero(mlir::Type ty) const;
+
+  /// Emits atomic load as a CIR operation.
+  mlir::Value emitAtomicLoadOp(cir::MemOrder order, bool isVolatile,
+                               bool cmpxchg = false);
 };
 } // namespace
 
@@ -189,11 +206,63 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr) const {
   return castToAtomicIntPointer(addr);
 }
 
+RValue AtomicInfo::convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                             bool asValue) const {
+  if (lvalue.isSimple()) {
+    if (evaluationKind == TEK_Aggregate) {
+      cgf.cgm.errorNYI(
+          loc,
+          "AtomicInfo::convertAtomicTempToRValue: evaluationKind is aggregate");
+      return RValue::get(nullptr);
+    }
+
+    // Drill into the padding structure if we have one.
+    if (hasPadding()) {
+      cgf.cgm.errorNYI(loc,
+                       "AtomicInfo::convertAtomicTempToRValue: hasPadding");
+      return RValue::get(nullptr);
+    }
+
+    // Otherwise, just convert the temporary to an r-value using the
+    // normal conversion routine.
+    return cgf.convertTempToRValue(addr, getValueType(), loc);
+  }
+
+  cgf.cgm.errorNYI(
+      loc, "AtomicInfo::convertAtomicTempToRValue: lvalue is not simple");
+  return RValue::get(nullptr);
+}
+
+RValue AtomicInfo::emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
+                                  bool asValue, cir::MemOrder order,
+                                  bool isVolatile) {
+  // Check whether we should use a library call.
+  if (shouldUseLibCall()) {
+    assert(!cir::MissingFeatures::atomicUseLibCall());
+    cgf.cgm.errorNYI(loc, "emitAtomicLoad: emit atomic lib call");
+    return RValue::get(nullptr);
+  }
+
+  // Okay, we're doing this natively.
+  mlir::Value loadOp = emitAtomicLoadOp(order, isVolatile);
+
+  // If we're ignoring an aggregate return, don't do anything.
+  if (getEvaluationKind() == TEK_Aggregate && resultSlot.isIgnored())
+    return RValue::getAggregate(Address::invalid(), false);
+
+  // Okay, turn that back into the original value or atomic (for non-simple
+  // lvalues) type.
+  return convertToValueOrAtomic(loadOp, resultSlot, loc, asValue);
+}
+
 Address AtomicInfo::createTempAlloca() const {
-  Address tempAlloca = cgf.createMemTemp(
-      (lvalue.isBitField() && valueSizeInBits > atomicSizeInBits) ? valueTy
-                                                                  : atomicTy,
-      getAtomicAlignment(), loc, "atomic-temp");
+  // Remove addrspace info from the atomic pointer element when making the
+  // alloca pointer element.
+  QualType tmpTy = (lvalue.isBitField() && valueSizeInBits > atomicSizeInBits)
+                       ? valueTy
+                       : atomicTy.getUnqualifiedType();
+  Address tempAlloca =
+      cgf.createMemTemp(tmpTy, getAtomicAlignment(), loc, "atomic-temp");
 
   // Cast to pointer to value type for bitfields.
   if (lvalue.isBitField()) {
@@ -240,6 +309,20 @@ static bool shouldCastToInt(mlir::Type valueTy, bool cmpxchg) {
   return !isa<cir::IntType>(valueTy) && !isa<cir::PointerType>(valueTy);
 }
 
+mlir::Value AtomicInfo::emitAtomicLoadOp(cir::MemOrder order, bool isVolatile,
+                                         bool cmpxchg) {
+  Address addr = getAtomicAddress();
+  if (shouldCastToInt(addr.getElementType(), cmpxchg))
+    addr = castToAtomicIntPointer(addr);
+
+  cir::LoadOp op =
+      cgf.getBuilder().createLoad(loc, addr, /*isVolatile=*/isVolatile);
+  op.setMemOrder(order);
+
+  assert(!cir::MissingFeatures::opTBAA());
+  return op;
+}
+
 mlir::Value AtomicInfo::convertRValueToInt(RValue rvalue, bool cmpxchg) const {
   // If we've got a scalar value of the right size, try to avoid going
   // through memory. Floats get casted if needed by AtomicExpandPass.
@@ -255,6 +338,47 @@ mlir::Value AtomicInfo::convertRValueToInt(RValue rvalue, bool cmpxchg) const {
   cgf.cgm.errorNYI(
       loc, "AtomicInfo::convertRValueToInt: cast non-scalar rvalue to int");
   return nullptr;
+}
+
+RValue AtomicInfo::convertToValueOrAtomic(mlir::Value intVal,
+                                          AggValueSlot resultSlot,
+                                          SourceLocation loc, bool asValue,
+                                          bool cmpxchg) const {
+  // Try not to in some easy cases.
+  assert((mlir::isa<cir::IntType, cir::PointerType, cir::FPTypeInterface>(
+             intVal.getType())) &&
+         "Expected integer, pointer or floating point value when converting "
+         "result.");
+  bool isWholeValue =
+      !lvalue.isBitField() || lvalue.getBitFieldInfo().size == valueSizeInBits;
+  if (getEvaluationKind() == TEK_Scalar &&
+      ((isWholeValue && !hasPadding()) || !asValue)) {
+    mlir::Type valTy = asValue ? cgf.convertTypeForMem(valueTy)
+                               : getAtomicAddress().getElementType();
+    if (!shouldCastToInt(valTy, cmpxchg)) {
+      assert((!mlir::isa<cir::IntType>(valTy) || intVal.getType() == valTy) &&
+             "Different integer types.");
+      return RValue::get(cgf.emitFromMemory(intVal, valueTy));
+    }
+
+    cgf.cgm.errorNYI("convertToValueOrAtomic: convert through bitcast");
+    return RValue::get(nullptr);
+  }
+
+  // Create a temporary.  This needs to be big enough to hold the
+  // atomic integer.
+  Address temp = Address::invalid();
+  if (asValue && getEvaluationKind() == TEK_Aggregate) {
+    cgf.cgm.errorNYI("convertToValueOrAtomic: temporary aggregate");
+    return RValue::get(nullptr);
+  } else {
+    temp = createTempAlloca();
+  }
+
+  // Slam the integer into the temporary.
+  Address castTemp = castToAtomicIntPointer(temp);
+  cgf.getBuilder().createStore(cgf.getLoc(loc), intVal, castTemp);
+  return convertAtomicTempToRValue(temp, loc, asValue);
 }
 
 /// Copy an r-value into memory as part of storing to an atomic type.
@@ -282,7 +406,8 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
   if (rvalue.isScalar()) {
     cgf.emitStoreOfScalar(rvalue.getValue(), tempLValue, /*isInit=*/true);
   } else {
-    cgf.cgm.errorNYI("copying complex into atomic lvalue");
+    cgf.emitStoreOfComplex(loc, rvalue.getComplexValue(), tempLValue,
+                           /*isInit=*/true);
   }
 }
 
@@ -442,6 +567,38 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
       });
 }
 
+// A version of the emitAtomicCmpXchgFailureSet function that ALSO checks
+// whether it is 'weak' or not (by adding an 'if' around it, and calling
+// emitAtomicCmpXchgFailureSet 2x).
+static void emitAtomicCmpXchgFailureSetCheckWeak(
+    CIRGenFunction &cgf, AtomicExpr *e, Expr *isWeakExpr, Address dest,
+    Address ptr, Address val1, Address val2, Expr *failureOrderExpr,
+    uint64_t size, cir::MemOrder successOrder, cir::SyncScopeKind scope) {
+  mlir::Value isWeakVal = cgf.emitScalarExpr(isWeakExpr);
+  // The AST seems to be inserting a 'bool' cast (even in C mode) here, so we'll
+  // just emit it like a scalar.
+  assert(isWeakVal.getType() == cgf.getBuilder().getBoolTy());
+  mlir::Location atomicLoc = cgf.getLoc(e->getSourceRange());
+
+  // Unlike classic compiler, we use an 'if' here instead of a switch, simply to
+  // make this more readable/logical, plus we don't allow switch over a bool in
+  // CIR.
+  cir::IfOp::create(
+      cgf.getBuilder(), atomicLoc, isWeakVal, /*elseRegion=*/true,
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitAtomicCmpXchgFailureSet(cgf, e, /*isWeak=*/true, dest, ptr, val1,
+                                    val2, failureOrderExpr, size, successOrder,
+                                    scope);
+        cgf.getBuilder().createYield(atomicLoc);
+      },
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitAtomicCmpXchgFailureSet(cgf, e, /*isWeak=*/false, dest, ptr, val1,
+                                    val2, failureOrderExpr, size, successOrder,
+                                    scope);
+        cgf.getBuilder().createYield(atomicLoc);
+      });
+}
+
 static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
                          Address ptr, Address val1, Address val2,
                          Expr *isWeakExpr, Expr *failureOrderExpr, int64_t size,
@@ -455,6 +612,11 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   auto scopeAttr = cir::SyncScopeKindAttr::get(builder.getContext(), scope);
   cir::AtomicFetchKindAttr fetchAttr;
   bool fetchFirst = true;
+
+  auto handleFetchOp = [&](cir::AtomicFetchKind kind) {
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(), kind);
+  };
 
   switch (expr->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -479,9 +641,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
       emitAtomicCmpXchgFailureSet(cgf, expr, isWeak, dest, ptr, val1, val2,
                                   failureOrderExpr, size, order, scope);
     } else {
-      assert(!cir::MissingFeatures::atomicExpr());
-      cgf.cgm.errorNYI(expr->getSourceRange(),
-                       "emitAtomicOp: non-constant isWeak");
+      emitAtomicCmpXchgFailureSetCheckWeak(cgf, expr, isWeakExpr, dest, ptr,
+                                           val1, val2, failureOrderExpr, size,
+                                           order, scope);
     }
     return;
   }
@@ -530,9 +692,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Add);
+    handleFetchOp(cir::AtomicFetchKind::Add);
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
@@ -542,9 +702,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Sub);
+    handleFetchOp(cir::AtomicFetchKind::Sub);
     break;
 
   case AtomicExpr::AO__atomic_min_fetch:
@@ -554,9 +712,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Min);
+    handleFetchOp(cir::AtomicFetchKind::Min);
     break;
 
   case AtomicExpr::AO__atomic_max_fetch:
@@ -566,9 +722,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Max);
+    handleFetchOp(cir::AtomicFetchKind::Max);
     break;
 
   case AtomicExpr::AO__atomic_and_fetch:
@@ -578,9 +732,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::And);
+    handleFetchOp(cir::AtomicFetchKind::And);
     break;
 
   case AtomicExpr::AO__atomic_or_fetch:
@@ -590,9 +742,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Or);
+    handleFetchOp(cir::AtomicFetchKind::Or);
     break;
 
   case AtomicExpr::AO__atomic_xor_fetch:
@@ -602,9 +752,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_xor:
   case AtomicExpr::AO__atomic_fetch_xor:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Xor);
+    handleFetchOp(cir::AtomicFetchKind::Xor);
     break;
 
   case AtomicExpr::AO__atomic_nand_fetch:
@@ -614,9 +762,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_nand:
   case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::Nand);
+    handleFetchOp(cir::AtomicFetchKind::Nand);
     break;
 
   case AtomicExpr::AO__atomic_test_and_set: {
@@ -638,16 +784,12 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__atomic_fetch_uinc:
   case AtomicExpr::AO__scoped_atomic_fetch_uinc:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::UIncWrap);
+    handleFetchOp(cir::AtomicFetchKind::UIncWrap);
     break;
 
   case AtomicExpr::AO__atomic_fetch_udec:
   case AtomicExpr::AO__scoped_atomic_fetch_udec:
-    opName = cir::AtomicFetchOp::getOperationName();
-    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
-                                              cir::AtomicFetchKind::UDecWrap);
+    handleFetchOp(cir::AtomicFetchKind::UDecWrap);
     break;
 
   case AtomicExpr::AO__opencl_atomic_init:
@@ -709,6 +851,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     rmwOp->setAttr("fetch_first", builder.getUnitAttr());
 
   mlir::Value result = rmwOp->getResult(0);
+
   builder.createStore(loc, result, dest);
 }
 
@@ -1025,19 +1168,40 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__c11_atomic_fetch_sub:
     if (memTy->isPointerType()) {
-      cgm.errorNYI(e->getSourceRange(),
-                   "atomic fetch-and-add and fetch-and-sub for pointers");
-      return RValue::get(nullptr);
+      // For pointer arithmetic, we're required to do a bit of math:
+      // adding 1 to an int* is not the same as adding 1 to a uintptr_t.
+      // ... but only for the C11 builtins. The GNU builtins expect the
+      // user to multiply by sizeof(T).
+      QualType val1Ty = e->getVal1()->getType();
+      mlir::Location loc = getLoc(e->getSourceRange());
+      mlir::Value val1Scalar = emitScalarExpr(e->getVal1());
+      CharUnits pointeeIncAmt =
+          getContext().getTypeSizeInChars(memTy->getPointeeType());
+      mlir::Value scale = builder.getConstInt(loc, val1Scalar.getType(),
+                                              pointeeIncAmt.getQuantity());
+      val1Scalar = builder.createMul(loc, val1Scalar, scale);
+      val1 = createMemTemp(val1Ty, loc, ".atomictmp");
+      emitStoreOfScalar(val1Scalar, makeAddrLValue(val1, val1Ty),
+                        /*isInit=*/true);
     }
     [[fallthrough]];
   case AtomicExpr::AO__atomic_fetch_add:
-  case AtomicExpr::AO__atomic_fetch_max:
-  case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__atomic_add_fetch:
+  case AtomicExpr::AO__atomic_sub_fetch:
+    if (memTy->isPointerType()) {
+      // Fetch-and-update atomic operation on pointers should treat the pointer
+      // value as uintptr_t values
+      if (!val1.isValid())
+        val1 = emitValToTemp(*this, e->getVal1());
+      ptr = ptr.withElementType(builder, val1.getElementType());
+      break;
+    }
+    [[fallthrough]];
+  case AtomicExpr::AO__atomic_fetch_max:
+  case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__atomic_min_fetch:
-  case AtomicExpr::AO__atomic_sub_fetch:
   case AtomicExpr::AO__c11_atomic_fetch_max:
   case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
@@ -1099,6 +1263,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     ptr = atomics.castToAtomicIntPointer(ptr);
     if (val1.isValid())
       val1 = atomics.convertToAtomicIntPointer(val1);
+    if (val2.isValid())
+      val2 = atomics.convertToAtomicIntPointer(val2);
   }
   if (dest.isValid()) {
     if (shouldCastToIntPtrTy)
@@ -1161,6 +1327,22 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   return convertTempToRValue(
       dest.withElementType(builder, convertTypeForMem(resultTy)), resultTy,
       e->getExprLoc());
+}
+
+RValue CIRGenFunction::emitAtomicLoad(LValue lvalue, SourceLocation loc,
+                                      AggValueSlot slot) {
+  if (lvalue.getType()->isAtomicType())
+    return emitAtomicLoad(lvalue, loc, cir::MemOrder::SequentiallyConsistent,
+                          /*isVolatile=*/lvalue.isVolatileQualified(), slot);
+  return emitAtomicLoad(lvalue, loc, cir::MemOrder::Acquire,
+                        /*isVolatile=*/true, slot);
+}
+
+RValue CIRGenFunction::emitAtomicLoad(LValue lvalue, SourceLocation loc,
+                                      cir::MemOrder order, bool isVolatile,
+                                      AggValueSlot slot) {
+  AtomicInfo info(*this, lvalue, getLoc(loc));
+  return info.emitAtomicLoad(slot, loc, /*asValue=*/true, order, isVolatile);
 }
 
 void CIRGenFunction::emitAtomicStore(RValue rvalue, LValue dest, bool isInit) {

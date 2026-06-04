@@ -167,7 +167,7 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Output.getFilename());
 
   // TODO: Consider moving SPIR-V linking to a separate tool.
-  if (C.getDriver().isUsingLTO()) {
+  if (ToolChain.isUsingLTO(Args)) {
     // Implement limited LTO support through llvm-lto.
     if (Args.hasArg(options::OPT_sycl_link)) {
       // For unsupported cases, throw the same error as when LTO isn't supported
@@ -184,6 +184,8 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Use of --sycl-link will call the clang-sycl-linker instead of
     // the default linker (spirv-link).
     Linker = ToolChain.GetProgramPath("clang-sycl-linker");
+    if (Args.hasArg(options::OPT_v))
+      CmdArgs.push_back("-v");
   } else if (!llvm::sys::fs::can_execute(Linker) &&
              !C.getArgs().hasArg(clang::options::OPT__HASH_HASH_HASH)) {
     C.getDriver().Diag(clang::diag::err_drv_no_spv_tools) << getShortName();
@@ -199,7 +201,7 @@ SPIRVToolChain::SPIRVToolChain(const Driver &D, const llvm::Triple &Triple,
     : ToolChain(D, Triple, Args) {
   // TODO: Revisit need/use of --sycl-link option once SYCL toolchain is
   // available and SYCL linking support is moved there.
-  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link) || D.isUsingLTO();
+  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link) || isUsingLTO(Args);
 
   // Lookup binaries into the driver directory.
   getProgramPaths().push_back(getDriver().Dir);

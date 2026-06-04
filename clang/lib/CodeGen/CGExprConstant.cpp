@@ -21,6 +21,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1146,7 +1147,7 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
 // handled by constant folding.
 //
 // Constant folding is currently missing support for a few features supported
-// here: CK_ToUnion, CK_ReinterpretMemberPointer, and DesignatedInitUpdateExpr.
+// here: CK_ReinterpretMemberPointer, and DesignatedInitUpdateExpr.
 class ConstExprEmitter
     : public ConstStmtVisitor<ConstExprEmitter, llvm::Constant *, QualType> {
   CodeGenModule &CGM;
@@ -2645,8 +2646,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     unsigned NumElts = NumRows * NumCols;
     SmallVector<llvm::Constant *, 16> Inits(NumElts);
 
-    bool IsRowMajor = CGM.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(CGM.getLangOpts(), DestType);
 
     for (unsigned Row = 0; Row != NumRows; ++Row) {
       for (unsigned Col = 0; Col != NumCols; ++Col) {

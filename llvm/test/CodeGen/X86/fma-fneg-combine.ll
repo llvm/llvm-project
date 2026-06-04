@@ -352,33 +352,36 @@ entry:
   ret <16 x float> %sub.i
 }
 
-define <16 x float> @test15(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask)  {
+define <16 x float> @test15(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask0, i16 %mask1)  {
 ; SKX-LABEL: test15:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    kmovd %esi, %k2
 ; SKX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm3
 ; SKX-NEXT:    vfnmadd213ps {ru-sae}, %zmm2, %zmm0, %zmm1
 ; SKX-NEXT:    vmovaps %zmm1, %zmm3 {%k1}
-; SKX-NEXT:    vfnmadd132ps {rd-sae}, %zmm0, %zmm2, %zmm3 {%k1}
+; SKX-NEXT:    vfnmadd132ps {rd-sae}, %zmm0, %zmm2, %zmm3 {%k2}
 ; SKX-NEXT:    vmovaps %zmm3, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test15:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    kmovw %esi, %k2
 ; KNL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm3
 ; KNL-NEXT:    vfnmadd213ps {ru-sae}, %zmm2, %zmm0, %zmm1
 ; KNL-NEXT:    vmovaps %zmm1, %zmm3 {%k1}
-; KNL-NEXT:    vfnmadd132ps {rd-sae}, %zmm0, %zmm2, %zmm3 {%k1}
+; KNL-NEXT:    vfnmadd132ps {rd-sae}, %zmm0, %zmm2, %zmm3 {%k2}
 ; KNL-NEXT:    vmovaps %zmm3, %zmm0
 ; KNL-NEXT:    retq
 entry:
-  %bc = bitcast i16 %mask to <16 x i1>
+  %bc0 = bitcast i16 %mask0 to <16 x i1>
+  %bc1 = bitcast i16 %mask1 to <16 x i1>
   %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %a
   %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sub.i, <16 x float> %b, <16 x float> %c, i32 10)
-  %sel = select <16 x i1> %bc, <16 x float> %0, <16 x float> %sub.i
+  %sel = select <16 x i1> %bc0, <16 x float> %0, <16 x float> %sub.i
   %1 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %sel, <16 x float> %sub.i, <16 x float> %c, i32 9)
-  %sel2 = select <16 x i1> %bc, <16 x float> %1, <16 x float> %sel
+  %sel2 = select <16 x i1> %bc1, <16 x float> %1, <16 x float> %sel
   ret <16 x float> %sel2
 }
 

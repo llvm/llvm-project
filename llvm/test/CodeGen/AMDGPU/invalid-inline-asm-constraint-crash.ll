@@ -1,6 +1,6 @@
 ; RUN: not llc -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR: error: couldn't allocate output register for constraint 'q'
+; ERR: error: could not allocate output register for constraint 'q'
 define void @crash_use_invalid_output_constraint_block(ptr addrspace(1) %arg) {
 bb:
   %v = call i32 asm sideeffect "", "=q"()
@@ -29,7 +29,7 @@ define void @invalid_input_constraint_multi_valid() {
   ret void
 }
 
-; ERR: error: couldn't allocate output register for constraint 'q'
+; ERR: error: could not allocate output register for constraint 'q'
 define void @crash_use_invalid_output_constraint_block_multi(ptr addrspace(1) %arg) {
 bb:
   %v = call { i32, i32 } asm sideeffect "", "=q,=q"()
@@ -40,7 +40,7 @@ use:
   ret void
 }
 
-; ERR: error: couldn't allocate output register for constraint 'q'
+; ERR: error: could not allocate output register for constraint 'q'
 define void @crash_use_invalid_output_constraint_block_multi_valid(ptr addrspace(1) %arg) {
 bb:
   %v = call { i32, i32 } asm sideeffect "", "=q,=v"()

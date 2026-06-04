@@ -431,7 +431,7 @@ Function *HotColdSplitting::extractColdRegion(
         OutF->setSection(OrigF->getSection());
     }
 
-    markFunctionCold(*OutF, BFI != nullptr);
+    markFunctionCold(*OutF, true);
 
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     ORE.emit([&]() {
@@ -721,6 +721,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             SubRegion, &*DT, /* AggregateArgs */ false, /* BFI */ nullptr,
             /* BPI */ nullptr, AC, /* AllowVarArgs */ false,
             /* AllowAlloca */ false, /* AllocaBlock */ nullptr,
+            /* DeallocationBlocks */ {},
             /* Suffix */ "cold." + std::to_string(OutlinedFunctionID),
             /* ArgsInZeroAddressSpace */ false,
             /* VoidReturnWithSingleOutput */ false);

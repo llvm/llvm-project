@@ -11,7 +11,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-LABEL: @consecutive_no_gep(
 ; CHECK: vector.body
 ; CHECK: %[[index:.*]] = phi i64 [ 0, %vector.ph ]
-; CHECK: %[[offset:.*]] = mul i64 %[[index]], 4
+; CHECK: %[[offset:.*]] = shl i64 %[[index]], 2
 ; CHECK: getelementptr i8, ptr %{{.*}}, i64 %[[offset]]
 ; CHECK: load <4 x float>
 

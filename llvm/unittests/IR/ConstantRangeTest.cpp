@@ -1107,72 +1107,68 @@ TEST_F(ConstantRangeTest, Multiply) {
 TEST_F(ConstantRangeTest, MultiplyWithNoWrap) {
   using OBO = OverflowingBinaryOperator;
 
-  EXPECT_EQ(Empty.multiplyWithNoWrap(Some, OBO::NoUnsignedWrap), Empty);
-  EXPECT_EQ(Some.multiplyWithNoWrap(Empty, OBO::NoUnsignedWrap), Empty);
-  EXPECT_EQ(Full.multiplyWithNoWrap(Full, OBO::NoUnsignedWrap), Full);
-  EXPECT_EQ(Full.multiplyWithNoWrap(Some, OBO::NoUnsignedWrap), Full);
-  EXPECT_EQ(Some.multiplyWithNoWrap(Full, OBO::NoUnsignedWrap), Full);
+  EXPECT_EQ(Empty.multiply(Some, OBO::NoUnsignedWrap), Empty);
+  EXPECT_EQ(Some.multiply(Empty, OBO::NoUnsignedWrap), Empty);
+  EXPECT_EQ(Full.multiply(Full, OBO::NoUnsignedWrap), Full);
+  EXPECT_EQ(Full.multiply(Some, OBO::NoUnsignedWrap), Full);
+  EXPECT_EQ(Some.multiply(Full, OBO::NoUnsignedWrap), Full);
   EXPECT_EQ(ConstantRange(APInt(4, 0), APInt(4, 2))
-                .multiplyWithNoWrap(ConstantRange(APInt(4, 2), APInt(4, 0)),
-                                    OBO::NoUnsignedWrap),
+                .multiply(ConstantRange(APInt(4, 2), APInt(4, 0)),
+                          OBO::NoUnsignedWrap),
             ConstantRange::getFull(4));
   EXPECT_EQ(ConstantRange(APInt(4, 1), APInt(4, 5))
-                .multiplyWithNoWrap(ConstantRange(APInt(4, 1), APInt(4, 5)),
-                                    OBO::NoUnsignedWrap),
+                .multiply(ConstantRange(APInt(4, 1), APInt(4, 5)),
+                          OBO::NoUnsignedWrap),
             ConstantRange(APInt(4, 1), APInt(4, 0)));
   EXPECT_EQ(ConstantRange(APInt(8, 254), APInt(8, 0))
-                .multiplyWithNoWrap(ConstantRange(APInt(8, 252), APInt(8, 4)),
-                                    OBO::NoUnsignedWrap),
+                .multiply(ConstantRange(APInt(8, 252), APInt(8, 4)),
+                          OBO::NoUnsignedWrap),
             ConstantRange(APInt(8, 250), APInt(8, 9)));
   EXPECT_EQ(ConstantRange(APInt(8, 254), APInt(8, 255))
-                .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 4)),
-                                    OBO::NoUnsignedWrap),
+                .multiply(ConstantRange(APInt(8, 2), APInt(8, 4)),
+                          OBO::NoUnsignedWrap),
             ConstantRange::getEmpty(8));
 
-  EXPECT_EQ(Empty.multiplyWithNoWrap(Some, OBO::NoSignedWrap), Empty);
-  EXPECT_EQ(Some.multiplyWithNoWrap(Empty, OBO::NoSignedWrap), Empty);
-  EXPECT_EQ(Full.multiplyWithNoWrap(Full, OBO::NoSignedWrap), Full);
-  EXPECT_EQ(Full.multiplyWithNoWrap(Some, OBO::NoSignedWrap), Full);
-  EXPECT_EQ(Some.multiplyWithNoWrap(Full, OBO::NoSignedWrap), Full);
+  EXPECT_EQ(Empty.multiply(Some, OBO::NoSignedWrap), Empty);
+  EXPECT_EQ(Some.multiply(Empty, OBO::NoSignedWrap), Empty);
+  EXPECT_EQ(Full.multiply(Full, OBO::NoSignedWrap), Full);
+  EXPECT_EQ(Full.multiply(Some, OBO::NoSignedWrap), Full);
+  EXPECT_EQ(Some.multiply(Full, OBO::NoSignedWrap), Full);
+  EXPECT_EQ(ConstantRange(APInt(4, 0), APInt(4, 4))
+                .multiply(ConstantRange(APInt(4, -5, true), APInt(4, 4)),
+                          OBO::NoSignedWrap),
+            ConstantRange::getFull(4));
   EXPECT_EQ(
-      ConstantRange(APInt(4, 0), APInt(4, 4))
-          .multiplyWithNoWrap(ConstantRange(APInt(4, -5, true), APInt(4, 4)),
-                              OBO::NoSignedWrap),
-      ConstantRange::getFull(4));
-  EXPECT_EQ(ConstantRange(APInt(4, 0), APInt(4, 3))
-                .multiplyWithNoWrap(ConstantRange(APInt(4, 0), APInt(4, 5)),
-                                    OBO::NoSignedWrap),
-            ConstantRange(APInt(4, 0), APInt(4, -8, true)));
+      ConstantRange(APInt(4, 0), APInt(4, 3))
+          .multiply(ConstantRange(APInt(4, 0), APInt(4, 5)), OBO::NoSignedWrap),
+      ConstantRange(APInt(4, 0), APInt(4, -8, true)));
   EXPECT_EQ(ConstantRange(APInt(8, 3), APInt(8, -11, true))
-                .multiplyWithNoWrap(ConstantRange(APInt(8, -1, true)),
-                                    OBO::NoSignedWrap),
+                .multiply(ConstantRange(APInt(8, -1, true)), OBO::NoSignedWrap),
             ConstantRange(APInt(8, 12), APInt(8, -2, true)));
   EXPECT_EQ(ConstantRange(APInt(8, 254), APInt(8, 255))
-                .multiplyWithNoWrap(ConstantRange(APInt(8, 100), APInt(8, 121)),
-                                    OBO::NoSignedWrap),
+                .multiply(ConstantRange(APInt(8, 100), APInt(8, 121)),
+                          OBO::NoSignedWrap),
             ConstantRange::getEmpty(8));
   EXPECT_TRUE(ConstantRange::getFull(8)
-                  .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 128)),
-                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                  .multiply(ConstantRange(APInt(8, 2), APInt(8, 128)),
+                            OBO::NoUnsignedWrap | OBO::NoSignedWrap)
                   .isAllNonNegative());
   EXPECT_TRUE(ConstantRange(APInt(8, 2), APInt(8, 128))
-                  .multiplyWithNoWrap(ConstantRange::getFull(8),
-                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                  .multiply(ConstantRange::getFull(8),
+                            OBO::NoUnsignedWrap | OBO::NoSignedWrap)
                   .isAllNonNegative());
-  EXPECT_FALSE(
-      ConstantRange::getFull(8)
-          .multiplyWithNoWrap(ConstantRange(APInt(8, 1), APInt(8, 128)),
-                              OBO::NoUnsignedWrap | OBO::NoSignedWrap)
-          .isAllNonNegative());
-  EXPECT_FALSE(
-      ConstantRange::getFull(8)
-          .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 128)),
-                              OBO::NoSignedWrap)
-          .isAllNonNegative());
+  EXPECT_FALSE(ConstantRange::getFull(8)
+                   .multiply(ConstantRange(APInt(8, 1), APInt(8, 128)),
+                             OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                   .isAllNonNegative());
+  EXPECT_FALSE(ConstantRange::getFull(8)
+                   .multiply(ConstantRange(APInt(8, 2), APInt(8, 128)),
+                             OBO::NoSignedWrap)
+                   .isAllNonNegative());
 
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
-        return CR1.multiplyWithNoWrap(CR2, OBO::NoUnsignedWrap);
+        return CR1.multiply(CR2, OBO::NoUnsignedWrap);
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
@@ -1184,7 +1180,7 @@ TEST_F(ConstantRangeTest, MultiplyWithNoWrap) {
       PreferSmallest, CheckCorrectnessOnly);
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
-        return CR1.multiplyWithNoWrap(CR2, OBO::NoSignedWrap);
+        return CR1.multiply(CR2, OBO::NoSignedWrap);
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
@@ -1196,8 +1192,7 @@ TEST_F(ConstantRangeTest, MultiplyWithNoWrap) {
       PreferSmallest, CheckCorrectnessOnly);
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
-        return CR1.multiplyWithNoWrap(CR2,
-                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap);
+        return CR1.multiply(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow1, IsOverflow2;

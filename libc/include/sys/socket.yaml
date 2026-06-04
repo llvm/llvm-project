@@ -9,6 +9,8 @@ types:
   - type_name: struct_sockaddr_storage
   - type_name: socklen_t
   - type_name: sa_family_t
+  - type_name: struct_cmsghdr
+  - type_name: struct_mmsghdr
   - type_name: struct_msghdr
   - type_name: struct_iovec
   - type_name: struct_linger
@@ -19,7 +21,7 @@ objects: []
 functions:
   - name: accept
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -27,7 +29,7 @@ functions:
       - type: socklen_t *__restrict
   - name: accept4
     standards:
-      - Linux
+      - linux
     return_type: int
     arguments:
       - type: int
@@ -36,7 +38,7 @@ functions:
       - type: int
   - name: bind
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -44,15 +46,31 @@ functions:
       - type: socklen_t
   - name: connect
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: const struct sockaddr *
       - type: socklen_t
+  - name: getpeername
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct sockaddr *__restrict
+      - type: socklen_t *__restrict
+  - name: getsockname
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct sockaddr *__restrict
+      - type: socklen_t *__restrict
   - name: getsockopt
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -62,14 +80,14 @@ functions:
       - type: socklen_t *__restrict
   - name: listen
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: int
   - name: recv
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
@@ -78,18 +96,18 @@ functions:
       - type: int
   - name: recvfrom
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
-      - type: void *
+      - type: void *__restrict
       - type: size_t
       - type: int
       - type: struct sockaddr *__restrict
       - type: socklen_t *__restrict
   - name: recvmsg
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
@@ -97,16 +115,25 @@ functions:
       - type: int
   - name: send
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
       - type: const void*
       - type: size_t
       - type: int
+  - name: sendmmsg
+    standards:
+      - linux
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct mmsghdr *
+      - type: unsigned int
+      - type: int
   - name: sendmsg
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
@@ -114,7 +141,7 @@ functions:
       - type: int
   - name: sendto
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
@@ -125,7 +152,7 @@ functions:
       - type: socklen_t
   - name: setsockopt
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -135,14 +162,14 @@ functions:
       - type: socklen_t
   - name: shutdown
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: int
   - name: socket
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int

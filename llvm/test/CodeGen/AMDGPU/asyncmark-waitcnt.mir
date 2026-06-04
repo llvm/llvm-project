@@ -16,7 +16,7 @@ body:             |
     ; CHECK-LABEL: name: asyncmark_preexisting_waitcnt
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: S_WAITCNT 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; CHECK-NEXT: ASYNCMARK
     ; CHECK-NEXT: S_ENDPGM 0
     S_WAITCNT_soft 0

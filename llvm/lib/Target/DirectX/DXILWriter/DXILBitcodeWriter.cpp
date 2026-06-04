@@ -12,6 +12,7 @@
 
 #include "DXILBitcodeWriter.h"
 #include "DXILValueEnumerator.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -128,16 +129,20 @@ class DXILBitcodeWriter {
   /// This maps values to their typed pointers
   PointerTypeMap PointerMap;
 
+  /// Tracks debug info metadata.
+  const DXILDebugInfoMap &DebugInfo;
+
 public:
   /// Constructs a ModuleBitcodeWriter object for the given Module,
   /// writing to the provided \p Buffer.
   DXILBitcodeWriter(const Module &M, SmallVectorImpl<char> &Buffer,
-                    StringTableBuilder &StrtabBuilder, BitstreamWriter &Stream)
+                    StringTableBuilder &StrtabBuilder, BitstreamWriter &Stream,
+                    const DXILDebugInfoMap &DebugInfo)
       : I8Ty(Type::getInt8Ty(M.getContext())),
         I8PtrTy(TypedPointerType::get(I8Ty, 0)), Stream(Stream),
-        StrtabBuilder(StrtabBuilder), M(M), VE(M, I8PtrTy), Buffer(Buffer),
-        BitcodeStartBit(Stream.GetCurrentBitNo()),
-        PointerMap(PointerTypeAnalysis::run(M)) {
+        StrtabBuilder(StrtabBuilder), M(M), VE(M, I8PtrTy, DebugInfo),
+        Buffer(Buffer), BitcodeStartBit(Stream.GetCurrentBitNo()),
+        PointerMap(PointerTypeAnalysis::run(M)), DebugInfo(DebugInfo) {
     GlobalValueId = VE.getValues().size();
     // Enumerate the typed pointers
     for (auto El : PointerMap)
@@ -393,7 +398,8 @@ dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
 dxil::BitcodeWriter::~BitcodeWriter() { }
 
 /// Write the specified module to the specified output stream.
-void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
+void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out,
+                           const DXILDebugInfoMap &DebugInfo) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
@@ -404,7 +410,7 @@ void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
   BitcodeWriter Writer(Buffer);
-  Writer.writeModule(M);
+  Writer.writeModule(M, DebugInfo);
 
   // Write the generated bitstream to "Out".
   if (!Buffer.empty())
@@ -424,7 +430,8 @@ void BitcodeWriter::writeBlob(unsigned Block, unsigned Record, StringRef Blob) {
   Stream->ExitBlock();
 }
 
-void BitcodeWriter::writeModule(const Module &M) {
+void BitcodeWriter::writeModule(const Module &M,
+                                const DXILDebugInfoMap &DebugInfo) {
 
   // The Mods vector is used by irsymtab::build, which requires non-const
   // Modules in case it needs to materialize metadata. But the bitcode writer
@@ -433,7 +440,7 @@ void BitcodeWriter::writeModule(const Module &M) {
   assert(M.isMaterialized());
   Mods.push_back(const_cast<Module *>(&M));
 
-  DXILBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream);
+  DXILBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream, DebugInfo);
   ModuleWriter.write();
 }
 
@@ -522,21 +529,19 @@ unsigned DXILBitcodeWriter::getEncodedBinaryOpcode(unsigned Opcode) {
 }
 
 unsigned DXILBitcodeWriter::getTypeID(Type *T, const Value *V) {
-  if (!T->isPointerTy() &&
-      // For Constant, always check PointerMap to make sure OpaquePointer in
-      // things like constant struct/array works.
-      (!V || !isa<Constant>(V)))
+  // For Constant, always check PointerMap to make sure OpaquePointer in
+  // things like constant struct/array works.
+  if (!T->isPointerTy() && !isa_and_nonnull<Constant>(V))
     return VE.getTypeID(T);
   auto It = PointerMap.find(V);
   if (It != PointerMap.end())
     return VE.getTypeID(It->second);
-  // For Constant, return T when cannot find in PointerMap.
-  // FIXME: support ConstantPointerNull which could map to more than one
-  // TypedPointerType.
+  // FIXME: support ConstantPointerNull and UndefValue which could map to more
+  // than one TypedPointerType.
   // See https://github.com/llvm/llvm-project/issues/57942.
-  if (V && isa<Constant>(V) && !isa<ConstantPointerNull>(V))
-    return VE.getTypeID(T);
-  return VE.getTypeID(I8PtrTy);
+  if (T->isPointerTy())
+    return VE.getTypeID(I8PtrTy);
+  return VE.getTypeID(T);
 }
 
 unsigned DXILBitcodeWriter::getGlobalObjectValueTypeID(Type *T,
@@ -1304,7 +1309,9 @@ void DXILBitcodeWriter::writeModuleInfo() {
   }
 
   // Emit the function proto information.
-  for (const Function &F : M) {
+  for (const Function &OrigF : M) {
+    const Function &F = VE.getDXILFunction(OrigF);
+
     // FUNCTION:  [type, callingconv, isproto, linkage, paramattrs, alignment,
     //             section, visibility, gc, unnamed_addr, prologuedata,
     //             dllstorageclass, comdat, prefixdata, personalityfn]
@@ -1521,13 +1528,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                            SmallVectorImpl<uint64_t> &Record,
                                            unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  DISourceLanguageName Lang = N->getSourceLanguage();
-  if (Lang.hasVersionedName()) {
-    auto LangName = static_cast<dwarf::SourceLanguageName>(Lang.getName());
-    Lang = dwarf::toDW_LANG(LangName, Lang.getVersion())
-               .value_or(dwarf::SourceLanguage{});
-  }
-  Record.push_back(Lang.getUnversionedName());
+  Record.push_back(N->getSourceLanguage().getUnversionedName());
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());
@@ -1537,7 +1538,7 @@ void DXILBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(N->getEmissionKind());
   Record.push_back(VE.getMetadataOrNullID(N->getEnumTypes().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getRetainedTypes().get()));
-  Record.push_back(/* subprograms */ 0);
+  Record.push_back(VE.getMetadataOrNullID(DebugInfo.MDExtra.lookup(N)));
   Record.push_back(VE.getMetadataOrNullID(N->getGlobalVariables().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getImportedEntities().get()));
   Record.push_back(N->getDWOId());
@@ -1564,7 +1565,7 @@ void DXILBitcodeWriter::writeDISubprogram(const DISubprogram *N,
   Record.push_back(N->getVirtualIndex());
   Record.push_back(N->getFlags());
   Record.push_back(N->isOptimized());
-  Record.push_back(VE.getMetadataOrNullID(N->getRawUnit()));
+  Record.push_back(VE.getMetadataOrNullID(DebugInfo.MDExtra.lookup(N)));
   Record.push_back(VE.getMetadataOrNullID(N->getTemplateParams().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getDeclaration()));
   Record.push_back(VE.getMetadataOrNullID(N->getRetainedNodes().get()));
@@ -1881,15 +1882,21 @@ void DXILBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
   F.getAllMetadata(MDs);
   if (!MDs.empty()) {
     for (const auto &I : MDs) {
+      if (I.first == LLVMContext::MD_dbg)
+        continue;
       Record.push_back(I.first);
       Record.push_back(VE.getMetadataID(I.second));
     }
+  }
+  if (!Record.empty()) {
     Stream.EmitRecord(bitc::METADATA_ATTACHMENT, Record, 0);
     Record.clear();
   }
 
   for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB) {
+    for (const Instruction &OrigI : BB) {
+      const Instruction &I = VE.getDXILInstruction(OrigI);
+
       MDs.clear();
       I.getAllMetadataOtherThanDebugLoc(MDs);
 
@@ -2601,7 +2608,8 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   SmallVector<const ValueName *, 16> SortedTable;
 
   for (auto &VI : VST) {
-    SortedTable.push_back(VI.second->getValueName());
+    const Value &V = VE.getDXILValue(*VI.second);
+    SortedTable.push_back(V.getValueName());
   }
   // The keys are unique, so there shouldn't be stability issues.
   llvm::sort(SortedTable, [](const ValueName *A, const ValueName *B) {
@@ -2684,18 +2692,20 @@ void DXILBitcodeWriter::writeFunction(const Function &F) {
 
   // Finally, emit all the instructions, in order.
   for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E;
-         ++I) {
-      writeInstruction(*I, InstID, Vals);
+    for (BasicBlock::const_iterator It = BB->begin(), E = BB->end(); It != E;
+         ++It) {
+      const Instruction &I = VE.getDXILInstruction(*It);
 
-      if (!I->getType()->isVoidTy())
+      writeInstruction(I, InstID, Vals);
+
+      if (!I.getType()->isVoidTy())
         ++InstID;
 
       // If the instruction has metadata, write a metadata attachment later.
-      NeedsMetadataAttachment |= I->hasMetadataOtherThanDebugLoc();
+      NeedsMetadataAttachment |= I.hasMetadataOtherThanDebugLoc();
 
       // If the instruction has a debug location, emit it.
-      DILocation *DL = I->getDebugLoc();
+      DILocation *DL = I.getDebugLoc();
       if (!DL)
         continue;
 

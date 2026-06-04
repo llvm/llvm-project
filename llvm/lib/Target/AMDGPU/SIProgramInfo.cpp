@@ -136,17 +136,27 @@ static uint64_t getPGMRSrc1Reg(const SIProgramInfo &ProgInfo,
   return Reg;
 }
 
-static uint64_t getComputePGMRSrc2Reg(const SIProgramInfo &ProgInfo) {
-  uint64_t Reg = S_00B84C_USER_SGPR(ProgInfo.UserSGPR) |
-                 S_00B84C_TRAP_HANDLER(ProgInfo.TrapHandlerEnable) |
-                 S_00B84C_TGID_X_EN(ProgInfo.TGIdXEnable) |
-                 S_00B84C_TGID_Y_EN(ProgInfo.TGIdYEnable) |
-                 S_00B84C_TGID_Z_EN(ProgInfo.TGIdZEnable) |
-                 S_00B84C_TG_SIZE_EN(ProgInfo.TGSizeEnable) |
-                 S_00B84C_TIDIG_COMP_CNT(ProgInfo.TIdIGCompCount) |
-                 S_00B84C_EXCP_EN_MSB(ProgInfo.EXCPEnMSB) |
-                 S_00B84C_LDS_SIZE(ProgInfo.LdsSize) |
-                 S_00B84C_EXCP_EN(ProgInfo.EXCPEnable);
+static uint64_t getComputePGMRSrc2Reg(const GCNSubtarget &ST,
+                                      const SIProgramInfo &ProgInfo) {
+  uint64_t MaxNumUserSGRPs = AMDGPU::getMaxNumUserSGPRs(ST);
+  uint64_t Reg = 0;
+  if (MaxNumUserSGRPs == 32) {
+    Reg = S_00B84C_USER_SGPR_GFX1250(ProgInfo.UserSGPR);
+  } else if (MaxNumUserSGRPs == 16) {
+    Reg = (S_00B84C_USER_SGPR(ProgInfo.UserSGPR) |
+           S_00B84C_TRAP_HANDLER(ProgInfo.TrapHandlerEnable));
+  } else {
+    llvm_unreachable("max Number of User SGPRs are either 32 or 16");
+  }
+
+  Reg |= S_00B84C_TGID_X_EN(ProgInfo.TGIdXEnable) |
+         S_00B84C_TGID_Y_EN(ProgInfo.TGIdYEnable) |
+         S_00B84C_TGID_Z_EN(ProgInfo.TGIdZEnable) |
+         S_00B84C_TG_SIZE_EN(ProgInfo.TGSizeEnable) |
+         S_00B84C_TIDIG_COMP_CNT(ProgInfo.TIdIGCompCount) |
+         S_00B84C_EXCP_EN_MSB(ProgInfo.EXCPEnMSB) |
+         S_00B84C_LDS_SIZE(ProgInfo.LdsSize) |
+         S_00B84C_EXCP_EN(ProgInfo.EXCPEnable);
 
   return Reg;
 }
@@ -189,23 +199,24 @@ const MCExpr *SIProgramInfo::getPGMRSrc1(CallingConv::ID CC,
   return MCBinaryExpr::createOr(RegExpr, Res, Ctx);
 }
 
-const MCExpr *SIProgramInfo::getComputePGMRSrc2(MCContext &Ctx) const {
-  uint64_t Reg = getComputePGMRSrc2Reg(*this);
+const MCExpr *SIProgramInfo::getComputePGMRSrc2(const GCNSubtarget &ST,
+                                                MCContext &Ctx) const {
+  uint64_t Reg = getComputePGMRSrc2Reg(ST, *this);
   const MCExpr *RegExpr = MCConstantExpr::create(Reg, Ctx);
   return MCBinaryExpr::createOr(ScratchEnable, RegExpr, Ctx);
 }
 
 const MCExpr *SIProgramInfo::getPGMRSrc2(CallingConv::ID CC,
+                                         const GCNSubtarget &ST,
                                          MCContext &Ctx) const {
   if (AMDGPU::isCompute(CC))
-    return getComputePGMRSrc2(Ctx);
+    return getComputePGMRSrc2(ST, Ctx);
 
   return MCConstantExpr::create(0, Ctx);
 }
 
-uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF,
-                                            bool IsLowerBound) {
-  if (!IsLowerBound && CodeSizeInBytes.has_value())
+uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF) {
+  if (CodeSizeInBytes.has_value())
     return *CodeSizeInBytes;
 
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
@@ -214,22 +225,12 @@ uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF,
   uint64_t CodeSize = 0;
 
   for (const MachineBasicBlock &MBB : MF) {
-    // The amount of padding to align code can be both underestimated and
-    // overestimated. In case of inline asm used getInstSizeInBytes() will
-    // return a maximum size of a single instruction, where the real size may
-    // differ. At this point CodeSize may be already off.
-    if (!IsLowerBound)
-      CodeSize = alignTo(CodeSize, MBB.getAlignment());
+    CodeSize = alignTo(CodeSize, MBB.getAlignment());
 
     for (const MachineInstr &MI : MBB) {
       // TODO: CodeSize should account for multiple functions.
 
       if (MI.isMetaInstruction())
-        continue;
-
-      // We cannot properly estimate inline asm size. It can be as small as zero
-      // if that is just a comment.
-      if (IsLowerBound && MI.isInlineAsm())
         continue;
 
       CodeSize += TII->getInstSizeInBytes(MI);

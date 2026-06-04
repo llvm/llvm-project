@@ -145,7 +145,7 @@ private:
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
   bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
-  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown,
+  bool parseParens(TokenType StarAndAmpTokenType = TT_Unknown,
                    bool InMacroCall = false);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
@@ -208,6 +208,8 @@ private:
   void parseVerilogCaseLabel();
   // For import, export, and extern.
   void parseVerilogExtern();
+  // Skip things that can precede the keywords like module.
+  void skipVerilogQualifiers();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 

@@ -85,7 +85,7 @@
 ; CHECK-O23-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23-NEXT: Invalidating analysis: LazyValueAnalysis
-; CHECK-O23SZ-NEXT: Running pass: JumpTableToSwitchPass
+; CHECK-O23-NEXT: Running pass: JumpTableToSwitchPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O23-NEXT: Running pass: AggressiveInstCombinePass
@@ -169,6 +169,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopDeletionPass
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopInterchangePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopDistributePass
 ; CHECK-POSTLINK-O-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-POSTLINK-O-NEXT: Running pass: InjectTLIMappings

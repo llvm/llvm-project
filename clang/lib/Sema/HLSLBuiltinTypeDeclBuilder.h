@@ -64,7 +64,7 @@ public:
   ~BuiltinTypeDeclBuilder();
 
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
-                                                  ConceptDecl *CD);
+                                                  ConceptDecl *CD = nullptr);
   BuiltinTypeDeclBuilder &
   addSimpleTemplateParams(ArrayRef<StringRef> Names,
                           ArrayRef<QualType> DefaultTypes, ConceptDecl *CD);
@@ -83,6 +83,7 @@ public:
   addTextureHandle(ResourceClass RC, bool IsROV, ResourceDimension RD,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
+  BuiltinTypeDeclBuilder &addConstantBufferConversionToType();
   BuiltinTypeDeclBuilder &addArraySubscriptOperators(
       ResourceDimension Dim = ResourceDimension::Unknown);
 
@@ -114,11 +115,11 @@ public:
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
-                                                  bool IsConst, bool IsRef,
-                                                  QualType IndexTy,
+                                                  bool IsConstReturn,
+                                                  bool IsRef, QualType IndexTy,
                                                   QualType ElemTy = QualType());
   BuiltinTypeDeclBuilder &
-  addLoadWithStatusFunction(DeclarationName &Name, bool IsConst,
+  addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
                                            QualType ValueType);

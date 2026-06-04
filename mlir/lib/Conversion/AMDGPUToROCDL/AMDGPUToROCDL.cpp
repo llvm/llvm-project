@@ -48,6 +48,7 @@ constexpr Chipset kGfx908 = Chipset(9, 0, 8);
 constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
 constexpr Chipset kGfx942 = Chipset(9, 4, 2);
 constexpr Chipset kGfx950 = Chipset(9, 5, 0);
+constexpr Chipset kGfx1200 = Chipset(12, 0, 0);
 constexpr Chipset kGfx1250 = Chipset(12, 5, 0);
 
 // Predicates mirroring the LLVM AMDGPU `HasDot{N}Insts` features that gate
@@ -490,6 +491,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bit 0: GLC = 0 (atomics drop value, less coherency)
     // bits 1-2: SLC, DLC = 0 (similarly)
     // bit 3: swizzled (0 for raw)
+    // Note: atomic ret/no-ret bit set by backend based on actual usage.
     args.push_back(createI32Constant(rewriter, loc, 0));
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
@@ -1696,7 +1698,17 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
     // smfmac is supported on gfx942 and gfx950.
     if (chipset.majorVersion != 9 || chipset < kGfx942)
       return op->emitOpError("sparse MFMA (smfmac) only supported on gfx942+");
-    bool isGfx950 = chipset >= kGfx950;
+
+    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
+    if (!maybeIntrinsic.has_value())
+      return op.emitOpError(
+          "no intrinsic matching sparse MFMA on the given chipset");
+    bool isGfx942BF16 =
+        (*maybeIntrinsic ==
+             ROCDL::smfmac_f32_16x16x32_bf16::getOperationName() ||
+         *maybeIntrinsic ==
+             ROCDL::smfmac_f32_32x32x16_bf16::getOperationName());
+    bool isGfx950 = (chipset >= kGfx950) && !isGfx942BF16;
 
     Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA(),
                                          isGfx950);
@@ -1704,14 +1716,12 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
                                          isGfx950);
     Value c = adaptor.getDestC();
 
-    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
-    if (!maybeIntrinsic.has_value())
-      return op.emitOpError(
-          "no intrinsic matching sparse MFMA on the given chipset");
-
     // Bitcast sparse indices from vector<4xi8> or vector<2xi16> to i32.
-    Value sparseIdx = LLVM::BitcastOp::create(
-        rewriter, loc, rewriter.getI32Type(), adaptor.getSparseIdx());
+    // gfx950 8-bit variants already carry the index as i32; skip the bitcast.
+    Value sparseIdx = adaptor.getSparseIdx();
+    Type i32Type = rewriter.getI32Type();
+    if (sparseIdx.getType() != i32Type)
+      sparseIdx = LLVM::BitcastOp::create(rewriter, loc, i32Type, sparseIdx);
 
     OperationState loweredOp(loc, maybeIntrinsic.value());
     loweredOp.addTypes(outType);
@@ -2158,8 +2168,9 @@ struct TransposeLoadOpLowering
   LogicalResult
   matchAndRewrite(TransposeLoadOp op, TransposeLoadOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset != kGfx950)
-      return op.emitOpError("Non-gfx950 chipset not supported");
+    if (chipset != kGfx950 && chipset < kGfx1250)
+      return op.emitOpError(
+          "transpose_load is only supported on gfx950 and gfx1250+");
 
     Location loc = op.getLoc();
     auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
@@ -2182,42 +2193,181 @@ struct TransposeLoadOpLowering
     size_t elementTypeSize =
         resultType.getElementType().getIntOrFloatBitWidth();
 
-    // ROCDL transpose load intrinsics return vectors of 32-bit integers, if
-    // the element size is smaller than 16 bits.
-    Type rocdlResultType = VectorType::get((numElements * elementTypeSize) / 32,
-                                           rewriter.getIntegerType(32));
+    Type llvmResultType = typeConverter->convertType(resultType);
+    // ROCDL transpose load intrinsics return vectors of 32-bit integers for
+    // sub-16-bit element types, and otherwise return the converted result type.
+    Type rocdlResultType =
+        elementTypeSize < 16
+            ? VectorType::get((numElements * elementTypeSize) / 32,
+                              rewriter.getIntegerType(32))
+            : llvmResultType;
+
+    auto emitNumElementsError = [&](size_t expected, StringRef chipsetName) {
+      return op.emitOpError()
+             << elementTypeSize << "-bit transpose_load requires " << expected
+             << " elements on " << chipsetName;
+    };
+
+    Value intrinsic;
+    if (chipset >= kGfx1250) {
+      switch (elementTypeSize) {
+      case 4: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr4_B64::create(rewriter, loc, rocdlResultType, srcPtr)
+                .getResult();
+        break;
+      }
+      case 6: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr6_B96::create(rewriter, loc, rocdlResultType, srcPtr)
+                .getResult();
+        break;
+      }
+      case 8: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr8_B64::create(rewriter, loc, rocdlResultType, srcPtr)
+                .getResult();
+        break;
+      }
+      case 16: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx1250+");
+        intrinsic = ROCDL::DsLoadTr16_B128::create(rewriter, loc,
+                                                   rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      default:
+        return op.emitOpError("Unsupported element size for transpose load");
+      }
+    } else {
+      switch (elementTypeSize) {
+      case 4: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx950");
+        intrinsic = ROCDL::ds_read_tr4_b64::create(rewriter, loc,
+                                                   rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      case 6: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx950");
+        intrinsic = ROCDL::ds_read_tr6_b96::create(rewriter, loc,
+                                                   rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      case 8: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx950");
+        intrinsic = ROCDL::ds_read_tr8_b64::create(rewriter, loc,
+                                                   rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      case 16: {
+        if (numElements != 4)
+          return emitNumElementsError(4, "gfx950");
+        intrinsic = ROCDL::ds_read_tr16_b64::create(rewriter, loc,
+                                                    rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      default:
+        return op.emitOpError("Unsupported element size for transpose load");
+      }
+    }
+
+    assert(intrinsic && "expected ROCDL transpose load intrinsic");
+    if (intrinsic.getType() == llvmResultType) {
+      rewriter.replaceOp(op, intrinsic);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, intrinsic);
+    return success();
+  }
+};
+
+struct GlobalTransposeLoadOpLowering
+    : public ConvertOpToLLVMPattern<GlobalTransposeLoadOp> {
+  GlobalTransposeLoadOpLowering(const LLVMTypeConverter &converter,
+                                Chipset chipset)
+      : ConvertOpToLLVMPattern<GlobalTransposeLoadOp>(converter),
+        chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(GlobalTransposeLoadOp op,
+                  GlobalTransposeLoadOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1200)
+      return op.emitOpError(
+          "global_transpose_load is only supported on gfx1200+");
+
+    Location loc = op.getLoc();
+    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto resultType = cast<VectorType>(op.getResult().getType());
+
+    Value srcPtr = getStridedElementPtr(
+        rewriter, loc, srcMemRefType, adaptor.getSrc(), adaptor.getSrcIndices(),
+        LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw);
+
+    size_t numElements = resultType.getNumElements();
+    size_t elementTypeSize =
+        resultType.getElementType().getIntOrFloatBitWidth();
+
+    // ROCDL global transpose load intrinsics return vectors of i32 for
+    // sub-16-bit elements, matching the LDS lowering convention.
+    Type rocdlResultType =
+        elementTypeSize < 16
+            ? VectorType::get((numElements * elementTypeSize) / 32,
+                              rewriter.getIntegerType(32))
+            : typeConverter->convertType(resultType);
     Type llvmResultType = typeConverter->convertType(resultType);
 
     switch (elementTypeSize) {
     case 4: {
       assert(numElements == 16);
-      auto rocdlOp = ROCDL::ds_read_tr4_b64::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
+      if (chipset < kGfx1250)
+        return op.emitOpError("4-bit global_transpose_load requires gfx1250+");
+      auto rocdlOp = ROCDL::GlobalLoadTr4_B64::create(rewriter, loc,
+                                                      rocdlResultType, srcPtr);
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 6: {
       assert(numElements == 16);
-      auto rocdlOp = ROCDL::ds_read_tr6_b96::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
+      if (chipset < kGfx1250)
+        return op.emitOpError("6-bit global_transpose_load requires gfx1250+");
+      auto rocdlOp = ROCDL::GlobalLoadTr6_B96::create(rewriter, loc,
+                                                      rocdlResultType, srcPtr);
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 8: {
       assert(numElements == 8);
-      auto rocdlOp = ROCDL::ds_read_tr8_b64::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::GlobalLoadTr8_B64::create(rewriter, loc,
+                                                      rocdlResultType, srcPtr);
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 16: {
-      assert(numElements == 4);
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr16_b64>(op, llvmResultType,
-                                                           srcPtr);
+      assert(numElements == 8);
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadTr8_B128>(op, llvmResultType,
+                                                             srcPtr);
       break;
     }
     default:
-      return op.emitOpError("Unsupported element size for transpose load");
+      return op.emitOpError(
+          "unsupported element size for global transpose load");
     }
     return success();
   }
@@ -3134,6 +3284,51 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
       Value vdstNew =
           LLVM::SelectOp::create(rewriter, loc, isEqual, vdst1, vdst0);
       permuted.emplace_back(vdstNew);
+    }
+
+    Value result = LLVM::composeValue(rewriter, loc, permuted, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+struct AMDGPUPermlaneVarLowering
+    : public ConvertOpToLLVMPattern<PermlaneVarOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  AMDGPUPermlaneVarLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<PermlaneVarOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(PermlaneVarOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1200)
+      return op->emitOpError("permlane_var is only supported on GFX12+");
+
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+    Value src = adaptor.getSrc();
+    Value selector = adaptor.getSelector();
+    bool cross = op.getCross();
+    bool fi = op.getFetchInactive();
+    bool boundCtrl = op.getBoundCtrl();
+
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
+
+    SmallVector<Value> permuted;
+    for (Value v : decomposed) {
+      Value res;
+      if (cross)
+        res = ROCDL::PermlaneX16VarOp::create(rewriter, loc, i32, v, v,
+                                              selector, fi, boundCtrl);
+      else
+        res = ROCDL::Permlane16VarOp::create(rewriter, loc, i32, v, v, selector,
+                                             fi, boundCtrl);
+      permuted.emplace_back(res);
     }
 
     Value result = LLVM::composeValue(rewriter, loc, permuted, src.getType());
@@ -4320,6 +4515,10 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
         }
         llvm_unreachable("unknown address space enum value");
       });
+  typeConverter.addConversion([](gpu::NamedBarrierType type) {
+    return LLVM::LLVMPointerType::get(
+        type.getContext(), ROCDL::ROCDLDialect::kSharedMemoryAddressSpace);
+  });
 }
 
 void mlir::populateAMDGPUTypeAndAttributeConversions(
@@ -4405,7 +4604,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
            GlobalLoadAsyncToLDSOpLowering, TransposeLoadOpLowering,
-           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           GlobalTransposeLoadOpLowering, AMDGPUPermlaneLowering,
+           AMDGPUPermlaneVarLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,

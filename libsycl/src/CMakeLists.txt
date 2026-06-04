@@ -71,6 +71,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
       ${CMAKE_THREAD_LIBS_INIT}
       LLVMOffload
       LLVMObject
+      LLVMSupport
   )
 
   set_target_properties(${LIB_TARGET_NAME}

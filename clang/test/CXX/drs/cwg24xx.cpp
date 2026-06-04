@@ -1,12 +1,22 @@
-// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14
-// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx17
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14,cxx98-17
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14,cxx98-17
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98-14,cxx98-17
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx17,cxx98-17
 // RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20,since-cxx17
 // RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20,since-cxx17
 // RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx20,since-cxx17
 
 // cwg2406 is in cwg2406.cpp
+
+namespace cwg2413 { // cwg2413: 23
+template <typename T>
+struct S {
+  operator T::R();
+  // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'T::R' is a C++20 extension}}
+  void f() { operator T::R(); }
+  // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'T::R' is a C++20 extension}}
+};
+} // namespace cwg2413
 
 namespace cwg2428 { // cwg2428: 19
 #if __cplusplus >= 202002L

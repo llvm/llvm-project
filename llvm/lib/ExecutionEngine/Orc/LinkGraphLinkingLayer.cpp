@@ -412,11 +412,6 @@ private:
 
 LinkGraphLinkingLayer::Plugin::~Plugin() = default;
 
-LinkGraphLinkingLayer::LinkGraphLinkingLayer(ExecutionSession &ES)
-    : LinkGraphLayer(ES), MemMgr(ES.getExecutorProcessControl().getMemMgr()) {
-  ES.registerResourceManager(*this);
-}
-
 LinkGraphLinkingLayer::LinkGraphLinkingLayer(ExecutionSession &ES,
                                              JITLinkMemoryManager &MemMgr)
     : LinkGraphLayer(ES), MemMgr(MemMgr) {

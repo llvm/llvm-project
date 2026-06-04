@@ -23,7 +23,7 @@ namespace llvm {
 
 // This pass is responsible for removing optional traps, like llvm.ubsantrap
 // from the hot code.
-class LowerAllowCheckPass : public PassInfoMixin<LowerAllowCheckPass> {
+class LowerAllowCheckPass : public RequiredPassInfoMixin<LowerAllowCheckPass> {
 public:
   struct Options {
     std::vector<unsigned int> cutoffs;
@@ -33,8 +33,6 @@ public:
   explicit LowerAllowCheckPass(LowerAllowCheckPass::Options Opts)
       : Opts(std::move(Opts)) {};
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 
   LLVM_ABI static bool IsRequested();
   LLVM_ABI void

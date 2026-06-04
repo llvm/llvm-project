@@ -170,3 +170,29 @@ The Facade location adds these optional affordances to the Resolver class:
 |`was_hit`| `frame`:`lldb.SBFrame` `bp_loc`:`lldb.SBBreakpointLocation` | This will get called when one of the "real" locations set by your resolver is hit.  `frame` is the stack frame that hit this location.  `bp_loc` is the real location that was hit.  Return either the facade location that you want to consider hit on this stop, or None if you don't consider any of your facade locations to have been hit. |
 | `get_location_description` | `bp_loc`:`lldb.SBBreakpointLocation` `desc_level`:`lldb.DescriptionLevel` `bp_loc` is the facade location to describe.| Use this to provide a helpful description of each facade location.  ``desc_level`` is the level of description requested.  The Brief description is printed when the location is hit.  Full is printed for `break list` and Verbose for `break list -v`.|
 
+## Override breakpoint resolvers
+
+If a breakpoint resolver can provide a better action for some subset of
+breakpoints that lldb would normally set using its own resolvers, it can
+register itself as an "Override Resolver" using:
+
+```
+SBTarget.AddBreakpointOverrideResolver(classname, description, extra_args)
+```
+
+description is what will show in the command:
+
+```
+(lldb) breakpoint override resolver list 
+```
+
+And extra_args is an SBStructuredData that will get passed to the constructor
+of your breakpoint resolver when we make an instance to check for overrides.
+
+The overrides resolver requires the following to be implemented:
+
+| Name  | Arguments | Description|
+|-------|-----------|------------|
+|`overrides_resolver`| `orig_resolver_data`:`lldb.SBStructuredData` | This will get called when lldb has determined the resolver it would normally use for the breakpoint.  `orig_resolver_data` the serialized form of the breakpoint resolver lldb would have used.  If you return True from the API, then lldb will use this instance of your resolver instead of the one it would have used. |
+
+

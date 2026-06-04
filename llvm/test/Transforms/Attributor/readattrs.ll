@@ -15,7 +15,7 @@ declare void @test1_1(ptr %x1_1, ptr readonly %y1_1, ...)
 ;.
 define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 ; CHECK-LABEL: define {{[^@]+}}@test1_2
-; CHECK-SAME: (ptr [[X1_2:%.*]], ptr nofree [[Y1_2:%.*]], ptr [[Z1_2:%.*]]) {
+; CHECK-SAME: (ptr [[X1_2:%.*]], ptr [[Y1_2:%.*]], ptr [[Z1_2:%.*]]) {
 ; CHECK-NEXT:    call void (ptr, ptr, ...) @test1_1(ptr [[X1_2]], ptr nofree readonly [[Y1_2]], ptr [[Z1_2]])
 ; CHECK-NEXT:    store i32 0, ptr @x, align 4
 ; CHECK-NEXT:    ret void
@@ -76,7 +76,7 @@ declare void @test6_1()
 ; This is not a missed optz'n.
 define void @test6_2(ptr %p, ptr %q) {
 ; CHECK-LABEL: define {{[^@]+}}@test6_2
-; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[P:%.*]], ptr nofree [[Q:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[P:%.*]], ptr [[Q:%.*]]) {
 ; CHECK-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; CHECK-NEXT:    call void @test6_1()
 ; CHECK-NEXT:    ret void
@@ -206,13 +206,13 @@ define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
 }
 
 define i32 @volatile_load(ptr %p) {
-; TUNIT: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@volatile_load
 ; TUNIT-SAME: (ptr nofree noundef align 4 [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; TUNIT-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
 ; TUNIT-NEXT:    ret i32 [[LOAD]]
 ;
-; CGSCC: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@volatile_load
 ; CGSCC-SAME: (ptr nofree noundef align 4 [[P:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CGSCC-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
@@ -232,7 +232,7 @@ declare void @escape_readonly_ptr(ptr %addr, ptr readonly %ptr)
 ;
 define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 ; CHECK-LABEL: define {{[^@]+}}@unsound_readnone
-; CHECK-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr nofree [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; CHECK-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    call void @escape_readnone_ptr(ptr noundef nonnull align 8 dereferenceable(8) [[ADDR]], ptr noalias nofree readnone [[ESCAPED_THEN_WRITTEN]])
 ; CHECK-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -248,7 +248,7 @@ define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 
 define void @unsound_readonly(ptr %ignored, ptr %escaped_then_written) {
 ; CHECK-LABEL: define {{[^@]+}}@unsound_readonly
-; CHECK-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr nofree [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; CHECK-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    call void @escape_readonly_ptr(ptr noundef nonnull align 8 dereferenceable(8) [[ADDR]], ptr nofree readonly [[ESCAPED_THEN_WRITTEN]])
 ; CHECK-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -361,14 +361,14 @@ declare void @val_use(i8 %ptr) readonly nounwind
 define void @ptr_uses(ptr %ptr) {
 ; TUNIT: Function Attrs: nosync nounwind memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@ptr_uses
-; TUNIT-SAME: (ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR13]] {
+; TUNIT-SAME: (ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR13]] {
 ; TUNIT-NEXT:    [[CALL_PTR:%.*]] = call ptr @maybe_returned_ptr(ptr nofree readonly [[PTR]]) #[[ATTR13]]
 ; TUNIT-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(ptr readonly [[CALL_PTR]]) #[[ATTR13]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync nounwind memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@ptr_uses
-; CGSCC-SAME: (ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR14]] {
+; CGSCC-SAME: (ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR14]] {
 ; CGSCC-NEXT:    [[CALL_PTR:%.*]] = call ptr @maybe_returned_ptr(ptr nofree readonly [[PTR]]) #[[ATTR14]]
 ; CGSCC-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(ptr readonly [[CALL_PTR]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret void
@@ -410,7 +410,7 @@ define i32 @read_only_constant_mem() {
 ; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nounwind memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR7]] = { nosync nounwind memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR8]] = { nounwind memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nounwind memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR10]] = { nosync memory(none) }
 ; TUNIT: attributes #[[ATTR11]] = { nosync }
 ; TUNIT: attributes #[[ATTR12:[0-9]+]] = { nounwind memory(read) }
@@ -432,7 +432,7 @@ define i32 @read_only_constant_mem() {
 ; CGSCC: attributes #[[ATTR7:[0-9]+]] = { nounwind memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR8]] = { nosync nounwind memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR9]] = { nounwind memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR10]] = { nofree norecurse nounwind memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR11]] = { nosync memory(none) }
 ; CGSCC: attributes #[[ATTR12]] = { nosync }
 ; CGSCC: attributes #[[ATTR13:[0-9]+]] = { nounwind memory(read) }

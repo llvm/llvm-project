@@ -25,7 +25,7 @@ mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
       .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
 }
 
-mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+mlir::Value mlir::acc::getACCOperandForBlockArg(mlir::Value v) {
   auto barg = mlir::dyn_cast<mlir::BlockArgument>(v);
   if (!barg)
     return nullptr;
@@ -33,10 +33,15 @@ mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
   mlir::Block *block = barg.getOwner();
   auto computeReg =
       mlir::dyn_cast<mlir::acc::ComputeRegionOp>(block->getParentOp());
-  if (!computeReg || block != computeReg.getBody())
+  if (!computeReg)
     return nullptr;
+  assert(block == computeReg.getBody() &&
+         "block must be the body of acc.compute_region");
+  return computeReg.getOperand(barg);
+}
 
-  mlir::Value orig = computeReg.getOperand(barg);
+mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+  mlir::Value orig = getACCOperandForBlockArg(v);
   if (!orig)
     return nullptr;
   mlir::Operation *def = orig.getDefiningOp();
@@ -245,23 +250,33 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
     if (pointerLikeTy.isDeviceData(val))
       return true;
 
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data that is already associated with
+  // the device.
+  if (auto declareAttr = defOp->getAttrOfType<mlir::acc::DeclareAttr>(
+          mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
   // Handle operations that access a partial entity - check if the base entity
   // is device data.
-  if (auto *defOp = val.getDefiningOp()) {
-    if (auto partialAccess =
-            dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
-      if (mlir::Value base = partialAccess.getBaseEntity())
-        return isDeviceValue(base);
-    }
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isDeviceValue(base);
+  }
 
-    // Handle address_of - check if the referenced global is device data.
-    if (auto addrOfIface =
-            dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
-      auto symbol = addrOfIface.getSymbol();
-      if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
-              mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
-        return global.isDeviceData();
-    }
+  // Handle address_of - check if the referenced global is device data.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isDeviceData();
   }
 
   return false;

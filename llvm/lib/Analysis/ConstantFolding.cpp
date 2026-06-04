@@ -535,9 +535,12 @@ namespace {
 /// Recursive helper to read bits out of global. C is the constant being copied
 /// out of. ByteOffset is an offset into C. CurPtr is the pointer to copy
 /// results into and BytesLeft is the number of bytes left in
-/// the CurPtr buffer. DL is the DataLayout.
+/// the CurPtr buffer. DL is the DataLayout. When IsByteLoad is true, do not
+/// unwrap inttoptr constant expressions. The caller would reconstruct those
+/// bits as a ConstantByte, dropping the pointer's provenance.
 bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
-                        unsigned BytesLeft, const DataLayout &DL) {
+                        unsigned BytesLeft, const DataLayout &DL,
+                        bool IsByteLoad = false) {
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
 
@@ -571,15 +574,18 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   if (CFP && CFP->getType()->isFloatingPointTy()) {
     if (CFP->getType()->isDoubleTy()) {
       C = FoldBitCast(C, Type::getInt64Ty(C->getContext()), DL);
-      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL);
+      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL,
+                                IsByteLoad);
     }
     if (CFP->getType()->isFloatTy()){
       C = FoldBitCast(C, Type::getInt32Ty(C->getContext()), DL);
-      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL);
+      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL,
+                                IsByteLoad);
     }
     if (CFP->getType()->isHalfTy()){
       C = FoldBitCast(C, Type::getInt16Ty(C->getContext()), DL);
-      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL);
+      return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL,
+                                IsByteLoad);
     }
     return false;
   }
@@ -597,7 +603,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
       if (ByteOffset < EltSize &&
           !ReadDataFromGlobal(CS->getOperand(Index), ByteOffset, CurPtr,
-                              BytesLeft, DL))
+                              BytesLeft, DL, IsByteLoad))
         return false;
 
       ++Index;
@@ -645,7 +651,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
     for (; Index != NumElts; ++Index) {
       if (!ReadDataFromGlobal(C->getAggregateElement(Index), Offset, CurPtr,
-                              BytesLeft, DL))
+                              BytesLeft, DL, IsByteLoad))
         return false;
 
       uint64_t BytesWritten = EltSize - Offset;
@@ -663,8 +669,12 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   if (auto *CE = dyn_cast<ConstantExpr>(C)) {
     if (CE->getOpcode() == Instruction::IntToPtr &&
         CE->getOperand(0)->getType() == DL.getIntPtrType(CE->getType())) {
+      // Folding byte loads through the integer operand would rebuild the result
+      // as a `ConstantByte`, dropping the pointer's provenance.
+      if (IsByteLoad)
+        return false;
       return ReadDataFromGlobal(CE->getOperand(0), ByteOffset, CurPtr,
-                                BytesLeft, DL);
+                                BytesLeft, DL, IsByteLoad);
     }
   }
 
@@ -690,7 +700,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     // that address spaces don't matter here since we're not going to result in
     // an actual new load.
     if (!LoadTy->isFloatingPointTy() && !LoadTy->isPointerTy() &&
-        !LoadTy->isVectorTy())
+        !LoadTy->isByteTy() && !LoadTy->isVectorTy())
       return nullptr;
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
@@ -750,7 +760,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     Offset = 0;
   }
 
-  if (!ReadDataFromGlobal(C, Offset, CurPtr, BytesLeft, DL))
+  if (!ReadDataFromGlobal(C, Offset, CurPtr, BytesLeft, DL,
+                          /*IsByteLoad=*/OrigLoadTy->isByteOrByteVectorTy()))
     return nullptr;
 
   APInt ResultVal = APInt(IntType->getBitWidth(), 0);
@@ -904,7 +915,8 @@ Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
   if (C->isNullValue() && !Ty->isX86_AMXTy())
     return Constant::getNullValue(Ty);
   if (C->isAllOnesValue() &&
-      (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy()))
+      (Ty->isIntOrIntVectorTy() || Ty->isByteOrByteVectorTy() ||
+       Ty->isFPOrFPVectorTy()))
     return Constant::getAllOnesValue(Ty);
   return nullptr;
 }
@@ -1450,8 +1462,8 @@ Constant *llvm::ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
   return ConstantFoldBinaryInstruction(Opcode, LHS, RHS);
 }
 
-static Constant *flushDenormalConstant(Type *Ty, const APFloat &APF,
-                                       DenormalMode::DenormalModeKind Mode) {
+static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
+                                         DenormalMode::DenormalModeKind Mode) {
   switch (Mode) {
   case DenormalMode::Dynamic:
     return nullptr;
@@ -1478,9 +1490,9 @@ static DenormalMode getInstrDenormalMode(const Instruction *CtxI, Type *Ty) {
       Ty->getScalarType()->getFltSemantics());
 }
 
-static Constant *flushDenormalConstantFP(ConstantFP *CFP,
-                                         const Instruction *Inst,
-                                         bool IsOutput) {
+static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
+                                           const Instruction *Inst,
+                                           bool IsOutput) {
   const APFloat &APF = CFP->getValueAPF();
   if (!APF.isDenormal())
     return CFP;
@@ -1502,7 +1514,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   VectorType *VecTy = dyn_cast<VectorType>(Ty);
   if (VecTy) {
     if (auto *Splat = dyn_cast_or_null<ConstantFP>(Operand->getSplatValue())) {
-      Constant *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
+      ConstantFP *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
       if (!Folded)
         return nullptr;
       return ConstantVector::getSplat(VecTy->getElementCount(), Folded);
@@ -1527,7 +1539,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
       if (!CFP)
         return nullptr;
 
-      Constant *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
+      ConstantFP *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
       if (!Folded)
         return nullptr;
       NewElts.push_back(Folded);
@@ -1544,7 +1556,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
         NewElts.push_back(ConstantFP::get(Ty, Elt));
       } else {
         DenormalMode Mode = getInstrDenormalMode(Inst, Ty);
-        Constant *Folded =
+        ConstantFP *Folded =
             flushDenormalConstant(Ty, Elt, IsOutput ? Mode.Output : Mode.Input);
         if (!Folded)
           return nullptr;
@@ -3701,9 +3713,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       switch (IntrinsicID) {
       case Intrinsic::ldexp: {
+        // APFloat::scalbn takes the exponent as `int`. Clamp wider integer
+        // exponents into [INT_MIN, INT_MAX] so values still saturate the
+        // result to +/-inf or +/-0.
+        APInt Exp = Op2C->getValue();
+        Exp = Exp.getBitWidth() < 32 ? Exp.sext(32) : Exp.truncSSat(32);
         return ConstantFP::get(
             Ty->getContext(),
-            scalbn(Op1V, Op2C->getSExtValue(), APFloat::rmNearestTiesToEven));
+            scalbn(Op1V, Exp.getSExtValue(), APFloat::rmNearestTiesToEven));
       }
       case Intrinsic::is_fpclass: {
         FPClassTest Mask = static_cast<FPClassTest>(Op2C->getZExtValue());
@@ -4618,6 +4635,9 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
                                  ConstantVector::get(CosResults));
     }
 
+    if (!Ty->isFloatingPointTy())
+      return nullptr;
+
     auto [SinResult, CosResult] = ConstantFoldScalarSincosCall(Operands[0]);
     if (!SinResult || !CosResult)
       return nullptr;
@@ -4671,15 +4691,14 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 
 } // end anonymous namespace
 
+Constant *llvm::ConstantFoldUnaryIntrinsic(Intrinsic::ID ID, Constant *Op,
+                                           Type *Ty) {
+  return ConstantFoldScalarCall1("", ID, Ty, Op, nullptr, nullptr);
+}
+
 Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                            Constant *RHS, Type *Ty,
-                                            Instruction *FMFSource) {
-  auto *Call = dyn_cast_if_present<CallBase>(FMFSource);
-  // Ensure we check flags like StrictFP that might prevent this from getting
-  // folded before generating a result.
-  if (Call && !canConstantFoldCallTo(Call, Call->getCalledFunction()))
-    return nullptr;
-  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, Call);
+                                            Constant *RHS, Type *Ty) {
+  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, nullptr);
 }
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,

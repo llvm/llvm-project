@@ -1941,7 +1941,6 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   VTable = new llvm::GlobalVariable(CGM.getModule(), VTableType,
                                     /*isConstant=*/true, VTableLinkage,
                                     /*Initializer=*/nullptr, VTableName);
-  VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Comdat *C = nullptr;
   if (!VFTableComesFromAnotherTU &&
@@ -1968,7 +1967,6 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
                                         /*AddressSpace=*/0, VFTableLinkage,
                                         VFTableName.str(), VTableGEP,
                                         &CGM.getModule());
-    VFTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   } else {
     // We don't need a GlobalAlias to be a symbol for the VTable if we won't
     // be referencing any RTTI data.
@@ -4163,25 +4161,25 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
 
   // Following the 'this' pointer is a reference to the source object that we
   // are copying from.
-  ImplicitParamDecl SrcParam(
+  auto *SrcParam = ImplicitParamDecl::Create(
       getContext(), /*DC=*/nullptr, SourceLocation(),
       &getContext().Idents.get("src"),
       getContext().getLValueReferenceType(RecordTy,
                                           /*SpelledAsLValue=*/true),
       ImplicitParamKind::Other);
   if (IsCopy)
-    FunctionArgs.push_back(&SrcParam);
+    FunctionArgs.push_back(SrcParam);
 
   // Constructors for classes which utilize virtual bases have an additional
   // parameter which indicates whether or not it is being delegated to by a more
   // derived constructor.
-  ImplicitParamDecl IsMostDerived(getContext(), /*DC=*/nullptr,
-                                  SourceLocation(),
-                                  &getContext().Idents.get("is_most_derived"),
-                                  getContext().IntTy, ImplicitParamKind::Other);
+  auto *IsMostDerived =
+      ImplicitParamDecl::Create(getContext(), /*DC=*/nullptr, SourceLocation(),
+                                &getContext().Idents.get("is_most_derived"),
+                                getContext().IntTy, ImplicitParamKind::Other);
   // Only add the parameter to the list if the class has virtual bases.
   if (RD->getNumVBases() > 0)
-    FunctionArgs.push_back(&IsMostDerived);
+    FunctionArgs.push_back(IsMostDerived);
 
   // Start defining the function.
   auto NL = ApplyDebugLocation::CreateEmpty(CGF);
@@ -4193,7 +4191,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   llvm::Value *This = getThisValue(CGF);
 
   llvm::Value *SrcVal =
-      IsCopy ? CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(&SrcParam), "src")
+      IsCopy ? CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(SrcParam), "src")
              : nullptr;
 
   CallArgList Args;
@@ -4203,7 +4201,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
 
   // Push the src ptr.
   if (SrcVal)
-    Args.add(RValue::get(SrcVal), SrcParam.getType());
+    Args.add(RValue::get(SrcVal), SrcParam->getType());
 
   // Add the rest of the default arguments.
   SmallVector<const Stmt *, 4> ArgVec;
@@ -4513,7 +4511,7 @@ void MicrosoftCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
   QualType ThrowType = SubExpr->getType();
   // The exception object lives on the stack and it's address is passed to the
   // runtime function.
-  Address AI = CGF.CreateMemTemp(ThrowType);
+  Address AI = CGF.CreateMemTempWithoutCast(ThrowType);
   CGF.EmitAnyExprToMem(SubExpr, AI, ThrowType.getQualifiers(),
                        /*IsInit=*/true);
 
