@@ -27,7 +27,7 @@ using namespace ento;
 class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
   const BugType LifetimeEndNode{this, "LifetimeEndReporter"};
 
-  bool report(CheckerContext &C, Twine Description) const {
+  bool report(CheckerContext &C, const Twine &Description) const {
     ExplodedNode *Node = C.generateNonFatalErrorNode(C.getState());
     if (!Node)
       return false;
