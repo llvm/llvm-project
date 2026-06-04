@@ -1436,13 +1436,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
       return DenseMapInfo<PHINode *>::getEmptyKey();
     }
 
-    static PHINode *getTombstoneKey() {
-      return DenseMapInfo<PHINode *>::getTombstoneKey();
-    }
-
-    static bool isSentinel(PHINode *PN) {
-      return PN == getEmptyKey() || PN == getTombstoneKey();
-    }
+    static bool isSentinel(PHINode *PN) { return PN == getEmptyKey(); }
 
     // WARNING: this logic must be kept in sync with
     //          Instruction::isIdenticalToWhenDefined()!
@@ -2827,18 +2821,13 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
           return DenseMapInfo<CatchPadInst *>::getEmptyKey();
         }
 
-        static CatchPadInst *getTombstoneKey() {
-          return DenseMapInfo<CatchPadInst *>::getTombstoneKey();
-        }
-
         static unsigned getHashValue(CatchPadInst *CatchPad) {
           return static_cast<unsigned>(hash_combine_range(
               CatchPad->value_op_begin(), CatchPad->value_op_end()));
         }
 
         static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
-          if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
-              RHS == getEmptyKey() || RHS == getTombstoneKey())
+          if (LHS == getEmptyKey() || RHS == getEmptyKey())
             return LHS == RHS;
           return LHS->isIdenticalTo(RHS);
         }
@@ -3008,17 +2997,17 @@ static void combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
         break;
       case LLVMContext::MD_invariant_load:
-        // If K moves, only set the !invariant.load if it is present in both
-        // instructions.
+      case LLVMContext::MD_invariant_group:
+        // If K moves, only keep the invariant metadata if it is present on
+        // both instructions; otherwise the invariant would be asserted on a
+        // path (J's) that never promised it. If K does not move, K stays on
+        // its original path, so its existing metadata remains valid.
         if (DoesKMove)
           K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_nonnull:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_invariant_group:
-        // Preserve !invariant.group in K.
         break;
       // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
       // from being removed as unknown metadata. The actual merging is handled
@@ -3058,6 +3047,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly)
           K->setMetadata(Kind, JMD);
         break;
+      case LLVMContext::MD_mem_cache_hint:
+        // Preserve !mem.cache_hint only if it is present and equivalent on both
+        // instructions.
+        if (!AAOnly && KMD != JMD)
+          K->setMetadata(Kind, nullptr);
+        break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
           K->setMetadata(Kind,
@@ -3075,22 +3070,11 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_alloc_token:
         // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD == JMD)
-          K->setMetadata(Kind, JMD);
-        else
+        if (KMD != JMD)
           K->setMetadata(Kind, nullptr);
         break;
       }
   }
-  // Set !invariant.group from J if J has it. If both instructions have it
-  // then we will just pick it from J - even when they are different.
-  // Also make sure that K is load or store - f.e. combining bitcast with load
-  // could produce bitcast with invariant.group metadata, which is invalid.
-  // FIXME: we should try to preserve both invariant.group md if they are
-  // different, but right now instruction can only have one invariant.group.
-  if (auto *JMD = J->getMetadata(LLVMContext::MD_invariant_group))
-    if (isa<LoadInst>(K) || isa<StoreInst>(K))
-      K->setMetadata(LLVMContext::MD_invariant_group, JMD);
 
   // Merge MMRAs.
   // This is handled separately because we also want to handle cases where K
@@ -3168,6 +3152,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_alias_scope:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_mem_cache_hint:
     case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
@@ -4087,7 +4072,7 @@ void OverflowTracking::mergeFlags(Instruction &I) {
 }
 
 void OverflowTracking::applyFlags(Instruction &I) {
-  I.clearSubclassOptionalData();
+  I.dropPoisonGeneratingFlags();
   if (I.getOpcode() == Instruction::Add ||
       (I.getOpcode() == Instruction::Mul && AllKnownNonZero)) {
     if (HasNUW)

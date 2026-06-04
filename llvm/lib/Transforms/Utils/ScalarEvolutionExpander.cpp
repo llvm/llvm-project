@@ -1684,24 +1684,7 @@ Value *SCEVExpander::expand(SCEVUse S) {
   } else {
     for (Instruction *I : DropPoisonGeneratingInsts) {
       rememberFlags(I);
-      I->dropPoisonGeneratingAnnotations();
-      // See if we can re-infer from first principles any of the flags we just
-      // dropped.
-      if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
-        if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
-          auto *BO = cast<BinaryOperator>(I);
-          BO->setHasNoUnsignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-          BO->setHasNoSignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
-        }
-      if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
-        auto *Src = NNI->getOperand(0);
-        if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
-                                    Constant::getNullValue(Src->getType()), I,
-                                    DL).value_or(false))
-          NNI->setNonNeg(true);
-      }
+      dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
     }
   }
   // Remember the expanded value for this SCEV at this location.
@@ -1727,6 +1710,29 @@ void SCEVExpander::rememberInstruction(Value *I) {
 void SCEVExpander::rememberFlags(Instruction *I) {
   // If we already have flags for the instruction, keep the existing ones.
   OrigFlags.try_emplace(I, PoisonFlags(I));
+}
+
+void SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(
+    ScalarEvolution &SE, Instruction *I) {
+  I->dropPoisonGeneratingAnnotations();
+  // See if we can re-infer from first principles any of the flags we just
+  // dropped.
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
+    if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+      auto *BO = cast<BinaryOperator>(I);
+      BO->setHasNoUnsignedWrap(
+          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+      BO->setHasNoSignedWrap(
+          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+    }
+  if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
+    auto *Src = NNI->getOperand(0);
+    if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
+                                Constant::getNullValue(Src->getType()), I,
+                                SE.getDataLayout())
+            .value_or(false))
+      NNI->setNonNeg(true);
+  }
 }
 
 void SCEVExpander::replaceCongruentIVInc(

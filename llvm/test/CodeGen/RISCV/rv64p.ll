@@ -1774,3 +1774,23 @@ define i64 @test_plui_w_remat(ptr %p) nounwind {
   ; Use the constant again - it should be rematerialized, not spilled/reloaded
   ret i64 u0x7640000076400000
 }
+
+; The 0x0101010101010101 can be materialized with pli.b
+; The multiply makes the upper 10 bits of the and result unneeded
+; causing the mask to become 0x0001010101010101. Make sure we can still match
+; the pli.b
+define i64 @and_mul_32bitsplat(i64 %x) {
+; CHECK-LABEL: and_mul_32bitsplat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, 1
+; CHECK-NEXT:    lui a2, 65664
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    addi a1, a2, 1024
+; CHECK-NEXT:    slli a2, a1, 27
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = and i64 %x, u0x0101010101010101
+  %b = mul i64 %a, u0x0080402010080400
+  ret i64 %b
+}
