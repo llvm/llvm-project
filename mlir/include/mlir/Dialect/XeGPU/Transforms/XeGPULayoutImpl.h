@@ -236,10 +236,14 @@ DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    const uArch::uArch *uArch,
                                                    int coalesceFactor = 1);
 
-/// Sets up the anchor layout for a store matrix operation.
+/// Sets up the anchor layout for a store matrix operation. When
+/// `coalesceFactor > 1`, the SLM store is coalesced: lane_data[FCD] = factor
+/// (inst_data[FCD] = subgroupSize * factor), matching a coalesced producer so
+/// the SLM round-trip stays chunked end-to-end.
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
-                                                  const uArch::uArch *uArch);
+                                                  const uArch::uArch *uArch,
+                                                  int coalesceFactor = 1);
 
 /// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
 /// The numSg and consumerLayout (optional) are only used by sg layout creation.

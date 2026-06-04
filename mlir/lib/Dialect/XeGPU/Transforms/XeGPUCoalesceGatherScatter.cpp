@@ -1004,78 +1004,6 @@ static bool isCandidateForCoalesce(OpTy op) {
   return true;
 }
 
-/// True when `op` (a gather load or scatter store) is tied to a
-/// `vector.multi_reduction` whose value passes through an SLM redistribution
-/// barrier (`xegpu.store_matrix` / `xegpu.load_matrix`, introduced by
-/// XeGPUWgToSgDistribute for a cross-subgroup reduction).
-///
-/// Such accesses must be gated: a `store_matrix` is a layout sink with no
-/// coalesce-factor signal in the backward layout analysis, so it forces its
-/// (coalesced) reduction-result operand back to lane_data[FCD]=1, producing an
-/// unlowerable convert against the coalesced final store. Single-subgroup
-/// reductions (no SLM in the chain) are NOT gated — both FCD reductions
-/// (Option A) and non-FCD reductions (surviving-FCD factor) lower end-to-end.
-///
-/// Detection is a bounded backward walk of the stored value's slice (store
-/// side) / forward walk of the result's uses (load side), looking for a
-/// matrix op on the way to / from a multi_reduction.
-/// See /home/gta/test/issue_1303/coalesce_journey.md for the full analysis.
-template <typename OpTy>
-static bool crossesSlmReductionBarrier(OpTy op) {
-  auto isGlue = [](Operation *d) {
-    return isa<vector::ShapeCastOp, vector::BitCastOp, xegpu::ConvertLayoutOp,
-               vector::InsertOp, vector::InsertStridedSliceOp,
-               vector::ExtractOp, vector::ExtractStridedSliceOp>(d) ||
-           OpTrait::hasElementwiseMappableTraits(d);
-  };
-  if constexpr (std::is_same_v<OpTy, xegpu::StoreScatterOp>) {
-    // Backward walk from the stored value: gate if a matrix (SLM) op is
-    // reachable through reduction/glue ops. The store's value derives from a
-    // load_matrix in the cross-SG case.
-    SmallVector<Value, 8> worklist{op.getValue()};
-    llvm::SmallPtrSet<Operation *, 32> seen;
-    unsigned steps = 0;
-    bool sawReduction = false;
-    while (!worklist.empty() && steps++ < 256) {
-      Value v = worklist.pop_back_val();
-      Operation *def = v.getDefiningOp();
-      if (!def || !seen.insert(def).second)
-        continue;
-      if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>(def))
-        return sawReduction;
-      if (isa<vector::MultiDimReductionOp>(def))
-        sawReduction = true;
-      if (isa<vector::MultiDimReductionOp>(def) || isGlue(def))
-        for (Value operand : def->getOperands())
-          if (isa<VectorType>(operand.getType()))
-            worklist.push_back(operand);
-    }
-    return false;
-  } else {
-    // Forward walk from the load result: gate if it feeds a reduction whose
-    // result flows into a store_matrix (cross-SG case).
-    SmallVector<Value, 8> worklist{op->getResult(0)};
-    llvm::SmallPtrSet<Operation *, 32> seen;
-    unsigned steps = 0;
-    bool sawReduction = false;
-    while (!worklist.empty() && steps++ < 256) {
-      Value v = worklist.pop_back_val();
-      for (Operation *user : v.getUsers()) {
-        if (!seen.insert(user).second)
-          continue;
-        if (isa<xegpu::StoreMatrixOp, xegpu::LoadMatrixOp>(user))
-          return sawReduction;
-        if (isa<vector::MultiDimReductionOp>(user))
-          sawReduction = true;
-        if ((isa<vector::MultiDimReductionOp>(user) || isGlue(user)) &&
-            user->getNumResults() == 1)
-          worklist.push_back(user->getResult(0));
-      }
-    }
-    return false;
-  }
-}
-
 /// Run the analysis on a single op. If the offsets analyze as `Chunked`,
 /// stamp a `xegpu.coalesce_hint` attribute carrying the FCD lane_data
 /// factor.
@@ -1084,15 +1012,14 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
                                 unsigned maxChunkSize) {
   if (!isCandidateForCoalesce(op))
     return;
-  // Single-subgroup FCD and non-FCD reductions are supported end-to-end (FCD
-  // via the producer-FCD adoption in inferSourceLayoutFromResultForNonAnchorOp;
-  // non-FCD via the surviving-FCD factor carried onto the reduction
-  // result/source by setupMultiReductionResultLayout). A cross-subgroup
-  // reduction routes its value through an SLM store_matrix/load_matrix barrier
-  // that has no coalesce-factor signal, so coalescing it does not lower yet —
-  // gate those.
-  if (crossesSlmReductionBarrier(op))
-    return;
+  // Reductions are supported end-to-end and need no gating here:
+  //  - FCD reduction: the reduction source-operand layout adopts the coalesced
+  //    producer FCD (inferSourceLayoutFromResultForNonAnchorOp).
+  //  - non-FCD reduction: the surviving-FCD factor is carried onto the
+  //    reduction result/source (setupMultiReductionResultLayout).
+  //  - cross-subgroup (SLM) reduction: store_matrix recovers the factor from
+  //    the data it spills and the trailing reduction recovers it from its
+  //    coalesced consumer, so the SLM round-trip stays chunked on both sides.
   auto offsetsTy = cast<VectorType>(op.getOffsets().getType());
   unsigned subgroupSize = lookupSubgroupSize(op);
   const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());

@@ -692,6 +692,28 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
                 xegpu::getCoalesceHintAttrName()))
           coalesceFactor = static_cast<int>(hint.getFactor().getInt());
       }
+      // For a NON-FCD reduction, the surviving FCD is also present on the
+      // RESULT, so a coalesced consumer (e.g. a coalesced store, or a
+      // coalesced load_matrix's downstream) carries the factor on the
+      // consumer layout's FCD. Recover it from there when the source has no
+      // hint of its own (e.g. the source is a load_matrix spilled from SLM,
+      // which never carries a coalesce_hint). This keeps the SLM round-trip
+      // chunked on both sides.
+      int srcRank = sourceTy.getRank();
+      bool reducedIsFcd =
+          reductionDims.size() == 1 && reductionDims[0] == srcRank - 1;
+      if (coalesceFactor == 1 && !reducedIsFcd && consumerLayoutAttr) {
+        auto resLane = consumerLayoutAttr.getEffectiveLaneDataAsInt();
+        auto resInst = consumerLayoutAttr.getEffectiveInstDataAsInt();
+        int resFcd = -1;
+        if (layoutKind == xegpu::LayoutKind::Lane && !resLane.empty())
+          resFcd = static_cast<int>(resLane.back());
+        else if (layoutKind == xegpu::LayoutKind::InstData && !resInst.empty())
+          // inst_data[FCD] on the consumer is subgroupSize * factor.
+          resFcd = static_cast<int>(resInst.back()) / uArch->getSubgroupSize();
+        if (resFcd > 1)
+          coalesceFactor = resFcd;
+      }
     }
   }
 
@@ -1389,6 +1411,37 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   }
 }
 
+/// Bounded backward walk from `v` looking for a `xegpu.coalesce_hint` on a
+/// defining op, traversing layout-neutral / reduction / elementwise glue. Used
+/// by store_matrix (a layout sink with no consumer) to recover the coalesce
+/// factor of the data it is about to spill to SLM, so the SLM round-trip stays
+/// chunked instead of forcing an unlowerable round-robin<->chunked convert.
+static int recoverCoalesceFactorFromProducers(Value v) {
+  SmallVector<Value, 8> worklist{v};
+  llvm::SmallPtrSet<Operation *, 32> seen;
+  unsigned steps = 0;
+  while (!worklist.empty() && steps++ < 128) {
+    Value cur = worklist.pop_back_val();
+    Operation *def = cur.getDefiningOp();
+    if (!def || !seen.insert(def).second)
+      continue;
+    if (auto hint = def->getAttrOfType<xegpu::CoalesceHintAttr>(
+            xegpu::getCoalesceHintAttrName()))
+      return static_cast<int>(hint.getFactor().getInt());
+    // Traverse through the reduction and the layout-neutral / elementwise
+    // reassembly that sits between the coalesced load and this store_matrix.
+    if (isa<vector::MultiDimReductionOp, vector::ShapeCastOp, vector::BitCastOp,
+            xegpu::ConvertLayoutOp, vector::InsertOp,
+            vector::InsertStridedSliceOp, vector::ExtractOp,
+            vector::ExtractStridedSliceOp>(def) ||
+        OpTrait::hasElementwiseMappableTraits(def))
+      for (Value operand : def->getOperands())
+        if (isa<VectorType>(operand.getType()))
+          worklist.push_back(operand);
+  }
+  return 1;
+}
+
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1402,8 +1455,18 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     const uArch *uArch = getUArch(getChipStr(storeMatrix).value_or(""));
     if (!uArch)
       return;
-    auto requiredAnchorLayoutAttr =
-        xegpu::setupStoreMatrixAnchorLayout(layoutKind, srcVecTy, uArch);
+    // store_matrix is a layout sink with no consumer to inherit a coalesce
+    // factor from. Recover it from the data it spills (produced by a coalesced
+    // load through a reduction) so the SLM layout matches the coalesced
+    // producer and the matching load_matrix; otherwise an unlowerable
+    // round-robin<->chunked convert is forced on the reduction result.
+    int coalesceFactor = 1;
+    if (layoutKind == xegpu::LayoutKind::Lane ||
+        layoutKind == xegpu::LayoutKind::InstData)
+      coalesceFactor =
+          recoverCoalesceFactorFromProducers(storeMatrix.getData());
+    auto requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
+        layoutKind, srcVecTy, uArch, coalesceFactor);
     storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
     layout = LayoutInfo(requiredAnchorLayoutAttr);
   }

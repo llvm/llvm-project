@@ -1430,10 +1430,9 @@ xegpu::DistributeLayoutAttr xegpu::setupStoreScatterAnchorLayout(
 }
 
 /// Sets up the anchor layout for a store matrix operation.
-xegpu::DistributeLayoutAttr
-xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                    VectorType srcVecTy,
-                                    const xegpu::uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr xegpu::setupStoreMatrixAnchorLayout(
+    xegpu::LayoutKind layoutKind, VectorType srcVecTy,
+    const xegpu::uArch::uArch *uArch, int coalesceFactor) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
@@ -1446,7 +1445,7 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
 
   return setupGenericStoreAnchorLayout(layoutKind, context, false, maxChunkSize,
-                                       srcShape, subgroupSize);
+                                       srcShape, subgroupSize, coalesceFactor);
 }
 
 // This function returns the default lane layout for a given vector type.
