@@ -2155,17 +2155,11 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     Register Op1 = MI.getOperand(2).getReg();
 
     auto IsConstOne = [&](Register R) {
-      MachineInstr *Def = MRI.getVRegDef(R);
-      if (!Def || Def->getOpcode() != TargetOpcode::G_CONSTANT)
-        return false;
-
-      auto *C = Def->getOperand(1).getCImm();
-      return C && C->getValue().isOne();
+      return mi_match(R, MRI, m_SpecificICst(1));
     };
 
     auto IsCTPOP = [&](Register R) {
-      MachineInstr *Def = MRI.getVRegDef(R);
-      return Def && Def->getOpcode() == TargetOpcode::G_CTPOP;
+      return MRI.getVRegDef(R)->getOpcode() == TargetOpcode::G_CTPOP;
     };
 
     if ((IsCTPOP(Op0) && IsConstOne(Op1)) ||
