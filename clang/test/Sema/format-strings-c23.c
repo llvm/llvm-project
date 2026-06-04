@@ -31,6 +31,12 @@ void t1(int8_t i8, uint8_t u8, int16_t i16, uint16_t u16, int32_t i32,
   printf("%wf64d", if64);
   printf("%wf64u", uf64);
 
+  printf("%w32d", 1);
+  printf("%w32d", i32);
+  printf("%w16d", 1);
+  printf("%w16d", 65536);
+  printf("%w16d", i32);
+
   printf("%w32d", 1.0);  // expected-warning{{format specifies type 'int32_t' (aka 'int') but the argument has type 'double'}}
   printf("%w32u", 1.0);  // expected-warning{{format specifies type 'uint32_t' (aka 'unsigned int') but the argument has type 'double'}}
   printf("%wf32d", 1.0); // expected-warning{{format specifies type 'int_fast32_t' (aka 'int') but the argument has type 'double'}}
@@ -80,10 +86,12 @@ void t3(int8_t *i8_ptr, uint8_t *u8_ptr, int16_t *i16_ptr,
   scanf("%wf64d", if64_ptr);
   scanf("%wf64u", uf64_ptr);
 
-  scanf("%w32d", d_ptr);  // expected-warning{{format specifies type 'int32_t *' (aka 'int *') but the argument has type 'double *'}}
-  scanf("%w32u", d_ptr);  // expected-warning{{format specifies type 'uint32_t *' (aka 'unsigned int *') but the argument has type 'double *'}}
-  scanf("%wf32d", d_ptr); // expected-warning{{format specifies type 'int_fast32_t *' (aka 'int *') but the argument has type 'double *'}}
-  scanf("%wf32u", d_ptr); // expected-warning{{format specifies type 'uint_fast32_t *' (aka 'unsigned int *') but the argument has type 'double *'}}
+  scanf("%w32d", d_ptr);   // expected-warning{{format specifies type 'int32_t *' (aka 'int *') but the argument has type 'double *'}}
+  scanf("%w32u", d_ptr);   // expected-warning{{format specifies type 'uint32_t *' (aka 'unsigned int *') but the argument has type 'double *'}}
+  scanf("%wf32d", d_ptr);  // expected-warning{{format specifies type 'int_fast32_t *' (aka 'int *') but the argument has type 'double *'}}
+  scanf("%wf32u", d_ptr);  // expected-warning{{format specifies type 'uint_fast32_t *' (aka 'unsigned int *') but the argument has type 'double *'}}
+  scanf("%w16d", i32_ptr); // expected-warning{{format specifies type 'int16_t *' (aka 'short *') but the argument has type 'int32_t *' (aka 'int *')}}
+  scanf("%w32d", i16_ptr); // expected-warning{{format specifies type 'int32_t *' (aka 'int *') but the argument has type 'int16_t *' (aka 'short *')}}
 }
 
 void t4(const char *fmt) __attribute__((format_matches(printf, 1, "%w32d"))); // expected-note{{comparing with this specifier}}

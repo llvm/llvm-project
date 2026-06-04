@@ -499,7 +499,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
   }
 
   case SpecificTy: {
-    if (TK != TypeKind::DontCare) {
+    if (TK == TypeKind::SizeT || TK == TypeKind::PtrdiffT) {
       return matchesSizeTPtrdiffT(C, argTy, T);
     }
 
