@@ -49,9 +49,13 @@ bool FactsGenerator::hasOrigins(const Expr *E) const {
 /// Propagates origin information from Src to Dst through all levels of
 /// indirection, creating OriginFlowFacts at each level.
 ///
-/// This function enforces a critical type-safety invariant: both lists must
-/// have the same shape (same depth/structure). This invariant ensures that
-/// origins flow only between compatible types during expression evaluation.
+/// This function enforces a critical type-safety invariant: both trees
+/// must have the same pointee-chain depth, and field children are
+/// matched by `FieldDecl`. This invariant ensures that origins flow only
+/// between compatible types during expression evaluation. Field pairs
+/// found on both sides recurse; unmatched fields are skipped, which is
+/// exercised by `CK_DerivedToBase` flows where Base's and Derived's
+/// trees carry distinct direct-field FDs.
 ///
 /// Examples:
 ///   - `int* p = &x;` flows origins from `&x` (depth 1) to `p` (depth 1)
@@ -59,19 +63,31 @@ bool FactsGenerator::hasOrigins(const Expr *E) const {
 ///     * Level 1: pp <- p's address
 ///     * Level 2: (*pp) <- what p points to (i.e., &x)
 ///   - `View v = obj;` flows origins from `obj` (depth 1) to `v` (depth 1)
+///   - `S s2 = s;` flows the top-level origin and recursively flows each
+///     matching `FieldDecl` subtree, so loans on `s.v.inner` propagate to
+///     `s2.v.inner`.
 void FactsGenerator::flow(OriginNode *Dst, OriginNode *Src, bool Kill) {
   if (!Dst)
     return;
-  assert(Src &&
-         "Dst is non-null but Src is null. List must have the same length");
-  assert(Dst->getLength() == Src->getLength() &&
-         "Lists must have the same length");
 
-  while (Dst && Src) {
-    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-        Dst->getOriginID(), Src->getOriginID(), Kill));
-    Dst = Dst->getPointeeChild();
-    Src = Src->getPointeeChild();
+  assert(Src && "Dst node has no paired Src node");
+
+  llvm::SmallVector<std::pair<OriginNode *, OriginNode *>, 4> Worklist{
+      {Dst, Src}};
+  while (!Worklist.empty()) {
+    auto [D, S] = Worklist.pop_back_val();
+    assert(D->getPointeeChainLength() == S->getPointeeChainLength() &&
+           "matched Dst/Src nodes must have equal pointee-chain length");
+    while (D && S) {
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          D->getOriginID(), S->getOriginID(), Kill));
+      for (const OriginNode::Edge &E : D->children())
+        if (E.FD)
+          if (OriginNode *SrcF = S->getFieldChild(*E.FD))
+            Worklist.push_back({E.Child, SrcF});
+      D = D->getPointeeChild();
+      S = S->getPointeeChild();
+    }
   }
 }
 
@@ -321,7 +337,8 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_DerivedToBase:
     // It is possible that the derived class and base class have different
     // gsl::Pointer annotations. Skip if their origin shape differ.
-    if (Dest && Src && Dest->getLength() == Src->getLength())
+    if (Dest && Src &&
+        Dest->getPointeeChainLength() == Src->getPointeeChainLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
   case CK_ArrayToPointerDecay:
@@ -336,7 +353,8 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_BitCast:
     // OriginLists for Src and Dst may differ here. For example when casting
     // from int** to void*
-    if (Src && Dest && Dest->getLength() == Src->getLength())
+    if (Src && Dest &&
+        Dest->getPointeeChainLength() == Src->getPointeeChainLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
   default:
@@ -366,12 +384,16 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
 }
 
 void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
-  if (const Expr *RetExpr = RS->getRetValue()) {
-    if (OriginNode *Node = getOriginNode(*RetExpr))
-      for (OriginNode *L = Node; L != nullptr; L = L->getPointeeChild())
-        EscapesInCurrentBlock.push_back(
-            FactMgr.createFact<ReturnEscapeFact>(L->getOriginID(), RetExpr));
-  }
+  const Expr *RetExpr = RS->getRetValue();
+  if (!RetExpr)
+    return;
+  OriginNode *Root = getOriginNode(*RetExpr);
+  if (!Root)
+    return;
+  Root->forEachOrigin([this, RetExpr](const OriginNode *Cur) {
+    EscapesInCurrentBlock.push_back(
+        FactMgr.createFact<ReturnEscapeFact>(Cur->getOriginID(), RetExpr));
+  });
 }
 
 void FactsGenerator::handleAssignment(const Expr *TargetExpr,
@@ -583,8 +605,8 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   if (!MTENode)
     return;
   OriginNode *SubExprNode = getOriginNode(*MTE->getSubExpr());
-  assert((!SubExprNode ||
-          MTENode->getLength() == (SubExprNode->getLength() + 1)) &&
+  assert((!SubExprNode || MTENode->getPointeeChainLength() ==
+                              (SubExprNode->getPointeeChainLength() + 1)) &&
          "MTE top level origin should contain a loan to the MTE itself");
 
   OriginNode *RValMTENode = getRValueOrigins(MTE, MTENode);
@@ -806,7 +828,7 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
       continue;
     const Expr *Arg = Args[I];
     OriginNode *MovedOrigins = getOriginNode(*Arg);
-    assert(MovedOrigins->getLength() >= 1 &&
+    assert(MovedOrigins->getPointeeChainLength() >= 1 &&
            "unexpected length for r-value reference param");
     // Arg is being moved to this parameter. Mark the origin as moved.
     CurrentBlockFacts.push_back(
@@ -1009,7 +1031,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       // TODO: document with code example.
       // std::string_view(const std::string_view& from)
       if (isGslPointerType(Args[I]->getType())) {
-        assert(!Args[I]->isGLValue() || ArgNode->getLength() >= 2);
+        assert(!Args[I]->isGLValue() || ArgNode->getPointeeChainLength() >= 2);
         ArgNode = getRValueOrigins(Args[I], ArgNode);
       }
       if (isGslOwnerType(Args[I]->getType())) {
@@ -1031,7 +1053,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {
-      assert(ArgNode->getLength() >= 2 &&
+      assert(ArgNode->getPointeeChainLength() >= 2 &&
              "Object arg of pointer type should have at least two origins");
       // See through the GSLPointer reference to see the pointer's value.
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(

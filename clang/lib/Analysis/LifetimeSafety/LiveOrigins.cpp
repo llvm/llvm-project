@@ -127,10 +127,15 @@ public:
   /// A read operation makes the origin live with definite confidence, as it
   /// dominates this program point. A write operation kills the liveness of
   /// the origin since it overwrites the value.
+  ///
+  /// Walks the full subtree so loans held by any descendant (pointee
+  /// chain or field child) become visible at the use site.
   Lattice transfer(Lattice In, const UseFact &UF) {
+    const OriginNode *Root = UF.getUsedOrigins();
+    if (!Root)
+      return In;
     Lattice Out = In;
-    for (const OriginNode *Cur = UF.getUsedOrigins(); Cur;
-         Cur = Cur->getPointeeChild()) {
+    Root->forEachOrigin([this, &UF, &Out](const OriginNode *Cur) {
       OriginID OID = Cur->getOriginID();
       // Write kills liveness.
       if (UF.isWritten()) {
@@ -141,7 +146,7 @@ public:
         Out = Lattice(Factory.add(Out.LiveOrigins, OID,
                                   LivenessInfo(&UF, LivenessKind::Must)));
       }
-    }
+    });
     return Out;
   }
 
