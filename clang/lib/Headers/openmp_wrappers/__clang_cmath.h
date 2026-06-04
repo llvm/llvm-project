@@ -1,4 +1,4 @@
-/*===---- __clang_spirv_cmath.h - SPIRV cmath decls -----------------------===
+/*===---- __clang_cmath.h - cmath decls ------------------------------------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
