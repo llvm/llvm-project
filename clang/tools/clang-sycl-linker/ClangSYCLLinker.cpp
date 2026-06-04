@@ -209,8 +209,8 @@ getInput(const ArgList &Args) {
                          : offloading::InputDesc::Kind::File;
     Desc.WholeArchive = WholeArchive;
 
-    // Validate positional file inputs exist before passing to resolveArchiveMembers
-    // (which silently skips non-existent paths)
+    // Validate positional file inputs exist before passing to
+    // resolveArchiveMembers (which silently skips non-existent paths)
     if (Desc.InputKind == offloading::InputDesc::Kind::File) {
       if (!sys::fs::exists(Desc.Value))
         return createStringError("input file not found: '" + Desc.Value + "'");
@@ -312,8 +312,8 @@ linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> InputBuffers,
       } else {
         return createStringError(
             "conflicting target triples: '" + TargetTriple.str() + "' (from " +
-                TripleSource + ") vs '" + T.str() + "' (from " +
-                Buffer->getBufferIdentifier() + ")");
+            TripleSource + ") vs '" + T.str() + "' (from " +
+            Buffer->getBufferIdentifier() + ")");
       }
     }
 
