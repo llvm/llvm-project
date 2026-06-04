@@ -18,13 +18,13 @@
 
 // TAR: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // TAR: repro.tar
-// TAR-NOT: .c
-// TAR-NOT: .sh
+// TAR-NOT: .c{{$}}
+// TAR-NOT: .sh{{$}}
 
 // NOTAR: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
-// NOTAR: .c
-// NOTAR: .sh
-// NOTAR-NOT: .tar
+// NOTAR: .c{{$}}
+// NOTAR: .sh{{$}}
+// NOTAR-NOT: .tar{{$}}
 
 // INVALID: Error creating reproducer tarball:
 
