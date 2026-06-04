@@ -10692,7 +10692,7 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, TargetTransformInfo *TTI,
       IntrinsicCost = InstructionCost::getInvalid();
   } else if (IntrinsicCost > ScalarLimit) {
     // A type-based query always scalarizes struct-returning intrinsics (e.g.
-    // llvm.sincos), which do nto have a VFDatabase name mapping. Retry with an
+    // llvm.sincos), which do not have a VFDatabase name mapping. Retry with an
     // argument-aware query (as the loop vectorizer does) so such lowerings are
     // taken into account.
     SmallVector<const Value *> Args(CI->args());
