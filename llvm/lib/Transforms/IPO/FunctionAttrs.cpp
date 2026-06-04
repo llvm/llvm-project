@@ -86,6 +86,7 @@ STATISTIC(NumNoUndefReturn, "Number of function returns marked noundef");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 STATISTIC(NumNoFree, "Number of functions marked as nofree");
+STATISTIC(NumNoFreeArg, "Number of arguments marked as nofree");
 STATISTIC(NumWillReturn, "Number of functions marked as willreturn");
 STATISTIC(NumNoSync, "Number of functions marked as nosync");
 STATISTIC(NumCold, "Number of functions marked as cold");
@@ -853,10 +854,27 @@ struct GraphTraits<ArgumentGraph *> : public GraphTraits<ArgumentGraphNode *> {
   static ChildIteratorType nodes_end(ArgumentGraph *AG) { return AG->end(); }
 };
 
+struct ArgProperties {
+  bool IsRead = false;
+  bool IsWrite = false;
+  bool IsFree = false;
+
+  static ArgProperties all() { return {true, true, true}; }
+
+  bool hasAll() const { return IsRead && IsWrite && IsFree; }
+
+  ArgProperties &operator|=(const ArgProperties &Other) {
+    IsRead |= Other.IsRead;
+    IsWrite |= Other.IsWrite;
+    IsFree |= Other.IsFree;
+    return *this;
+  }
+};
+
 } // end namespace llvm
 
 /// Returns Attribute::None, Attribute::ReadOnly or Attribute::ReadNone.
-static Attribute::AttrKind
+static ArgProperties
 determinePointerAccessAttrs(Argument *A,
                             const SmallPtrSet<Argument *, 8> &SCCNodes) {
   SmallVector<Use *, 32> Worklist;
@@ -864,10 +882,9 @@ determinePointerAccessAttrs(Argument *A,
 
   // inalloca arguments are always clobbered by the call.
   if (A->hasInAllocaAttr() || A->hasPreallocatedAttr())
-    return Attribute::None;
+    return ArgProperties::all();
 
-  bool IsRead = false;
-  bool IsWrite = false;
+  ArgProperties Props;
 
   for (Use &U : A->uses()) {
     Visited.insert(&U);
@@ -875,9 +892,9 @@ determinePointerAccessAttrs(Argument *A,
   }
 
   while (!Worklist.empty()) {
-    if (IsWrite && IsRead)
+    if (Props.hasAll())
       // No point in searching further..
-      return Attribute::None;
+      return Props;
 
     Use *U = Worklist.pop_back_val();
     Instruction *I = cast<Instruction>(U->getUser());
@@ -895,8 +912,8 @@ determinePointerAccessAttrs(Argument *A,
     if (capturesAnyProvenance(Info.UseCC)) {
       // Handle indirect access via captured provenance.
       if (!capturesReadProvenanceOnly(Info.UseCC))
-        return Attribute::None;
-      IsRead = true;
+        return ArgProperties::all();
+      Props.IsRead = true;
     }
 
     if (capturesAnyProvenance(Info.ResultCC)) {
@@ -907,7 +924,7 @@ determinePointerAccessAttrs(Argument *A,
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
       if (CB->isCallee(U)) {
-        IsRead = true;
+        Props.IsRead = true;
         continue;
       }
 
@@ -930,15 +947,13 @@ determinePointerAccessAttrs(Argument *A,
 
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
-      if (CB->doesNotAccessMemory(UseIndex)) {
-        /* nop */
-      } else if (!isModSet(ArgMR) || CB->onlyReadsMemory(UseIndex)) {
-        IsRead = true;
-      } else if (!isRefSet(ArgMR) || CB->dataOperandHasImpliedAttr(
-                                         UseIndex, Attribute::WriteOnly)) {
-        IsWrite = true;
-      } else {
-        return Attribute::None;
+      if (isRefSet(ArgMR) && !CB->onlyWritesMemory(UseIndex))
+        Props.IsRead = true;
+      if (isModSet(ArgMR) && !CB->onlyReadsMemory(UseIndex)) {
+        Props.IsWrite = true;
+        if (CB->isArgOperand(U) && !CB->hasFnAttr(Attribute::NoFree) &&
+            !CB->paramHasAttr(UseIndex, Attribute::NoFree))
+          Props.IsFree = true;
       }
     } else {
       // Ignore value operand for stores.
@@ -946,19 +961,12 @@ determinePointerAccessAttrs(Argument *A,
           StoreInst::getPointerOperandIndex() != U->getOperandNo())
         continue;
 
-      IsRead |= I->mayReadFromMemory();
-      IsWrite |= I->mayWriteToMemory();
+      Props.IsRead |= I->mayReadFromMemory();
+      Props.IsWrite |= I->mayWriteToMemory();
     }
   }
 
-  if (IsWrite && IsRead)
-    return Attribute::None;
-  else if (IsRead)
-    return Attribute::ReadOnly;
-  else if (IsWrite)
-    return Attribute::WriteOnly;
-  else
-    return Attribute::ReadNone;
+  return Props;
 }
 
 /// Deduce returned attributes for the SCC.
@@ -1063,15 +1071,32 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
   return Changed;
 }
 
-static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
-  assert((R == Attribute::ReadOnly || R == Attribute::ReadNone ||
-          R == Attribute::WriteOnly)
-         && "Must be an access attribute.");
+static bool addAccessAttrs(Argument *A, ArgProperties Props) {
   assert(A && "Argument must not be null.");
+
+  bool Changed = false;
+  if (!Props.IsFree) {
+    if (!A->hasAttribute(Attribute::NoFree)) {
+      ++NumNoFreeArg;
+      A->addAttr(Attribute::NoFree);
+      Changed = true;
+    }
+  }
+
+  if (Props.IsRead && Props.IsWrite)
+    return Changed;
+
+  Attribute::AttrKind R;
+  if (Props.IsRead)
+    R = Attribute::ReadOnly;
+  else if (Props.IsWrite)
+    R = Attribute::WriteOnly;
+  else
+    R = Attribute::ReadNone;
 
   // If the argument already has the attribute, nothing needs to be done.
   if (A->hasAttribute(R))
-      return false;
+    return false;
 
   // Otherwise, remove potentially conflicting attribute, add the new one,
   // and update statistics.
@@ -1219,10 +1244,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
   auto DetermineAccessAttrsForSingleton = [](Argument *A) {
     SmallPtrSet<Argument *, 8> Self;
     Self.insert(A);
-    Attribute::AttrKind R = determinePointerAccessAttrs(A, Self);
-    if (R != Attribute::None)
-      return addAccessAttr(A, R);
-    return false;
+    return addAccessAttrs(A, determinePointerAccessAttrs(A, Self));
   };
 
   // Check each function in turn, determining which pointer arguments are not
@@ -1387,29 +1409,18 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     // Also, a readonly/readnone pointer may be returned, but returning a
     // pointer is capturing it.
 
-    auto meetAccessAttr = [](Attribute::AttrKind A, Attribute::AttrKind B) {
-      if (A == B)
-        return A;
-      if (A == Attribute::ReadNone)
-        return B;
-      if (B == Attribute::ReadNone)
-        return A;
-      return Attribute::None;
-    };
-
-    Attribute::AttrKind AccessAttr = Attribute::ReadNone;
+    ArgProperties Props;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       Argument *A = N->Definition;
-      Attribute::AttrKind K = determinePointerAccessAttrs(A, ArgumentSCCNodes);
-      AccessAttr = meetAccessAttr(AccessAttr, K);
-      if (AccessAttr == Attribute::None)
+      Props |= determinePointerAccessAttrs(A, ArgumentSCCNodes);
+      if (Props.hasAll())
         break;
     }
 
-    if (AccessAttr != Attribute::None) {
+    if (!Props.hasAll()) {
       for (ArgumentGraphNode *N : ArgumentSCC) {
         Argument *A = N->Definition;
-        if (addAccessAttr(A, AccessAttr))
+        if (addAccessAttrs(A, Props))
           Changed.insert(A->getParent());
       }
     }
