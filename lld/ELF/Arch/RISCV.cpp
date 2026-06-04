@@ -233,7 +233,8 @@ void RISCV::writePltHeader(uint8_t *buf) const {
     //     l[w|d] t0, PTRSIZE(t0)
     //     jr     t2
     const uint32_t offset = ctx.in.gotPlt->getVA() -
-                            (ctx.in.plt->getVA() + 4 /* offset for lpad */);
+    const uint32_t offset = ctx.in.gotPlt->getVA() -
+                            ctx.in.plt->getVA();
     const uint32_t load = ctx.arg.is64 ? LD : LW;
     write32le(buf + 0, utype(AUIPC, X_T3, hi20(offset)));
     write32le(buf + 4, rtype(SUB, X_T1, X_T1, X_T2));
