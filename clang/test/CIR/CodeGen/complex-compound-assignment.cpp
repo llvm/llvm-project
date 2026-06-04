@@ -299,7 +299,7 @@ void foo5() {
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR: %[[RESULT_REAL:.*]] = cir.add %[[A_REAL]], %[[TMP_B]] : !cir.float
+// CIR: %[[RESULT_REAL:.*]] = cir.fadd %[[A_REAL]], %[[TMP_B]] : !cir.float
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
@@ -403,12 +403,12 @@ void foo7() {
 // CIR: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR: %[[MUL_BR_AR:.*]] = cir.mul %[[B_REAL]], %[[A_REAL]] : !cir.float
-// CIR: %[[MUL_BI_AI:.*]] = cir.mul %[[B_IMAG]], %[[A_IMAG]] : !cir.float
-// CIR: %[[MUL_BR_AI:.*]] = cir.mul %[[B_REAL]], %[[A_IMAG]] : !cir.float
-// CIR: %[[MUL_BI_AR:.*]] = cir.mul %[[B_IMAG]], %[[A_REAL]] : !cir.float
-// CIR: %[[C_REAL:.*]] = cir.sub %[[MUL_BR_AR]], %[[MUL_BI_AI]] : !cir.float
-// CIR: %[[C_IMAG:.*]] = cir.add %[[MUL_BR_AI]], %[[MUL_BI_AR]] : !cir.float
+// CIR: %[[MUL_BR_AR:.*]] = cir.fmul %[[B_REAL]], %[[A_REAL]] : !cir.float
+// CIR: %[[MUL_BI_AI:.*]] = cir.fmul %[[B_IMAG]], %[[A_IMAG]] : !cir.float
+// CIR: %[[MUL_BR_AI:.*]] = cir.fmul %[[B_REAL]], %[[A_IMAG]] : !cir.float
+// CIR: %[[MUL_BI_AR:.*]] = cir.fmul %[[B_IMAG]], %[[A_REAL]] : !cir.float
+// CIR: %[[C_REAL:.*]] = cir.fsub %[[MUL_BR_AR]], %[[MUL_BI_AI]] : !cir.float
+// CIR: %[[C_IMAG:.*]] = cir.fadd %[[MUL_BR_AI]], %[[MUL_BI_AR]] : !cir.float
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: %[[IS_C_REAL_NAN:.*]] = cir.cmp ne %[[C_REAL]], %[[C_REAL]] : !cir.float
 // CIR: %[[IS_C_IMAG_NAN:.*]] = cir.cmp ne %[[C_IMAG]], %[[C_IMAG]] : !cir.float
@@ -503,8 +503,8 @@ void foo8() {
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR: %[[RESULT_REAL:.*]] = cir.mul %[[A_REAL]], %[[TMP_B]] : !cir.float
-// CIR: %[[RESULT_IMAG:.*]] = cir.mul %[[A_IMAG]], %[[TMP_B]] : !cir.float
+// CIR: %[[RESULT_REAL:.*]] = cir.fmul %[[A_REAL]], %[[TMP_B]] : !cir.float
+// CIR: %[[RESULT_IMAG:.*]] = cir.fmul %[[A_IMAG]], %[[TMP_B]] : !cir.float
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
@@ -596,8 +596,8 @@ void foo11() {
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR: %[[RESULT_REAL:.*]] = cir.div %[[A_REAL]], %[[TMP_B]] : !cir.float
-// CIR: %[[RESULT_IMAG:.*]] = cir.div %[[A_IMAG]], %[[TMP_B]] : !cir.float
+// CIR: %[[RESULT_REAL:.*]] = cir.fdiv %[[A_REAL]], %[[TMP_B]] : !cir.float
+// CIR: %[[RESULT_IMAG:.*]] = cir.fdiv %[[A_IMAG]], %[[TMP_B]] : !cir.float
 // CIR: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
@@ -834,7 +834,7 @@ void foo9() {
 // C_CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.float>, !cir.float
 // C_CIR: %[[A_REAL:.*]] = cir.complex.real %[[A_ADDR]] : !cir.complex<!cir.float> -> !cir.float
 // C_CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[A_ADDR]] : !cir.complex<!cir.float> -> !cir.float
-// C_CIR: %[[NEW_REAL:.*]] = cir.add %[[TMP_B]], %[[A_REAL]] : !cir.float
+// C_CIR: %[[NEW_REAL:.*]] = cir.fadd %[[TMP_B]], %[[A_REAL]] : !cir.float
 // C_CIR: %[[RESULT:.*]] = cir.complex.create %[[NEW_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // C_CIR: %[[RESULT_REAL:.*]] = cir.complex.real %[[RESULT]] : !cir.complex<!cir.float> -> !cir.float
 // C_CIR: cir.store{{.*}} %[[RESULT_REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
