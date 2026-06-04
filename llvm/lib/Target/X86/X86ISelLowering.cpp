@@ -34287,14 +34287,23 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumEltsInWideVec = 512/VT.getScalarSizeInBits();
   MVT WideDataVT = MVT::getVectorVT(ScalarVT, NumEltsInWideVec);
 
-  // Mask element has to be i1.
-  assert(Mask.getSimpleValueType().getScalarType() == MVT::i1 &&
-         "Unexpected mask type");
+  // For AVX512F targets without VLX (e.g. KNL), a maxnum/minnum store-back
+  // fuses a legacy CMPP vector comparison into the masked store, so the mask
+  // may arrive as vNi32 instead of vNi1. Accept both and convert to i1 below.
+  MVT MaskEltVT = Mask.getSimpleValueType().getScalarType();
+  assert((MaskEltVT == MVT::i1 || MaskEltVT.getSizeInBits() >= 8) &&
+         "Expected an i1 mask or a wide vector mask from a CMPP comparison");
 
-  MVT WideMaskVT = MVT::getVectorVT(MVT::i1, NumEltsInWideVec);
+  MVT WideMaskVT = MVT::getVectorVT(MaskEltVT, NumEltsInWideVec);
 
   DataToStore = ExtendToType(DataToStore, WideDataVT, DAG);
   Mask = ExtendToType(Mask, WideMaskVT, DAG, true);
+  // Truncate a vNi32 mask down to vNi1 for the masked op. A CMPP result is
+  // all-ones/all-zeros per lane, so bit 0 of each lane carries the predicate,
+  // and the zero-filled widened lanes truncate to 0 (disabled).
+  if (MaskEltVT != MVT::i1)
+    Mask = DAG.getNode(ISD::TRUNCATE, dl,
+                       MVT::getVectorVT(MVT::i1, NumEltsInWideVec), Mask);
   return DAG.getMaskedStore(N->getChain(), dl, DataToStore, N->getBasePtr(),
                             N->getOffset(), Mask, N->getMemoryVT(),
                             N->getMemOperand(), N->getAddressingMode(),
