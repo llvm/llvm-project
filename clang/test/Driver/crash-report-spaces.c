@@ -8,7 +8,7 @@
 // REQUIRES: crash-recovery
 
 #pragma clang __debug parser_crash
-// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
+// CHECK: Preprocessed source(s) and associated run script(s) are located at:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.c
 FOO
 // CHECKSRC: FOO

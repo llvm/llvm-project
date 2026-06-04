@@ -354,9 +354,6 @@ New Compiler Flags
   that ``bool`` values loaded from memory cannot have a bit pattern other
   than 0 or 1.
 
-- New option ``-fcrash-diagnostics-tar`` added to create an archive of crash
-  reproducer files for easier bug filing.
-
 Deprecated Compiler Flags
 -------------------------
 

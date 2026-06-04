@@ -763,10 +763,6 @@ control the crash diagnostics.
    Like ``-fcrash-diagnostics-dir=<dir>``, specifies where to write the
    crash diagnostics files, but with lower precedence than the option.
 
-.. option:: -fcrash-diagnostics-tar=<path>
-
-  Specify where to write the crash diagnostics files as a tarball.
-
 Clang is also capable of generating preprocessed source file(s) and associated
 run script(s) even without a crash. This is especially useful when trying to
 generate a reproducer for warnings or errors while using modules.

@@ -18,7 +18,7 @@
 // RUN: find %t/crash-vfs-*.cache/vfs | \
 // RUN:   grep "B.framework/Headers/B.h" | count 1
 
-// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
+// CHECK: Preprocessed source(s) and associated run script(s) are located at:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 
