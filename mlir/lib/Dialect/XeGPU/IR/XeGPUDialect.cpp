@@ -662,8 +662,8 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 //   - order: the original dim index is replaced by the expanded dim indices
 //     in innermost-fastest order; entries past `dim` shift up by
 //     `targetShape.size() - 1`.
-DistributeLayoutAttr
-LayoutAttr::expandDims(int64_t dim, ArrayRef<int64_t> targetShape) {
+DistributeLayoutAttr LayoutAttr::expandDims(int64_t dim,
+                                            ArrayRef<int64_t> targetShape) {
   SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
   SmallVector<int64_t> sgData = getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
@@ -715,8 +715,7 @@ LayoutAttr::expandDims(int64_t dim, ArrayRef<int64_t> targetShape) {
 
   // Splice `expanded` (length expCount) into `vec` at position `dim`,
   // replacing the single entry at `dim`.
-  auto splice = [&](SmallVector<int64_t> &vec,
-                    ArrayRef<int64_t> expanded) {
+  auto splice = [&](SmallVector<int64_t> &vec, ArrayRef<int64_t> expanded) {
     if (vec.empty())
       return;
     vec.erase(vec.begin() + dim);
@@ -826,9 +825,9 @@ LayoutAttr::expandDims(int64_t dim, ArrayRef<int64_t> targetShape) {
     SmallVector<int32_t> v32(v.begin(), v.end());
     return DenseI32ArrayAttr::get(getContext(), v32);
   };
-  return xegpu::LayoutAttr::get(
-      getContext(), toAttr(sgLayout), toAttr(sgData), toAttr(instData),
-      toAttr(laneLayout), toAttr(laneData), toAttr(newOrder));
+  return xegpu::LayoutAttr::get(getContext(), toAttr(sgLayout), toAttr(sgData),
+                                toAttr(instData), toAttr(laneLayout),
+                                toAttr(laneData), toAttr(newOrder));
 }
 
 // Derive a new layout by transpose the layout using `permutation`.
@@ -1344,7 +1343,7 @@ DistributeLayoutAttr SliceAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 // expanded there, and the slice dims that lie past the expanded position
 // are shifted up by `targetShape.size() - 1`.
 DistributeLayoutAttr SliceAttr::expandDims(int64_t dim,
-                                            ArrayRef<int64_t> targetShape) {
+                                           ArrayRef<int64_t> targetShape) {
   // `dim` is in slice space; map it to parent space (parent dims listed in
   // `sliceDims` are removed by the slice, so the mapping always lands on a
   // non-sliced parent dim).
