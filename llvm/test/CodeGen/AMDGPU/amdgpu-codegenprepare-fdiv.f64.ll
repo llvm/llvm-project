@@ -469,7 +469,7 @@ define double @rsq_f64_input_known_not_zero(double nofpclass(zero) %x) {
 ; CHECK-LABEL: define double @rsq_f64_input_known_not_zero(
 ; CHECK-SAME: double nofpclass(zero) [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], +inf
 ; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
@@ -580,7 +580,7 @@ define double @rsq_f64_dynamic_denormal(double %x) #0 {
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp contract oeq double [[X]], +inf
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select contract i1 [[TMP4]], double [[TMP1]], double [[X]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fneg contract double [[TMP1]]
@@ -619,7 +619,7 @@ define double @rsq_f64_dynamic_denormal_no_zero_no_denorm(double nofpclass(zero 
 ; CHECK-LABEL: define double @rsq_f64_dynamic_denormal_no_zero_no_denorm(
 ; CHECK-SAME: double nofpclass(zero sub) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], +inf
 ; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]
@@ -750,7 +750,7 @@ define double @rsq_f64_assume_nonzero(double %x) {
 ; CHECK-NEXT:    [[NONZERO:%.*]] = fcmp one double [[X]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @llvm.amdgcn.rsq.f64(double [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp contract oeq double [[X]], +inf
 ; CHECK-NEXT:    [[TMP3:%.*]] = select contract i1 [[TMP2]], double [[TMP1]], double [[X]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg contract double [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract double [[TMP3]], [[TMP4]]

@@ -80,7 +80,7 @@ struct DirectiveSpecificationScope {
       return std::visit(
           [](auto &&s) -> decltype(auto) { return GetODS(s); }, x.u);
     } else {
-      static_assert(std::is_same_v<OpenMPSectionConstruct, T>);
+      static_assert(std::is_same_v<OmpSectionDirective, T>);
       llvm_unreachable("This function does not work for SECTION");
     }
   }

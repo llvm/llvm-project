@@ -50,12 +50,11 @@ void splash(Swim& swam) {                 // expected-note {{declared here}}
 }
 
 extern Swim dc;
-extern Swim& trident; // interpreter-note {{declared here}}
+extern Swim& trident;
 
 constexpr auto& sandeno   = typeid(dc);         // ok: can only be typeid(Swim)
 constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}} \
-                                                // nointerpreter-note {{typeid applied to object 'trident' whose dynamic type is not constant}} \
-                                                // interpreter-note {{initializer of 'trident' is unknown}}
+                                                // expected-note {{typeid applied to object 'trident' whose dynamic type is not constant}}
 
 namespace explicitThis {
 struct C {
@@ -266,21 +265,19 @@ namespace param_reference {
 
 namespace dropped_note {
   extern int &x; // expected-note {{declared here}}
-  constexpr int f() { return x; } // nointerpreter-note {{read of non-constexpr variable 'x'}} \
-                                  // interpreter-note {{initializer of 'x' is unknown}}
-  constexpr int y = f(); // expected-error {{constexpr variable 'y' must be initialized by a constant expression}} expected-note {{in call to 'f()'}}
+  constexpr int f() { return x; } // expected-note {{read of non-constexpr variable 'x'}}
+  constexpr int y = f(); // expected-error {{constexpr variable 'y' must be initialized by a constant expression}} \
+                         // expected-note {{in call to 'f()'}}
 }
 
 namespace dynamic {
   struct A {virtual ~A();};
   struct B : A {};
-  void f(A& a) { // interpreter-note 2{{declared here}}
+  void f(A& a) {
     constexpr B* b = dynamic_cast<B*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
-                                           // interpreter-note {{pointer to 'a' is not a constant expression}}
+                                           // expected-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
     constexpr void* b2 = dynamic_cast<void*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
-                                                  // interpreter-note {{pointer to 'a' is not a constant expression}}
+                                                  // expected-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
   }
 }
 
@@ -288,11 +285,9 @@ namespace unsized_array {
   void f(int (&a)[], int (&b)[], int (&c)[4]) {
     constexpr int t1 = a - a;
     constexpr int t2 = a - b; // expected-error {{constexpr variable 't2' must be initialized by a constant expression}} \
-                              // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}} \
-                              // interpreter-note {{arithmetic involving unrelated objects 'a' and 'b' has unspecified value}}
+                              // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}}
     constexpr int t3 = a - &c[2];  // expected-error {{constexpr variable 't3' must be initialized by a constant expression}} \
-                              // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}} \
-                              // interpreter-note {{arithmetic involving unrelated objects 'a' and '*((char*)&c + 8)' has unspecified value}}
+                                   // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}}
   }
 }
 
@@ -300,24 +295,19 @@ namespace casting {
   struct A {};
   struct B : A {};
   struct C : A {};
-  extern A &a; // interpreter-note {{declared here}}
-  extern B &b; // expected-note {{declared here}} interpreter-note 2 {{declared here}}
+  extern A &a;
+  extern B &b; // nointerpreter-note {{declared here}}
   constexpr B &t1 = (B&)a; // expected-error {{must be initialized by a constant expression}} \
-                           // nointerpreter-note {{cannot cast object of dynamic type 'A' to type 'B'}} \
-                           // interpreter-note {{initializer of 'a' is unknown}}
+                           // nointerpreter-note {{cannot cast object of dynamic type 'A' to type 'B'}}
   constexpr B &t2 = (B&)(A&)b; // expected-error {{must be initialized by a constant expression}} \
-                               // nointerpreter-note {{initializer of 'b' is not a constant expression}} \
-                               // interpreter-note {{initializer of 'b' is unknown}}
-  // FIXME: interpreter incorrectly rejects.
-  constexpr bool t3 = &b + 1 == &(B&)(A&)b; // interpreter-error {{must be initialized by a constant expression}} \
-                                            // interpreter-note {{initializer of 'b' is unknown}}
+                               // nointerpreter-note {{initializer of 'b' is not a constant expression}}
+  constexpr bool t3 = &b + 1 == &(B&)(A&)b; // interpreter-error {{constexpr variable 't3' must be initialized by a constant expression}}
   constexpr C &t4 = (C&)(A&)b; // expected-error {{must be initialized by a constant expression}} \
-                               // nointerpreter-note {{cannot cast object of dynamic type 'B' to type 'C'}} \
-                               // interpreter-note {{initializer of 'b' is unknown}}
+                               // nointerpreter-note {{cannot cast object of dynamic type 'B' to type 'C'}}
 }
 
 namespace pointer_comparisons {
-  extern int &extern_n; // interpreter-note 4 {{declared here}}
+  extern int &extern_n;
   extern int &extern_n2;
   constexpr int f1(bool b, int& n) {
     if (b) {
@@ -325,30 +315,25 @@ namespace pointer_comparisons {
     }
     return f1(true, n);
   }
-  // FIXME: interpreter incorrectly rejects; both sides are the same constexpr-unknown value.
-  static_assert(f1(false, extern_n)); // interpreter-error {{static assertion expression is not an integral constant expression}} \
-                                      // interpreter-note {{initializer of 'extern_n' is unknown}}
+  static_assert(f1(false, extern_n));
   static_assert(&extern_n != &extern_n2); // expected-error {{static assertion expression is not an integral constant expression}} \
-                                          // nointerpreter-note {{comparison between pointers to unrelated objects '&extern_n' and '&extern_n2' has unspecified value}} \
-                                          // interpreter-note {{initializer of 'extern_n' is unknown}}
+                                          // expected-note {{comparison between pointers to unrelated objects '&extern_n' and '&extern_n2' has unspecified value}}
   void f2(const int &n) {
-    constexpr int x = &x == &n; // nointerpreter-error {{must be initialized by a constant expression}} \
-                                // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&n' has unspecified value}}
+    constexpr int x = &x == &n; // expected-error {{must be initialized by a constant expression}} \
+                                // expected-note {{comparison between pointers to unrelated objects '&x' and '&n' has unspecified value}}
     // Distinct variables are not equal, even if they're local variables.
     constexpr int y = &x == &y;
     static_assert(!y);
   }
   constexpr int f3() {
     int x;
-    return &x == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&extern_n' has unspecified value}} \
-                            // interpreter-note {{initializer of 'extern_n' is unknown}}
+    return &x == &extern_n; // expected-note {{comparison between pointers to unrelated objects '&x' and '&extern_n' has unspecified value}}
   }
   static_assert(!f3()); // expected-error {{static assertion expression is not an integral constant expression}} \
                         // expected-note {{in call to 'f3()'}}
   constexpr int f4() {
     int *p = new int;
-    bool b = p == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&{*new int#0}' and '&extern_n' has unspecified value}} \
-                             // interpreter-note {{initializer of 'extern_n' is unknown}}
+    bool b = p == &extern_n; // expected-note {{comparison between pointers to unrelated objects '&{*new int#0}' and '&extern_n' has unspecified value}}
     delete p;
     return b;
   }
@@ -383,17 +368,16 @@ namespace enable_if_2 {
 }
 
 namespace GH150015 {
-  extern int (& c)[8]; // interpreter-note {{declared here}}
+  extern int (& c)[8];
   constexpr int x = c <= c+8; // interpreter-error {{constexpr variable 'x' must be initialized by a constant expression}} \
-                              // interpreter-note {{initializer of 'c' is unknown}}
+                              // interpreter-note {{cannot refer to element 8 of non-array object in a constant expression}}
 
   struct X {};
   struct Y {};
   struct Z : X, Y {};
-  extern Z &z; // interpreter-note{{declared here}}
-  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // expected-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
-                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}} \
-                                                 // interpreter-note {{initializer of 'z' is unknown}}
+  extern Z &z;
+  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // nointerpreter-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
+                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
 }
 
 namespace InvalidConstexprFn {

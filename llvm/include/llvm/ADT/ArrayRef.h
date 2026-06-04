@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -551,6 +552,16 @@ template <typename T> hash_code hash_value(ArrayRef<T> S) {
   return hash_combine_range(S);
 }
 
+/// Inline ArrayRef overloads of the xxhash entry points declared
+/// out-of-line in llvm/Support/xxhash.h. They live here so xxhash.h can stay
+/// free of ADT dependencies.
+inline uint64_t xxh3_64bits(ArrayRef<uint8_t> data) {
+  return xxh3_64bits(data.data(), data.size());
+}
+inline XXH128_hash_t xxh3_128bits(ArrayRef<uint8_t> data) {
+  return xxh3_128bits(data.data(), data.size());
+}
+
 // Provide DenseMapInfo for ArrayRefs.
 template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
   static inline ArrayRef<T> getEmptyKey() {
@@ -558,23 +569,14 @@ template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
                        size_t(0));
   }
 
-  static inline ArrayRef<T> getTombstoneKey() {
-    return ArrayRef<T>(reinterpret_cast<const T *>(~static_cast<uintptr_t>(1)),
-                       size_t(0));
-  }
-
   static unsigned getHashValue(ArrayRef<T> Val) {
     assert(Val.data() != getEmptyKey().data() && "Cannot hash the empty key!");
-    assert(Val.data() != getTombstoneKey().data() &&
-           "Cannot hash the tombstone key!");
     return (unsigned)(hash_value(Val));
   }
 
   static bool isEqual(ArrayRef<T> LHS, ArrayRef<T> RHS) {
     if (RHS.data() == getEmptyKey().data())
       return LHS.data() == getEmptyKey().data();
-    if (RHS.data() == getTombstoneKey().data())
-      return LHS.data() == getTombstoneKey().data();
     return LHS == RHS;
   }
 };

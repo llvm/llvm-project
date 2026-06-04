@@ -802,8 +802,13 @@ def canRunLibcxxTests():
 
     platform = lldbplatformutil.getPlatform()
 
-    if lldbplatformutil.target_is_android() or lldbplatformutil.platformIsDarwin():
+    if lldbplatformutil.target_is_android():
         return True, "libc++ always present"
+
+    if lldbplatformutil.platformIsDarwin():
+        if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
+            return False, "libc++ tests require a locally built libc++"
+        return True, "libc++ present"
 
     if platform == "linux":
         if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
@@ -1089,8 +1094,8 @@ def run_suite():
             % (configuration.lldb_platform_working_dir)
         )
         error = lldb.remote_platform.MakeDirectory(
-            configuration.lldb_platform_working_dir, 448
-        )  # 448 = 0o700
+            configuration.lldb_platform_working_dir, 0o700
+        )
         if error.Fail():
             raise Exception(
                 "making remote directory '%s': %s"

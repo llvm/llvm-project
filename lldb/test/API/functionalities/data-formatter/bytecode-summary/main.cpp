@@ -22,10 +22,17 @@ int main(int argc, char **argv) {
   return *y;
 }
 
+#ifdef __APPLE__
+#define FORMATTER_SECTION "__DATA_CONST,__lldbformatters"
+#else
+#define FORMATTER_SECTION ".lldbformatters"
+#endif
+
 // Produced from the assembler in
 // Shell/ScriptInterpreter/Python/Inputs/FormatterBytecode/formatter.py
-__attribute__((used, section("__DATA_CONST,__lldbformatters"))) unsigned char
-    _MyOptional_type_summary[] =
+// clang-format off
+__attribute__((used, section(FORMATTER_SECTION)))
+unsigned char _MyOptional_type_summary[] =
         "\x01"             // version
         "\xa4"             // record size
         "\x01"             // record size
@@ -41,3 +48,4 @@ __attribute__((used, section("__DATA_CONST,__lldbformatters"))) unsigned char
         "\x0#\x16\x60\x5\x22\x5value#\x12\x60\x5#\x17\x60\x1,"
         "\x10\x6\x22\x4None\x10\x11\x1#\x0\x60\x1#R\x60\x10\x3# "
         "\x60\x10\x1\x2\x12\x12\x12\x12"; // summary function
+// clang-format on

@@ -5281,7 +5281,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
         }
         if (isa<FPMathOperator>(I)) {
-          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          uint64_t Flags = Record[OpNum];
+          if (isa<UIToFPInst>(I))
+            Flags >>= 1;
+          FastMathFlags FMF = getDecodedFastMathFlags(Flags);
           if (FMF.any())
             I->setFastMathFlags(FMF);
         }
@@ -7058,7 +7061,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (!F || !F->isMaterializable())
     return Error::success();
 
-  DenseMap<Function*, uint64_t>::iterator DFII = DeferredFunctionInfo.find(F);
+  auto DFII = DeferredFunctionInfo.find(F);
   assert(DFII != DeferredFunctionInfo.end() && "Deferred function not found!");
   // If its position is recorded as 0, its body is somewhere in the stream
   // but we haven't seen it yet.

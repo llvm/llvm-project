@@ -1352,7 +1352,7 @@ size_t AppleObjCRuntimeV2::GetByteOffsetForIvar(CompilerType &parent_ast_type,
     buffer.append(class_name.GetStringRef());
     buffer.push_back('.');
     buffer.append(ivar_name);
-    ConstString ivar_const_str(buffer.c_str());
+    ConstString ivar_const_str(buffer);
 
     // Try to get the ivar offset address from the symbol table first using the
     // name we created above
@@ -1522,7 +1522,7 @@ public:
       if (!err.Success())
         return element();
 
-      return element(ConstString(key_string.c_str()),
+      return element(ConstString(key_string),
                      (ObjCLanguageRuntime::ObjCISA)value);
     }
 
@@ -2245,7 +2245,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
 
   if (class_buffer_addr != LLDB_INVALID_ADDRESS) {
     arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_addr;
-    arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_byte_size;
+    arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_len;
   }
 
   // Only dump the runtime classes from the expression evaluation if the log is

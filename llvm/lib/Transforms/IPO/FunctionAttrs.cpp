@@ -186,6 +186,18 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
   // Additional locations accessed if the SCC accesses argmem.
   MemoryEffects RecursiveArgME = MemoryEffects::none();
 
+  auto AddNonArgMemoryEffects = [&ME](MemoryEffects InstME) {
+    // Merge instruction memory effects, including inaccessible and errno
+    // memory, but excluding argument memory, which is handled separately.
+    ME |= InstME.getWithoutLoc(IRMemLocation::ArgMem);
+
+    // If the instruction accesses captured memory (currently part of "other")
+    // and an argument is captured (currently not tracked), then it may also
+    // access argument memory.
+    ModRefInfo OtherMR = InstME.getModRef(IRMemLocation::Other);
+    ME |= MemoryEffects::argMemOnly(OtherMR);
+  };
+
   // Inalloca and preallocated arguments are always clobbered by the call.
   if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
       F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
@@ -222,16 +234,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (isa<PseudoProbeInst>(I))
         continue;
 
-      // Merge callee's memory effects into caller's ones, including
-      // inaccessible and errno memory, but excluding argument memory, which is
-      // handled separately.
-      ME |= CallME.getWithoutLoc(IRMemLocation::ArgMem);
-
-      // If the call accesses captured memory (currently part of "other") and
-      // an argument is captured (currently not tracked), then it may also
-      // access argument memory.
-      ModRefInfo OtherMR = CallME.getModRef(IRMemLocation::Other);
-      ME |= MemoryEffects::argMemOnly(OtherMR);
+      AddNonArgMemoryEffects(CallME);
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
@@ -241,27 +244,20 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       continue;
     }
 
-    ModRefInfo MR = ModRefInfo::NoModRef;
-    if (I.mayWriteToMemory())
-      MR |= ModRefInfo::Mod;
-    if (I.mayReadFromMemory())
-      MR |= ModRefInfo::Ref;
-    if (MR == ModRefInfo::NoModRef)
+    MemoryEffects InstME = I.getMemoryEffects();
+    if (InstME.doesNotAccessMemory())
       continue;
 
     std::optional<MemoryLocation> Loc = MemoryLocation::getOrNone(&I);
     if (!Loc) {
       // If no location is known, conservatively assume anything can be
       // accessed.
-      ME |= MemoryEffects(MR);
+      ME |= MemoryEffects(InstME.getModRef());
       continue;
     }
 
-    // Volatile operations may access inaccessible memory.
-    if (I.isVolatile())
-      ME |= MemoryEffects::inaccessibleMemOnly(MR);
-
-    addLocAccess(ME, *Loc, MR, AAR);
+    AddNonArgMemoryEffects(InstME);
+    addLocAccess(ME, *Loc, InstME.getModRef(IRMemLocation::ArgMem), AAR);
   }
 
   return {OrigME & ME, RecursiveArgME};
@@ -885,110 +881,73 @@ determinePointerAccessAttrs(Argument *A,
 
     Use *U = Worklist.pop_back_val();
     Instruction *I = cast<Instruction>(U->getUser());
+    if (isa<ReturnInst>(I))
+      continue;
 
-    switch (I->getOpcode()) {
-    case Instruction::BitCast:
-    case Instruction::GetElementPtr:
-    case Instruction::PHI:
-    case Instruction::Select:
-    case Instruction::AddrSpaceCast:
-      // The original value is not read/written via this if the new value isn't.
+    UseCaptureInfo Info = DetermineUseCaptureKind(*U, A);
+
+    // FIXME: This should really be part of CaptureTracking, but keep it here
+    // for now due to interference with isEscapeSource().
+    if (auto *CB = dyn_cast<CallBase>(I))
+      if (CB->onlyReadsMemory())
+        Info.UseCC &= CaptureComponents::Address;
+
+    if (capturesAnyProvenance(Info.UseCC)) {
+      // Handle indirect access via captured provenance.
+      if (!capturesReadProvenanceOnly(Info.UseCC))
+        return Attribute::None;
+      IsRead = true;
+    }
+
+    if (capturesAnyProvenance(Info.ResultCC)) {
       for (Use &UU : I->uses())
         if (Visited.insert(&UU).second)
           Worklist.push_back(&UU);
-      break;
+    }
 
-    case Instruction::Call:
-    case Instruction::Invoke: {
-      CallBase &CB = cast<CallBase>(*I);
-      if (CB.isCallee(U)) {
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      if (CB->isCallee(U)) {
         IsRead = true;
-        // Note that indirect calls do not capture, see comment in
-        // CaptureTracking for context
         continue;
       }
 
       // Given we've explicitly handled the callee operand above, what's left
       // must be a data operand (e.g. argument or operand bundle)
-      const unsigned UseIndex = CB.getDataOperandNo(U);
+      const unsigned UseIndex = CB->getDataOperandNo(U);
 
-      // Some intrinsics (for instance ptrmask) do not capture their results,
-      // but return results thas alias their pointer argument, and thus should
-      // be handled like GEP or addrspacecast above.
-      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-              &CB, /*MustPreserveNullness=*/false)) {
-        for (Use &UU : CB.uses())
-          if (Visited.insert(&UU).second)
-            Worklist.push_back(&UU);
-      } else if (capturesAnyProvenance(CB.getCaptureInfo(UseIndex))) {
-        if (!CB.onlyReadsMemory())
-          // If the callee can save a copy into other memory, then simply
-          // scanning uses of the call is insufficient.  We have no way
-          // of tracking copies of the pointer through memory to see
-          // if a reloaded copy is written to, thus we must give up.
-          return Attribute::None;
-        // Push users for processing once we finish this one
-        if (!I->getType()->isVoidTy())
-          for (Use &UU : I->uses())
-            if (Visited.insert(&UU).second)
-              Worklist.push_back(&UU);
-      }
-
-      ModRefInfo ArgMR = CB.getMemoryEffects().getModRef(IRMemLocation::ArgMem);
+      ModRefInfo ArgMR =
+          CB->getMemoryEffects().getModRef(IRMemLocation::ArgMem);
       if (isNoModRef(ArgMR))
         continue;
 
-      if (Function *F = CB.getCalledFunction())
-        if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
+      if (Function *F = CB->getCalledFunction())
+        if (CB->isArgOperand(U) && UseIndex < F->arg_size() &&
             SCCNodes.count(F->getArg(UseIndex)))
           // This is an argument which is part of the speculative SCC.  Note
           // that only operands corresponding to formal arguments of the callee
           // can participate in the speculation.
-          break;
+          continue;
 
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
-      if (CB.doesNotAccessMemory(UseIndex)) {
+      if (CB->doesNotAccessMemory(UseIndex)) {
         /* nop */
-      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
+      } else if (!isModSet(ArgMR) || CB->onlyReadsMemory(UseIndex)) {
         IsRead = true;
-      } else if (!isRefSet(ArgMR) ||
-                 CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
+      } else if (!isRefSet(ArgMR) || CB->dataOperandHasImpliedAttr(
+                                         UseIndex, Attribute::WriteOnly)) {
         IsWrite = true;
       } else {
         return Attribute::None;
       }
-      break;
-    }
+    } else {
+      // Ignore value operand for stores.
+      if (isa<StoreInst>(I) &&
+          StoreInst::getPointerOperandIndex() != U->getOperandNo())
+        continue;
 
-    case Instruction::Load:
-      // A volatile load has side effects beyond what readonly can be relied
-      // upon.
-      if (cast<LoadInst>(I)->isVolatile())
-        return Attribute::None;
-
-      IsRead = true;
-      break;
-
-    case Instruction::Store:
-      if (cast<StoreInst>(I)->getValueOperand() == *U)
-        // untrackable capture
-        return Attribute::None;
-
-      // A volatile store has side effects beyond what writeonly can be relied
-      // upon.
-      if (cast<StoreInst>(I)->isVolatile())
-        return Attribute::None;
-
-      IsWrite = true;
-      break;
-
-    case Instruction::ICmp:
-    case Instruction::Ret:
-      break;
-
-    default:
-      return Attribute::None;
+      IsRead |= I->mayReadFromMemory();
+      IsWrite |= I->mayWriteToMemory();
     }
   }
 
@@ -1919,8 +1878,11 @@ static bool InstrBreaksNonThrowing(Instruction &I, const SCCNodeSet &SCCNodes) {
 /// Helper for NoFree inference predicate InstrBreaksAttribute.
 static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
   CallBase *CB = dyn_cast<CallBase>(&I);
-  if (!CB)
-    return false;
+  if (!CB) {
+    // Synchronization may establish happens-before with a free on another
+    // thread.
+    return I.maySynchronize();
+  }
 
   if (CB->hasFnAttr(Attribute::NoFree))
     return false;
@@ -1933,46 +1895,16 @@ static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
   return true;
 }
 
-// Return true if this is an atomic which has an ordering stronger than
-// unordered.  Note that this is different than the predicate we use in
-// Attributor.  Here we chose to be conservative and consider monotonic
-// operations potentially synchronizing.  We generally don't do much with
-// monotonic operations, so this is simply risk reduction.
-static bool isOrderedAtomic(Instruction *I) {
-  if (!I->isAtomic())
-    return false;
-
-  if (auto *FI = dyn_cast<FenceInst>(I))
-    // All legal orderings for fence are stronger than monotonic.
-    return FI->getSyncScopeID() != SyncScope::SingleThread;
-  else if (isa<AtomicCmpXchgInst>(I) || isa<AtomicRMWInst>(I))
-    return true;
-  else if (auto *SI = dyn_cast<StoreInst>(I))
-    return !SI->isUnordered();
-  else if (auto *LI = dyn_cast<LoadInst>(I))
-    return !LI->isUnordered();
-  else {
-    llvm_unreachable("unknown atomic instruction?");
-  }
-}
-
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
-  // An ordered atomic may synchronize.  (See comment about on monotonic.)
-  if (isOrderedAtomic(&I))
-    return true;
-
-  auto *CB = dyn_cast<CallBase>(&I);
-  if (!CB)
-    // Non call site cases covered by the two checks above
+  if (!I.maySynchronize())
     return false;
 
-  if (CB->hasFnAttr(Attribute::NoSync))
-    return false;
-
-  // Speculatively assume in SCC.
-  if (Function *Callee = CB->getCalledFunction())
-    if (SCCNodes.contains(Callee))
-      return false;
+  // Optimistically assume calls within the SCC are nosync: if nothing else in
+  // the SCC synchronizes, the assumption holds.
+  if (auto *CB = dyn_cast<CallBase>(&I))
+    if (Function *Callee = CB->getCalledFunction())
+      if (SCCNodes.contains(Callee))
+        return false;
 
   return true;
 }

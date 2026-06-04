@@ -405,12 +405,15 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
       ValNo > 1)
     return true;
 
-  // UseGPRForF16_F32 if targeting one of the soft-float ABIs, if passing a
-  // variadic argument, or if no F16/F32 argument registers are available.
-  bool UseGPRForF16_F32 = true;
-  // UseGPRForF64 if targeting soft-float ABIs or an FLEN=32 ABI, if passing a
-  // variadic argument, or if no F64 argument registers are available.
-  bool UseGPRForF64 = true;
+  // Double wide packed types require 2 GPRs so we can only return 1 of them.
+  if (Subtarget.isPExtPackedDoubleType(LocVT) && IsRet && ValNo > 0)
+    return true;
+
+  // AllowFPRForF16_F32 if targeting an FLEN>=32 ABI and the argument isn't
+  // variadic.
+  bool AllowFPRForF16_F32 = false;
+  // UseFPRForF64 if targeting an FLEN>=64 ABI and the argument isn't variadic.
+  bool AllowFPRForF64 = false;
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   switch (ABI) {
@@ -421,32 +424,31 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   case RISCVABI::ABI_LP64:
   case RISCVABI::ABI_LP64E:
     break;
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_LP64F:
-    UseGPRForF16_F32 = ArgFlags.isVarArg();
-    break;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
-    UseGPRForF16_F32 = ArgFlags.isVarArg();
-    UseGPRForF64 = ArgFlags.isVarArg();
+    AllowFPRForF64 = !ArgFlags.isVarArg();
+    [[fallthrough]];
+  case RISCVABI::ABI_ILP32F:
+  case RISCVABI::ABI_LP64F:
+    AllowFPRForF16_F32 = !ArgFlags.isVarArg();
     break;
   }
 
-  if ((LocVT == MVT::f16 || LocVT == MVT::bf16) && !UseGPRForF16_F32) {
+  if ((LocVT == MVT::f16 || LocVT == MVT::bf16) && AllowFPRForF16_F32) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR16s)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  if (LocVT == MVT::f32 && !UseGPRForF16_F32) {
+  if (LocVT == MVT::f32 && AllowFPRForF16_F32) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR32s)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
   }
 
-  if (LocVT == MVT::f64 && !UseGPRForF64) {
+  if (LocVT == MVT::f64 && AllowFPRForF64) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR64s)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
@@ -526,9 +528,12 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
          "PendingLocs and PendingArgFlags out of sync");
 
   // Handle passing f64 on RV32D with a soft float ABI or when floating point
-  // registers are exhausted.
-  if (XLen == 32 && LocVT == MVT::f64) {
-    assert(PendingLocs.empty() && "Can't lower f64 if it is split");
+  // registers are exhausted. Or 64-bit P extension vectors on RV32.
+  if (XLen == 32 &&
+      (LocVT == MVT::f64 || (Subtarget.isPExtPackedDoubleType(LocVT) &&
+                             !ArgFlags.isSplit() && PendingLocs.empty()))) {
+    assert(PendingLocs.empty() &&
+           "Can't lower f64 or P extension vector if it is split");
     // Depending on available argument GPRS, f64 may be passed in a pair of
     // GPRs, split between a GPR and the stack, or passed completely on the
     // stack. LowerCall/LowerFormalArguments/LowerReturn must recognise these
@@ -556,7 +561,8 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
-  if ((LocVT.isScalarInteger() || Subtarget.isPExtPackedType(LocVT)) &&
+  if ((LocVT.isScalarInteger() ||
+       (Subtarget.isPExtPackedType(LocVT) && LocVT.getSizeInBits() == XLen)) &&
       ArgFlags.isSplitEnd() && PendingLocs.size() <= 1) {
     assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
@@ -632,7 +638,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   // end of a split argument that must be passed indirectly.
   if (!PendingLocs.empty()) {
     assert(ArgFlags.isSplitEnd() && "Expected ArgFlags.isSplitEnd()");
-    assert(PendingLocs.size() > 2 && "Unexpected PendingLocs.size()");
+    assert(PendingLocs.size() > 1 && "Unexpected PendingLocs.size()");
 
     for (auto &It : PendingLocs) {
       if (Reg)

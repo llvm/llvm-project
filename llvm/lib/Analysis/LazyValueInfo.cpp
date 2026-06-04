@@ -2115,6 +2115,10 @@ Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *V,
   // return it quickly. But this is only a fastpath, and falling
   // through would still be correct.
   const DataLayout &DL = CxtI->getDataLayout();
+  // NOTE: This check is meant to determine whether a pointer is semantically a
+  // null pointer, not just whether its value equals ConstantPointerNull. If the
+  // semantics of ConstantPointerNull change in the future, this should be
+  // updated to use a semantic check (e.g. isKnownNonNull).
   if (V->getType()->isPointerTy() && C->isNullValue() &&
       isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
     Type *ResTy = CmpInst::makeCmpResultType(C->getType());
