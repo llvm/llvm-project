@@ -103,4 +103,84 @@ TEST(CheckLifetimeEnd, NonTrivialDtor) {
   EXPECT_EQ(Diags, "test.LifetimeEndReporter: a LIFETIME END\n");
 }
 
+TEST(CheckLifetimeEnd, MultipleVariablesAndNestedScopes) {
+  constexpr auto Code = R"(
+void foo() {
+  int a = 0;
+  int b = 0;
+  {
+    int c = 0, d = 0;
+  }
+}
+  )";
+
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
+      Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: a LIFETIME END\n"
+                   "test.LifetimeEndReporter: b LIFETIME END\n"
+                   "test.LifetimeEndReporter: c LIFETIME END\n"
+                   "test.LifetimeEndReporter: d LIFETIME END\n");
+}
+
+TEST(CheckLifetimeEnd, LocalStaticVariable) {
+  constexpr auto Code = R"(
+void foo() {
+  static int i = 0;
+  int j = 0;
+}
+  )";
+
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
+      Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: j LIFETIME END\n");
+}
+
+TEST(CheckLifetimeEnd, GlobalVariable) {
+  constexpr auto Code = R"(
+int g = 0;
+void foo() {
+  int i = 0;
+}
+  )";
+
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
+      Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END\n");
+}
+
+TEST(CheckLifetimeEnd, LoopBodyVariable) {
+  constexpr auto Code = R"(
+void foo() {
+  while (true) {
+    int i = 0;
+    break;
+  }
+}
+  )";
+
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
+      Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END\n");
+}
+
+TEST(CheckLifetimeEnd, ForLoopInductionVariable) {
+  constexpr auto Code = R"(
+void foo() {
+  for (int i = 0; i < 1; i++) {
+    int j = 0;
+  }
+}
+  )";
+
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
+      Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END\n"
+                   "test.LifetimeEndReporter: j LIFETIME END\n");
+}
+
 } // namespace
