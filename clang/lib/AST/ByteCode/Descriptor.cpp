@@ -301,14 +301,14 @@ Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
 }
 
 /// Primitive arrays.
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
-                       size_t NumElems, bool IsConst, bool IsTemporary,
-                       bool IsMutable)
-    : Source(D), ElemSize(primSize(Type)), Size(ElemSize * NumElems),
-      MDSize(MD.value_or(0)),
+Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+                       MetadataSize MD, size_t NumElems, bool IsConst,
+                       bool IsTemporary, bool IsMutable, bool IsVolatile)
+    : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)),
+      Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
       AllocSize(align(MDSize) + align(Size) + sizeof(InitMapPtr)), PrimT(Type),
       IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      IsArray(true), CtorFn(getCtorArrayPrim(Type)),
+      IsVolatile(IsVolatile), IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)) {
   assert(Source && "Missing source");
   assert(NumElems <= (MaxArrayElemBytes / ElemSize));
@@ -375,8 +375,7 @@ Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
 QualType Descriptor::getType() const {
   if (SourceType)
     return QualType(SourceType, 0);
-  if (const auto *D = asValueDecl())
-    return D->getType();
+
   if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
     return T->getASTContext().getTypeDeclType(T);
 
@@ -384,10 +383,28 @@ QualType Descriptor::getType() const {
   // we really save. Try to consult the Record first.
   if (isRecord()) {
     const RecordDecl *RD = ElemRecord->getDecl();
-    return RD->getASTContext().getCanonicalTagType(RD);
+    QualType T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
+                                                std::nullopt, RD, false);
+    if (IsConst)
+      return T.withConst();
+    return T;
   }
-  if (const auto *E = asExpr())
+
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return E->getType()->getPointeeType();
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return E->getType()->getPointeeType();
     return E->getType();
+  }
+
+  if (const auto *D = asValueDecl())
+    return D->getType();
+
   llvm_unreachable("Invalid descriptor type");
 }
 
@@ -435,22 +452,6 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
         ME && ME->getRecordDecl()->getName() == "allocator" &&
         ME->getMethodDecl()->getName() == "allocate")
       return MakeArrayType(E->getType()->getPointeeType());
-    return E->getType();
-  }
-
-  return getType();
-}
-
-QualType Descriptor::getDataElemType() const {
-  if (const auto *E = asExpr()) {
-    if (isa<CXXNewExpr>(E))
-      return E->getType()->getPointeeType();
-
-    // std::allocator.allocate() call.
-    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
-        ME && ME->getRecordDecl()->getName() == "allocator" &&
-        ME->getMethodDecl()->getName() == "allocate")
-      return E->getType()->getPointeeType();
     return E->getType();
   }
 

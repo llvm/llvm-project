@@ -1819,6 +1819,13 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse, [], [ClangOption, FlangOption]>>;
+defm debug_record_sysroot : BoolFOption<"debug-record-sysroot",
+  CodeGenOpts<"DebugRecordSysroot">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Record the sysroot path in debug info as DW_AT_LLVM_sysroot and in DW_AT_LLVM_include_path "
+          "(used by LLDB to locate the SDK for Clang module imports).">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Scrub the sysroot path from debug info.">>;
 def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -4808,7 +4815,7 @@ def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, FlangOption]>;
+  Visibility<[ClangOption, CC1Option, CLOption, FlangOption]>;
 def fwrapv_pointer : Flag<["-"], "fwrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat pointer overflow as two's complement">;
@@ -4825,9 +4832,9 @@ defm zero_initialized_in_bss : BoolFOption<"zero-initialized-in-bss",
   PosFlag<SetFalse>>;
 defm function_sections : BoolFOption<"function-sections",
   CodeGenOpts<"FunctionSections">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each function in its own section">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm basic_block_address_map : BoolFOption<"basic-block-address-map",
   CodeGenOpts<"BBAddrMap">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Emit the basic block address map section.">,
@@ -4840,9 +4847,9 @@ def fbasic_block_sections_EQ : Joined<["-"], "fbasic-block-sections=">, Group<f_
   MarshallingInfoString<CodeGenOpts<"BBSections">, [{"none"}]>;
 defm data_sections : BoolFOption<"data-sections",
   CodeGenOpts<"DataSections">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each data in its own section">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm experimental_call_graph_section
     : BoolFOption<"experimental-call-graph-section",
                   CodeGenOpts<"CallGraphSection">, DefaultFalse,
@@ -6099,6 +6106,14 @@ def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given reg for addressing the stack-protector guard">,
   MarshallingInfoString<CodeGenOpts<"StackProtectorGuardReg">>;
+def mstackprotector_guard_record
+    : Flag<["-"], "mstack-protector-guard-record">,
+      HelpText<
+          "Generate a __stack_protector_loc section entry for each load of "
+          "the stack-protector guard address.">,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<m_Group>,
+      MarshallingInfoFlag<CodeGenOpts<"StackProtectorGuardRecord">>;
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"CallFEntry">>;

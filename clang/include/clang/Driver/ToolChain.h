@@ -18,6 +18,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -59,6 +60,8 @@ class InputInfo;
 class SanitizerArgs;
 class Tool;
 class XRayArgs;
+
+enum LTOKind : int;
 
 /// Helper structure used to pass information extracted from clang executable
 /// name such as `i686-linux-android-g++`.
@@ -185,7 +188,12 @@ private:
   Tool *getOffloadPackager() const;
   Tool *getLinkerWrapper() const;
 
+  /// Track if diagnostics have been emitted for sanitizer arguments already to
+  /// avoid duplicate diagnostics.
   mutable bool SanitizerArgsChecked = false;
+
+  /// Set of BoundArch values which have already had diagnostics emitted.
+  mutable llvm::SmallSet<StringRef, 4> BoundArchSanitizerArgsChecked;
 
   /// The effective clang triple for the current Job.
   mutable llvm::Triple EffectiveTriple;
@@ -338,7 +346,18 @@ public:
   /// -print-multi-flags-experimental argument.
   Multilib::flags_list getMultilibFlags(const llvm::opt::ArgList &) const;
 
-  SanitizerArgs getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const;
+  SanitizerArgs getSanitizerArgs(
+      const llvm::opt::ArgList &JobArgs, StringRef BoundArch = "",
+      Action::OffloadKind DeviceOffloadKind = Action::OFK_None) const;
+
+  /// Returns the feature requirement for a sanitizer on a specific arch for
+  /// diagnostic purposes. Returns the required feature name (e.g., "xnack+") if
+  /// the sanitizer is generally supported but requires a specific feature for
+  /// the given BoundArch, or an empty StringRef otherwise.
+  virtual StringRef getSanitizerRequirement(SanitizerMask Kinds,
+                                            StringRef BoundArch) const {
+    return {};
+  }
 
   const XRayArgs getXRayArgs(const llvm::opt::ArgList &) const;
 
@@ -444,6 +463,17 @@ public:
   /// HasNativeLTOLinker - Check whether the linker and related tools have
   /// native LLVM support.
   virtual bool HasNativeLLVMSupport() const;
+
+  /// Returns the default LTO mode for this toolchain.
+  virtual LTOKind getDefaultLTOMode() const;
+
+  /// Resolve the requested LTO mode for this toolchain.
+  LTOKind getLTOMode(const llvm::opt::ArgList &Args,
+                     Action::OffloadKind Kind = Action::OFK_None) const;
+
+  /// Returns true if LTO is active for this toolchain given the args.
+  bool isUsingLTO(const llvm::opt::ArgList &Args,
+                  Action::OffloadKind Kind = Action::OFK_None) const;
 
   /// LookupTypeForExtension - Return the default language type to use for the
   /// given extension.
@@ -847,7 +877,9 @@ public:
                                 llvm::opt::ArgStringList &CmdArgs) const {}
 
   /// Return sanitizers which are available in this toolchain.
-  virtual SanitizerMask getSupportedSanitizers() const;
+  virtual SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const;
 
   /// Return sanitizers which are enabled by default.
   virtual SanitizerMask getDefaultSanitizers() const {

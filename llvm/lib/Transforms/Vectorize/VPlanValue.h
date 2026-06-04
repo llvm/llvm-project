@@ -194,6 +194,10 @@ public:
   VPRecipeBase *getDefiningRecipe();
   const VPRecipeBase *getDefiningRecipe() const;
 
+  /// Returns the scalar type of this VPValue, dispatching based on the
+  /// concrete subclass.
+  Type *getScalarType() const;
+
   /// Returns true if this VPValue is defined by a recipe.
   bool hasDefiningRecipe() const { return getDefiningRecipe(); }
 
@@ -312,6 +316,9 @@ class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
 
+  /// The scalar type of the value produced by this recipe.
+  Type *Ty = nullptr;
+
 #if !defined(NDEBUG)
   /// Returns true if this VPRecipeValue is defined by \p D.
   /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
@@ -320,10 +327,14 @@ class VPRecipeValue : public VPValue {
 #endif
 
 protected:
-  VPRecipeValue(unsigned char SC, Value *UV = nullptr) : VPValue(SC, UV) {}
+  VPRecipeValue(unsigned char SC, Value *UV, Type *Ty = nullptr)
+      : VPValue(SC, UV), Ty(Ty) {}
 
 public:
   LLVM_ABI_FOR_TEST virtual ~VPRecipeValue() = 0;
+
+  /// Returns the scalar type of this VPRecipeValue.
+  Type *getScalarType() const { return Ty; }
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVMultiDefValueSC ||
@@ -339,7 +350,7 @@ class VPSingleDefValue : public VPRecipeValue {
 protected:
   /// Construct a VPSingleDefValue. Must only be used by VPSingleDefRecipe.
   LLVM_ABI_FOR_TEST VPSingleDefValue(VPSingleDefRecipe *Def,
-                                     Value *UV = nullptr);
+                                     Value *UV = nullptr, Type *Ty = nullptr);
 
 public:
   ~VPSingleDefValue() override;
@@ -357,7 +368,7 @@ class VPMultiDefValue : public VPRecipeValue {
   VPRecipeBase *Def;
 
 public:
-  LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV = nullptr);
+  LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV, Type *Ty);
 
   ~VPMultiDefValue() override;
 
@@ -415,6 +426,9 @@ public:
   }
 
   void setOperand(unsigned I, VPValue *New) {
+    assert((!Operands[I]->getScalarType() || !New->getScalarType() ||
+            Operands[I]->getScalarType() == New->getScalarType()) &&
+           "scalar type of new operand must match the old operand");
     Operands[I]->removeUser(*this);
     Operands[I] = New;
     New->addUser(*this);

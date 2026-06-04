@@ -428,10 +428,6 @@ template <typename... PTs> struct DenseMapInfo<PointerUnion<PTs...>> {
 
   static inline Union getEmptyKey() { return Union(FirstInfo::getEmptyKey()); }
 
-  static inline Union getTombstoneKey() {
-    return Union(FirstInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const Union &UnionVal) {
     auto Key = reinterpret_cast<uintptr_t>(UnionVal.getOpaqueValue());
     return DenseMapInfo<uintptr_t>::getHashValue(Key);
