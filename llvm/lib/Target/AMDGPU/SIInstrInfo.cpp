@@ -4931,6 +4931,12 @@ bool SIInstrInfo::isLiteralOperandLegal(const MCInstrDesc &InstDesc,
 
 bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                                     int64_t ImmVal) const {
+  const unsigned Opc = InstDesc.getOpcode();
+  int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+  if (Src1Idx != -1 && !ST.hasDPPSrc1SGPR() && isDPP(Opc) &&
+      OpNo == static_cast<unsigned>(Src1Idx))
+    return false;
+
   const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
   if (isInlineConstant(ImmVal, OpInfo.OperandType)) {
     if (isMAI(InstDesc) && ST.hasMFMAInlineLiteralBug() &&
@@ -5541,6 +5547,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const MachineOperand &Src1MO = MI.getOperand(Src1Idx);
     if (Src1MO.isReg() && RI.isSGPRReg(MRI, Src1MO.getReg())) {
       ErrInfo = "DPP src1 cannot be SGPR on this subtarget";
+      return false;
+    }
+    if (Src1MO.isImm()) {
+      ErrInfo = "DPP src1 cannot be an immediate on this subtarget";
       return false;
     }
   }
