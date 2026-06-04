@@ -2077,6 +2077,8 @@ Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   for (const Range<lldb::addr_t, size_t> &range : ranges)
     fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
                               range.GetByteSize());
+  if (!GetDisableMemoryCache())
+    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
   return DoReadMemoryRanges(fixed_ranges, buffer);
 }
 

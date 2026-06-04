@@ -381,7 +381,7 @@ class CXXNameMangler {
   ASTContext &getASTContext() const { return Context.getASTContext(); }
 
   bool isCompatibleWith(LangOptions::ClangABI Ver) {
-    return Context.getASTContext().getLangOpts().getClangABICompat() <= Ver;
+    return getASTContext().getLangOpts().isCompatibleWith(Ver);
   }
 
   bool isStd(const NamespaceDecl *NS);
@@ -698,8 +698,8 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
       return getASTContext().getTranslationUnitDecl();
   }
 
-  if (const auto *FD = getASTContext().getLangOpts().getClangABICompat() >
-                               LangOptions::ClangABI::Ver19
+  if (const auto *FD = !getASTContext().getLangOpts().isCompatibleWith(
+                           LangOptions::ClangABI::Ver19)
                            ? D->getAsFunction()
                            : dyn_cast<FunctionDecl>(D)) {
     if (FD->isExternC())
@@ -707,8 +707,8 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
     // Member-like constrained friends are mangled as if they were members of
     // the enclosing class.
     if (FD->isMemberLikeConstrainedFriend() &&
-        getASTContext().getLangOpts().getClangABICompat() >
-            LangOptions::ClangABI::Ver17)
+        !getASTContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver17))
       return D->getLexicalDeclContext()->getRedeclContext();
   }
 
@@ -2975,13 +2975,13 @@ static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
     return true;
   // From Clang 18.0 we correctly treat SVE types as substitution candidates.
   if (Ty->isSVESizelessBuiltinType() &&
-      Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver17)
+      !Ctx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver17))
     return true;
   if (Ty->isBuiltinType())
     return false;
   // Through to Clang 6.0, we accidentally treated undeduced auto types as
   // substitution candidates.
-  if (Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver6 &&
+  if (!Ctx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver6) &&
       isa<AutoType>(Ty))
     return false;
   // A placeholder type for class template deduction is substitutable with
@@ -6829,8 +6829,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
       // Clang 11 and before mangled an array subject to array-to-pointer decay
       // as if it were the declaration itself.
       bool IsArrayToPointerDecayMangledAsDecl = false;
-      if (TopLevel && Ctx.getLangOpts().getClangABICompat() <=
-                          LangOptions::ClangABI::Ver11) {
+      if (TopLevel && isCompatibleWith(LangOptions::ClangABI::Ver11)) {
         QualType BType = B.getType();
         IsArrayToPointerDecayMangledAsDecl =
             BType->isArrayType() && V.getLValuePath().size() == 1 &&
@@ -7569,9 +7568,8 @@ void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
   Mangler.getStream() << "_ZTC";
   // Older versions of clang did not add the record as a substitution candidate
   // here.
-  bool SuppressSubstitution =
-      getASTContext().getLangOpts().getClangABICompat() <=
-      LangOptions::ClangABI::Ver19;
+  bool SuppressSubstitution = getASTContext().getLangOpts().isCompatibleWith(
+      LangOptions::ClangABI::Ver19);
   Mangler.mangleCXXRecordDecl(RD, SuppressSubstitution);
   Mangler.getStream() << Offset;
   Mangler.getStream() << '_';

@@ -1518,31 +1518,8 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
       assert(!MFI.hasVarSizedObjects());
       FrameReg = SPReg;
     }
-  } else if (!RI->hasStackRealignment(MF)) {
-    // Note: Keeping the following as multiple 'if' statements rather than
-    // merging to a single expression for readability.
-    if (!hasFP(MF)) {
-      // No FP available, must use SP.
-      FrameReg = SPReg;
-    } else {
-      FrameReg = FPReg;
-      if (RVFI->getRVVStackSize() == 0 && !MFI.hasVarSizedObjects()) {
-        // Both FP and SP are candidates.
-        // Prefer SP when the SP-relative offset fits in the compressed
-        // instruction immediate range.
-        int64_t SPOff = Offset.getFixed() + MFI.getStackSize();
-        int64_t CLWSPMaxOffset = 252;
-        int64_t CLDSPMaxOffset = 504;
-        int64_t SPThreshold = STI.is64Bit() ? CLDSPMaxOffset : CLWSPMaxOffset;
-        if (SPOff >= 0 && SPOff <= SPThreshold)
-          FrameReg = SPReg;
-      }
-    }
   } else {
-    assert(RI->hasStackRealignment(MF) && MFI.isFixedObjectIndex(FI) &&
-           "Expected fixed object with stack realignment");
-    assert(hasFP(MF) && "Re-aligned stack must have frame pointer");
-    FrameReg = FPReg;
+    FrameReg = RI->getFrameRegister(MF);
   }
 
   if (FrameReg == FPReg) {
@@ -1621,9 +1598,9 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   } else if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
     // Ensure the base of the RVV stack is correctly aligned: add on the
     // alignment padding.
-    int ScalarLocalVarSize = MFI.getStackSize() -
-                             RVFI->getCalleeSavedStackSize() -
-                             RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
+    int64_t ScalarLocalVarSize =
+        MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
+        RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
     Offset += StackOffset::get(ScalarLocalVarSize, RVFI->getRVVStackSize());
   }
   return Offset;

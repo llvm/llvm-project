@@ -434,9 +434,6 @@ template <> struct DenseMapInfo<ElementCount, void> {
   static inline ElementCount getEmptyKey() {
     return ElementCount::getScalable(~0U);
   }
-  static inline ElementCount getTombstoneKey() {
-    return ElementCount::getFixed(~0U - 1);
-  }
   static unsigned getHashValue(const ElementCount &EltCnt) {
     unsigned HashVal = EltCnt.getKnownMinValue() * 37U;
     if (EltCnt.isScalable())
