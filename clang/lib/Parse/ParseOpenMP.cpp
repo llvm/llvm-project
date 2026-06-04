@@ -2388,6 +2388,8 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     ImplicitClauseAllowed = false;
     Actions.OpenMP().StartOpenMPClause(CKind);
     HasImplicitClause = false;
+    SourceLocation ClauseLoc = Tok.getLocation();
+
     OMPClause *Clause =
         ParseOpenMPClause(DKind, CKind, !SeenClauses[unsigned(CKind)]);
     SeenClauses[unsigned(CKind)] = true;
@@ -2398,6 +2400,13 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     if (Tok.is(tok::comma))
       ConsumeToken();
     Actions.OpenMP().EndOpenMPClause();
+
+    // If ParseOpenMPClause returned without consuming any tokens, skip
+    // to end to avoid an infinite loop.
+    if (Tok.getLocation() == ClauseLoc) {
+      skipUntilPragmaOpenMPEnd(DKind);
+      break;
+    }
   }
   // End location of the directive.
   EndLoc = Tok.getLocation();

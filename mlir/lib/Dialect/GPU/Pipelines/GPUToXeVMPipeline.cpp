@@ -20,11 +20,13 @@
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Conversion/XeGPUToXeVM/XeGPUToXeVM.h"
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
@@ -89,8 +91,7 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
-    pm.addNestedPass<gpu::GPUModuleOp>(
-        xegpu::createXeGPUSgToWiDistributeExperimental());
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSgToLaneDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createLoopInvariantCodeMotionPass());
@@ -109,6 +110,26 @@ void buildGPUPassPipeline(OpPassManager &pm,
     gpuToLLVMSPVOptions.use64bitIndex = options.use64bitIndex;
     pm.addNestedPass<gpu::GPUModuleOp>(
         createConvertGpuOpsToLLVMSPVOps(gpuToLLVMSPVOptions));
+  }
+  // Legalize math/arith ops on floating-point types that the XeVM target
+  // cannot handle natively (e.g. bf16) by wrapping them with extf/truncf
+  // around a supported type (defaulting to f32).
+  {
+    math::MathExtendToSupportedTypesOptions mathExtendOptions;
+    mathExtendOptions.extraTypeStrs.assign(options.mathExtendExtraTypes.begin(),
+                                           options.mathExtendExtraTypes.end());
+    mathExtendOptions.targetTypeStr = options.supportedTargetTypes;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        math::createMathExtendToSupportedTypes(mathExtendOptions));
+  }
+  {
+    arith::ArithEmulateUnsupportedFloatsOptions arithEmulateOptions;
+    arithEmulateOptions.sourceTypeStrs.assign(
+        options.unsupportedSourceTypes.begin(),
+        options.unsupportedSourceTypes.end());
+    arithEmulateOptions.targetTypeStr = options.supportedTargetTypes;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        arith::createArithEmulateUnsupportedFloats(arithEmulateOptions));
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
