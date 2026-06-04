@@ -412,7 +412,6 @@ static bool preservesUniformity(unsigned Opcode) {
   case Instruction::Select:
   case VPInstruction::Not:
   case VPInstruction::Broadcast:
-  case VPInstruction::MaskedCond:
   case VPInstruction::PtrAdd:
     return true;
   default:
