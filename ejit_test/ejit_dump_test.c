@@ -77,9 +77,15 @@ int main(int argc, char **argv) {
   int cellIdx = 0;
   if (argc > 1) cellIdx = atoi(argv[1]);
 
-  // Use env var or default
+  // Use env var or default (under TMPDIR to avoid permission issues)
   const char *dumpDir = getenv("EJIT_DUMP_DIR");
-  if (!dumpDir) dumpDir = "/tmp/ejit_dump_test";
+  if (!dumpDir) {
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = "/tmp";
+    static char buf[256];
+    snprintf(buf, sizeof(buf), "%s/ejit_dump_test", tmp);
+    dumpDir = buf;
+  }
 
   // Clean and create dump dir
   char cmd[256];
