@@ -120,9 +120,9 @@ std::vector<Matcher *> llvm::gi::optimizeRuleset(
         const auto *L = cast<RuleMatcher>(A);
         const auto *R = cast<RuleMatcher>(B);
         return std::tuple(OpcodeOrder[L->getOpcode()],
-                          L->insnmatchers_front().getNumOperandMatchers()) <
+                          L->roots_front().getNumOperandMatchers()) <
                std::tuple(OpcodeOrder[R->getOpcode()],
-                          R->insnmatchers_front().getNumOperandMatchers());
+                          R->roots_front().getNumOperandMatchers());
       });
 
   for (Matcher *R : InputRules)
@@ -482,16 +482,14 @@ RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
 
 uint64_t RuleMatcher::NextRuleID = 0;
 
-StringRef RuleMatcher::getOpcode() const {
-  return Matchers.front()->getOpcode();
-}
+StringRef RuleMatcher::getOpcode() const { return Roots.front()->getOpcode(); }
 
 bool RuleMatcher::recordsOperand() const {
-  return matchersRecordOperand(Matchers);
+  return matchersRecordOperand(Roots);
 }
 
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() const {
-  InstructionMatcher &InsnMatcher = *Matchers.front();
+  InstructionMatcher &InsnMatcher = *Roots.front();
   if (!InsnMatcher.predicates_empty()) {
     if (const auto *TM =
             dyn_cast<LLTOperandMatcher>(&**InsnMatcher.predicates_begin())) {
@@ -503,9 +501,8 @@ LLTCodeGen RuleMatcher::getFirstConditionAsRootType() const {
 }
 
 void RuleMatcher::optimize() {
-  for (auto &Item : InsnVariableIDs) {
-    InstructionMatcher &InsnMatcher = *Item.first;
-    for (auto &OM : InsnMatcher.operands()) {
+  for (const auto &InsnMatcher : InsnMatchers) {
+    for (auto &OM : InsnMatcher->operands()) {
       // Complex Patterns are usually expensive and they relatively rarely fail
       // on their own: more often we end up throwing away all the work done by a
       // matching part of a complex pattern because some other part of the
@@ -517,7 +514,7 @@ void RuleMatcher::optimize() {
           EpilogueMatchers.emplace_back(std::move(OP));
       OM->eraseNullPredicates();
     }
-    InsnMatcher.optimize();
+    InsnMatcher->optimize();
   }
   llvm::sort(EpilogueMatchers, [](const std::unique_ptr<PredicateMatcher> &L,
                                   const std::unique_ptr<PredicateMatcher> &R) {
@@ -550,9 +547,9 @@ void RuleMatcher::optimize() {
 }
 
 bool RuleMatcher::hasFirstCondition() const {
-  if (insnmatchers_empty())
+  if (roots_empty())
     return false;
-  InstructionMatcher &Matcher = insnmatchers_front();
+  InstructionMatcher &Matcher = roots_front();
   if (!Matcher.predicates_empty())
     return true;
   for (auto &OM : Matcher.operands())
@@ -563,10 +560,10 @@ bool RuleMatcher::hasFirstCondition() const {
 }
 
 const PredicateMatcher &RuleMatcher::getFirstCondition() const {
-  assert(!insnmatchers_empty() &&
+  assert(!roots_empty() &&
          "Trying to get a condition from an empty RuleMatcher");
 
-  InstructionMatcher &Matcher = insnmatchers_front();
+  InstructionMatcher &Matcher = roots_front();
   if (!Matcher.predicates_empty())
     return **Matcher.predicates_begin();
   // If there is no more predicate on the instruction itself, look at its
@@ -581,10 +578,10 @@ const PredicateMatcher &RuleMatcher::getFirstCondition() const {
 }
 
 std::unique_ptr<PredicateMatcher> RuleMatcher::popFirstCondition() {
-  assert(!insnmatchers_empty() &&
+  assert(!roots_empty() &&
          "Trying to pop a condition from an empty RuleMatcher");
 
-  InstructionMatcher &Matcher = insnmatchers_front();
+  InstructionMatcher &Matcher = roots_front();
   if (!Matcher.predicates_empty())
     return Matcher.predicates_pop_front();
   // If there is no more predicate on the instruction itself, look at its
@@ -653,9 +650,10 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
 }
 
 InstructionMatcher &RuleMatcher::addInstructionMatcher(StringRef SymbolicName) {
-  Matchers.emplace_back(new InstructionMatcher(*this, SymbolicName));
-  MutatableInsns.insert(Matchers.back().get());
-  return *Matchers.back();
+  auto &Res = allocateInstructionMatcher(SymbolicName);
+  Roots.push_back(&Res);
+  MutatableInsns.insert(&Res);
+  return Res;
 }
 
 void RuleMatcher::addRequiredSimplePredicate(StringRef PredName) {
@@ -664,19 +662,6 @@ void RuleMatcher::addRequiredSimplePredicate(StringRef PredName) {
 
 const std::vector<std::string> &RuleMatcher::getRequiredSimplePredicates() {
   return RequiredSimplePredicates;
-}
-
-unsigned RuleMatcher::implicitlyDefineInsnVar(InstructionMatcher &Matcher) {
-  unsigned NewInsnVarID = NextInsnVarID++;
-  InsnVariableIDs[&Matcher] = NewInsnVarID;
-  return NewInsnVarID;
-}
-
-unsigned RuleMatcher::getInsnVarID(InstructionMatcher &InsnMatcher) const {
-  const auto &I = InsnVariableIDs.find(&InsnMatcher);
-  if (I != InsnVariableIDs.end())
-    return I->second;
-  llvm_unreachable("Matched Insn was not captured in a local variable");
 }
 
 void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
@@ -697,9 +682,10 @@ void RuleMatcher::definePhysRegOperand(const Record *Reg, OperandMatcher &OM) {
 
 InstructionMatcher &
 RuleMatcher::getInstructionMatcher(StringRef SymbolicName) const {
-  for (const auto &I : InsnVariableIDs)
-    if (I.first->getSymbolicName() == SymbolicName)
-      return *I.first;
+  for (const auto &InsnMatcher : InsnMatchers) {
+    if (InsnMatcher->getSymbolicName() == SymbolicName)
+      return *InsnMatcher;
+  }
   llvm_unreachable(
       ("Failed to lookup instruction " + SymbolicName).str().c_str());
 }
@@ -735,7 +721,7 @@ const OperandMatcher &RuleMatcher::getOperandMatcher(StringRef Name) const {
 }
 
 void RuleMatcher::emit(MatchTable &Table) {
-  if (Matchers.empty())
+  if (Roots.empty())
     llvm_unreachable("Unexpected empty matcher!");
 
   // The representation supports rules that require multiple roots such as:
@@ -747,7 +733,7 @@ void RuleMatcher::emit(MatchTable &Table) {
   //    %ptr(p0) = ...
   //    %elt0(s32), %elt1(s32) = TGT_LOAD_PAIR %ptr
   // on some targets but we don't need to make use of that yet.
-  assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
+  assert(Roots.size() == 1 && "Cannot handle multi-root matchers yet");
 
   unsigned LabelID = Table.allocateLabelID();
 
@@ -772,14 +758,14 @@ void RuleMatcher::emit(MatchTable &Table) {
     }
   }
 
-  Matchers.front()->emitPredicateOpcodes(Table, *this);
+  Roots.front()->emitPredicateOpcodes(Table, *this);
 
   // Check if it's safe to replace registers.
   for (const auto &MA : Actions)
     MA->emitAdditionalPredicates(Table, *this);
 
   // We must also check if it's safe to fold the matched instructions.
-  if (InsnVariableIDs.size() >= 2) {
+  if (InsnMatchers.size() >= 2) {
 
     // FIXME: Emit checks to determine it's _actually_ safe to fold and/or
     //        account for unsafe cases.
@@ -818,7 +804,7 @@ void RuleMatcher::emit(MatchTable &Table) {
 
     Table << MatchTable::Opcode("GIM_CheckIsSafeToFold")
           << MatchTable::Comment("NumInsns")
-          << MatchTable::IntValue(1, InsnVariableIDs.size() - 1)
+          << MatchTable::IntValue(1, InsnMatchers.size() - 1)
           << MatchTable::LineBreak;
   }
 
@@ -871,12 +857,12 @@ void RuleMatcher::emit(MatchTable &Table) {
 
 bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
   // Rules involving more match roots have higher priority.
-  if (Matchers.size() > B.Matchers.size())
+  if (Roots.size() > B.Roots.size())
     return true;
-  if (Matchers.size() < B.Matchers.size())
+  if (Roots.size() < B.Roots.size())
     return false;
 
-  for (auto Matcher : zip(Matchers, B.Matchers)) {
+  for (auto Matcher : zip(Roots, B.Roots)) {
     if (std::get<0>(Matcher)->isHigherPriorityThan(*std::get<1>(Matcher)))
       return true;
     if (std::get<1>(Matcher)->isHigherPriorityThan(*std::get<0>(Matcher)))
@@ -887,14 +873,13 @@ bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
 }
 
 unsigned RuleMatcher::countRendererFns() const {
-  return std::accumulate(
-      Matchers.begin(), Matchers.end(), 0,
-      [](unsigned A, const std::unique_ptr<InstructionMatcher> &Matcher) {
-        return A + Matcher->countRendererFns();
-      });
+  return std::accumulate(Roots.begin(), Roots.end(), 0,
+                         [](unsigned A, InstructionMatcher *Matcher) {
+                           return A + Matcher->countRendererFns();
+                         });
 }
 
-void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
+void RuleMatcher::roots_pop_front() { Roots.erase(Roots.begin()); }
 
 //===- PredicateMatcher ---------------------------------------------------===//
 
@@ -936,8 +921,7 @@ bool OperandPredicateMatcher::isHigherPriorityThan(
 void SameOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                               RuleMatcher &Rule) const {
   const OperandMatcher &OtherOM = Rule.getOperandMatcher(MatchingName);
-  unsigned OtherInsnVarID = Rule.getInsnVarID(OtherOM.getInstructionMatcher());
-  assert(OtherInsnVarID == OtherOM.getInstructionMatcher().getInsnVarID());
+  unsigned OtherInsnVarID = OtherOM.getInstructionMatcher().getInsnVarID();
   const bool IgnoreCopies = Flags & GISF_IgnoreCopies;
   Table << MatchTable::Opcode(IgnoreCopies
                                   ? "GIM_CheckIsSameOperandIgnoreCopies"
@@ -1676,7 +1660,7 @@ void InstructionMatcher::optimize() {
 
 void InstructionOperandMatcher::emitCaptureOpcodes(MatchTable &Table,
                                                    RuleMatcher &Rule) const {
-  const unsigned NewInsnVarID = InsnMatcher->getInsnVarID();
+  const unsigned NewInsnVarID = InsnMatcher.getInsnVarID();
   const bool IgnoreCopies = Flags & GISF_IgnoreCopies;
   Table << MatchTable::Opcode(IgnoreCopies ? "GIM_RecordInsnIgnoreCopies"
                                            : "GIM_RecordInsn")
@@ -1697,7 +1681,7 @@ bool InstructionOperandMatcher::isHigherPriorityThan(
 
   if (const InstructionOperandMatcher *BP =
           dyn_cast<InstructionOperandMatcher>(&B))
-    if (InsnMatcher->isHigherPriorityThan(*BP->InsnMatcher))
+    if (InsnMatcher.isHigherPriorityThan(BP->InsnMatcher))
       return true;
   return false;
 }
@@ -1729,7 +1713,7 @@ void CopyRenderer::emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
 void CopyRenderer::emitRenderOpcodes(MatchTable &Table,
                                      RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
-  unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+  unsigned OldInsnVarID = Operand.getInstructionMatcher().getInsnVarID();
 
   emitRenderOpcodes(Table, Rule, NewInsnID, OldInsnVarID, Operand.getOpIdx(),
                     SymbolicName, Operand.isVariadic());
@@ -1740,7 +1724,7 @@ void CopyRenderer::emitRenderOpcodes(MatchTable &Table,
 void CopyPhysRegRenderer::emitRenderOpcodes(MatchTable &Table,
                                             RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getPhysRegOperandMatcher(PhysReg);
-  unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+  unsigned OldInsnVarID = Operand.getInstructionMatcher().getInsnVarID();
   CopyRenderer::emitRenderOpcodes(Table, Rule, NewInsnID, OldInsnVarID,
                                   Operand.getOpIdx(), PhysReg->getName());
 }
@@ -1750,7 +1734,7 @@ void CopyPhysRegRenderer::emitRenderOpcodes(MatchTable &Table,
 void CopyOrAddZeroRegRenderer::emitRenderOpcodes(MatchTable &Table,
                                                  RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
-  unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+  unsigned OldInsnVarID = Operand.getInstructionMatcher().getInsnVarID();
   Table << MatchTable::Opcode("GIR_CopyOrAddZeroReg")
         << MatchTable::Comment("NewInsnID")
         << MatchTable::ULEB128Value(NewInsnID)
@@ -1772,7 +1756,7 @@ void CopyOrAddZeroRegRenderer::emitRenderOpcodes(MatchTable &Table,
 void CopyConstantAsImmRenderer::emitRenderOpcodes(MatchTable &Table,
                                                   RuleMatcher &Rule) const {
   InstructionMatcher &InsnMatcher = Rule.getInstructionMatcher(SymbolicName);
-  unsigned OldInsnVarID = Rule.getInsnVarID(InsnMatcher);
+  unsigned OldInsnVarID = InsnMatcher.getInsnVarID();
   Table << MatchTable::Opcode(Signed ? "GIR_CopyConstantAsSImm"
                                      : "GIR_CopyConstantAsUImm")
         << MatchTable::Comment("NewInsnID")
@@ -1787,7 +1771,7 @@ void CopyConstantAsImmRenderer::emitRenderOpcodes(MatchTable &Table,
 void CopyFConstantAsFPImmRenderer::emitRenderOpcodes(MatchTable &Table,
                                                      RuleMatcher &Rule) const {
   InstructionMatcher &InsnMatcher = Rule.getInstructionMatcher(SymbolicName);
-  unsigned OldInsnVarID = Rule.getInsnVarID(InsnMatcher);
+  unsigned OldInsnVarID = InsnMatcher.getInsnVarID();
   Table << MatchTable::Opcode("GIR_CopyFConstantAsFPImm")
         << MatchTable::Comment("NewInsnID")
         << MatchTable::ULEB128Value(NewInsnID)
@@ -1801,7 +1785,7 @@ void CopyFConstantAsFPImmRenderer::emitRenderOpcodes(MatchTable &Table,
 void CopySubRegRenderer::emitRenderOpcodes(MatchTable &Table,
                                            RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
-  unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+  unsigned OldInsnVarID = Operand.getInstructionMatcher().getInsnVarID();
   Table << MatchTable::Opcode("GIR_CopySubReg")
         << MatchTable::Comment("NewInsnID")
         << MatchTable::ULEB128Value(NewInsnID)
@@ -1955,7 +1939,7 @@ void IntrinsicIDRenderer::emitRenderOpcodes(MatchTable &Table,
 void CustomRenderer::emitRenderOpcodes(MatchTable &Table,
                                        RuleMatcher &Rule) const {
   InstructionMatcher &InsnMatcher = Rule.getInstructionMatcher(SymbolicName);
-  unsigned OldInsnVarID = Rule.getInsnVarID(InsnMatcher);
+  unsigned OldInsnVarID = InsnMatcher.getInsnVarID();
   Table << MatchTable::Opcode("GIR_CustomRenderer")
         << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
         << MatchTable::Comment("OldInsnID")
@@ -2049,7 +2033,7 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
     assert(canMutate(Rule, Matched) &&
            "Arranged to mutate an insn that isn't mutatable");
 
-    unsigned RecycleInsnID = Rule.getInsnVarID(*Matched);
+    unsigned RecycleInsnID = Matched->getInsnVarID();
     Table << MatchTable::Opcode("GIR_MutateOpcode")
           << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
           << MatchTable::Comment("RecycleInsnID")
@@ -2132,8 +2116,8 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
     //       sign-extend since it has no effect there.
 
     std::vector<unsigned> MergeInsnIDs;
-    for (const auto &IDMatcherPair : Rule.defined_insn_vars())
-      MergeInsnIDs.push_back(IDMatcherPair.second);
+    for (const auto &Matcher : Rule.all_instmatchers())
+      MergeInsnIDs.push_back(Matcher->getInsnVarID());
     llvm::sort(MergeInsnIDs);
 
     Table << MatchTable::Opcode("GIR_MergeMemOperands")

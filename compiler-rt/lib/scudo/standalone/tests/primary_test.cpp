@@ -561,7 +561,7 @@ TEST(ScudoPrimaryTest, PushBlocksDifferentGroups) {
   Allocator->pushBlocks(&SizeClassAllocator, ClassId, Array.data(),
                         static_cast<scudo::u32>(Array.size()));
 
-  for (size_t I = 0; I < Array.size(); I++)
+  for (size_t I = 1; I < Array.size(); I++)
     EXPECT_LE(Array[I - 1] & ~Mask, Array[I] & ~Mask)
         << "Array not ordered: index " << I - 1 << " is < index " << I;
 
