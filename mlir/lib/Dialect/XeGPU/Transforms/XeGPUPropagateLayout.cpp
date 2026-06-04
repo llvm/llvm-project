@@ -667,24 +667,64 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
       numSg = numSgOrErr.value();
   }
 
+  // Coalesced reduction: if the source is produced by a coalescible op that
+  // carries a `xegpu.coalesce_hint`, and the reduction kind is
+  // associative-commutative (so reordering the fold is safe), request the
+  // factor on the source's FCD lane_data. Each lane then folds `factor`
+  // contiguous elements locally before the cross-lane reduction. Only at the
+  // lane level; inst/subgroup grow inst_data to match (see layout setup).
+  int coalesceFactor = 1;
+  if (layoutKind == xegpu::LayoutKind::Lane ||
+      layoutKind == xegpu::LayoutKind::InstData) {
+    auto isAssocCommutative = [](vector::CombiningKind k) {
+      using vector::CombiningKind;
+      return k == CombiningKind::ADD || k == CombiningKind::MUL ||
+             k == CombiningKind::MINUI || k == CombiningKind::MINSI ||
+             k == CombiningKind::MAXUI || k == CombiningKind::MAXSI ||
+             k == CombiningKind::AND || k == CombiningKind::OR ||
+             k == CombiningKind::XOR || k == CombiningKind::MINNUMF ||
+             k == CombiningKind::MAXNUMF || k == CombiningKind::MINIMUMF ||
+             k == CombiningKind::MAXIMUMF;
+    };
+    if (isAssocCommutative(reduction.getKind())) {
+      if (Operation *srcDefOp = reduction.getSource().getDefiningOp()) {
+        if (auto hint = srcDefOp->getAttrOfType<xegpu::CoalesceHintAttr>(
+                xegpu::getCoalesceHintAttrName()))
+          coalesceFactor = static_cast<int>(hint.getFactor().getInt());
+      }
+    }
+  }
+
   // The result layout represents the layout requirements of the operation.
   // it is recorded to anchor layout or temporary layout.
   // it must be honored for current op and may conflict with the layout
   // propagated from consumer op, the conflict is resolved in later phase by
   // converting the required result layout to the consumer layout
-  auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
-      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch);
+  // The coalesce factor only belongs on the SOURCE operand (each lane folds
+  // `factor` contiguous elements of the reduced dim before the cross-lane
+  // reduction). The RESULT and ACCUMULATOR live on the post-reduction
+  // (reduced-dim-removed) layout and must NOT carry the factor — otherwise
+  // they disagree with the real consumer's layout and the propagator inserts
+  // an unlowerable lane_data=factor <-> lane_data=1 convert_layout. So build
+  // the result/acc layout with factor = 1, and the source layout with the
+  // factor.
+  auto resultLayoutAttr = xegpu::setupMultiReductionResultLayout(
+      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch,
+      /*coalesceFactor=*/1);
+  auto srcReqLayoutAttr = xegpu::setupMultiReductionResultLayout(
+      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch,
+      coalesceFactor);
 
-  xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
+  xegpu::setTemporaryLayout(reduction->getResult(0), resultLayoutAttr);
 
-  // derive the source layout from the dominant layout and reduction dims
-  auto srcLayoutAttr = xegpu::inferMultiReductionSourceLayout(
-      requiredResLayoutAttr, reductionDims);
+  // derive the source layout from the (coalesced) required layout
+  auto srcLayoutAttr =
+      xegpu::inferMultiReductionSourceLayout(srcReqLayoutAttr, reductionDims);
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
-  // Accumulator should have the same layout as the result.
+  // Accumulator should have the same layout as the result (no factor).
   propagateIfChanged(operands[1],
-                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+                     operands[1]->meet(LayoutInfo(resultLayoutAttr)));
 }
 
 void LayoutInfoPropagation::visitVectorReductionOp(

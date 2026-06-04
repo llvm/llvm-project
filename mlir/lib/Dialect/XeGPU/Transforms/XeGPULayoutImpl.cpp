@@ -861,7 +861,7 @@ xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
     DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims,
-    int numSg, const xegpu::uArch::uArch *uArch) {
+    int numSg, const xegpu::uArch::uArch *uArch, int coalesceFactor) {
 
   auto srcShape = srcVecTy.getShape();
   int srcRank = srcShape.size();
@@ -874,6 +874,13 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   };
 
   const int subgroupSize = uArch->getSubgroupSize();
+  // Coalescing only applies when the (single) reduction dim is the FCD and
+  // the factor cleanly partitions the reduced extent across the lanes.
+  int fcd = srcRank - 1;
+  int coalesce = std::max(1, coalesceFactor);
+  bool coalesceFcd = coalesce > 1 && reductionDims.size() == 1 &&
+                     reductionDims[0] == fcd &&
+                     srcShape[fcd] % (subgroupSize * coalesce) == 0;
   int64_t maxReduceVectorSize = 1; // could extend to spirv vector Size
   xegpu::DistributeLayoutAttr srcLayout;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
@@ -950,6 +957,12 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
           std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
     instData[srcRank - 1] =
         std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
+    // Coalesced FCD reduction: grow inst_data on the FCD to
+    // lane_layout * lane_data = subgroupSize * factor so blocking keeps the
+    // reduced run in one instruction tile (rather than splitting into
+    // `factor` separate subgroupSize-wide blocks).
+    if (coalesceFcd)
+      instData[fcd] = subgroupSize * coalesce;
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
 
@@ -959,6 +972,13 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     if (srcRank >= 2)
       laneData[srcRank - 2] =
           std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
+    // Coalesced FCD reduction: each lane owns `factor` contiguous elements of
+    // the reduced dim. lane_layout[FCD] shrinks to subgroupSize and
+    // lane_data[FCD] becomes the factor (lane_layout * lane_data partitions
+    // the reduced extent). The downstream SgToWi reduction lowering folds the
+    // `factor` elements per lane before the cross-lane butterfly.
+    if (coalesceFcd)
+      laneData[fcd] = coalesce;
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
                                        toInt32Attr(laneData));
   }
@@ -1851,7 +1871,45 @@ xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
   if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
     if (idx == 0) {
       SmallVector<int64_t> reductionDims(reduction.getReductionDims());
-      return xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
+      xegpu::DistributeLayoutAttr srcLayout =
+          xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
+      // Coalesced FCD reduction: the result layout (reduced dim removed) does
+      // not carry the coalesce factor, so re-deriving the source from it drops
+      // it — yielding lane_data/inst_data = 1 on the reduced FCD and a
+      // disagreement with the already-coalesced producer (an unlowerable
+      // convert, and a round-robin tiling by XeGPUBlocking). The producer's
+      // permanent layout (e.g. a coalesced xegpu.load with inst_data[FCD] =
+      // subgroupSize*factor or lane_data[FCD] = factor) is the source of truth
+      // here and survives the temporary-layout wipe, so adopt its FCD value
+      // when it exceeds the result-derived one. This keeps the contiguous
+      // per-lane chunk through blocking; the SgToLane reduction lowering then
+      // folds the `factor` per-lane elements before the cross-lane butterfly.
+      if (srcLayout && reductionDims.size() == 1) {
+        int rank = srcLayout.getRank();
+        int fcd = rank - 1;
+        if (reductionDims[0] == fcd) {
+          if (auto prod = xegpu::getDistributeLayoutAttr(operand.get())) {
+            SmallVector<int64_t> prodInst = prod.getEffectiveInstDataAsInt();
+            SmallVector<int64_t> prodLane = prod.getEffectiveLaneDataAsInt();
+            SmallVector<int64_t> srcInst =
+                srcLayout.getEffectiveInstDataAsInt();
+            SmallVector<int64_t> srcLane =
+                srcLayout.getEffectiveLaneDataAsInt();
+            bool isLane = !srcLayout.getEffectiveLaneLayoutAsInt().empty();
+            if (isLane && fcd < (int)srcLane.size() &&
+                fcd < (int)prodLane.size() && prodLane[fcd] > srcLane[fcd])
+              srcLayout = srcLayout.setDimData(fcd, /*sgData=*/-1,
+                                               /*instData=*/-1,
+                                               /*laneData=*/prodLane[fcd]);
+            else if (!isLane && fcd < (int)srcInst.size() &&
+                     fcd < (int)prodInst.size() && prodInst[fcd] > srcInst[fcd])
+              srcLayout = srcLayout.setDimData(fcd, /*sgData=*/-1,
+                                               /*instData=*/prodInst[fcd],
+                                               /*laneData=*/-1);
+          }
+        }
+      }
+      return srcLayout;
     }
     if (idx == 1)
       return resLayout;

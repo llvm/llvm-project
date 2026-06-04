@@ -167,11 +167,18 @@ inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
 /// with the consumer's preferred layout. This minimizes data redistribution
 /// overhead. The SliceAttr for the result is then created based on the
 /// derived source layout and the specified reduction dimensions.
+/// `coalesceFactor` (> 1) requests a coalesced reduction over the
+/// fastest-changing dim: the source's `lane_data[FCD]` is seeded to the
+/// factor (and `inst_data[FCD]` grown to `lane_layout[FCD] * factor`) so each
+/// lane folds `factor` contiguous elements locally before the cross-lane
+/// reduction. Only valid when the single reduction dim is the FCD; ignored
+/// otherwise.
 SliceAttr setupMultiReductionResultLayout(LayoutKind layoutKind,
                                           VectorType srcVectorTy,
                                           DistributeLayoutAttr consumerLayout,
                                           SmallVector<int64_t> reductionDims,
-                                          int numSg, const uArch::uArch *uArch);
+                                          int numSg, const uArch::uArch *uArch,
+                                          int coalesceFactor = 1);
 
 /// Sets up layout for Reduction operations by creating a SliceAttr for the
 /// result.

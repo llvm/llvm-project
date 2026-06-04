@@ -520,3 +520,41 @@ gpu.module @xevm_module {
     gpu.return
   }
 }
+
+// -----
+// Coalesced cross-lane reduction: the source vector<2x64xf32> reduces dim 1
+// with lane_data = [1, 4], so each of the 16 lanes owns 4 contiguous elements
+// of the 64-wide reduced dim. The reduced dim distributes to vector<...x4> per
+// lane: each lane folds its 4 elements locally (vector.reduction over
+// vector<4xf32>), then the cross-lane butterfly spans only the 16 lanes
+// (offsets 1,2,4,8 at width 16) -- not the full 64-element extent.
+gpu.module @xevm_module {
+    // CHECK-LABEL: gpu.func @coalesced_cross_lane_reduce
+    // CHECK: %[[C16:.*]] = arith.constant 16 : i32
+    // CHECK: %[[LOAD:.*]] = xegpu.load_nd {{.*}} -> vector<8xf32>
+    // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf32> to vector<2x4xf32>
+    // CHECK: %[[ROW0:.*]] = vector.extract %[[CAST]][0] : vector<4xf32> from vector<2x4xf32>
+    // CHECK: %[[RED0:.*]] = vector.reduction <add>, %[[ROW0]] : vector<4xf32> into f32
+    // CHECK: gpu.shuffle xor %[[RED0]], %{{.*}}, %[[C16]] : f32
+    // CHECK: gpu.shuffle xor {{.*}}, %[[C16]] : f32
+    // CHECK: gpu.shuffle xor {{.*}}, %[[C16]] : f32
+    // CHECK: gpu.shuffle xor {{.*}}, %[[C16]] : f32
+    // CHECK: %[[ROW1:.*]] = vector.extract %[[CAST]][1] : vector<4xf32> from vector<2x4xf32>
+    // CHECK: %[[RED1:.*]] = vector.reduction <add>, %[[ROW1]] : vector<4xf32> into f32
+    // CHECK: xegpu.store
+  gpu.func @coalesced_cross_lane_reduce(%arg0: memref<2x64xf32>, %arg1: memref<256xf32>) {
+    %cst = arith.constant 0.000000e+00 : f32
+    %0 = xegpu.create_nd_tdesc %arg0 : memref<2x64xf32> -> !xegpu.tensor_desc<2x64xf32>
+    %1 = xegpu.load_nd %0[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>}> : !xegpu.tensor_desc<2x64xf32> -> vector<2x64xf32>
+    %2 = vector.broadcast %cst : f32 to vector<2xf32>
+    %3 = vector.multi_reduction <add>, %1, %2 [1] : vector<2x64xf32> to vector<2xf32>
+    %anchor = xegpu.convert_layout %3
+      <{ input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, dims = [1]>,
+         target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, dims = [1]> }>
+      : vector<2xf32>
+    %cst_0 = arith.constant dense<0> : vector<2xindex>
+    %cst_1 = arith.constant dense<true> : vector<2xi1>
+    xegpu.store %anchor, %arg1[%cst_0], %cst_1 <{layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, dims = [1]>}> : vector<2xf32>, memref<256xf32>, vector<2xindex>, vector<2xi1>
+    gpu.return
+  }
+}
