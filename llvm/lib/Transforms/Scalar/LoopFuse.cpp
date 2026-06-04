@@ -96,7 +96,7 @@ STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
 
-static cl::opt<unsigned> FusionPeelMaxCount(
+static cl::opt<uint32_t> FusionPeelMaxCount(
     "loop-fusion-peel-max-count", cl::init(0), cl::Hidden,
     cl::desc("Max number of iterations to be peeled from a loop, such that "
              "fusion can take place"));
@@ -595,7 +595,7 @@ private:
   ///
   /// \returns The integer difference, or std::nullopt if it
   ///          cannot be determined.
-  std::optional<int>
+  std::optional<int64_t>
   calculateTripCountDiff(const FusionCandidate &FC0,
                          const FusionCandidate &FC1) const {
     const SCEV *TripCount0 = SE.getBackedgeTakenCount(FC0.L);
@@ -624,9 +624,11 @@ private:
                          "determining the difference between trip counts\n");
 
     // Currently only considering loops with a single exit point
-    // and a non-constant trip count.
-    const unsigned TC0 = SE.getSmallConstantTripCount(FC0.L);
-    const unsigned TC1 = SE.getSmallConstantTripCount(FC1.L);
+    // and a non-constant trip count. Note that the return value 
+    // of getSmallConstantTripCount is a 32 bit number, based on
+    // the existing implementation.
+    const int64_t TC0 = static_cast<int64_t>(SE.getSmallConstantTripCount(FC0.L));
+    const int64_t TC1 = static_cast<int64_t>(SE.getSmallConstantTripCount(FC1.L));
 
     // If any of the tripcounts are zero that means that loop(s) do not have
     // a single exit or a constant tripcount.
@@ -738,18 +740,18 @@ private:
         FC0.verify();
         FC1.verify();
 
-        std::optional<int> TCDifference = calculateTripCountDiff(FC0, FC1);
+        std::optional<int64_t> TCDifference = calculateTripCountDiff(FC0, FC1);
         // Here we are checking that FC0 (the first loop) can be peeled, and
         // the first loop has a larger trip count.
         bool WillPeel = false;
         if (FC0.AbleToPeel && TCDifference > 0 &&
-            TCDifference <= FusionPeelMaxCount) {
+            TCDifference <= static_cast<int64_t>(FusionPeelMaxCount)) {
             // Dependent on peeling being performed on the first loop, and
             // assuming all other conditions for fusion return true.
             WillPeel = true;
           }
 
-        if (!WillPeel && TCDifference != 0) {
+        if (!WillPeel && (!TCDifference || *TCDifference != 0)) {
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "
                                "counts and peeling is not supported for this "
                                "case. Not fusing.\n");
