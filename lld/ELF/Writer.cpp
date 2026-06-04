@@ -360,7 +360,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
     // Capture output for the embedded unoptimized dynamic debugging relocatable
     // link.
-    if (ctx.dynDbgLink)
+    if (ctx.inDynDbgLink)
       ctx.dynDbgOutput.swap(buffer);
     else if (!ctx.e.disableOutput) {
       if (auto e = buffer->commit())

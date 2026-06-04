@@ -1268,8 +1268,11 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     sym->referenced = true;
   }
 
-  // Process the undefined symbols of the embedded unoptimized dynamic debugging
-  // object.
+  // Process the undefined symbols of the "inner" embedded unoptimized dynamic
+  // debugging object to ensure that the "outer" ELF contains the dependencies
+  // of the "inner" ELF. Also tag which "outer" global symbols are dynamic
+  // debugging references, i.e. used in an "inner" relocation for a SHT_PROGBITS
+  // and SHF_ALLOC section, via the `isDynDbgRef` flag.
   if (dynDbgSec) {
     auto content = dynDbgSec->content();
     MemoryBufferRef dbgMb({(const char *)content.data(), content.size()},
