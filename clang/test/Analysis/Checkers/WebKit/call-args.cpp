@@ -500,6 +500,48 @@ namespace call_with_adopt_ref {
   }
 }
 
+namespace call_on_member {
+
+  class SomeObj {
+  public:
+    static Ref<SomeObj> create() { return adoptRef(*new SomeObj); }
+
+    void ref() const;
+    void deref() const;
+
+    void doWork() {
+      m_obj->method();
+      // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+      m_obj.get()->method();
+      // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+      m_constObj->method();
+    }
+
+    void localWork() {
+      RefPtr obj = provide();
+      obj->method();
+      obj.get()->method();
+    }
+
+    void argWork(RefPtr<RefCountable> arg) {
+      arg->method();
+      arg.get()->method();
+    }
+
+    void temporaryWork() {
+      RefPtr { provide() }->method();
+      RefPtr { provide() }.get()->method();
+    }
+
+    void work();
+
+  private:
+    RefPtr<RefCountable> m_obj;
+    const RefPtr<RefCountable> m_constObj;
+  };
+
+}
+
 namespace call_with_weak_ptr {
 
   class RefCountableWithWeakPtr : public RefCountable, public CanMakeWeakPtr<RefCountableWithWeakPtr> {
@@ -515,4 +557,21 @@ namespace call_with_weak_ptr {
     weakPtr->method();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
+
+  struct Provider {
+    RefCountableWithWeakPtr* provide();
+  };
+  int intValue();
+
+  struct Container {
+    Container(Provider& provider)
+      : m_weakPtr(provider.provide())
+      , m_value(intValue())
+    { }
+
+  private:
+    WeakPtr<RefCountableWithWeakPtr> m_weakPtr;
+    int m_value;
+  };
+
 }

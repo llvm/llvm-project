@@ -418,6 +418,30 @@ def SPIRV_GLRoundEvenOp: SPIRV_GLUnaryArithmeticOp<"RoundEven", 2, SPIRV_Float> 
 
 // -----
 
+def SPIRV_GLTruncOp: SPIRV_GLUnaryArithmeticOp<"Trunc", 3, SPIRV_Float> {
+  let summary = "Rounds to the nearest whole number toward zero";
+
+  let description = [{
+    Result is the value equal to the nearest whole number to x whose absolute
+    value is not larger than the absolute value of x.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Trunc %0 : f32
+    %3 = spirv.GL.Trunc %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLInverseSqrtOp : SPIRV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPIRV_Float> {
   let summary = "Reciprocal of sqrt(operand)";
 

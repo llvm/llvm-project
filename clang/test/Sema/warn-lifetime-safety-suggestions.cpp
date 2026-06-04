@@ -276,19 +276,19 @@ View return_view_field(const ViewProvider& v) {    // expected-warning {{paramet
 }
 
 void test_get_on_temporary_pointer() {
-  const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{object whose reference is captured does not live long enough}}.
+  const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{local temporary object does not live long enough}}.
                                                    // expected-note@-1 {{destroyed here}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_ref() {
-  const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{object whose reference is captured does not live long enough}}.
+  const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{local temporary object does not live long enough}}.
                                                    // expected-note@-1 {{destroyed here}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_getView_on_temporary() {
-  View sv = ViewProvider{1}.getView();      // expected-warning {{object whose reference is captured does not live long enough}}.
+  View sv = ViewProvider{1}.getView();      // expected-warning {{local temporary object does not live long enough}}.
                                             // expected-note@-1 {{destroyed here}}
   (void)sv;                                 // expected-note {{later used here}}
 }
@@ -371,7 +371,7 @@ View inference_caller_forwards_callee(View a) { // expected-warning {{parameter 
 
 View inference_top_level_return_stack_view() {
   MyObj local_stack;
-  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{stack memory associated with local variable 'local_stack' is returned}}
                                                             // expected-note@-1 {{returned here}}
 }
 } // namespace simple_annotation_inference
@@ -389,7 +389,7 @@ View inference_caller_forwards_callee(View a) {
   
 View inference_top_level_return_stack_view() {
   MyObj local_stack;
-  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{stack memory associated with local variable 'local_stack' is returned}}
                                                             // expected-note@-1 {{returned here}}
 }
 } // namespace inference_in_order_with_redecls
@@ -407,7 +407,7 @@ T* template_caller(T* a) {              // expected-warning {{parameter in intra
 
 MyObj* test_template_inference_with_stack() {
   MyObj local_stack;
-  return template_caller(&local_stack);   // expected-warning {{address of stack memory is returned later}}
+  return template_caller(&local_stack);   // expected-warning {{stack memory associated with local variable 'local_stack' is returned}}
                                           // expected-note@-1 {{returned here}}                                       
 }
 } // namespace inference_with_templates
@@ -468,7 +468,9 @@ void Foo(int, int*, const MyObj&, View);
 auto implicit_ref_capture(int integer, int* ptr,
                           const MyObj& ref, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
                           View view) {
-  return [&]() { Foo(integer, ptr, ref, view); }; // expected-warning 3 {{address of stack memory is returned later}} \
+  return [&]() { Foo(integer, ptr, ref, view); }; // expected-warning {{stack memory associated with parameter 'ptr' is returned}} \
+                                                  // expected-warning {{stack memory associated with parameter 'view' is returned}} \
+                                                  // expected-warning {{stack memory associated with parameter 'integer' is returned}} \
                                                   // expected-note 3 {{returned here}} \
                                                   // expected-note {{param returned here}}
 }
@@ -522,7 +524,7 @@ struct CaptureRefToView {
 
 CaptureRefToView test_ref_to_view() {
   MyObj obj;
-  CaptureRefToView x(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureRefToView x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   return x; // expected-note {{returned here}}
 }
 
@@ -533,7 +535,7 @@ struct CaptureRefToPtr {
 
 CaptureRefToPtr test_ref_to_ptr() {
   MyObj obj;
-  CaptureRefToPtr x(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureRefToPtr x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   return x; // expected-note {{returned here}}
 }
 
@@ -544,7 +546,7 @@ struct CaptureViewToView {
 
 CaptureViewToView test_view_to_view() {
   MyObj obj;
-  View v(obj); // expected-warning {{address of stack memory is returned later}}
+  View v(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   CaptureViewToView x(v);
   return x; // expected-note {{returned here}}
 }
@@ -556,7 +558,7 @@ struct CapturePtrToPtr {
 
 CapturePtrToPtr test_ptr_to_ptr() {
   MyObj obj;
-  CapturePtrToPtr x(&obj); // expected-warning {{address of stack memory is returned later}}
+  CapturePtrToPtr x(&obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   return x; // expected-note {{returned here}}
 }
 
@@ -567,7 +569,7 @@ struct CaptureRefToRef {
 
 CaptureRefToRef test_ref_to_ref() {
   MyObj obj;
-  CaptureRefToRef x(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureRefToRef x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   return x; // expected-note {{returned here}}
 }
 
@@ -582,7 +584,7 @@ struct CaptureRefToBaseView : BaseWithView {
 
 CaptureRefToBaseView test_ref_to_base_view() {
   MyObj obj;
-  CaptureRefToBaseView x(obj); // expected-warning {{address of stack memory is returned later}}
+  CaptureRefToBaseView x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   return x; // expected-note {{returned here}}
 }
 } // namespace capturing_constructor
@@ -597,7 +599,7 @@ void uaf_via_inferred_lifetimebound() {
   std::function<void()> f = []() {};
   {
     int local;
-    f = return_lambda_capturing_param(local); // expected-warning {{object whose reference is captured does not live long enough}}
+    f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}}
   } // expected-note {{destroyed here}}
   (void)f; // expected-note {{later used here}}
 }
@@ -620,7 +622,7 @@ void test_inference() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   {
     MyObj obj;
-    ptr = create_target(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+    ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}}
   } // expected-note {{destroyed here}}
   (void)ptr; // expected-note {{later used here}}
 }
@@ -633,7 +635,7 @@ View* MakeView(const MyObj& in) { // expected-warning {{parameter in intra-TU fu
 }
 
 void test_new_allocation() {
-  View* v = MakeView(MyObj{}); // expected-warning {{object whose reference is captured does not live long enough}} \
+  View* v = MakeView(MyObj{}); // expected-warning {{local temporary object does not live long enough}} \
                                // expected-note {{destroyed here}}
   (void)v;                     // expected-note {{later used here}}
 }
@@ -651,7 +653,7 @@ struct HasCtorField {
 
 HasCtorField test_dangling_field_ctor() {
   MyObj obj;
-  HasCtorField x(obj); // expected-warning {{address of stack memory is returned later}}
+  HasCtorField x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   return x;            // expected-note {{returned here}}
 }
 
@@ -663,7 +665,7 @@ struct HasSetterField {
   }
   void reset() {
     MyObj obj;
-    field = new LifetimeBoundCtor(obj); // expected-warning {{address of stack memory escapes to a field}}
+    field = new LifetimeBoundCtor(obj); // expected-warning {{stack memory associated with local variable 'obj' escapes to the field 'field' which will dangle}}
   }
 };
 
