@@ -4939,9 +4939,38 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *Cmp;
         if (CmpInst::isIntPredicate(MinMaxPred))
           Cmp = Builder.CreateICmp(MinMaxPred, LHS, RHS);
-        else
+        else {
+          auto *OldFCmp = cast<FCmpInst>(SI.getCondition());
+
+          // The new fcmp may use min/max operands that differ from the original
+          // fcmp operands. Make sure those operands cannot become poison due to
+          // nnan/ninf flags that were not present on the original fcmp.
+          auto isPoisonSafe = [&](Value *V) {
+            FastMathFlags NewFMF;
+
+            if (auto *FPOp = dyn_cast<FPMathOperator>(V))
+              NewFMF |= FPOp->getFastMathFlags();
+
+            if (auto *Sel = dyn_cast<SelectInst>(V))
+              if (auto *CondFPOp =
+                      dyn_cast<FPMathOperator>(Sel->getCondition()))
+                NewFMF |= CondFPOp->getFastMathFlags();
+
+            bool HasExtraPoison = (NewFMF.noNaNs() && !OldFCmp->hasNoNaNs()) ||
+                                  (NewFMF.noInfs() && !OldFCmp->hasNoInfs());
+
+            return !HasExtraPoison ||
+                   isGuaranteedNotToBePoison(V, &AC, &SI, &DT);
+          };
+
+          // Reject the fold if either new fcmp operand may introduce poison
+          // that the original fcmp did not have.
+          if (!isPoisonSafe(LHS) || !isPoisonSafe(RHS))
+            return nullptr;
+
           Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS,
                                       cast<Instruction>(SI.getCondition()));
+        }
 
         Value *NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);
         if (!IsCastNeeded)
