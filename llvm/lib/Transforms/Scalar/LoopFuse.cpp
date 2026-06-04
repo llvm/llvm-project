@@ -659,7 +659,7 @@ private:
 #ifndef NDEBUG
     auto TCDiff = calculateTripCountDiff(FC0, FC1);
 
-    assert(TCDiff == 0 &&
+    assert(TCDiff && *TCDiff == 0 &&
            "Loops should have identical trip counts after peeling");
 #endif
 
@@ -744,12 +744,12 @@ private:
 
         std::optional<int64_t> TCDifference = calculateTripCountDiff(FC0, FC1);
         // Here we are checking that FC0 (the first loop) can be peeled, and
-        // the first loop has a larger trip count.
+        // the first loop has a larger trip count. In this case it is possible
+        // that the first loop is peeled to expose the fusion opportunity.
+        // Peeling the second loop is not currently supported.
         bool WillPeel = false;
-        if (FC0.AbleToPeel && TCDifference > 0 &&
-            TCDifference <= static_cast<int64_t>(FusionPeelMaxCount)) {
-          // Dependent on peeling being performed on the first loop, and
-          // assuming all other conditions for fusion return true.
+        if (FC0.AbleToPeel && TCDifference && *TCDifference > 0 &&
+            *TCDifference <= static_cast<int64_t>(FusionPeelMaxCount)) {
           WillPeel = true;
         }
 
