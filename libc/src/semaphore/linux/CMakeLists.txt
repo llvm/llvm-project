@@ -11,6 +11,7 @@ add_header_library(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.limits
     libc.src.__support.error_or
+    libc.src.__support.libc_assert
     libc.src.__support.threads.futex_utils
     libc.src.__support.time.abs_timeout
 )

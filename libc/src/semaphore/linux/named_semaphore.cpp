@@ -147,7 +147,10 @@ ErrorOr<Semaphore *> Semaphore::open(const char *name, int oflag, mode_t mode,
   }
 
   Semaphore *sem = sem_or.value();
-  new (sem) Semaphore(value);
+
+  // Named semaphores are backed by MAP_SHARED memory and used across
+  // processes, so they use shared futex addressing mode.
+  new (sem) Semaphore(value, /*is_shared=*/true);
 
   // atomically publish the fully initialized semaphore.
   auto link_or = linux_syscalls::link(tmp_or->data(), path_or->data());

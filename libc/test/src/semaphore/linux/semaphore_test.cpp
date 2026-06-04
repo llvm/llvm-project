@@ -17,20 +17,20 @@
 using LIBC_NAMESPACE::Semaphore;
 
 TEST(LlvmLibcSemaphoreTest, InitAndGetValue) {
-  Semaphore sem(3);
+  Semaphore sem(3, /*is_shared=*/false);
   ASSERT_TRUE(sem.is_valid());
   ASSERT_EQ(sem.getvalue(), 3);
 }
 
 TEST(LlvmLibcSemaphoreTest, Destroy) {
-  Semaphore sem(5);
+  Semaphore sem(5, /*is_shared=*/false);
   ASSERT_TRUE(sem.is_valid());
   sem.destroy();
   ASSERT_FALSE(sem.is_valid());
 }
 
 TEST(LlvmLibcSemaphoreTest, TryWait) {
-  Semaphore sem(2);
+  Semaphore sem(2, /*is_shared=*/false);
 
   // two successful non-blocking decrements.
   ASSERT_EQ(sem.trywait(), 0);
@@ -43,7 +43,7 @@ TEST(LlvmLibcSemaphoreTest, TryWait) {
 }
 
 TEST(LlvmLibcSemaphoreTest, Post) {
-  Semaphore sem(0);
+  Semaphore sem(0, /*is_shared=*/false);
   ASSERT_EQ(sem.getvalue(), 0);
 
   ASSERT_EQ(sem.post(), 0);
@@ -55,7 +55,7 @@ TEST(LlvmLibcSemaphoreTest, Post) {
 }
 
 TEST(LlvmLibcSemaphoreTest, WaitNonBlocking) {
-  Semaphore sem(2);
+  Semaphore sem(2, /*is_shared=*/false);
 
   // value is positive: wait() should decrement without blocking.
   ASSERT_EQ(sem.wait(), 0);
@@ -65,7 +65,7 @@ TEST(LlvmLibcSemaphoreTest, WaitNonBlocking) {
 }
 
 TEST(LlvmLibcSemaphoreTest, TimedWaitNonBlocking) {
-  Semaphore sem(2);
+  Semaphore sem(2, /*is_shared=*/false);
   timespec ts{};
   LIBC_NAMESPACE::internal::clock_gettime(CLOCK_REALTIME, &ts);
   ts.tv_sec += 60;
@@ -77,7 +77,7 @@ TEST(LlvmLibcSemaphoreTest, TimedWaitNonBlocking) {
 }
 
 TEST(LlvmLibcSemaphoreTest, TimedWaitTimeout) {
-  Semaphore sem(0);
+  Semaphore sem(0, /*is_shared=*/false);
   timespec ts{};
   LIBC_NAMESPACE::internal::clock_gettime(CLOCK_REALTIME, &ts);
   // a few milliseconds in the future.
@@ -92,7 +92,7 @@ TEST(LlvmLibcSemaphoreTest, TimedWaitTimeout) {
 }
 
 TEST(LlvmLibcSemaphoreTest, TimedWaitBeforeEpoch) {
-  Semaphore sem(0);
+  Semaphore sem(0, /*is_shared=*/false);
   // tv_sec < 0 is treated as an already expired deadline.
   timespec ts{};
   ts.tv_sec = -1;
@@ -101,7 +101,7 @@ TEST(LlvmLibcSemaphoreTest, TimedWaitBeforeEpoch) {
 }
 
 TEST(LlvmLibcSemaphoreTest, TimedWaitInvalidTimespec) {
-  Semaphore sem(0);
+  Semaphore sem(0, /*is_shared=*/false);
   // tv_nsec out of [0, 1e9) is malformed.
   timespec ts{};
   ts.tv_sec = 1;
@@ -110,7 +110,7 @@ TEST(LlvmLibcSemaphoreTest, TimedWaitInvalidTimespec) {
 }
 
 TEST(LlvmLibcSemaphoreTest, ClockWaitMonotonicTimeout) {
-  Semaphore sem(0);
+  Semaphore sem(0, /*is_shared=*/false);
   timespec ts{};
   LIBC_NAMESPACE::internal::clock_gettime(CLOCK_MONOTONIC, &ts);
   ts.tv_nsec += 10'000'000;
@@ -123,7 +123,7 @@ TEST(LlvmLibcSemaphoreTest, ClockWaitMonotonicTimeout) {
 }
 
 TEST(LlvmLibcSemaphoreTest, ClockWaitUnsupportedClock) {
-  Semaphore sem(0);
+  Semaphore sem(0, /*is_shared=*/false);
   timespec ts{};
   ts.tv_sec = 1;
   ts.tv_nsec = 0;

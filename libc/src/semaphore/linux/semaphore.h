@@ -18,6 +18,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/threads/futex_utils.h"
 #include "src/__support/time/abs_timeout.h"
 
@@ -31,6 +32,9 @@ class Semaphore {
   Futex value;
   unsigned int canary;
 
+  // Whether the semaphore is shared between processes.
+  bool is_shared;
+
   // A private constant canary used to detect use of uninitialized or
   // destroyed semaphores. Chose "SEM1" in ASCII (0x53='S', 0x45='E',
   // 0x4D='M', 0x31='1').
@@ -43,7 +47,7 @@ class Semaphore {
       if (trywait() == 0)
         return 0;
 
-      auto wait_or = value.wait(/*expected=*/0, timeout, /*is_shared=*/true);
+      auto wait_or = value.wait(/*expected=*/0, timeout, is_shared);
       if (!wait_or.has_value() && wait_or.error() == ETIMEDOUT) {
         // Final attempt in case a post() raced with the timeout.
         if (trywait() == 0)
@@ -54,8 +58,8 @@ class Semaphore {
   }
 
 public:
-  LIBC_INLINE constexpr Semaphore(unsigned int value)
-      : value(value), canary(SEM_CANARY) {}
+  LIBC_INLINE constexpr Semaphore(unsigned int value, bool shared)
+      : value(value), canary(SEM_CANARY), is_shared(shared) {}
 
   // Sanity check to detect use of uninitialized or destroyed semaphores.
   LIBC_INLINE bool is_valid() const { return canary == SEM_CANARY; }
@@ -92,9 +96,7 @@ public:
 
     // Wake one waiter if any,
     // waiter selection is left to linux futex implementation.
-    // Named semaphores live in MAP_SHARED memory and may be shared across
-    // processes, so use a shared wake.
-    value.notify_one(/*is_shared=*/true);
+    value.notify_one(is_shared);
     return 0;
   }
 
@@ -123,8 +125,7 @@ public:
       // Futex wait re-checks the value atomically,
       // so a racing post() before sleep is not lost.
       // Spurious wakeups just send back to trywait().
-      (void)value.wait(/*expected=*/0, /*timeout=*/cpp::nullopt,
-                       /*is_shared=*/true);
+      (void)value.wait(/*expected=*/0, /*timeout=*/cpp::nullopt, is_shared);
     }
   }
 
@@ -145,7 +146,10 @@ public:
     if (LIBC_LIKELY(timeout.has_value()))
       return wait_until(timeout.value());
 
-    switch (timeout.error()) {
+    internal::AbsTimeout::Error err = timeout.error();
+    LIBC_ASSERT(err == internal::AbsTimeout::Error::Invalid ||
+                err == internal::AbsTimeout::Error::BeforeEpoch);
+    switch (err) {
     case internal::AbsTimeout::Error::Invalid:
       return EINVAL;
     case internal::AbsTimeout::Error::BeforeEpoch:
