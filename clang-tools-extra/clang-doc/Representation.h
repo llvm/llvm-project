@@ -51,8 +51,8 @@ private:
 
 ConcurrentStringPool &getGlobalStringPool();
 
-extern thread_local llvm::BumpPtrAllocator TransientArena;
-extern thread_local llvm::BumpPtrAllocator PersistentArena;
+llvm::BumpPtrAllocator &getTransientArena();
+llvm::BumpPtrAllocator &getPersistentArena();
 
 inline StringRef internString(const Twine &T) {
   if (T.isTriviallyEmpty())
@@ -107,12 +107,13 @@ llvm::ArrayRef<T> deepCopyArray(llvm::ArrayRef<T> V,
 // A helper function to create an owned pointer, abstracting away the memory
 // allocation mechanism.
 template <typename T, typename... Args> T *allocateTransient(Args &&...args) {
-  return new (TransientArena.Allocate<T>()) T(std::forward<Args>(args)...);
+  return new (getTransientArena().Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
 // A helper function to create memory allocated in the TransientArena.
 template <typename T, typename... Args> T *allocatePersistent(Args &&...args) {
-  return new (PersistentArena.Allocate<T>()) T(std::forward<Args>(args)...);
+  return new (getPersistentArena().Allocate<T>())
+      T(std::forward<Args>(args)...);
 }
 
 // An overload to explicitly allocate on an arena, returning a bare pointer.
@@ -156,7 +157,7 @@ InfoNode<T> *allocateListNode(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
 
 template <typename T, typename... Args>
 InfoNode<T> *allocateListNodeTransient(Args &&...args) {
-  return allocateListNode<T>(TransientArena, std::forward<Args>(args)...);
+  return allocateListNode<T>(getTransientArena(), std::forward<Args>(args)...);
 }
 
 template <typename T>
@@ -165,16 +166,16 @@ InfoNode<T> *allocateListNode(llvm::BumpPtrAllocator &Alloc, T *Item) {
 }
 
 template <typename T> InfoNode<T> *allocateListNodeTransient(T *Item) {
-  return allocateListNode<T>(TransientArena, Item);
+  return allocateListNode<T>(getTransientArena(), Item);
 }
 
 template <typename T, typename... Args>
 InfoNode<T> *allocateListNodePersistent(Args &&...args) {
-  return allocateListNode<T>(PersistentArena, std::forward<Args>(args)...);
+  return allocateListNode<T>(getPersistentArena(), std::forward<Args>(args)...);
 }
 
 template <typename T> InfoNode<T> *allocateListNodePersistent(T *Item) {
-  return allocateListNode<T>(PersistentArena, Item);
+  return allocateListNode<T>(getPersistentArena(), Item);
 }
 
 // An abstraction for lists that are dynamically managed (inserted/removed).
@@ -841,7 +842,7 @@ struct ClangDocContext {
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
                   clang::DiagnosticsEngine &Diags, OutputFormatTy Format,
-                  bool FTimeTrace = false);
+                  bool FTimeTrace = false, bool Pretty = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
@@ -869,6 +870,7 @@ struct ClangDocContext {
   int Granularity; // Granularity of ftime trace
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on
+  bool Pretty;     // Indicates if JSON is emitted with whitespace.
 };
 
 // Ensure arena allocated types remain safe to allocate in the arena.

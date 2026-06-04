@@ -75,17 +75,20 @@ func.func @array_coor_slice_shift_section() {
   return
 }
 
-// Descriptor-backed array_coor with shape_shift + slice.
-// TODO: the strides must still be taken from the descriptor.
+// Descriptor-backed array_coor with shape_shift + slice. The descriptor owns
+// the layout: extents and strides must come from fir.box_dims, not from the
+// shape_shift extents. This matches the CodeGen XArrayCoorOp lowering, which
+// reads stride from the box (getStrideFromBox) regardless of any explicit
+// shape; the shape_shift only contributes lower bounds for index translation.
 // CHECK-LABEL: func.func @array_coor_box_shape_shift_slice
-// CHECK:       %[[C1:.*]] = arith.constant 1 : index
-// CHECK:       %[[C5:.*]] = arith.constant 5 : index
-// CHECK:       %[[C10:.*]] = arith.constant 10 : index
 // CHECK:       fir.box_addr %arg0
-// CHECK:       memref.reinterpret_cast %{{.+}} to offset: [%{{.+}}], sizes: [%[[C5]], %[[C10]]], strides: [%[[C10]], %{{.+}}]
+// CHECK:       fir.box_elesize %arg0
+// CHECK:       fir.box_dims %arg0
+// CHECK:       arith.divsi
+// CHECK:       fir.box_dims %arg0
+// CHECK:       arith.divsi
+// CHECK:       memref.reinterpret_cast %{{.+}} to offset: [%{{.+}}], sizes: [{{%.+}}, {{%.+}}], strides: [{{%.+}}, {{%.+}}]
 // CHECK:       memref.load
-// CHECK-NOT:   fir.box_dims
-// CHECK-NOT:   fir.box_elesize
 // CHECK-NOT:   fir.array_coor
 func.func @array_coor_box_shape_shift_slice(%arg0: !fir.box<!fir.array<?x?xi32>>) {
   %c1 = arith.constant 1 : index
@@ -97,5 +100,33 @@ func.func @array_coor_box_shape_shift_slice(%arg0: !fir.box<!fir.array<?x?xi32>>
   %slice = fir.slice %c1, %c2, %c1, %c2, %undef, %undef : (index, index, index, index, index, index) -> !fir.slice<2>
   %addr = fir.array_coor %arg0(%ss) [%slice] %c1, %c2 : (!fir.box<!fir.array<?x?xi32>>, !fir.shapeshift<2>, !fir.slice<2>, index, index) -> !fir.ref<i32>
   %val = fir.load %addr : !fir.ref<i32>
+  return
+}
+
+// Full-rank canonicalized form with scalar dim kept explicit.
+// Scalar dim offset uses (sliceLb-shift), while non-scalar dim consumes its
+// own full-rank coordinate-space index.
+// CHECK-LABEL: func.func @array_coor_slice_scalar_full_rank_dim1_shifted
+// CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
+// CHECK-DAG:   %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG:   %[[CM4:.*]] = arith.constant -4 : index
+// CHECK:       arith.subi %[[C5]], %[[C3]] : index
+// CHECK:       arith.subi %[[CM4]], %[[CM4]] : index
+// CHECK:       memref.store
+// CHECK-NOT:   fir.array_coor
+func.func @array_coor_slice_scalar_full_rank_dim1_shifted() {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %c_neg4 = arith.constant -4 : index
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.alloca !fir.array<10x10xi32> {bindc_name = "a", uniq_name = "_QFEa"}
+  %1 = fir.shape_shift %c3, %c10, %c_neg4, %c10 : (index, index, index, index) -> !fir.shapeshift<2>
+  %2 = fir.declare %0(%1) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<10x10xi32>>
+  %u = fir.undefined index
+  %3 = fir.slice %c5, %u, %u, %c_neg4, %c10, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %4 = fir.array_coor %2(%1) [%3] %c5, %c_neg4 : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>, !fir.slice<2>, index, index) -> !fir.ref<i32>
+  fir.store %c1_i32 to %4 : !fir.ref<i32>
   return
 }

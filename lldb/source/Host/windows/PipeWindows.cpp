@@ -104,6 +104,11 @@ Status PipeWindows::CreateNew(llvm::StringRef name) {
   if (INVALID_HANDLE_VALUE == m_read)
     return Status(::GetLastError(), eErrorTypeWin32);
   m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
+  if (m_read_fd < 0) {
+    ::CloseHandle(m_read);
+    m_read = INVALID_HANDLE_VALUE;
+    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+  }
   ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
   m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
@@ -176,6 +181,11 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
       return Status(::GetLastError(), eErrorTypeWin32);
 
     m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
+    if (m_read_fd < 0) {
+      ::CloseHandle(m_read);
+      m_read = INVALID_HANDLE_VALUE;
+      return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
 
     ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
     m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -186,6 +196,11 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
       return Status(::GetLastError(), eErrorTypeWin32);
 
     m_write_fd = _open_osfhandle((intptr_t)m_write, _O_WRONLY);
+    if (m_write_fd < 0) {
+      ::CloseHandle(m_write);
+      m_write = INVALID_HANDLE_VALUE;
+      return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
 
     ZeroMemory(&m_write_overlapped, sizeof(m_write_overlapped));
     m_write_overlapped.hEvent = ::CreateEventA(nullptr, TRUE, FALSE, nullptr);

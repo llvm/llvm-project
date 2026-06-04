@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Representation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
@@ -28,8 +29,15 @@ namespace clang {
 namespace doc {
 
 // Thread local arenas usable in each thread pool
-thread_local llvm::BumpPtrAllocator TransientArena;
-thread_local llvm::BumpPtrAllocator PersistentArena;
+llvm::BumpPtrAllocator &getTransientArena() {
+  thread_local llvm::BumpPtrAllocator TransientArena;
+  return TransientArena;
+}
+
+llvm::BumpPtrAllocator &getPersistentArena() {
+  thread_local llvm::BumpPtrAllocator PersistentArena;
+  return PersistentArena;
+}
 
 ConcurrentStringPool &getGlobalStringPool() {
   static ConcurrentStringPool GlobalPool;
@@ -167,7 +175,7 @@ void mergeUnkeyed<CommentInfo>(DocList<CommentInfo> &Target,
     if (llvm::none_of(Target,
                       [Ptr](const auto &E) { return *E.Ptr == *Ptr; })) {
       Target.push_back(
-          *allocateListNodePersistent<CommentInfo>(*Ptr, PersistentArena));
+          *allocateListNodePersistent<CommentInfo>(*Ptr, getPersistentArena()));
     }
   }
 }
@@ -306,8 +314,7 @@ bool CommentInfo::operator==(const CommentInfo &Other) const {
   if (FirstCI != SecondCI || Children.size() != Other.Children.size())
     return false;
 
-  return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                    Other.Children.end());
+  return llvm::equal(Children, Other.Children);
 }
 
 bool CommentInfo::operator<(const CommentInfo &Other) const {
@@ -461,7 +468,7 @@ void Info::mergeBase(Info &&Other) {
   if (Path == "")
     Path = Other.Path;
   if (Namespace.empty() && !Other.Namespace.empty())
-    Namespace = allocateArray(Other.Namespace, PersistentArena);
+    Namespace = allocateArray(Other.Namespace, getPersistentArena());
   // Unconditionally extend the description, since each decl may have a comment.
   mergeUnkeyed(Description, std::move(Other.Description));
   if (ParentUSR == EmptySID)
@@ -549,22 +556,22 @@ void RecordInfo::merge(RecordInfo &&Other) {
     TagType = Other.TagType;
   IsTypeDef = IsTypeDef || Other.IsTypeDef;
   if (Members.empty() && !Other.Members.empty())
-    Members = deepCopyArray(Other.Members, PersistentArena);
+    Members = deepCopyArray(Other.Members, getPersistentArena());
   if (Bases.empty() && !Other.Bases.empty())
-    Bases = deepCopyArray(Other.Bases, PersistentArena);
+    Bases = deepCopyArray(Other.Bases, getPersistentArena());
   if (Parents.empty() && !Other.Parents.empty())
-    Parents = allocateArray(Other.Parents, PersistentArena);
+    Parents = allocateArray(Other.Parents, getPersistentArena());
   if (VirtualParents.empty() && !Other.VirtualParents.empty())
-    VirtualParents = allocateArray(Other.VirtualParents, PersistentArena);
+    VirtualParents = allocateArray(Other.VirtualParents, getPersistentArena());
   if (Friends.empty() && !Other.Friends.empty())
-    Friends = deepCopyArray(Other.Friends, PersistentArena);
+    Friends = deepCopyArray(Other.Friends, getPersistentArena());
   // Reduce children if necessary.
   reduceChildren(Children.Records, std::move(Other.Children.Records));
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
   reduceChildren(Children.Enums, std::move(Other.Children.Enums));
   reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
   if (!Template && Other.Template)
-    Template = TemplateInfo(*Other.Template, PersistentArena);
+    Template = TemplateInfo(*Other.Template, getPersistentArena());
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -586,7 +593,7 @@ void EnumInfo::merge(EnumInfo &&Other) {
   if (!BaseType && Other.BaseType)
     BaseType = std::move(Other.BaseType);
   if (Members.empty() && !Other.Members.empty())
-    Members = deepCopyArray(Other.Members, PersistentArena);
+    Members = deepCopyArray(Other.Members, getPersistentArena());
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -601,9 +608,9 @@ void FunctionInfo::merge(FunctionInfo &&Other) {
   if (Parent.USR == EmptySID && Parent.Name == "")
     Parent = std::move(Other.Parent);
   if (Params.empty() && !Other.Params.empty())
-    Params = allocateArray(Other.Params, PersistentArena);
+    Params = allocateArray(Other.Params, getPersistentArena());
   if (!Template && Other.Template)
-    Template = TemplateInfo(*Other.Template, PersistentArena);
+    Template = TemplateInfo(*Other.Template, getPersistentArena());
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -614,7 +621,7 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
   if (Underlying.Type.Name == "")
     Underlying = Other.Underlying;
   if (!Template && Other.Template)
-    Template = TemplateInfo(*Other.Template, PersistentArena);
+    Template = TemplateInfo(*Other.Template, getPersistentArena());
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -626,9 +633,10 @@ void ConceptInfo::merge(ConceptInfo &&Other) {
     ConstraintExpression = std::move(Other.ConstraintExpression);
   if (Template.Constraints.empty() && !Other.Template.Constraints.empty())
     Template.Constraints =
-        allocateArray(Other.Template.Constraints, PersistentArena);
+        allocateArray(Other.Template.Constraints, getPersistentArena());
   if (Template.Params.empty() && !Other.Template.Params.empty())
-    Template.Params = allocateArray(Other.Template.Params, PersistentArena);
+    Template.Params =
+        allocateArray(Other.Template.Params, getPersistentArena());
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -720,18 +728,16 @@ void Index::sort() {
     C.sort();
 }
 
-ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
-                                 StringRef ProjectName, bool PublicOnly,
-                                 StringRef OutDirectory, StringRef SourceRoot,
-                                 StringRef RepositoryUrl,
-                                 StringRef RepositoryLinePrefix, StringRef Base,
-                                 std::vector<std::string> UserStylesheets,
-                                 clang::DiagnosticsEngine &Diags,
-                                 OutputFormatTy Format, bool FTimeTrace)
+ClangDocContext::ClangDocContext(
+    tooling::ExecutionContext *ECtx, StringRef ProjectName, bool PublicOnly,
+    StringRef OutDirectory, StringRef SourceRoot, StringRef RepositoryUrl,
+    StringRef RepositoryLinePrefix, StringRef Base,
+    std::vector<std::string> UserStylesheets, clang::DiagnosticsEngine &Diags,
+    OutputFormatTy Format, bool FTimeTrace, bool Pretty)
     : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
       SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
       Base(Base), Diags(Diags), Format(Format), PublicOnly(PublicOnly),
-      FTimeTrace(FTimeTrace) {
+      FTimeTrace(FTimeTrace), Pretty(Pretty) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default

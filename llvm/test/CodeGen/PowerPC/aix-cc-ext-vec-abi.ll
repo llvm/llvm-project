@@ -3,7 +3,7 @@
 ; RUN: FileCheck --check-prefixes=ASM32,ASM %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec -xcoff-traceback-table=false \
-; RUN:  -vec-extabi -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:  -vec-extabi -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck --check-prefixes=ASM64,ASM %s
 
 define dso_local <4 x i32> @vec_callee(<4 x i32> %vec1, <4 x i32> %vec2, <4 x i32> %vec3, <4 x i32> %vec4, <4 x i32> %vec5, <4 x i32> %vec6, <4 x i32> %vec7, <4 x i32> %vec8, <4 x i32> %vec9, <4 x i32> %vec10, <4 x i32> %vec11, <4 x i32> %vec12) {

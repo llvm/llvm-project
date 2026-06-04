@@ -274,7 +274,7 @@ define ptr @test11(ptr) local_unnamed_addr {
 ; FNATTRS-NEXT:    ret ptr [[TMP6]]
 ;
 ; ATTRIBUTOR-LABEL: define nonnull ptr @test11(
-; ATTRIBUTOR-SAME: ptr [[TMP0:%.*]]) local_unnamed_addr {
+; ATTRIBUTOR-SAME: ptr nofree [[TMP0:%.*]]) local_unnamed_addr {
 ; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
 ; ATTRIBUTOR:       3:
@@ -856,7 +856,7 @@ f:
 
 define i8 @parent6(ptr %a, ptr %b) {
 ; FNATTRS-LABEL: define i8 @parent6(
-; FNATTRS-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; FNATTRS-SAME: ptr [[A:%.*]], ptr captures(address) [[B:%.*]]) {
 ; FNATTRS-NEXT:    [[C:%.*]] = load volatile i8, ptr [[B]], align 1
 ; FNATTRS-NEXT:    call void @use1nonnull(ptr [[A]])
 ; FNATTRS-NEXT:    ret i8 [[C]]

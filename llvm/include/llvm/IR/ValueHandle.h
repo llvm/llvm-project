@@ -29,6 +29,7 @@ namespace llvm {
 /// below for details.
 class ValueHandleBase {
   friend class Value;
+  template <typename ValueTy> friend class PoisoningVH;
 
 protected:
   /// This indicates what sub class the handle actually is.
@@ -129,9 +130,7 @@ protected:
   Value *getValPtr() const { return Val; }
 
   static bool isValid(Value *V) {
-    return V &&
-           V != DenseMapInfo<Value *>::getEmptyKey() &&
-           V != DenseMapInfo<Value *>::getTombstoneKey();
+    return V && V != DenseMapInfo<Value *>::getEmptyKey();
   }
 
   /// Remove this ValueHandle from its current use list.
@@ -209,10 +208,6 @@ template <> struct simplify_type<const WeakVH> {
 template <> struct DenseMapInfo<WeakVH> {
   static inline WeakVH getEmptyKey() {
     return WeakVH(DenseMapInfo<Value *>::getEmptyKey());
-  }
-
-  static inline WeakVH getTombstoneKey() {
-    return WeakVH(DenseMapInfo<Value *>::getTombstoneKey());
   }
 
   static unsigned getHashValue(const WeakVH &Val) {
@@ -540,8 +535,15 @@ public:
   PoisoningVH() = default;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   PoisoningVH(ValueTy *P) : CallbackVH(GetAsValue(P)) {}
-  PoisoningVH(const PoisoningVH &RHS)
-      : CallbackVH(RHS), Poisoned(RHS.Poisoned) {}
+  // A poisoned handle is detached from its use list but keeps its raw value
+  // pointer, so its use-list pointers are stale; a copy must not relink through
+  // them.
+  PoisoningVH(const PoisoningVH &RHS) : CallbackVH(), Poisoned(RHS.Poisoned) {
+    if (Poisoned)
+      ValueHandleBase::setValPtr(RHS.getRawValPtr());
+    else
+      setRawValPtr(RHS.getRawValPtr());
+  }
 
   ~PoisoningVH() {
     if (Poisoned)
@@ -551,7 +553,14 @@ public:
   PoisoningVH &operator=(const PoisoningVH &RHS) {
     if (Poisoned)
       clearValPtr();
-    CallbackVH::operator=(RHS);
+    if (RHS.Poisoned) {
+      // Detach *this and copy only the raw pointer; see the copy constructor.
+      if (isValid(getRawValPtr()))
+        RemoveFromUseList();
+      ValueHandleBase::setValPtr(RHS.getRawValPtr());
+    } else {
+      CallbackVH::operator=(RHS);
+    }
     Poisoned = RHS.Poisoned;
     return *this;
   }
@@ -570,12 +579,6 @@ template <typename T> struct DenseMapInfo<PoisoningVH<T>> {
   static inline PoisoningVH<T> getEmptyKey() {
     PoisoningVH<T> Res;
     Res.setRawValPtr(DenseMapInfo<Value *>::getEmptyKey());
-    return Res;
-  }
-
-  static inline PoisoningVH<T> getTombstoneKey() {
-    PoisoningVH<T> Res;
-    Res.setRawValPtr(DenseMapInfo<Value *>::getTombstoneKey());
     return Res;
   }
 
