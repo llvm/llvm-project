@@ -71,7 +71,7 @@ struct CIRRecordLowering final {
   void setBitFieldInfo(const FieldDecl *fd, CharUnits startOffset,
                        mlir::Type storageType);
 
-  void lower(bool NonVirtualBaseType);
+  void lower(bool nonVirtualBaseType);
   void lowerUnion(bool nonVirtualBaseType);
 
   /// Determines if we need a packed llvm struct.
@@ -715,7 +715,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
                              : lowering.astRecordLayout.getNonVirtualSize();
     if (baseSize != lowering.astRecordLayout.getSize()) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
-      baseLowering.lower(/*NonVirtualBaseType=*/true);
+      baseLowering.lower(/*nonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
       baseTy = builder.getCompleteNamedRecordType(
           baseLowering.fieldTypes, baseLowering.packed, baseLowering.padded,
@@ -874,6 +874,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
 
     // NOTE(cir): Track all union member's types, not just the largest one. It
     // allows for proper type-checking and retain more info for analisys.
+    //
     // The base-subobject type instead uses a single (possibly clipped) storage
     // type, mirroring classic CodeGen, so that it exposes the union's reusable
     // tail padding.
