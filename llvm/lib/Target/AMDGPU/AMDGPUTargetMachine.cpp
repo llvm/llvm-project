@@ -646,7 +646,7 @@ static cl::opt<bool> EnableUniformIntrinsicCombine(
 static cl::opt<bool>
     UseSSAMachineScheduler("amdgpu-use-ssa-machine-scheduler",
                            cl::desc("Use the machine scheduler in SSA mode."),
-                           cl::init(false), cl::Hidden);
+                           cl::init(true), cl::Hidden);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
