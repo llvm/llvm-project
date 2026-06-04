@@ -23,12 +23,12 @@ define void @reduction_lcssa_with_non_phi_user() {
 ; IR-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; IR:       [[OUTER_HEADER]]:
 ; IR-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; IR-NEXT:    [[SUM_PTR:%.*]] = getelementptr inbounds [100 x i32], ptr @sum, i64 0, i64 [[I]]
+; IR-NEXT:    [[SUM_PTR:%.*]] = getelementptr inbounds i32, ptr @sum, i64 [[I]]
 ; IR-NEXT:    br label %[[INNER:.*]]
 ; IR:       [[INNER]]:
 ; IR-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[J_NEXT:%.*]], %[[INNER]] ]
 ; IR-NEXT:    [[RED:%.*]] = phi i32 [ 0, %[[OUTER_HEADER]] ], [ [[ADD:%.*]], %[[INNER]] ]
-; IR-NEXT:    [[PTR:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 [[J]], i64 [[I]]
+; IR-NEXT:    [[PTR:%.*]] = getelementptr inbounds [100 x i32], ptr @A, i64 [[J]], i64 [[I]]
 ; IR-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 4
 ; IR-NEXT:    [[ADD]] = add i32 [[RED]], [[VAL]]
 ; IR-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
@@ -52,13 +52,13 @@ entry:
 
 outer.header:
   %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
-  %sum.ptr = getelementptr inbounds [100 x i32], ptr @sum, i64 0, i64 %i
+  %sum.ptr = getelementptr inbounds i32, ptr @sum, i64 %i
   br label %inner
 
 inner:
   %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner ]
   %red = phi i32 [ 0, %outer.header ], [ %add, %inner ]
-  %ptr = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %j, i64 %i
+  %ptr = getelementptr inbounds [100 x i32], ptr @A, i64 %j, i64 %i
   %val = load i32, ptr %ptr
   %add = add i32 %red, %val
   %j.next = add nuw nsw i64 %j, 1
