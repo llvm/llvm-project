@@ -6590,8 +6590,6 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
-      RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *Plan);
-      RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *Plan);
     }
 
     if (auto P =
