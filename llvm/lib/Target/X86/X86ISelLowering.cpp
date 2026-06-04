@@ -20344,6 +20344,18 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
   if (Subtarget.isTargetELF()) {
     TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
+    // LFI does not support dlopen, so all TLS is statically resolved. Upgrade
+    // dynamic models to avoid TLS indirect calls that cause problems with
+    // linker relaxation.
+    if (Subtarget.isLFI()) {
+      bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
+      bool IsSharedLibrary =
+          DAG.getTarget().getRelocationModel() == Reloc::PIC_ && !IsPIE;
+      if (model == TLSModel::GeneralDynamic)
+        model = TLSModel::InitialExec;
+      else if (model == TLSModel::LocalDynamic)
+        model = IsSharedLibrary ? TLSModel::InitialExec : TLSModel::LocalExec;
+    }
     switch (model) {
       case TLSModel::GeneralDynamic:
         if (Subtarget.is64Bit()) {
