@@ -6696,6 +6696,9 @@ defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
 
+def : Pat<(i32 (int_aarch64_neon_scalar_uqxtn (i64 FPR64:$Rn))),
+          (i32 (UQXTNv1i32 FPR64:$Rn))>;
+
 // ssub_sat(0, R) -> sqneg(R)
 def : Pat<(v16i8 (ssubsat immAllZerosV, V128:$reg)),
           (v16i8 (SQNEGv16i8 V128:$reg))>;

@@ -611,17 +611,23 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
     return cir::ComplexAddOp::create(builder, op.loc, op.lhs, op.rhs);
 
+  auto createAdd = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
+    return cir::isFPOrVectorOfFPType(a.getType())
+               ? builder.createFAdd(loc, a, b)
+               : builder.createAdd(loc, a, b);
+  };
+
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
     mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
-    mlir::Value newReal = builder.createAdd(op.loc, real, op.rhs);
+    mlir::Value newReal = createAdd(op.loc, real, op.rhs);
     return builder.createComplexCreate(op.loc, newReal, imag);
   }
 
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
   mlir::Value real = builder.createComplexReal(op.loc, op.rhs);
   mlir::Value imag = builder.createComplexImag(op.loc, op.rhs);
-  mlir::Value newReal = builder.createAdd(op.loc, op.lhs, real);
+  mlir::Value newReal = createAdd(op.loc, op.lhs, real);
   return builder.createComplexCreate(op.loc, newReal, imag);
 }
 
@@ -633,17 +639,23 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
     return cir::ComplexSubOp::create(builder, op.loc, op.lhs, op.rhs);
 
+  auto createSub = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
+    return cir::isFPOrVectorOfFPType(a.getType())
+               ? builder.createFSub(loc, a, b)
+               : builder.createSub(loc, a, b);
+  };
+
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
     mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
-    mlir::Value newReal = builder.createSub(op.loc, real, op.rhs);
+    mlir::Value newReal = createSub(op.loc, real, op.rhs);
     return builder.createComplexCreate(op.loc, newReal, imag);
   }
 
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
   mlir::Value real = builder.createComplexReal(op.loc, op.rhs);
   mlir::Value imag = builder.createComplexImag(op.loc, op.rhs);
-  mlir::Value newReal = builder.createSub(op.loc, op.lhs, real);
+  mlir::Value newReal = createSub(op.loc, op.lhs, real);
   return builder.createComplexCreate(op.loc, newReal, imag);
 }
 
@@ -676,19 +688,25 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
                                      rangeKind);
   }
 
+  auto createMul = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
+    return cir::isFPOrVectorOfFPType(a.getType())
+               ? builder.createFMul(loc, a, b)
+               : builder.createMul(loc, a, b);
+  };
+
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
     mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
-    mlir::Value newReal = builder.createMul(op.loc, real, op.rhs);
-    mlir::Value newImag = builder.createMul(op.loc, imag, op.rhs);
+    mlir::Value newReal = createMul(op.loc, real, op.rhs);
+    mlir::Value newImag = createMul(op.loc, imag, op.rhs);
     return builder.createComplexCreate(op.loc, newReal, newImag);
   }
 
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
   mlir::Value real = builder.createComplexReal(op.loc, op.rhs);
   mlir::Value imag = builder.createComplexImag(op.loc, op.rhs);
-  mlir::Value newReal = builder.createMul(op.loc, op.lhs, real);
-  mlir::Value newImag = builder.createMul(op.loc, op.lhs, imag);
+  mlir::Value newReal = createMul(op.loc, op.lhs, real);
+  mlir::Value newImag = createMul(op.loc, op.lhs, imag);
   return builder.createComplexCreate(op.loc, newReal, newImag);
 }
 
