@@ -3616,11 +3616,12 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    v_readlane_b32 s5, v34, 38
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:  ; %bb.6:
-; GCN-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
+; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v0
+; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-O0-NEXT:    s_mov_b32 s4, 32
 ; GCN-O0-NEXT:    v_lshrrev_b64 v[1:2], s4, v[1:2]

@@ -153,6 +153,9 @@ void SIPostRABundler::reorderLoads(
        SearchI != MBB.end() && MaxDistance < SearchDistance &&
        UseDistance.size() < Defs.size();
        ++SearchI, ++MaxDistance) {
+    // Meta instructions should not introduce waits
+    if (SearchI->isMetaInstruction())
+      continue;
     for (Register Reg : Defs) {
       if (UseDistance.contains(Reg))
         continue;
@@ -173,19 +176,20 @@ void SIPostRABundler::reorderLoads(
   bool Reordered = false;
   for (auto II = BundleStart; II != Next; ++II, ++NativeOrder) {
     // Bail out if we encounter anything that seems risky to reorder.
-    if (!II->getNumExplicitDefs() || II->isKill() ||
-        II->hasOrderedMemoryRef()) {
+    if (II->isKill() || II->hasOrderedMemoryRef() ||
+        (!II->getNumExplicitDefs() && !II->isMetaInstruction())) {
       LLVM_DEBUG(dbgs() << " Abort\n");
       return;
     }
-
-    Register Reg = getDef(*II);
-    unsigned NewOrder =
-        UseDistance.contains(Reg) ? UseDistance[Reg] : MaxDistance;
+    unsigned NewOrder = MaxDistance;
+    if (II->getNumExplicitDefs())
+      NewOrder = UseDistance.lookup_or(getDef(*II), NewOrder);
     LLVM_DEBUG(dbgs() << "  Order: " << NewOrder << "," << NativeOrder
                       << ", MI: " << *II);
     unsigned Order = (NewOrder << 16 | NativeOrder);
     Schedule.emplace_back(&*II, Order);
+    if (II->isMetaInstruction())
+      continue;
     Reordered |= Order < LastOrder;
     LastOrder = Order;
   }

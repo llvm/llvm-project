@@ -1015,17 +1015,18 @@ define amdgpu_kernel void @half8_inselt(ptr addrspace(1) %out, <8 x half> %vec, 
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s3
 ; GCN-O0-NEXT:    buffer_load_dword v0, v0, s[12:15], 0 offen offset:4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-O0-NEXT:    buffer_load_dword v2, off, s[12:15], 0
 ; GCN-O0-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:4
 ; GCN-O0-NEXT:    buffer_load_dword v1, v1, s[12:15], 0 offen offset:4
+; GCN-O0-NEXT:    buffer_load_dword v2, off, s[12:15], 0
 ; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
+; GCN-O0-NEXT:    s_waitcnt vmcnt(2)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v6
-; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
+; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v4, v1
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; GCN-O0-NEXT:    s_endpgm
 entry:
@@ -3773,10 +3774,10 @@ define amdgpu_kernel void @double15_inselt(ptr addrspace(1) %out, <15 x double> 
 ; GCN-O0-NEXT:    buffer_load_dword v35, off, s[56:59], 0 offset:140 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v37, off, s[56:59], 0 offset:148 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v38, off, s[56:59], 0 offset:152 ; 4-byte Folded Reload
-; GCN-O0-NEXT:    buffer_load_dword v2, off, s[56:59], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v6, off, s[56:59], 0 offset:24 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v1, off, s[56:59], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v0, off, s[56:59], 0 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    buffer_load_dword v2, off, s[56:59], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    ; kill: def $vgpr42 killed $vgpr42 def $vgpr42_vgpr43_vgpr44_vgpr45 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v43, v46
 ; GCN-O0-NEXT:    v_mov_b32_e32 v44, v41
@@ -3856,14 +3857,15 @@ define amdgpu_kernel void @double15_inselt(ptr addrspace(1) %out, <15 x double> 
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, s2
 ; GCN-O0-NEXT:    flat_store_dwordx2 v[3:4], v[7:8]
 ; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; GCN-O0-NEXT:    s_waitcnt vmcnt(6)
+; GCN-O0-NEXT:    s_waitcnt vmcnt(7)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v6
-; GCN-O0-NEXT:    s_waitcnt vmcnt(5)
+; GCN-O0-NEXT:    s_waitcnt vmcnt(6)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v4, v1
-; GCN-O0-NEXT:    s_waitcnt vmcnt(4)
+; GCN-O0-NEXT:    s_waitcnt vmcnt(5)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-O0-NEXT:    s_waitcnt vmcnt(4)
 ; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; GCN-O0-NEXT:    s_endpgm
 entry:
