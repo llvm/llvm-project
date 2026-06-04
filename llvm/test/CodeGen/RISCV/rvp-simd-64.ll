@@ -3143,8 +3143,7 @@ define <4 x i16> @test_psdiv_mulhsu_h(<4 x i16> %a) {
 ; RV64-NEXT:    lui a1, 1048569
 ; RV64-NEXT:    addi a1, a1, -1911
 ; RV64-NEXT:    pmv.hs a1, a1
-; RV64-NEXT:    pmulh.h a1, a0, a1
-; RV64-NEXT:    padd.h a0, a1, a0
+; RV64-NEXT:    pmulhsu.h a0, a0, a1
 ; RV64-NEXT:    psrai.h a0, a0, 3
 ; RV64-NEXT:    psrli.h a1, a0, 15
 ; RV64-NEXT:    padd.h a0, a0, a1
@@ -3306,10 +3305,9 @@ define <8 x i8> @test_psdiv_mulhsu_b(<8 x i8> %a) {
 ; RV64-LABEL: test_psdiv_mulhsu_b:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pli.b a1, -119
-; RV64-NEXT:    pmul.h.b11 a2, a0, a1
-; RV64-NEXT:    pmul.h.b00 a1, a0, a1
-; RV64-NEXT:    ppairo.b a1, a1, a2
-; RV64-NEXT:    padd.b a0, a1, a0
+; RV64-NEXT:    pmulsu.h.b11 a2, a0, a1
+; RV64-NEXT:    pmulsu.h.b00 a0, a0, a1
+; RV64-NEXT:    ppairo.b a0, a0, a2
 ; RV64-NEXT:    psrai.b a0, a0, 3
 ; RV64-NEXT:    psrli.b a1, a0, 7
 ; RV64-NEXT:    padd.b a0, a0, a1
@@ -3357,8 +3355,7 @@ define <2 x i32> @test_psdiv_mulhsu_w(<2 x i32> %a) {
 ; RV64-NEXT:    lui a1, 599186
 ; RV64-NEXT:    addi a1, a1, 1171
 ; RV64-NEXT:    pmv.ws a1, a1
-; RV64-NEXT:    pmulh.w a1, a0, a1
-; RV64-NEXT:    padd.w a0, a1, a0
+; RV64-NEXT:    pmulhsu.w a0, a0, a1
 ; RV64-NEXT:    psrai.w a0, a0, 2
 ; RV64-NEXT:    psrli.w a1, a0, 31
 ; RV64-NEXT:    padd.w a0, a0, a1
