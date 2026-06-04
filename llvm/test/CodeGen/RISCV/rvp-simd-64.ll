@@ -4213,78 +4213,33 @@ define <2 x i32> @test_bitreverse_v2i32(<2 x i32> %a) {
 }
 
 define <4 x i16> @test_zext_v4i8_to_v4i16(<4 x i8> %a) {
-; RV32-LABEL: test_zext_v4i8_to_v4i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srli a1, a0, 24
-; RV32-NEXT:    slli a2, a0, 8
-; RV32-NEXT:    srli a2, a2, 24
-; RV32-NEXT:    pack a1, a2, a1
-; RV32-NEXT:    zext.b a2, a0
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    pack a0, a2, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_zext_v4i8_to_v4i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    srli a1, a0, 24
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    pzext.h.b a1, a1
-; RV64-NEXT:    pzext.h.b a2, a2
-; RV64-NEXT:    ppaire.h a1, a2, a1
-; RV64-NEXT:    pzext.h.b a2, a0
-; RV64-NEXT:    srli a0, a0, 8
-; RV64-NEXT:    pzext.h.b a0, a0
-; RV64-NEXT:    ppaire.h a0, a2, a0
-; RV64-NEXT:    pack a0, a0, a1
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_zext_v4i8_to_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pwcvtu.b a0, a0
+; CHECK-NEXT:    ret
   %res = zext <4 x i8> %a to <4 x i16>
   ret <4 x i16> %res
 }
 
 define <2 x i32> @test_zext_v2i16_to_v2i32(<2 x i16> %a) {
-; RV32-LABEL: test_zext_v2i16_to_v2i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srli a1, a0, 16
-; RV32-NEXT:    zext.h a0, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_zext_v2i16_to_v2i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pzext.w.h a1, a0
-; RV64-NEXT:    srli a0, a0, 16
-; RV64-NEXT:    pzext.w.h a0, a0
-; RV64-NEXT:    pack a0, a1, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_zext_v2i16_to_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pwcvtu.h a0, a0
+; CHECK-NEXT:    ret
   %res = zext <2 x i16> %a to <2 x i32>
   ret <2 x i32> %res
 }
 
+; FIXME: Should use psext.h.b on RV64.
 define <4 x i16> @test_sext_v4i8_to_v4i16(<4 x i8> %a) {
 ; RV32-LABEL: test_sext_v4i8_to_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a0, 24
-; RV32-NEXT:    slli a2, a0, 8
-; RV32-NEXT:    srai a2, a2, 24
-; RV32-NEXT:    pack a1, a2, a1
-; RV32-NEXT:    sext.b a2, a0
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    srai a0, a0, 24
-; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    pwcvt.b a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_sext_v4i8_to_v4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a1, a0, 24
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    ppaire.b a1, a1, a0
-; RV64-NEXT:    ppaire.b a2, a2, a0
-; RV64-NEXT:    ppaire.h a1, a2, a1
-; RV64-NEXT:    ppaire.b a2, a0, a0
-; RV64-NEXT:    srli a0, a0, 8
-; RV64-NEXT:    ppaire.b a0, a0, a0
-; RV64-NEXT:    ppaire.h a0, a2, a0
-; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    pwcvtu.b a0, a0
 ; RV64-NEXT:    pslli.h a0, a0, 8
 ; RV64-NEXT:    psrai.h a0, a0, 8
 ; RV64-NEXT:    ret
@@ -4292,19 +4247,16 @@ define <4 x i16> @test_sext_v4i8_to_v4i16(<4 x i8> %a) {
   ret <4 x i16> %res
 }
 
+; FIXME: Should use psext.w.h on RV64.
 define <2 x i32> @test_sext_v2i16_to_v2i32(<2 x i16> %a) {
 ; RV32-LABEL: test_sext_v2i16_to_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a0, 16
-; RV32-NEXT:    sext.h a0, a0
+; RV32-NEXT:    pwcvt.h a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_sext_v2i16_to_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ppaire.h a1, a0, a0
-; RV64-NEXT:    srli a0, a0, 16
-; RV64-NEXT:    ppaire.h a0, a0, a0
-; RV64-NEXT:    pack a0, a1, a0
+; RV64-NEXT:    pwcvtu.h a0, a0
 ; RV64-NEXT:    pslli.w a0, a0, 16
 ; RV64-NEXT:    psrai.w a0, a0, 16
 ; RV64-NEXT:    ret

@@ -2147,6 +2147,14 @@ let append Predicates = [IsRV32] in {
   def : LdPat<load, LW, v4i8>;
   def : LdPat<load, LW, v2i16>;
 
+  // Zero-extend patterns using wzip*p with zero
+  def : Pat<(v4i16 (zext (v4i8 GPR:$rs))), (WZIP8P GPR:$rs, (v4i8 X0))>;
+  def : Pat<(v2i32 (zext (v2i16 GPR:$rs))), (WZIP16P GPR:$rs, (v2i16 X0))>;
+
+  // Sign-extend patterns using pwadd with zero
+  def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
+  def : Pat<(v2i32 (sext (v2i16 GPR:$rs))), (PWADD_H GPR:$rs, (v2i16 X0))>;
+
   // Build vector patterns
   def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
@@ -2511,5 +2519,9 @@ let append Predicates = [IsRV64] in {
 
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
+
+  // Zero-extend patterns using zip*p with zero
+  def : Pat<(v4i16 (zext_invec (v8i8 GPR:$rs))), (ZIP8P GPR:$rs, (v8i8 X0))>;
+  def : Pat<(v2i32 (zext_invec (v4i16 GPR:$rs))), (ZIP16P GPR:$rs, (v4i16 X0))>;
 } // append Predicates = [IsRV64]
 } // Predicates = [HasStdExtP]
