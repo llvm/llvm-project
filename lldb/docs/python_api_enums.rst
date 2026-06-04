@@ -897,13 +897,10 @@ SymbolType
 .. py:data:: eSymbolTypeHeaderFile
 .. py:data:: eSymbolTypeObjectFile
 .. py:data:: eSymbolTypeCommonBlock
-.. py:data:: eSymbolTypeBlock
 .. py:data:: eSymbolTypeLocal
-.. py:data:: eSymbolTypeParam
 .. py:data:: eSymbolTypeVariable
 .. py:data:: eSymbolTypeVariableType
 .. py:data:: eSymbolTypeLineEntry
-.. py:data:: eSymbolTypeLineHeader
 .. py:data:: eSymbolTypeScopeBegin
 .. py:data:: eSymbolTypeScopeEnd
 .. py:data:: eSymbolTypeAdditional

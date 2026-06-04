@@ -229,20 +229,14 @@ def symbol_type_to_str(enum):
         return "objectfile"
     elif enum == lldb.eSymbolTypeCommonBlock:
         return "commonblock"
-    elif enum == lldb.eSymbolTypeBlock:
-        return "block"
     elif enum == lldb.eSymbolTypeLocal:
         return "local"
-    elif enum == lldb.eSymbolTypeParam:
-        return "param"
     elif enum == lldb.eSymbolTypeVariable:
         return "variable"
     elif enum == lldb.eSymbolTypeVariableType:
         return "variabletype"
     elif enum == lldb.eSymbolTypeLineEntry:
         return "lineentry"
-    elif enum == lldb.eSymbolTypeLineHeader:
-        return "lineheader"
     elif enum == lldb.eSymbolTypeScopeBegin:
         return "scopebegin"
     elif enum == lldb.eSymbolTypeScopeEnd:
