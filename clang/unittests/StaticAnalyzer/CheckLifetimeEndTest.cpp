@@ -40,9 +40,7 @@ class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
 
 public:
   void checkLifetimeEnd(const VarDecl *D, CheckerContext &C) const {
-    auto II = D->getIdentifier();
-    ASSERT_TRUE(II != nullptr);
-    report(C, II->getName() + " LIFETIME END");
+    report(C, D->getDeclName().getAsString() + " LIFETIME END");
   }
 };
 
