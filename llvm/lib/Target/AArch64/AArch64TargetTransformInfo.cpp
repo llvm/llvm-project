@@ -569,7 +569,8 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) const {
 }
 
 InstructionCost AArch64TTIImpl::getBranchMispredictPenalty() const {
-  // MispredictPenalty is defined per-CPU in AArch64Sched*.td (e.g., AArch64SchedNeoverseV2.td).
+  // MispredictPenalty is defined per-CPU in AArch64Sched*.td (e.g.,
+  // AArch64SchedNeoverseV2.td).
   return ST->getSchedModel().MispredictPenalty;
 }
 
