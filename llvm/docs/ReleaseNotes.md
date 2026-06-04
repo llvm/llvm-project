@@ -240,6 +240,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
 * `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
 * Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
+* Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
 
 ### Changes to the WebAssembly Backend
 
