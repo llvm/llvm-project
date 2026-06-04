@@ -1634,6 +1634,11 @@ def bitcast_bitcast_fold : GICombineRule<
       [{ return MRI.getType(${src0}.getReg()) == MRI.getType(${dst}.getReg()); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${src0}.getReg()); }])>;
 
+def bitcast_bitcast_to_bitcast : GICombineRule<
+  (defs root:$dst),
+  (match (G_BITCAST $dst, $src1), (G_BITCAST $src1, $src0),
+      [{ return MRI.getType(${src0}.getReg()) != MRI.getType(${dst}.getReg()); }]),
+  (apply (G_BITCAST $dst, $src0))>;
 
 def fptrunc_fpext_fold : GICombineRule<
   (defs root:$dst),
@@ -2418,7 +2423,9 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         add_sub_reg, buildvector_identity_fold,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
-                                        bitcast_bitcast_fold, fptrunc_fpext_fold,
+                                        bitcast_bitcast_fold,
+                                        bitcast_bitcast_to_bitcast,
+                                        fptrunc_fpext_fold,
                                         right_identity_neg_zero_fp, right_identity_neg_zero_fp_nsz,
                                         right_identity_neg_one_fp]>;
 
