@@ -310,8 +310,10 @@ void MCResourceInfo::gatherResourceInfo(
   });
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  auto [MaxAllowedVGPRs, MaxAllowedAGPRs] =
+  std::pair<unsigned, unsigned> MaxNumVectorRegs =
       ST.getMaxNumVectorRegs(MF.getFunction());
+  unsigned MaxAllowedVGPRs = MaxNumVectorRegs.first;
+  unsigned MaxAllowedAGPRs = MaxNumVectorRegs.second;
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
