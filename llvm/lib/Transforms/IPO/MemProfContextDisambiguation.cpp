@@ -207,7 +207,7 @@ static cl::opt<bool> AllowRecursiveContexts(
 // Set the minimum absolute count threshold for allowing inlining of indirect
 // calls promoted during cloning.
 static cl::opt<unsigned> MemProfICPNoInlineThreshold(
-    "memprof-icp-noinline-threshold", cl::init(2), cl::Hidden,
+    "memprof-icp-noinline-threshold", cl::init(0), cl::Hidden,
     cl::desc("Minimum absolute count for promoted target to be inlinable"));
 
 namespace llvm {
@@ -5899,8 +5899,19 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           break;
         }
       }
-      assert(GVSummary && GVSummary->modulePath() == SrcModule);
+      // TODO: Put back the assert once we have metadata on imported copies of
+      // aliases linking them back to the original alias GUID, which would allow
+      // us to locate the alias summary here.
+      // assert(GVSummary && GVSummary->modulePath() == SrcModule);
     }
+
+    // GVSummary can be null if this is a function imported as a copy of an
+    // alias, and we don't have the aliasee's summary in our distributed index.
+    // TODO: Once we can locate the original GUID for imported aliases (e.g. via
+    // TBD additional metadata), we should find the alias summary instead, and
+    // we can remove this check and fall back to the original check below.
+    if (!GVSummary)
+      continue;
 
     // If this was an imported alias skip it as we won't have the function
     // summary, and it should be cloned in the original module.

@@ -839,7 +839,6 @@ private:
 namespace llvm {
 template<> struct DenseMapInfo<clang::APValue::LValueBase> {
   static clang::APValue::LValueBase getEmptyKey();
-  static clang::APValue::LValueBase getTombstoneKey();
   static unsigned getHashValue(const clang::APValue::LValueBase &Base);
   static bool isEqual(const clang::APValue::LValueBase &LHS,
                       const clang::APValue::LValueBase &RHS);

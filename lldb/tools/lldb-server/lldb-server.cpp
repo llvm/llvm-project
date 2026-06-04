@@ -61,9 +61,15 @@ int main(int argc, char *argv[]) {
 
   switch (argv[1][0]) {
   case 'g': {
+#if defined(__APPLE__)
+    fprintf(stderr, "gdbserver mode is not supported on Apple platforms. "
+                    "Use debugserver instead.\n");
+    return EXIT_FAILURE;
+#else
     llgs::Initialize();
     auto terminate = llvm::scope_exit([]() { llgs::Terminate(); });
     return main_gdbserver(argc, argv);
+#endif
   }
   case 'p': {
     llgs::Initialize();

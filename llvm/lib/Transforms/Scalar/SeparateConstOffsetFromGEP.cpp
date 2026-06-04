@@ -1512,21 +1512,39 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
   First->setOperand(1, Offset2);
   Second->setOperand(1, Offset1);
 
-  // We changed p+o+c to p+c+o, p+c may not be inbound anymore.
+  // After changing (p+o)+c to (p+c)+o, the inner GEP may not be inbounds
+  // anymore.
   const DataLayout &DAL = First->getDataLayout();
-  APInt Offset(DAL.getIndexSizeInBits(
-                   cast<PointerType>(First->getType())->getAddressSpace()),
-               0);
-  Value *NewBase =
-      First->stripAndAccumulateInBoundsConstantOffsets(DAL, Offset);
-  uint64_t ObjectSize;
-  if (!getObjectSize(NewBase, ObjectSize, DAL, TLI) ||
-     Offset.ugt(ObjectSize)) {
+  unsigned IdxBits = DAL.getIndexSizeInBits(
+      cast<PointerType>(First->getType())->getAddressSpace());
+
+  auto ClearNoWrapFlags = [&] {
     // TODO(gep_nowrap): Make flag preservation more precise.
     First->setNoWrapFlags(GEPNoWrapFlags::none());
     Second->setNoWrapFlags(GEPNoWrapFlags::none());
-  } else
-    First->setIsInBounds(true);
+  };
+
+  APInt FirstOffset(IdxBits, 0);
+  if (!First->accumulateConstantOffset(DAL, FirstOffset)) {
+    ClearNoWrapFlags();
+    return;
+  }
+
+  APInt BaseOffset(IdxBits, 0);
+  Value *NewBase =
+      First->getOperand(0)->stripAndAccumulateInBoundsConstantOffsets(
+          DAL, BaseOffset);
+
+  bool Overflow = false;
+  APInt TotalOffset = BaseOffset.uadd_ov(FirstOffset, Overflow);
+  uint64_t ObjectSize;
+  if (Overflow || !getObjectSize(NewBase, ObjectSize, DAL, TLI) ||
+      TotalOffset.ugt(ObjectSize)) {
+    ClearNoWrapFlags();
+    return;
+  }
+
+  First->setIsInBounds(true);
 }
 
 void SeparateConstOffsetFromGEPPass::printPipeline(

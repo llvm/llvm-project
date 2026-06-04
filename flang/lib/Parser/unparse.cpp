@@ -152,6 +152,12 @@ public:
   void Unparse(const DeclarationTypeSpec::Record &x) {
     Word("RECORD/"), Walk(x.v), Put('/');
   }
+  void Unparse(const DeclarationTypeSpec::TypeOf &x) {
+    Word("TYPEOF("), Walk(x.v), Put(')');
+  }
+  void Unparse(const DeclarationTypeSpec::ClassOf &x) {
+    Word("CLASSOF("), Walk(x.v), Put(')');
+  }
   void Before(const IntrinsicTypeSpec::Real &) { // R704
     Word("REAL");
   }
@@ -2097,7 +2103,7 @@ public:
   void Unparse(const OpenACCRoutineConstruct &x) {
     BeginOpenACC();
     Word("!$ACC ROUTINE");
-    Walk("(", std::get<std::optional<Name>>(x.t), ")");
+    Walk("(", std::get<std::list<Name>>(x.t), ",", ")");
     Walk(std::get<AccClauseList>(x.t));
     Put("\n");
     EndOpenACC();
@@ -2843,6 +2849,7 @@ public:
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
   WALK_NESTED_ENUM(common, OmpDependenceKind)
+  WALK_NESTED_ENUM(common, OmpDeviceType)
   WALK_NESTED_ENUM(common, OmpMemoryOrderType)
   WALK_NESTED_ENUM(IntentSpec, Intent) // R826
   WALK_NESTED_ENUM(ImplicitStmt, ImplicitNoneNameSpec) // R866
@@ -2870,8 +2877,6 @@ public:
   WALK_NESTED_ENUM(OmpThreadsetClause, ThreadsetPolicy) // OMP threadset
   WALK_NESTED_ENUM(OmpAccessGroup, Value)
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
-  WALK_NESTED_ENUM(
-      OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpFallbackModifier, Value) // OMP fallback-modifier
@@ -2897,6 +2902,9 @@ public:
     switch (x) {
     case ReductionOperator::Operator::Plus:
       Word("+");
+      break;
+    case ReductionOperator::Operator::Minus:
+      Word("-");
       break;
     case ReductionOperator::Operator::Multiply:
       Word("*");
