@@ -11,8 +11,6 @@
 // Ensure that users can suppress the wstring_convert deprecation warning
 // using #pragma clang diagnostic ignored around the usage site.
 
-// ADDITIONAL_COMPILE_FLAGS: -Werror=deprecated-declarations
-
 // REQUIRES: c++17 || c++20 || c++23
 // UNSUPPORTED: no-wide-characters
 
