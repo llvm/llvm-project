@@ -10,8 +10,7 @@ define void @store_2x_vectors_offset_mul_vl(<vscale x 16 x i8> %zn0, <vscale x 1
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    addvl x8, x0, #14
-; CHECK-NEXT:    st1b { z0.b, z1.b }, pn8, [x8]
+; CHECK-NEXT:    st1b { z0.b, z1.b }, pn8, [x0, #14, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -28,10 +27,9 @@ define void @store_4x_vectors_offset_mul_vl(<vscale x 16 x i8> %zn0, <vscale x 1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    incb x0, all, mul #4
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    st1b { z0.b - z3.b }, pn8, [x0]
+; CHECK-NEXT:    st1b { z0.b - z3.b }, pn8, [x0, #4, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -50,8 +48,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @load_x2_vectors_offset_mul_vl
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    rdvl x8, #-2
-; CHECK-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [x0, x8]
+; CHECK-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [x0, #-2, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -70,8 +67,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    rdvl x8, #-4
-; CHECK-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [x0, x8]
+; CHECK-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [x0, #-4, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -92,8 +88,7 @@ define void @store_2x_vectors_offset_mul_vl_nt(<vscale x 16 x i8> %zn0, <vscale 
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    addvl x8, x0, #14
-; CHECK-NEXT:    stnt1b { z0.b, z1.b }, pn8, [x8]
+; CHECK-NEXT:    stnt1b { z0.b, z1.b }, pn8, [x0, #14, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -110,10 +105,9 @@ define void @store_4x_vectors_offset_mul_vl_nt(<vscale x 16 x i8> %zn0, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    incb x0, all, mul #4
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    stnt1b { z0.b - z3.b }, pn8, [x0]
+; CHECK-NEXT:    stnt1b { z0.b - z3.b }, pn8, [x0, #4, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -132,8 +126,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @load_x2_vectors_offset_mul_vl
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    rdvl x8, #-2
-; CHECK-NEXT:    ldnt1b { z0.b, z1.b }, pn8/z, [x0, x8]
+; CHECK-NEXT:    ldnt1b { z0.b, z1.b }, pn8/z, [x0, #-2, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -152,8 +145,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    rdvl x8, #-4
-; CHECK-NEXT:    ldnt1b { z0.b - z3.b }, pn8/z, [x0, x8]
+; CHECK-NEXT:    ldnt1b { z0.b - z3.b }, pn8/z, [x0, #-4, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
