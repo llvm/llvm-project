@@ -6,7 +6,7 @@
 # CHECK-NEXT: >>> referenced by test.c:3
 # CHECK-NEXT: >>>               {{.*}}.o:(symbol _main+0x0)
 # CHECK-NEXT: >>> referenced by test.c:2
-# CHECK-NEXT  >>>               {{.*}}.o:(symbol _ptr+0x0)
+# CHECK-NEXT: >>>               {{.*}}.o:(symbol _ptr+0x0)
 
 ## This is the output of `clang -g2 -O2 -fdebug-compilation-dir=. -fno-ident` called on the following file, with the
 ## Apple DWARF tables removed:
