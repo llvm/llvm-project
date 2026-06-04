@@ -21,6 +21,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
@@ -212,6 +213,10 @@ public:
   bool hasOrigins(QualType QT) const;
   bool hasOrigins(const Expr *E) const;
 
+  bool isAccessedField(const FieldDecl *FD) const {
+    return AccessedFields.contains(FD);
+  }
+
   void dump(OriginID OID, llvm::raw_ostream &OS,
             const FieldDecl *FD = nullptr) const;
 
@@ -231,10 +236,13 @@ private:
 
   void initializeThisOrigins(const Decl *D);
 
-  /// Pre-scans the function body (and constructor init lists) to discover
-  /// return types of lifetime-annotated calls (currently
-  /// [[clang::lifetimebound]]), registering them for origin tracking.
-  void collectLifetimeAnnotatedOriginTypes(const AnalysisDeclContext &AC);
+  /// Pre-scans the function body (and constructor init lists) to discover:
+  ///
+  /// 1. Return types of lifetime-annotated calls (currently
+  ///    [[clang::lifetimebound]]), registering them for origin tracking.
+  ///
+  /// 2. The fields it accesses; the rest are excluded from origin tracking.
+  void runPreScan(const AnalysisDeclContext &AC);
   void registerLifetimeAnnotatedOriginType(QualType QT);
 
   ASTContext &AST;
@@ -250,6 +258,9 @@ private:
   /// because of lifetime annotations (currently [[clang::lifetimebound]]) on
   /// functions that return them.
   llvm::DenseSet<const Type *> LifetimeAnnotatedOriginTypes;
+  /// Fields accessed in the function body (or constructor init lists).
+  /// Fields outside this set are excluded from origin tracking.
+  llvm::SmallPtrSet<const FieldDecl *, 8> AccessedFields;
 };
 } // namespace clang::lifetimes::internal
 
