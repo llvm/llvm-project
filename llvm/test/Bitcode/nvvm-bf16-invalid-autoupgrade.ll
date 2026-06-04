@@ -1,6 +1,6 @@
 ; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
-; CHECK: intrinsic has incorrect return type!
+; CHECK: intrinsic return type expected bfloat, but got half
 declare half @llvm.nvvm.neg.bf16(bfloat)
 
 define void @test() {
@@ -8,7 +8,7 @@ define void @test() {
   ret void
 }
 
-; CHECK: intrinsic has incorrect argument type!
+; CHECK: intrinsic argument 1 type expected bfloat, but got half
 declare bfloat @llvm.nvvm.fmax.bf16(bfloat, half)
 
 define void @wrong_argument(bfloat %x, half %y) {
