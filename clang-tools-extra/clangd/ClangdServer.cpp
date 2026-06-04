@@ -1202,7 +1202,7 @@ void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
   auto HasRequiredModules = [this, File]() {
     if (!ModulesManager)
       return false;
-    // Required modules check uses compile commands extraced from the
+    // Required modules check uses compile commands extracted from the
     // compilation database.
     // We use context provider here to make command mangler to use compile
     // command adjustments from the config.
