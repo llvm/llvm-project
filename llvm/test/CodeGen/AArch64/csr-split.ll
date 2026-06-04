@@ -83,13 +83,12 @@ declare signext i32 @callNonVoid(ptr) local_unnamed_addr
 define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr uwtable  {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cbz x0, .LBB1_3
-; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    adrp x8, a
 ; CHECK-NEXT:    ldrsw x8, [x8, :lo12:a]
 ; CHECK-NEXT:    cmp x8, x0
-; CHECK-NEXT:    b.ne .LBB1_3
-; CHECK-NEXT:  // %bb.2: // %if.then2
+; CHECK-NEXT:    ccmp x0, #0, #4, eq
+; CHECK-NEXT:    b.eq .LBB1_2
+; CHECK-NEXT:  // %bb.1: // %if.then2
 ; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
@@ -102,21 +101,20 @@ define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr uwtable  {
 ; CHECK-NEXT:    .cfi_restore w19
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    b callNonVoid
-; CHECK-NEXT:  .LBB1_3: // %return
+; CHECK-NEXT:  .LBB1_2: // %return
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-APPLE-LABEL: test2:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
-; CHECK-APPLE-NEXT:    cbz x0, LBB1_3
-; CHECK-APPLE-NEXT:  ; %bb.1: ; %entry
 ; CHECK-APPLE-NEXT:  Lloh2:
 ; CHECK-APPLE-NEXT:    adrp x8, _a@PAGE
 ; CHECK-APPLE-NEXT:  Lloh3:
 ; CHECK-APPLE-NEXT:    ldrsw x8, [x8, _a@PAGEOFF]
 ; CHECK-APPLE-NEXT:    cmp x8, x0
-; CHECK-APPLE-NEXT:    b.ne LBB1_3
-; CHECK-APPLE-NEXT:  ; %bb.2: ; %if.then2
+; CHECK-APPLE-NEXT:    ccmp x0, #0, #4, eq
+; CHECK-APPLE-NEXT:    b.eq LBB1_2
+; CHECK-APPLE-NEXT:  ; %bb.1: ; %if.then2
 ; CHECK-APPLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
@@ -135,7 +133,7 @@ define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr uwtable  {
 ; CHECK-APPLE-NEXT:    .cfi_restore w19
 ; CHECK-APPLE-NEXT:    .cfi_restore w20
 ; CHECK-APPLE-NEXT:    b _callNonVoid
-; CHECK-APPLE-NEXT:  LBB1_3: ; %return
+; CHECK-APPLE-NEXT:  LBB1_2: ; %return
 ; CHECK-APPLE-NEXT:    mov w0, wzr
 ; CHECK-APPLE-NEXT:    ret
 ; CHECK-APPLE-NEXT:    .loh AdrpLdr Lloh2, Lloh3

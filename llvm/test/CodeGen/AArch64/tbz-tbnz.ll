@@ -199,20 +199,20 @@ if.end:
 define void @test8(i64 %val1, i64 %val2, i64 %val3) {
 ; CHECK-SD-LABEL: test8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    tst x0, x1
-; CHECK-SD-NEXT:    b.pl .LBB7_3
-; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    and x8, x1, x2
-; CHECK-SD-NEXT:    tbnz x8, #63, .LBB7_3
-; CHECK-SD-NEXT:  // %bb.2: // %if.then2
+; CHECK-SD-NEXT:    and x9, x0, x1
+; CHECK-SD-NEXT:    cmn x8, #1
+; CHECK-SD-NEXT:    ccmp x9, #0, #0, gt
+; CHECK-SD-NEXT:    b.pl .LBB7_2
+; CHECK-SD-NEXT:  // %bb.1: // %if.then2
 ; CHECK-SD-NEXT:    tst x0, x1, lsl #63
-; CHECK-SD-NEXT:    b.mi .LBB7_4
-; CHECK-SD-NEXT:  .LBB7_3: // %if.end
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB7_4: // %if.then3
-; CHECK-SD-NEXT:    tst x0, x1, lsl #62
 ; CHECK-SD-NEXT:    b.mi .LBB7_3
-; CHECK-SD-NEXT:  // %bb.5: // %if.then4
+; CHECK-SD-NEXT:  .LBB7_2: // %if.end
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB7_3: // %if.then3
+; CHECK-SD-NEXT:    tst x0, x1, lsl #62
+; CHECK-SD-NEXT:    b.mi .LBB7_2
+; CHECK-SD-NEXT:  // %bb.4: // %if.then4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16

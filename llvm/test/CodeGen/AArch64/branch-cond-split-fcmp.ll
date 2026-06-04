@@ -7,19 +7,20 @@ declare i64 @bar()
 define i64 @test_or(float %a, float %b) {
 ; CHECK-SD-LABEL: test_or:
 ; CHECK-SD:       // %bb.0: // %bb1
-; CHECK-SD-NEXT:    fcmp s0, #0.0
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    b.ne .LBB0_3
-; CHECK-SD-NEXT:  // %bb.1: // %bb1
+; CHECK-SD-NEXT:    movi d2, #0000000000000000
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    b.ne .LBB0_3
-; CHECK-SD-NEXT:  // %bb.2: // %bb4
+; CHECK-SD-NEXT:    fccmp s0, s2, #0, eq
+; CHECK-SD-NEXT:    cset w8, eq
+; CHECK-SD-NEXT:    tbnz w8, #0, .LBB0_2
+; CHECK-SD-NEXT:  // %bb.1:
+; CHECK-SD-NEXT:    mov x0, xzr
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB0_2: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl bar
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-SD-NEXT:  .LBB0_3: // %common.ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_or:
@@ -56,19 +57,19 @@ bb4:
 define i64 @test_or_select(float %a, float %b) {
 ; CHECK-SD-LABEL: test_or_select:
 ; CHECK-SD:       // %bb.0: // %bb1
-; CHECK-SD-NEXT:    fcmp s0, #0.0
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    b.ne .LBB1_3
-; CHECK-SD-NEXT:  // %bb.1: // %bb1
+; CHECK-SD-NEXT:    movi d2, #0000000000000000
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    b.ne .LBB1_3
-; CHECK-SD-NEXT:  // %bb.2: // %bb4
+; CHECK-SD-NEXT:    fccmp s0, s2, #0, eq
+; CHECK-SD-NEXT:    b.eq .LBB1_2
+; CHECK-SD-NEXT:  // %bb.1:
+; CHECK-SD-NEXT:    mov x0, xzr
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB1_2: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl bar
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-SD-NEXT:  .LBB1_3: // %common.ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_or_select:
@@ -105,22 +106,22 @@ bb4:
 define i64 @test_and(float %a, float %b) {
 ; CHECK-SD-LABEL: test_and:
 ; CHECK-SD:       // %bb.0: // %bb1
-; CHECK-SD-NEXT:    fcmp s0, #0.0
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    b.mi .LBB2_2
-; CHECK-SD-NEXT:    b.gt .LBB2_2
-; CHECK-SD-NEXT:  // %bb.1: // %bb1
+; CHECK-SD-NEXT:    movi d2, #0000000000000000
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    b.eq .LBB2_3
-; CHECK-SD-NEXT:    b.vs .LBB2_3
-; CHECK-SD-NEXT:  .LBB2_2: // %common.ret
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB2_3: // %bb4
+; CHECK-SD-NEXT:    fccmp s1, s2, #8, le
+; CHECK-SD-NEXT:    fccmp s0, s2, #0, pl
+; CHECK-SD-NEXT:    fccmp s0, s2, #8, le
+; CHECK-SD-NEXT:    cset w8, pl
+; CHECK-SD-NEXT:    tbz w8, #0, .LBB2_2
+; CHECK-SD-NEXT:  // %bb.1: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl bar
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB2_2:
+; CHECK-SD-NEXT:    mov x0, xzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_and:
@@ -160,22 +161,22 @@ bb4:
 define i64 @test_and_select(float %a, float %b) {
 ; CHECK-SD-LABEL: test_and_select:
 ; CHECK-SD:       // %bb.0: // %bb1
-; CHECK-SD-NEXT:    fcmp s0, #0.0
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    b.mi .LBB3_2
-; CHECK-SD-NEXT:    b.gt .LBB3_2
-; CHECK-SD-NEXT:  // %bb.1: // %bb1
+; CHECK-SD-NEXT:    movi d2, #0000000000000000
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    b.eq .LBB3_3
-; CHECK-SD-NEXT:    b.vs .LBB3_3
-; CHECK-SD-NEXT:  .LBB3_2: // %common.ret
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB3_3: // %bb4
+; CHECK-SD-NEXT:    fccmp s1, s2, #8, le
+; CHECK-SD-NEXT:    fccmp s0, s2, #0, pl
+; CHECK-SD-NEXT:    fccmp s0, s2, #8, le
+; CHECK-SD-NEXT:    cset w8, pl
+; CHECK-SD-NEXT:    tbz w8, #0, .LBB3_2
+; CHECK-SD-NEXT:  // %bb.1: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    bl bar
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB3_2:
+; CHECK-SD-NEXT:    mov x0, xzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_and_select:
