@@ -7,6 +7,12 @@ set(LLVM_LINK_COMPONENTS
 add_bolt_unittest(ProfileTests
   DataAggregator.cpp
   PerfSpeEvents.cpp
+  PerfScripts.cpp
+
+  # FIXME CoreTests uses `llvm::detail::TakeError(llvm::Error)`, but linking
+  #       to LLVMTestingSupport introduces a transitive dependency on the
+  #       dynamic LLVM library when LLVM_LINK_LLVM_DYLIB is ON.
+  ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support/Error.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )

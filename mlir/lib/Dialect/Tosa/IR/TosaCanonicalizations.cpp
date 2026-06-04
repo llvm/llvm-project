@@ -1515,6 +1515,24 @@ struct Exp2FoldAdaptor {
   }
 };
 
+// The specification requires shape div operations to have non-negative lhs and
+// strictly positive rhs so we can only fold when these conditions are met.
+template <bool Ceil>
+struct ShapeDivFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    assert(!isUnsigned &&
+           "unsigned values are not supported for shape div folders");
+    if (lhs.isNegative() || !rhs.isStrictlyPositive())
+      return failure();
+    return DivFoldAdaptor<Ceil>::fold(lhs, rhs, isUnsigned);
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return failure();
+  }
+};
+
 struct Log2CeilFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &value, bool isUnsigned) {
     if (!value.isStrictlyPositive())
@@ -1648,10 +1666,12 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1());
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
-  if (lhsAttr && lhsAttr.isSplat()) {
+  if (lhsAttr && lhsAttr.isSplat() && rhsAttr && rhsAttr.isSplat()) {
     if (llvm::isa<IntegerType>(resultETy) && resultTy.hasStaticShape() &&
-        lhsAttr.getSplatValue<APInt>().isZero())
+        lhsAttr.getSplatValue<APInt>().isZero() &&
+        !rhsAttr.getSplatValue<APInt>().isZero()) {
       return lhsAttr.resizeSplat(resultTy);
+    }
   }
 
   if (rhsAttr && rhsAttr.isSplat()) {
@@ -2430,11 +2450,11 @@ OpFoldResult tosa::MulShapeOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::DivCeilShapeOp::fold(FoldAdaptor adaptor) {
-  return binaryFold<DivCeilShapeOp, DivFoldAdaptor</*Ceil*/ true>>(this);
+  return binaryFold<DivCeilShapeOp, ShapeDivFoldAdaptor</*Ceil*/ true>>(this);
 }
 
 OpFoldResult tosa::DivFloorShapeOp::fold(FoldAdaptor adaptor) {
-  return binaryFold<DivFloorShapeOp, DivFoldAdaptor</*Ceil*/ false>>(this);
+  return binaryFold<DivFloorShapeOp, ShapeDivFoldAdaptor</*Ceil*/ false>>(this);
 }
 
 OpFoldResult tosa::ModShapeOp::fold(FoldAdaptor adaptor) {

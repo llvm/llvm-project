@@ -168,8 +168,8 @@ public:
   /// command line.
   std::string Dir;
 
-  /// The original path to the clang executable.
-  std::string ClangExecutable;
+  /// The original path to the driver executable.
+  std::string DriverExecutable;
 
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
@@ -389,7 +389,7 @@ private:
                               SmallString<128> &CrashDiagDir);
 
 public:
-  Driver(StringRef ClangExecutable, StringRef TargetTriple,
+  Driver(StringRef DriverExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags, std::string Title = "clang LLVM compiler",
          IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
@@ -426,10 +426,8 @@ public:
 
   std::string getTargetTriple() const { return TargetTriple; }
 
-  /// Get the path to the main clang executable.
-  const char *getClangProgramPath() const {
-    return ClangExecutable.c_str();
-  }
+  /// Get the path to the main driver executable.
+  const char *getDriverProgramPath() const { return DriverExecutable.c_str(); }
 
   StringRef getPreferredLinker() const { return PreferredLinker; }
   void setPreferredLinker(std::string Value) {
