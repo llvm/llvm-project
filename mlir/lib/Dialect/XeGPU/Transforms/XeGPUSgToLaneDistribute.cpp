@@ -1224,6 +1224,13 @@ struct SgToLaneVectorExtractStridedSlice
         return rewriter.notifyMatchFailure(
             op, "source of extract_strided_slice lacks distribution layout");
       int sourceDistrDimSize = op.getSourceVectorType().getShape()[distDim];
+      auto laneLayout = sourceLayout.getEffectiveLaneLayoutAsInt();
+      // Effective subgroup size needs to be adjusted if laneLayout along
+      // the distributed dimension is smaller than subgroup size.
+      if (laneLayout[distDim] < subgroupSize) {
+        if (subgroupSize % laneLayout[distDim] == 0)
+          subgroupSize = laneLayout[distDim];
+      }
       if (sourceDistrDimSize % subgroupSize != 0)
         return rewriter.notifyMatchFailure(
             op, "source size along distributed dim is not a multiple of "
@@ -1531,7 +1538,99 @@ struct SgToLaneConvertLayout
       return rewriter.notifyMatchFailure(
           op, "lowering incompatible convert_layout not yet supported");
     }
+    // Handle special case where laneLayout involves partial subgroup
+    if (inputLayout.getEffectiveOrderAsInt() ==
+            targetLayout.getEffectiveOrderAsInt() &&
+        inputLayout.getRank() == 2 && targetLayout.getRank() == 2) {
+      auto laneLayout = inputLayout.getEffectiveLaneLayoutAsInt();
+      auto targetLaneLayout = targetLayout.getEffectiveLaneLayoutAsInt();
+      auto dataLayout = inputLayout.getEffectiveLaneDataAsInt();
+      auto targetDataLayout = targetLayout.getEffectiveLaneDataAsInt();
+      if (dataLayout == targetDataLayout && laneLayout != targetLaneLayout) {
+        int64_t factor = 1;
+        int64_t distDim = 1;
+        if (laneLayout[0] == 1) {
+          // distribute along inner dim
+          factor = laneLayout[1] / targetLaneLayout[1];
+        } else if (laneLayout[1] == 1) {
+          // distribute alone outer dim
+          factor = laneLayout[0] / targetLaneLayout[0];
+          distDim = 0;
+        } else {
+          return rewriter.notifyMatchFailure(
+              op, "distribution across multiple dimensions is not supported");
+        }
+        // Currently, partial subgroup support is limited to special cases
+        // TODO: enable more cases as new usage cases shows up
+        if (distDim == 1)
+          return rewriter.notifyMatchFailure(
+              op, "distribution along inner dimension is not supported.");
+        // Supporting only factor of 2 for now.
+        if (factor != 2)
+          return rewriter.notifyMatchFailure(
+              op, "only supports half of subgroup size.");
+        // Val1 : get source
+        Value src = adaptor.getSource();
+        VectorType srcTy = dyn_cast<VectorType>(src.getType());
+        if (!srcTy)
+          return rewriter.notifyMatchFailure(op, "expected VectorType source.");
+        if (srcTy.getRank() != 2)
+          return rewriter.notifyMatchFailure(op,
+                                             "expected VectorType of rank 2.");
+        auto vectorBitWidth =
+            srcTy.getNumElements() * srcTy.getElementTypeBitWidth();
+        if (vectorBitWidth % 32 != 0)
+          return rewriter.notifyMatchFailure(
+              op, "Vector bitwidth must be a multiple of 32bit.");
+        // Vector cannot be directly shuffled
+        // -- cast to vector to 1D vector of i32
+        // -- create empty temp 1D vector of i32
+        // -- loop
+        // --- extract i32 from source vector
+        // --- gpu.shuffle up by targetLaneLayout[0]
+        // --- insert to temp vector
+        // -- cast target vector to source vector type.
+        // -- vector.shuffle source and temp to create result
+        auto loc = op.getLoc();
+        Type shuffleElemTy = rewriter.getI32Type();
+        auto numShuffles = vectorBitWidth / 32;
+        VectorType shuffleBundleTy =
+            VectorType::get({numShuffles}, shuffleElemTy);
+        // Initialize temp to zero.
+        Value temp = arith::ConstantOp::create(
+            rewriter, loc,
+            DenseElementsAttr::get(shuffleBundleTy,
+                                   IntegerAttr::get(shuffleElemTy, 0)));
+        VectorType flatSrcTy =
+            VectorType::get({srcTy.getNumElements()}, srcTy.getElementType());
+        auto flatSrc =
+            vector::ShapeCastOp::create(rewriter, loc, flatSrcTy, src);
+        auto shuffleBundle =
+            vector::BitCastOp::create(rewriter, loc, shuffleBundleTy, flatSrc);
+        for (decltype(numShuffles) i = 0; i < numShuffles; i++) {
+          Value shuffleElem =
+              vector::ExtractOp::create(rewriter, loc, shuffleBundle, i);
+          shuffleElem =
+              gpu::ShuffleOp::create(rewriter, loc, shuffleElem, 0,
+                                     targetLaneLayout[0], gpu::ShuffleMode::UP)
+                  .getResult(0);
+          temp = vector::InsertOp::create(rewriter, loc, shuffleElem, temp, i);
+        }
+        temp = vector::BitCastOp::create(rewriter, loc, flatSrcTy, temp);
+        temp = vector::ShapeCastOp::create(rewriter, loc, srcTy, temp);
 
+        // vector.shuffle the two values src and temp
+        auto shape = srcTy.getShape();
+        SmallVector<int64_t> indices(shape[0] * 2);
+        std::iota(indices.begin(), indices.end(), 0);
+        Value res =
+            vector::ShuffleOp::create(rewriter, loc, src, temp, indices);
+        rewriter.replaceOp(op, res);
+        return success();
+      }
+    }
+
+    // Normal compatible case is just a replace with source.
     rewriter.replaceOp(op, adaptor.getSource());
     return success();
   }
