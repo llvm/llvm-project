@@ -392,7 +392,8 @@ private:
         old = RwState::fetch_set_pending_bit<role>(state,
                                                    cpp::MemoryOrder::RELAXED);
         // relaxed atomic since it is already protected by the mutex.
-        serial_number = guard.serialization<role>().load(cpp::MemoryOrder::RELAXED);
+        serial_number =
+            guard.serialization<role>().load(cpp::MemoryOrder::RELAXED);
       }
 
       // Phase 6: do futex wait until the lock is available or timeout is
@@ -437,10 +438,12 @@ private:
     {
       WaitingQueue::Guard guard = queue.acquire(is_pshared);
       if (guard.pending_count<Role::Writer>() != 0) {
-        guard.serialization<Role::Writer>().fetch_add(1, cpp::MemoryOrder::RELEASE);
+        guard.serialization<Role::Writer>().fetch_add(
+            1, cpp::MemoryOrder::RELEASE);
         status = WakeTarget::Writers;
       } else if (guard.pending_count<Role::Reader>() != 0) {
-        guard.serialization<Role::Reader>().fetch_add(1, cpp::MemoryOrder::RELEASE);
+        guard.serialization<Role::Reader>().fetch_add(
+            1, cpp::MemoryOrder::RELEASE);
         status = WakeTarget::Readers;
       } else {
         status = WakeTarget::None;
