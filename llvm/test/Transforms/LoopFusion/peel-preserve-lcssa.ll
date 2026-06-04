@@ -8,7 +8,7 @@ define void @lcssa_peel_repro() {
 ; CHECK:       [[OUTER_HEADER_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ poison, %[[OUTER_HEADER_LOOPEXIT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[XOR:%.*]], %[[OUTER_HEADER_LOOPEXIT]] ]
 ; CHECK-NEXT:    br label %[[INNER1_PEEL_BEGIN:.*]]
 ; CHECK:       [[INNER1_PEEL_BEGIN]]:
 ; CHECK-NEXT:    br label %[[INNER1_PEEL:.*]]
@@ -23,7 +23,7 @@ define void @lcssa_peel_repro() {
 ; CHECK:       [[OUTER_HEADER_PEEL_NEWPH]]:
 ; CHECK-NEXT:    br label %[[INNER1:.*]]
 ; CHECK:       [[INNER1]]:
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 0, 0
+; CHECK-NEXT:    [[XOR]] = xor i64 0, 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 1, 1
 ; CHECK-NEXT:    br i1 false, label %[[INNER1]], label %[[OUTER_HEADER_LOOPEXIT]]
 ;
