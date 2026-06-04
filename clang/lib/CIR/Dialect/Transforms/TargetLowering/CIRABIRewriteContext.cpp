@@ -17,13 +17,19 @@ using namespace mlir;
 using namespace mlir::abi;
 
 // This rewrite context supports the Direct (with or without coercion),
-// Extend, Ignore, Indirect-return (sret), and Indirect-argument (byval and
-// byref) classifications.  For byval (ArgClassification::byVal == true) the
-// callee gets llvm.byval + llvm.noalias + llvm.noundef; for byref (byVal ==
-// false) the callee gets llvm.byref without the ownership attrs.  Both pass
-// through an alloca+store at the call site; the attribute distinction
-// communicates ownership semantics to the optimizer.  Expand still emits an
-// errorNYI rather than silently passing through.
+// Extend, Ignore, Indirect-return (sret), Indirect-argument (byval and
+// byref), and Expand (struct flattening) classifications.
+//
+// For byval (ArgClassification::byVal == true) the callee gets
+// llvm.byval + llvm.noalias + llvm.noundef; for byref (byVal == false)
+// the callee gets llvm.byref without the ownership attrs.  Both pass
+// through an alloca+store at the call site.
+//
+// For Expand, the single struct argument is replaced by N scalar arguments
+// (one per field).  At the callee, the N block arguments are reassembled
+// into the struct via an alloca+get_member+store+load sequence.  At the
+// call site, the struct operand is decomposed into its fields using
+// cir.extract_member.
 
 namespace {
 
@@ -41,10 +47,10 @@ bool needsRewrite(const FunctionClassification &fc) {
 }
 
 /// Build the new argument-type list for a function whose ABI classification
-/// is \p fc.  Handles Direct (with or without coercion), Extend, Ignore, and
-/// Indirect (byval and byref) arguments.  Expand emits an error.  The sret
-/// return pointer, when present, is prepended by rewriteFunctionDefinition
-/// rather than here.
+/// is \p fc.  Handles Direct (with or without coercion), Extend, Ignore,
+/// Indirect (byval and byref), and Expand (struct flattening) arguments.
+/// The sret return pointer, when present, is prepended by
+/// rewriteFunctionDefinition rather than here.
 LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
                                const FunctionClassification &fc,
                                SmallVectorImpl<Type> &newArgTypes,
@@ -63,10 +69,19 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
       break;
     case ArgKind::Ignore:
       break;
-    case ArgKind::Expand:
-      emitError() << "Expand at arg " << idx
-                  << " not yet implemented in CallConvLowering";
-      return failure();
+    case ArgKind::Expand: {
+      // Flatten the struct into one wire argument per field.  The
+      // reassembly in the callee body and the decomposition at the call
+      // site are handled by insertArgCoercion and rewriteCallSite.
+      auto recTy = cast<cir::RecordType>(origTy);
+      assert(recTy.isStruct() &&
+             "Expand classification requires a struct type, not a union");
+      assert(!recTy.getMembers().empty() &&
+             "Expand classification requires at least one struct field");
+      for (Type memberTy : recTy.getMembers())
+        newArgTypes.push_back(memberTy);
+      break;
+    }
     case ArgKind::Extend:
       // Extend keeps the original (narrow) type in the signature; the
       // sign/zero extension is communicated to LLVM via the llvm.signext /
@@ -146,7 +161,13 @@ ArrayAttr updateArgAttrs(MLIRContext *ctx, ArrayRef<Type> origArgTypes,
     DictionaryAttr existing = DictionaryAttr::get(ctx);
     if (existingArgAttrs && oldIdx < existingArgAttrs.size())
       existing = cast<DictionaryAttr>(existingArgAttrs[oldIdx]);
-    if (ac.kind == ArgKind::Extend) {
+    if (ac.kind == ArgKind::Expand) {
+      // Push one empty attribute dict per expanded field; the flattened
+      // scalar arguments carry no special ABI attributes.
+      auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
+      for (unsigned i = 0; i < recTy.getNumElements(); ++i)
+        newArgAttrs.push_back(DictionaryAttr::get(ctx));
+    } else if (ac.kind == ArgKind::Extend) {
       StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
       NamedAttribute extAttr(StringAttr::get(ctx, attrName),
                              UnitAttr::get(ctx));
@@ -314,12 +335,17 @@ void insertReturnCoercion(FunctionOpInterface funcOp, Type origRetTy,
 
 /// For each Direct arg with a coerced type, change the block argument's type
 /// to the coerced type and insert a coercion at function entry that maps it
-/// back to the original type for body uses.  For each Indirect (byval) arg,
-/// change the block argument's type to a pointer and insert a load at entry
-/// so the body sees the original value type.
+/// back to the original type for body uses.  For each Indirect (byval/byref)
+/// arg, change the block argument's type to a pointer and insert a load at
+/// entry so the body sees the original value type.  For each Expand arg,
+/// replace the single struct block argument with N scalar block arguments (one
+/// per field) and insert an alloca+get_member+store+load sequence at entry to
+/// reassemble the struct for body uses.
+///
 /// \p sretOffset is 1 when the function has an sret return (a hidden return
-/// pointer is prepended as block argument 0), so classification index \p idx
-/// maps to block argument \p idx + \p sretOffset.
+/// pointer is prepended as block argument 0).  Expand arguments expand the
+/// block argument count, so a running index tracks the current block argument
+/// position rather than computing \p classIdx + \p sretOffset directly.
 void insertArgCoercion(FunctionOpInterface funcOp,
                        const FunctionClassification &fc, OpBuilder &rewriter,
                        const DataLayout &dl, unsigned sretOffset) {
@@ -328,19 +354,78 @@ void insertArgCoercion(FunctionOpInterface funcOp,
     return;
   Block &entry = body.front();
 
-  for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
-    unsigned blockIdx = idx + sretOffset;
-    if (blockIdx >= entry.getNumArguments())
-      continue;
+  // Running block argument index.  Each non-Expand classification occupies
+  // one block argument slot; each Expand classification occupies N slots
+  // (one per struct field), so the running index must be incremented by N
+  // rather than 1 after processing an Expand arg.
+  unsigned blockArgIdx = sretOffset;
 
-    BlockArgument blockArg = entry.getArgument(blockIdx);
+  for (const ArgClassification &ac : fc.argInfos) {
+    if (blockArgIdx >= entry.getNumArguments())
+      break;
+
+    if (ac.kind == ArgKind::Expand) {
+      // The block arg at blockArgIdx currently has the original struct type.
+      // Replace it with N scalar args (one per field) and insert an entry
+      // sequence that reassembles them back into the struct.
+      BlockArgument origArg = entry.getArgument(blockArgIdx);
+      auto recTy = cast<cir::RecordType>(origArg.getType());
+      assert(recTy.isStruct() &&
+             "Expand classification requires a struct type, not a union");
+      unsigned numFields = recTy.getNumElements();
+      assert(numFields > 0 &&
+             "Expand classification requires at least one struct field");
+      Location loc = funcOp.getLoc();
+
+      // Change slot 0 to field 0's type; insert slots 1..N-1 after it.
+      origArg.setType(recTy.getElementType(0));
+      for (unsigned f = 1; f < numFields; ++f)
+        entry.insertArgument(blockArgIdx + f, recTy.getElementType(f), loc);
+
+      // setInsertionPointToStart places each Expand arg's prolog at the
+      // top of the entry block.  When multiple Expand args are present
+      // the second call pushes its prolog before the first one, inverting
+      // the emission order relative to the classification order.  The SSA
+      // subgraphs are fully independent — each alloca is written through
+      // its own field block args — so the inverted ordering is safe.
+      rewriter.setInsertionPointToStart(&entry);
+      auto ptrTy = cir::PointerType::get(recTy);
+      uint64_t align = dl.getTypeABIAlignment(recTy);
+      auto slot = cir::AllocaOp::create(rewriter, loc, ptrTy, recTy,
+                                        rewriter.getStringAttr("expand"),
+                                        rewriter.getI64IntegerAttr(align));
+      SmallPtrSet<Operation *, 8> expandOps = {slot};
+      for (unsigned f = 0; f < numFields; ++f) {
+        Type fieldPtrTy = cir::PointerType::get(recTy.getElementType(f));
+        auto fieldPtr = cir::GetMemberOp::create(rewriter, loc, fieldPtrTy,
+                                                 slot, /*name=*/"",
+                                                 /*index=*/f);
+        expandOps.insert(fieldPtr);
+        auto storeOp = cir::StoreOp::create(
+            rewriter, loc, entry.getArgument(blockArgIdx + f), fieldPtr);
+        expandOps.insert(storeOp);
+      }
+      auto loaded = cir::LoadOp::create(rewriter, loc, recTy, slot.getResult());
+      expandOps.insert(loaded);
+
+      // Replace all original body uses of the struct block arg with the
+      // reassembled value.  The store for field 0 uses origArg and is
+      // in expandOps, so it is preserved.
+      origArg.replaceAllUsesExcept(loaded, expandOps);
+
+      blockArgIdx += numFields;
+      continue;
+    }
+
+    BlockArgument blockArg = entry.getArgument(blockArgIdx);
 
     if (ac.kind == ArgKind::Direct && ac.coercedType) {
       Type oldArgTy = blockArg.getType();
       Type newArgTy = ac.coercedType;
-      if (oldArgTy == newArgTy)
+      if (oldArgTy == newArgTy) {
+        blockArgIdx++;
         continue;
-
+      }
       blockArg.setType(newArgTy);
 
       rewriter.setInsertionPointToStart(&entry);
@@ -349,9 +434,10 @@ void insertArgCoercion(FunctionOpInterface funcOp,
                                    blockArg, funcOp, dl, coercionOps);
 
       // Replace blockArg uses with the adapted value, except inside the
-      // helper ops we just created.  This is critical: the StoreOp's value
-      // operand is blockArg, and if we naively replaceAllUses it gets swapped
-      // to adapted (now of the original type != the alloca's pointee type).
+      // helper ops we just created.  This is critical: the StoreOp's
+      // value operand is blockArg, and if we naively replaceAllUses it
+      // gets swapped to adapted (now of the original type != the alloca's
+      // pointee type).
       blockArg.replaceAllUsesExcept(adapted, coercionOps);
     } else if (ac.kind == ArgKind::Indirect) {
       // byval and byref: the wire type is !cir.ptr<T>.  Change the block arg
@@ -369,6 +455,9 @@ void insertArgCoercion(FunctionOpInterface funcOp,
       SmallPtrSet<Operation *, 1> loadOps = {loadOp};
       blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
     }
+    // Ignore, Extend, and Direct-without-coerce need no block-level changes.
+
+    blockArgIdx++;
   }
 }
 
@@ -556,17 +645,38 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
 
       Block &entry = body.front();
 
+      // Build a mapping from classification index to the block argument
+      // start index it occupies after insertArgCoercion has run.  Each
+      // non-Expand classification occupies one block argument slot; each
+      // Expand classification occupies N slots (its number of fields).
+      // This mapping is needed because the Ignore-drop loop below erases
+      // by block argument index, not by classification index.
+      SmallVector<unsigned> classToBlockArg(fc.argInfos.size());
+      {
+        unsigned runningIdx = sretOffset;
+        for (unsigned i = 0; i < fc.argInfos.size(); ++i) {
+          classToBlockArg[i] = runningIdx;
+          if (fc.argInfos[i].kind == ArgKind::Expand) {
+            auto recTy = cast<cir::RecordType>(oldArgTypes[i]);
+            runningIdx += recTy.getNumElements();
+          } else {
+            runningIdx += 1;
+          }
+        }
+      }
+
       // For each Ignored argument: drop the block argument and, if the
       // body still references it, replace those uses with a poison
       // constant.  Ignore classifications mean the value is empty / not
       // passed at the ABI level, so any remaining uses are vacuous;
-      // poison says exactly that.  Iterate in reverse so that earlier
-      // indices stay stable as later ones are erased.
-      for (int blockIdx = static_cast<int>(fc.argInfos.size()) - 1;
-           blockIdx >= 0; --blockIdx) {
-        if (fc.argInfos[blockIdx].kind != ArgKind::Ignore)
+      // poison says exactly that.  Iterate in reverse classification
+      // order so that erasing a later block argument does not shift the
+      // block argument indices for earlier classifications.
+      for (int classIdx = static_cast<int>(fc.argInfos.size()) - 1;
+           classIdx >= 0; --classIdx) {
+        if (fc.argInfos[classIdx].kind != ArgKind::Ignore)
           continue;
-        unsigned realIdx = static_cast<unsigned>(blockIdx) + sretOffset;
+        unsigned realIdx = classToBlockArg[classIdx];
         if (realIdx >= entry.getNumArguments())
           continue;
         BlockArgument arg = entry.getArgument(realIdx);
@@ -606,12 +716,12 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
 
   // Rebuild arg_attrs when the function has an sret slot (slot 0 needs the
   // sret attribute set) or any arg is Ignore (dropped from the output array),
-  // Extend (needs llvm.signext / llvm.zeroext), or Indirect (needs
-  // llvm.byval / llvm.align).
+  // Extend (needs llvm.signext / llvm.zeroext), Indirect (needs
+  // llvm.byval / llvm.align), or Expand (changes the argument count).
   bool needsArgAttrUpdate =
       hasSRet || llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
         return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-               ac.kind == ArgKind::Indirect;
+               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand;
       });
   if (needsArgAttrUpdate) {
     auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
@@ -660,20 +770,6 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   MLIRContext *ctx = callOp->getContext();
   auto enclosingFunc = call->getParentOfType<FunctionOpInterface>();
 
-  for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
-    switch (ac.kind) {
-    case ArgKind::Direct:
-    case ArgKind::Ignore:
-    case ArgKind::Extend:
-    case ArgKind::Indirect:
-      // All handled in the arg-building loop below.
-      break;
-    case ArgKind::Expand:
-      return call.emitOpError() << "Expand at call-site arg " << idx
-                                << " not yet implemented in CallConvLowering";
-    }
-  }
-
   builder.setInsertionPoint(call);
 
   SmallVector<Value> newArgs;
@@ -696,11 +792,24 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
     if (ac.kind == ArgKind::Ignore)
       continue;
     Value arg = argOperands[idx];
-    if (ac.kind == ArgKind::Direct && ac.coercedType &&
-        arg.getType() != ac.coercedType)
+    if (ac.kind == ArgKind::Expand) {
+      // Decompose the struct value into its constituent scalar fields and
+      // pass each as a separate argument.  cir.extract_member extracts the
+      // field value directly without a memory round-trip.
+      auto recTy = cast<cir::RecordType>(arg.getType());
+      assert(recTy.isStruct() &&
+             "Expand classification requires a struct type, not a union");
+      for (unsigned f = 0; f < recTy.getNumElements(); ++f) {
+        Value field =
+            cir::ExtractMemberOp::create(builder, call.getLoc(), arg, f);
+        newArgs.push_back(field);
+      }
+    } else if (ac.kind == ArgKind::Direct && ac.coercedType &&
+               arg.getType() != ac.coercedType) {
       arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg,
                          enclosingFunc, dl);
-    else if (ac.kind == ArgKind::Indirect) {
+      newArgs.push_back(arg);
+    } else if (ac.kind == ArgKind::Indirect) {
       // byval and byref: allocate a stack slot, copy the value in, and pass
       // the pointer.  The alloca+store pattern is identical for both; the
       // attribute distinction (llvm.byval vs llvm.byref) is applied by
@@ -715,8 +824,10 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
                                         builder.getI64IntegerAttr(align));
       cir::StoreOp::create(builder, call.getLoc(), arg, slot);
       arg = slot;
+      newArgs.push_back(arg);
+    } else {
+      newArgs.push_back(arg);
     }
-    newArgs.push_back(arg);
   }
 
   bool hasResult = call.getNumResults() > 0;
@@ -776,12 +887,12 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
 
     // Shape the per-argument attrs exactly as the non-sret path does
     // (signext / zeroext for Extend, drop Ignore slots, byval / align for
-    // Indirect) before prepending the sret slot.
+    // Indirect, flatten for Expand) before prepending the sret slot.
     ArrayAttr argAttrs = call->getAttrOfType<ArrayAttr>("arg_attrs");
     bool needsArgAttrUpdate =
         llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
           return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-                 ac.kind == ArgKind::Indirect;
+                 ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand;
         });
     if (needsArgAttrUpdate)
       argAttrs = updateArgAttrs(ctx, origCallArgTypes, argAttrs, fc);
@@ -834,11 +945,12 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
 
   // Layer llvm.signext / llvm.zeroext onto the new call's arg_attrs and
   // res_attrs for Extend args/return.  Ignore args require a rebuild because
-  // their slots are dropped; Indirect args need llvm.byval / llvm.align.
+  // their slots are dropped; Indirect args need llvm.byval / llvm.align;
+  // Expand args change the argument count.
   bool needsArgAttrUpdate =
       llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
         return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-               ac.kind == ArgKind::Indirect;
+               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand;
       });
   if (needsArgAttrUpdate) {
     auto existing = call->getAttrOfType<ArrayAttr>("arg_attrs");
