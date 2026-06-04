@@ -1,0 +1,190 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+// Named source structs.
+!rec_TwoLong  = !cir.struct<"TwoLong"  {!s64i, !s64i}>
+!rec_ThreeInt = !cir.struct<"ThreeInt" {!s32i, !s32i, !s32i}>
+// dim3-equivalent: three i32 fields totalling 12 bytes.
+!rec_Dim3     = !cir.struct<"Dim3"     {!s32i, !s32i, !s32i}>
+
+// ABI-coerced anonymous structs.  MLIR auto-generates their aliases
+// (!rec_anon_struct, !rec_anon_struct1, etc.) in encounter order.
+!rec_coerced_two   = !cir.struct<{!s64i, !s64i}>
+!rec_coerced_three = !cir.struct<{!s32i, !s32i, !s32i}>
+// x86-64 SysV packs dim3's first two i32s into an i64; the third i32
+// is a separate half of the second eightbyte.
+!rec_coerced_dim3  = !cir.struct<{!s64i, !s32i}>
+
+#flatten_two = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !rec_coerced_two,
+               can_flatten = true } ]
+}
+
+#flatten_three = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !rec_coerced_three,
+               can_flatten = true } ]
+}
+
+#flatten_dim3 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !rec_coerced_dim3,
+               can_flatten = true } ]
+}
+
+#flatten_ignore_flatten = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !rec_coerced_two,
+               can_flatten = true },
+             { kind = "ignore" },
+             { kind = "direct", coerced_type = !rec_coerced_two,
+               can_flatten = true } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+// Callee: the single TwoLong arg is replaced by two i64 block args.  At entry
+// the scalars are stored into a coerced-struct alloca, then coerced back to
+// TwoLong for body uses.
+
+cir.func @takes_two_long(%arg0: !rec_TwoLong)
+    attributes { test_classify = #flatten_two } {
+  %0 = cir.alloca !rec_TwoLong, !cir.ptr<!rec_TwoLong>, ["p"] {alignment = 8 : i64}
+  cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @takes_two_long(%[[F0:.*]]: !s64i, %[[F1:.*]]: !s64i)
+// Two ["coerce"] allocas: the coercion round-trip alloca and the flatSlot.
+// CHECK:        %{{.*}} = cir.alloca {{.*}} ["coerce"]
+// CHECK:        %[[FSLOT:.*]] = cir.alloca {{.*}} ["coerce"]
+// Store each field block arg into the flat slot.
+// CHECK:        %[[P0:.*]] = cir.get_member %[[FSLOT]][0]
+// CHECK:        cir.store %[[F0]], %[[P0]] : !s64i, !cir.ptr<!s64i>
+// CHECK:        %[[P1:.*]] = cir.get_member %[[FSLOT]][1]
+// CHECK:        cir.store %[[F1]], %[[P1]] : !s64i, !cir.ptr<!s64i>
+// Reload the coerced struct, coerce to TwoLong, use in body.
+// CHECK:        %{{.*}} = cir.load %[[FSLOT]]
+// CHECK:        cir.cast bitcast %{{.*}} : !cir.ptr<{{.*}}> -> !cir.ptr<!rec_TwoLong>
+// CHECK:        %[[TVAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+// CHECK:        %[[P:.*]] = cir.alloca !rec_TwoLong, !cir.ptr<!rec_TwoLong>, ["p"]
+// CHECK:        cir.store %[[TVAL]], %[[P]] : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+
+// Forward declaration: two i64 wire args, no body.
+
+cir.func private @takes_two_long_decl(!rec_TwoLong)
+    attributes { test_classify = #flatten_two }
+
+// CHECK:      cir.func{{.*}} @takes_two_long_decl(!s64i, !s64i)
+// CHECK-NOT:  !rec_TwoLong
+
+// Caller: the TwoLong operand is coerced to the anonymous struct type via a
+// memory round-trip, then each field is extracted as a separate call argument.
+
+cir.func @caller_two_long() attributes { test_classify = #passthrough } {
+  %0 = cir.alloca !rec_TwoLong, !cir.ptr<!rec_TwoLong>, ["s"] {alignment = 8 : i64}
+  %1 = cir.load %0 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+  cir.call @takes_two_long(%1) : (!rec_TwoLong) -> ()
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @caller_two_long()
+// CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+// Coerce TwoLong → coerced struct then extract fields.
+// CHECK:        %[[CV:.*]] = cir.load %{{.*}} : !cir.ptr<{{.*}}>, {{.*}}
+// CHECK:        %[[F0:.*]] = cir.extract_member %[[CV]][0] : {{.*}} -> !s64i
+// CHECK:        %[[F1:.*]] = cir.extract_member %[[CV]][1] : {{.*}} -> !s64i
+// CHECK:        cir.call @takes_two_long(%[[F0]], %[[F1]]) : (!s64i, !s64i) -> ()
+
+// Three-field flatten (CUDA dim3 with 3 equal-width fields → 3 scalar args).
+// Covers the numFields == 3 path in insertArgCoercion.
+
+cir.func @takes_three_int(%arg0: !rec_ThreeInt)
+    attributes { test_classify = #flatten_three } {
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @takes_three_int(%[[A:.*]]: !s32i, %[[B:.*]]: !s32i, %[[C:.*]]: !s32i)
+// Two ["coerce"] allocas appear; the fields are stored via the second one.
+// CHECK:        cir.alloca {{.*}} ["coerce"]
+// CHECK:        cir.alloca {{.*}} ["coerce"]
+// CHECK:        %[[PA:.*]] = cir.get_member %{{.*}}[0]
+// CHECK:        cir.store %[[A]], %[[PA]] : !s32i, !cir.ptr<!s32i>
+// CHECK:        %[[PB:.*]] = cir.get_member %{{.*}}[1]
+// CHECK:        cir.store %[[B]], %[[PB]] : !s32i, !cir.ptr<!s32i>
+// CHECK:        %[[PC:.*]] = cir.get_member %{{.*}}[2]
+// CHECK:        cir.store %[[C]], %[[PC]] : !s32i, !cir.ptr<!s32i>
+
+cir.func @caller_three_int() attributes { test_classify = #passthrough } {
+  %0 = cir.alloca !rec_ThreeInt, !cir.ptr<!rec_ThreeInt>, ["s"] {alignment = 4 : i64}
+  %1 = cir.load %0 : !cir.ptr<!rec_ThreeInt>, !rec_ThreeInt
+  cir.call @takes_three_int(%1) : (!rec_ThreeInt) -> ()
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @caller_three_int()
+// CHECK:        %[[F0:.*]] = cir.extract_member %{{.*}}[0] : {{.*}} -> !s32i
+// CHECK:        %[[F1:.*]] = cir.extract_member %{{.*}}[1] : {{.*}} -> !s32i
+// CHECK:        %[[F2:.*]] = cir.extract_member %{{.*}}[2] : {{.*}} -> !s32i
+// CHECK:        cir.call @takes_three_int(%[[F0]], %[[F1]], %[[F2]]) : (!s32i, !s32i, !s32i) -> ()
+
+// Mixed-packing case (x86-64 SysV dim3 pattern): struct { uint x, y, z; }
+// is coerced to {i64, i32} — the first two i32s are packed into an i64,
+// producing 2 wire arguments from a 3-field source struct.
+
+cir.func @takes_dim3(%arg0: !rec_Dim3)
+    attributes { test_classify = #flatten_dim3 } {
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @takes_dim3(%[[D0:.*]]: !s64i, %[[D1:.*]]: !s32i)
+// Two ["coerce"] allocas appear; the {i64, i32} fields are stored into the second.
+// CHECK:        cir.alloca {{.*}} ["coerce"]
+// CHECK:        cir.alloca {{.*}} ["coerce"]
+// CHECK:        %{{.*}} = cir.get_member %{{.*}}[0]
+// CHECK:        cir.store %[[D0]], %{{.*}} : !s64i
+// CHECK:        %{{.*}} = cir.get_member %{{.*}}[1]
+// CHECK:        cir.store %[[D1]], %{{.*}} : !s32i
+
+cir.func @caller_dim3() attributes { test_classify = #passthrough } {
+  %0 = cir.alloca !rec_Dim3, !cir.ptr<!rec_Dim3>, ["d"] {alignment = 4 : i64}
+  %1 = cir.load %0 : !cir.ptr<!rec_Dim3>, !rec_Dim3
+  cir.call @takes_dim3(%1) : (!rec_Dim3) -> ()
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @caller_dim3()
+// Coerce Dim3 → {i64, i32} then extract two fields.
+// CHECK:        %[[E0:.*]] = cir.extract_member %{{.*}}[0] : {{.*}} -> !s64i
+// CHECK:        %[[E1:.*]] = cir.extract_member %{{.*}}[1] : {{.*}} -> !s32i
+// CHECK:        cir.call @takes_dim3(%[[E0]], %[[E1]]) : (!s64i, !s32i) -> ()
+
+// Two flatten args with an Ignore in between: exercises the Ignore-drop loop's
+// classToBlockArg mapping when canFlatten args occupy multiple block arg slots.
+
+cir.func @flatten_ignore_flatten_callee(
+    %a: !rec_TwoLong, %b: !rec_TwoLong, %c: !rec_TwoLong)
+    attributes { test_classify = #flatten_ignore_flatten } {
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @flatten_ignore_flatten_callee(
+// CHECK-SAME:     %{{.*}}: !s64i, %{{.*}}: !s64i, %{{.*}}: !s64i, %{{.*}}: !s64i)
+// The middle ignored arg is dropped; two flatten slots produce four block args.
+// CHECK-DAG:    cir.alloca {{.*}} ["coerce"]
+// CHECK-DAG:    cir.alloca {{.*}} ["coerce"]
+
+}

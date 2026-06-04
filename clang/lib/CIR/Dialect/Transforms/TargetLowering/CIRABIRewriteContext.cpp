@@ -30,6 +30,13 @@ using namespace mlir::abi;
 // into the struct via an alloca+get_member+store+load sequence.  At the
 // call site, the struct operand is decomposed into its fields using
 // cir.extract_member.
+//
+// For Direct + canFlatten (where the coerced type is a multi-field struct),
+// the coerced struct is similarly flattened into N individual wire arguments.
+// The callee reassembles the N scalar block args into the coerced struct,
+// then coerces to the original argument type if the two types differ.  The
+// call site coerces the original type to the coerced struct, then extracts
+// each field as a separate call argument.
 
 namespace {
 
@@ -44,6 +51,26 @@ bool needsRewrite(const FunctionClassification &fc) {
     if ((ac.kind != ArgKind::Direct) || ac.coercedType)
       return true;
   return false;
+}
+
+/// Return the coerced RecordType for a Direct classification that should be
+/// flattened into individual scalar arguments, or a null type if the
+/// classification does not call for flattening.
+///
+/// Flattening applies when all four conditions hold:
+///   1. The classification is Direct with a non-null coercedType.
+///   2. canFlatten is set.
+///   3. The coercedType is a struct (not a union).
+///   4. The struct has more than one field (single-field structs are already
+///      scalar; flattening them produces no benefit and classic CodeGen skips
+///      them for the same reason).
+cir::RecordType getFlattenedCoercedType(const ArgClassification &ac) {
+  if (ac.kind != ArgKind::Direct || !ac.coercedType || !ac.canFlatten)
+    return {};
+  auto recTy = dyn_cast<cir::RecordType>(ac.coercedType);
+  if (!recTy || !recTy.isStruct() || recTy.getNumElements() <= 1)
+    return {};
+  return recTy;
 }
 
 /// Build the new argument-type list for a function whose ABI classification
@@ -61,11 +88,20 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
     Type origTy = oldArgTypes[idx];
     switch (ac.kind) {
     case ArgKind::Direct:
-      // Direct with a coerced type means the wire signature uses the
-      // coerced type; the body still expects origTy and we'll insert a
-      // coercion at the entry block.  Direct without a coerced type is a
-      // true pass-through.
-      newArgTypes.push_back(ac.coercedType ? ac.coercedType : origTy);
+      // Direct with canFlatten and a struct coerced type: push one wire type
+      // per field of the coerced struct rather than the struct itself.
+      // Single-field coerced structs fall through to the non-flatten path —
+      // the struct is already scalar-sized and flattening adds no value.
+      if (auto flatTy = getFlattenedCoercedType(ac)) {
+        for (Type memberTy : flatTy.getMembers())
+          newArgTypes.push_back(memberTy);
+      } else {
+        // Direct with a coerced type: the wire signature uses the coerced
+        // type; the body still expects origTy and insertArgCoercion recovers
+        // it via a memory round-trip.  Direct without coercion is a
+        // pass-through.
+        newArgTypes.push_back(ac.coercedType ? ac.coercedType : origTy);
+      }
       break;
     case ArgKind::Ignore:
       break;
@@ -161,9 +197,12 @@ ArrayAttr updateArgAttrs(MLIRContext *ctx, ArrayRef<Type> origArgTypes,
     DictionaryAttr existing = DictionaryAttr::get(ctx);
     if (existingArgAttrs && oldIdx < existingArgAttrs.size())
       existing = cast<DictionaryAttr>(existingArgAttrs[oldIdx]);
-    if (ac.kind == ArgKind::Expand) {
-      // Push one empty attribute dict per expanded field; the flattened
-      // scalar arguments carry no special ABI attributes.
+    if (auto flatTy = getFlattenedCoercedType(ac)) {
+      // Direct + canFlatten: one empty dict per flattened field.
+      for (unsigned i = 0; i < flatTy.getNumElements(); ++i)
+        newArgAttrs.push_back(DictionaryAttr::get(ctx));
+    } else if (ac.kind == ArgKind::Expand) {
+      // Pure Expand: one empty dict per struct field.
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       for (unsigned i = 0; i < recTy.getNumElements(); ++i)
         newArgAttrs.push_back(DictionaryAttr::get(ctx));
@@ -419,6 +458,63 @@ void insertArgCoercion(FunctionOpInterface funcOp,
 
     BlockArgument blockArg = entry.getArgument(blockArgIdx);
 
+    if (auto flatTy = getFlattenedCoercedType(ac)) {
+      // Direct + canFlatten: the coerced type is a struct whose fields become
+      // individual wire arguments.  The reconstruction mirrors the Expand path
+      // — replace the single block arg with N scalar block args, store them
+      // into an alloca of the coerced struct type, reload — but then applies
+      // an additional coercion from the coerced struct type to the original
+      // argument type if the two differ in layout.
+      unsigned numFields = flatTy.getNumElements();
+      assert(numFields >= 2 && "getFlattenedCoercedType guarantees >1 fields");
+      Type origTy = blockArg.getType();
+      Location loc = funcOp.getLoc();
+
+      // Change slot 0 to field 0's type; insert slots 1..N-1 after it.
+      blockArg.setType(flatTy.getElementType(0));
+      for (unsigned f = 1; f < numFields; ++f)
+        entry.insertArgument(blockArgIdx + f, flatTy.getElementType(f), loc);
+
+      // setInsertionPointToStart: see comment in the Expand arm above.
+      rewriter.setInsertionPointToStart(&entry);
+      auto flatPtrTy = cir::PointerType::get(flatTy);
+      uint64_t flatAlign = dl.getTypeABIAlignment(flatTy);
+      auto flatSlot = cir::AllocaOp::create(
+          rewriter, loc, flatPtrTy, flatTy, rewriter.getStringAttr("coerce"),
+          rewriter.getI64IntegerAttr(flatAlign));
+      SmallPtrSet<Operation *, 8> flattenOps = {flatSlot};
+      for (unsigned f = 0; f < numFields; ++f) {
+        Type fieldPtrTy = cir::PointerType::get(flatTy.getElementType(f));
+        auto fieldPtr = cir::GetMemberOp::create(rewriter, loc, fieldPtrTy,
+                                                 flatSlot, /*name=*/"",
+                                                 /*index=*/f);
+        flattenOps.insert(fieldPtr);
+        auto storeOp = cir::StoreOp::create(
+            rewriter, loc, entry.getArgument(blockArgIdx + f), fieldPtr);
+        flattenOps.insert(storeOp);
+      }
+      auto flatLoaded =
+          cir::LoadOp::create(rewriter, loc, flatTy, flatSlot.getResult());
+      flattenOps.insert(flatLoaded);
+
+      // If the coerced struct type differs from the original argument type,
+      // insert a memory round-trip to recover the original type for body uses.
+      Value finalVal = flatLoaded;
+      if (origTy != flatTy) {
+        SmallPtrSet<Operation *, 4> coercionOps;
+        finalVal = emitCoercion(rewriter, loc, origTy, flatLoaded, funcOp, dl,
+                                coercionOps);
+        flattenOps.insert(coercionOps.begin(), coercionOps.end());
+      }
+
+      // Replace all original body uses of the struct block arg (now field 0)
+      // with the recovered original-type value.
+      blockArg.replaceAllUsesExcept(finalVal, flattenOps);
+
+      blockArgIdx += numFields;
+      continue;
+    }
+
     if (ac.kind == ArgKind::Direct && ac.coercedType) {
       Type oldArgTy = blockArg.getType();
       Type newArgTy = ac.coercedType;
@@ -656,7 +752,10 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
         unsigned runningIdx = sretOffset;
         for (unsigned i = 0; i < fc.argInfos.size(); ++i) {
           classToBlockArg[i] = runningIdx;
-          if (fc.argInfos[i].kind == ArgKind::Expand) {
+          if (auto flatTy = getFlattenedCoercedType(fc.argInfos[i])) {
+            // Direct + canFlatten: N slots, one per coerced struct field.
+            runningIdx += flatTy.getNumElements();
+          } else if (fc.argInfos[i].kind == ArgKind::Expand) {
             auto recTy = cast<cir::RecordType>(oldArgTypes[i]);
             runningIdx += recTy.getNumElements();
           } else {
@@ -717,11 +816,13 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   // Rebuild arg_attrs when the function has an sret slot (slot 0 needs the
   // sret attribute set) or any arg is Ignore (dropped from the output array),
   // Extend (needs llvm.signext / llvm.zeroext), Indirect (needs
-  // llvm.byval / llvm.align), or Expand (changes the argument count).
+  // llvm.byval / llvm.align), Expand or Direct+canFlatten (both change the
+  // argument count).
   bool needsArgAttrUpdate =
       hasSRet || llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
         return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand;
+               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand ||
+               getFlattenedCoercedType(ac);
       });
   if (needsArgAttrUpdate) {
     auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
@@ -792,7 +893,21 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
     if (ac.kind == ArgKind::Ignore)
       continue;
     Value arg = argOperands[idx];
-    if (ac.kind == ArgKind::Expand) {
+    if (auto flatTy = getFlattenedCoercedType(ac)) {
+      // Direct + canFlatten: coerce the struct to the ABI-coerced struct type
+      // and then extract each field as a separate call argument.  The coercion
+      // is a memory round-trip when the original and coerced types differ in
+      // layout; when they are the same CIR type the coercion is skipped.
+      Value coerced = arg;
+      if (arg.getType() != flatTy)
+        coerced = emitCoercion(builder, call.getLoc(), flatTy, arg,
+                               enclosingFunc, dl);
+      for (unsigned f = 0; f < flatTy.getNumElements(); ++f) {
+        Value field =
+            cir::ExtractMemberOp::create(builder, call.getLoc(), coerced, f);
+        newArgs.push_back(field);
+      }
+    } else if (ac.kind == ArgKind::Expand) {
       // Decompose the struct value into its constituent scalar fields and
       // pass each as a separate argument.  cir.extract_member extracts the
       // field value directly without a memory round-trip.
@@ -887,12 +1002,14 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
 
     // Shape the per-argument attrs exactly as the non-sret path does
     // (signext / zeroext for Extend, drop Ignore slots, byval / align for
-    // Indirect, flatten for Expand) before prepending the sret slot.
+    // Indirect, flatten for Expand and Direct+canFlatten) before prepending
+    // the sret slot.
     ArrayAttr argAttrs = call->getAttrOfType<ArrayAttr>("arg_attrs");
     bool needsArgAttrUpdate =
         llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
           return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-                 ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand;
+                 ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand ||
+                 getFlattenedCoercedType(ac);
         });
     if (needsArgAttrUpdate)
       argAttrs = updateArgAttrs(ctx, origCallArgTypes, argAttrs, fc);
@@ -946,11 +1063,12 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   // Layer llvm.signext / llvm.zeroext onto the new call's arg_attrs and
   // res_attrs for Extend args/return.  Ignore args require a rebuild because
   // their slots are dropped; Indirect args need llvm.byval / llvm.align;
-  // Expand args change the argument count.
+  // Expand and Direct+canFlatten args change the argument count.
   bool needsArgAttrUpdate =
       llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
         return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand;
+               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand ||
+               getFlattenedCoercedType(ac);
       });
   if (needsArgAttrUpdate) {
     auto existing = call->getAttrOfType<ArrayAttr>("arg_attrs");
