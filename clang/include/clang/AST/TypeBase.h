@@ -1111,11 +1111,6 @@ public:
   /// CXXRecordDecl::isCXX11StandardLayout, this takes DRs into account.
   bool isCXX11PODType(const ASTContext &Context) const;
 
-  /// Return true if this is a POD type according to the HLSL rules.
-  /// User-defined records in HLSL do not have default constructors, which
-  /// is a POD requirement for C++.
-  bool isHLSLPODType(const ASTContext &Context) const;
-
   /// Return true if this is a trivial type per (C++0x [basic.types]p9)
   bool isTrivialType(const ASTContext &Context) const;
 
@@ -2803,8 +2798,10 @@ public:
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLResourceRecordArray() const;
-  bool isHLSLIntangibleType()
-      const; // Any HLSL intangible type (builtin, array, class)
+  // Any HLSL intangible type (builtin, array, class)
+  bool isHLSLIntangibleType() const;
+  // User-defined HLSL records or arrays of such records
+  bool isHLSLStandardRecordOrArrayOf() const;
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather

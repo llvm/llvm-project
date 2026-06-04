@@ -16117,12 +16117,15 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   if (getLangOpts().CPlusPlus) {
-    if ((LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
-         LHSExpr->getType()->isOverloadableType() ||
-         RHSExpr->getType()->isOverloadableType()) &&
-        (!getLangOpts().HLSL ||
-         HLSL().canHaveOverloadedBinOp(LHSExpr->getType(), Opc) ||
-         HLSL().canHaveOverloadedBinOp(RHSExpr->getType(), Opc)))
+    bool CanOverloadBinOp =
+        !getLangOpts().HLSL ||
+        HLSL().canHaveOverloadedBinOp(LHSExpr->getType(), Opc) ||
+        HLSL().canHaveOverloadedBinOp(RHSExpr->getType(), Opc);
+    bool TypeDependent =
+        LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent();
+    bool Overloadable = LHSExpr->getType()->isOverloadableType() ||
+                        RHSExpr->getType()->isOverloadableType();
+    if (CanOverloadBinOp && (TypeDependent || Overloadable))
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
   }
 

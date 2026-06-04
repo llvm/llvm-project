@@ -1831,9 +1831,6 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
   //   given Conversion rank, in spite of the fact that a copy/move
   //   constructor (i.e., a user-defined conversion function) is
   //   called for those cases.
-  // HLSL:
-  //   A conversion of an expression of class type to the same class
-  //   type needs implicit LvaluetoRvalue conversion.
   QualType FromType = From->getType();
   if (ToType->isRecordType() &&
       (S.Context.hasSameUnqualifiedType(FromType, ToType) ||
@@ -1849,6 +1846,8 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     // appropriate constructor to copy the returned object, if needed.
     ICS.Standard.CopyConstructor = nullptr;
 
+    // In HLSL, a conversion of an expression of class type to the same class
+    // type needs implicit LvaluetoRvalue conversion.
     if (S.getLangOpts().HLSL)
       ICS.Standard.First = ICK_Lvalue_To_Rvalue;
 
