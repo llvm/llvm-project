@@ -5770,9 +5770,6 @@ static void DiagnoseBaseOrMemInitializerOrder(
       // of the class to be instantiated.
       if (IdealIndex >= NumIdealInits)
         break;
-
-      assert(IdealIndex < NumIdealInits &&
-             "initializer not found in initializer list");
     }
     CorrelatedInitOrder.emplace_back(IdealIndex, InitIndex);
   }
