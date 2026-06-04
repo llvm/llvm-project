@@ -75,7 +75,7 @@ def main():
     parser.add_argument(
         "--mach-o",
         action="store_true",
-        help="Strip the leading underscore Mach-O prepends " "to every symbol.",
+        help="Strip the leading underscore Mach-O prepends to every symbol.",
     )
     parser.add_argument(
         "objects", nargs="+", help="Object files (or archives) to scan."

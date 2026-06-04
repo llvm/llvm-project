@@ -181,6 +181,8 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
       VERBATIM
       COMMENT "Merging script interpreter export lists for liblldb"
     )
+    add_custom_target(liblldb-script-interpreter-exports
+      DEPENDS ${generated_exports_file})
     message(STATUS "Symbols (liblldb): exporting the lldb namespace plus "
                    "script interpreter dependencies")
     lldb_apply_exports_file(liblldb ${generated_exports_file})
