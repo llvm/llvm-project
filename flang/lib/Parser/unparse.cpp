@@ -578,7 +578,8 @@ public:
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
             [&](const ExplicitShapeBoundsSpec &y) {
-              /*TODO: unreachable until after semantic analysis is done */
+              llvm_unreachable(
+                  "Unparse for ExplicitShapeBoundsSpec should not be reached");
             },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
             [&](const DeferredShapeSpecList &y) { Walk(y); },

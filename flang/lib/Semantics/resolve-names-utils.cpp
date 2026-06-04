@@ -288,10 +288,8 @@ static void rewriteShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
   }
 
   parser::ExplicitShapeBoundsSpec boundsSpec{
-      std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
+      std::move(lowerIntExpr), std::move(upperIntExpr)};
   mutableArraySpec.u = std::move(boundsSpec);
-
-  return;
 }
 
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
@@ -342,7 +340,7 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
 }
 
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
-  context_.Say("TODO: Analyze overload for ExplicitShapeBoundsSpec"_err_en_US);
+  context_.Say("TODO: Analyze overload for ExplicitShapeBoundsSpec"_todo_en_US);
   // prevent CHECK abort in Analyze(ArraySpec), otherwise it'll abort before
   // printing error message
   arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));

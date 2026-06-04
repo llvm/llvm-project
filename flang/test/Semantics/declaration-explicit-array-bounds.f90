@@ -74,7 +74,7 @@ program declaration_array_bounds
   integer :: ggg(rank1_parameter_array * 2 : rank1_parameter_array - 1)
 
 
-  ! Negative cases (erros expected)
+  ! Negative cases (errors expected)
   integer :: rank1_array(3) = [5,5,5]
   ! Use existing error message for constness checking
   !future_PORTABILITY: specification expression refers to local object 'rank1_array' (initialized and saved) [-Wsaved-local-in-spec-expr]
@@ -108,7 +108,7 @@ program declaration_array_bounds
   integer :: k(rank2_parameter_array : rank3_array)
 
   ! Test that any comma list is parsed as ExplicitShapeSpecList and not rewritten 
-  ! to ExplicitShapeBonudsSpec, giving error messages expecting same number of 
+  ! to ExplicitShapeBoundsSpec, giving error messages expecting same number of 
   ! aruments as rank of test_array and scalar integers
   !ERROR: Must be a scalar value, but is a rank-1 array
   !ERROR: Must be a scalar value, but is a rank-1 array
