@@ -613,7 +613,7 @@ TEST_F(AlignmentTest, ConsecutiveAssignments) {
   // See https://llvm.org/PR55360
   Alignment = getLLVMStyleWithColumns(50);
   Alignment.AlignConsecutiveAssignments.Enabled = true;
-  Alignment.BinPackArguments = false;
+  Alignment.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
   verifyFormat("int a_long_name = 1;\n"
                "auto b          = B({a_long_name, a_long_name},\n"
                "                    {a_longer_name_for_wrap,\n"
@@ -1135,6 +1135,25 @@ TEST_F(AlignmentTest, ConsecutiveAssignmentsAcrossEmptyLinesAndComments) {
                Alignment);
 }
 
+TEST_F(AlignmentTest, ConsecutiveEnumAssignments) {
+  FormatStyle Alignment = getLLVMStyle();
+  Alignment.AlignConsecutiveAssignments.EnumAssignments = true;
+  verifyFormat("enum ValueKind {\n"
+               "  VK_Argument   = 1,\n"
+               "  VK_BasicBlock = 2,\n"
+               "  VK_Segment    = 8,\n"
+               "};",
+               Alignment);
+  Alignment.AlignConsecutiveAssignments.Enabled = true;
+  Alignment.AlignConsecutiveAssignments.EnumAssignments = false;
+  verifyFormat("enum ValueKind {\n"
+               "  VK_Argument   = 1,\n"
+               "  VK_BasicBlock = 2,\n"
+               "  VK_Segment    = 8,\n"
+               "};",
+               Alignment);
+}
+
 TEST_F(AlignmentTest, ConsecutiveCompoundAssignments) {
   FormatStyle Alignment = getLLVMStyle();
   Alignment.AlignConsecutiveAssignments.Enabled = true;
@@ -1280,6 +1299,13 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
   verifyFormat("int         a = method();\n"
                "float const oneTwoThree = 133;",
                Alignment);
+  verifyFormat(
+      "foo          fooNode(ConvertStdStringToUString(fieldNames[chIdx]),\n"
+      "                     // asdf\n"
+      "                     // foo1 foo2 foo12345\n"
+      "                     SomeFunctionAB(a123456789012345));\n"
+      "const size_t v1234567890123456789012345678901234;",
+      Alignment);
   verifyFormat("int i = 1, j = 10;\n"
                "something = 2000;",
                Alignment);
@@ -1596,7 +1622,7 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
 
   auto Style = AlignmentLeft;
   Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("int function_name(const wchar_t*  title,\n"
                "                  int             x          = 0,\n"
                "                  long            extraStyle = 0,\n"
@@ -1804,7 +1830,7 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
   Alignment.AlignConsecutiveAssignments.Enabled = false;
 
   Alignment.ColumnLimit = 30;
-  Alignment.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Alignment.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void foo(float     a,\n"
                "         float     b,\n"
                "         int       c,\n"
@@ -1818,7 +1844,7 @@ TEST_F(AlignmentTest, ConsecutiveDeclarations) {
                "         uint32_t *c,\n"
                "         bool      d) {}",
                Alignment);
-  Alignment.BinPackParameters = FormatStyle::BPPS_BinPack;
+  Alignment.PackParameters.BinPack = FormatStyle::BPPS_BinPack;
   Alignment.ColumnLimit = 80;
 
   // Bug 33507
@@ -2363,14 +2389,14 @@ TEST_F(AlignmentTest, AlignWithLineBreaks) {
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/false,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/true}));
+                 /*EnumAssignments=*/false, /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
                  /*AlignFunctionDeclarations=*/true,
                  /*AlignFunctionPointers=*/false,
-                 /*PadOperators=*/false}));
+                 /*EnumAssignments=*/false, /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"
@@ -2555,7 +2581,7 @@ TEST_F(AlignmentTest, AlignWithLineBreaks) {
                Style);
   // clang-format on
 
-  Style.BinPackArguments = false;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
 
   // clang-format off
   verifyFormat("void SomeFunc() {\n"
@@ -3556,6 +3582,50 @@ TEST_F(AlignmentTest, AlignInsidePreprocessorElseBlock) {
                "#elifndef BAZ\n"
                "  abcd = 4;\n"
                "#endif\n"
+               "}",
+               Style);
+}
+
+TEST_F(AlignmentTest, ContinuedAligned) {
+  FormatStyle Style = getLLVMStyleWithColumns(60);
+  Style.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Style.TabWidth = Style.IndentWidth = Style.ContinuationIndentWidth = 4;
+
+  verifyFormat("for (;;) {\n"
+               "\tif (bar(aaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbb,\n"
+               "\t        cccccccccccccccccccccccccccccc)) {\n"
+               "\t\treturn {};\n"
+               "\t}\n"
+               "}",
+               Style);
+  verifyFormat("bar([]() {\n"
+               "\tconst AAAAAA aaaaa =\n"
+               "\t\tAAAAAAAAAA(foo(bbbbbbbbbbbbbbbbbbbbbbbbbb),\n"
+               "\t\t           foo(cccccccccccccccccccccccccc),\n"
+               "\t\t           foo(ddddddddddddddddddddddddd)) +\n"
+               "\t\teeeeeeeee;\n"
+               "});",
+               Style);
+
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
+  verifyFormat("bar(\n"
+               "\t[]() {\n"
+               "\t\tif constexpr (std::is_same_v<aaaaaa,\n"
+               "\t\t                             T>) // comment line 1\n"
+               "\t\t                                 // comment line 2\n"
+               "\t\t{\n"
+               "\t\t}\n"
+               "\t},\n"
+               "\tvariant);",
+               Style);
+
+  Style.ColumnLimit = 40;
+  Style.IndentWidth = Style.TabWidth = Style.ContinuationIndentWidth = 8;
+
+  verifyFormat("void f() {\n"
+               "\tint aaaaaaaaaaaaaaaaaaaa =\n"
+               "\t\t000000000000000001 ? 2\n"
+               "\t\t                   : 3;\n"
                "}",
                Style);
 }

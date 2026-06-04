@@ -41,8 +41,6 @@ bb.1:
 define i16 @int_to_vec(i80 %in) {
 ; CHECK-LABEL: int_to_vec:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    @ kill: def $r2 killed $r1
-; CHECK-NEXT:    @ kill: def $r2 killed $r0
 ; CHECK-NEXT:    lsl r0, r0, #16
 ; CHECK-NEXT:    orr r0, r0, r1, lsr #16
 ; CHECK-NEXT:    @ implicit-def: $d18

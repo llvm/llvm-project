@@ -73,20 +73,45 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
   return std::move(this->EvalResult);
 }
 
+EvaluationResult EvalEmitter::interpretDestructor(const VarDecl *VD,
+                                                  const APValue &Value) {
+  assert(VD);
+  S.setEvalLocation(VD->getLocation());
+  EvalResult.setSource(VD);
+
+  if (!this->visitDtorCall(VD, Value))
+    EvalResult.setInvalid();
+
+  return std::move(this->EvalResult);
+}
+
 EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
                                                  PtrCallback PtrCB) {
-
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = false;
   this->CheckFullyInitialized = false;
   this->PtrCB = PtrCB;
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E, /*DestroyToplevelScope=*/true)) {
+  if (!this->visitExpr(E, true)) {
     // EvalResult may already have a result set, but something failed
     // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
   }
+
+  return std::move(this->EvalResult);
+}
+
+EvaluationResult EvalEmitter::interpretAsLValuePointer(const Expr *E,
+                                                       PtrCallback PtrCB) {
+  S.setEvalLocation(E->getExprLoc());
+  this->ConvertResultToRValue = false;
+  this->CheckFullyInitialized = false;
+  this->PtrCB = PtrCB;
+  EvalResult.setSource(E);
+
+  if (!this->visitLValueExpr(E, true))
+    EvalResult.setInvalid();
 
   return std::move(this->EvalResult);
 }
@@ -220,7 +245,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (!Ptr.isZero() && !Ptr.isDereferencable())
+    if (Ptr.isPastEnd())
       return false;
 
     if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
@@ -291,6 +316,14 @@ bool EvalEmitter::emitGetPtrLocal(uint32_t I, SourceInfo Info) {
   return true;
 }
 
+bool EvalEmitter::emitGetRefLocal(uint32_t I, SourceInfo Info) {
+  if (!isActive())
+    return true;
+
+  Block *B = getLocal(I);
+  return handleReference(S, OpPC, B);
+}
+
 template <PrimType OpType>
 bool EvalEmitter::emitGetLocal(uint32_t I, SourceInfo Info) {
   if (!isActive())
@@ -318,6 +351,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
   B->deref<T>() = S.Stk.pop<T>();
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
+  Desc.LifeState = Lifetime::Started;
 
   return true;
 }

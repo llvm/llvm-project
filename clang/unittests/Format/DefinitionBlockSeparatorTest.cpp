@@ -291,6 +291,22 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                "struct E {};",
                Style);
 
+  constexpr StringRef Code("// NOLINTBEGIN\n"
+                           "int x = 1;\n"
+                           "int y = 2;\n"
+                           "// NOLINTEND\n"
+                           "\n"
+                           "void some_function() {}");
+  verifyFormat(Code, Style, Code);
+
+  constexpr StringRef Code2("int x = 0;\n"
+                            "int y = 0;\n"
+                            "// trailing comment 1\n"
+                            "// trailing comment 2\n"
+                            "\n"
+                            "void some_function() {}");
+  verifyFormat(Code2, Style, Code2);
+
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"
                       "// Enum test1\n"
@@ -462,8 +478,24 @@ TEST_F(DefinitionBlockSeparatorTest, OpeningBracketOwnsLine) {
 
 TEST_F(DefinitionBlockSeparatorTest, TryBlocks) {
   FormatStyle Style = getLLVMStyle();
-  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  verifyFormat("void foo() try {\n"
+               "  // do something\n"
+               "} catch (const std::exception &) {\n"
+               "  // handle exception\n"
+               "}",
+               Style, "", /*Inverse=*/false);
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("void foo()\n"
+               "try\n"
+               "{\n"
+               "  // do something\n"
+               "}\n"
+               "catch (const std::exception &)\n"
+               "{\n"
+               "  // handle exception\n"
+               "}",
+               Style, "", /*Inverse=*/false);
   verifyFormat("void FunctionWithInternalTry()\n"
                "{\n"
                "  try\n"

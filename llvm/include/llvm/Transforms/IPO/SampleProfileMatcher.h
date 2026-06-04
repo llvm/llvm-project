@@ -130,7 +130,7 @@ public:
       : M(M), Reader(Reader), CG(CG), ProbeManager(ProbeManager),
         LTOPhase(LTOPhase), FuncNameToProfNameMap(&FuncNameToProfNameMap),
         SymbolMap(&SymMap), PSL(PSL) {};
-  void runOnModule();
+  LLVM_ABI void runOnModule();
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.
@@ -203,8 +203,8 @@ private:
   void computeAndReportProfileStaleness();
   void UpdateWithSalvagedProfiles();
 
-  LocToLocMap &getIRToProfileLocationMap(const Function &F) {
-    return FuncMappings[FunctionSamples::getCanonicalFnName(F.getName())];
+  LocToLocMap &getIRToProfileLocationMap(const FunctionSamples &FS) {
+    return FuncMappings[FS.getFuncName()];
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);

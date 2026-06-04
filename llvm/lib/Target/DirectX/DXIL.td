@@ -880,6 +880,53 @@ def CBufferLoadLegacy : DXILOp<59, cbufferLoadLegacy> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def SampleBias : DXILOp<61, sampleBias> {
+  let Doc = "samples a texture after applying the input bias to the mip level";
+  // Handle, Sampler, Coord0, Coord1, Coord2, Coord3,
+  // Offset0, Offset1, Offset2, Bias, Clamp
+  let arguments = [HandleTy, HandleTy, FloatTy, FloatTy, FloatTy, FloatTy,
+                   Int32Ty, Int32Ty, Int32Ty, FloatTy, FloatTy];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [ResRetHalfTy, ResRetFloatTy]>,
+       Overloads<DXIL1_7,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>,
+                Stages<DXIL1_6, [library, pixel, compute, amplification, mesh,
+                                 node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def SampleGrad : DXILOp<63, sampleGrad> {
+  let Doc = "samples a texture using a gradient to influence the way the sample "
+            "location is calculated";
+  // Handle, Sampler, Coord0, Coord1, Coord2, Coord3,
+  // Offset0, Offset1, Offset2, DDX0, DDX1, DDX2, DDY0, DDY1, DDY2, Clamp
+  let arguments = [HandleTy, HandleTy, FloatTy, FloatTy, FloatTy, FloatTy,
+                   Int32Ty, Int32Ty, Int32Ty, FloatTy, FloatTy, FloatTy,
+                   FloatTy, FloatTy, FloatTy, FloatTy];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [ResRetHalfTy, ResRetFloatTy]>,
+       Overloads<DXIL1_7,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def TextureLoad : DXILOp<66, textureLoad> {
+  let Doc = "reads from a texture resource";
+  // Handle, MipLevelOrSampleCount, Coord0, Coord1, Coord2, Offset0, Offset1, Offset2
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, Int32Ty,
+                   Int32Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
 def BufferLoad : DXILOp<68, bufferLoad> {
   let Doc = "reads from a TypedBuffer";
   // Handle, Coord0, Coord1
@@ -931,6 +978,14 @@ def GetDimensions : DXILOp<72, getDimensions> {
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [
+    IntrinSelect<int_dx_all_memory_barrier,
+                 [IntrinArgI32<BarrierMode_AllMemoryBarrier>]>,
+    IntrinSelect<int_dx_all_memory_barrier_with_group_sync,
+                 [IntrinArgI32<BarrierMode_AllMemoryBarrierWithGroupSync>]>,
+    IntrinSelect<int_dx_device_memory_barrier,
+                 [IntrinArgI32<BarrierMode_DeviceMemoryBarrier>]>,
+    IntrinSelect<int_dx_device_memory_barrier_with_group_sync,
+                 [IntrinArgI32<BarrierMode_DeviceMemoryBarrierWithGroupSync>]>,
     IntrinSelect<int_dx_group_memory_barrier,
                  [IntrinArgI32<BarrierMode_GroupMemoryBarrier>]>,
     IntrinSelect<int_dx_group_memory_barrier_with_group_sync,
@@ -1168,7 +1223,7 @@ def WaveActiveBit : DXILOp<120, waveActiveBit> {
   let intrinsics = [
     IntrinSelect<int_dx_wave_reduce_or,
                  [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,                   
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,
                  ]>,
     IntrinSelect<int_dx_wave_reduce_xor,
                  [

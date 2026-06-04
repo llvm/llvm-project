@@ -42,7 +42,7 @@ DLWRAP(cuDeviceTotalMem, 2)
 DLWRAP(cuDriverGetVersion, 1)
 
 DLWRAP(cuGetErrorString, 2)
-DLWRAP(cuLaunchKernel, 11)
+DLWRAP(cuLaunchKernelEx, 4)
 DLWRAP(cuLaunchHostFunc, 3)
 
 DLWRAP(cuMemAlloc, 2)
@@ -83,6 +83,7 @@ DLWRAP(cuDevicePrimaryCtxSetFlags, 2)
 DLWRAP(cuDevicePrimaryCtxRetain, 2)
 DLWRAP(cuModuleLoadDataEx, 5)
 DLWRAP(cuOccupancyMaxPotentialBlockSize, 6)
+DLWRAP(cuOccupancyMaxActiveBlocksPerMultiprocessor, 4)
 DLWRAP(cuFuncGetParamInfo, 4)
 
 DLWRAP(cuDeviceCanAccessPeer, 3)
@@ -100,8 +101,6 @@ DLWRAP(cuEventSynchronize, 1)
 DLWRAP(cuEventElapsedTime, 3)
 DLWRAP(cuEventDestroy, 1)
 
-DLWRAP_FINALIZE()
-
 DLWRAP(cuMemUnmap, 2)
 DLWRAP(cuMemRelease, 1)
 DLWRAP(cuMemAddressFree, 2)
@@ -111,6 +110,8 @@ DLWRAP(cuMemMap, 5)
 DLWRAP(cuMemCreate, 4)
 DLWRAP(cuMemSetAccess, 4)
 DLWRAP(cuMemGetAllocationGranularity, 3)
+
+DLWRAP_FINALIZE()
 
 #ifndef DYNAMIC_CUDA_PATH
 #define DYNAMIC_CUDA_PATH "libcuda.so"

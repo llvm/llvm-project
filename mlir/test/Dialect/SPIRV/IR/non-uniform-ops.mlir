@@ -13,7 +13,7 @@ func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> {
 // -----
 
 func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformBallot <Device> %predicate : vector<4xi32>
   return %0: vector<4xi32>
 }
@@ -41,7 +41,7 @@ func.func @group_non_uniform_ballot_find_lsb(%value : vector<4xi32>) -> i32 {
 // -----
 
 func.func @group_non_uniform_ballot_find_lsb(%value : vector<4xi32>) -> i32 {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformBallotFindLSB <Device> %value : vector<4xi32>, i32
   return %0: i32
 }
@@ -69,7 +69,7 @@ func.func @group_non_uniform_ballot_find_msb(%value : vector<4xi32>) -> i32 {
 // -----
 
 func.func @group_non_uniform_ballot_find_msb(%value : vector<4xi32>) -> i32 {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformBallotFindMSB <Device> %value : vector<4xi32>, i32
   return %0: i32
 }
@@ -108,7 +108,7 @@ func.func @group_non_uniform_broadcast_vector(%value: vector<4xf32>) -> vector<4
 
 func.func @group_non_uniform_broadcast_negative_scope(%value: f32, %localid: i32 ) -> f32 {
   %one = spirv.Constant 1 : i32
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformBroadcast <Device> %value, %one : f32, i32
   return %0: f32
 }
@@ -119,6 +119,24 @@ func.func @group_non_uniform_broadcast_negative_non_const(%value: f32, %localid:
   // expected-error @+1 {{id must be the result of a constant op}}
   %0 = spirv.GroupNonUniformBroadcast <Subgroup> %value, %localid : f32, i32
   return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_broadcast_bf16(%value: bf16) -> bf16 {
+  %one = spirv.Constant 1 : i32
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformBroadcast <Workgroup> %value, %one : bf16, i32
+  return %0: bf16
+}
+
+// -----
+
+func.func @group_non_uniform_broadcast_float8(%value: f8E4M3FN) -> f8E4M3FN {
+  %one = spirv.Constant 1 : i32
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'f8E4M3FN'}}
+  %0 = spirv.GroupNonUniformBroadcast <Workgroup> %value, %one : f8E4M3FN, i32
+  return %0: f8E4M3FN
 }
 
 // -----
@@ -146,7 +164,7 @@ func.func @group_non_uniform_broadcast_first_vector(%value: vector<4xf32>) -> ve
 // -----
 
 func.func @group_non_uniform_broadcast_first_negative_scope(%value: f32) -> f32 {
-  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  // expected-error @+1 {{execution_scope must be 'Subgroup'}}
   %0 = spirv.GroupNonUniformBroadcastFirst <Device> %value : f32
   return %0 : f32
 }
@@ -155,7 +173,7 @@ func.func @group_non_uniform_broadcast_first_negative_scope(%value: f32) -> f32 
 
 
 func.func @group_non_uniform_broadcast_first_negative_type(%value: !spirv.array<3 x i32>) -> !spirv.array<3 x i32> {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1 or bool or fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got '!spirv.array<3 x i32>'}}
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got '!spirv.array<3 x i32>'}}
   %0 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %value : !spirv.array<3 x i32>
   return %0 : !spirv.array<3 x i32>
 }
@@ -184,7 +202,7 @@ func.func @group_non_uniform_elect() -> i1 {
 // -----
 
 func.func @group_non_uniform_elect() -> i1 {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformElect <CrossDevice> : i1
   return %0: i1
 }
@@ -295,7 +313,7 @@ func.func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>) -> vecto
 // -----
 
 func.func @group_non_uniform_iadd_reduce(%val: i32) -> i32 {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformIAdd <Device> <Reduce> %val : i32 -> i32
   return %0: i32
 }
@@ -394,8 +412,24 @@ func.func @group_non_uniform_shuffle2(%val: vector<2xf32>, %id: i32) -> vector<2
 
 // -----
 
+func.func @group_non_uniform_shuffle_bf16(%val: bf16, %id: i32) -> bf16 {
+  // expected-error @+1 {{'spirv.GroupNonUniformShuffle' op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformShuffle <Subgroup> %val, %id : bf16, i32
+  return %0: bf16
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle_float8(%val: f8E4M3FN, %id: i32) -> f8E4M3FN {
+  // expected-error @+1 {{'spirv.GroupNonUniformShuffle' op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'f8E4M3FN'}}
+  %0 = spirv.GroupNonUniformShuffle <Subgroup> %val, %id : f8E4M3FN, i32
+  return %0: f8E4M3FN
+}
+
+// -----
+
 func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformShuffle <Device> %val, %id : vector<2xf32>, i32
   return %0: vector<2xf32>
 }
@@ -430,8 +464,24 @@ func.func @group_non_uniform_shuffle2(%val: vector<2xf32>, %id: i32) -> vector<2
 
 // -----
 
+func.func @group_non_uniform_shuffle_xor_bf16(%val: bf16, %id: i32) -> bf16 {
+  // expected-error @+1 {{'spirv.GroupNonUniformShuffleXor' op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformShuffleXor <Subgroup> %val, %id : bf16, i32
+  return %0: bf16
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle_xor_float8(%val: f8E4M3FN, %id: i32) -> f8E4M3FN {
+  // expected-error @+1 {{'spirv.GroupNonUniformShuffleXor' op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'f8E4M3FN'}}
+  %0 = spirv.GroupNonUniformShuffleXor <Subgroup> %val, %id : f8E4M3FN, i32
+  return %0: f8E4M3FN
+}
+
+// -----
+
 func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformShuffleXor <Device> %val, %id : vector<2xf32>, i32
   return %0: vector<2xf32>
 }
@@ -466,8 +516,24 @@ func.func @group_non_uniform_shuffle2(%val: vector<2xf32>, %id: i32) -> vector<2
 
 // -----
 
+func.func @group_non_uniform_shuffle_up_bf16(%val: bf16, %id: i32) -> bf16 {
+  // expected-error @+1 {{'spirv.GroupNonUniformShuffleUp' op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformShuffleUp <Subgroup> %val, %id : bf16, i32
+  return %0: bf16
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle_up_float8(%val: f8E4M3FN, %id: i32) -> f8E4M3FN {
+  // expected-error @+1 {{'spirv.GroupNonUniformShuffleUp' op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'f8E4M3FN'}}
+  %0 = spirv.GroupNonUniformShuffleUp <Subgroup> %val, %id : f8E4M3FN, i32
+  return %0: f8E4M3FN
+}
+
+// -----
+
 func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformShuffleUp <Device> %val, %id : vector<2xf32>, i32
   return %0: vector<2xf32>
 }
@@ -502,8 +568,24 @@ func.func @group_non_uniform_shuffle2(%val: vector<2xf32>, %id: i32) -> vector<2
 
 // -----
 
+func.func @group_non_uniform_shuffle_down_bf16(%val: bf16, %id: i32) -> bf16 {
+  // expected-error @+1 {{'spirv.GroupNonUniformShuffleDown' op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformShuffleDown <Subgroup> %val, %id : bf16, i32
+  return %0: bf16
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle_down_float8(%val: f8E4M3FN, %id: i32) -> f8E4M3FN {
+  // expected-error @+1 {{'spirv.GroupNonUniformShuffleDown' op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'f8E4M3FN'}}
+  %0 = spirv.GroupNonUniformShuffleDown <Subgroup> %val, %id : f8E4M3FN, i32
+  return %0: f8E4M3FN
+}
+
+// -----
+
 func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformShuffleDown <Device> %val, %id : vector<2xf32>, i32
   return %0: vector<2xf32>
 }
@@ -695,7 +777,7 @@ func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
 
 func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
   %four = spirv.Constant 4 : i32
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  // expected-error @+1 {{execution_scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupNonUniformRotateKHR <Device> %val, %delta, cluster_size(%four) : f32, i32, i32 -> f32
   return %0: f32
 }
@@ -751,7 +833,7 @@ func.func @group_non_uniform_all(%predicate: i1) -> i1 {
 // -----
 
 func.func @group_non_uniform_all(%predicate: i1) -> i1 {
-  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  // expected-error @+1 {{execution_scope must be 'Subgroup'}}
   %0 = spirv.GroupNonUniformAll <Device> %predicate : i1
   return %0: i1
 }
@@ -772,7 +854,7 @@ func.func @group_non_uniform_any(%predicate: i1) -> i1 {
 // -----
 
 func.func @group_non_uniform_any(%predicate: i1) -> i1 {
-  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  // expected-error @+1 {{execution_scope must be 'Subgroup'}}
   %0 = spirv.GroupNonUniformAny <Device> %predicate : i1
   return %0: i1
 }
@@ -803,7 +885,7 @@ func.func @group_non_uniform_all_equal(%value: vector<4xi32>) -> i1 {
 // -----
 
 func.func @group_non_uniform_all_equal(%value: f32) -> i1 {
-  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  // expected-error @+1 {{execution_scope must be 'Subgroup'}}
   %0 = spirv.GroupNonUniformAllEqual <Device> %value : f32, i1
   return %0: i1
 }
@@ -837,7 +919,7 @@ func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
 // -----
 
 func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
-  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  // expected-error @+1 {{execution_scope must be 'Subgroup'}}
   %0 = spirv.GroupNonUniformQuadSwap <Device> <Horizontal> %value : vector<4xf32>
   return %0: vector<4xf32>
 }
@@ -854,7 +936,67 @@ func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
 // -----
 
 func.func @group_non_uniform_quad_swap(%value: !spirv.array<3 x i32>) -> !spirv.array<3 x i32> {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1 or bool or fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got '!spirv.array<3 x i32>'}}
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or 16/32/64-bit float or bool or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got '!spirv.array<3 x i32>'}}
   %0 = spirv.GroupNonUniformQuadSwap <Device> <Horizontal> %value : !spirv.array<3 x i32>
   return %0: !spirv.array<3 x i32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotBitCount
+//===----------------------------------------------------------------------===//
+
+func.func @group_non_uniform_ballot_bit_count(%value: vector<4xi32>) -> i32 {
+  // CHECK: {{%.*}} = spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> {{%.*}} : vector<4xi32> -> i32
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> %value : vector<4xi32> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_scope(%value: vector<4xi32>) -> i32 {
+  // expected-error @+1 {{execution_scope must be 'Subgroup'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Workgroup> <Reduce> %value : vector<4xi32> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_value_len(%value: vector<3xi32>) -> i32 {
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4 of ranks 1, but got 'vector<3xi32>'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<3xi32> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_value_type(%value: vector<4xi8>) -> i32 {
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4 of ranks 1, but got 'vector<4xi8>'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xi8> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_value_sign(%value: vector<4xsi32>) -> i32 {
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4 of ranks 1, but got 'vector<4xsi32>'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xsi32> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_result_type(%value: vector<4xi32>) -> f32 {
+  // expected-error @+1 {{result #0 must be 8/16/32/64-bit signless/unsigned integer, but got 'f32'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xi32> -> f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_result_sign(%value: vector<4xi32>) -> si32 {
+  // expected-error @+1 {{result #0 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xi32> -> si32
+  return %0: si32
 }

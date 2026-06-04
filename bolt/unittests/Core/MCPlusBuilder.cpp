@@ -18,6 +18,9 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
+#include "bolt/Passes/BinaryPasses.h"
+#include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -120,6 +123,103 @@ TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
                  /*OnlySmaller=*/true);
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_createLoadImmediate) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // mov  x0, 0x0001000100010001 --> orr x0, xzr, 0x0001000100010001
+  auto Insts1 = BC->MIB->createLoadImmediate(AArch64::X0, 0x0001000100010001);
+  ASSERT_EQ(Insts1.size(), 1U);
+  ASSERT_EQ(Insts1[0].getOpcode(), AArch64::ORRXri);
+  ASSERT_EQ(Insts1[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts1[0].getOperand(1).getReg(), AArch64::XZR);
+  ASSERT_EQ(Insts1[0].getOperand(2).getImm(), 32);
+
+  // mov  w0, #0x00030003 --> orr w0, wzr, 0x00030003
+  auto Insts2 = BC->MIB->createLoadImmediate(AArch64::W0, 0x00030003);
+  ASSERT_EQ(Insts2.size(), 1U);
+  ASSERT_EQ(Insts2[0].getOpcode(), AArch64::ORRWri);
+  ASSERT_EQ(Insts2[0].getOperand(0).getReg(), AArch64::W0);
+  ASSERT_EQ(Insts2[0].getOperand(1).getReg(), AArch64::WZR);
+  ASSERT_EQ(Insts2[0].getOperand(2).getImm(), 33);
+
+  // mov  x0, #-16  --> movn x0, #15
+  auto Insts3 = BC->MIB->createLoadImmediate(AArch64::X0, 0xfffffffffffffff0);
+  ASSERT_EQ(Insts3.size(), 1U);
+  ASSERT_EQ(Insts3[0].getOpcode(), AArch64::MOVNXi);
+  ASSERT_EQ(Insts3[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts3[0].getOperand(1).getImm(), 15);
+  ASSERT_EQ(Insts3[0].getOperand(2).getImm(), 0);
+
+  // mov  w0, #-1 --> movn  w0, #0
+  auto Insts4 = BC->MIB->createLoadImmediate(AArch64::W0, 0xffffffff);
+  ASSERT_EQ(Insts4.size(), 1U);
+  ASSERT_EQ(Insts4[0].getOpcode(), AArch64::MOVNWi);
+  ASSERT_EQ(Insts4[0].getOperand(0).getReg(), AArch64::W0);
+  ASSERT_EQ(Insts4[0].getOperand(1).getImm(), 0);
+  ASSERT_EQ(Insts4[0].getOperand(2).getImm(), 0);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  auto Insts5 = BC->MIB->createLoadImmediate(AArch64::X0, 0x00020001);
+  ASSERT_EQ(Insts5.size(), 2U);
+  ASSERT_EQ(Insts5[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts5[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts5[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts5[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts5[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts5[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts5[1].getOperand(3).getImm(), 16);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  // movk   x0, #0x3, lsl #32
+  auto Insts6 = BC->MIB->createLoadImmediate(AArch64::X0, 0x000300020001);
+  ASSERT_EQ(Insts6.size(), 3U);
+  ASSERT_EQ(Insts6[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts6[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts6[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts6[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts6[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts6[1].getOperand(3).getImm(), 16);
+  ASSERT_EQ(Insts6[2].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts6[2].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[2].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts6[2].getOperand(2).getImm(), 3);
+  ASSERT_EQ(Insts6[2].getOperand(3).getImm(), 32);
+
+  // mov    x0, #0x1
+  // movk   x0, #0x2, lsl #16
+  // movk   x0, #0x3, lsl #32
+  // movk   x0, #0x4, lsl #48
+  auto Insts7 = BC->MIB->createLoadImmediate(AArch64::X0, 0x0004000300020001);
+  ASSERT_EQ(Insts7.size(), 4U);
+  ASSERT_EQ(Insts7[0].getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(Insts7[0].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[0].getOperand(1).getImm(), 1);
+  ASSERT_EQ(Insts7[0].getOperand(2).getImm(), 0);
+  ASSERT_EQ(Insts7[1].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[1].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[1].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[1].getOperand(2).getImm(), 2);
+  ASSERT_EQ(Insts7[1].getOperand(3).getImm(), 16);
+  ASSERT_EQ(Insts7[2].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[2].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[2].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[2].getOperand(2).getImm(), 3);
+  ASSERT_EQ(Insts7[2].getOperand(3).getImm(), 32);
+  ASSERT_EQ(Insts7[3].getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(Insts7[3].getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[3].getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(Insts7[3].getOperand(2).getImm(), 4);
+  ASSERT_EQ(Insts7[3].getOperand(3).getImm(), 48);
+}
+
 TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
@@ -136,8 +236,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                            .addExpr(MCSymbolRefExpr::create(
                                TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(NeedsImmInc));
-  BC->MIB->reverseBranchCondition(NeedsImmInc, TargetBB->getLabel(),
-                                  BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(/*ParentBB*/ nullptr, NeedsImmInc,
+                                  TargetBB->getLabel(), BC->Ctx.get());
   ASSERT_EQ(NeedsImmInc.getOpcode(), AArch64::CBLTXri);
   ASSERT_EQ(NeedsImmInc.getOperand(1).getImm(), 1);
 
@@ -150,8 +250,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                            .addExpr(MCSymbolRefExpr::create(
                                TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(NeedsImmDec));
-  BC->MIB->reverseBranchCondition(NeedsImmDec, TargetBB->getLabel(),
-                                  BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(/*ParentBB*/ nullptr, NeedsImmDec,
+                                  TargetBB->getLabel(), BC->Ctx.get());
   ASSERT_EQ(NeedsImmDec.getOpcode(), AArch64::CBHIXri);
   ASSERT_EQ(NeedsImmDec.getOperand(1).getImm(), 0);
 
@@ -164,8 +264,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                                    .addExpr(MCSymbolRefExpr::create(
                                        TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(CompRegNeedsRegSwap));
-  BC->MIB->reverseBranchCondition(CompRegNeedsRegSwap, TargetBB->getLabel(),
-                                  BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(/*ParentBB*/ nullptr, CompRegNeedsRegSwap,
+                                  TargetBB->getLabel(), BC->Ctx.get());
   ASSERT_EQ(CompRegNeedsRegSwap.getOpcode(), AArch64::CBGTXrr);
   ASSERT_EQ(CompRegNeedsRegSwap.getOperand(0).getReg(), AArch64::X1);
   ASSERT_EQ(CompRegNeedsRegSwap.getOperand(1).getReg(), AArch64::X0);
@@ -179,8 +279,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                                     .addExpr(MCSymbolRefExpr::create(
                                         TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(CompByteNeedsRegSwap));
-  BC->MIB->reverseBranchCondition(CompByteNeedsRegSwap, TargetBB->getLabel(),
-                                  BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(/*ParentBB*/ nullptr, CompByteNeedsRegSwap,
+                                  TargetBB->getLabel(), BC->Ctx.get());
   ASSERT_EQ(CompByteNeedsRegSwap.getOpcode(), AArch64::CBBHSWrr);
   ASSERT_EQ(CompByteNeedsRegSwap.getOperand(0).getReg(), AArch64::W1);
   ASSERT_EQ(CompByteNeedsRegSwap.getOperand(1).getReg(), AArch64::W0);
@@ -194,8 +294,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                                     .addExpr(MCSymbolRefExpr::create(
                                         TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(CompHalfNeedsRegSwap));
-  BC->MIB->reverseBranchCondition(CompHalfNeedsRegSwap, TargetBB->getLabel(),
-                                  BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(/*ParentBB*/ nullptr, CompHalfNeedsRegSwap,
+                                  TargetBB->getLabel(), BC->Ctx.get());
   ASSERT_EQ(CompHalfNeedsRegSwap.getOpcode(), AArch64::CBHHIWrr);
   ASSERT_EQ(CompHalfNeedsRegSwap.getOperand(0).getReg(), AArch64::W1);
   ASSERT_EQ(CompHalfNeedsRegSwap.getOperand(1).getReg(), AArch64::W0);
@@ -219,6 +319,123 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                          .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(),
                                                           *BC->Ctx.get()));
   ASSERT_FALSE(BC->MIB->isReversibleBranch(Overflows));
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Underflows) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  BinaryBasicBlock *EntryBB = BF->addBasicBlock();
+  BinaryBasicBlock *FallThroughBB = BF->addBasicBlock();
+  BinaryBasicBlock *TargetBB = BF->addBasicBlock();
+  BF->addEntryPoint(*EntryBB);
+  EntryBB->addSuccessor(TargetBB);
+  EntryBB->addSuccessor(FallThroughBB);
+
+  // Inversion requires expansion, immediate value underflows.
+  // cblt x0, #0, target ~> cmp x0, #0
+  //                        b.ge target
+  auto I =
+      EntryBB->addInstruction(MCInstBuilder(AArch64::CBLTXri)
+                                  .addReg(AArch64::X0)
+                                  .addImm(0)
+                                  .addExpr(MCSymbolRefExpr::create(
+                                      TargetBB->getLabel(), *BC->Ctx.get())));
+  BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
+  RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
+  DataflowInfoManager DIM(*BF, &RA, nullptr);
+
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &DIM));
+  BC->MIB->reverseBranchCondition(EntryBB, *I, TargetBB->getLabel(),
+                                  BC->Ctx.get(), &DIM);
+  I = EntryBB->begin();
+  ASSERT_EQ(I->getOpcode(), AArch64::SUBSXri);
+  ASSERT_EQ(I->getOperand(0).getReg(), AArch64::XZR);
+  ASSERT_EQ(I->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(I->getOperand(2).getImm(), 0);
+  ASSERT_EQ(I->getOperand(3).getImm(), 0);
+  I++;
+  ASSERT_EQ(I->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(I->getOperand(0).getImm(), AArch64CC::GE);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Overflows) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  BinaryBasicBlock *EntryBB = BF->addBasicBlock();
+  BinaryBasicBlock *FallThroughBB = BF->addBasicBlock();
+  BinaryBasicBlock *TargetBB = BF->addBasicBlock();
+  BF->addEntryPoint(*EntryBB);
+  EntryBB->addSuccessor(TargetBB);
+  EntryBB->addSuccessor(FallThroughBB);
+
+  // Inversion requires expansion, immediate value overflows.
+  // cbhi w0, #63, target ~> cmp w0, #63
+  //                         b.ls target
+  auto I =
+      EntryBB->addInstruction(MCInstBuilder(AArch64::CBHIWri)
+                                  .addReg(AArch64::W0)
+                                  .addImm(63)
+                                  .addExpr(MCSymbolRefExpr::create(
+                                      TargetBB->getLabel(), *BC->Ctx.get())));
+  BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
+  RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
+  DataflowInfoManager DIM(*BF, &RA, nullptr);
+
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &DIM));
+  BC->MIB->reverseBranchCondition(EntryBB, *I, TargetBB->getLabel(),
+                                  BC->Ctx.get(), &DIM);
+  I = EntryBB->begin();
+  ASSERT_EQ(I->getOpcode(), AArch64::SUBSWri);
+  ASSERT_EQ(I->getOperand(0).getReg(), AArch64::WZR);
+  ASSERT_EQ(I->getOperand(1).getReg(), AArch64::W0);
+  ASSERT_EQ(I->getOperand(2).getImm(), 63);
+  ASSERT_EQ(I->getOperand(3).getImm(), 0);
+  I++;
+  ASSERT_EQ(I->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(I->getOperand(0).getImm(), AArch64CC::LS);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_IsReversibleBranch_LiveCondFlags) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  BinaryBasicBlock *EntryBB = BF->addBasicBlock();
+  BinaryBasicBlock *FallThroughBB = BF->addBasicBlock();
+  BinaryBasicBlock *TargetBB = BF->addBasicBlock();
+  BF->addEntryPoint(*EntryBB);
+  EntryBB->addSuccessor(TargetBB);
+  EntryBB->addSuccessor(FallThroughBB);
+
+  // cmp x0, #63
+  EntryBB->addInstruction(MCInstBuilder(AArch64::SUBSXri)
+                              .addReg(AArch64::XZR)
+                              .addReg(AArch64::X0)
+                              .addImm(63)
+                              .addImm(0));
+  // cbgt x0, #63, target
+  auto I =
+      EntryBB->addInstruction(MCInstBuilder(AArch64::CBGTXri)
+                                  .addReg(AArch64::X0)
+                                  .addImm(63)
+                                  .addExpr(MCSymbolRefExpr::create(
+                                      TargetBB->getLabel(), *BC->Ctx.get())));
+  // csel x0, x1, x2, le
+  FallThroughBB->addInstruction(MCInstBuilder(AArch64::CSELXr)
+                                    .addReg(AArch64::X0)
+                                    .addReg(AArch64::X1)
+                                    .addReg(AArch64::X2)
+                                    .addImm(13));
+
+  BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
+  RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
+  DataflowInfoManager DIM(*BF, &RA, nullptr);
+
+  ASSERT_FALSE(BC->MIB->isReversibleBranch(*I, &DIM));
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {

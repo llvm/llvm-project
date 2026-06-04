@@ -614,59 +614,40 @@ public:
 
     void *BlockBegin = getBlockBegin(OldTaggedPtr, &Header);
     uptr BlockEnd;
-    bool ExactSize = AllocatorConfig::getExactUsableSize() ||
-                     useMemoryTagging<AllocatorConfig>(Options);
     const uptr ClassId = Header.ClassId;
     uptr OldSize;
+    uptr UsableSize;
     if (LIKELY(ClassId)) {
       BlockEnd = reinterpret_cast<uptr>(BlockBegin) +
                  SizeClassMap::getSizeByClassId(ClassId);
-      if (ExactSize)
-        OldSize = Header.SizeOrUnusedBytes;
-      else
-        OldSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
+      OldSize = Header.SizeOrUnusedBytes;
+      UsableSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
     } else {
       BlockEnd = SecondaryT::getBlockEnd(BlockBegin);
-      OldSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
-      if (ExactSize)
-        OldSize -= Header.SizeOrUnusedBytes;
+      UsableSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
+      OldSize = UsableSize - Header.SizeOrUnusedBytes;
     }
-    // If the new chunk still fits in the previously allocated block (with a
-    // reasonable delta), we just keep the old block, and update the chunk
-    // header to reflect the size change.
-    if (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize <= BlockEnd) {
-      if (NewSize > OldSize || (OldSize - NewSize) < getPageSizeCached()) {
-        // If we have reduced the size, set the extra bytes to the fill value
-        // so that we are ready to grow it again in the future.
-        if (NewSize < OldSize) {
-          const FillContentsMode FillContents =
-              TSDRegistry.getDisableMemInit() ? NoFill
-                                              : Options.getFillContentsMode();
-          if (FillContents != NoFill) {
-            memset(reinterpret_cast<char *>(OldTaggedPtr) + NewSize,
-                   FillContents == ZeroFill ? 0 : PatternFillByte,
-                   OldSize - NewSize);
-          }
-        }
 
-        Header.SizeOrUnusedBytes =
-            (ClassId ? NewSize
-                     : BlockEnd -
-                           (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize)) &
-            Chunk::SizeOrUnusedBytesMask;
-        Chunk::storeHeader(Cookie, OldPtr, &Header);
-        if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Options))) {
-          if (ClassId) {
-            resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
-                              reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
-                              NewSize, untagPointer(BlockEnd));
-            storePrimaryAllocationStackMaybe(Options, OldPtr);
-          } else {
-            storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
-          }
+    // If the new chunk fits in the previously allocated block, do nothing
+    // but update the header and return immediately.
+    if (NewSize <= UsableSize) {
+      Header.SizeOrUnusedBytes =
+          (ClassId
+               ? NewSize
+               : BlockEnd - (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize)) &
+          Chunk::SizeOrUnusedBytesMask;
+      Chunk::storeHeader(Cookie, OldPtr, &Header);
+      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Options))) {
+        if (ClassId) {
+          resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
+                            reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
+                            NewSize, untagPointer(BlockEnd));
+          storePrimaryAllocationStackMaybe(Options, OldPtr);
+        } else {
+          storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
         }
-        return OldTaggedPtr;
       }
+      return OldTaggedPtr;
     }
 
     // Otherwise we allocate a new one, and deallocate the old one. Some
@@ -675,7 +656,10 @@ public:
     // are currently unclear.
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (LIKELY(NewPtr)) {
-      memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
+      bool ExactSize = AllocatorConfig::getExactUsableSize() ||
+                       useMemoryTagging<AllocatorConfig>(Options);
+      memcpy(NewPtr, OldTaggedPtr,
+             Min(NewSize, ExactSize ? OldSize : UsableSize));
       quarantineOrDeallocateChunk(Options, OldTaggedPtr, &Header, OldSize);
     }
     return NewPtr;
@@ -1002,6 +986,186 @@ public:
     return RB && RB->RingBufferElements
                ? ringBufferSizeInBytes(RB->RingBufferElements)
                : 0;
+  }
+
+  void getErrorInfo(uptr FaultAddr, size_t MinDistance, size_t MaxDistance,
+                    scudo_error_report *Reports, size_t &ReportIndex) {
+    auto *RingBuffer = getRingBuffer();
+    if (RingBuffer == nullptr)
+      return;
+
+    // No more room for any more error reports.
+    if (ReportIndex == NumErrorReports)
+      return;
+
+    uptr UntaggedFaultAddr = untagPointer(FaultAddr);
+    BlockInfo Info = Primary.findNearestBlock(UntaggedFaultAddr);
+
+    auto GetBlockInfo = [&](uptr Addr, Chunk::UnpackedHeader *Header,
+                            uptr &ChunkAddr) {
+      uptr ChunkOffset = getChunkOffsetFromBlock(
+          reinterpret_cast<const char *>(loadTagUnaligned(Addr)));
+      ChunkAddr = loadTagUnaligned(Addr + ChunkOffset);
+      uptr HeaderAddr = loadTag(Addr + ChunkOffset - Chunk::getHeaderSize());
+      *Header = *reinterpret_cast<const Chunk::UnpackedHeader *>(HeaderAddr);
+    };
+
+    auto CheckOOB = [&](uptr BlockAddr) {
+      if (BlockAddr < Info.RegionBegin || BlockAddr >= Info.RegionEnd)
+        return false;
+
+      uptr ChunkAddr;
+      Chunk::UnpackedHeader Header;
+      GetBlockInfo(BlockAddr, &Header, ChunkAddr);
+      if (Header.State != Chunk::State::Allocated)
+        return false;
+      const u8 ChunkTag = extractTag(ChunkAddr);
+      if (extractTag(FaultAddr) != ChunkTag) {
+        // If the allocated size is zero, then there isn't a tag on this
+        // pointer, so allow a tag mismatch.
+        if (ChunkTag != 0 || Header.SizeOrUnusedBytes != 0)
+          return false;
+      }
+      auto *Report = &Reports[ReportIndex++];
+      uptr UntaggedChunkAddr = untagPointer(ChunkAddr);
+      const u32 *ChunkData = reinterpret_cast<const u32 *>(UntaggedChunkAddr);
+      Report->error_type = UntaggedFaultAddr < UntaggedChunkAddr
+                               ? BUFFER_UNDERFLOW
+                               : BUFFER_OVERFLOW;
+      Report->allocation_address = UntaggedChunkAddr;
+      Report->allocation_size = Header.SizeOrUnusedBytes;
+      if (RingBuffer->Depot) {
+        const u32 *TracePtr = reinterpret_cast<const u32 *>(loadTagUnaligned(
+            reinterpret_cast<uptr>(&ChunkData[MemTagAllocationTraceIndex])));
+        collectTraceMaybe(RingBuffer->Depot, Report->allocation_trace,
+                          *TracePtr);
+      }
+      const u32 *TidPtr = reinterpret_cast<const u32 *>(loadTagUnaligned(
+          reinterpret_cast<uptr>(&ChunkData[MemTagAllocationTidIndex])));
+      Report->allocation_tid = *TidPtr;
+      return ReportIndex == NumErrorReports;
+    };
+
+    if (MinDistance == 0 && CheckOOB(Info.BlockBegin))
+      return;
+
+    for (size_t I = Max<size_t>(MinDistance, 1); I != MaxDistance; ++I)
+      if (CheckOOB(Info.BlockBegin + I * Info.BlockSize) ||
+          CheckOOB(Info.BlockBegin - I * Info.BlockSize))
+        return;
+  }
+
+  void getRingBufferErrorInfo(uintptr_t FaultAddr, scudo_error_report *Reports,
+                              size_t &ReportIndex) {
+    auto *RingBuffer = getRingBuffer();
+    if (RingBuffer == nullptr)
+      return;
+
+    // No more room for any more error reports.
+    if (ReportIndex == NumErrorReports)
+      return;
+
+    uptr Pos = atomic_load_relaxed(&RingBuffer->Pos);
+    if (Pos == 0)
+      return;
+
+    const uptr RingBufferElements = RingBuffer->RingBufferElements;
+
+    // Pos is a value that is always increasing.
+    uptr LastPos;
+    if (Pos < RingBufferElements) {
+      LastPos = 0;
+    } else {
+      LastPos = Pos - RingBufferElements;
+    }
+    for (uptr I = Pos; I > LastPos; --I) {
+      auto *Entry =
+          getRingBufferEntry(RingBuffer, (I - 1) % RingBufferElements);
+      uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
+      if (!EntryPtr)
+        continue;
+
+      uptr UntaggedEntryPtr = untagPointer(EntryPtr);
+      uptr EntrySize = atomic_load_relaxed(&Entry->AllocationSize);
+      u32 AllocationTrace = atomic_load_relaxed(&Entry->AllocationTrace);
+      u32 AllocationTid = atomic_load_relaxed(&Entry->AllocationTid);
+      u32 DeallocationTrace = atomic_load_relaxed(&Entry->DeallocationTrace);
+      u32 DeallocationTid = atomic_load_relaxed(&Entry->DeallocationTid);
+      if (DeallocationTid) {
+        // For UAF we only consider in-bounds fault addresses because
+        // out-of-bounds UAF is rare and attempting to detect it is very likely
+        // to result in false positives.
+        if (FaultAddr < EntryPtr || FaultAddr >= EntryPtr + EntrySize)
+          continue;
+      } else {
+        // Ring buffer OOB is only possible with secondary allocations. In this
+        // case we are guaranteed a guard region of at least a page on either
+        // side of the allocation (guard page on the right, guard page + tagged
+        // region on the left), so ignore any faults outside of that range.
+        if (FaultAddr < EntryPtr - getPageSizeCached() ||
+            FaultAddr >= EntryPtr + EntrySize + getPageSizeCached())
+          continue;
+
+        // For UAF the ring buffer will contain two entries, one for the
+        // allocation and another for the deallocation. Don't report buffer
+        // overflow/underflow using the allocation entry if we have already
+        // collected a report from the deallocation entry.
+        bool Found = false;
+        for (uptr J = 0; J != ReportIndex; ++J) {
+          if (Reports[J].allocation_address == UntaggedEntryPtr) {
+            Found = true;
+            break;
+          }
+        }
+        if (Found)
+          continue;
+      }
+
+      auto *Report = &Reports[ReportIndex++];
+      if (DeallocationTid)
+        Report->error_type = USE_AFTER_FREE;
+      else if (FaultAddr < EntryPtr)
+        Report->error_type = BUFFER_UNDERFLOW;
+      else
+        Report->error_type = BUFFER_OVERFLOW;
+
+      Report->allocation_address = UntaggedEntryPtr;
+      Report->allocation_size = EntrySize;
+      collectTraceMaybe(RingBuffer->Depot, Report->allocation_trace,
+                        AllocationTrace);
+      Report->allocation_tid = AllocationTid;
+      collectTraceMaybe(RingBuffer->Depot, Report->deallocation_trace,
+                        DeallocationTrace);
+      Report->deallocation_tid = DeallocationTid;
+      if (ReportIndex == NumErrorReports) {
+        // No more report entries.
+        return;
+      }
+    }
+  }
+
+  void getErrorInfo(uintptr_t FaultAddr, struct scudo_error_info *ErrorInfo) {
+    const Options Options = Primary.Options.load();
+    if (!useMemoryTagging<AllocatorConfig>(Options))
+      return;
+
+    bool TagExists = extractTag(FaultAddr) != 0;
+    size_t ReportIndex = 0;
+    if (TagExists) {
+      // Check for OOB in the current block and the two surrounding blocks.
+      // Beyond that, UAF is more likely.
+      getErrorInfo(FaultAddr, 0, 2, &ErrorInfo->reports[0], ReportIndex);
+    }
+
+    // Check the ring buffer. For primary allocations this will only find UAF;
+    // for secondary allocations we can find either UAF or OOB.
+    getRingBufferErrorInfo(FaultAddr, &ErrorInfo->reports[0], ReportIndex);
+
+    if (TagExists) {
+      // Check for OOB in the 28 blocks surrounding the 3 we checked earlier.
+      // Beyond that we are likely to hit false positives.
+      getErrorInfo(FaultAddr, 2, 16, &ErrorInfo->reports[0], ReportIndex);
+    }
   }
 
   static const uptr MaxTraceSize = 64;
@@ -1791,6 +1955,8 @@ private:
   }
 
   uptr getStats(ScopedString *Str) {
+    Str->append("Config Stats Base: ");
+    AllocatorConfig::getConfigValues(Str);
     Primary.getStats(Str);
     Secondary.getStats(Str);
     if (!AllocatorConfig::getQuarantineDisabled())

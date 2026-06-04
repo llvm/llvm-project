@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GDBRemoteCommunication.h"
+#include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
@@ -30,6 +31,7 @@
 #include <climits>
 #include <cstring>
 #include <sys/stat.h>
+#include <thread>
 #include <variant>
 
 #if HAVE_LIBCOMPRESSION
@@ -100,7 +102,7 @@ size_t GDBRemoteCommunication::SendNack() {
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
-  StreamString packet(0, 4, eByteOrderBig);
+  StreamString packet(0, eByteOrderBig);
   packet.PutChar('$');
   packet.Write(payload.data(), payload.size());
   packet.PutChar('#');
@@ -119,7 +121,7 @@ GDBRemoteCommunication::SendNotificationPacketNoLock(
   // If there are no notification in the queue, send the notification
   // packet.
   if (queue.empty()) {
-    StreamString packet(0, 4, eByteOrderBig);
+    StreamString packet(0, eByteOrderBig);
     packet.PutChar('%');
     packet.Write(notify_type.data(), notify_type.size());
     packet.PutChar(':');
@@ -136,6 +138,10 @@ GDBRemoteCommunication::SendNotificationPacketNoLock(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
                                             bool skip_ack) {
+  std::chrono::milliseconds delay = ProcessGDBRemote::GetPacketTestDelay();
+  if (delay.count() > 0)
+    std::this_thread::sleep_for(delay);
+
   if (IsConnected()) {
     Log *log = GetLog(GDBRLog::Packets);
     ConnectionStatus status = eConnectionStatusSuccess;

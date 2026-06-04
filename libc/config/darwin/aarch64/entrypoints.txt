@@ -46,6 +46,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strncmp
     libc.src.string.strncpy
     libc.src.string.strnlen
+    libc.src.string.strnlen_s
     libc.src.string.strpbrk
     libc.src.string.strrchr
     libc.src.string.strspn
@@ -113,6 +114,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswxdigit
     libc.src.wctype.iswpunct
     libc.src.wctype.iswprint
+    libc.src.wctype.iswctype
+    libc.src.wctype.wctype
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -471,6 +474,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
+    libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16

@@ -23,7 +23,7 @@ static inline RT_API_ATTRS bool IsCharValueSeparator(
     const DataEdit &edit, char32_t ch) {
   return ch == ' ' || ch == '\t' || ch == '/' ||
       ch == edit.modes.GetSeparatorChar() ||
-      (edit.IsNamelist() && (ch == '&' || ch == '$'));
+      (edit.IsNamelist() && (ch == '&' || ch == '$' || ch == '!'));
 }
 
 // Checks that a list-directed input value has been entirely consumed and
@@ -1055,6 +1055,12 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
   case DataEdit::ListDirected:
     return EditListDirectedCharacterInput(io, x, lengthChars, edit);
   case 'A':
+    if (edit.variation == 'T') {
+      io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+          "'AT' edit descriptor may not be used for input");
+      return false;
+    }
+    break;
   case 'G':
     break;
   case 'B':

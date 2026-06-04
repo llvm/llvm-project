@@ -1427,4 +1427,41 @@ bb:
   ret void
 }
 
+; Fast-math patterns with CTEST instructions.
+; Fast-math canonicalization can introduce FREEZE nodes around SETCC operations.
+; With SETCC in isGuaranteedNotToBeUndefOrPoisonForTargetNode, these FREEZE
+; nodes are eliminated early, allowing CTEST pattern matching to work naturally.
+define i32 @test_and_fp_int(double %a, i32 %b) {
+; CHECK-LABEL: test_and_fp_int:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    ctestbl {dfv=zf} %edi, %edi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: test_and_fp_int:
+; NDD:       # %bb.0:
+; NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; NDD-NEXT:    ctestbl {dfv=zf} %edi, %edi
+; NDD-NEXT:    setne %al
+; NDD-NEXT:    movzbl %al, %eax
+; NDD-NEXT:    retq
+;
+; SETZUCC-LABEL: test_and_fp_int:
+; SETZUCC:       # %bb.0:
+; SETZUCC-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
+; SETZUCC-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; SETZUCC-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; SETZUCC-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
+; SETZUCC-NEXT:    setzub %cl # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc1]
+; SETZUCC-NEXT:    andb %al, %cl # encoding: [0x20,0xc1]
+; SETZUCC-NEXT:    movzbl %cl, %eax # encoding: [0x0f,0xb6,0xc1]
+; SETZUCC-NEXT:    retq # encoding: [0xc3]
+  %cmp = icmp ne i32 %b, 0
+  %cmp1 = fcmp fast olt double %a, 1.500000e+00
+  %sel = select i1 %cmp, i1 %cmp1, i1 false
+  %ext = zext i1 %sel to i32
+  ret i32 %ext
+}
 declare dso_local void @foo(...)

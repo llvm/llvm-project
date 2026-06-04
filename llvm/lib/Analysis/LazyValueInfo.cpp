@@ -1316,8 +1316,8 @@ LazyValueInfoImpl::getValueFromSimpleICmpCondition(CmpInst::Predicate Pred,
                                                    bool UseBlockValue) {
   ConstantRange RHSRange(RHS->getType()->getScalarSizeInBits(),
                          /*isFullSet=*/true);
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
-    RHSRange = ConstantRange(CI->getValue());
+  if (auto *C = dyn_cast<Constant>(RHS)) {
+    RHSRange = C->toConstantRange();
   } else if (UseBlockValue) {
     std::optional<ValueLatticeElement> R =
         getBlockValue(RHS, CxtI->getParent(), CxtI);
@@ -1391,7 +1391,7 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
   }
 
   Type *Ty = Val->getType();
-  if (!Ty->isIntegerTy())
+  if (!Ty->isIntOrIntVectorTy())
     return ValueLatticeElement::getOverdefined();
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
@@ -1405,7 +1405,7 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     return getValueFromSimpleICmpCondition(SwappedPred, LHS, Offset, ICI,
                                            UseBlockValue);
 
-  if (match(LHS, m_Intrinsic<Intrinsic::ctpop>(m_Specific(Val))))
+  if (match(LHS, m_Ctpop(m_Specific(Val))))
     return getValueFromICmpCtpop(EdgePred, RHS);
 
   const APInt *Mask, *C;
@@ -2115,6 +2115,10 @@ Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *V,
   // return it quickly. But this is only a fastpath, and falling
   // through would still be correct.
   const DataLayout &DL = CxtI->getDataLayout();
+  // NOTE: This check is meant to determine whether a pointer is semantically a
+  // null pointer, not just whether its value equals ConstantPointerNull. If the
+  // semantics of ConstantPointerNull change in the future, this should be
+  // updated to use a semantic check (e.g. isKnownNonNull).
   if (V->getType()->isPointerTy() && C->isNullValue() &&
       isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
     Type *ResTy = CmpInst::makeCmpResultType(C->getType());

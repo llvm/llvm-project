@@ -701,6 +701,11 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcmp' and 'xqccmp' extensions are incompatible");
   }
+
+  for (StringRef Input : {"rv32i_zcmt_xqccmt0p1", "rv64i_zcmt_xqccmt0p1"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmt' and 'xqccmt' extensions are incompatible");
+  }
 }
 
 TEST(ParseArchString, MissingDepency) {
@@ -1152,6 +1157,7 @@ R"(All available -march extensions for RISC-V
     zicboz               1.0
     ziccamoa             1.0
     ziccamoc             1.0
+    ziccid               1.0
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
@@ -1301,6 +1307,7 @@ R"(All available -march extensions for RISC-V
     xandesvpackfph       5.0
     xandesvsinth         5.0
     xandesvsintload      5.0
+    xcheriot             1.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0
@@ -1373,20 +1380,31 @@ R"(All available -march extensions for RISC-V
 
 Experimental extensions
     p                    0.21
-    y                    0.96
+    y                    0.98
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
     zvabd                0.7
     zvbc32e              0.7
     zvdot4a8i            0.1
+    zvfbdota32f          0.2
     zvfbfa               0.1
     zvfofp8min           0.2
+    zvfqwbdota8f         0.2
+    zvfqwdota8f          0.2
+    zvfwbdota16bf        0.2
+    zvfwdota16bf         0.2
     zvkgs                0.7
+    zvqwbdota16i         0.2
+    zvqwbdota8i          0.2
+    zvqwdota16i          0.2
+    zvqwdota8i           0.2
+    zvvfmm               0.1
+    zvvmm                0.1
     zvzip                0.1
     smpmpmt              0.6
     svukte               0.3
-    xrivosvizip          0.1
+    xqccmt               0.1
     xsfmclic             0.1
     xsfsclic             0.1
 

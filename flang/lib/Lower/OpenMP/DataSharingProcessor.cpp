@@ -260,11 +260,6 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
     // draw a relation between %linear and %arg0. Hence skip.
     if (sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
       return true;
-
-    // `OmpPreDetermined` symbols cannot be exceptions since
-    // their privatized symbols are heavily used in FIR.
-    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return false;
     return false;
   };
 
@@ -345,7 +340,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     return;
 
   if (mlir::isa<mlir::omp::WsloopOp>(op) || mlir::isa<mlir::omp::SimdOp>(op) ||
-      mlir::isa<mlir::omp::TaskloopOp>(op)) {
+      mlir::isa<mlir::omp::TaskloopWrapperOp>(op)) {
     mlir::omp::LoopRelatedClauseOps result;
     llvm::SmallVector<const semantics::Symbol *> iv;
     collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,
@@ -422,7 +417,6 @@ static parser::CharBlock getSource(const semantics::SemanticsContext &semaCtx,
         return parser::omp::GetOmpDirectiveName(x).source;
       },
       [&](const parser::OpenMPDeclarativeConstruct &x) { return x.source; },
-      [&](const parser::OmpEndLoopDirective &x) { return x.source; },
       [&](const auto &x) { return parser::CharBlock{}; },
   });
 }

@@ -181,6 +181,10 @@ def Jf : JumpOpcode;
 def PushIgnoreDiags : Opcode;
 def PopIgnoreDiags : Opcode;
 
+
+def StartInit : Opcode;
+def EndInit : Opcode;
+
 def StartSpeculation : Opcode;
 def EndSpeculation : Opcode;
 def BCP : Opcode {
@@ -322,6 +326,13 @@ class OffsetOpcode : Opcode {
 def GetPtrLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+def GetRefLocal : OffsetOpcode {
+  bit HasCustomEval = 1;
+}
+def GetRefGlobal : OffsetOpcode;
+
+def CheckRefInit : Opcode {}
+
 // [] -> [Pointer]
 def GetPtrParam : OffsetOpcode;
 // [] -> [Pointer]
@@ -429,7 +440,9 @@ def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
 def EndLifetimePop : Opcode;
 def EndLifetime : Opcode;
-def StartLifetime : Opcode;
+def MarkDestroyed : Opcode;
+def StartThisLifetime : Opcode;
+def StartThisLifetime1 : Opcode;
 
 def CheckDecl : Opcode {
   let Args = [ArgVarDecl];
@@ -446,6 +459,7 @@ def CheckLiteralType : Opcode {
 }
 
 def CheckArraySize : Opcode { let Args = [ArgUint64]; }
+def CheckArrayDestSize : Opcode { let Args = [ArgUint64]; }
 def CheckFunctionDecl : Opcode { let Args = [ArgFunctionDecl]; }
 def CheckBitCast : Opcode { let Args = [ArgTypePtr, ArgBool]; }
 
@@ -750,7 +764,7 @@ def CastPointerIntegralAPS : Opcode {
   let Args = [ArgUint32];
 }
 def CastIntegralFixedPoint : Opcode {
-  let Types = [FixedSizeIntegralTypeClass];
+  let Types = [IntegralTypeClass];
   let Args = [ArgUint32];
   let HasGroup = 1;
 }
@@ -835,6 +849,8 @@ def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
+def CheckDynamicCast : Opcode {}
+
 def InvalidStore : Opcode { let Args = [ArgTypePtr]; }
 def CheckPseudoDtor : Opcode {}
 
@@ -865,6 +881,9 @@ def GetMemberPtr : Opcode {
 }
 def GetMemberPtrBase : Opcode;
 def GetMemberPtrDecl : Opcode;
+def CopyMemberPtrPath : Opcode {
+  let Args = [ArgRecordDecl, ArgBool];
+}
 
 //===----------------------------------------------------------------------===//
 // Debugging.

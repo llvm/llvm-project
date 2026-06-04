@@ -809,7 +809,7 @@ private:
 public:
   LLVM_ABI AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID,
+                         SyncScope::ID SSID, bool Elementwise = false,
                          InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
@@ -821,8 +821,10 @@ public:
       AtomicOrderingBitfieldElementT<VolatileField::NextBit>;
   using OperationField = BinOpBitfieldElement<AtomicOrderingField::NextBit>;
   using AlignmentField = AlignmentBitfieldElementT<OperationField::NextBit>;
+  using ElementwiseField = BoolBitfieldElementT<AlignmentField::NextBit>;
   static_assert(Bitfield::areContiguous<VolatileField, AtomicOrderingField,
-                                        OperationField, AlignmentField>(),
+                                        OperationField, AlignmentField,
+                                        ElementwiseField>(),
                 "Bitfields must be contiguous");
 
   BinOp getOperation() const { return getSubclassData<OperationField>(); }
@@ -866,6 +868,12 @@ public:
   /// Specify whether this is a volatile RMW or not.
   ///
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this RMW has elementwise vector semantics.
+  bool isElementwise() const { return getSubclassData<ElementwiseField>(); }
+
+  /// Specify whether this RMW has elementwise vector semantics.
+  void setElementwise(bool V) { setSubclassData<ElementwiseField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -920,7 +928,7 @@ public:
 
 private:
   void Init(BinOp Operation, Value *Ptr, Value *Val, Align Align,
-            AtomicOrdering Ordering, SyncScope::ID SSID);
+            AtomicOrdering Ordering, SyncScope::ID SSID, bool Elementwise);
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
@@ -1418,7 +1426,7 @@ public:
 /// to the constructor. It only operates on floating point values or packed
 /// vectors of floating point values. The operands must be identical types.
 /// Represents a floating point comparison operator.
-class FCmpInst: public CmpInst {
+class FCmpInst : public CmpInst, public FastMathFlagsStorage {
   void AssertOK() {
     assert(isFPPredicate() && "Invalid FCmp predicate value");
     assert(getOperand(0)->getType() == getOperand(1)->getType() &&
@@ -1455,7 +1463,9 @@ public:
            const Twine &NameStr = "", ///< Name of the instruction
            Instruction *FlagsSource = nullptr)
       : CmpInst(makeCmpResultType(LHS->getType()), Instruction::FCmp, Pred, LHS,
-                RHS, NameStr, nullptr, FlagsSource) {
+                RHS, NameStr) {
+    if (FlagsSource)
+      copyIRFlags(FlagsSource);
     AssertOK();
   }
 
@@ -1518,7 +1528,7 @@ public:
 /// field to indicate whether or not this is a tail call.  The rest of the bits
 /// hold the calling convention of the call.
 ///
-class CallInst : public CallBase {
+class CallInst : public CallBase, public FastMathFlagsStorage {
   CallInst(const CallInst &CI, AllocInfo AllocInfo);
 
   /// Construct a CallInst from a range of arguments
@@ -1697,7 +1707,7 @@ CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
 
 /// This class represents the LLVM 'select' instruction.
 ///
-class SelectInst : public Instruction {
+class SelectInst : public Instruction, public FastMathFlagsStorage {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
   SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
@@ -2648,7 +2658,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertValueInst, Value)
 // node, that can not exist in nature, but can be synthesized in a computer
 // scientist's overactive imagination.
 //
-class PHINode : public Instruction {
+class PHINode : public Instruction, public FastMathFlagsStorage {
   constexpr static HungOffOperandsAllocMarker AllocMarker{};
 
   /// The number of operands actually allocated.  NumOperands is
@@ -3699,8 +3709,17 @@ public:
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 
   ~SwitchInstProfUpdateWrapper() {
-    if (Changed && Weights.has_value() && Weights->size() >= 2)
-      setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
+    if (Changed && Weights.has_value()) {
+      if (Weights->size() >= 2) {
+        setBranchWeights(SI, Weights.value(), /*IsExpected=*/false);
+        return;
+      }
+      // In some cases while simplifying switch instructions, we end up with
+      // degenerate switch instructions (e.g., only contains the default case).
+      // We drop profile metadata in such cases rather than updating given it
+      // does not convey anything.
+      SI.setMetadata(LLVMContext::MD_prof, nullptr);
+    }
   }
 
   /// Delegate the call to the underlying SwitchInst::removeCase() and remove
@@ -4869,7 +4888,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a truncation of floating point types.
-class FPTruncInst : public CastInst {
+class FPTruncInst : public CastInst, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -4900,7 +4919,7 @@ public:                 /// Constructor with insert-before-instruction semantics
 //===----------------------------------------------------------------------===//
 
 /// This class represents an extension of floating point types.
-class FPExtInst : public CastInst {
+class FPExtInst : public CastInst, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -4932,7 +4951,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a cast unsigned integer to floating point.
-class UIToFPInst : public CastInst {
+class UIToFPInst : public CastInst, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -4964,7 +4983,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a cast from signed integer to floating point.
-class SIToFPInst : public CastInst {
+class SIToFPInst : public CastInst, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;

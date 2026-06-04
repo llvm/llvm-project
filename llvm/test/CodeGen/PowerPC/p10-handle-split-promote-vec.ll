@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix -vec-extabi \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix --code-model=small -vec-extabi \
 ; RUN:   -mcpu=pwr10 < %s | FileCheck %s -check-prefix=CHECK-AIX
 
 define i32 @SplitPromoteVectorTest(i32 %Opc) align 2 {

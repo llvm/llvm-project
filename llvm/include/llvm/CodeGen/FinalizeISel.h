@@ -13,10 +13,10 @@
 
 namespace llvm {
 
-class FinalizeISelPass : public PassInfoMixin<FinalizeISelPass> {
+class FinalizeISelPass : public RequiredPassInfoMixin<FinalizeISelPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &);
 };
 
 } // namespace llvm

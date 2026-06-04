@@ -1161,12 +1161,10 @@ define i1 @pow2_and_i128(i128 %num, i128 %shift) {
 define i32 @pow2_bswap(i32 %a0, i32 %a1) {
 ; CHECK-LABEL: pow2_bswap:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    leal 4(,%rdi,4), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    shrl $5, %eax
+; CHECK-NEXT:    orl $67108863, %eax # imm = 0x3FFFFFF
 ; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 0, %a0
@@ -1213,12 +1211,10 @@ define i32 @pow2_bitreverse(i32 %a0, i32 %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    leal 4(,%rdi,4), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shll $3, %eax
-; CHECK-NEXT:    leal (%rax,%rcx,2), %eax
+; CHECK-NEXT:    shrl $5, %edi
+; CHECK-NEXT:    andl $67108864, %edi # imm = 0x4000000
+; CHECK-NEXT:    leal 536870912(,%rdi,8), %eax
+; CHECK-NEXT:    leal 134217728(%rax,%rdi,2), %eax
 ; CHECK-NEXT:    andl $805306368, %eax # imm = 0x30000000
 ; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    andl %esi, %eax
@@ -1367,26 +1363,28 @@ define i8 @pow2_trunc_fail(i32 %x, i32 %a){
   ret i8 %r
 }
 
-define i8 @pow2_trunc_vec(<4 x i32> %x, <4 x i32> %a) {
+define i8 @pow2_trunc_vec(i8 %x8, <4 x i32> %a, ptr %p) {
 ; CHECK-LABEL: pow2_trunc_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor %xmm2, %xmm2
-; CHECK-NEXT:    psubd %xmm1, %xmm2
-; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-NEXT:    paddb %xmm2, %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
+; CHECK-NEXT:    psubd %xmm0, %xmm1
 ; CHECK-NEXT:    pand %xmm0, %xmm1
 ; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    packuswb %xmm1, %xmm1
+; CHECK-NEXT:    packuswb %xmm1, %xmm1
+; CHECK-NEXT:    movd %xmm1, (%rsi)
+; CHECK-NEXT:    decb %al
+; CHECK-NEXT:    andb %dil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
-  %a.splat = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
-  %a.splat.neg = sub <4 x i32> zeroinitializer, %a.splat
-  %y = and <4 x i32> %a.splat, %a.splat.neg
-  %x8 = trunc <4 x i32> %x to <4 x i8>
+  %a.neg = sub <4 x i32> <i32 0, i32 -1, i32 -1, i32 -1>, %a
+  %y = and <4 x i32> %a, %a.neg
   %y8 = trunc <4 x i32> %y to <4 x i8>
-  %r = urem <4 x i8> %x8, %y8
-  %ext = extractelement <4 x i8> %r, i8 0
-  ret i8 %ext
+  store <4 x i8> %y8, ptr %p
+  %y8.elt = extractelement <4 x i8> %y8, i8 0
+  %r = urem i8 %x8, %y8.elt
+  ret i8 %r
 }
 
 define i8 @pow2_truncc_vec_fail(<4 x i32> %x, <4 x i32> %a) {

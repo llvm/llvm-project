@@ -1281,6 +1281,7 @@ void ASTStmtReader::VisitInitListExpr(InitListExpr *E) {
     for (unsigned I = 0; I != NumInits; ++I)
       E->updateInit(Record.getContext(), I, Record.readSubExpr());
   }
+  E->InitListExprBits.IsExplicit = Record.readBool();
 }
 
 void ASTStmtReader::VisitDesignatedInitExpr(DesignatedInitExpr *E) {
@@ -1388,8 +1389,14 @@ void ASTStmtReader::VisitEmbedExpr(EmbedExpr *E) {
   EmbedDataStorage *Data = new (Record.getContext()) EmbedDataStorage;
   Data->BinaryData = cast<StringLiteral>(Record.readSubStmt());
   E->Data = Data;
-  E->Begin = Record.readInt();
-  E->NumOfElements = Record.readInt();
+  E->Begin = Record.readUInt32();
+  E->NumOfElements = Record.readUInt32();
+  ASTContext &Ctx = Record.getContext();
+  E->Ctx = &Ctx;
+  E->setType(Ctx.IntTy);
+  E->FakeChildNode = IntegerLiteral::Create(
+      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(E->getType())), E->getType(),
+      E->EmbedKeywordLoc);
 }
 
 void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {
@@ -1787,6 +1794,7 @@ void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   E->CXXOperatorCallExprBits.OperatorKind = Record.readInt();
+  E->CXXOperatorCallExprBits.IsReversed = Record.readInt();
   E->BeginLoc = Record.readSourceLocation();
 }
 
@@ -2278,11 +2286,11 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
-  E->AssociatedDeclAndRef.setPointer(readDeclAs<Decl>());
-  E->AssociatedDeclAndRef.setInt(CurrentUnpackingBits->getNextBit());
+  E->AssociatedDeclAndFinal.setPointer(readDeclAs<Decl>());
+  E->AssociatedDeclAndFinal.setInt(CurrentUnpackingBits->getNextBit());
   E->Index = CurrentUnpackingBits->getNextBits(/*Width=*/12);
   E->PackIndex = Record.readUnsignedOrNone().toInternalRepresentation();
-  E->Final = CurrentUnpackingBits->getNextBit();
+  E->ParamType = Record.readType();
   E->SubstNonTypeTemplateParmExprBits.NameLoc = readSourceLocation();
   E->Replacement = Record.readSubExpr();
 }
@@ -2526,6 +2534,10 @@ void ASTStmtReader::VisitOMPCanonicalLoopSequenceTransformationDirective(
 }
 
 void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPSplitDirective(OMPSplitDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
@@ -3684,6 +3696,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
              "Reverse directive has no clauses");
       S = OMPReverseDirective::CreateEmpty(Context, NumLoops);
+      break;
+    }
+
+    case STMT_OMP_SPLIT_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPSplitDirective::CreateEmpty(Context, NumClauses, NumLoops);
       break;
     }
 

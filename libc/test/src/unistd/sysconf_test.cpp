@@ -15,3 +15,18 @@ TEST(LlvmLibcSysconfTest, PagesizeTest) {
   long pagesize = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
   ASSERT_GT(pagesize, 0l);
 }
+
+TEST(LlvmLibcSysconfTest, NprocessorsConfTest) {
+  long sysconf_count = LIBC_NAMESPACE::sysconf(_SC_NPROCESSORS_CONF);
+  ASSERT_GT(sysconf_count, 0l);
+}
+
+TEST(LlvmLibcSysconfTest, NprocessorsOnlnTest) {
+  long sysconf_count = LIBC_NAMESPACE::sysconf(_SC_NPROCESSORS_ONLN);
+  ASSERT_GT(sysconf_count, 0l);
+}
+
+TEST(LlvmLibcSysconfTest, ThreadsTest) {
+  long threads = LIBC_NAMESPACE::sysconf(_SC_THREADS);
+  ASSERT_EQ(threads, _POSIX_THREADS);
+}

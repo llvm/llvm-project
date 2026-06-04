@@ -26,6 +26,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1355,14 +1356,18 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
     return;
   }
   // Does an SSCL have an entry for the DstType under its respective sanitizer
-  // section?
-  if (DstSigned && CGF.getContext().isTypeIgnoredBySanitizer(
-                       SanitizerKind::ImplicitSignedIntegerTruncation, DstType))
-    return;
-  if (!DstSigned &&
-      CGF.getContext().isTypeIgnoredBySanitizer(
-          SanitizerKind::ImplicitUnsignedIntegerTruncation, DstType))
-    return;
+  // section? Don't check this if an __ob_trap type is involved as it has
+  // priority to emit checks regardless of sanitizer case lists.
+  if (!OBTrapInvolved) {
+    if (DstSigned &&
+        CGF.getContext().isTypeIgnoredBySanitizer(
+            SanitizerKind::ImplicitSignedIntegerTruncation, DstType))
+      return;
+    if (!DstSigned &&
+        CGF.getContext().isTypeIgnoredBySanitizer(
+            SanitizerKind::ImplicitUnsignedIntegerTruncation, DstType))
+      return;
+  }
   // That's it. We can't rule out any more cases with the data we have.
 
   auto CheckHandler = SanitizerHandler::ImplicitConversion;
@@ -1670,6 +1675,20 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
   llvm::Type *DstTy = ConvertType(DstType);
 
+  // Determine whether an overflow behavior of 'trap' has been specified for
+  // either the destination or the source types. If so, we can elide sanitizer
+  // capability checks as this overflow behavior kind is also capable of
+  // emitting traps without runtime sanitizer support.
+  // Also skip instrumentation if either source or destination has 'wrap'
+  // behavior - the user has explicitly indicated they accept wrapping
+  // semantics. Use non-canonical types to preserve OBT annotations.
+  const auto *DstOBT = NoncanonicalDstType->getAs<OverflowBehaviorType>();
+  const auto *SrcOBT = NoncanonicalSrcType->getAs<OverflowBehaviorType>();
+  bool OBTrapInvolved =
+      (DstOBT && DstOBT->isTrapKind()) || (SrcOBT && SrcOBT->isTrapKind());
+  bool OBWrapInvolved =
+      (DstOBT && DstOBT->isWrapKind()) || (SrcOBT && SrcOBT->isWrapKind());
+
   // Cast from half through float if half isn't a native type.
   if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
     // Cast to FP using the intrinsic if the half type itself isn't supported.
@@ -1696,9 +1715,10 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
   // Ignore conversions like int -> uint.
   if (SrcTy == DstTy) {
-    if (Opts.EmitImplicitIntegerSignChangeChecks)
+    if (Opts.EmitImplicitIntegerSignChangeChecks ||
+        (OBTrapInvolved && !OBWrapInvolved))
       EmitIntegerSignChangeCheck(Src, NoncanonicalSrcType, Src,
-                                 NoncanonicalDstType, Loc);
+                                 NoncanonicalDstType, Loc, OBTrapInvolved);
 
     return Src;
   }
@@ -1828,20 +1848,6 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
       Res = Builder.CreateBitCast(Res, ResTy);
     }
   }
-
-  // Determine whether an overflow behavior of 'trap' has been specified for
-  // either the destination or the source types. If so, we can elide sanitizer
-  // capability checks as this overflow behavior kind is also capable of
-  // emitting traps without runtime sanitizer support.
-  // Also skip instrumentation if either source or destination has 'wrap'
-  // behavior - the user has explicitly indicated they accept wrapping
-  // semantics. Use non-canonical types to preserve OBT annotations.
-  const auto *DstOBT = NoncanonicalDstType->getAs<OverflowBehaviorType>();
-  const auto *SrcOBT = NoncanonicalSrcType->getAs<OverflowBehaviorType>();
-  bool OBTrapInvolved =
-      (DstOBT && DstOBT->isTrapKind()) || (SrcOBT && SrcOBT->isTrapKind());
-  bool OBWrapInvolved =
-      (DstOBT && DstOBT->isWrapKind()) || (SrcOBT && SrcOBT->isWrapKind());
 
   if ((Opts.EmitImplicitIntegerTruncationChecks || OBTrapInvolved) &&
       !OBWrapInvolved && !Opts.PatternExcluded)
@@ -2208,7 +2214,15 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
     CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
 
-  return Builder.CreateExtractElement(Base, Idx, "vecext");
+  Value *Ret = Builder.CreateExtractElement(Base, Idx, "vecext");
+
+  // Even being a scalar the `__mfp8` type corresponds to `<1 x i8>` in LLVM IR.
+  if (E->getType()->isMFloat8Type())
+    Ret = Builder.CreateInsertElement(
+        llvm::PoisonValue::get(llvm::FixedVectorType::get(CGF.Int8Ty, 1)), Ret,
+        uint64_t(0), "mfp8ext");
+
+  return Ret;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
@@ -2232,10 +2246,11 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
+
   for (unsigned Col = 0; Col != NumColumns; ++Col) {
     Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
-    bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                            LangOptions::MatrixMemoryLayout::MatrixRowMajor;
     Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, NumColumns,
                                    IsMatrixRowMajor, "matrix_row_idx");
     Value *Elt =
@@ -2261,8 +2276,8 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   Value *Idx;
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
   Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
@@ -2347,8 +2362,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // column-major positions rather than inserting sequentially and shuffling.
   const ConstantMatrixType *ColMajorMT = nullptr;
   if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
-      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      MT && !isMatrixRowMajor(CGF.getLangOpts(), E->getType()))
     ColMajorMT = MT;
 
   // Loop over initializers collecting the Value for each, and remembering
@@ -2587,8 +2601,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
 
     llvm::Value *V = CGF.Builder.CreateLoad(
         CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
@@ -3167,12 +3180,16 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       assert(SrcMatTy && "Source type must be a matrix type.");
       assert(NumRows <= SrcMatTy->getNumRows());
       assert(NumCols <= SrcMatTy->getNumColumns());
-      bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                        LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
+      // isMatrix[Src|Dst]RowMajor needs the full sugared QualType to find
+      // matrix layout attrs. So use E->getType() &  DestTy rather than SrcMatTy
+      // & MatTy b/c getAs<ConstantMatrixType>() strips the sugar.
+      bool IsSrcRowMajor = isMatrixRowMajor(CGF.getLangOpts(), E->getType());
+      bool IsDstRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
       for (unsigned R = 0; R < NumRows; R++)
         for (unsigned C = 0; C < NumCols; C++)
-          Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =
-              SrcMatTy->getFlattenedIndex(R, C, IsRowMajor);
+          Mask[MatTy->getFlattenedIndex(R, C, IsDstRowMajor)] =
+              SrcMatTy->getFlattenedIndex(R, C, IsSrcRowMajor);
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }
@@ -4225,7 +4242,7 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
-      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType() &&
+      Ops.mayHaveIntegerOverflow() &&
       !CGF.getContext().isTypeIgnoredBySanitizer(
           SanitizerKind::SignedIntegerOverflow, Ops.Ty)) {
     llvm::IntegerType *Ty = cast<llvm::IntegerType>(Zero->getType());
@@ -5315,7 +5332,7 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
 
     // If this is a vector comparison, sign extend the result to the appropriate
     // vector integer type and return it (don't convert to bool).
-    if (LHSTy->isVectorType())
+    if (LHSTy->isVectorType() || LHSTy->isSveVLSBuiltinType())
       return Builder.CreateSExt(Result, ConvertType(E->getType()), "sext");
 
   } else {

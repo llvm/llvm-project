@@ -7,8 +7,8 @@ define void @store_nontemporal(ptr dereferenceable(4) %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[COPY]](p0) :: (non-temporal store (s32) into %ir.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[COPY]](p0) :: (non-temporal store (i32) into %ir.ptr)
   ; CHECK-NEXT:   RET_ReallyLR
   store i32 0, ptr %ptr, align 4, !nontemporal !0
   ret void
@@ -20,8 +20,8 @@ define void @store_dereferenceable(ptr dereferenceable(4) %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[COPY]](p0) :: (store (s32) into %ir.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[COPY]](p0) :: (store (i32) into %ir.ptr)
   ; CHECK-NEXT:   RET_ReallyLR
   store i32 0, ptr %ptr, align 4
   ret void
@@ -33,8 +33,8 @@ define void @store_volatile_dereferenceable(ptr dereferenceable(4) %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[COPY]](p0) :: (volatile store (s32) into %ir.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[COPY]](p0) :: (volatile store (i32) into %ir.ptr)
   ; CHECK-NEXT:   RET_ReallyLR
   store volatile i32 0, ptr %ptr, align 4
   ret void
@@ -46,8 +46,8 @@ define void @store_falkor_strided_access(ptr %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[COPY]](p0) :: ("aarch64-strided-access" store (s32) into %ir.ptr)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[COPY]](p0) :: ("aarch64-strided-access" store (i32) into %ir.ptr)
   ; CHECK-NEXT:   RET_ReallyLR
   store i32 0, ptr %ptr, align 4, !falkor.strided.access !0
   ret void

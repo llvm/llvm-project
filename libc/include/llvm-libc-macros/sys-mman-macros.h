@@ -18,6 +18,10 @@
 #error "cannot use <sys/mman.h> without proper system headers."
 #endif
 
+#if __has_include(<linux/memfd.h>)
+#include <linux/memfd.h>
+#endif
+
 // Some posix standard flags may not be defined in system headers.
 // Posix mmap flags.
 #ifndef MAP_FAILED

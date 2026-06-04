@@ -1,5 +1,5 @@
 ; RUN: opt < %s -mattr=+mve,+mve.fp -passes=loop-vectorize -tail-predication=disabled -S | FileCheck %s --check-prefixes=DEFAULT
-; RUN: opt < %s -mattr=+mve,+mve.fp -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck %s --check-prefixes=TAILPRED
+; RUN: opt < %s -mattr=+mve,+mve.fp -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail -S | FileCheck %s --check-prefixes=TAILPRED
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-none-eabi"
@@ -7,9 +7,9 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; When TP is disabled, this test can vectorize with a VF of 16.
 ; When TP is enabled, this test should vectorize with a VF of 8.
 ;
-; DEFAULT: load <16 x i8>, ptr
-; DEFAULT: sext <16 x i8> %{{.*}} to <16 x i16>
-; DEFAULT: add <16 x i16>
+; DEFAULT: load <8 x i8>, ptr
+; DEFAULT: sext <8 x i8> %{{.*}} to <8 x i16>
+; DEFAULT: add <8 x i16>
 ; DEFAULT-NOT: llvm.masked.load
 ; DEFAULT-NOT: llvm.masked.store
 ;
