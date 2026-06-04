@@ -135,4 +135,11 @@ struct BFloat16 {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
+static_assert(
+    LIBC_NAMESPACE::cpp::is_trivially_constructible<
+        LIBC_NAMESPACE::fputil::BFloat16>::value);
+static_assert(
+    LIBC_NAMESPACE::cpp::is_trivially_copyable<
+        LIBC_NAMESPACE::fputil::BFloat16>::value);
+
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
