@@ -6,7 +6,7 @@ target triple = "arm64-apple-macosx"
 
 define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %call) {
 ; CHECK-LABEL: define noundef i1 @test_order_1(
-; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]], ptr noalias [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]], ptr noalias captures(address) [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:

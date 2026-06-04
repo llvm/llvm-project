@@ -749,3 +749,285 @@ define i32 @test_broadcast_in_rows16_bitmask(i32 %val) {
   %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
   ret i32 %result
 }
+
+; Rotate-left-by-1 using mbcnt.lo only (wave32 ID form); folds to ds_swizzle
+; rotate mode (imm=0xC020) on GFX11 wave32, but not on wave64 targets (GFX11-W64,
+; GFX9) where mbcnt.lo alone is not the full lane ID.
+define i32 @test_rotate_add1_w32(i32 %val) {
+; GFX11-LABEL: @test_rotate_add1_w32(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 49184)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_rotate_add1_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 1
+; GFX11-W64-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 31
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_rotate_add1_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 1
+; GFX9-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 31
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %add = add i32 %lane, 1
+  %idx = and i32 %add, 31
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
+
+; Rotate-right-by-1 canonicalized to rotate-left-by-31; folds to ds_swizzle
+; rotate mode (imm=0xC3E0) on GFX11 wave32, but not on wave64 targets (GFX11-W64,
+; GFX9) where mbcnt.lo alone is not the full lane ID.
+define i32 @test_rotate_sub1_w32(i32 %val) {
+; GFX11-LABEL: @test_rotate_sub1_w32(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 50144)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_rotate_sub1_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 31
+; GFX11-W64-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 31
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_rotate_sub1_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 31
+; GFX9-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 31
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %add = add i32 %lane, 31
+  %idx = and i32 %add, 31
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
+
+; Same rotate-left-by-1 via ds_bpermute (byte-addressed); folds to ds_swizzle
+; rotate mode (imm=0xC020) on GFX11 wave32, but not on wave64 targets (GFX11-W64,
+; GFX9) where mbcnt.lo alone is not the full lane ID.
+define i32 @test_bpermute_rotate_add1_w32(i32 %val) {
+; GFX11-LABEL: @test_bpermute_rotate_add1_w32(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 49184)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_bpermute_rotate_add1_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[ADD:%.*]] = shl nuw nsw i32 [[LANE]], 2
+; GFX11-W64-NEXT:    [[IDX:%.*]] = add nuw nsw i32 [[ADD]], 4
+; GFX11-W64-NEXT:    [[ADDR:%.*]] = and i32 [[IDX]], 124
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[ADDR]], i32 [[VAL:%.*]])
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_bpermute_rotate_add1_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[ADD:%.*]] = shl nuw nsw i32 [[LANE]], 2
+; GFX9-NEXT:    [[IDX:%.*]] = add nuw nsw i32 [[ADD]], 4
+; GFX9-NEXT:    [[ADDR:%.*]] = and i32 [[IDX]], 124
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[ADDR]], i32 [[VAL:%.*]])
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %add = add i32 %lane, 1
+  %idx = and i32 %add, 31
+  %addr = shl i32 %idx, 2
+  %result = call i32 @llvm.amdgcn.ds.bpermute(i32 %addr, i32 %val)
+  ret i32 %result
+}
+
+; Wave64 rotate-left-by-1 with both 32-lane groups rotating independently;
+; folds to ds_swizzle rotate mode on all targets.
+define i32 @test_rotate_add1_w64(i32 %val) {
+; GFX11-LABEL: @test_rotate_add1_w64(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 49184)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_rotate_add1_w64(
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 49184)
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_rotate_add1_w64(
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 49184)
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %lane = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %low5 = and i32 %lane, 31
+  %add = add i32 %low5, 1
+  %rot = and i32 %add, 31
+  %hi = and i32 %lane, 32
+  %idx = or i32 %rot, %hi
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
+
+; Negative: full-wave64 rotate crosses the 32-lane group boundary, so
+; hasPeriodicLayout<32> rejects it and no fold occurs.
+define i32 @test_rotate_add1_full_w64(i32 %val) {
+; GFX11-LABEL: @test_rotate_add1_full_w64(
+; GFX11-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LO]], 1
+; GFX11-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 63
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_rotate_add1_full_w64(
+; GFX11-W64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX11-W64-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 1
+; GFX11-W64-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 63
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_rotate_add1_full_w64(
+; GFX9-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX9-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 1
+; GFX9-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 63
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %lane = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %add = add i32 %lane, 1
+  %idx = and i32 %add, 63
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
+
+; Identity shuffle (N=0 degenerate case for rotate; add %lane,0 folds to %lane).
+; On GFX11 wave32 this still folds to the identity quad-perm via DPP; on wave64
+; targets (GFX11-W64, GFX9) mbcnt.lo alone is not the full lane ID so no fold.
+define i32 @test_identity_w32(i32 %val) {
+; GFX11-LABEL: @test_identity_w32(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 228, i32 15, i32 15, i1 true)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_identity_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[IDX:%.*]] = and i32 [[LANE]], 31
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_identity_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[IDX:%.*]] = and i32 [[LANE]], 31
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %add = add i32 %lane, 0
+  %idx = and i32 %add, 31
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
+
+; Two 32-lane halves rotate by different amounts (low half by 1, high half by 2).
+; On wave64 hasPeriodicLayout<32> rejects the non-uniform pattern so no fold
+; occurs. On GFX11 wave32 only one 32-lane group exists so the high-half shift
+; is never evaluated; the pattern collapses to a uniform rotate-by-1 and folds.
+define i32 @test_rotate_asymmetric_w64(i32 %val) {
+; GFX11-LABEL: @test_rotate_asymmetric_w64(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[VAL:%.*]], i32 49184)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_rotate_asymmetric_w64(
+; GFX11-W64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX11-W64-NEXT:    [[HI:%.*]] = and i32 [[LANE]], 32
+; GFX11-W64-NEXT:    [[HIGH_EXTRA:%.*]] = lshr exact i32 [[HI]], 5
+; GFX11-W64-NEXT:    [[SHIFT:%.*]] = add nuw nsw i32 [[HIGH_EXTRA]], 1
+; GFX11-W64-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], [[SHIFT]]
+; GFX11-W64-NEXT:    [[ROT:%.*]] = and i32 [[ADD]], 31
+; GFX11-W64-NEXT:    [[IDX:%.*]] = or disjoint i32 [[ROT]], [[HI]]
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_rotate_asymmetric_w64(
+; GFX9-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; GFX9-NEXT:    [[HI:%.*]] = and i32 [[LANE]], 32
+; GFX9-NEXT:    [[HIGH_EXTRA:%.*]] = lshr exact i32 [[HI]], 5
+; GFX9-NEXT:    [[SHIFT:%.*]] = add nuw nsw i32 [[HIGH_EXTRA]], 1
+; GFX9-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], [[SHIFT]]
+; GFX9-NEXT:    [[ROT:%.*]] = and i32 [[ADD]], 31
+; GFX9-NEXT:    [[IDX:%.*]] = or disjoint i32 [[ROT]], [[HI]]
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %lane = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %low5 = and i32 %lane, 31
+  %hi = and i32 %lane, 32
+  %high_extra = lshr i32 %hi, 5
+  %shift = add i32 %high_extra, 1
+  %add = add i32 %low5, %shift
+  %rot = and i32 %add, 31
+  %idx = or i32 %rot, %hi
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 %idx)
+  ret i32 %result
+}
+
+; Rotate-left-by-3 using an f32 source; createDsSwizzle bitcasts to i32.
+define float @test_rotate_add3_f32_w32(float %val) {
+; GFX11-LABEL: @test_rotate_add3_f32_w32(
+; GFX11-NEXT:    [[TMP1:%.*]] = bitcast float [[VAL:%.*]] to i32
+; GFX11-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[TMP1]], i32 49248)
+; GFX11-NEXT:    [[RESULT:%.*]] = bitcast i32 [[TMP2]] to float
+; GFX11-NEXT:    ret float [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_rotate_add3_f32_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 3
+; GFX11-W64-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 31
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call float @llvm.amdgcn.wave.shuffle.f32(float [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret float [[RESULT]]
+;
+; GFX9-LABEL: @test_rotate_add3_f32_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 3
+; GFX9-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 31
+; GFX9-NEXT:    [[RESULT:%.*]] = call float @llvm.amdgcn.wave.shuffle.f32(float [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret float [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %add = add i32 %lane, 3
+  %idx = and i32 %add, 31
+  %result = call float @llvm.amdgcn.wave.shuffle.f32(float %val, i32 %idx)
+  ret float %result
+}
+
+; Rotate-left-by-3 using a local-memory pointer source; createDsSwizzle
+; ptrtoint/inttoptr-converts around the i32 ds_swizzle.
+define ptr addrspace(3) @test_rotate_add3_ptr_w32(ptr addrspace(3) %val) {
+; GFX11-LABEL: @test_rotate_add3_ptr_w32(
+; GFX11-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[VAL:%.*]] to i32
+; GFX11-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.ds.swizzle(i32 [[TMP1]], i32 49248)
+; GFX11-NEXT:    [[RESULT:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; GFX11-NEXT:    ret ptr addrspace(3) [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_rotate_add3_ptr_w32(
+; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX11-W64-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 3
+; GFX11-W64-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 31
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3) [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    ret ptr addrspace(3) [[RESULT]]
+;
+; GFX9-LABEL: @test_rotate_add3_ptr_w32(
+; GFX9-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX9-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LANE]], 3
+; GFX9-NEXT:    [[IDX:%.*]] = and i32 [[ADD]], 31
+; GFX9-NEXT:    [[RESULT:%.*]] = call ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3) [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    ret ptr addrspace(3) [[RESULT]]
+;
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %add = add i32 %lane, 3
+  %idx = and i32 %add, 31
+  %result = call ptr addrspace(3) @llvm.amdgcn.wave.shuffle.p3(ptr addrspace(3) %val, i32 %idx)
+  ret ptr addrspace(3) %result
+}

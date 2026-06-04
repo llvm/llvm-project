@@ -67,11 +67,11 @@ void test_float_dims() {
 // SPIRV: %[[RES:.*]] = call <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_1_2_0_0_1_0t(target("spirv.Image", float, 1, 2, 0, 0, 1, 0) %[[HANDLE]])
 // CHECK: %[[W_PTR:.*]] = load ptr, ptr %[[WIDTH]]
 // CHECK: %[[W_VAL:.*]] = extractelement <2 x i32> %[[RES]], i64 0
-// CHECK: %[[W_F:.*]] = uitofp i32 %[[W_VAL]] to float
+// CHECK: %[[W_F:.*]] = uitofp reassoc nnan ninf nsz arcp afn i32 %[[W_VAL]] to float
 // CHECK: store float %[[W_F]], ptr %[[W_PTR]]
 // CHECK: %[[H_PTR:.*]] = load ptr, ptr %[[HEIGHT]]
 // CHECK: %[[H_VAL:.*]] = extractelement <2 x i32> %[[RES]], i64 1
-// CHECK: %[[H_F:.*]] = uitofp i32 %[[H_VAL]] to float
+// CHECK: %[[H_F:.*]] = uitofp reassoc nnan ninf nsz arcp afn i32 %[[H_VAL]] to float
 // CHECK: store float %[[H_F]], ptr %[[H_PTR]]
 
 // CHECK: define {{.*}} void @test_float_levels_dims{{.*}}(i32 noundef %[[MIP_LEVEL:.*]])
@@ -91,13 +91,13 @@ void test_float_levels_dims(uint mipLevel) {
 // SPIRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.getdimensions.levels.xy.tspirv.Image_f32_1_2_0_0_1_0t(target("spirv.Image", float, 1, 2, 0, 0, 1, 0) %[[HANDLE]], i32 %[[MIP_VAL]])
 // CHECK: %[[W_PTR:.*]] = load ptr, ptr %[[WIDTH]]
 // CHECK: %[[W_VAL:.*]] = extractelement <3 x i32> %[[RES]], i64 0
-// CHECK: %[[W_F:.*]] = uitofp i32 %[[W_VAL]] to float
+// CHECK: %[[W_F:.*]] = uitofp reassoc nnan ninf nsz arcp afn i32 %[[W_VAL]] to float
 // CHECK: store float %[[W_F]], ptr %[[W_PTR]]
 // CHECK: %[[H_PTR:.*]] = load ptr, ptr %[[HEIGHT]]
 // CHECK: %[[H_VAL:.*]] = extractelement <3 x i32> %[[RES]], i64 1
-// CHECK: %[[H_F:.*]] = uitofp i32 %[[H_VAL]] to float
+// CHECK: %[[H_F:.*]] = uitofp reassoc nnan ninf nsz arcp afn i32 %[[H_VAL]] to float
 // CHECK: store float %[[H_F]], ptr %[[H_PTR]]
 // CHECK: %[[L_PTR:.*]] = load ptr, ptr %[[LEVELS]]
 // CHECK: %[[L_VAL:.*]] = extractelement <3 x i32> %[[RES]], i64 2
-// CHECK: %[[L_F:.*]] = uitofp i32 %[[L_VAL]] to float
+// CHECK: %[[L_F:.*]] = uitofp reassoc nnan ninf nsz arcp afn i32 %[[L_VAL]] to float
 // CHECK: store float %[[L_F]], ptr %[[L_PTR]]

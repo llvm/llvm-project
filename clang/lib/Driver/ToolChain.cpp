@@ -1347,6 +1347,7 @@ static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,
   return llvm::StringSwitch<LTOKind>(LTOName)
       .Case("full", LTOK_Full)
       .Case("thin", LTOK_Thin)
+      .Case("none", LTOK_None)
       .Default(LTOK_Unknown);
 }
 

@@ -47,8 +47,7 @@ SimpleExecutorDylibManager::open(const std::string &Path, uint64_t Mode) {
 ExecutorResolver::ResolveResult
 SimpleExecutorDylibManager::resolve(ExecutorAddr Resolver,
                                     RemoteSymbolLookupSet Lookup) {
-  using TmpResult =
-      MSVCPExpected<std::vector<std::optional<ExecutorSymbolDef>>>;
+  using TmpResult = MSVCPExpected<std::vector<std::optional<ExecutorAddr>>>;
   std::promise<TmpResult> P;
   auto F = P.get_future();
   Resolver.toPtr<ExecutorResolver *>()->resolveAsync(

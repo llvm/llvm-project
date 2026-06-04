@@ -1,5 +1,4 @@
-Scripting Bridge API
-====================
+# Scripting Bridge API
 
 The SB APIs constitute the stable C++ API that lldb presents to external
 clients, and which get processed by SWIG to produce the Python bindings to
@@ -7,10 +6,9 @@ lldb. As such it is important that they not suffer from the binary
 incompatibilities that C++ is so susceptible to. We've established a few rules
 to ensure that this happens.
 
-Extending the SB API
---------------------
+## Extending the SB API
 
-The classes in the SB API's are all called SB<SomeName>, where SomeName is in
+The classes in the SB API's are all called SB\<SomeName>, where SomeName is in
 CamelCase starting with an upper case letter. The method names are all
 CamelCase with initial capital letter as well.
 
@@ -46,41 +44,42 @@ prepared to handle their opaque implementation pointer being empty, and doing
 something reasonable. We also always have an "IsValid" method on all the SB
 classes to report whether the object is empty or not.
 
-.. note::
-  The implication of an object being "empty" can vary by class.
+:::{note}
+The implication of an object being "empty" can vary by class.
 
-  For most classes, the lack of anything backing the class means that it
-  would not be valid to interact with it by calling any other methods
-  on it.
+For most classes, the lack of anything backing the class means that it
+would not be valid to interact with it by calling any other methods
+on it.
 
-  One exception to this is ``SBError``, which can provide valid
-  information even when empty. This is because it does not need an
-  underlying object to be able to represent a success state.
+One exception to this is `SBError`, which can provide valid
+information even when empty. This is because it does not need an
+underlying object to be able to represent a success state.
+:::
 
 Another piece of the SB API infrastructure is the Python (or other script
 interpreter) customization. SWIG allows you to add property access, iterators
 and documentation to classes. We place the property accessors and iterators in
 a file dedicated to extensions to existing SB classes at
-"bindings/interface/SB<ClassName>Extensions.i". The documentation is similarly
-located at "bindings/interface/SB<ClassName>Docstrings.i". These two files, in
-addition to the actual header SB<ClassName>.h, forms the interface that lldb
+"bindings/interface/SB\<ClassName>Extensions.i". The documentation is similarly
+located at "bindings/interface/SB\<ClassName>Docstrings.i". These two files, in
+addition to the actual header SB\<ClassName>.h, forms the interface that lldb
 exposes to users through the scripting languages.
 
 There are some situations where you may want to add functionality to the SB API
 only for use in C++. To prevent SWIG from generating bindings to these
 functions, you can use a C macro guard, like so:
 
-::
+```
+#ifndef SWIG
+int GetResourceCPPOnly() const;
+#endif
+```
 
-  #ifndef SWIG
-  int GetResourceCPPOnly() const;
-  #endif
-
-In this case, ``GetResourceCPPOnly`` will not be generated for Python or other
+In this case, `GetResourceCPPOnly` will not be generated for Python or other
 scripting languages. If you wanted to add a resource specifically only for the
-SWIG case, you can invert the condition and use ``#ifdef SWIG`` instead. When
+SWIG case, you can invert the condition and use `#ifdef SWIG` instead. When
 building the LLDB framework for macOS, the headers are processed with
-``unifdef`` prior to being copied into the framework bundle to remove macros
+`unifdef` prior to being copied into the framework bundle to remove macros
 involving SWIG.
 
 Another good principle when adding SB API methods is: if you find yourself
@@ -88,57 +87,54 @@ implementing a significant algorithm in the SB API method, you should not do
 that, but instead look for and then add it - if not found - as a method in the
 underlying lldb_private class, and then call that from your SB API method.
 If it was a useful algorithm, it's very likely it already exists
-because the lldb_private code also needed to do it.  And if it doesn't at
+because the lldb_private code also needed to do it. And if it doesn't at
 present, if it was a useful thing to do, it's likely someone will later need
 it in lldb_private and then we end up with two implementations of the same
-algorithm.  If we keep the SB API code to just what's needed to manage the SB
+algorithm. If we keep the SB API code to just what's needed to manage the SB
 objects and requests, we won't get into this situation.
 
-Lifetime
---------
-Many SB API methods will return strings in the form of ``const char *`` values.
+## Lifetime
+
+Many SB API methods will return strings in the form of `const char *` values.
 Once created, these strings are guaranteed to live until the end of the
 debugging session. LLDB owns these strings, clients should not attempt to free
 them. Doing so may cause LLDB to crash.
 Note that this only affects the C++ API as scripting languages usually
-will usually create native string types from the ``const char *`` value.
+will usually create native string types from the `const char *` value.
 
-API Instrumentation
--------------------
+## API Instrumentation
 
 The reproducer infrastructure requires API methods to be instrumented so that
 they can be captured and replayed. Instrumentation consists of two macros,
-``LLDB_REGISTER`` and ``LLDB_RECORD``. Both can be automatically generated with
-the ``lldb-instr`` utility.
+`LLDB_REGISTER` and `LLDB_RECORD`. Both can be automatically generated with
+the `lldb-instr` utility.
 
-To add instrumentation for a given file, pass it to the ``lldb-instr`` tool.
+To add instrumentation for a given file, pass it to the `lldb-instr` tool.
 Like other clang-based tools it requires a compilation database
-(``compile_commands.json``) to be present in the current working directory.
+(`compile_commands.json`) to be present in the current working directory.
 
-::
+```
+$ ./bin/lldb-instr /path/to/lldb/source/API/SBDebugger.cpp
+```
 
-   $ ./bin/lldb-instr /path/to/lldb/source/API/SBDebugger.cpp
-
-
-The tool will automatically insert ``LLDB_RECORD`` macros inline, however you
-will need to run ``clang-format`` over the processed file, as the tool
+The tool will automatically insert `LLDB_RECORD` macros inline, however you
+will need to run `clang-format` over the processed file, as the tool
 (intentionally) makes no attempt to get that right.
 
-The ``LLDB_REGISTER`` macros are printed to standard out between curly braces.
-You'll have to copy-paste those into the corresponding ``RegisterMethods``
+The `LLDB_REGISTER` macros are printed to standard out between curly braces.
+You'll have to copy-paste those into the corresponding `RegisterMethods`
 function in the implementation file. This function is fully specialized in the
 corresponding type.
 
-::
+```
+template <> void RegisterMethods<SBDebugger>(Registry &R) {
+  ...
+}
+```
 
-  template <> void RegisterMethods<SBDebugger>(Registry &R) {
-    ...
-  }
-
-
-When adding a new class, you'll also have to add a call to ``RegisterMethods``
-in the ``SBRegistry`` constructor.
+When adding a new class, you'll also have to add a call to `RegisterMethods`
+in the `SBRegistry` constructor.
 
 The tool can be used incrementally. However, it will ignore existing macros
-even if their signature is wrong. It will only generate a ``LLDB_REGISTER`` if
-it emitted a corresponding ``LLDB_RECORD`` macro.
+even if their signature is wrong. It will only generate a `LLDB_REGISTER` if
+it emitted a corresponding `LLDB_RECORD` macro.

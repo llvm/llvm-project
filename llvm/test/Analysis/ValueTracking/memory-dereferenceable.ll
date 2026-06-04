@@ -67,6 +67,7 @@ entry:
 ; GLOBAL: %d4_load{{.*}}(unaligned)
 ; POINT-NOT: %d4_load{{.*}}(unaligned)
     %d4_load = load ptr, ptr @globali32ptr, !dereferenceable !0
+    call void @mayfree()
     %load7 = load i32, ptr %d4_load
 
     ; Load from an offset not covered by the dereferenceable portion
@@ -83,6 +84,7 @@ entry:
 ; GLOBAL: %d_or_null_non_null_load{{.*}}(unaligned)
 ; POINT-NOT: %d_or_null_non_null_load{{.*}}(unaligned)
     %d_or_null_non_null_load = load ptr, ptr @globali32ptr, !nonnull !2, !dereferenceable_or_null !0
+    call void @mayfree()
     %load10 = load i32, ptr %d_or_null_non_null_load
 
     ; Loads from aligned arguments
@@ -119,6 +121,7 @@ entry:
     %no_deref_return = call ptr @foo()
     %deref_return = call dereferenceable(32) ptr @foo()
     %deref_and_aligned_return = call dereferenceable(32) align 16 ptr @foo()
+    call void @mayfree()
     %load23 = load i32, ptr %no_deref_return
     %load24 = load i32, ptr %deref_return, align 16
     %load25 = load i32, ptr %deref_and_aligned_return, align 16
@@ -130,8 +133,10 @@ entry:
 ; POINT-NOT: %d4_aligned_load{{.*}}(aligned)
     %d4_unaligned_load = load ptr, ptr @globali32ptr, !dereferenceable !0
     %d4_aligned_load = load ptr, ptr @globali32ptr, !dereferenceable !0, !align !{i64 16}
+    call void @mayfree()
     %load26 = load i32, ptr %d4_unaligned_load, align 16
     %load27 = load i32, ptr %d4_aligned_load, align 16
+
     ret void
 }
 
@@ -309,6 +314,76 @@ if.then:
 
 if.end:
   ret void
+}
+
+; CHECK-LABEL: 'dereferenceable_arg_freed_between'
+; GLOBAL: %a
+; POINT-NOT: %a
+define void @dereferenceable_arg_freed_between(ptr dereferenceable(16) %a) {
+  call void @mayfree()
+  %v = load i32, ptr %a
+  ret void
+}
+
+; CHECK-LABEL: 'dereferenceable_arg_freed_between2'
+; GLOBAL: %a
+; POINT-NOT: %a
+define void @dereferenceable_arg_freed_between2(ptr dereferenceable(16) %a, ptr %p) {
+  load atomic i32, ptr %p acquire, align 4
+  %v = load i32, ptr %a
+  ret void
+}
+
+; CHECK-LABEL: 'dereferenceable_arg_not_freed_between'
+; CHECK: %a
+define void @dereferenceable_arg_not_freed_between(ptr dereferenceable(16) %a) {
+  call void @mayfree() nofree
+  %v = load i32, ptr %a
+  ret void
+}
+
+; CHECK-LABEL: 'dereferenceable_ret_freed_between'
+; GLOBAL: %a
+; POINT-NOT: %a
+define void @dereferenceable_ret_freed_between() {
+  %a = call dereferenceable(16) ptr @foo()
+  call void @mayfree()
+  %v = load i32, ptr %a
+  ret void
+}
+
+; CHECK-LABEL: 'dereferenceable_ret_freed_between2'
+; GLOBAL: %a
+; POINT-NOT: %a
+define void @dereferenceable_ret_freed_between2(ptr %p) {
+  %a = call dereferenceable(16) ptr @foo()
+  load atomic i32, ptr %p acquire, align 4
+  %v = load i32, ptr %a
+  ret void
+}
+
+; CHECK-LABEL: 'dereferenceable_ret_not_freed_between'
+; CHECK: %a
+define void @dereferenceable_ret_not_freed_between() {
+  %a = call dereferenceable(16) ptr @foo()
+  call void @mayfree() nofree
+  %v = load i32, ptr %a
+  ret void
+}
+
+; CHECK-LABEL: 'dereferenceable_ret_not_freed_between_invoke'
+; CHECK: %a
+define void @dereferenceable_ret_not_freed_between_invoke() personality ptr null {
+  %a = invoke dereferenceable(16) ptr @foo() to label %cont unwind label %lpad
+
+cont:
+  call void @mayfree() nofree
+  %v = load i32, ptr %a
+  ret void
+
+lpad:
+  %l = landingpad { ptr, i32 } cleanup
+  resume { ptr, i32} %l
 }
 
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)

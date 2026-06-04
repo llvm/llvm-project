@@ -881,110 +881,73 @@ determinePointerAccessAttrs(Argument *A,
 
     Use *U = Worklist.pop_back_val();
     Instruction *I = cast<Instruction>(U->getUser());
+    if (isa<ReturnInst>(I))
+      continue;
 
-    switch (I->getOpcode()) {
-    case Instruction::BitCast:
-    case Instruction::GetElementPtr:
-    case Instruction::PHI:
-    case Instruction::Select:
-    case Instruction::AddrSpaceCast:
-      // The original value is not read/written via this if the new value isn't.
+    UseCaptureInfo Info = DetermineUseCaptureKind(*U, A);
+
+    // FIXME: This should really be part of CaptureTracking, but keep it here
+    // for now due to interference with isEscapeSource().
+    if (auto *CB = dyn_cast<CallBase>(I))
+      if (CB->onlyReadsMemory())
+        Info.UseCC &= CaptureComponents::Address;
+
+    if (capturesAnyProvenance(Info.UseCC)) {
+      // Handle indirect access via captured provenance.
+      if (!capturesReadProvenanceOnly(Info.UseCC))
+        return Attribute::None;
+      IsRead = true;
+    }
+
+    if (capturesAnyProvenance(Info.ResultCC)) {
       for (Use &UU : I->uses())
         if (Visited.insert(&UU).second)
           Worklist.push_back(&UU);
-      break;
+    }
 
-    case Instruction::Call:
-    case Instruction::Invoke: {
-      CallBase &CB = cast<CallBase>(*I);
-      if (CB.isCallee(U)) {
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      if (CB->isCallee(U)) {
         IsRead = true;
-        // Note that indirect calls do not capture, see comment in
-        // CaptureTracking for context
         continue;
       }
 
       // Given we've explicitly handled the callee operand above, what's left
       // must be a data operand (e.g. argument or operand bundle)
-      const unsigned UseIndex = CB.getDataOperandNo(U);
+      const unsigned UseIndex = CB->getDataOperandNo(U);
 
-      // Some intrinsics (for instance ptrmask) do not capture their results,
-      // but return results thas alias their pointer argument, and thus should
-      // be handled like GEP or addrspacecast above.
-      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-              &CB, /*MustPreserveOffset=*/false)) {
-        for (Use &UU : CB.uses())
-          if (Visited.insert(&UU).second)
-            Worklist.push_back(&UU);
-      } else if (capturesAnyProvenance(CB.getCaptureInfo(UseIndex))) {
-        if (!CB.onlyReadsMemory())
-          // If the callee can save a copy into other memory, then simply
-          // scanning uses of the call is insufficient.  We have no way
-          // of tracking copies of the pointer through memory to see
-          // if a reloaded copy is written to, thus we must give up.
-          return Attribute::None;
-        // Push users for processing once we finish this one
-        if (!I->getType()->isVoidTy())
-          for (Use &UU : I->uses())
-            if (Visited.insert(&UU).second)
-              Worklist.push_back(&UU);
-      }
-
-      ModRefInfo ArgMR = CB.getMemoryEffects().getModRef(IRMemLocation::ArgMem);
+      ModRefInfo ArgMR =
+          CB->getMemoryEffects().getModRef(IRMemLocation::ArgMem);
       if (isNoModRef(ArgMR))
         continue;
 
-      if (Function *F = CB.getCalledFunction())
-        if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
+      if (Function *F = CB->getCalledFunction())
+        if (CB->isArgOperand(U) && UseIndex < F->arg_size() &&
             SCCNodes.count(F->getArg(UseIndex)))
           // This is an argument which is part of the speculative SCC.  Note
           // that only operands corresponding to formal arguments of the callee
           // can participate in the speculation.
-          break;
+          continue;
 
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
-      if (CB.doesNotAccessMemory(UseIndex)) {
+      if (CB->doesNotAccessMemory(UseIndex)) {
         /* nop */
-      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
+      } else if (!isModSet(ArgMR) || CB->onlyReadsMemory(UseIndex)) {
         IsRead = true;
-      } else if (!isRefSet(ArgMR) ||
-                 CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
+      } else if (!isRefSet(ArgMR) || CB->dataOperandHasImpliedAttr(
+                                         UseIndex, Attribute::WriteOnly)) {
         IsWrite = true;
       } else {
         return Attribute::None;
       }
-      break;
-    }
+    } else {
+      // Ignore value operand for stores.
+      if (isa<StoreInst>(I) &&
+          StoreInst::getPointerOperandIndex() != U->getOperandNo())
+        continue;
 
-    case Instruction::Load:
-      // Volatile and ordered atomic accesses are modelled as reading and
-      // writing the location.
-      if (!cast<LoadInst>(I)->isUnordered())
-        return Attribute::None;
-
-      IsRead = true;
-      break;
-
-    case Instruction::Store:
-      if (cast<StoreInst>(I)->getValueOperand() == *U)
-        // untrackable capture
-        return Attribute::None;
-
-      // Volatile and ordered atomic accesses are modelled as reading and
-      // writing the location.
-      if (!cast<StoreInst>(I)->isUnordered())
-        return Attribute::None;
-
-      IsWrite = true;
-      break;
-
-    case Instruction::ICmp:
-    case Instruction::Ret:
-      break;
-
-    default:
-      return Attribute::None;
+      IsRead |= I->mayReadFromMemory();
+      IsWrite |= I->mayWriteToMemory();
     }
   }
 

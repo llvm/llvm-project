@@ -1371,8 +1371,10 @@ areInnerLoopExitPHIsSupported(Loop *OuterL, Loop *InnerL,
     // from the loop latch.
     if (PHI.getNumIncomingValues() > 1)
       return false;
+    // The reduction LCSSA PHI's store user is rewritten by reduction2Memory();
+    // skip its user-check but keep validating the remaining LCSSA PHIs.
     if (&PHI == LcssaReduction)
-      return true;
+      continue;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
           if (!PN)

@@ -1009,7 +1009,7 @@ define float @test_rootn_afn_f32(float %x, i32 %y) {
 ; NOPRELINK-LABEL: define float @test_rootn_afn_f32(
 ; NOPRELINK-SAME: float [[X:%.*]], i32 [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
+; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp afn i32 [[Y]] to float
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan afn float 1.000000e+00, [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call afn float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call afn float @llvm.log2.f32(float [[TMP2]])
@@ -1051,7 +1051,7 @@ define <2 x float> @test_rootn_afn_v2f32(<2 x float> %x, <2 x i32> %y) {
 ; NOPRELINK-LABEL: define <2 x float> @test_rootn_afn_v2f32(
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp <2 x i32> [[Y]] to <2 x float>
+; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp afn <2 x i32> [[Y]] to <2 x float>
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan afn <2 x float> splat (float 1.000000e+00), [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP2]])
@@ -1141,7 +1141,7 @@ define float @test_rootn_afn_nnan_ninf_f32(float %x, i32 %y) {
 ; NOPRELINK-LABEL: define float @test_rootn_afn_nnan_ninf_f32(
 ; NOPRELINK-SAME: float [[X:%.*]], i32 [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
+; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp nnan ninf afn i32 [[Y]] to float
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan ninf afn float 1.000000e+00, [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[TMP2]])
@@ -1180,7 +1180,7 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32(<2 x float> %x, <2 x i32> %y)
 ; NOPRELINK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32(
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp <2 x i32> [[Y]] to <2 x float>
+; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp nnan ninf afn <2 x i32> [[Y]] to <2 x float>
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan ninf afn <2 x float> splat (float 1.000000e+00), [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP2]])
@@ -1701,7 +1701,7 @@ define float @test_rootn_afn_f32__x_known_positive(float nofpclass(ninf nsub nno
 ; NOPRELINK-LABEL: define float @test_rootn_afn_f32__x_known_positive(
 ; NOPRELINK-SAME: float nofpclass(ninf nsub nnorm) [[X:%.*]], i32 [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
+; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp afn i32 [[Y]] to float
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan afn float 1.000000e+00, [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call afn float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call afn float @llvm.log2.f32(float [[TMP2]])
@@ -1740,7 +1740,7 @@ define float @test_rootn_afn_ninf_nnan_f32__x_known_positive(float nofpclass(nin
 ; NOPRELINK-LABEL: define float @test_rootn_afn_ninf_nnan_f32__x_known_positive(
 ; NOPRELINK-SAME: float nofpclass(ninf nsub nnorm) [[X:%.*]], i32 [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
+; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp nnan ninf afn i32 [[Y]] to float
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan ninf afn float 1.000000e+00, [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn float [[TMP1]], [[TMP2]]
@@ -1830,7 +1830,7 @@ define float @test_fast_rootn_f32_y_known_even(float %x, i32 %y.arg) {
 ; NOPRELINK-SAME: float [[X:%.*]], i32 [[Y_ARG:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[Y:%.*]] = shl i32 [[Y_ARG]], 1
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
+; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp fast i32 [[Y]] to float
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.log2.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = fdiv fast float [[TMP3]], [[TMP0]]
@@ -1864,7 +1864,7 @@ define float @test_fast_rootn_f32_known_positive_y_known_even(float nofpclass(ni
 ; NOPRELINK-SAME: float nofpclass(ninf nsub nnorm) [[X:%.*]], i32 [[Y_ARG:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[Y:%.*]] = shl i32 [[Y_ARG]], 1
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
+; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp fast i32 [[Y]] to float
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.log2.f32(float [[TMP1]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fdiv fast float [[TMP2]], [[TMP0]]

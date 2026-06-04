@@ -41,12 +41,22 @@ orc_rt::Error hostOSUnloadLibrary(void *Handle) {
   return orc_rt::Error::success();
 }
 
-std::vector<void *> hostOSLibraryLookup(void *Handle,
-                                        const std::vector<std::string> &Names) {
-  std::vector<void *> Result;
+std::vector<std::optional<void *>>
+hostOSLibraryLookup(void *Handle, const std::vector<std::string> &Names) {
+  std::vector<std::optional<void *>> Result;
   Result.reserve(Names.size());
-  for (const auto &Name : Names)
-    Result.push_back(dlsym(Handle, Name.c_str()));
+  // Reset dlerror so we can distinguish "dlsym returned null because the
+  // symbol is present at address 0" from "dlsym returned null because the
+  // symbol isn't in the library" via per-iteration dlerror() checks.
+  dlerror();
+  for (const auto &Name : Names) {
+    if (void *Addr = dlsym(Handle, Name.c_str()))
+      Result.push_back(Addr);
+    else if (dlerror() == nullptr)
+      Result.push_back(nullptr);
+    else
+      Result.push_back(std::nullopt);
+  }
   return Result;
 }
 

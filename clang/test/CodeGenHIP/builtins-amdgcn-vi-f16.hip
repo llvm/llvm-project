@@ -225,7 +225,7 @@ __device__ void test_fract_f16(_Float16 *out, _Float16 a) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[A_ADDR_ASCAST]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.amdgcn.class.f16(half [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    [[CONV:%.*]] = uitofp i1 [[TMP2]] to half
+// CHECK-NEXT:    [[CONV:%.*]] = uitofp contract i1 [[TMP2]] to half
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store half [[CONV]], ptr [[TMP3]], align 2
 // CHECK-NEXT:    ret void

@@ -172,12 +172,12 @@ exit:
 define void @spills_profitable(ptr %in1, ptr %in2, ptr %out, i32 %n, i32 %m) {
 ; CHECK-LABEL: LV: Checking a loop in 'spills_profitable'
 ; CHECK: LV: Scalar loop costs: 54
-; CHECK-NOPRESSURE: Cost for VF 2: 1530 (Estimated cost per lane: 765.0)
-; CHECK-NOPRESSURE: Cost for VF 4: 38 (Estimated cost per lane: 9.5)
+; CHECK-NOPRESSURE: Cost for VF 2: 1535 (Estimated cost per lane: 767.5)
+; CHECK-NOPRESSURE: Cost for VF 4: 43 (Estimated cost per lane: 10.8)
 ; CHECK-PRESSURE: LV(REG): Cost of 4 from 2 spills of Generic::ScalarRC
-; CHECK-PRESSURE-NEXT: Cost for VF 2: 1534 (Estimated cost per lane: 767.0)
+; CHECK-PRESSURE-NEXT: Cost for VF 2: 1539 (Estimated cost per lane: 769.5)
 ; CHECK-PRESSURE: LV(REG): Cost of 6 from 3 spills of Generic::VectorRC
-; CHECK-PRESSURE-NEXT: Cost for VF 4: 44 (Estimated cost per lane: 11.0)
+; CHECK-PRESSURE-NEXT: Cost for VF 4: 49 (Estimated cost per lane: 12.2)
 ; CHECK: LV: Selecting VF: 4
 entry:
   %cmp = icmp eq i32 %n, 0

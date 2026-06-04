@@ -1,54 +1,47 @@
-Formatter Bytecode
-==================
+# Formatter Bytecode
 
-Background
-----------
+## Background
 
-LLDB provides rich customization options to display data types (see :doc:`/use/variable/`). To use custom data formatters, developers need to edit the global ``~/.lldbinit`` file to make sure they are found and loaded. In addition to this rather manual workflow, developers or library authors can ship ship data formatters with their code in a format that allows LLDB automatically find them and run them securely.
+LLDB provides rich customization options to display data types (see {doc}`/use/variable/`). To use custom data formatters, developers need to edit the global `~/.lldbinit` file to make sure they are found and loaded. In addition to this rather manual workflow, developers or library authors can ship ship data formatters with their code in a format that allows LLDB automatically find them and run them securely.
 
-An end-to-end example of such a workflow is the Swift ``DebugDescription`` macro (see https://www.swift.org/blog/announcing-swift-6/#debugging ) that translates Swift string interpolation into LLDB summary strings, and puts them into a ``.lldbsummaries`` section, where LLDB can find them.
+An end-to-end example of such a workflow is the Swift `DebugDescription` macro (see <https://www.swift.org/blog/announcing-swift-6/#debugging> ) that translates Swift string interpolation into LLDB summary strings, and puts them into a `.lldbsummaries` section, where LLDB can find them.
 
 This document describes a minimal bytecode tailored to running LLDB formatters. It defines a human-readable assembler representation for the language, an efficient binary encoding, a virtual machine for evaluating it, and format for embedding formatters into binary containers.
 
-Goals
-~~~~~
+### Goals
 
 Provide an efficient and secure encoding for data formatters that can be used as a compilation target from user-friendly representations (such as DIL, Swift DebugDescription, or NatVis).
 
-Non-goals
-~~~~~~~~~
+### Non-goals
 
 While humans could write the assembler syntax, making it user-friendly is not a goal. It is meant to be used as a compilation target for higher-level, language-specific affordances.
 
-Design of the virtual machine
------------------------------
+## Design of the virtual machine
 
 The LLDB formatter virtual machine uses a stack-based bytecode, comparable with DWARF expressions, but with higher-level data types and functions.
 
 The virtual machine has two stacks, a data and a control stack. The control stack is kept separate to make it easier to reason about the security aspects of the virtual machine.
 
-Data types
-~~~~~~~~~~
+### Data types
 
 All objects on the data stack must have one of the following data types. These data types are "host" data types, in LLDB parlance.
 
-* *String* (UTF-8)
-* *Int* (64 bit)
-* *UInt* (64 bit)
-* *Object* (Basically an ``SBValue``)
-* *Type* (Basically an ``SBType``)
-* *Selector* (One of the predefine functions)
+- *String* (UTF-8)
+- *Int* (64 bit)
+- *UInt* (64 bit)
+- *Object* (Basically an `SBValue`)
+- *Type* (Basically an `SBType`)
+- *Selector* (One of the predefine functions)
 
-*Object* and *Type* are opaque, they can only be used as a parameters of ``call``.
+*Object* and *Type* are opaque, they can only be used as a parameters of `call`.
 
-Instruction set
----------------
+## Instruction set
 
-Stack operations
-~~~~~~~~~~~~~~~~
+### Stack operations
 
 These instructions manipulate the data stack directly.
 
+```{eval-rst}
 ========  ==========  ===========================
  Opcode    Mnemonic    Stack effect
 --------  ----------  ---------------------------
@@ -59,12 +52,13 @@ These instructions manipulate the data stack directly.
  0x04      ``swap``      ``(x y -> y x)``
  0x05      ``rot``       ``(x y z -> z x y)``
 ========  ==========  ===========================
+```
 
-Control flow
-~~~~~~~~~~~~
+### Control flow
 
-These manipulate the control stack and program counter. Both ``if`` and ``ifelse`` expect a ``UInt`` at the top of the data stack to represent the condition.
+These manipulate the control stack and program counter. Both `if` and `ifelse` expect a `UInt` at the top of the data stack to represent the condition.
 
+```{eval-rst}
 ========  ============  ============================================================
  Opcode    Mnemonic     Description
 --------  ------------  ------------------------------------------------------------
@@ -77,10 +71,11 @@ These manipulate the control stack and program counter. Both ``if`` and ``ifelse
                         otherwise the second.
  0x13      ``return``   pop the entire control stack and return
 ========  ============  ============================================================
+```
 
-Literals for basic types
-~~~~~~~~~~~~~~~~~~~~~~~~
+### Literals for basic types
 
+```{eval-rst}
 ========  =============  ============================================================
  Opcode    Mnemonic      Description
 --------  -------------  ------------------------------------------------------------
@@ -90,10 +85,11 @@ Literals for basic types
  0x23      ``@strlen``    ``( -> Selector)`` push one of the predefined function
                           selectors. See ``call``.
 ========  =============  ============================================================
+```
 
-Conversion operations
-~~~~~~~~~~~~~~~~~~~~~
+### Conversion operations
 
+```{eval-rst}
 ========  =============  ================================================================
  Opcode    Mnemonic      Description
 --------  -------------  ----------------------------------------------------------------
@@ -101,13 +97,13 @@ Conversion operations
  0x2b      ``as_uint``    ``( Int -> UInt)`` reinterpret an Int as a UInt
  0x2c      ``is_null``    ``( Object -> UInt )`` check an object for null ``(object ? 0 : 1)``
 ========  =============  ================================================================
+```
 
+### Arithmetic, logic, and comparison operations
 
-Arithmetic, logic, and comparison operations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+All of these operations are only defined for `Int` and `UInt` and both operands need to be of the same type. The `>>` operator is an arithmetic shift if the parameters are of type `Int`, otherwise it's a logical shift to the right.
 
-All of these operations are only defined for ``Int`` and ``UInt`` and both operands need to be of the same type. The ``>>`` operator is an arithmetic shift if the parameters are of type ``Int``, otherwise it's a logical shift to the right.
-
+```{eval-rst}
 ========  ==========  ===========================
  Opcode    Mnemonic    Stack effect
 --------  ----------  ---------------------------
@@ -128,20 +124,23 @@ All of these operations are only defined for ``Int`` and ``UInt`` and both opera
  0x54      ``=<``
  0x55      ``>=``
 ========  ==========  ===========================
+```
 
-Function calls
-~~~~~~~~~~~~~~
+### Function calls
 
-For security reasons the list of functions callable with ``call`` is predefined. The supported functions are either existing methods on ``SBValue``, or string formatting operations.
+For security reasons the list of functions callable with `call` is predefined. The supported functions are either existing methods on `SBValue`, or string formatting operations.
 
+```{eval-rst}
 ========  ==========  ============================================
  Opcode    Mnemonic    Stack effect
 --------  ----------  --------------------------------------------
  0x60      ``call``      ``(Object argN ... arg0 Selector -> retval)``
 ========  ==========  ============================================
+```
 
 Method is one of a predefined set of *Selectors*.
 
+```{eval-rst}
 ====  ===============================  ======================================================  ======================================
 Sel.  Mnemonic                         Stack Effect                                            Description
 ----  -------------------------------  ------------------------------------------------------  --------------------------------------
@@ -173,24 +172,23 @@ Sel.  Mnemonic                         Stack Effect                             
 0x51  ``sprintf``                       ``(String arg0 ... sprintf -> String)``                 ``sprintf``
 0x52  ``strlen``                        ``(String strlen -> String)``                           ``strlen in bytes``
 ====  ===============================  ======================================================  ======================================
+```
 
-Byte Code
-~~~~~~~~~
+### Byte Code
 
 Most instructions are just a single byte opcode. The only exceptions are the literals:
 
-* *String*: Length in bytes encoded as ULEB128, followed length bytes
-* *Int*: LEB128
-* *UInt*: ULEB128
-* *Selector*: ULEB128
+- *String*: Length in bytes encoded as ULEB128, followed length bytes
+- *Int*: LEB128
+- *UInt*: ULEB128
+- *Selector*: ULEB128
 
-Embedding
-~~~~~~~~~
+### Embedding
 
-Expression programs are embedded into an ``.lldbformatters`` section (an evolution of the Swift ``.lldbsummaries`` section) that is a dictionary of type names/regexes and descriptions. It consists of a list of records. Each record starts with the following header:
+Expression programs are embedded into an `.lldbformatters` section (an evolution of the Swift `.lldbsummaries` section) that is a dictionary of type names/regexes and descriptions. It consists of a list of records. Each record starts with the following header:
 
-* Version number (ULEB128)
-* Remaining size of the record (minus the header) (ULEB128)
+- Version number (ULEB128)
+- Remaining size of the record (minus the header) (ULEB128)
 
 The version number is increased whenever an incompatible change is made. Adding new opcodes or selectors is not an incompatible change since consumers can unambiguously detect this and report an error.
 
@@ -198,24 +196,24 @@ Space between two records may be padded with NULL bytes.
 
 In version 1, a record consists of a dictionary key, which is a type name or regex.
 
-* Length of the key in bytes (ULEB128)
-* The key (UTF-8)
+- Length of the key in bytes (ULEB128)
+- The key (UTF-8)
 
-A regex has to start with ``^``, which is part of the regular expression.
+A regex has to start with `^`, which is part of the regular expression.
 
-After this comes a flag bitfield, which is a ULEB-encoded ``lldb::TypeOptions`` bitfield.
+After this comes a flag bitfield, which is a ULEB-encoded `lldb::TypeOptions` bitfield.
 
-* Flags (ULEB128)
-
+- Flags (ULEB128)
 
 This is followed by one or more dictionary values that immediately follow each other and entirely fill out the record size from the header. Each expression program has the following layout:
 
-* Function signature (1 byte)
-* Length of the program (ULEB128)
-* The program bytecode
+- Function signature (1 byte)
+- Length of the program (ULEB128)
+- The program bytecode
 
 The possible function signatures are:
 
+```{eval-rst}
 =========  ========================= ==============================
 Signature    Mnemonic                Stack Effect
 ---------  ------------------------- ------------------------------
@@ -227,17 +225,16 @@ Signature    Mnemonic                Stack Effect
   0x05      ``@get_value``            ``(Object+ -> String)``
   0x06      ``@update``               ``(Object+ -> Object+)``
 =========  ========================= ==============================
+```
 
-If not specified, the init function defaults to an empty function that just passes the Object along. Its results may be cached and allow common prep work to be done for an Object that can be reused by subsequent calls to the other methods. This way subsequent calls to ``@get_child_at_index`` can avoid recomputing shared information, for example.
+If not specified, the init function defaults to an empty function that just passes the Object along. Its results may be cached and allow common prep work to be done for an Object that can be reused by subsequent calls to the other methods. This way subsequent calls to `@get_child_at_index` can avoid recomputing shared information, for example.
 
 While it is more efficient to store multiple programs per type key, this is not a requirement. LLDB will merge all entries. If there are conflicts the result is undefined.
 
-Execution model
-~~~~~~~~~~~~~~~
+### Execution model
 
-Execution begins at the first byte in the program. The program counter of the virtual machine starts at offset 0 of the bytecode and may never move outside the range of the program as defined in the header. The data stack starts with one Object or the result of the ``@init`` function (``Object+`` in the table above).
+Execution begins at the first byte in the program. The program counter of the virtual machine starts at offset 0 of the bytecode and may never move outside the range of the program as defined in the header. The data stack starts with one Object or the result of the `@init` function (`Object+` in the table above).
 
-Error handling
-~~~~~~~~~~~~~~
+### Error handling
 
 In version 1 errors are unrecoverable, the entire expression will fail if any kind of error is encountered.

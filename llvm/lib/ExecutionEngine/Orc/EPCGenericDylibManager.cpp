@@ -70,8 +70,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
       SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
-              Result) mutable {
+          Expected<std::vector<std::optional<ExecutorAddr>>> Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
@@ -89,8 +88,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
       SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
-              Result) mutable {
+          Expected<std::vector<std::optional<ExecutorAddr>>> Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));

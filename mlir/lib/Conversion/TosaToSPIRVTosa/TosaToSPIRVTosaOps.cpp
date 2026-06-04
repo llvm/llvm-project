@@ -450,6 +450,13 @@ LogicalResult replaceRescale(tosa::RescaleOp op, tosa::RescaleOpAdaptor adaptor,
 template <typename SourceOp>
 LogicalResult replaceConstant(SourceOp op, typename SourceOp::Adaptor adaptor,
                               Type type, ConversionPatternRewriter &rewriter) {
+  if (auto graphConstantId = op->template getAttrOfType<IntegerAttr>(
+          graphARMGraphConstantIdAttrName)) {
+    rewriter.replaceOpWithNewOp<spirv::GraphConstantARMOp>(op, type,
+                                                           graphConstantId);
+    return success();
+  }
+
   auto convertedType = dyn_cast<ShapedType>(type);
   auto values = dyn_cast<DenseElementsAttr>(adaptor.getValues());
   if (!convertedType || !values)
