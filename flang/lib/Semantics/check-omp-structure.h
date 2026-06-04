@@ -258,13 +258,17 @@ private:
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
 
-  // check-omp-metadirective.cpp
+  // check-omp-variant.cpp
+  void CheckOmpDeclareVariantDirective(
+      const parser::OmpDeclareVariantDirective &);
+  void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);
   std::optional<llvm::omp::Clause> GetClauseFromProperty(
       const parser::OmpTraitProperty &);
 
   void CheckTraitSelectorList(const std::list<parser::OmpTraitSelector> &);
+  void CheckContextSelectorSpecification(const parser::OmpContextSelector &);
   void CheckTraitSetSelector(const parser::OmpTraitSetSelector &);
   void CheckTraitScore(const parser::OmpTraitScore &);
   bool VerifyTraitPropertyLists(
@@ -417,6 +421,8 @@ private:
     LastType = MetadirectiveNest,
   };
   int directiveNest_[LastType + 1] = {0};
+
+  std::set<std::pair<const Symbol *, const Symbol *>> declareVariantPairs_;
 
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;

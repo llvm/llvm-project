@@ -187,9 +187,9 @@ public:
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
-  void handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL);
-  bool diagnoseInstantiatedMatrixLayoutAttr(Decl *D,
-                                            const HLSLMatrixLayoutAttr *Attr);
+  Attr *buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL);
+  bool diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
+                                         SourceLocation Loc);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
