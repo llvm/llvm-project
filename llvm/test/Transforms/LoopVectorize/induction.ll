@@ -1133,12 +1133,8 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -1
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 8, i64 [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[TMP2]], [[TMP4]]
-; INTERLEAVE-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 3
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], 2305843009213693944
+; INTERLEAVE-NEXT:    [[IND_END:%.*]] = shl nuw i64 [[N_VEC]], 3
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1439,10 +1435,8 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N:%.*]], 9
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 8, i64 [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[TMP1]]
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -1
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -8
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1821,8 +1815,6 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-LABEL: @scalarize_induction_variable_04(
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; INTERLEAVE:       vector.memcheck:
@@ -1840,10 +1832,8 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; INTERLEAVE-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
-; INTERLEAVE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; INTERLEAVE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 8, i64 [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[TMP2]], [[TMP10]]
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = and i32 [[TMP0]], -8
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = zext i32 [[TMP9]] to i64
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1897,9 +1887,9 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; INTERLEAVE-NEXT:    [[DOTIDX6:%.*]] = shl nsw i64 [[I]], 4
-; INTERLEAVE-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[DOTIDX6]]
+; INTERLEAVE-NEXT:    [[TMP37:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[DOTIDX6]]
 ; INTERLEAVE-NEXT:    [[TMP38:%.*]] = load i32, ptr [[TMP37]], align 1
-; INTERLEAVE-NEXT:    [[DOTSPLIT14:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[I]]
+; INTERLEAVE-NEXT:    [[DOTSPLIT14:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[I]]
 ; INTERLEAVE-NEXT:    [[TMP39:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT14]], i64 4
 ; INTERLEAVE-NEXT:    store i32 [[TMP38]], ptr [[TMP39]], align 1
 ; INTERLEAVE-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
