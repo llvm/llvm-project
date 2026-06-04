@@ -549,11 +549,107 @@ define <2 x float> @test_fmax3_v2f32_nnan(<2 x float> %a, <2 x float> %b, <2 x f
   ret <2 x float> %max2
 }
 
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
-declare double @llvm.minnum.f64(double, double)
-declare double @llvm.maxnum.f64(double, double)
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
+define float @fmaximum3_f32(float %a, float %b, float %c) {
+; GFX10-LABEL: fmaximum3_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v3, v0, v1
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v1
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v3, vcc_lo
+; GFX10-NEXT:    v_max_f32_e32 v1, v0, v2
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v2
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: fmaximum3_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_maximum3_f32 v0, v0, v1, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %m1 = call float @llvm.maximum.f32(float %a, float %b)
+  %m2 = call float @llvm.maximum.f32(float %m1, float %c)
+  ret float %m2
+}
+
+define float @fminimum3_f32(float %a, float %b, float %c) {
+; GFX10-LABEL: fminimum3_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_min_f32_e32 v3, v0, v1
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v1
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v3, vcc_lo
+; GFX10-NEXT:    v_min_f32_e32 v1, v0, v2
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v2
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: fminimum3_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_minimum3_f32 v0, v0, v1, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %m1 = call float @llvm.minimum.f32(float %a, float %b)
+  %m2 = call float @llvm.minimum.f32(float %m1, float %c)
+  ret float %m2
+}
+
+define half @fmaximum3_f16(half %a, half %b, half %c) {
+; GFX10-LABEL: fmaximum3_f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f16_e32 v3, v0, v1
+; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v1
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v3, vcc_lo
+; GFX10-NEXT:    v_max_f16_e32 v1, v0, v2
+; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v2
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: fmaximum3_f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_maximum3_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %m1 = call half @llvm.maximum.f16(half %a, half %b)
+  %m2 = call half @llvm.maximum.f16(half %m1, half %c)
+  ret half %m2
+}
+
+define half @fminimum3_f16(half %a, half %b, half %c) {
+; GFX10-LABEL: fminimum3_f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_min_f16_e32 v3, v0, v1
+; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v1
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v3, vcc_lo
+; GFX10-NEXT:    v_min_f16_e32 v1, v0, v2
+; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v2
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: fminimum3_f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_minimum3_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %m1 = call half @llvm.minimum.f16(half %a, half %b)
+  %m2 = call half @llvm.minimum.f16(half %m1, half %c)
+  ret half %m2
+}
+

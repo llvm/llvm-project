@@ -277,6 +277,9 @@ def : GINodeEquiv<G_AMDGPU_FMAX3, AMDGPUfmax3>;
 def : GINodeEquiv<G_AMDGPU_SMIN3, AMDGPUsmin3>;
 def : GINodeEquiv<G_AMDGPU_UMIN3, AMDGPUumin3>;
 def : GINodeEquiv<G_AMDGPU_FMIN3, AMDGPUfmin3>;
+def : GINodeEquiv<G_AMDGPU_FMAXIMUM3, AMDGPUfmaximum3>;
+def : GINodeEquiv<G_AMDGPU_FMINIMUM3, AMDGPUfminimum3>;
+
 def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;

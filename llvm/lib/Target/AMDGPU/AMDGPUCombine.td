@@ -171,6 +171,8 @@ def umax_to_minmax3 : minmax_to_minmax3_opcodes<G_UMAX>;
 def umin_to_minmax3 : minmax_to_minmax3_opcodes<G_UMIN>;
 def fmax_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXNUM>;
 def fmin_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINNUM>;
+def fmaximum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXIMUM>;
+def fminimum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINIMUM>;
 def fmax_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXNUM_IEEE>;
 def fmin_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINNUM_IEEE>;
 
@@ -256,7 +258,7 @@ def AMDGPURegBankCombiner : GICombiner<
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
-   d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3, 
-   umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmax_ieee_to_minmax3, 
-   fmin_ieee_to_minmax3]> {
+   d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
+   umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
+   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
 }
