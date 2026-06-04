@@ -173,8 +173,13 @@ NativeProcessWindows::GetThreadByID(lldb::tid_t thread_id) {
 Status NativeProcessWindows::Halt() {
   bool caused_stop = false;
   StateType state = GetState();
-  if (state != eStateStopped)
-    return HaltProcess(caused_stop);
+  if (state != eStateStopped) {
+    m_pending_halt = true;
+    Status err = HaltProcess(caused_stop);
+    if (err.Fail() || !caused_stop)
+      m_pending_halt = false;
+    return err;
+  }
   return Status();
 }
 
@@ -581,6 +586,33 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
   // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
   // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
   // Stop the debugger and let the user decide what to do.
+  if (m_pending_halt) {
+    LLDB_LOG(log,
+             "DebugBreakProcess injection treated as Halt SIGSTOP for tid "
+             "{0:x}",
+             thread_id);
+    m_pending_halt = false;
+    ThreadStopInfo signal_info;
+    signal_info.reason = StopReason::eStopReasonSignal;
+    signal_info.signo = 19; // SIGSTOP on POSIX
+
+    // Halt all threads at the kernel level.
+    for (uint32_t i = 0; i < m_threads.size(); ++i) {
+      auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
+      if (t->DoStop().Fail())
+        exit(1);
+    }
+    if (!m_threads.empty()) {
+      auto first = static_cast<NativeThreadWindows *>(m_threads[0].get());
+      first->SetStopReason(signal_info, "interrupt");
+    }
+    SetCurrentThreadID(thread_id);
+    if (NativeThreadWindows *injected = GetThreadByID(thread_id))
+      injected->SetStopReason(signal_info, "interrupt");
+    SetState(eStateStopped, true);
+    return ExceptionResult::BreakInDebugger;
+  }
+
   std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",
                              record.GetExceptionCode(), exception_addr)
                          .str();

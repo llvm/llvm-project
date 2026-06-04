@@ -160,6 +160,9 @@ private:
   /// launch / attach.
   bool m_initial_stop_seen = false;
 
+  /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
+  bool m_pending_halt = false;
+
   /// PseudoConsole for the lldb-server stdio-forwarding path.
   std::shared_ptr<PseudoConsole> m_pty;
 
