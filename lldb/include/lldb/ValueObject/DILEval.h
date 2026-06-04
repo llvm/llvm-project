@@ -44,8 +44,8 @@ lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
 class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
-              std::shared_ptr<StackFrame> frame_sp,
-              lldb::DynamicValueType use_dynamic, uint32_t options);
+              StackFrame &stack_frame, lldb::DynamicValueType use_dynamic,
+              uint32_t options);
 
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
@@ -154,7 +154,7 @@ private:
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;
   lldb::ValueObjectSP m_scope;
-  std::shared_ptr<StackFrame> m_exe_ctx_scope;
+  StackFrame &m_stack_frame;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
   bool m_check_ptr_vs_member;
