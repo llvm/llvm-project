@@ -1677,17 +1677,17 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
       match(Y, m_EVL(m_VPValue()))) {
     auto *VPReverse = new VPWidenIntrinsicRecipe(
         Intrinsic::experimental_vp_reverse, {X, Plan->getTrue(), Y},
-        TypeInfo.inferScalarType(X), {}, {}, Def->getDebugLoc());
+        X->getScalarType(), {}, {}, Def->getDebugLoc());
     VPReverse->insertBefore(Def);
     return Def->replaceAllUsesWith(VPReverse);
   }
 
   if (match(Def, m_Intrinsic<Intrinsic::vector_splice_right>(
-                      m_Reverse(m_VPValue(X)), m_Poison(), m_VPValue(Y))) &&
+                     m_Reverse(m_VPValue(X)), m_Poison(), m_VPValue(Y))) &&
       match(Y, m_EVL(m_VPValue()))) {
     auto *VPReverse = new VPWidenIntrinsicRecipe(
         Intrinsic::experimental_vp_reverse, {X, Plan->getTrue(), Y},
-        TypeInfo.inferScalarType(X), {}, {}, Def->getDebugLoc());
+        X->getScalarType(), {}, {}, Def->getDebugLoc());
     VPReverse->insertBefore(Def);
     return Def->replaceAllUsesWith(VPReverse);
   }
@@ -3058,11 +3058,11 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    VPValue *Poison = Plan->getOrAddLiveIn(
-        PoisonValue::get(TypeInfo.inferScalarType(StoredVal)));
+    VPValue *Poison =
+        Plan->getOrAddLiveIn(PoisonValue::get(StoredVal->getScalarType()));
     auto *SpliceR = new VPWidenIntrinsicRecipe(
         Intrinsic::vector_splice_right, {StoredVal, Poison, &EVL},
-        TypeInfo.inferScalarType(StoredVal), {}, {}, DL);
+        StoredVal->getScalarType(), {}, {}, DL);
     SpliceR->insertBefore(&CurRecipe);
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
                                      SpliceR, EVL, Mask);
