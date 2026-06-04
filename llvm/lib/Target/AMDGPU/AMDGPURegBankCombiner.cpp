@@ -501,37 +501,39 @@ void AMDGPURegBankCombinerImpl::applyMinMaxToMinMax3(
 
 bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
-  Register dst = MI.getOperand(0).getReg();
-  Register src1 = MI.getOperand(1).getReg();
-  Register src2 = MI.getOperand(2).getReg();
-  // if the register is SGPR, don't optimize it.
-  if (!(isVgprRegBank(dst) && isVgprRegBank(src1) && isVgprRegBank(src2))) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src1 = MI.getOperand(1).getReg();
+  Register Src2 = MI.getOperand(2).getReg();
+  // If the register is SGPR, don't optimize it.
+  if (!(isVgprRegBank(Dst) && isVgprRegBank(Src1) && isVgprRegBank(Src2))) {
     return false;
   }
-
-  LLT t = MRI.getType(dst);
-  bool IsSupportedTy = t == LLT::scalar(32) ||
-                       (t == LLT::scalar(16) && STI.hasMin3Max3_16());
+  unsigned Opc = MI.getOpcode();
+  LLT Ty = MRI.getType(Dst);
+  bool IsFPOp = Opc == AMDGPU::G_FMAXNUM || Opc == AMDGPU::G_FMAXNUM_IEEE ||
+                Opc == AMDGPU::G_FMINNUM || Opc == AMDGPU::G_FMINNUM_IEEE;
+  bool IsSupportedTy = Ty == LLT::scalar(32) ||
+                       (Ty == LLT::scalar(16) && STI.hasMin3Max3_16()) ||
+                       (IsFPOp && Ty == LLT::fixed_vector(2, 32));
   if (!IsSupportedTy)
     return false;
 
   Register R0, R1, R2;
-  unsigned opc = MI.getOpcode();
-  auto matchMinOrMax3 = [&](MachineInstr &MI, MachineRegisterInfo &MRI,
-                            unsigned op, Register &r0, Register &r1,
-                            Register &r2) {
-    auto p1 = m_BinOp(op, m_OneNonDBGUse(m_BinOp(op, m_Reg(r0), m_Reg(r1))),
-                      m_Reg(r2));
-    auto p2 = m_BinOp(op, m_Reg(r0),
-                      m_OneNonDBGUse(m_BinOp(op, m_Reg(r1), m_Reg(r2))));
+  auto MatchMinOrMax3 = [&](MachineInstr &MI, MachineRegisterInfo &MRI,
+                            unsigned Op, Register &R0, Register &R1,
+                            Register &R2) {
+    auto P1 = m_BinOp(Op, m_OneNonDBGUse(m_BinOp(Op, m_Reg(R0), m_Reg(R1))),
+                      m_Reg(R2));
+    auto P2 = m_BinOp(Op, m_Reg(R0),
+                      m_OneNonDBGUse(m_BinOp(Op, m_Reg(R1), m_Reg(R2))));
 
-    return mi_match(MI, MRI, m_any_of(p1, p2));
+    return mi_match(MI, MRI, m_any_of(P1, P2));
   };
-  if (!matchMinOrMax3(MI, MRI, opc, R0, R1, R2)) {
+  if (!MatchMinOrMax3(MI, MRI, Opc, R0, R1, R2)) {
     return false;
   }
 
-  auto getAMDGPUOp = [](unsigned Opc) -> unsigned {
+  auto GetAMDGPUOp = [](unsigned Opc) -> unsigned {
     switch (Opc) {
     case AMDGPU::G_SMAX:
       return AMDGPU::G_AMDGPU_SMAX3;
@@ -551,10 +553,10 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
       return 0;
     }
   };
-  unsigned amdgpuOpc = getAMDGPUOp(opc);
-  if (!amdgpuOpc)
+  unsigned AMDGPUOpc = GetAMDGPUOp(Opc);
+  if (!AMDGPUOpc)
     return false;
-  MatchInfo = {getAMDGPUOp(opc), R0, R1, R2};
+  MatchInfo = {GetAMDGPUOp(Opc), R0, R1, R2};
   return true;
 }
 
