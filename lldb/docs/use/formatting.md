@@ -1,32 +1,31 @@
-Frame and Thread Format
-=======================
+# Frame and Thread Format
 
 LLDB has a facility to allow users to define the format of the information that
 generates the descriptions for threads and stack frames. Typically when your
 program stops at a breakpoint you will get two lines that describe why your
 thread stopped and where:
 
-::
-
-   * thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
-       frame #0: test`main at test.c:5
+```
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+    frame #0: test`main at test.c:5
+```
 
 Stack backtraces frames also have a similar information line:
 
-::
-
-   (lldb) thread backtrace
-   * thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
-       frame #0: 0x0000000100000e85 a.out`main + 4 at test.c:19
-       frame #1: 0x0000000100000e40 a.out`start + 52
+```
+(lldb) thread backtrace
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+    frame #0: 0x0000000100000e85 a.out`main + 4 at test.c:19
+    frame #1: 0x0000000100000e40 a.out`start + 52
+```
 
 The two format strings that govern the printing in these output forms can
 currently be set using the settings set command:
 
-::
-
-   (lldb) settings set thread-stop-format STRING
-   (lldb) settings set frame-format STRING
+```
+(lldb) settings set thread-stop-format STRING
+(lldb) settings set frame-format STRING
+```
 
 The first of these is an abbreviated thread output, that just contains data
 about the thread, and not the stop frame. It will always get used in situations
@@ -37,29 +36,27 @@ There is another thread format used for commands like thread list where the
 thread information isn't followed by frame info. In that case, it is convenient
 to have frame zero information in the thread output. That format is set by:
 
-::
+```
+(lldb) settings set thread-format STRING
+```
 
-   (lldb) settings set thread-format STRING
-
-
-Format Strings
---------------
+## Format Strings
 
 So what is the format of the format strings? Format strings can contain plain
 text, control characters and variables that have access to the current program
 state.
 
-Normal characters are any text that doesn't contain a ``{``, ``}``, ``$``, or
-``\`` character.
+Normal characters are any text that doesn't contain a `{`, `}`, `$`, or
+`\` character.
 
-Variable names are found in between a ``${`` prefix, and end with a ``}``
-suffix. In other words, a variable looks like ``${frame.pc}``.
+Variable names are found in between a `${` prefix, and end with a `}`
+suffix. In other words, a variable looks like `${frame.pc}`.
 
-Variables
----------
+## Variables
 
 A complete list of currently supported format string variables is listed below:
 
+```{eval-rst}
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | **Variable Name**                                 | **Description**                                                                                                                                                                                                                                                                             |
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -182,81 +179,76 @@ A complete list of currently supported format string variables is listed below:
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``addr-file-or-load``                             | Formats an address either as a load address, or if process has not yet been launched, as a load address (used in ``disassembly-format``)                                                                                                                                                    |
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
 
-Control Characters
-------------------
+## Control Characters
 
-Control characters include ``{``, ``}``, and ``\``.
+Control characters include `{`, `}`, and `\`.
 
-The ``{`` and ``}`` are used for scoping blocks, and the ``\`` character allows
+The `{` and `}` are used for scoping blocks, and the `\` character allows
 you to desensitize control characters and also emit non-printable characters.
 
-Desensitizing Characters in the Format String
----------------------------------------------
+## Desensitizing Characters in the Format String
 
-The backslash control character allows you to enter the typical ``\a``,
-``\b``, ``\f``, ``\n``, ``\r``, ``\t``, ``\v``, ``\\``, characters and along
-with the standard octal representation ``\0123`` and hex ``\xAB`` characters.
+The backslash control character allows you to enter the typical `\a`,
+`\b`, `\f`, `\n`, `\r`, `\t`, `\v`, `\\`, characters and along
+with the standard octal representation `\0123` and hex `\xAB` characters.
 This allows you to enter escape characters into your format strings and will
 allow colorized output for terminals that support color.
 
-Scoping
--------
+## Scoping
 
 Many times the information that you might have in your prompt might not be
 available and you won't want it to print out if it isn't valid. To take care
 of this you can enclose everything that must resolve into a scope. A scope
-starts with ``{`` and ends with ``}``. For example in order to only display the
+starts with `{` and ends with `}`. For example in order to only display the
 current frame line table entry basename and line number when the information is
 available for the current frame:
 
-::
-
-   "{ at {$line.file.basename}:${line.number}}"
-
+```
+"{ at {$line.file.basename}:${line.number}}"
+```
 
 Broken down this is:
 
-- The start the scope: ``{`` ,
-- format whose content will only be displayed if all information is available: ``at {$line.file.basename}:${line.number}``
-- end the scope: ``}``
+- The start the scope: `{` ,
+- format whose content will only be displayed if all information is available: `at {$line.file.basename}:${line.number}`
+- end the scope: `}`
 
-Making the Frame Format
------------------------
+## Making the Frame Format
 
 The information that we see when stopped in a frame:
 
-::
-
-   frame #0: 0x0000000100000e85 a.out`main + 4 at test.c:19
+```
+frame #0: 0x0000000100000e85 a.out`main + 4 at test.c:19
+```
 
 can be displayed with the following format:
 
-::
-
-   "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}`${function.name}{${function.pc-offset}}}{ at ${line.file.basename}:${line.number}}\n"
+```
+"frame #${frame.index}: ${frame.pc}{ ${module.file.basename}`${function.name}{${function.pc-offset}}}{ at ${line.file.basename}:${line.number}}\n"
+```
 
 This breaks down to:
 
-- Always print the frame index and frame PC: ``frame #${frame.index}: ${frame.pc}``,
-- only print the module followed by a tick if there is a valid module for the current frame: ``{ ${module.file.basename}`}``,
-- print the function name with optional offset: ``{${function.name}{${function.pc-offset}}}``,
-- print the line info if it is available: ``{ at ${line.file.basename}:${line.number}}``,
-- then finish off with a newline: ``\n``.
+- Always print the frame index and frame PC: `frame #${frame.index}: ${frame.pc}`,
+- only print the module followed by a tick if there is a valid module for the current frame: `` { ${module.file.basename}`} ``,
+- print the function name with optional offset: `{${function.name}{${function.pc-offset}}}`,
+- print the line info if it is available: `{ at ${line.file.basename}:${line.number}}`,
+- then finish off with a newline: `\n`.
 
-Making Your own Formats
------------------------
+## Making Your own Formats
 
 When modifying your own format strings, it is useful to start with the default
 values for the frame and thread format strings. These can be accessed with the
-``settings show`` command:
+`settings show` command:
 
-::
-
-   (lldb) settings show thread-format
-   thread-format (format-string) = "thread #${thread.index}: tid = ${thread.id%tid}{, ${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}}{, name = '${thread.name}'}{, queue = '${thread.queue}'}{, activity = '${thread.info.activity.name}'}{, ${thread.info.trace_messages} messages}{, stop reason = ${thread.stop-reason}}{\nReturn value: ${thread.return-value}}{\nCompleted expression: ${thread.completed-expression}}\n"
-   (lldb) settings show frame-format
-   frame-format (format-string) = "frame #${frame.index}:{ ${frame.no-debug}${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}}{${function.is-optimized} [opt]}\n"
+```
+(lldb) settings show thread-format
+thread-format (format-string) = "thread #${thread.index}: tid = ${thread.id%tid}{, ${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}}{, name = '${thread.name}'}{, queue = '${thread.queue}'}{, activity = '${thread.info.activity.name}'}{, ${thread.info.trace_messages} messages}{, stop reason = ${thread.stop-reason}}{\nReturn value: ${thread.return-value}}{\nCompleted expression: ${thread.completed-expression}}\n"
+(lldb) settings show frame-format
+frame-format (format-string) = "frame #${frame.index}:{ ${frame.no-debug}${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}}{${function.is-optimized} [opt]}\n"
+```
 
 When making thread formats, you will need surround any of the information that
 comes from a stack frame with scopes ({ frame-content }) as the thread format
@@ -264,102 +256,98 @@ doesn't always want to show frame information. When displaying the backtrace
 for a thread, we don't need to duplicate the information for frame zero in the
 thread information:
 
-::
-
-  (lldb) thread backtrace
-  thread #1: tid = 0x2e03, stop reason = breakpoint 1.1 2.1
-    frame #0: 0x0000000100000e85 a.out`main + 4 at test.c:19
-    frame #1: 0x0000000100000e40 a.out`start + 52
+```
+(lldb) thread backtrace
+thread #1: tid = 0x2e03, stop reason = breakpoint 1.1 2.1
+  frame #0: 0x0000000100000e85 a.out`main + 4 at test.c:19
+  frame #1: 0x0000000100000e40 a.out`start + 52
+```
 
 The frame-related variables are:
 
-- ``${file.*}``
-- ``${frame.*}``
-- ``${function.*}``
-- ``${line.*}``
-- ``${module.*}``
-
+- `${file.*}`
+- `${frame.*}`
+- `${function.*}`
+- `${line.*}`
+- `${module.*}`
 
 Looking at the default format for the thread, and underlining the frame
 information:
 
-::
-
-   thread #${thread.index}: tid = ${thread.id}{, ${frame.pc}}{ ${module.file.basename}`${function.name}{${function.pc-offset}}}{, stop reason = ${thread.stop-reason}}{, name = ${thread.name}}{, queue = ${thread.queue}}\n
-
+```
+thread #${thread.index}: tid = ${thread.id}{, ${frame.pc}}{ ${module.file.basename}`${function.name}{${function.pc-offset}}}{, stop reason = ${thread.stop-reason}}{, name = ${thread.name}}{, queue = ${thread.queue}}\n
+```
 
 We can see that all frame information is contained in scopes so that when the
 thread information is displayed in a context where we only want to show thread
 information, we can do so.
 
-For both thread and frame formats, you can use ${script.target:python_func},
-${script.process:python_func} and ${script.thread:python_func} (and of course
-${script.frame:python_func} for frame formats) In all cases, the signature of
+For both thread and frame formats, you can use \${script.target:python_func},
+\${script.process:python_func} and \${script.thread:python_func} (and of course
+\${script.frame:python_func} for frame formats) In all cases, the signature of
 python_func is expected to be:
 
-::
-
-   def python_func(object,unused):
-     ...
-     return string
+```
+def python_func(object,unused):
+  ...
+  return string
+```
 
 Where object is an instance of the SB class associated to the keyword you are
 using.
 
 e.g. Assuming your function looks like:
 
-::
-
-   def thread_printer_func (thread,unused):
-     return "Thread %s has %d frames\n" % (thread.name, thread.num_frames)
+```
+def thread_printer_func (thread,unused):
+  return "Thread %s has %d frames\n" % (thread.name, thread.num_frames)
+```
 
 And you set it up with:
 
-::
-
-   (lldb) settings set thread-format "${script.thread:thread_printer_func}"
+```
+(lldb) settings set thread-format "${script.thread:thread_printer_func}"
+```
 
 you would see output like:
 
-::
+```
+* Thread main has 21 frames
+```
 
-   * Thread main has 21 frames
+### Function Name Formats
 
-Function Name Formats
-_____________________
+The function names displayed in backtraces/`frame info`/`thread info` are the demangled names of functions. On some platforms (like ones using Itanium the mangling scheme), LLDB supports decomposing these names into fine-grained components. These are currently:
 
-The function names displayed in backtraces/``frame info``/``thread info`` are the demangled names of functions. On some platforms (like ones using Itanium the mangling scheme), LLDB supports decomposing these names into fine-grained components. These are currently:
+- `${function.return-left}`
+- `${function.prefix}`
+- `${function.scope}`
+- `${function.basename}`
+- `${function.name-qualifiers}`
+- `${function.template-arguments}`
+- `${function.formatted-arguments}`
+- `${function.qualifiers}`
+- `${function.return-right}`
+- `${function.suffix}`
 
-- ``${function.return-left}``
-- ``${function.prefix}``
-- ``${function.scope}``
-- ``${function.basename}``
-- ``${function.name-qualifiers}``
-- ``${function.template-arguments}``
-- ``${function.formatted-arguments}``
-- ``${function.qualifiers}``
-- ``${function.return-right}``
-- ``${function.suffix}``
-
-Each language plugin decides how to handle these variables. For C++, LLDB uses these variables to dictate how function names are formatted. This can be customized using the ``plugin.cplusplus.display.function-name-format`` LLDB setting.
+Each language plugin decides how to handle these variables. For C++, LLDB uses these variables to dictate how function names are formatted. This can be customized using the `plugin.cplusplus.display.function-name-format` LLDB setting.
 
 E.g., the following setting would reconstruct the entire function name (and is LLDB's default):
 
-::
-
-    (lldb) settings set plugin.cplusplus.display.function-name-format "${function.return-left}${function.scope}${function.basename}${function.template-arguments}${function.formatted-arguments}${function.qualifiers}${function.return-right}${function.suffix}"
+```
+(lldb) settings set plugin.cplusplus.display.function-name-format "${function.return-left}${function.scope}${function.basename}${function.template-arguments}${function.formatted-arguments}${function.qualifiers}${function.return-right}${function.suffix}"
+```
 
 If a user wanted to only print the name and arguments of a C++ function one could do:
 
-::
-
-    (lldb) settings set plugin.cplusplus.display.function-name-format "${function.scope}${function.basename}${function.formatted-arguments}"
-
+```
+(lldb) settings set plugin.cplusplus.display.function-name-format "${function.scope}${function.basename}${function.formatted-arguments}"
+```
 
 Then the following would highlight just the basename in green:
 
-::
+```
+(lldb) settings set plugin.cplusplus.display.function-name-format "${function.scope}${ansi.fg.yellow}${function.basename}${ansi.normal}${function.formatted-arguments}"
+```
 
-    (lldb) settings set plugin.cplusplus.display.function-name-format "${function.scope}${ansi.fg.yellow}${function.basename}${ansi.normal}${function.formatted-arguments}"
-
-The ``${function.name-with-args}`` by default asks the language plugin whether it supports a language-specific ``function-name-format`` (e.g., the ``plugin.cplusplus.display.function-name-format`` for C++), and if it does, uses it. Otherwise it will display the demangled function name.
+The `${function.name-with-args}` by default asks the language plugin whether it supports a language-specific `function-name-format` (e.g., the `plugin.cplusplus.display.function-name-format` for C++), and if it does, uses it. Otherwise it will display the demangled function name.

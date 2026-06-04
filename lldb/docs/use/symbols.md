@@ -1,5 +1,4 @@
-Symbols on macOS
-================
+# Symbols on macOS
 
 On macOS, debug symbols are often in stand alone bundles called **dSYM** files.
 These are bundles that contain DWARF debug information and other resources
@@ -8,11 +7,11 @@ related to builds and debug info.
 The DebugSymbols.framework framework helps locate dSYM files when given a UUID.
 It can locate the symbols using a variety of methods:
 
--  Spotlight
--  Explicit search paths
--  Implicit search paths
--  File mapped UUID paths
--  Running one or more shell scripts
+- Spotlight
+- Explicit search paths
+- Implicit search paths
+- File mapped UUID paths
+- Running one or more shell scripts
 
 DebugSymbols.framework also has global defaults that can be modified to allow
 all of the debug tools (lldb, gdb, sample, CoreSymbolication.framework) to
@@ -20,11 +19,11 @@ easily find important debug symbols. The domain for the DebugSymbols.framework
 defaults is **com.apple.DebugSymbols**, and the defaults can be read, written
 or modified using the **defaults** shell command:
 
-::
-
-   % defaults read com.apple.DebugSymbols
-   % defaults write com.apple.DebugSymbols KEY ...
-   % defaults delete com.apple.DebugSymbols KEY
+```
+% defaults read com.apple.DebugSymbols
+% defaults write com.apple.DebugSymbols KEY ...
+% defaults delete com.apple.DebugSymbols KEY
+```
 
 The following is a list of the defaults key value setting pairs that can
 be used to enhance symbol location:
@@ -38,11 +37,11 @@ Directories" section below for more details. Whenever
 DebugSymbols.framework is asked to lookup a dSYM file, it will first
 look in any file mapped UUID directories for a quick match.
 
-::
-
-   % defaults write com.apple.DebugSymbols DBGFileMappedPaths -string /path/to/uuidmap1
-   % defaults write com.apple.DebugSymbols DBGFileMappedPaths -array /path/to/uuidmap1
-       /path/to/uuidmap2
+```
+% defaults write com.apple.DebugSymbols DBGFileMappedPaths -string /path/to/uuidmap1
+% defaults write com.apple.DebugSymbols DBGFileMappedPaths -array /path/to/uuidmap1
+    /path/to/uuidmap2
+```
 
 **DBGShellCommands**
 
@@ -52,11 +51,11 @@ dSYM. The shell script will be run given a single UUID value as the
 shell command arguments and the shell command is expected to return a
 property list. See the property list format defined below.
 
-::
-
-   % defaults write com.apple.DebugSymbols DBGShellCommands -string /path/to/script1
-   % defaults write com.apple.DebugSymbols DBGShellCommands -array /path/to/script1
-       /path/to/script2
+```
+% defaults write com.apple.DebugSymbols DBGShellCommands -string /path/to/script1
+% defaults write com.apple.DebugSymbols DBGShellCommands -array /path/to/script1
+    /path/to/script2
+```
 
 **DBGSpotlightPaths**
 
@@ -65,14 +64,13 @@ array of strings. When any other defaults are supplied to
 **com.apple.DebugSymbols**, spotlight searches will be disabled unless
 this default is set to an empty array:
 
-::
+```
+# Specify an empty array to keep Spotlight searches enabled in all locations
+% defaults write com.apple.DebugSymbols DBGSpotlightPaths -array
 
-   # Specify an empty array to keep Spotlight searches enabled in all locations
-   % defaults write com.apple.DebugSymbols DBGSpotlightPaths -array
-
-   # Specify an array of paths to limit spotlight searches to certain directories
-   % defaults write com.apple.DebugSymbols DBGSpotlightPaths -array /path/dir1 /path/dir2
-
+# Specify an array of paths to limit spotlight searches to certain directories
+% defaults write com.apple.DebugSymbols DBGSpotlightPaths -array /path/dir1 /path/dir2
+```
 
 **DBGSearchPaths**
 
@@ -80,14 +78,12 @@ You can specify an ordered list of directories to use when manually searching
 for dSYM files. Each directory will be recursively searched for any dSYM
 bundles, and the the first UUID match will be returned.
 
-::
+```
+$ defaults write com.apple.DebugSymbols DBGSearchPaths -string /single/path/to/search
+$ defaults write com.apple.DebugSymbols DBGSearchPaths -array /path/to/search1 /path/to/search2
+```
 
-   $ defaults write com.apple.DebugSymbols DBGSearchPaths -string /single/path/to/search
-   $ defaults write com.apple.DebugSymbols DBGSearchPaths -array /path/to/search1 /path/to/search2
-
-
-Shell Script Property List Format
----------------------------------
+## Shell Script Property List Format
 
 Shell scripts that are specified with the **DBGShellCommands** defaults key
 will be run in the order in which they are specified until a match is found.
@@ -97,6 +93,7 @@ property list being written to STDOUT. The property list returned must contain
 UUID string values as the root key values, with a dictionary for each UUID. The
 dictionaries can contain one or more of the following keys:
 
+```{eval-rst}
 +-----------------------------------+-----------------------------------+
 | Key                               | Description                       |
 +-----------------------------------+-----------------------------------+
@@ -141,44 +138,45 @@ dictionaries can contain one or more of the following keys:
 |                                   | for the supplied UUID, a user     |
 |                                   | readable error can be returned.   |
 +-----------------------------------+-----------------------------------+
+```
 
 Below is a sample shell script output for a binary that contains two
 architectures:
 
-::
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-       <key>23516BE4-29BE-350C-91C9-F36E7999F0F1</key>
-       <dict>
-           <key>DBGArchitecture</key>
-           <string>i386</string>
-           <key>DBGBuildSourcePath</key>
-           <string>/path/to/build/sources</string>
-           <key>DBGSourcePath</key>
-           <string>/path/to/actual/sources</string>
-           <key>DBGDSYMPath</key>
-           <string>/path/to/foo.dSYM/Contents/Resources/DWARF/foo</string>
-           <key>DBGSymbolRichExecutable</key>
-           <string>/path/to/unstripped/executable</string>
-       </dict>
-       <key>A40597AA-5529-3337-8C09-D8A014EB1578</key>
-       <dict>
-           <key>DBGArchitecture</key>
-           <string>x86_64</string>
-           <key>DBGBuildSourcePath</key>
-           <string>/path/to/build/sources</string>
-           <key>DBGSourcePath</key>
-           <string>/path/to/actual/sources</string>
-           <key>DBGDSYMPath</key>
-           <string>/path/to/foo.dSYM/Contents/Resources/DWARF/foo</string>
-           <key>DBGSymbolRichExecutable</key>
-           <string>/path/to/unstripped/executable</string>
-       </dict>
-   </dict>
-   </plist>
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>23516BE4-29BE-350C-91C9-F36E7999F0F1</key>
+    <dict>
+        <key>DBGArchitecture</key>
+        <string>i386</string>
+        <key>DBGBuildSourcePath</key>
+        <string>/path/to/build/sources</string>
+        <key>DBGSourcePath</key>
+        <string>/path/to/actual/sources</string>
+        <key>DBGDSYMPath</key>
+        <string>/path/to/foo.dSYM/Contents/Resources/DWARF/foo</string>
+        <key>DBGSymbolRichExecutable</key>
+        <string>/path/to/unstripped/executable</string>
+    </dict>
+    <key>A40597AA-5529-3337-8C09-D8A014EB1578</key>
+    <dict>
+        <key>DBGArchitecture</key>
+        <string>x86_64</string>
+        <key>DBGBuildSourcePath</key>
+        <string>/path/to/build/sources</string>
+        <key>DBGSourcePath</key>
+        <string>/path/to/actual/sources</string>
+        <key>DBGDSYMPath</key>
+        <string>/path/to/foo.dSYM/Contents/Resources/DWARF/foo</string>
+        <key>DBGSymbolRichExecutable</key>
+        <string>/path/to/unstripped/executable</string>
+    </dict>
+</dict>
+</plist>
+```
 
 There is no timeout imposed on a shell script when is it asked to locate a dSYM
 file, so be careful to not make a shell script that has high latency or takes a
@@ -195,8 +193,7 @@ downloading the same file simultaneously. Also you will want to verify the
 download was successful and then and only then place the file into the cache
 for tools that will cache files locally.
 
-Embedding UUID property lists inside the dSYM bundles
------------------------------------------------------
+## Embedding UUID property lists inside the dSYM bundles
 
 Since dSYM files are bundles, you can also place UUID info plists files inside
 your dSYM bundles in the **Contents/Resources** directory. One of the main
@@ -208,40 +205,40 @@ information in the debug info.
 If we take the two UUID values from the returns plist above, we can split them
 out and save then in the dSYM bundle:
 
-::
+```
+% ls /path/to/foo.dSYM/Contents/Resources
+23516BE4-29BE-350C-91C9-F36E7999F0F1.plist
+A40597AA-5529-3337-8C09-D8A014EB1578.plist
 
-   % ls /path/to/foo.dSYM/Contents/Resources
-   23516BE4-29BE-350C-91C9-F36E7999F0F1.plist
-   A40597AA-5529-3337-8C09-D8A014EB1578.plist
-
-   % cat /path/to/foo.dSYM/Contents/Resources/23516BE4-29BE-350C-91C9-F36E7999F0F1.plist
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
+% cat /path/to/foo.dSYM/Contents/Resources/23516BE4-29BE-350C-91C9-F36E7999F0F1.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+   <key>DBGArchitecture</key>
+   <string>i386</string>
+   <key>DBGBuildSourcePath</key>
+   <string>/path/to/build/sources</string>
+   <key>DBGSourcePath</key>
+   <string>/path/to/actual/sources</string>
+   <key>DBGDSYMPath</key>
+   <string>/path/to/foo.dSYM/Contents/Resources/DWARF/foo</string>
+   <key>DBGSymbolRichExecutable</key>
+   <string>/path/to/unstripped/executable</string>
+   <key>DBGVersion</key>
+   <string>3</string>
+   <key>DBGSourcePathRemapping</key>
    <dict>
-      <key>DBGArchitecture</key>
-      <string>i386</string>
-      <key>DBGBuildSourcePath</key>
-      <string>/path/to/build/sources</string>
-      <key>DBGSourcePath</key>
-      <string>/path/to/actual/sources</string>
-      <key>DBGDSYMPath</key>
-      <string>/path/to/foo.dSYM/Contents/Resources/DWARF/foo</string>
-      <key>DBGSymbolRichExecutable</key>
-      <string>/path/to/unstripped/executable</string>
-      <key>DBGVersion</key>
-      <string>3</string>
-      <key>DBGSourcePathRemapping</key>
-      <dict>
-          <key>/path/to/build/time/src/location1</key>
-          <string>/path/to/debug/time/src/location</string>
-          <key>/path/to/build/time/src/location2</key>
-          <string>/path/to/debug/time/src/location</string>
-      </dict>
-      <key>DBGSymbolRichExecutable</key>
-      <string>/path/to/unstripped/executable</string>
+       <key>/path/to/build/time/src/location1</key>
+       <string>/path/to/debug/time/src/location</string>
+       <key>/path/to/build/time/src/location2</key>
+       <string>/path/to/debug/time/src/location</string>
    </dict>
-   </plist>
+   <key>DBGSymbolRichExecutable</key>
+   <string>/path/to/unstripped/executable</string>
+</dict>
+</plist>
+```
 
 Note that the output is very close to what is needed by shell script output, so
 making the results of your shell script will be very easy to create by
@@ -264,8 +261,7 @@ may allow for more specific remappings in the **DBGSourcePathRemapping**
 dictionary and a less specific remapping in the
 **DBGBuildSourcePath**/**DBGSourcePath** pair as a last resort.
 
-File Mapped UUID Directories
-----------------------------
+## File Mapped UUID Directories
 
 File Mapped directories can be used for efficient dSYM file lookups for local
 or remote dSYM files. The UUID is broken up by splitting the first 20 hex
@@ -282,28 +278,27 @@ create a File Mapped UUID directory cache in
 **~/Library/SymbolCache/dsyms/uuids**. We can easily see how things are laid
 out:
 
-::
-
-   % find ~/Library/SymbolCache/dsyms/uuids -type l
-   ~/Library/SymbolCache/dsyms/uuids/2351/6BE4/29BE/350C/91C9/F36E7999F0F1
-   ~/Library/SymbolCache/dsyms/uuids/A405/97AA/5529/3337/8C09/D8A014EB1578
+```
+% find ~/Library/SymbolCache/dsyms/uuids -type l
+~/Library/SymbolCache/dsyms/uuids/2351/6BE4/29BE/350C/91C9/F36E7999F0F1
+~/Library/SymbolCache/dsyms/uuids/A405/97AA/5529/3337/8C09/D8A014EB1578
+```
 
 The last entries in these file mapped directories are symlinks to the actual
 dsym mach file in the dsym bundle:
 
-::
-
-   % ls -lAF ~/Library/SymbolCache/dsyms/uuids/2351/6BE4/29BE/350C/91C9/F36E7999F0F1
-   ~/Library/SymbolCache/dsyms/uuids/2351/6BE4/29BE/350C/91C9/F36E7999F0F1@ -> ../../../../../../dsyms/foo.dSYM/Contents/Resources/DWARF/foo
+```
+% ls -lAF ~/Library/SymbolCache/dsyms/uuids/2351/6BE4/29BE/350C/91C9/F36E7999F0F1
+~/Library/SymbolCache/dsyms/uuids/2351/6BE4/29BE/350C/91C9/F36E7999F0F1@ -> ../../../../../../dsyms/foo.dSYM/Contents/Resources/DWARF/foo
+```
 
 Then you can also tell DebugSymbols to check this UUID file map cache using:
 
-::
+```
+% defaults write com.apple.DebugSymbols DBGFileMappedPaths ~/Library/SymbolCache/dsyms/uuids
+```
 
-   % defaults write com.apple.DebugSymbols DBGFileMappedPaths ~/Library/SymbolCache/dsyms/uuids
-
-dSYM Locating Shell Script Tips
--------------------------------
+## dSYM Locating Shell Script Tips
 
 One possible implementation of a dSYM finding shell script is to have the
 script download and cache files locally in a known location. Then create a UUID
@@ -317,11 +312,11 @@ script, enabling the file mapped path setting so that already downloaded dSYMS
 fill quickly be found without needing to run the shell script every time, and
 also leaving spotlight enabled so that other normal dSYM files are still found:
 
-::
-
-   % defaults write com.apple.DebugSymbols DBGShellCommands /path/to/shellscript
-   % defaults write com.apple.DebugSymbols DBGFileMappedPaths ~/Library/SymbolCache/dsyms/uuids
-   % defaults write com.apple.DebugSymbols DBGSpotlightPaths -array
+```
+% defaults write com.apple.DebugSymbols DBGShellCommands /path/to/shellscript
+% defaults write com.apple.DebugSymbols DBGFileMappedPaths ~/Library/SymbolCache/dsyms/uuids
+% defaults write com.apple.DebugSymbols DBGSpotlightPaths -array
+```
 
 Hopefully this helps explain how DebugSymbols.framework can help any company
 implement a smart symbol finding and caching with minimal overhead.
