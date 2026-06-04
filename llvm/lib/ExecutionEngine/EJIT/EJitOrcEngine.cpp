@@ -69,9 +69,11 @@ EJitOrcEngine::Create(const Config &config,
   orc::LLJITBuilder Builder;
   Builder.setJITTargetMachineBuilder(*JTMBOrErr);
   Builder.setNumCompileThreads(0);
-  // Bare-metal: no host process to search for symbols (avoids dlopen/dlsym).
-  #ifdef EJIT_FREESTANDING
+// Bare-metal: skip host process symbol search (avoids dlopen/dlsym),
+// and skip ORC runtime injection / EH frames / atexit / global ctors.
+#ifdef EJIT_FREESTANDING
   Builder.setLinkProcessSymbolsByDefault(false);
+  Builder.setPlatformSetUp(orc::setUpInactivePlatform);
 #endif
 
   auto J = Builder.create();
