@@ -10,6 +10,7 @@
 #define _LIBCPP___EXPECTED_EXPECTED_H
 
 #include <__assert>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__expected/bad_expected_access.h>
 #include <__expected/unexpect.h>
@@ -1162,9 +1163,9 @@ public:
   }
 
   // The unusual signature avoids constraint recursion via ADL through
-  // std::expected, see https://github.com/llvm/llvm-project/issues/160431.
-  template <class _T2, class _Tp2>
-    requires _IsSame<_Tp2, _Tp>::value
+  // std::expected, see https://llvm.org/PR160431. Note that this only
+  // triggers with compilers that implement https://wg21.link/CWG2369.
+  template <class _T2, same_as<_Tp> _Tp2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected<_Tp2, _Err>& __x, const _T2& __v)
 #  if _LIBCPP_STD_VER >= 26
     requires(!__is_std_expected<_T2>::value) && requires {
