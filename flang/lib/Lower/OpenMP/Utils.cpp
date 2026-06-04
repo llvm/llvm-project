@@ -1130,6 +1130,231 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   /*typeparams=*/mlir::ValueRange{});
 }
 
+llvm::omp::TraitSet mapTraitSet(parser::OmpTraitSetSelectorName::Value name) {
+  switch (name) {
+  case parser::OmpTraitSetSelectorName::Value::Construct:
+    return llvm::omp::TraitSet::construct;
+  case parser::OmpTraitSetSelectorName::Value::Device:
+    return llvm::omp::TraitSet::device;
+  case parser::OmpTraitSetSelectorName::Value::Implementation:
+    return llvm::omp::TraitSet::implementation;
+  case parser::OmpTraitSetSelectorName::Value::User:
+    return llvm::omp::TraitSet::user;
+  case parser::OmpTraitSetSelectorName::Value::Target_Device:
+    return llvm::omp::TraitSet::target_device;
+  }
+  llvm_unreachable("unknown trait set");
+}
+
+llvm::omp::TraitSelector
+mapTraitSelector(const parser::OmpTraitSelectorName &name,
+                 llvm::omp::TraitSet set) {
+  if (const auto *val =
+          std::get_if<parser::OmpTraitSelectorName::Value>(&name.u)) {
+    switch (*val) {
+    case parser::OmpTraitSelectorName::Value::Kind:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_kind;
+      return llvm::omp::TraitSelector::device_kind;
+    case parser::OmpTraitSelectorName::Value::Arch:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_arch;
+      return llvm::omp::TraitSelector::device_arch;
+    case parser::OmpTraitSelectorName::Value::Isa:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_isa;
+      return llvm::omp::TraitSelector::device_isa;
+    case parser::OmpTraitSelectorName::Value::Vendor:
+      return llvm::omp::TraitSelector::implementation_vendor;
+    case parser::OmpTraitSelectorName::Value::Extension:
+      return llvm::omp::TraitSelector::implementation_extension;
+    case parser::OmpTraitSelectorName::Value::Condition:
+      return llvm::omp::TraitSelector::user_condition;
+    case parser::OmpTraitSelectorName::Value::Atomic_Default_Mem_Order:
+    case parser::OmpTraitSelectorName::Value::Requires:
+    case parser::OmpTraitSelectorName::Value::Simd:
+    case parser::OmpTraitSelectorName::Value::Device_Num:
+    case parser::OmpTraitSelectorName::Value::Uid:
+      break;
+    }
+  }
+  // Construct traits, extension strings, and remaining selectors use
+  // string-based lookup.
+  return llvm::omp::getOpenMPContextTraitSelectorKind(name.ToString(), set);
+}
+
+/// Collect trait property names (vendor, kind, arch, isa, etc.) into a VMI.
+static void processTraitProperties(
+    llvm::omp::VariantMatchInfo &vmi, llvm::omp::TraitSet set,
+    llvm::omp::TraitSelector selector,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    llvm::APInt *scorePtr, mlir::Location loc) {
+  if (!props)
+    return;
+
+  for (const auto &prop :
+       std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+    const auto *name = std::get_if<parser::OmpTraitPropertyName>(&prop.u);
+    // Clause properties and extension properties (e.g. `simdlen(8)` in
+    // `construct={simd(simdlen(8))}`) and `foo(bar)` in
+    // `implementation={my_trait(foo(bar))}` are not matched yet.
+    if (!name)
+      TODO(loc, "clause or extension trait matching in METADIRECTIVE");
+
+    llvm::omp::TraitProperty propKind =
+        llvm::omp::getOpenMPContextTraitPropertyKind(set, selector, name->v);
+    if (propKind != llvm::omp::TraitProperty::invalid) {
+      vmi.addTrait(set, propKind, name->v, scorePtr);
+      continue;
+    }
+
+    if (selector == llvm::omp::TraitSelector::device_isa) {
+      vmi.addTrait(set, llvm::omp::TraitProperty::device_isa___ANY, name->v,
+                   scorePtr);
+    } else if (selector == llvm::omp::TraitSelector::target_device_isa) {
+      vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
+                   name->v, scorePtr);
+    } else {
+      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
+      // mean the variant cannot match. Add an invalid trait to ensure it is
+      // not selected.
+      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+    }
+  }
+}
+
+/// Try to constant-fold a user condition expression to a boolean.
+static std::optional<bool>
+evaluateUserCondition(semantics::SemanticsContext &semaCtx,
+                      const parser::ScalarExpr &scalarExpr) {
+  const auto *typedExpr = semantics::GetExpr(semaCtx, scalarExpr);
+  if (!typedExpr)
+    return std::nullopt;
+
+  auto foldedExpr = Fortran::evaluate::Fold(semaCtx.foldingContext(),
+                                            Fortran::common::Clone(*typedExpr));
+  if (auto constVal = Fortran::evaluate::ToInt64(foldedExpr))
+    return *constVal != 0;
+
+  if (auto logicalVal = Fortran::evaluate::GetScalarConstantValue<
+          Fortran::evaluate::LogicalResult>(foldedExpr))
+    return logicalVal->IsTrue();
+
+  return std::nullopt;
+}
+
+/// Process user={condition(...)} trait properties. Constant conditions are
+/// resolved to user_condition_true/false. Non-constant conditions are marked
+/// as user_condition_unknown and returned for later use in fir.if lowering.
+static std::optional<DynamicUserCondition> processUserConditionTrait(
+    llvm::omp::VariantMatchInfo &vmi,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    semantics::SemanticsContext &semaCtx, llvm::APInt *scorePtr) {
+  std::optional<DynamicUserCondition> dynamicCond;
+  if (!props)
+    return dynamicCond;
+
+  for (const auto &prop :
+       std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+    const auto *scalarExpr = std::get_if<parser::ScalarExpr>(&prop.u);
+    if (!scalarExpr)
+      continue;
+
+    if (auto constValue = evaluateUserCondition(semaCtx, *scalarExpr)) {
+      vmi.addTrait(*constValue ? llvm::omp::TraitProperty::user_condition_true
+                               : llvm::omp::TraitProperty::user_condition_false,
+                   "<condition>", scorePtr);
+      continue;
+    }
+
+    dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
+    vmi.addTrait(llvm::omp::TraitProperty::user_condition_unknown,
+                 "<condition>", scorePtr);
+  }
+
+  return dynamicCond;
+}
+
+/// Extract the optional score value from trait properties.
+static llvm::APInt *
+getTraitScore(const std::optional<parser::OmpTraitSelector::Properties> &props,
+              semantics::SemanticsContext &semaCtx,
+              std::optional<llvm::APInt> &scoreStorage) {
+  if (!props)
+    return nullptr;
+
+  const auto &optScore =
+      std::get<std::optional<parser::OmpTraitScore>>(props->t);
+  if (!optScore)
+    return nullptr;
+
+  const auto *typedExpr = semantics::GetExpr(semaCtx, optScore->v);
+  if (!typedExpr)
+    return nullptr;
+
+  auto constVal = Fortran::evaluate::ToInt64(*typedExpr);
+  if (!constVal)
+    return nullptr;
+
+  scoreStorage = llvm::APInt(64, *constVal);
+  return &*scoreStorage;
+}
+
+/// Populate a VariantMatchInfo from context selector.
+/// For user conditions, attempts constant folding. Non-constant conditions
+/// are recorded as user_condition_unknown and returned for later use in
+/// fir.if lowering.
+std::optional<DynamicUserCondition>
+makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
+                     const parser::modifier::OmpContextSelector &ctxSel,
+                     semantics::SemanticsContext &semaCtx, mlir::Location loc) {
+  std::optional<DynamicUserCondition> dynamicCond;
+
+  for (const auto &traitSet : ctxSel.v) {
+    using TSSName = parser::OmpTraitSetSelectorName;
+    auto setName = std::get<TSSName>(traitSet.t).v;
+    llvm::omp::TraitSet set = mapTraitSet(setName);
+
+    for (const auto &trait :
+         std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      const auto &selectorName =
+          std::get<parser::OmpTraitSelectorName>(trait.t);
+      llvm::omp::TraitSelector selector = mapTraitSelector(selectorName, set);
+      const auto &props =
+          std::get<std::optional<parser::OmpTraitSelector::Properties>>(
+              trait.t);
+
+      // target_device selectors require runtime target device queries not yet
+      // supported.
+      if (set == llvm::omp::TraitSet::target_device)
+        TODO(loc, "target_device selector in METADIRECTIVE");
+
+      std::optional<llvm::APInt> score;
+      llvm::APInt *scorePtr = getTraitScore(props, semaCtx, score);
+
+      if (selector == llvm::omp::TraitSelector::user_condition) {
+        if (std::optional<DynamicUserCondition> userCond =
+                processUserConditionTrait(vmi, props, semaCtx, scorePtr))
+          dynamicCond = userCond;
+        continue;
+      }
+
+      processTraitProperties(vmi, set, selector, props, scorePtr, loc);
+
+      if (props || set != llvm::omp::TraitSet::construct)
+        continue;
+
+      // Construct traits with no properties: the selector is the property.
+      llvm::omp::TraitProperty propKind =
+          llvm::omp::getOpenMPContextTraitPropertyForSelector(selector);
+      if (propKind != llvm::omp::TraitProperty::invalid)
+        vmi.addTrait(set, propKind, selectorName.ToString(), scorePtr);
+    }
+  }
+
+  return dynamicCond;
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

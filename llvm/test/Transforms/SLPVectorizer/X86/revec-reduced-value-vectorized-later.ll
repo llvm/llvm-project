@@ -4,16 +4,7 @@
 define <4 x i16> @test() {
 ; CHECK-LABEL: define <4 x i16> @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP37:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i16> poison, i16 [[TMP37]], i64 0
-; CHECK-NEXT:    [[TMP40:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <4 x i16> [[TMP38]], i16 [[TMP40]], i64 1
-; CHECK-NEXT:    [[TMP43:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <4 x i16> [[TMP41]], i16 [[TMP43]], i64 2
-; CHECK-NEXT:    [[TMP46:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i16> [[TMP44]], i16 [[TMP46]], i64 3
-; CHECK-NEXT:    [[OP_RDX9:%.*]] = or <4 x i16> [[TMP47]], zeroinitializer
-; CHECK-NEXT:    ret <4 x i16> [[OP_RDX9]]
+; CHECK-NEXT:    ret <4 x i16> zeroinitializer
 ;
 entry:
   %subi = add <4 x i16> zeroinitializer, zeroinitializer
