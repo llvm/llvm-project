@@ -19,7 +19,7 @@
 
 constexpr bool test() {
   {
-    std::text_encoding a_other = std::text_encoding("foobar");
+    std::text_encoding a_other{"foobar"};
 
     std::text_encoding::aliases_view other_aliases = a_other.aliases();
 
@@ -29,7 +29,7 @@ constexpr bool test() {
   }
 
   {
-    std::text_encoding utf8 = std::text_encoding(std::text_encoding::UTF8);
+    std::text_encoding utf8{std::text_encoding::UTF8};
 
     std::text_encoding::aliases_view aliases = utf8.aliases();
 

@@ -23,7 +23,7 @@ constexpr bool test() {
   ASSERT_SAME_TYPE(decltype(std::text_encoding().aliases()), std::text_encoding::aliases_view);
 
   // 2 aliases
-  std::text_encoding utf8 = std::text_encoding::UTF8;
+  std::text_encoding utf8{std::text_encoding::UTF8};
 
   auto aliases = utf8.aliases();
 

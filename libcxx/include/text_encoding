@@ -355,8 +355,8 @@ struct text_encoding {
   };
 
 private:
-  static constexpr int __NATS_DANO_     = 33;
-  static constexpr int __NATS_DANO_ADD_ = 34;
+  static constexpr int __nats_dano_     = 33;
+  static constexpr int __nats_dano_add_ = 34;
 
   // A __te_data structure stores:
   // Index into a table of offsets in the giant aliases string
@@ -451,8 +451,8 @@ private:
   static constexpr unsigned short __find_data_idx_by_id(id __i) noexcept {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__i >= id::other, "invalid text_encoding::id passed");
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__i <= id::CP50220, "invalid text_encoding::id passed");
-    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(int_least32_t(__i) != __NATS_DANO_, "Mib for NATS-DANO used");
-    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(int_least32_t(__i) != __NATS_DANO_ADD_, "Mib for NATS-DANO-ADD used");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(int_least32_t(__i) != __nats_dano_, "Mib for NATS-DANO used");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(int_least32_t(__i) != __nats_dano_add_, "Mib for NATS-DANO-ADD used");
     auto __found = std::lower_bound(std::begin(__entries), std::end(__entries), __i);
 
     if (__found == std::end(__entries)) {
@@ -818,7 +818,7 @@ private:
 
 template <>
 struct hash<text_encoding> {
-  [[nodiscard]] size_t operator()(const text_encoding& __enc) const noexcept {
+  [[nodiscard]] static size_t operator()(const text_encoding& __enc) noexcept {
     return std::hash<std::text_encoding::id>()(__enc.mib());
   }
 };

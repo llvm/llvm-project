@@ -23,6 +23,7 @@
 #include <text_encoding>
 
 #include "platform_support.h"
+#include "test_macros.h"
 
 int main(int, char**) {
   auto check_env = []() {
@@ -38,15 +39,15 @@ int main(int, char**) {
     constexpr std::text_encoding::id expected_id = std::text_encoding::unknown;
 #endif
 
-    std::text_encoding te = std::text_encoding::environment();
+    std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding::environment();
     bool fail             = false;
     if (te != expected_id) {
       std::cerr << std::format(
           "Environment mismatch: Expected ID {}, received: {{{},{}}}\n", int(expected_id), int(te.mib()), te.name());
       fail = true;
     }
-
-    if (!std::text_encoding::environment_is<expected_id>()) {
+    std::same_as<bool> decltype(auto) env_is_expected = std::text_encoding::environment_is<expected_id>();
+    if (!env_is_expected) {
       fail = true;
     }
 
@@ -58,19 +59,19 @@ int main(int, char**) {
     assert(check_env());
   }
 
-  std::text_encoding te = std::text_encoding::environment();
+  auto te = std::text_encoding::environment();
   // 2. text_encoding::environment()'s return value isn't altered by changes to locale.
   {
     std::setlocale(LC_ALL, LOCALE_en_US_UTF_8);
 
-    std::text_encoding te2 = std::text_encoding::environment();
+    auto te2 = std::text_encoding::environment();
     assert(te == te2);
   }
 
   {
     std::setlocale(LC_CTYPE, LOCALE_en_US_UTF_8);
 
-    std::text_encoding te2 = std::text_encoding::environment();
+    auto te2 = std::text_encoding::environment();
     assert(te == te2);
   }
   return 0;

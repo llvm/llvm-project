@@ -18,7 +18,7 @@
 #include <type_traits>
 
 constexpr bool test() {
-  std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding();
+  std::text_encoding te{};
   assert(te.mib() == std::text_encoding::unknown);
   assert(std::string_view("") == te.name());
 
@@ -27,16 +27,11 @@ constexpr bool test() {
 
 int main(int, char**) {
   // 1. Default constructor must be nothrow
-  {
-    static_assert(
-        std::is_nothrow_default_constructible<std::text_encoding>::value, "Must be nothrow default constructible");
-  }
+  static_assert(std::is_nothrow_default_constructible_v<std::text_encoding>, "Must be nothrow default constructible");
 
   // 2. Default constructing a text_encoding object makes it so that mib() == id::unknown, and its name is empty
-  {
-    test();
-    static_assert(test());
-  }
+  test();
+  static_assert(test());
 
   return 0;
 }

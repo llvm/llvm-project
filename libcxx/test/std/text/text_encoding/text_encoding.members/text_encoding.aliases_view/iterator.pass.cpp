@@ -25,7 +25,7 @@
 
 constexpr bool test() {
   // Test iterator operators.
-  std::text_encoding te = std::text_encoding(std::text_encoding::ASCII); // 11 aliases
+  std::text_encoding te{std::text_encoding::ASCII}; // 11 aliases
 
   auto i = te.aliases().begin();
   auto j = te.aliases().begin();

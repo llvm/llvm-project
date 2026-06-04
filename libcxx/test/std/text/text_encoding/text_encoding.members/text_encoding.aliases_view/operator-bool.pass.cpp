@@ -24,14 +24,14 @@ constexpr bool test() {
   // 1. An alias_view of a text_encoding object for "other" and "unknown" are empty
   {
     {
-      std::text_encoding te_other                  = std::text_encoding(id::other);
-      std::text_encoding::aliases_view other_range = te_other.aliases();
+      std::text_encoding te_other{id::other};
+      auto other_range = te_other.aliases();
       assert(!bool(other_range));
     }
 
     {
-      std::text_encoding te_unknown                  = std::text_encoding(id::unknown);
-      std::text_encoding::aliases_view unknown_range = te_unknown.aliases();
+      std::text_encoding te_unknown{id::unknown};
+      auto unknown_range = te_unknown.aliases();
       assert(!bool(unknown_range));
     }
   }
@@ -39,8 +39,8 @@ constexpr bool test() {
   // 2. An alias_view of a text_encoding object for a known encoding e.g. "UTF-8" is not empty
   {
     for (auto& data : unique_encoding_data) {
-      std::text_encoding te                  = std::text_encoding(id(data.mib));
-      std::text_encoding::aliases_view range = te.aliases();
+      std::text_encoding te{id(data.mib)};
+      auto range = te.aliases();
       assert(bool(range));
     }
   }

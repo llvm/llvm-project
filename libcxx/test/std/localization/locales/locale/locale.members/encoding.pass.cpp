@@ -18,6 +18,7 @@
 // text_encoding locale::encoding() const
 
 #include <cassert>
+#include <concepts>
 #include <format>
 #include <iostream>
 #include <locale>
@@ -29,10 +30,10 @@ int main(int, char**) {
   {
     // 1. Locale built with en_US.UTF-8 returns text_encoding representing "UTF-8"
     const std::locale utf8_locale(LOCALE_en_US_UTF_8);
-    std::text_encoding te      = utf8_locale.encoding();
-    std::text_encoding utf8_te = std::text_encoding(std::text_encoding::id::UTF8);
+    std::same_as<std::text_encoding> decltype(auto) te = utf8_locale.encoding();
+    auto utf8_te                                       = std::text_encoding{std::text_encoding::UTF8};
 
-    if (te != std::text_encoding::id::UTF8) {
+    if (te != std::text_encoding::UTF8) {
       std::cerr << std::format("Expected UTF-8, received {{ {}, \"{}\" }}", int(te.mib()), te.name());
       assert(false);
     }
@@ -42,9 +43,9 @@ int main(int, char**) {
   {
     // BCP-47 locale name
     const std::locale loc("en-US");
-    std::text_encoding te    = loc.encoding();
-    std::text_encoding w1252 = std::text_encoding(std::text_encoding::id::windows1252);
-    assert(te == std::text_encoding::id::windows1252);
+    std::same_as<std::text_encoding> decltype(auto) te = loc.encoding();
+    auto w1252                                         = std::text_encoding{std::text_encoding::windows1252};
+    assert(te == std::text_encoding::windows1252);
     assert(te == w1252);
   }
 #endif

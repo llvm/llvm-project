@@ -27,7 +27,7 @@ constexpr bool test() {
   {
     // 2. Constructing an object with a valid id must set mib() and the name to the corresponding value.
     for (auto pair : unique_encoding_data) {
-      std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(id(pair.mib));
+      std::text_encoding te{id(pair.mib)};
 
       assert(te.mib() == id(pair.mib));
       assert(pair.name == te.name());
@@ -38,7 +38,7 @@ constexpr bool test() {
   {
     // 3. Constructing an object using id::unknown or id::other must set mib() to id::unknown or id::other, respectively, and the name to an empty string.
     {
-      std::text_encoding te = std::text_encoding(id::other);
+      std::text_encoding te{id::other};
 
       assert(te.mib() == id::other);
       assert(std::string_view("") == te.name());
@@ -46,7 +46,7 @@ constexpr bool test() {
     }
 
     {
-      std::text_encoding te = std::text_encoding(id::unknown);
+      std::text_encoding te{id::unknown};
 
       assert(te.mib() == id::unknown);
       assert(std::string_view("") == te.name());
@@ -58,16 +58,12 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  {
-    // 1. text_encoding(id) must be nothrow
-    static_assert(std::is_nothrow_constructible<std::text_encoding, std::text_encoding::id>::value,
-                  "Must be nothrow constructible with id");
-  }
+  // 1. text_encoding(id) must be nothrow
+  static_assert(std::is_nothrow_constructible_v<std::text_encoding, std::text_encoding::id>,
+                "Must be nothrow constructible with id");
 
-  {
-    test();
-    static_assert(test());
-  }
+  test();
+  static_assert(test());
 
   return 0;
 }

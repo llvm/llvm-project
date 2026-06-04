@@ -21,10 +21,11 @@
 constexpr bool test() {
   // 1. begin() of an aliases_view from a single text_encoding object are the same.
   {
-    std::text_encoding te = std::text_encoding(std::text_encoding::UTF8);
+    std::text_encoding te{std::text_encoding::UTF8};
 
-    std::text_encoding::aliases_view view1 = te.aliases();
-    std::text_encoding::aliases_view view2 = te.aliases();
+    std::same_as<std::text_encoding::aliases_view> decltype(auto) view1 = te.aliases();
+
+    auto view2 = te.aliases();
     ASSERT_NOEXCEPT(view1.begin());
 
     assert(std::ranges::begin(view1) == std::ranges::begin(view2));
@@ -33,11 +34,11 @@ constexpr bool test() {
 
   // 2. begin() of aliases_views of two text_encoding objects that represent the same ID but hold different names are the same.
   {
-    std::text_encoding te1 = std::text_encoding("ANSI_X3.4-1968");
-    std::text_encoding te2 = std::text_encoding("ANSI_X3.4-1986");
+    std::text_encoding te1{"ANSI_X3.4-1968"};
+    std::text_encoding te2{"ANSI_X3.4-1986"};
 
-    std::text_encoding::aliases_view view1 = te1.aliases();
-    std::text_encoding::aliases_view view2 = te2.aliases();
+    auto view1 = te1.aliases();
+    auto view2 = te2.aliases();
 
     assert(view1.begin() == view2.begin());
     assert(std::ranges::begin(view1) == std::ranges::begin(view2));
@@ -45,11 +46,11 @@ constexpr bool test() {
 
   // 3. begin() of aliases_views of two text_encoding objects that represent different IDs are different.
   {
-    std::text_encoding te1 = std::text_encoding(std::text_encoding::UTF8);
-    std::text_encoding te2 = std::text_encoding(std::text_encoding::ASCII);
+    std::text_encoding te1{std::text_encoding::UTF8};
+    std::text_encoding te2{std::text_encoding::ASCII};
 
-    std::text_encoding::aliases_view view1 = te1.aliases();
-    std::text_encoding::aliases_view view2 = te2.aliases();
+    auto view1 = te1.aliases();
+    auto view2 = te2.aliases();
 
     assert(!(view1.begin() == view2.begin()));
     assert(!(std::ranges::begin(view1) == std::ranges::begin(view2)));
@@ -57,9 +58,9 @@ constexpr bool test() {
 
   {
     // 2 aliases
-    std::text_encoding te = std::text_encoding(std::text_encoding::UTF8);
+    std::text_encoding te{std::text_encoding::UTF8};
 
-    std::text_encoding::aliases_view view = te.aliases();
+    auto view = te.aliases();
 
     assert(view.begin() + 2 == view.end());
   }

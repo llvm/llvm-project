@@ -13,6 +13,6 @@
 #include <text_encoding>
 
 constexpr decltype(auto) foo() {
-  return &std::text_encoding::
-      literal; // expected-error@*:* {{cannot take address of consteval function 'literal' outside of an immediate invocation}}
+  // expected-error@*:* {{cannot take address of consteval function 'literal' outside of an immediate invocation}}
+  return &std::text_encoding::literal;
 }

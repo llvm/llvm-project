@@ -10,13 +10,12 @@
 
 // <text_encoding>
 
-#include <functional>
 #include <text_encoding>
 
 #include "test_macros.h"
 
-int main(int, char**) {
-  std::text_encoding te = std::text_encoding();
+void test() {
+  std::text_encoding te{};
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   te.mib();
@@ -49,11 +48,17 @@ int main(int, char**) {
   it - it;
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::hash<std::text_encoding>()(std::text_encoding::id::ASCII);
+  std::hash<std::text_encoding>()(std::text_encoding::ASCII);
 
-  // Clang does not emit a nodiscard warning for consteval functions with [[nodiscard]]: See issue #141536
-  // expected-warning@+1 {{expression result unused}}
+#if _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  te.environment();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  te.environment_is<std::text_encoding::UTF8>();
+#endif
+}
+
+consteval void literal() {
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::text_encoding::literal();
-
-  return 0;
 }

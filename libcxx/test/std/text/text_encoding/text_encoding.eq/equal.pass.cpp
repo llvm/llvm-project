@@ -28,8 +28,8 @@ constexpr bool test() {
 
   // 2. operator==(const text_encoding&, const text_encoding&) returns true if both text_encoding ids are equal
   {
-    std::text_encoding te1 = std::text_encoding(id::UTF8);
-    std::text_encoding te2 = std::text_encoding(id::UTF8);
+    std::text_encoding te1{id::UTF8};
+    std::text_encoding te2{id::UTF8};
     assert(te1 == te2);
     assert((te1 == te2) == !(te1 != te2));
 
@@ -41,22 +41,22 @@ constexpr bool test() {
 
   // 3. operator==(const text_encoding&, const text_encoding&) for text_encodings with ids of "other" return true if the names are equal
   {
-    std::text_encoding other_te1 = std::text_encoding("foo");
-    std::text_encoding other_te2 = std::text_encoding("foo");
+    std::text_encoding other_te1{"foo"};
+    std::text_encoding other_te2{"foo"};
     assert(other_te1 == other_te2);
   }
 
   // 4. operator==(const text_encoding&, const text_encoding&) returns false when comparing text_encodings with different ids
   {
-    std::text_encoding te1 = std::text_encoding(id::UTF8);
-    std::text_encoding te2 = std::text_encoding(id::UTF16);
+    std::text_encoding te1{id::UTF8};
+    std::text_encoding te2{id::UTF16};
     assert(!(te1 == te2));
   }
 
   // 5. operator==(const text_encoding&, const text_encoding&) for text_encodings with ids of "other" returns false if the names are not equal
   {
-    std::text_encoding other_te1 = std::text_encoding("foo");
-    std::text_encoding other_te2 = std::text_encoding("bar");
+    std::text_encoding other_te1("foo");
+    std::text_encoding other_te2("bar");
     assert(!(other_te1 == other_te2));
   }
 

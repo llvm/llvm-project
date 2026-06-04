@@ -15,65 +15,58 @@
 // text_encoding::text_encoding(string_view) noexcept
 
 #include <cassert>
-#include <concepts>
 #include <string_view>
 #include <text_encoding>
 #include <type_traits>
 
 #include "../test_text_encoding.h"
 
-constexpr void test_ctor(std::string_view str, std::text_encoding::id expect_id) {
-  std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(str);
+using id = std::text_encoding::id;
+
+constexpr void test_ctor(std::string_view str, id expect_id) {
+  std::text_encoding te{str};
 
   assert(te.mib() == expect_id);
   assert(te.name() == str);
 }
 
 constexpr bool test() {
-  { // The first encoding name for each mib in the data table.
-    for (auto& data : unique_encoding_data) {
-      std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(data.name);
+  // The first encoding name for each mib in the data table.
+  for (auto& data : unique_encoding_data) {
+    std::text_encoding te{data.name};
 
-      assert(te.mib() == std::text_encoding::id(data.mib));
-      assert(te.name() == data.name);
-    }
+    assert(te.mib() == id(data.mib));
+    assert(te.name() == data.name);
   }
 
-  { // Names that should all result in an "other" text encoding
-    for (auto& name : other_names) {
-      std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(name);
+  // Names that should all result in an "other" text encoding
+  for (auto& name : other_names) {
+    std::text_encoding te{name};
 
-      assert(te.mib() == std::text_encoding::other);
-      assert(te.name() == name);
-    }
+    assert(te.mib() == std::text_encoding::other);
+    assert(te.name() == name);
   }
 
-  test_ctor("U_T_F-8", std::text_encoding::UTF8);
-  test_ctor("utf8", std::text_encoding::UTF8);
-  test_ctor("u.t.f-008", std::text_encoding::UTF8);
-  test_ctor("utf-80", std::text_encoding::other);
-  test_ctor("iso885931988", std::text_encoding::ISOLatin3);
-  test_ctor("iso00885931988", std::text_encoding::ISOLatin3);
+  test_ctor("U_T_F-8", id::UTF8);
+  test_ctor("utf8", id::UTF8);
+  test_ctor("u.t.f-008", id::UTF8);
+  test_ctor("utf-80", id::other);
+  test_ctor("iso885931988", id::ISOLatin3);
+  test_ctor("iso00885931988", id::ISOLatin3);
 
   return true;
 }
 
 int main(int, char**) {
-  {
-    static_assert(std::is_nothrow_constructible_v<std::text_encoding, std::string_view>,
-                  "Must be nothrow constructible with string_view");
-  }
+  static_assert(std::is_nothrow_constructible_v<std::text_encoding, std::string_view>,
+                "Must be nothrow constructible with string_view");
 
-  {
-    test();
-    static_assert(test());
-  }
+  test();
+  static_assert(test());
 
-  {
-    // Runtime test only as it would take unreasonably long to test in constexpr.
-    for (auto& enc : all_encoding_data) {
-      test_ctor(enc.name, std::text_encoding::id(enc.mib));
-    }
+  // Check every possible alias, intentionally runtime only as it would take unreasonably long to test in constexpr.
+  for (auto& enc : all_encoding_data) {
+    test_ctor(enc.name, id(enc.mib));
   }
 
   return 0;
