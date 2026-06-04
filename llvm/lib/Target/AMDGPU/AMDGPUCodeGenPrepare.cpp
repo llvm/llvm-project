@@ -179,9 +179,8 @@ public:
 
   bool divHasSpecialOptimization(BinaryOperator &I,
                                  Value *Num, Value *Den) const;
-  bool getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
-                     unsigned MaxDivBits, bool Signed, unsigned &DivBits,
-                     unsigned &LHSBits) const;
+  unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
+                         unsigned MaxDivBits, bool Signed) const;
 
   /// Expands 24 bit div or rem.
   Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
@@ -1020,28 +1019,26 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
 /// Figure out how many bits are really needed for this division.
 /// \p MaxDivBits is an optimization hint to bypass the second
 /// ComputeNumSignBits/computeKnownBits call if the first one is
-/// already known to require more than MaxDivBits.  Return false if DivBits is
-/// known to be too big. Also, calculate LHSBits, the number of bits needed to
-/// represent Num.
-bool AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
-                                             Value *Den, unsigned MaxDivBits,
-                                             bool IsSigned, unsigned &DivBits,
-                                             unsigned &LHSBits) const {
+/// insufficient.
+unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
+                                                 Value *Den,
+                                                 unsigned MaxDivBits,
+                                                 bool IsSigned) const {
   assert(Num->getType()->getScalarSizeInBits() ==
          Den->getType()->getScalarSizeInBits());
   unsigned SSBits = Num->getType()->getScalarSizeInBits();
   if (IsSigned) {
     unsigned RHSSignBits = ComputeNumSignBits(Den, SQ.DL, SQ.AC, &I, SQ.DT);
     // A sign bit needs to be reserved for shrinking.
-    DivBits = SSBits - RHSSignBits + 1;
+    unsigned DivBits = SSBits - RHSSignBits + 1;
     if (DivBits > MaxDivBits)
-      return false;
+      return SSBits;
 
     unsigned LHSSignBits = ComputeNumSignBits(Num, SQ.DL, SQ.AC, &I);
+
     unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-    LHSBits = SSBits - LHSSignBits + 1;
     DivBits = SSBits - SignBits + 1;
-    return true;
+    return DivBits;
   }
 
   // All bits are used for unsigned division for Num or Den in range
@@ -1064,24 +1061,20 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
                                                 BinaryOperator &I, Value *Num,
                                                 Value *Den, bool IsDiv,
                                                 bool IsSigned) const {
-  unsigned DivBits;
-  unsigned LHSBits;
-  if (!getDivNumBits(I, Num, Den, 24, IsSigned, DivBits, LHSBits) ||
-      DivBits > 24)
-    return nullptr;
+  unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned);
 
   // v_rcp_f32(float(X)) can have an error of 1 ulp.
   // This can cause expandDivRem24Impl to sometimes calculate Y/X incorrectly
-  // when (Y>0x800000).
+  // when abs(Y)>0x800000.
   // For example,
   // (0xbf2758/0xbf2759) erroneously produces 1 instead of 0.
   // (0xe3170d/0x000c32) erroneously produces 4767 instead of 4766.
   //
-  // Note that for IsSigned, abs(Y) is at most
+  // Note that for DivBits==24 && IsSigned, Y is in the range
+  // [-0x800000:0x7FFFFF]. abs(Y) is at most
   // 0x800000 so it cannot hit this issue.
-  if (!IsSigned && LHSBits >= 24)
+  if (DivBits > (IsSigned ? 24 : 23))
     return nullptr;
-
   return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
 }
 
@@ -1366,23 +1359,22 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
   bool IsDiv = Opc == Instruction::SDiv || Opc == Instruction::UDiv;
   bool IsSigned = Opc == Instruction::SDiv || Opc == Instruction::SRem;
 
-  unsigned NumDivBits;
-  unsigned LHSBits;
-  if (!getDivNumBits(I, Num, Den, 32, IsSigned, NumDivBits, LHSBits) ||
-      NumDivBits > 32)
+  unsigned NumDivBits = getDivNumBits(I, Num, Den, 32, IsSigned);
+  if (NumDivBits > 32)
     return nullptr;
 
   Value *Narrowed = nullptr;
   // v_rcp_f32(float(X)) can have an error of 1 ulp.
   // This can cause expandDivRem24Impl to sometimes calculate Y/X incorrectly
-  // when (Y>0x800000).
+  // when abs(Y)>0x800000.
   // For example,
   // (0xbf2758/0xbf2759) erroneously produces 1 instead of 0.
   // (0xe3170d/0x000c32) erroneously produces 4767 instead of 4766.
   //
-  // Note that for IsSigned, abs(Y) is at most
+  // Note that for NumDivBits==24 && IsSigned, Y is in the range
+  // [-0x800000:0x7FFFFF]. abs(Y) is at most
   // 0x800000 so it cannot hit this issue.
-  if (NumDivBits <= 24 && (IsSigned || LHSBits < 24)) {
+  if (NumDivBits <= (IsSigned ? 24 : 23)) {
     Narrowed = expandDivRem24Impl(Builder, I, Num, Den, NumDivBits,
                                   IsDiv, IsSigned);
   } else if (NumDivBits <= 32) {
