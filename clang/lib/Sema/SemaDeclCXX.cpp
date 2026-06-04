@@ -5766,6 +5766,11 @@ static void DiagnoseBaseOrMemInitializerOrder(
         if (InitKey == IdealInitKeys[IdealIndex])
           break;
 
+      // There was a template parameter in the initializers, that isn't a base
+      // of the class to be instantiated.
+      if (IdealIndex >= NumIdealInits)
+        break;
+
       assert(IdealIndex < NumIdealInits &&
              "initializer not found in initializer list");
     }
