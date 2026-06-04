@@ -11,16 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class ThreadStateTestCase(TestBase):
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr15824 thread states not properly maintained",
-    )
-    @skipIfDarwin  # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
-    @expectedFailureAll(
-        oslist=["freebsd"],
-        bugnumber="llvm.org/pr18190 thread states not properly maintained",
-    )
-    @expectedFailureNetBSD
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build()
@@ -48,13 +38,10 @@ class ThreadStateTestCase(TestBase):
         self.build()
         self.thread_state_after_expression_test()
 
-    # thread states not properly maintained
-    @unittest.expectedFailure  # llvm.org/pr15824 and <rdar://problem/28557237>
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",
     )
-    @skipIfDarwin  # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
     @expectedFailureNetBSD
     def test_process_state(self):
         """Test thread states (comprehensive)."""
@@ -190,7 +177,6 @@ class ThreadStateTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",
     )
-    @skipIfDarwin  # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
     @no_debug_info_test
     def test_process_interrupt(self):
         """Test process interrupt and continue."""
