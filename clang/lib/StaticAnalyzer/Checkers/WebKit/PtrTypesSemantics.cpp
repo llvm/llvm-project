@@ -667,6 +667,9 @@ public:
           if (!Visit(CtorInit->getInit()))
             return false;
         }
+        if (CtorDecl->isTrivial() && CtorDecl->isDefaultConstructor() &&
+            !CtorDecl->hasBody())
+          return true;
       }
       const Stmt *Body = D->getBody();
       if (!Body)

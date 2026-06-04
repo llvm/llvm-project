@@ -701,3 +701,45 @@ Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnTypedefPrval
 
 } // namespace returned_prvalue_typedef
 
+namespace create_with_default_constructor {
+
+  struct ObjectWithDefaultConstructorWithoutMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithoutMemberVariables());
+    }
+  };
+
+  struct ObjectWithDefaultConstructorWithPODMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithPODMemberVariables());
+    }
+
+  private:
+    int value { 0 };
+    RefCountable* ptr { nullptr };
+  };
+
+  struct ObjectWithOpaqueCtor {
+    ObjectWithOpaqueCtor();
+  };
+
+  struct ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables());
+      // expected-warning@-1{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+    }
+
+  private:
+    ObjectWithOpaqueCtor obj;
+  };
+
+} // namespace create_with_default_constructor
