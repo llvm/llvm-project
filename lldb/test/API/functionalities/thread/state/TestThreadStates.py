@@ -36,10 +36,7 @@ class ThreadStateTestCase(TestBase):
         self.thread_state_after_expression_test()
 
     @skipIfDarwin  # rdar://28557237
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr15824 process interrupt stop reason is trace instead of signal",
-    )
+    @skipIfLinux  # llvm.org/pr15824 process interrupt stop reason is trace instead of signal sometimes
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",
