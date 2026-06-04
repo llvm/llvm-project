@@ -158,8 +158,10 @@
 #endif
 #pragma OPENCL EXTENSION cl_khr_subgroups: enable
 
-#ifndef cl_khr_subgroup_non_uniform_arithmetic
-#error "Missing cl_khr_subgroup_non_uniform_arithmetic define"
+#ifdef LLVM_ENV_EXTENSIONS
+  #ifndef cl_khr_subgroup_non_uniform_arithmetic
+    #error "Missing cl_khr_subgroup_non_uniform_arithmetic define"
+  #endif
 #endif
 
 #ifndef cl_amd_media_ops
