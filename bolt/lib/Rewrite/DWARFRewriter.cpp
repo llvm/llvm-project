@@ -465,7 +465,7 @@ static void fixupDWARFRanges(DIEBuilder &DIEBlder, DWARFUnit &Unit,
     DIE *CUDie = DIEBlder.getUnitDIEbyUnit(Unit);
     DIEValue RngBaseVal = CUDie->findAttribute(dwarf::DW_AT_rnglists_base);
     if (RngBaseVal) {
-      uint64_t OldVal = RngBaseVal.getDIEInteger().getValue();
+      const uint64_t OldVal = RngBaseVal.getDIEInteger().getValue();
       DIEBlder.replaceValue(CUDie, dwarf::DW_AT_rnglists_base,
                             RngBaseVal.getForm(), DIEInteger(OldVal + Offset));
     }
@@ -477,7 +477,7 @@ static void fixupDWARFRanges(DIEBuilder &DIEBlder, DWARFUnit &Unit,
     DIEValue RangesVal = Die->findAttribute(dwarf::DW_AT_ranges);
     if (RangesVal &&
         (Version < 5 || RangesVal.getForm() == dwarf::DW_FORM_sec_offset)) {
-      uint64_t OldVal = RangesVal.getDIEInteger().getValue();
+      const uint64_t OldVal = RangesVal.getDIEInteger().getValue();
       // Empty ranges are stored at offset 0 in both local and global
       // buffers, so must not be shifted during merge.
       if (OldVal != DebugRangesSectionWriter::getEmptyRangesOffset())
@@ -790,7 +790,6 @@ void DWARFRewriter::mergePerBucketLocsAndRanges(
     finalizeSkeletonAndStrSection(PartDIEBlder, *CU, DWOToNameMap);
   }
   for (DWARFUnit *CU : SortedCUs) {
-
     const uint64_t CUOffset = CU->getOffset();
     // Compute this CU's base and adjust loclists / legacy loc fixups inline.
     uint64_t LoclistsBase = 0;
@@ -808,16 +807,19 @@ void DWARFRewriter::mergePerBucketLocsAndRanges(
         Accum.LoclistsOffset += BufferSize;
       } else if (!LocListWriter) {
         LegacyLocBase = Accum.LegacyLocOffset;
-        // DWARF4 .debug_loc buffers carry a trailing 16-byte terminator
-        // which is written only once at the global level; discount it here
-        // so the next CU's base offset is computed correctly.
+        // Each per-CU DWARF4 .debug_loc buffer begins with a 16-byte empty-list
+        // sentinel (offset 0). That sentinel is emitted once for the whole
+        // section in makeFinalLocListsSection, and each CU's leading 16 bytes
+        // are stripped, so a CU contributes BufferSize-16 bytes to the global
+        // section.
+
         if (BufferSize > 16)
           Accum.LegacyLocOffset += BufferSize - 16;
       }
     }
 
     if (CU->getVersion() >= 5) {
-      uint64_t RangsOffset = RangeListsSectionWriter->getSectionOffset();
+      const uint64_t RangsOffset = RangeListsSectionWriter->getSectionOffset();
       fixupDWARFRanges(PartDIEBlder, *CU, RangsOffset);
 
       if (LoclistsBase) {

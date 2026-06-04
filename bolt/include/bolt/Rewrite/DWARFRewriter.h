@@ -180,6 +180,7 @@ private:
   void processMainBinaryCU(DWARFUnit &Unit, DIEBuilder &DIEBlder,
                            BucketLocalWriter &LocalWriter);
 
+  /// Process all CUs in the given bucket.
   void processBucket(size_t Idx, SmallVector<SmallVector<DWARFUnit *>> &PartVec,
                      std::vector<std::unique_ptr<DIEBuilder>> &BucketDIEBlders,
                      std::vector<BucketLocalWriter> &LocalWriters,
