@@ -1085,7 +1085,7 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
   // Ideally the RuleMatcher should have a separate container for this type of
   // situation (perhaps we can reuse EpilogueMatcher), but it's not a big deal
   // right now.
-  InstructionMatcher &IM = M.insnmatchers_front();
+  InstructionMatcher &IM = M.roots_front();
   IM.addPredicate<GenericInstructionPredicateMatcher>(
       ExpandedCode.getEnumNameWithPrefix(CXXPredPrefix));
 }
