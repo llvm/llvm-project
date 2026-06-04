@@ -284,12 +284,6 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
             Call, /*MustPreserveOffset=*/false))
       return UseCaptureInfo::passthrough();
 
-    // Volatile operations effectively capture the memory location that they
-    // load and store to.
-    if (auto *MI = dyn_cast<MemIntrinsic>(Call))
-      if (MI->isVolatile())
-        return CaptureComponents::All;
-
     // Calling a function pointer does not in itself cause the pointer to
     // be captured.  This is a subtle point considering that (for example)
     // the callee might return its own address.  It is analogous to saying
@@ -298,6 +292,13 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     // (think of self-referential objects).
     if (Call->isCallee(&U))
       return CaptureComponents::None;
+
+    // Volatile operations make the address observable.
+    // TODO: This should probably get sunk into CallBase::getCaptureInfo().
+    CaptureComponents VolatileCC = CaptureComponents::None;
+    if (auto *MI = dyn_cast<MemIntrinsic>(Call))
+      if (MI->isVolatile())
+        VolatileCC |= CaptureComponents::Address;
 
     assert(Call->isDataOperand(&U) && "Non-callee must be data operand");
     CaptureInfo CI = Call->getCaptureInfo(Call->getDataOperandNo(&U));
@@ -308,13 +309,13 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     if (Call->onlyReadsMemory() && Call->getType()->isVoidTy())
       Mask = CaptureComponents::Address;
 
-    return UseCaptureInfo(CI.getOtherComponents() & Mask,
+    return UseCaptureInfo((CI.getOtherComponents() & Mask) | VolatileCC,
                           CI.getRetComponents());
   }
   case Instruction::Load:
     // Volatile loads make the address observable.
     if (cast<LoadInst>(I)->isVolatile())
-      return CaptureComponents::All;
+      return CaptureComponents::Address;
     return CaptureComponents::None;
   case Instruction::VAArg:
     // "va-arg" from a pointer does not cause it to be captured.
@@ -327,17 +328,19 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
 
     // Volatile stores make the address observable.
     if (cast<StoreInst>(I)->isVolatile())
-      return CaptureComponents::All;
+      return CaptureComponents::Address;
     return CaptureComponents::None;
   case Instruction::AtomicRMW: {
     // atomicrmw conceptually includes both a load and store from
     // the same location.
     // As with a store, the location being accessed is not captured,
     // but the value being stored is.
-    // Volatile stores make the address observable.
     auto *ARMWI = cast<AtomicRMWInst>(I);
-    if (U.getOperandNo() == 1 || ARMWI->isVolatile())
+    if (U.getOperandNo() == 1)
       return CaptureComponents::All;
+    // Volatile stores make the address observable.
+    if (ARMWI->isVolatile())
+      return CaptureComponents::Address;
     return CaptureComponents::None;
   }
   case Instruction::AtomicCmpXchg: {
@@ -345,10 +348,12 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     // the same location.
     // As with a store, the location being accessed is not captured,
     // but the value being stored is.
-    // Volatile stores make the address observable.
     auto *ACXI = cast<AtomicCmpXchgInst>(I);
-    if (U.getOperandNo() == 1 || U.getOperandNo() == 2 || ACXI->isVolatile())
+    if (U.getOperandNo() == 1 || U.getOperandNo() == 2)
       return CaptureComponents::All;
+    // Volatile stores make the address observable.
+    if (ACXI->isVolatile())
+      return CaptureComponents::Address;
     return CaptureComponents::None;
   }
   case Instruction::GetElementPtr:
@@ -372,23 +377,11 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
+    // Check whether this is a comparison of the base pointer against
+    // null.
     if (isa<ConstantPointerNull>(I->getOperand(OtherIdx)) &&
-        cast<ICmpInst>(I)->isEquality()) {
-      // TODO(captures): Remove these special cases once we make use of
-      // captures(address_is_null).
-
-      // Don't count comparisons of a no-alias return value against null as
-      // captures. This allows us to ignore comparisons of malloc results
-      // with null, for example.
-      if (U->getType()->getPointerAddressSpace() == 0)
-        if (isNoAliasCall(U.get()->stripPointerCasts()))
-          return CaptureComponents::None;
-
-      // Check whether this is a comparison of the base pointer against
-      // null.
-      if (U.get() == Base)
-        return CaptureComponents::AddressIsNull;
-    }
+        cast<ICmpInst>(I)->isEquality() && U.get() == Base)
+      return CaptureComponents::AddressIsNull;
 
     // Otherwise, be conservative. There are crazy ways to capture pointers
     // using comparisons. However, only the address is captured, not the

@@ -625,6 +625,17 @@ public:
            VK == ELF::R_RISCV_TLSDESC_CALL;
   }
 
+  bool isQCAccessSymbol() const {
+    int64_t Imm;
+    // Must be of 'immediate' type but not a constant.
+    if (!isExpr() || evaluateConstantExpr(getExpr(), Imm))
+      return false;
+
+    RISCV::Specifier VK = RISCV::S_None;
+    return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
+           VK == RISCV::S_QC_ACCESS;
+  }
+
   bool isCSRSystemRegister() const { return isSystemRegister(); }
 
   // If the last operand of the vsetvli/vsetvli instruction is a constant
@@ -2446,6 +2457,10 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
 bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
   if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+      STI->hasFeature(RISCV::FeatureStdExtZvqwdota8i) ||
+      STI->hasFeature(RISCV::FeatureStdExtZvqwdota16i) ||
+      STI->hasFeature(RISCV::FeatureStdExtZvfwdota16bf) ||
+      STI->hasFeature(RISCV::FeatureStdExtZvfqwdota8f) ||
       STI->hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
       STI->hasFeature(RISCV::FeatureVendorXSfvfbfexp16e) ||
       STI->hasFeature(RISCV::FeatureStdExtZvqwbdota8i) ||
