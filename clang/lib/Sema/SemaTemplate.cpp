@@ -7140,8 +7140,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
                                        TemplateArgument &SugaredConverted,
                                        TemplateArgument &CanonicalConverted,
                                        bool StrictCheck,
-                                       CheckTemplateArgumentKind CTAK,
-                                       bool SkipConstantEvaluation) {
+                                       CheckTemplateArgumentKind CTAK) {
   SourceLocation StartLoc = Arg->getBeginLoc();
   auto *ArgPE = dyn_cast<PackExpansionExpr>(Arg);
   Expr *DeductionArg = ArgPE ? ArgPE->getPattern() : Arg;
@@ -7345,9 +7344,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     }
 
     // For a value-dependent argument, CheckConvertedConstantExpression is
-    // permitted (and expected) to be unable to determine a value. Treat the
-    // argument the same way when the caller does not need the value.
-    if (ArgResult.get()->isValueDependent() || SkipConstantEvaluation) {
+    // permitted (and expected) to be unable to determine a value.
+    if (ArgResult.get()->isValueDependent()) {
       setDeductionArg(ArgResult.get());
       SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
