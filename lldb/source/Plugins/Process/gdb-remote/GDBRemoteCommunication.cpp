@@ -608,8 +608,8 @@ bool GDBRemoteCommunication::DecompressPacket() {
   return true;
 }
 
-// `payload` is the full raw packet (e.g. "$body#CC"); `content` is the body
-// between '$' and '#'.
+// `content` is the body between '$' and '#', `payload` is the full raw packet
+// (e.g. "$body#CC");
 static void AddToLog(llvm::StringRef content, llvm::StringRef payload,
                      uint64_t original_packet_size,
                      GDBRemoteCommunicationHistory &history,
@@ -645,25 +645,24 @@ static void AddToLog(llvm::StringRef content, llvm::StringRef payload,
   }
 
   StreamString strm;
-  // Packet header...
+  // Packet header.
   if (compression_enabled)
     strm.Printf("<%4" PRIu64 ":%" PRIu64 "> read packet: %c",
                 original_packet_size, total_length, payload[0]);
   else
     strm.Printf("<%4" PRIu64 "> read packet: %c", total_length, payload[0]);
   for (size_t i = 0; i < content.size(); ++i) {
-    // Remove binary escaped bytes when displaying the packet...
+    // Remove binary escaped bytes when displaying the packet.
     const char ch = content[i];
     if (ch == 0x7d) {
-      // 0x7d is the escape character.  The next character is to be
-      // XOR'd with 0x20.
+      // Escape character: the next character is to be XOR'd with 0x20.
       const char escapee = content[++i] ^ 0x20;
       strm.Printf("%2.2x", escapee);
     } else {
       strm.Printf("%2.2x", (uint8_t)ch);
     }
   }
-  // Packet footer...
+  // Packet footer.
   strm.Printf("%c%c%c", payload[total_length - 3], payload[total_length - 2],
               payload[total_length - 1]);
   log->PutString(strm.GetString());
