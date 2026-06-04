@@ -88,10 +88,13 @@ TEST_F(LlvmLibcBindTest, BindInet6Socket) {
   my_addr.sin6_family = AF_INET6;
   my_addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
 
-  ASSERT_THAT(
+  int result =
       LIBC_NAMESPACE::bind(sock, reinterpret_cast<struct sockaddr *>(&my_addr),
-                           sizeof(struct sockaddr_in6)),
-      Succeeds(0));
+                           sizeof(struct sockaddr_in6));
+  if (result == -1) {
+    ASSERT_ERRNO_EQ(EADDRNOTAVAIL); // Ipv6 not available on this host.
+    return;
+  }
 
   my_addr = {};
   socklen_t len = sizeof(my_addr);
