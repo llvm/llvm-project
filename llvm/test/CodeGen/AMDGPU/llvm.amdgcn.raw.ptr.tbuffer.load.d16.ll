@@ -279,6 +279,104 @@ main_body:
   ret i16 %elt
 }
 
+; Bfloat element types must use the same D16 path as f16.
+define amdgpu_ps bfloat @tbuffer_load_bf16(ptr addrspace(8) inreg %rsrc) {
+; PREGFX10-UNPACKED-LABEL: tbuffer_load_bf16:
+; PREGFX10-UNPACKED:       ; %bb.0: ; %main_body
+; PREGFX10-UNPACKED-NEXT:    tbuffer_load_format_d16_x v0, off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] ; encoding: [0x00,0x00,0xb4,0xe8,0x00,0x00,0x00,0x80]
+; PREGFX10-UNPACKED-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
+; PREGFX10-UNPACKED-NEXT:    ; return to shader part epilog
+;
+; PREGFX10-PACKED-LABEL: tbuffer_load_bf16:
+; PREGFX10-PACKED:       ; %bb.0: ; %main_body
+; PREGFX10-PACKED-NEXT:    tbuffer_load_format_d16_x v0, off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM]
+; PREGFX10-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX10-PACKED-LABEL: tbuffer_load_bf16:
+; GFX10-PACKED:       ; %bb.0: ; %main_body
+; GFX10-PACKED-NEXT:    tbuffer_load_format_d16_x v0, off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
+; GFX10-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX11-PACKED-LABEL: tbuffer_load_bf16:
+; GFX11-PACKED:       ; %bb.0: ; %main_body
+; GFX11-PACKED-NEXT:    tbuffer_load_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
+; GFX11-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-PACKED-NEXT:    ; return to shader part epilog
+main_body:
+  %data = call bfloat @llvm.amdgcn.raw.ptr.tbuffer.load.bf16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 22, i32 0)
+  ret bfloat %data
+}
+
+define amdgpu_ps bfloat @tbuffer_load_v2bf16(ptr addrspace(8) inreg %rsrc) {
+; PREGFX10-UNPACKED-LABEL: tbuffer_load_v2bf16:
+; PREGFX10-UNPACKED:       ; %bb.0: ; %main_body
+; PREGFX10-UNPACKED-NEXT:    tbuffer_load_format_d16_xy v[0:1], off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] ; encoding: [0x00,0x80,0xb4,0xe8,0x00,0x00,0x00,0x80]
+; PREGFX10-UNPACKED-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
+; PREGFX10-UNPACKED-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
+; PREGFX10-UNPACKED-NEXT:    ; return to shader part epilog
+;
+; PREGFX10-PACKED-LABEL: tbuffer_load_v2bf16:
+; PREGFX10-PACKED:       ; %bb.0: ; %main_body
+; PREGFX10-PACKED-NEXT:    tbuffer_load_format_d16_xy v0, off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM]
+; PREGFX10-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; PREGFX10-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX10-PACKED-LABEL: tbuffer_load_v2bf16:
+; GFX10-PACKED:       ; %bb.0: ; %main_body
+; GFX10-PACKED-NEXT:    tbuffer_load_format_d16_xy v0, off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
+; GFX10-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX10-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX11-PACKED-LABEL: tbuffer_load_v2bf16:
+; GFX11-PACKED:       ; %bb.0: ; %main_body
+; GFX11-PACKED-NEXT:    tbuffer_load_d16_format_xy v0, off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
+; GFX11-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11-PACKED-NEXT:    ; return to shader part epilog
+main_body:
+  %data = call <2 x bfloat> @llvm.amdgcn.raw.ptr.tbuffer.load.v2bf16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 22, i32 0)
+  %elt = extractelement <2 x bfloat> %data, i32 1
+  ret bfloat %elt
+}
+
+define amdgpu_ps bfloat @tbuffer_load_v4bf16(ptr addrspace(8) inreg %rsrc) {
+; PREGFX10-UNPACKED-LABEL: tbuffer_load_v4bf16:
+; PREGFX10-UNPACKED:       ; %bb.0: ; %main_body
+; PREGFX10-UNPACKED-NEXT:    tbuffer_load_format_d16_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] ; encoding: [0x00,0x80,0xb5,0xe8,0x00,0x00,0x00,0x80]
+; PREGFX10-UNPACKED-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
+; PREGFX10-UNPACKED-NEXT:    v_mov_b32_e32 v0, v3 ; encoding: [0x03,0x03,0x00,0x7e]
+; PREGFX10-UNPACKED-NEXT:    ; return to shader part epilog
+;
+; PREGFX10-PACKED-LABEL: tbuffer_load_v4bf16:
+; PREGFX10-PACKED:       ; %bb.0: ; %main_body
+; PREGFX10-PACKED-NEXT:    tbuffer_load_format_d16_xyzw v[0:1], off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM]
+; PREGFX10-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; PREGFX10-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX10-PACKED-LABEL: tbuffer_load_v4bf16:
+; GFX10-PACKED:       ; %bb.0: ; %main_body
+; GFX10-PACKED-NEXT:    tbuffer_load_format_d16_xyzw v[0:1], off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
+; GFX10-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX10-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX11-PACKED-LABEL: tbuffer_load_v4bf16:
+; GFX11-PACKED:       ; %bb.0: ; %main_body
+; GFX11-PACKED-NEXT:    tbuffer_load_d16_format_xyzw v[0:1], off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
+; GFX11-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX11-PACKED-NEXT:    ; return to shader part epilog
+main_body:
+  %data = call <4 x bfloat> @llvm.amdgcn.raw.ptr.tbuffer.load.v4bf16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 22, i32 0)
+  %elt = extractelement <4 x bfloat> %data, i32 3
+  ret bfloat %elt
+}
+
 declare half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8), i32, i32, i32, i32)
 declare <2 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f16(ptr addrspace(8), i32, i32, i32, i32)
 declare <3 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f16(ptr addrspace(8), i32, i32, i32, i32)
@@ -287,3 +385,6 @@ declare i16 @llvm.amdgcn.raw.ptr.tbuffer.load.i16(ptr addrspace(8), i32, i32, i3
 declare <2 x i16> @llvm.amdgcn.raw.ptr.tbuffer.load.v2i16(ptr addrspace(8), i32, i32, i32, i32)
 declare <3 x i16> @llvm.amdgcn.raw.ptr.tbuffer.load.v3i16(ptr addrspace(8), i32, i32, i32, i32)
 declare <4 x i16> @llvm.amdgcn.raw.ptr.tbuffer.load.v4i16(ptr addrspace(8), i32, i32, i32, i32)
+declare bfloat @llvm.amdgcn.raw.ptr.tbuffer.load.bf16(ptr addrspace(8), i32, i32, i32, i32)
+declare <2 x bfloat> @llvm.amdgcn.raw.ptr.tbuffer.load.v2bf16(ptr addrspace(8), i32, i32, i32, i32)
+declare <4 x bfloat> @llvm.amdgcn.raw.ptr.tbuffer.load.v4bf16(ptr addrspace(8), i32, i32, i32, i32)

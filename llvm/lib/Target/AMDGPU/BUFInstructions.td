@@ -2342,19 +2342,24 @@ multiclass MTBUF_LoadIntrinsicPat<SDPatternOperator name, ValueType vt,
 }
 
 let OtherPredicates = [HasMTBUFInsts] in {
-defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, i32,   "TBUFFER_LOAD_FORMAT_X">;
-defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v2i32, "TBUFFER_LOAD_FORMAT_XY">;
-defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v3i32, "TBUFFER_LOAD_FORMAT_XYZ">;
-defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v4i32, "TBUFFER_LOAD_FORMAT_XYZW">;
-defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, f32,   "TBUFFER_LOAD_FORMAT_X">;
-defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v2f32, "TBUFFER_LOAD_FORMAT_XY">;
-defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v3f32, "TBUFFER_LOAD_FORMAT_XYZ">;
-defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v4f32, "TBUFFER_LOAD_FORMAT_XYZW">;
+foreach vt = Reg32Types.types in {
+  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, vt, "TBUFFER_LOAD_FORMAT_X">;
+}
+foreach vt = Reg64Types.types in {
+  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, vt, "TBUFFER_LOAD_FORMAT_XY">;
+}
+foreach vt = Reg96Types.types in {
+  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, vt, "TBUFFER_LOAD_FORMAT_XYZ">;
+}
+foreach vt = Reg128Types.types in {
+  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, vt, "TBUFFER_LOAD_FORMAT_XYZW">;
+}
 } // End HasMTBUFInsts.
 
 let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
-  defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, f16,   "TBUFFER_LOAD_FORMAT_D16_X_gfx80">;
-  defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, i16,   "TBUFFER_LOAD_FORMAT_D16_X_gfx80">;
+  foreach vt = Reg16Types.types in {
+    defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, vt, "TBUFFER_LOAD_FORMAT_D16_X_gfx80">;
+  }
   defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, i32,   "TBUFFER_LOAD_FORMAT_D16_X_gfx80">;
   defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, v2i32, "TBUFFER_LOAD_FORMAT_D16_XY_gfx80">;
   defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, v3i32, "TBUFFER_LOAD_FORMAT_D16_XYZ_gfx80">;
@@ -2362,15 +2367,20 @@ let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
 } // End HasUnpackedD16VMem,HasMTBUFInsts.
 
 let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
-  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, f16,   "TBUFFER_LOAD_FORMAT_D16_X">;
-  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, i16,   "TBUFFER_LOAD_FORMAT_D16_X">;
+  foreach vt = Reg16Types.types in {
+    defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, vt, "TBUFFER_LOAD_FORMAT_D16_X">;
+  }
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, i32,   "TBUFFER_LOAD_FORMAT_D16_X">;
-  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v2f16, "TBUFFER_LOAD_FORMAT_D16_XY">;
-  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v2i16, "TBUFFER_LOAD_FORMAT_D16_XY">;
-  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v4f16, "TBUFFER_LOAD_FORMAT_D16_XYZ", v3f16>;
-  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v4i16, "TBUFFER_LOAD_FORMAT_D16_XYZ", v3i16>;
-  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v4f16, "TBUFFER_LOAD_FORMAT_D16_XYZW">;
-  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v4i16, "TBUFFER_LOAD_FORMAT_D16_XYZW">;
+  foreach vt = [v2i16, v2f16, v2bf16] in {
+    defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, vt, "TBUFFER_LOAD_FORMAT_D16_XY">;
+  }
+  foreach vt = [v4i16, v4f16] in {
+    defvar memoryVt = !cast<ValueType>("v3" # vt.ElementType);
+    defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, vt, "TBUFFER_LOAD_FORMAT_D16_XYZ", memoryVt>;
+  }
+  foreach vt = [v4i16, v4f16, v4bf16] in {
+    defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, vt, "TBUFFER_LOAD_FORMAT_D16_XYZW">;
+  }
 } // End HasPackedD16VMem,HasMTBUFInsts.
 
 multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
@@ -2421,19 +2431,24 @@ multiclass MTBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
 }
 
 let OtherPredicates = [HasMTBUFInsts] in {
-defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, i32,   "TBUFFER_STORE_FORMAT_X">;
-defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v2i32, "TBUFFER_STORE_FORMAT_XY">;
-defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v3i32, "TBUFFER_STORE_FORMAT_XYZ">;
-defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v4i32, "TBUFFER_STORE_FORMAT_XYZW">;
-defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, f32,   "TBUFFER_STORE_FORMAT_X">;
-defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v2f32, "TBUFFER_STORE_FORMAT_XY">;
-defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v3f32, "TBUFFER_STORE_FORMAT_XYZ">;
-defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v4f32, "TBUFFER_STORE_FORMAT_XYZW">;
+foreach vt = Reg32Types.types in {
+  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, vt, "TBUFFER_STORE_FORMAT_X">;
+}
+foreach vt = Reg64Types.types in {
+  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, vt, "TBUFFER_STORE_FORMAT_XY">;
+}
+foreach vt = Reg96Types.types in {
+  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, vt, "TBUFFER_STORE_FORMAT_XYZ">;
+}
+foreach vt = Reg128Types.types in {
+  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, vt, "TBUFFER_STORE_FORMAT_XYZW">;
+}
 } // End HasMTBUFInsts.
 
 let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
-  defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, f16,   "TBUFFER_STORE_FORMAT_D16_X_gfx80">;
-  defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, i16,   "TBUFFER_STORE_FORMAT_D16_X_gfx80">;
+  foreach vt = Reg16Types.types in {
+    defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_X_gfx80">;
+  }
   defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, i32,   "TBUFFER_STORE_FORMAT_D16_X_gfx80">;
   defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, v2i32, "TBUFFER_STORE_FORMAT_D16_XY_gfx80">;
   defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, v3i32, "TBUFFER_STORE_FORMAT_D16_XYZ_gfx80">;
@@ -2441,15 +2456,20 @@ let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
 } // End HasUnpackedD16VMem,HasMTBUFInsts.
 
 let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
-  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, f16,   "TBUFFER_STORE_FORMAT_D16_X">;
-  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, i16,   "TBUFFER_STORE_FORMAT_D16_X">;
+  foreach vt = Reg16Types.types in {
+    defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_X">;
+  }
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, i32,   "TBUFFER_STORE_FORMAT_D16_X">;
-  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v2f16, "TBUFFER_STORE_FORMAT_D16_XY">;
-  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v2i16, "TBUFFER_STORE_FORMAT_D16_XY">;
-  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4f16, "TBUFFER_STORE_FORMAT_D16_XYZ", v3f16>;
-  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4i16, "TBUFFER_STORE_FORMAT_D16_XYZ", v3i16>;
-  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4f16, "TBUFFER_STORE_FORMAT_D16_XYZW">;
-  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4i16, "TBUFFER_STORE_FORMAT_D16_XYZW">;
+  foreach vt = [v2i16, v2f16, v2bf16] in {
+    defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_XY">;
+  }
+  foreach vt = [v4i16, v4f16] in {
+    defvar memoryVt = !cast<ValueType>("v3" # vt.ElementType);
+    defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_XYZ", memoryVt>;
+  }
+  foreach vt = [v4i16, v4f16, v4bf16] in {
+    defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_XYZW">;
+  }
 } // End HasPackedD16VMem,HasMTBUFInsts.
 
 //===----------------------------------------------------------------------===//
