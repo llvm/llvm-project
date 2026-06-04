@@ -185,6 +185,8 @@ resolveArchiveMembers(const Inputs &In,
       if (!Filename)
         return createStringError("unable to find library -l%s",
                                  Desc.Value.str().c_str());
+      if (sys::fs::is_directory(*Filename))
+        return createStringError("'%s': Is a directory", Filename->c_str());
     } else {
       if (!sys::fs::exists(Desc.Value) || sys::fs::is_directory(Desc.Value))
         continue;
