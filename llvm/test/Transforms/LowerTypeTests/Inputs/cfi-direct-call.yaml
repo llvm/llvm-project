@@ -1,7 +1,8 @@
+---
 TypeIdMap:
   typeid1:
     TTRes:
-      Kind: AllOnes
+      Kind:            AllOnes
 CfiFunctionDefs:
 - Name: internal_default_def
   GUID: 2377677245844927262

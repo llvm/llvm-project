@@ -1,8 +1,9 @@
+---
 TypeIdMap:
   typeid1:
     TTRes:
-      Kind: AllOnes
-      SizeM1BitWidth: 7
+      Kind:            AllOnes
+      SizeM1BitWidth:  7
 WithGlobalValueDeadStripping: false
 CfiFunctionDefs:
 - Name: f

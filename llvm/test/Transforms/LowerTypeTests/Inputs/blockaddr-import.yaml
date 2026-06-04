@@ -1,7 +1,8 @@
+---
 TypeIdMap:
   typeid1:
     TTRes:
-      Kind: AllOnes
+      Kind:            AllOnes
 CfiFunctionDefs:
 - Name: m
   GUID: 2799708793537531759

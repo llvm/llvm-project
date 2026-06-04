@@ -1,12 +1,13 @@
+---
 TypeIdMap:
   typeid1:
     TTRes:
-      Kind: AllOnes
-      SizeM1BitWidth: 7
+      Kind:            AllOnes
+      SizeM1BitWidth:  7
   typeid2:
     TTRes:
-      Kind: Single
-      SizeM1BitWidth: 0
+      Kind:            Single
+      SizeM1BitWidth:  0
 WithGlobalValueDeadStripping: false
 CfiFunctionDefs:
 - Name: local_a
