@@ -183,4 +183,17 @@ void foo() {
                    "test.LifetimeEndReporter: j LIFETIME END\n");
 }
 
+TEST(CheckLifetimeEnd, LifetimeExtendedTemporary) {
+  constexpr auto Code = R"(
+void foo() {
+  const int& r = 42;
+}
+  )";
+
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
+      Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: r LIFETIME END\n");
+}
+
 } // namespace
