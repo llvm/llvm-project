@@ -21,6 +21,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -1126,4 +1127,34 @@ TEST_F(PointerFlowTest, NestedLambdaAssign) {
   ASSERT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"y", 1U}, {"x", 1U}}}));
 }
+
+//////////////////////////////////////////////////////////////
+//          Robustness Tests (No Crash Tests)              //
+//////////////////////////////////////////////////////////////
+
+TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
+  StringRef Code = R"cpp(
+    void foo() {
+      int *a[2];
+      auto [ptr1, ptr2] = a;
+      ptr1[5];
+      ptr2[3];
+    }
+  )cpp";
+
+  // BindingDecl may not be fully supported, but should not crash
+  llvm::DebugFlag = true;
+  llvm::setCurrentDebugType("ssaf-analyses");
+  testing::internal::CaptureStderr();
+
+  ASSERT_EQ(setUpTest(Code), true);
+
+  std::string Output = testing::internal::GetCapturedStderr();
+  llvm::DebugFlag = false;
+
+  // Verify the warning was logged
+  EXPECT_NE(Output.find("failed to create EntityId for Decomposition"),
+            std::string::npos);
+}
+
 } // namespace

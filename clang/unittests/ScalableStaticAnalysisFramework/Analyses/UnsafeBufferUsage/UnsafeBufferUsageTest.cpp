@@ -20,6 +20,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
@@ -568,6 +569,30 @@ TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
   Sum = getEntitySummary("main");
 
   EXPECT_EQ(Sum, nullptr);
+}
+
+// Robustness test: unsupported constructs will not cause crash
+TEST_F(UnsafeBufferUsageTest, DirectNewExpressionArrayAccess) {
+  // 'new' not yet supported, but should not crash and should log warning
+  llvm::DebugFlag = true;
+  llvm::setCurrentDebugType("ssaf-analyses");
+  testing::internal::CaptureStderr();
+
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int i) {
+      (new int[2])[i];
+    }
+  )cpp"));
+
+  std::string Output = testing::internal::GetCapturedStderr();
+  llvm::DebugFlag = false;
+
+  // The only unsafe pointer is unsupported, so no summary should be produced.
+  EXPECT_EQ(getEntitySummary("foo"), nullptr);
+  // Verify the warning was logged
+  EXPECT_NE(
+      Output.find("attempt to translate CXXNewExpr to EntityPointerLevels"),
+      std::string::npos);
 }
 
 } // namespace

@@ -17,7 +17,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -29,13 +28,13 @@ public:
   UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
-  Expected<std::unique_ptr<UnsafeBufferUsageEntitySummary>>
+  std::unique_ptr<UnsafeBufferUsageEntitySummary>
   extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx);
   void HandleTranslationUnit(ASTContext &Ctx) override;
 };
 } // namespace clang::ssaf
 
-Expected<std::unique_ptr<UnsafeBufferUsageEntitySummary>>
+std::unique_ptr<UnsafeBufferUsageEntitySummary>
 clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
     const NamedDecl *Contributor, ASTContext &Ctx) {
   std::set<const Expr *> UnsafePointers;
@@ -61,7 +60,7 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
       Results.insert(FilteredTranslation.begin(), FilteredTranslation.end());
       continue;
     }
-    return Translation.takeError();
+    logWarningFromError(Translation.takeError());
   }
 
   return std::make_unique<UnsafeBufferUsageEntitySummary>(
@@ -76,19 +75,19 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
   for (auto *CD : Contributors) {
     auto EntitySummary = extractEntitySummary(CD, Ctx);
 
-    if (!EntitySummary)
-      llvm::reportFatalInternalError(EntitySummary.takeError());
-    assert(*EntitySummary);
-    if ((*EntitySummary)->empty())
+    assert(EntitySummary);
+    if (EntitySummary->empty())
       continue;
 
     auto ContributorId = addEntity(CD);
 
-    if (!ContributorId)
-      llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
+    if (!ContributorId) {
+      logWarningFromError(makeEntityNameErr(Ctx, CD));
+      continue;
+    }
 
     [[maybe_unused]] auto [Ignored, InsertionSucceeded] =
-        SummaryBuilder.addSummary(*ContributorId, std::move(*EntitySummary));
+        SummaryBuilder.addSummary(*ContributorId, std::move(EntitySummary));
 
     assert(InsertionSucceeded && "duplicated contributor extraction");
   }
