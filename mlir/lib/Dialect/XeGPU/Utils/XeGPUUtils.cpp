@@ -991,3 +991,56 @@ bool xegpu::matchSplitDimExpansion(
   }
   return srcIdx == src.size();
 }
+
+// Checks if dst shape is a collapse of src shape where each dim in dst is
+// produced by one or more consecutive dims in src whose product equals the dst
+// dim. Populates collapseDims with one group per dst dim listing the src
+// indices collapsed into it. Unit dims in dst that have no backing src dim
+// (leading or trailing) get empty groups.
+// Examples:
+//   src=[8,16,32], dst=[1,4096] -> true, collapseDims=[[],[0,1,2]]
+//   src=[2,3,4],   dst=[6,4]    -> true, collapseDims=[[0,1],[2]]
+//   src=[64],      dst=[64]     -> true, collapseDims=[[0]]
+bool xegpu::matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                             SmallVector<SmallVector<int64_t>> &collapseDims) {
+  collapseDims.clear();
+  collapseDims.resize(dst.size());
+
+  size_t dstIdx = 0;
+  size_t srcIdx = 0;
+  int64_t accumulatedSize = 1;
+  SmallVector<int64_t> currentSrcDims;
+
+  // Skip any leading unit dst dims; they have no backing src dim.
+  while (dstIdx < dst.size() && dst[dstIdx] == 1)
+    dstIdx++;
+
+  while (srcIdx < src.size()) {
+    // Trailing src unit dims are absorbed into the most-recent group, or
+    // skipped if they appear before any group has started.
+    if (dstIdx >= dst.size()) {
+      if (src[srcIdx] != 1)
+        return false;
+      if (!collapseDims.empty() && !collapseDims.back().empty())
+        collapseDims.back().push_back(srcIdx);
+      srcIdx++;
+      continue;
+    }
+    accumulatedSize *= src[srcIdx];
+    currentSrcDims.push_back(srcIdx);
+    srcIdx++;
+
+    if (accumulatedSize == dst[dstIdx]) {
+      collapseDims[dstIdx] = currentSrcDims;
+      currentSrcDims.clear();
+      accumulatedSize = 1;
+      dstIdx++;
+      // Skip any subsequent unit dst dims; they have no backing src dim.
+      while (dstIdx < dst.size() && dst[dstIdx] == 1)
+        dstIdx++;
+    } else if (accumulatedSize > dst[dstIdx]) {
+      return false;
+    }
+  }
+  return dstIdx == dst.size() && currentSrcDims.empty();
+}
