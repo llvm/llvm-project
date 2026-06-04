@@ -381,8 +381,8 @@ define amdgpu_kernel void @s_test_imax_sgt_imm_v2i32(ptr addrspace(1) %out, <2 x
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_max_i32 s2, s2, 9
 ; GFX1250-NEXT:    s_max_i32 s3, s3, 9
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -886,8 +886,8 @@ define amdgpu_kernel void @s_test_umax_ugt_imm_v2i32(ptr addrspace(1) %out, <2 x
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_max_u32 s2, s2, 15
 ; GFX1250-NEXT:    s_max_u32 s3, s3, 23
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 ;

@@ -70,36 +70,21 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma(ptr addrsp
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[32:63], a0, a1, v[0:31]
 ; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_mov_b32_e32 v2, v32
-; CHECK-NEXT:    v_mov_b32_e32 v3, v33
-; CHECK-NEXT:    v_mov_b32_e32 v4, v34
-; CHECK-NEXT:    v_mov_b32_e32 v5, v35
-; CHECK-NEXT:    v_mov_b32_e32 v6, v36
-; CHECK-NEXT:    v_mov_b32_e32 v7, v37
-; CHECK-NEXT:    v_mov_b32_e32 v8, v38
-; CHECK-NEXT:    v_mov_b32_e32 v9, v39
-; CHECK-NEXT:    v_mov_b32_e32 v10, v40
-; CHECK-NEXT:    v_mov_b32_e32 v11, v41
-; CHECK-NEXT:    v_mov_b32_e32 v12, v42
-; CHECK-NEXT:    v_mov_b32_e32 v13, v43
-; CHECK-NEXT:    v_mov_b32_e32 v14, v44
-; CHECK-NEXT:    v_mov_b32_e32 v15, v45
-; CHECK-NEXT:    v_mov_b32_e32 v16, v46
-; CHECK-NEXT:    v_mov_b32_e32 v17, v47
-; CHECK-NEXT:    v_mov_b32_e32 v18, v48
-; CHECK-NEXT:    v_mov_b32_e32 v19, v49
-; CHECK-NEXT:    v_mov_b32_e32 v20, v50
-; CHECK-NEXT:    v_mov_b32_e32 v21, v51
-; CHECK-NEXT:    v_mov_b32_e32 v22, v52
-; CHECK-NEXT:    v_mov_b32_e32 v23, v53
-; CHECK-NEXT:    v_mov_b32_e32 v24, v54
-; CHECK-NEXT:    v_mov_b32_e32 v25, v55
-; CHECK-NEXT:    v_mov_b32_e32 v26, v56
-; CHECK-NEXT:    v_mov_b32_e32 v27, v57
-; CHECK-NEXT:    v_mov_b32_e32 v28, v58
-; CHECK-NEXT:    v_mov_b32_e32 v29, v59
-; CHECK-NEXT:    v_mov_b32_e32 v30, v60
-; CHECK-NEXT:    v_mov_b32_e32 v31, v61
+; CHECK-NEXT:    v_mov_b64_e32 v[2:3], v[32:33]
+; CHECK-NEXT:    v_mov_b64_e32 v[4:5], v[34:35]
+; CHECK-NEXT:    v_mov_b64_e32 v[6:7], v[36:37]
+; CHECK-NEXT:    v_mov_b64_e32 v[8:9], v[38:39]
+; CHECK-NEXT:    v_mov_b64_e32 v[10:11], v[40:41]
+; CHECK-NEXT:    v_mov_b64_e32 v[12:13], v[42:43]
+; CHECK-NEXT:    v_mov_b64_e32 v[14:15], v[44:45]
+; CHECK-NEXT:    v_mov_b64_e32 v[16:17], v[46:47]
+; CHECK-NEXT:    v_mov_b64_e32 v[18:19], v[48:49]
+; CHECK-NEXT:    v_mov_b64_e32 v[20:21], v[50:51]
+; CHECK-NEXT:    v_mov_b64_e32 v[22:23], v[52:53]
+; CHECK-NEXT:    v_mov_b64_e32 v[24:25], v[54:55]
+; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[56:57]
+; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[58:59]
+; CHECK-NEXT:    v_mov_b64_e32 v[30:31], v[60:61]
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], a0, a1, v[0:31]

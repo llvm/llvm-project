@@ -23,10 +23,8 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1
 ; GCN-NEXT:    v_mov_b32_e32 v10, v8
 ; GCN-NEXT:    v_mov_b32_e32 v11, v8
 ; GCN-NEXT:    v_mov_b32_e32 v12, v8
-; GCN-NEXT:    v_mov_b32_e32 v0, v8
-; GCN-NEXT:    v_mov_b32_e32 v1, v9
-; GCN-NEXT:    v_mov_b32_e32 v2, v10
-; GCN-NEXT:    v_mov_b32_e32 v3, v11
+; GCN-NEXT:    v_pk_mov_b32 v[0:1], v[8:9], v[8:9] op_sel:[0,1]
+; GCN-NEXT:    v_pk_mov_b32 v[2:3], v[10:11], v[10:11] op_sel:[0,1]
 ; GCN-NEXT:    v_mov_b32_e32 v4, v12
 ; GCN-NEXT:    image_load v[0:4], v6, s[0:7] dmask:0xf unorm lwe
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -82,17 +80,13 @@ define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, ptr addrspace
 ; GCN-NEXT:    v_mov_b32_e32 v12, v10
 ; GCN-NEXT:    v_mov_b32_e32 v13, v10
 ; GCN-NEXT:    v_mov_b32_e32 v14, v10
-; GCN-NEXT:    v_mov_b32_e32 v4, v10
-; GCN-NEXT:    v_mov_b32_e32 v5, v11
-; GCN-NEXT:    v_mov_b32_e32 v6, v12
-; GCN-NEXT:    v_mov_b32_e32 v7, v13
+; GCN-NEXT:    v_pk_mov_b32 v[4:5], v[10:11], v[10:11] op_sel:[0,1]
+; GCN-NEXT:    v_pk_mov_b32 v[6:7], v[12:13], v[12:13] op_sel:[0,1]
 ; GCN-NEXT:    v_mov_b32_e32 v8, v14
 ; GCN-NEXT:    image_load v[4:8], v[0:2], s[0:7] dmask:0xf unorm lwe da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, v4
-; GCN-NEXT:    v_mov_b32_e32 v1, v5
-; GCN-NEXT:    v_mov_b32_e32 v2, v6
-; GCN-NEXT:    v_mov_b32_e32 v3, v7
+; GCN-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[0,1]
+; GCN-NEXT:    v_pk_mov_b32 v[2:3], v[6:7], v[6:7] op_sel:[0,1]
 ; GCN-NEXT:    global_store_dword v10, v8, s[8:9]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
@@ -134,17 +128,13 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, ptr addrsp
 ; GCN-NEXT:    v_mov_b32_e32 v12, v10
 ; GCN-NEXT:    v_mov_b32_e32 v13, v10
 ; GCN-NEXT:    v_mov_b32_e32 v14, v10
-; GCN-NEXT:    v_mov_b32_e32 v4, v10
-; GCN-NEXT:    v_mov_b32_e32 v5, v11
-; GCN-NEXT:    v_mov_b32_e32 v6, v12
-; GCN-NEXT:    v_mov_b32_e32 v7, v13
+; GCN-NEXT:    v_pk_mov_b32 v[4:5], v[10:11], v[10:11] op_sel:[0,1]
+; GCN-NEXT:    v_pk_mov_b32 v[6:7], v[12:13], v[12:13] op_sel:[0,1]
 ; GCN-NEXT:    v_mov_b32_e32 v8, v14
 ; GCN-NEXT:    image_load v[4:8], v[0:2], s[0:7] dmask:0xf unorm lwe da
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, v4
-; GCN-NEXT:    v_mov_b32_e32 v1, v5
-; GCN-NEXT:    v_mov_b32_e32 v2, v6
-; GCN-NEXT:    v_mov_b32_e32 v3, v7
+; GCN-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[0,1]
+; GCN-NEXT:    v_pk_mov_b32 v[2:3], v[6:7], v[6:7] op_sel:[0,1]
 ; GCN-NEXT:    global_store_dword v10, v8, s[8:9]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog

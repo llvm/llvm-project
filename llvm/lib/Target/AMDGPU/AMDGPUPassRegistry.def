@@ -132,6 +132,7 @@ MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
 MACHINE_FUNCTION_PASS("print<amdgpu-next-use-analysis>", AMDGPUNextUseAnalysisPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fix-vgpr-copies", SIFixVGPRCopiesPass())
+MACHINE_FUNCTION_PASS("si-merge-vgpr-copies", SIMergeVGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
 MACHINE_FUNCTION_PASS("si-form-memory-clauses", SIFormMemoryClausesPass())
 MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())

@@ -11085,8 +11085,7 @@ define <4 x float> @global_load_saddr_f32_natural_addressing(ptr addrspace(1) in
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-SDAG-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 2, v[2:3]
 ; GFX942-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
@@ -11563,8 +11562,7 @@ define <4 x float> @global_load_f32_saddr_zext_vgpr_range_too_large(ptr addrspac
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-SDAG-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 2, v[2:3]
 ; GFX942-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off

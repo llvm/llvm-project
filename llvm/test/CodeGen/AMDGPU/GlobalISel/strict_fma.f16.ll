@@ -499,8 +499,7 @@ define void @v_constained_fma_f16_fpexcept_strict_fneg_uni(half inreg %x, half i
 ; GFX942-LABEL: v_constained_fma_f16_fpexcept_strict_fneg_uni:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, s0
-; GFX942-NEXT:    v_mov_b32_e32 v3, s1
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-NEXT:    v_fma_f16 v2, v2, v3, -s2
 ; GFX942-NEXT:    global_store_short v[0:1], v2, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)

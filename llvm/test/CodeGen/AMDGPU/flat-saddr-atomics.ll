@@ -12046,8 +12046,7 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-SDAG-NEXT:  .LBB110_8: ; %atomicrmw.end
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v3
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: flat_atomic_fadd_f64_saddr_rtn:
@@ -12096,8 +12095,7 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-GISEL-NEXT:  .LBB110_8: ; %atomicrmw.end
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v3
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr %ptr, i64 0, i64 10
   %result = atomicrmw fadd ptr %gep.0, double %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
@@ -12417,8 +12415,7 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
 ; GFX950-SDAG-NEXT:  .LBB112_4: ; %atomicrmw.end
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v3
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: flat_atomic_fmax_f64_saddr_rtn:
@@ -12451,8 +12448,7 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
 ; GFX950-GISEL-NEXT:  .LBB112_4: ; %atomicrmw.end
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v3
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr %ptr, i64 0, i64 10
   %result = atomicrmw fmax ptr %gep.0, double %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
@@ -12709,8 +12705,7 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
 ; GFX950-SDAG-NEXT:  .LBB114_4: ; %atomicrmw.end
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v3
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: flat_atomic_fmin_f64_saddr_rtn:
@@ -12743,8 +12738,7 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
 ; GFX950-GISEL-NEXT:  .LBB114_4: ; %atomicrmw.end
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v3
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr %ptr, i64 0, i64 10
   %result = atomicrmw fmin ptr %gep.0, double %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
@@ -12906,22 +12900,13 @@ define float @flat_atomic_fadd_f32_saddr_rtn(ptr inreg %ptr, float %data) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX950-SDAG-LABEL: flat_atomic_fadd_f32_saddr_rtn:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; GFX950-SDAG-NEXT:    flat_atomic_add_f32 v0, v[2:3], v0 offset:40 sc0
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-GISEL-LABEL: flat_atomic_fadd_f32_saddr_rtn:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    flat_atomic_add_f32 v0, v[2:3], v0 offset:40 sc0
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-LABEL: flat_atomic_fadd_f32_saddr_rtn:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-NEXT:    flat_atomic_add_f32 v0, v[2:3], v0 offset:40 sc0
+; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
   ret float %result
@@ -12938,22 +12923,13 @@ define void @flat_atomic_fadd_f32_saddr_nortn(ptr inreg %ptr, float %data) {
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX950-SDAG-LABEL: flat_atomic_fadd_f32_saddr_nortn:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; GFX950-SDAG-NEXT:    flat_atomic_add_f32 v[2:3], v0 offset:40
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-GISEL-LABEL: flat_atomic_fadd_f32_saddr_nortn:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    flat_atomic_add_f32 v[2:3], v0 offset:40
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-LABEL: flat_atomic_fadd_f32_saddr_nortn:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-NEXT:    flat_atomic_add_f32 v[2:3], v0 offset:40
+; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %unused = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -13216,22 +13192,13 @@ define <2 x half> @flat_atomic_fadd_v2f16_saddr_rtn(ptr inreg %ptr, <2 x half> %
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX950-SDAG-LABEL: flat_atomic_fadd_v2f16_saddr_rtn:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; GFX950-SDAG-NEXT:    flat_atomic_pk_add_f16 v0, v[2:3], v0 offset:40 sc0
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-GISEL-LABEL: flat_atomic_fadd_v2f16_saddr_rtn:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    flat_atomic_pk_add_f16 v0, v[2:3], v0 offset:40 sc0
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-LABEL: flat_atomic_fadd_v2f16_saddr_rtn:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-NEXT:    flat_atomic_pk_add_f16 v0, v[2:3], v0 offset:40 sc0
+; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x <2 x half>], ptr %ptr, i64 0, i64 10
   %result = atomicrmw fadd ptr %gep.0, <2 x half> %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
   ret <2 x half> %result
@@ -13248,22 +13215,13 @@ define void @flat_atomic_fadd_v2f16_saddr_nortn(ptr inreg %ptr, <2 x half> %data
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX950-SDAG-LABEL: flat_atomic_fadd_v2f16_saddr_nortn:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; GFX950-SDAG-NEXT:    flat_atomic_pk_add_f16 v[2:3], v0 offset:40
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-GISEL-LABEL: flat_atomic_fadd_v2f16_saddr_nortn:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    flat_atomic_pk_add_f16 v[2:3], v0 offset:40
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-LABEL: flat_atomic_fadd_v2f16_saddr_nortn:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-NEXT:    flat_atomic_pk_add_f16 v[2:3], v0 offset:40
+; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x <2 x half>], ptr %ptr, i64 0, i64 10
   %unused = atomicrmw fadd ptr %gep.0, <2 x half> %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -13617,8 +13575,7 @@ define <2 x bfloat> @flat_atomic_fadd_v2bf16_saddr_rtn(ptr inreg %ptr, <2 x bflo
 ; GFX950-LABEL: flat_atomic_fadd_v2bf16_saddr_rtn:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-NEXT:    v_mov_b32_e32 v3, s1
+; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX950-NEXT:    flat_atomic_pk_add_bf16 v0, v[2:3], v0 offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
@@ -13641,8 +13598,7 @@ define void @flat_atomic_fadd_v2bf16_saddr_nortn(ptr inreg %ptr, <2 x bfloat> %d
 ; GFX950-LABEL: flat_atomic_fadd_v2bf16_saddr_nortn:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-NEXT:    v_mov_b32_e32 v3, s1
+; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX950-NEXT:    flat_atomic_pk_add_bf16 v[2:3], v0 offset:40
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]

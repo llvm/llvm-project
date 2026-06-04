@@ -157,8 +157,7 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-LABEL: no_free_vgprs_at_agpr_to_agpr_copy:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v33, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v32, v1
+; GFX90A-NEXT:    v_pk_mov_b32 v[32:33], v[0:1], v[0:1] op_sel:[1,0]
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[0:31] a[0:15]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -1056,8 +1055,7 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v34, a32 ; Reload Reuse
-; GFX90A-NEXT:    v_mov_b32_e32 v33, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v32, v1
+; GFX90A-NEXT:    v_pk_mov_b32 v[32:33], v[0:1], v[0:1] op_sel:[1,0]
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[0:31] s[0:15]
 ; GFX90A-NEXT:    ;;#ASMEND

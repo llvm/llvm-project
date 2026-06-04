@@ -88,10 +88,8 @@ define amdgpu_kernel void @select_and_v4(ptr addrspace(1) %p, i32 %x, <4 x i32> 
 ; GFX942-NEXT:    s_cselect_b32 s2, s2, 0
 ; GFX942-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX942-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, s0
-; GFX942-NEXT:    v_mov_b32_e32 v3, s1
-; GFX942-NEXT:    v_mov_b32_e32 v4, s2
-; GFX942-NEXT:    v_mov_b32_e32 v5, s3
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[6:7]
 ; GFX942-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11
@@ -187,10 +185,8 @@ define amdgpu_kernel void @select_or_v4(ptr addrspace(1) %p, i32 %x, <4 x i32> %
 ; GFX942-NEXT:    s_cselect_b32 s2, s2, -1
 ; GFX942-NEXT:    s_cselect_b32 s1, s1, -1
 ; GFX942-NEXT:    s_cselect_b32 s0, s0, -1
-; GFX942-NEXT:    v_mov_b32_e32 v2, s0
-; GFX942-NEXT:    v_mov_b32_e32 v3, s1
-; GFX942-NEXT:    v_mov_b32_e32 v4, s2
-; GFX942-NEXT:    v_mov_b32_e32 v5, s3
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[6:7]
 ; GFX942-NEXT:    s_endpgm
   %c = icmp slt i32 %x, 11

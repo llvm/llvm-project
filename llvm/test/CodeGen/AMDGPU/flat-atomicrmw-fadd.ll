@@ -5764,9 +5764,8 @@ define double @flat_agent_atomic_fadd_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f64__amdgpu_no_fine_grained_memory:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v5, v1
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_shared_base
-; GFX942-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v5
 ; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -5922,9 +5921,8 @@ define double @flat_agent_atomic_fadd_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX90A-LABEL: flat_agent_atomic_fadd_ret_f64__amdgpu_no_fine_grained_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v1
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[0:1], v[0:1] op_sel:[0,1]
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
