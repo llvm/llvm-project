@@ -874,13 +874,25 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   };
 
   const int subgroupSize = uArch->getSubgroupSize();
-  // Coalescing only applies when the (single) reduction dim is the FCD and
-  // the factor cleanly partitions the reduced extent across the lanes.
+  // Coalescing of the *reduced* FCD: the single reduction dim is the FCD and
+  // the factor cleanly partitions the reduced extent across the lanes. Each
+  // lane folds `factor` contiguous reduced elements locally before the
+  // cross-lane butterfly. The factor lands on the reduced dim only (which the
+  // result slice removes), so the RESULT carries no factor.
   int fcd = srcRank - 1;
   int coalesce = std::max(1, coalesceFactor);
   bool coalesceFcd = coalesce > 1 && reductionDims.size() == 1 &&
                      reductionDims[0] == fcd &&
                      srcShape[fcd] % (subgroupSize * coalesce) == 0;
+  // Coalescing of a *surviving* FCD: a single non-FCD reduction whose source
+  // FCD is coalesced (factor on dim `fcd`, which is NOT reduced). The factor
+  // stays on the surviving FCD and is inherited by the result slice, so the
+  // reduction result/store carry it too (lane_data[resultFCD] = factor),
+  // matching the coalesced load and store. No cross-lane fold of the factor is
+  // needed here — the FCD is not reduced.
+  bool coalesceSurvivingFcd = coalesce > 1 && reductionDims.size() == 1 &&
+                              reductionDims[0] != fcd &&
+                              srcShape[fcd] % (subgroupSize * coalesce) == 0;
   int64_t maxReduceVectorSize = 1; // could extend to spirv vector Size
   xegpu::DistributeLayoutAttr srcLayout;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
@@ -963,6 +975,11 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     // `factor` separate subgroupSize-wide blocks).
     if (coalesceFcd)
       instData[fcd] = subgroupSize * coalesce;
+    // Coalesced surviving FCD (non-FCD reduction): grow inst_data on the
+    // surviving FCD the same way; the result slice keeps it (the FCD is not
+    // reduced), so the reduction result/store stay coalesced.
+    if (coalesceSurvivingFcd)
+      instData[fcd] = subgroupSize * coalesce;
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
 
@@ -978,6 +995,13 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     // the reduced extent). The downstream SgToWi reduction lowering folds the
     // `factor` elements per lane before the cross-lane butterfly.
     if (coalesceFcd)
+      laneData[fcd] = coalesce;
+    // Coalesced surviving FCD (non-FCD reduction): each lane owns `factor`
+    // contiguous elements of the surviving FCD. lane_layout[FCD] is already
+    // subgroupSize; set lane_data[FCD] = factor. The result slice keeps this
+    // dim, so the reduction result/store inherit lane_data[resultFCD] = factor
+    // and agree with the coalesced load/store — no convert_layout.
+    if (coalesceSurvivingFcd)
       laneData[fcd] = coalesce;
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
                                        toInt32Attr(laneData));

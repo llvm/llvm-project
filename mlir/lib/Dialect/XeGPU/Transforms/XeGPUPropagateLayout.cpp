@@ -700,17 +700,27 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   // it must be honored for current op and may conflict with the layout
   // propagated from consumer op, the conflict is resolved in later phase by
   // converting the required result layout to the consumer layout
-  // The coalesce factor only belongs on the SOURCE operand (each lane folds
-  // `factor` contiguous elements of the reduced dim before the cross-lane
-  // reduction). The RESULT and ACCUMULATOR live on the post-reduction
-  // (reduced-dim-removed) layout and must NOT carry the factor — otherwise
-  // they disagree with the real consumer's layout and the propagator inserts
-  // an unlowerable lane_data=factor <-> lane_data=1 convert_layout. So build
-  // the result/acc layout with factor = 1, and the source layout with the
-  // factor.
+  //
+  // Where the coalesce factor lands on the RESULT depends on which dim is
+  // reduced:
+  //  - FCD reduction (reduced dim == source FCD): the factor lives on the
+  //    reduced FCD, which the result slice removes. The RESULT/ACCUMULATOR
+  //    carry NO factor (building them with the factor would put lane_data=N on
+  //    a reduced-away dim and disagree with the real consumer). So result/acc
+  //    use factor = 1, source uses the factor.
+  //  - Non-FCD reduction (reduced dim != source FCD): the factor lives on the
+  //    SURVIVING FCD, which the result slice keeps. The RESULT/ACCUMULATOR
+  //    must ALSO carry the factor (lane_data[resultFCD] = factor) so they
+  //    agree with the coalesced store. So result/acc and source all use the
+  //    factor.
+  int srcRank = sourceTy.getRank();
+  bool reducedIsFcd =
+      reductionDims.size() == 1 && reductionDims[0] == srcRank - 1;
+  int resultCoalesceFactor = reducedIsFcd ? 1 : coalesceFactor;
+
   auto resultLayoutAttr = xegpu::setupMultiReductionResultLayout(
       layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch,
-      /*coalesceFactor=*/1);
+      resultCoalesceFactor);
   auto srcReqLayoutAttr = xegpu::setupMultiReductionResultLayout(
       layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch,
       coalesceFactor);
@@ -722,7 +732,7 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
       xegpu::inferMultiReductionSourceLayout(srcReqLayoutAttr, reductionDims);
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
-  // Accumulator should have the same layout as the result (no factor).
+  // Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1],
                      operands[1]->meet(LayoutInfo(resultLayoutAttr)));
 }

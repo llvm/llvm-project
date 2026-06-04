@@ -36,6 +36,41 @@ gpu.module @kernel_chain {
 }
 
 // -----
+// Coalesced FCD-reduction path: the load's offsets are contiguous on a
+// vector<2x32> (inner 32 > subgroup_size 16). Its consumer is an
+// associative-commutative multi_reduction over the FCD (inner dim). The load
+// is coalesced (lane_data = [1, 2]: each lane owns 2 contiguous elements), and
+// the reduction's SOURCE-operand layout adopts that coalesced FCD value (so it
+// agrees with the load — no convert). The reduction RESULT lives on the
+// post-reduction layout with lane_data = [1, 1] (the factor only applies to
+// the source the lane folds locally), so result/accumulator match the real
+// consumer. The downstream SgToLane reduction folds the 2 per-lane elements
+// before the cross-lane butterfly.
+// CHECK-LABEL: gpu.func @reduction_coalesces(
+// CHECK: xegpu.load
+// CHECK-SAME: layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>
+// CHECK: vector.multi_reduction
+// CHECK-SAME: #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>
+// CHECK-NOT: xegpu.convert_layout
+// CHECK-NOT: xegpu.convert_layout
+gpu.module @kernel_reduction {
+  gpu.func @reduction_coalesces(%src: i64, %dst: i64, %acc: vector<2xf32>) {
+    %step = vector.step : vector<64xindex>
+    %off2d = vector.shape_cast %step : vector<64xindex> to vector<2x32xindex>
+    %mask = arith.constant dense<true> : vector<2x32xi1>
+    %v = xegpu.load %src[%off2d], %mask <{chunk_size = 1 : i64}>
+        : i64, vector<2x32xindex>, vector<2x32xi1> -> vector<2x32xf32>
+    %r = vector.multi_reduction <add>, %v, %acc [1]
+        : vector<2x32xf32> to vector<2xf32>
+    %roff = vector.step : vector<2xindex>
+    %rmask = arith.constant dense<true> : vector<2xi1>
+    xegpu.store %r, %dst[%roff], %rmask <{chunk_size = 1 : i64}>
+        : vector<2xf32>, i64, vector<2xindex>, vector<2xi1>
+    gpu.return
+  }
+}
+
+// -----
 // The coalesce hint is a transient analysis artifact: it must not survive
 // into the propagator's output.
 // CHECK-LABEL: gpu.func @no_leftover_hint(
