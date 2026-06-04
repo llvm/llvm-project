@@ -499,6 +499,9 @@ void AMDGPURegBankCombinerImpl::applyMinMaxToMinMax3(
   return;
 }
 
+// min(min(a, b), c) == min(a, min(b, c)) == min3(a, b, c)
+// supported scalar type: S32 S16 U32 U16 F32 F16
+// supported vector type: V2F32
 bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
@@ -512,7 +515,9 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
   LLT Ty = MRI.getType(Dst);
   unsigned Opc = MI.getOpcode();
   bool IsFPOp = Opc == AMDGPU::G_FMAXNUM || Opc == AMDGPU::G_FMAXNUM_IEEE ||
-                Opc == AMDGPU::G_FMINNUM || Opc == AMDGPU::G_FMINNUM_IEEE;
+                Opc == AMDGPU::G_FMINNUM || Opc == AMDGPU::G_FMINNUM_IEEE ||
+                Opc == AMDGPU::G_FMAXIMUM || Opc == AMDGPU::G_FMINIMUM ||
+                Opc == AMDGPU::G_FMAXIMUMNUM || Opc == AMDGPU::G_FMINIMUMNUM;
   bool IsSupportedTy = Ty == LLT::scalar(32) ||
                        (Ty == LLT::scalar(16) && STI.hasMin3Max3_16()) ||
                        (IsFPOp && Ty == LLT::fixed_vector(2, 32));
@@ -544,8 +549,10 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     case AMDGPU::G_FMINNUM_IEEE:
       return AMDGPU::G_AMDGPU_FMIN3;
     case AMDGPU::G_FMAXIMUM:
+    case AMDGPU::G_FMAXIMUMNUM:
       return AMDGPU::G_AMDGPU_FMAXIMUM3;
     case AMDGPU::G_FMINIMUM:
+    case AMDGPU::G_FMINIMUMNUM:
       return AMDGPU::G_AMDGPU_FMINIMUM3;
     default:
       return 0;
@@ -555,16 +562,16 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
   if (!AMDGPUOpc)
     return false;
 
-  // remove canonicalize
+  // For v_max_f32(src1, src2, src3), it's safe to drop canonicalize of src1 and
+  // src2 since v_max3_f32(src1, src2, src3) = v_max_f32(v_max_f32(src1, src2),
+  // src3) but **not** on src3
   MachineInstr *Def = MRI.getVRegDef(Src1);
-  if (Def->getOpcode() == AMDGPU::G_FCANONICALIZE) {
-    R0 = Def->getOperand(1).getReg();
-  } else if (Def->getOpcode() == Opc) {
-    Register SRC11 = Def->getOperand(1).getReg();
-    Register SRC22 = Def->getOperand(2).getReg();
+  if (Def->getOpcode() == Opc) {
+    Register Left = Def->getOperand(1).getReg();
+    Register Right = Def->getOperand(2).getReg();
 
-    MachineInstr *Def1 = MRI.getVRegDef(SRC11);
-    MachineInstr *Def2 = MRI.getVRegDef(SRC22);
+    MachineInstr *Def1 = MRI.getVRegDef(Left);
+    MachineInstr *Def2 = MRI.getVRegDef(Right);
 
     if (Def1 && Def1->getOpcode() == AMDGPU::G_FCANONICALIZE) {
       R0 = Def1->getOperand(1).getReg();
