@@ -8838,13 +8838,31 @@ void ScalarEvolution::forgetValue(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return;
 
-  // Drop information about expressions based on loop-header PHIs.
-  SmallVector<Instruction *, 16> Worklist;
+  SmallVector<std::pair<Instruction *, const SCEV *>, 16> Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
   SmallVector<SCEVUse, 8> ToForget;
-  Worklist.push_back(I);
-  Visited.insert(I);
-  visitAndClearUsers(Worklist, Visited, ToForget);
+
+  auto PushIntoWorklist = [&](Instruction *UI) {
+    bool IsSCEVable = isSCEVable(UI->getType());
+    bool IsWO = isa<WithOverflowInst>(UI);
+    if ((!IsSCEVable && !IsWO) || !Visited.insert(UI).second)
+      return;
+    const SCEV *S = IsSCEVable ? getExistingSCEV(UI) : nullptr;
+    Worklist.emplace_back(UI, S);
+  };
+
+  PushIntoWorklist(I);
+
+  while (!Worklist.empty()) {
+    auto [Cur, S] = Worklist.pop_back_val();
+    if (S) {
+      ToForget.push_back(S);
+      if (auto *PN = dyn_cast<PHINode>(Cur))
+        ConstantEvolutionLoopExitValue.erase(PN);
+    }
+    for (User *U : Cur->users())
+      PushIntoWorklist(cast<Instruction>(U));
+  }
 
   forgetMemoizedResults(ToForget);
 }
