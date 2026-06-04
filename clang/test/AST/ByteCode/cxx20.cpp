@@ -1365,7 +1365,22 @@ namespace IndirectFieldInitializer {
     constexpr A() {}
   };
   static_assert(A().x == 3, "");
+}
 
+namespace Covariant {
+  struct A {
+    int a;
+    constexpr virtual const A* getA() const = 0;
+  };
+  struct B { int b; };
+
+  struct C: A, B {
+    constexpr const C* getA() const override {
+      return this;
+    }
+  };
+  constexpr  C c{};
+  static_assert(c.getA() == &c);
 }
 
 namespace InvalidOMPRequiredSimdAlign {

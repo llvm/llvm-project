@@ -1390,6 +1390,17 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
                                                     VecTy, Ctx.CostKind, 0);
   }
+  case VPInstruction::Not: {
+    Type *ValTy = this->getScalarType();
+    // InstCombine will fold `xor` to the conditional branch.
+    if (auto *U = const_cast<VPUser *>(getSingleUser()))
+      if (match(U, m_BranchOnCond(m_VPValue())))
+        return 0;
+    if (!vputils::onlyFirstLaneUsed(this))
+      ValTy = toVectorTy(ValTy, VF);
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
+                                          Ctx.CostKind);
+  }
   case VPInstruction::BranchOnCount: {
     // If TC <= VF then this is just a branch.
     // FIXME: Removing the branch happens in simplifyBranchConditionForVFAndUF
