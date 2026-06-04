@@ -1471,8 +1471,8 @@ void VPInstruction::addOperand(VPValue *Op) {
   case VPInstruction::AnyOf:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
-    assert(Ty == getOperand(0)->getScalarType() && Ty->isIntegerTy(1) &&
-           "appended operand must be an i1 (vector) matching operand 0");
+    assert(Ty == getOperand(0)->getScalarType() &&
+           "types of operand 0 and new operand must match");
     break;
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::BuildVector:
