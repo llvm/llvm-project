@@ -1902,7 +1902,8 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
   // Erase the root.
   unsigned RootInsnID =
       M.getInstructionMatcher(MatchRoot->getName()).getInsnVarID();
-  M.addAction<EraseInstAction>(RootInsnID);
+  if (M.tryEraseInsnID(RootInsnID))
+    M.addAction<EraseInstAction>(RootInsnID);
 
   return true;
 }
@@ -1985,7 +1986,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
 
   // Now render this inst.
   auto &DstMI =
-      M.addAction<BuildMIAction>(M.allocateOutputInsnID(), &CGIP.getInst());
+      M.addAction<BuildMIAction>(M.allocateOutputInsnID(), M, &CGIP.getInst());
 
   bool HasEmittedIntrinsicID = false;
   const auto EmitIntrinsicID = [&]() {
@@ -2028,7 +2029,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
         // the previous condition should have passed.
         assert(MatchOpTable.lookup(OpName).Found &&
                !ApplyOpTable.getDef(OpName) && "Temp reg not emitted yet!");
-        DstMI.addRenderer<CopyRenderer>(OpName);
+        DstMI.addRenderer<CopyRenderer>(M, OpName);
       }
       continue;
     }
@@ -2056,7 +2057,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
         return false;
       }
       // redef of a match
-      DstMI.addRenderer<CopyRenderer>(OpName);
+      DstMI.addRenderer<CopyRenderer>(M, OpName);
       continue;
     }
 
@@ -2169,7 +2170,8 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
   switch (P.getBuiltinKind()) {
   case BI_EraseRoot: {
     // Root is always inst 0.
-    M.addAction<EraseInstAction>(/*InsnID*/ 0);
+    if (M.tryEraseInsnID(0))
+      M.addAction<EraseInstAction>(/*InsnID*/ 0);
     return true;
   }
   case BI_ReplaceReg: {
