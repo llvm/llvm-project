@@ -310,6 +310,9 @@ public:
                            UseDistancePair *FurthestSubreg = nullptr,
                            DenseMap<const MachineOperand *, UseDistancePair>
                                *RelevantUses = nullptr) const;
+
+  bool isReachable(const MachineBasicBlock *From,
+                   const MachineBasicBlock *To) const;
 };
 
 //==============================================================================

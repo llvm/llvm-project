@@ -941,14 +941,15 @@ private:
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Feature getters. Use cached results if available. If not calculate.
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-private:
-  InstrIdTy getSize(const MachineBasicBlock *BB) const {
-    return pathInfoFor(BB, BB).Size;
-  }
-
+public:
   bool isReachable(const MachineBasicBlock *From,
                    const MachineBasicBlock *To) const {
     return pathInfoFor(From, To).Reachable;
+  }
+
+private:
+  InstrIdTy getSize(const MachineBasicBlock *BB) const {
+    return pathInfoFor(BB, BB).Size;
   }
 
   bool isReachableOrSame(const MachineBasicBlock *From,
@@ -2611,4 +2612,9 @@ AMDGPUNextUseAnalysisPrinterPass::run(MachineFunction &MF,
   printAsJson(OS, JsonTimerGroup, JsonTimer, MF, NUA, *NUA.Impl, LIS);
 
   return PreservedAnalyses::all();
+}
+
+bool AMDGPUNextUseAnalysis::isReachable(const MachineBasicBlock *From,
+                                        const MachineBasicBlock *To) const {
+  return Impl->isReachable(From, To);
 }
