@@ -856,15 +856,16 @@ void DataAggregator::imputeFallThroughs() {
 
 void DataAggregator::parseInput() {
   start();
-  if (opts::ReadPreAggregated &&
-      checkInputFileMagic(Filename, PerfTextMagicStr)) {
-    if (Error Err = parsePerfScript()) {
-      errs() << "PERF2BOLT-ERROR: failed to parse perfscript profile"
-             << llvm::toString(std::move(Err)) << "\n";
-      exit(1);
+  if (opts::ReadPreAggregated) {
+    if (checkInputFileMagic(Filename, PerfTextMagicStr)) {
+      if (Error Err = parsePerfScript()) {
+        errs() << "PERF2BOLT-ERROR: failed to parse perfscript profile"
+               << llvm::toString(std::move(Err)) << "\n";
+        exit(1);
+      }
+    } else {
+      parsePreAggregated();
     }
-  } else if (opts::ReadPreAggregated) {
-    parsePreAggregated();
   } else {
     parsePerfData();
   }
