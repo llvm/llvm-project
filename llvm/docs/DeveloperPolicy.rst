@@ -529,7 +529,7 @@ as "I approve of this request", "LGTM", or "I do not approve of this request".
 
 
 If approved, a GitHub invitation will be sent to your
-GitHub account. In case you don't get notification from GitHub, go to
+GitHub account. If you didn't get the notification from GitHub, you can go to the
 `Invitation Link <https://github.com/orgs/llvm/invitation>`_ directly. Once
 you accept the invitation, you'll get commit access.
 
