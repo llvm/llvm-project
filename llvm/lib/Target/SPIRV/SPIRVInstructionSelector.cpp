@@ -2075,39 +2075,43 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
 
   if (PointeeType.isTypePtr()) {
+    // If data to store is a pointer type we cast it to an integer type of the
+    // same size as the pointer size using OpConvertPtrToU and then generate
+    // OpAtomicStore with casted values as required by spec.
     auto PtrSize = GR.getPointerSize();
-    SPIRVTypeInst SpirvType =
+    SPIRVTypeInst PtrAsIntSpirvType =
         GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
 
-    Register NewVRegVal =
+    Register PtrToUVal =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
-    MRI->setRegClass(NewVRegVal, MRI->getRegClassOrNull(StoreVal));
-    GR.assignSPIRVTypeToVReg(SpirvType, NewVRegVal, MIRBuilder.getMF());
+    MRI->setRegClass(PtrToUVal, MRI->getRegClassOrNull(StoreVal));
+    GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
     MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
-        .addDef(NewVRegVal)
-        .addUse(GR.getSPIRVTypeID(SpirvType)) // Result type
-        .addUse(StoreVal)                     // Pointer operand
+        .addDef(PtrToUVal)
+        .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType)) // Result type
+        .addUse(StoreVal)                             // Pointer operand
         .constrainAllUses(TII, TRI, RBI);
 
-    Register NewVRegPtr =
+    Register PtrCastedToMatchValReg =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
-    MRI->setRegClass(NewVRegPtr, MRI->getRegClassOrNull(Ptr));
+    MRI->setRegClass(PtrCastedToMatchValReg, MRI->getRegClassOrNull(Ptr));
     SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
-        SpirvType, MIRBuilder,
+        PtrAsIntSpirvType, MIRBuilder,
         addressSpaceToStorageClass(MemOp.getAddrSpace(), STI));
-    GR.assignSPIRVTypeToVReg(PtrType, NewVRegPtr, MIRBuilder.getMF());
+    GR.assignSPIRVTypeToVReg(PtrType, PtrCastedToMatchValReg,
+                             MIRBuilder.getMF());
 
     MIRBuilder.buildInstr(SPIRV::OpBitcast)
-        .addDef(NewVRegPtr)
+        .addDef(PtrCastedToMatchValReg)
         .addUse(GR.getSPIRVTypeID(PtrType))
         .addUse(Ptr)
         .constrainAllUses(TII, TRI, RBI);
 
     MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
-        .addUse(NewVRegPtr)
+        .addUse(PtrCastedToMatchValReg)
         .addUse(ScopeReg)
         .addUse(MemSemReg)
-        .addUse(NewVRegVal)
+        .addUse(PtrToUVal)
         .constrainAllUses(TII, TRI, RBI);
   } else {
     auto AtomicStore = MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
