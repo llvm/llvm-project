@@ -23,13 +23,36 @@ namespace fputil {
 struct Float128 {
   UInt128 bits;
 
-  LIBC_INLINE Float128() = default;
+  LIBC_INLINE constexpr Float128() = default;
+  LIBC_INLINE constexpr Float128(const Float128 &) = default;
+  LIBC_INLINE constexpr Float128(Float128 &&) = default;
+  LIBC_INLINE constexpr Float128 &operator=(const Float128 &) = default;
+  LIBC_INLINE constexpr Float128 &operator=(Float128 &&) = default;
 
-  template <typename T> LIBC_INLINE constexpr explicit Float128(T x) : bits(0) {
+  template <typename T>
+  LIBC_INLINE constexpr explicit Float128(T value)
+      : bits(static_cast<UInt128>(0U)) {
     if constexpr (cpp::is_floating_point_v<T>) {
-      bits = fputil::cast<Float128>(x).bits;
+      bits = fputil::cast<Float128>(value).bits;
+    } else if constexpr (cpp::is_integral_v<T>) {
+      Sign sign = Sign::POS;
+
+      if constexpr (cpp::is_signed_v<T>) {
+        if (value < 0) {
+          sign = Sign::NEG;
+          value = -value;
+        }
+      }
+
+      fputil::DyadicFloat<cpp::numeric_limits<cpp::make_unsigned_t<T>>::digits>
+          xd(sign, 0, value);
+      bits = xd.template as<Float128, /*ShouldSignalExceptions=*/true>().bits;
+
+    } else if constexpr (cpp::is_convertible_v<T, Float128>) {
+      bits = value.operator Float128().bits;
+    } else {
+      bits = fputil::cast<Float128>(static_cast<float>(value)).bits;
     }
-    // TODO: add rem after testing
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T> &&
