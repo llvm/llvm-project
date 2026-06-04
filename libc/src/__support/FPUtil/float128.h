@@ -23,7 +23,7 @@ namespace fputil {
 struct Float128 {
   UInt128 bits;
 
-  LIBC_INLINE constexpr Float128() = default;
+  LIBC_INLINE Float128() = default;
   LIBC_INLINE constexpr Float128(const Float128 &) = default;
   LIBC_INLINE constexpr Float128(Float128 &&) = default;
   LIBC_INLINE constexpr Float128 &operator=(const Float128 &) = default;
