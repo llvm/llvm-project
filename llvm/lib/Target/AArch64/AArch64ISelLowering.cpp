@@ -157,6 +157,47 @@ cl::opt<bool> EnableSVEGISel(
 
 // TODO: This option should be removed once we switch to always using PTRADD in
 // the SelectionDAG.
+static cl::opt<int> BrMergingBaseCostThresh(
+    "aarch64-br-merging-base-cost", cl::init(2),
+    cl::desc(
+        "Sets the cost threshold for when multiple conditionals will be merged "
+        "into one branch versus be split in multiple branches. Merging "
+        "conditionals saves branches at the cost of additional instructions. "
+        "This value sets the instruction cost limit, below which conditionals "
+        "will be merged, and above which conditionals will be split. Set to -1 "
+        "to never merge branches."),
+    cl::Hidden);
+
+static cl::opt<int> BrMergingCcmpBias(
+    "aarch64-br-merging-ccmp-bias", cl::init(6),
+    cl::desc("Increases 'aarch64-br-merging-base-cost' to account for the "
+             "CCMP instruction, which is always available on AArch64 and "
+             "makes merging branch conditions cheaper."),
+    cl::Hidden);
+
+static cl::opt<int> BrMergingLikelyBias(
+    "aarch64-br-merging-likely-bias", cl::init(0),
+    cl::desc("Increases 'aarch64-br-merging-base-cost' in cases that it is "
+             "likely that all conditionals will be executed. For example for "
+             "merging the conditionals (a == b && c > d), if its known that "
+             "a == b is likely, then it is likely that if the conditionals are "
+             "split both sides will be executed, so it may be desirable to "
+             "increase the instruction cost threshold. Set to -1 to never "
+             "merge likely branches."),
+    cl::Hidden);
+
+static cl::opt<int> BrMergingUnlikelyBias(
+    "aarch64-br-merging-unlikely-bias", cl::init(-1),
+    cl::desc(
+        "Decreases 'aarch64-br-merging-base-cost' in cases that it is unlikely "
+        "that all conditionals will be executed. For example for merging "
+        "the conditionals (a == b && c > d), if its known that a == b is "
+        "unlikely, then it is unlikely that if the conditionals are split "
+        "both sides will be executed, so it may be desirable to decrease "
+        "the instruction cost threshold. Set to -1 to never merge unlikely "
+        "branches."),
+    cl::Hidden);
+
 static cl::opt<bool> UseFEATCPACodegen(
     "aarch64-use-featcpa-codegen", cl::Hidden,
     cl::desc("Generate ISD::PTRADD nodes for pointer arithmetic in "
@@ -31527,6 +31568,18 @@ bool AArch64TargetLowering::
     return false;
   // Else, if this is a vector shift, prefer 'shl'.
   return X.getValueType().isScalarInteger() || NewShiftOpcode == ISD::SHL;
+}
+
+TargetLoweringBase::CondMergingParams
+AArch64TargetLowering::getJumpConditionMergingParams(
+    Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs) const {
+  int BaseCost = BrMergingBaseCostThresh.getValue();
+  // CCMP is always available on AArch64.
+  if (BaseCost >= 0)
+    BaseCost += BrMergingCcmpBias;
+
+  return {BaseCost, BrMergingLikelyBias.getValue(),
+          BrMergingUnlikelyBias.getValue()};
 }
 
 TargetLowering::ShiftLegalizationStrategy
