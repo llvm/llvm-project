@@ -966,32 +966,19 @@ define void @sink_multiple_store_groups_noalias_via_scev_urem(ptr %dst, ptr %src
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[TMP12]], i32 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = urem <2 x i64> [[VEC_IND]], splat (i64 128)
-; CHECK-NEXT:    [[TMP16:%.*]] = xor <2 x i1> [[TMP10]], splat (i1 true)
-; CHECK-NEXT:    [[TMP18:%.*]] = fadd <2 x double> [[TMP14]], splat (double 8.000000e+00)
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x i1> [[TMP16]], i64 0
-; CHECK-NEXT:    br i1 [[TMP29]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
-; CHECK:       [[PRED_STORE_IF1]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP15]], i64 0
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x double> [[TMP18]], i64 0
-; CHECK-NEXT:    store double [[TMP21]], ptr [[TMP20]], align 8, !alias.scope [[META95]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE1]]
-; CHECK:       [[PRED_STORE_CONTINUE1]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i1> [[TMP16]], i64 1
-; CHECK-NEXT:    br i1 [[TMP22]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; CHECK:       [[PRED_STORE_IF3]]:
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i64> [[TMP15]], i64 1
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP20:%.*]] = fadd <2 x double> [[TMP14]], splat (double 8.000000e+00)
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP10]], <2 x double> [[TMP14]], <2 x double> [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x double> [[TMP18]], i64 0
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP19]], align 8, !alias.scope [[META95]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <2 x double> [[TMP18]], i64 1
-; CHECK-NEXT:    store double [[TMP34]], ptr [[TMP30]], align 8, !alias.scope [[META95]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; CHECK:       [[PRED_STORE_CONTINUE4]]:
+; CHECK-NEXT:    store double [[TMP34]], ptr [[TMP32]], align 8, !alias.scope [[META95]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x i1> [[TMP10]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP24]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x i64> [[TMP15]], i64 0
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store double [[TMP11]], ptr [[TMP19]], align 8, !alias.scope [[META95]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP19]], i64 16
 ; CHECK-NEXT:    store double 1.000000e+01, ptr [[TMP25]], align 8, !alias.scope [[META95]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
@@ -999,9 +986,6 @@ define void @sink_multiple_store_groups_noalias_via_scev_urem(ptr %dst, ptr %src
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[TMP10]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3]]
 ; CHECK:       [[PRED_STORE_IF2]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <2 x i64> [[TMP15]], i64 1
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP31]]
-; CHECK-NEXT:    store double [[TMP12]], ptr [[TMP32]], align 8, !alias.scope [[META95]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP32]], i64 16
 ; CHECK-NEXT:    store double 1.000000e+01, ptr [[TMP33]], align 8, !alias.scope [[META95]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]

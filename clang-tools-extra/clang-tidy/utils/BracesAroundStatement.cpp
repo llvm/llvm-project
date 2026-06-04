@@ -110,7 +110,9 @@ BraceInsertionHints getBraceInsertionsHints(const Stmt *const S,
   // 2) If there's a multi-line block comment starting on the same line after
   // the location we're inserting the closing brace at, or there's a non-comment
   // token, the check inserts "\n}" right before that token.
-  // 3) Otherwise the check finds the end of line (possibly after some block or
+  // 3) If the statement ends in the middle of a macro body expansion, the check
+  // emits a diagnostic without a fix-it.
+  // 4) Otherwise the check finds the end of line (possibly after some block or
   // line comments) and inserts "\n}" right before that EOL.
   if (!S || isa<CompoundStmt>(S)) {
     // Already inside braces.
@@ -157,6 +159,12 @@ BraceInsertionHints getBraceInsertionsHints(const Stmt *const S,
     EndLoc = EndLocHint;
     ClosingInsertion = "} ";
   } else {
+    const SourceLocation StmtEndLoc = S->getEndLoc();
+    if (StmtEndLoc.isMacroID() && SM.isMacroBodyExpansion(StmtEndLoc) &&
+        !Lexer::isAtEndOfMacroExpansion(StmtEndLoc, SM, LangOpts)) {
+      // No safe fix-it for a statement ending in the middle of a macro body.
+      return {StartLoc};
+    }
     EndLoc = findEndLocation(*S, SM, LangOpts);
     ClosingInsertion = "\n}";
   }

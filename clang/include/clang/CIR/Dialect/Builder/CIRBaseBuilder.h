@@ -127,9 +127,12 @@ public:
       return getNullDataMemberAttr(dataMemberTy);
     if (auto methodTy = mlir::dyn_cast<cir::MethodType>(ty))
       return getNullMethodAttr(methodTy);
+    if (auto vptrTy = mlir::dyn_cast<cir::VPtrType>(ty))
+      return cir::ZeroAttr::get(vptrTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
+
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 
@@ -697,6 +700,41 @@ public:
 
   mlir::Value createRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return cir::RemOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FAddOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FSubOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FMulOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FDivOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FRemOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createXor(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {

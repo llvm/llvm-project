@@ -1,0 +1,34 @@
+# RUN: not --crash llc -mtriple=riscv32 -mattr=+experimental-y -run-pass machineverifier %s -o - 2>&1 \
+# RUN:    | FileCheck %s --check-prefixes=CHECK,CHECK-32 --implicit-check-not="Bad machine code"
+# RUN: not --crash llc -mtriple=riscv64 -mattr=+experimental-y -run-pass machineverifier %s -o - 2>&1 \
+# RUN:    | FileCheck %s --check-prefixes=CHECK,CHECK-64  --implicit-check-not="Bad machine code"
+
+# CHECK:      *** Bad machine code: Invalid immediate ***
+# CHECK-NEXT: - function:{{ +}}verify_all_invalid
+# CHECK-NEXT: - basic block: {{%bb\.[0-9]+ .*}}
+# CHECK-NEXT: - instruction: $x10_y = YBNDSWI $x10_y, 0
+# CHECK-EMPTY:
+# CHECK:      *** Bad machine code: Invalid immediate ***
+# CHECK-NEXT: - function:{{ +}}verify_all_invalid
+# CHECK-NEXT: - basic block: {{%bb\.[0-9]+ .*}}
+# CHECK-NEXT: - instruction: $x10 = SRLIY $x10_y, 31
+# CHECK-64-EMPTY:
+# CHECK-64-NEXT: *** Bad machine code: Invalid immediate ***
+# CHECK-64-NEXT: - function:{{ +}}verify_all_invalid
+# CHECK-64-NEXT: - basic block: {{%bb\.[0-9]+ .*}}
+# CHECK-64-NEXT: - instruction: $x10 = SRLIY $x10_y, 32
+# CHECK-32-EMPTY:
+# CHECK-32-NEXT: *** Bad machine code: Invalid immediate ***
+# CHECK-32-NEXT: - function:{{ +}}verify_all_invalid
+# CHECK-32-NEXT: - basic block: {{%bb\.[0-9]+ .*}}
+# CHECK-32-NEXT: - instruction: $x10 = SRLIY $x10_y, 64
+
+---
+name: verify_all_invalid
+body: |
+  bb.0:
+    $x10_y = YBNDSWI $x10_y, 0
+    $x10 = SRLIY $x10_y, 31
+    $x10 = SRLIY $x10_y, 32
+    $x10 = SRLIY $x10_y, 64
+...

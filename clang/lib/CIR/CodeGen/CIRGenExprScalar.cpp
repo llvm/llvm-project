@@ -1429,6 +1429,13 @@ public:
     return {};
   }
 
+  mlir::Value convertVec3AndVec4(CIRGenBuilderTy &builder, mlir::Location loc,
+                                 mlir::Value src, unsigned numElementsDst) {
+    static constexpr int64_t mask[] = {0, 1, 2, -1};
+    return builder.createVecShuffle(
+        loc, src, llvm::ArrayRef<int64_t>(mask, numElementsDst));
+  }
+
   // Create cast instructions for converting MLIR value \p Src to MLIR type \p
   // DstTy. \p Src has the same size as \p DstTy. Both are single value types
   // but could be scalar or vectors of different lengths, and either can be
@@ -1515,10 +1522,12 @@ public:
     // to vec4 if the original type is not vec4, then a shuffle vector to
     // get a vec3.
     if (numElementsSrc != 3 && numElementsDst == 3) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter: VisitAsTypeExpr numElemsSrc != 3, "
-                       "numElemsDst = 3");
-      return {};
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      auto dstElemTy = cast<cir::VectorType>(dstTy).getElementType();
+      auto dstVec4Ty = cir::VectorType::get(dstElemTy, 4);
+      src = createCastsForTypeOfSameSize(src, dstVec4Ty);
+      src = convertVec3AndVec4(builder, loc, src, 3);
+      return src;
     }
 
     return createCastsForTypeOfSameSize(src, dstTy);
@@ -1981,18 +1990,29 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
                             cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
-  return cir::DivOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+    return builder.createFDiv(loc, ops.lhs, ops.rhs);
+  }
+  return cir::DivOp::create(builder, loc, cgf.convertType(ops.fullType),
+                            ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
-  return cir::RemOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+    return builder.createFRem(loc, ops.lhs, ops.rhs);
+  }
+  return cir::RemOp::create(builder, loc, cgf.convertType(ops.fullType),
+                            ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
   if (mlir::isa<cir::PointerType>(ops.lhs.getType()) ||
       mlir::isa<cir::PointerType>(ops.rhs.getType()))
-    return emitPointerArithmetic(cgf, ops, /*isSubtraction=*/false);
+    return emitPointerArithmetic(cgf, ops, /*isSubtraction=*/
+                                 false);
 
   const mlir::Location loc = cgf.getLoc(ops.loc);
   if (!isIntegerVectorBinOp(ops.lhs.getType()) &&

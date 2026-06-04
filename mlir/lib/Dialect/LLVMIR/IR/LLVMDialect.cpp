@@ -2605,8 +2605,8 @@ static bool isZeroAttribute(Attribute value) {
 
 LogicalResult GlobalOp::verify() {
   bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
+                                    LLVMLabelType>(getType())
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
@@ -2826,8 +2826,8 @@ ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
 
 LogicalResult AliasOp::verify() {
   bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
+                                    LLVMLabelType>(getType())
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
@@ -3361,6 +3361,15 @@ OpFoldResult LLVM::UndefOp::fold(FoldAdaptor) {
 /// Fold a poison operation to a dedicated poison attribute.
 OpFoldResult LLVM::PoisonOp::fold(FoldAdaptor) {
   return LLVM::PoisonAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// MetadataAsValueOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a metadata-as-value operation to its wrapped metadata attribute.
+OpFoldResult LLVM::MetadataAsValueOp::fold(FoldAdaptor) {
+  return getMetadataAttr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -4462,7 +4471,6 @@ void LLVMDialect::initialize() {
 
   // clang-format off
   addTypes<LLVMVoidType,
-           LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType>();
   // clang-format on
@@ -4698,6 +4706,10 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
     return LLVM::PoisonOp::create(builder, loc, type);
   if (isa<LLVM::ZeroAttr>(value))
     return LLVM::ZeroOp::create(builder, loc, type);
+  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDFuncAttr,
+          LLVM::MDNodeAttr>(value))
+    if (isa<LLVM::LLVMMetadataType>(type))
+      return LLVM::MetadataAsValueOp::create(builder, loc, type, value);
   // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
