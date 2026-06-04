@@ -50,7 +50,7 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::hash<std::text_encoding>()(std::text_encoding::ASCII);
 
-#if _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT
+#if !defined(TEST_HAS_NO_LOCALIZATION) && _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   te.environment();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
