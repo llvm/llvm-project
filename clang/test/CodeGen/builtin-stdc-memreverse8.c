@@ -3,15 +3,15 @@
 
 #ifndef TEST_C2Y_LIB_SPELLINGS
 
-// N=0 and N=1: IsEmpty folds to true, branch to after without entering loop.
+// N=0 and N=1: fall back to library call.
 // CHECK-LABEL: test_memreverse8_const0
-// CHECK: br i1 true,
+// CHECK: call void @stdc_memreverse8(
 void test_memreverse8_const0(unsigned char *p) {
   __builtin_stdc_memreverse8(0, p);
 }
 
 // CHECK-LABEL: test_memreverse8_const1
-// CHECK: br i1 true,
+// CHECK: call void @stdc_memreverse8(
 void test_memreverse8_const1(unsigned char *p) {
   __builtin_stdc_memreverse8(1, p);
 }
@@ -41,24 +41,17 @@ void test_memreverse8_const8(unsigned char *p) {
   __builtin_stdc_memreverse8(8, p);
 }
 
-// Constant N=3: not bswap-optimized, falls back to the loop.
+// Constant N=3: not bswap-optimized, falls back to library call.
 // CHECK-LABEL: test_memreverse8_const3
-// CHECK: br i1 false,
+// CHECK: call void @stdc_memreverse8(
 // CHECK-NOT: @llvm.bswap
 void test_memreverse8_const3(unsigned char *p) {
   __builtin_stdc_memreverse8(3, p);
 }
 
+// Runtime N: falls back to library call.
 // CHECK-LABEL: test_memreverse8_runtime
-// CHECK: lshr
-// CHECK: memreverse8.loop:
-// CHECK: getelementptr
-// CHECK: getelementptr
-// CHECK: load i8
-// CHECK: load i8
-// CHECK: store i8
-// CHECK: store i8
-// CHECK: memreverse8.after:
+// CHECK: call void @stdc_memreverse8(
 void test_memreverse8_runtime(__SIZE_TYPE__ n, unsigned char *p) {
   __builtin_stdc_memreverse8(n, p);
 }

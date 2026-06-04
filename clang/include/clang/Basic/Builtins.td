@@ -990,10 +990,11 @@ def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplat
   let Prototype = "T(T, unsigned int)";
 }
 
-def StdcMemReverse8: Builtin {
-  let Spellings = ["__builtin_stdc_memreverse8"];
+def StdcMemReverse8: LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Spellings = ["stdc_memreverse8"];
   let Attributes = [NoThrow, NonNull<NonOptimizing, [1]>];
   let Prototype = "void(size_t, unsigned char*)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Template {

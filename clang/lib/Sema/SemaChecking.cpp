@@ -3934,6 +3934,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
 
   case Builtin::BI__builtin_stdc_memreverse8:
+  case Builtin::BIstdc_memreverse8:
   case Builtin::BIstdc_memreverse8u8:
   case Builtin::BIstdc_memreverse8u16:
   case Builtin::BIstdc_memreverse8u32:

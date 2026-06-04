@@ -4240,6 +4240,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
 
+  case Builtin::BIstdc_memreverse8:
   case Builtin::BI__builtin_stdc_memreverse8: {
     Value *N = EmitScalarExpr(E->getArg(0));
     Address PtrAddr = EmitPointerWithAlignment(E->getArg(1));
@@ -4257,35 +4258,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       }
     }
 
-    // General case: emit a loop swapping ptr[i] and ptr[n-i-1].
-    Value *Ptr = PtrAddr.emitRawPointer(*this);
-    BasicBlock *EntryBB = Builder.GetInsertBlock();
-    BasicBlock *LoopBB = createBasicBlock("memreverse8.loop", CurFn);
-    BasicBlock *AfterBB = createBasicBlock("memreverse8.after", CurFn);
-    Value *Half = Builder.CreateLShr(N, ConstantInt::get(N->getType(), 1));
-    Value *IsEmpty =
-        Builder.CreateICmpEQ(Half, ConstantInt::get(Half->getType(), 0));
-    Builder.CreateCondBr(IsEmpty, AfterBB, LoopBB);
-
-    Builder.SetInsertPoint(LoopBB);
-    PHINode *Idx = Builder.CreatePHI(Half->getType(), 2, "i");
-    Idx->addIncoming(ConstantInt::get(Half->getType(), 0), EntryBB);
-    Value *J = Builder.CreateSub(Builder.CreateSub(N, Idx),
-                                 ConstantInt::get(N->getType(), 1));
-    Address AddrI(Builder.CreateGEP(Int8Ty, Ptr, Idx), Int8Ty,
-                  CharUnits::One());
-    Address AddrJ(Builder.CreateGEP(Int8Ty, Ptr, J), Int8Ty, CharUnits::One());
-    Value *XI = Builder.CreateLoad(AddrI);
-    Value *XJ = Builder.CreateLoad(AddrJ);
-    Builder.CreateStore(XJ, AddrI);
-    Builder.CreateStore(XI, AddrJ);
-    Value *Next = Builder.CreateAdd(Idx, ConstantInt::get(Half->getType(), 1));
-    Idx->addIncoming(Next, LoopBB);
-    Value *Done = Builder.CreateICmpEQ(Next, Half);
-    Builder.CreateCondBr(Done, AfterBB, LoopBB);
-
-    Builder.SetInsertPoint(AfterBB);
-    return RValue::get(nullptr);
+    // General case: fall back to the library function stdc_memreverse8.
+    break;
   }
 
   case Builtin::BI__builtin_constant_p: {
