@@ -199,6 +199,18 @@ static bool airSystemValues(Module &M) {
       if (F.isDeclaration())
         continue;
 
+      bool IsCalled = false;
+      for (User *U : F.users()) {
+        if (auto *CB = dyn_cast<CallBase>(U)) {
+          if (CB->getCalledFunction() == &F) {
+            IsCalled = true;
+            break;
+          }
+        }
+      }
+      if (IsCalled)
+        continue;
+
       SmallVector<Metadata *, 16> ParamNodes;
       unsigned ArgIdx = 0;
       auto *FTy = F.getFunctionType();
