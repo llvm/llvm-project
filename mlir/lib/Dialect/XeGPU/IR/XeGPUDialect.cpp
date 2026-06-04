@@ -689,10 +689,13 @@ bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
     return false;
   if (!isPermutationVector(perm))
     return false;
+  // vector.transpose semantics: dst[i] = src[perm[i]]. So `this` (= dst) is a
+  // transpose of `other` (= src) via `perm` iff for all i, dst[i] ==
+  // src[perm[i]].
   auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src,
                            ArrayRef<int64_t> perm) {
     for (const auto &ta : llvm::enumerate(perm)) {
-      if (src[ta.index()] != dst[ta.value()])
+      if (dst[ta.index()] != src[ta.value()])
         return false;
     }
     return true;
