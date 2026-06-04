@@ -40,7 +40,7 @@ func.func private @rank1_constant() -> memref<1xi64> {
 
 // -----
 
-func.func private @return_rank2_constant() -> memref<1x1xi64> {
+func.func private @rank2_constant() -> memref<1x1xi64> {
   // expected-error@+1 {{failed to legalize operation 'arith.constant'}}
   %0 = arith.constant dense<[[-1]]> : memref<1x1xi64>
   return %0 : memref<1x1xi64>
