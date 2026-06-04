@@ -725,7 +725,7 @@ public:
 
     // Store the updated result through the lvalue
     if (lv.isBitField())
-      return cgf.emitStoreThroughBitfieldLValue(RValue::get(value), lv);
+      value = cgf.emitStoreThroughBitfieldLValue(RValue::get(value), lv);
     else
       cgf.emitStoreThroughLValue(RValue::get(value), lv);
 
