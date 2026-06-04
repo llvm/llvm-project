@@ -386,12 +386,34 @@ void AArch64ConditionOptimizerImpl::updateCondInstr(MachineInstr *CondMI,
   ++NumConditionsAdjusted;
 }
 
+// PL/MI are the canonical condition codes for sign checks against zero.
+static void normalizeSignCondForZeroImm(AArch64CC::CondCode &CC, int CmpImm) {
+  if (CmpImm != 0)
+    return;
+  if (CC == AArch64CC::PL)
+    CC = AArch64CC::GE;
+  else if (CC == AArch64CC::MI)
+    CC = AArch64CC::LT;
+}
+
+static AArch64CC::CondCode
+canonicalizeSignCondForZeroImm(AArch64CC::CondCode CC, int CmpImm) {
+  if (CmpImm != 0)
+    return CC;
+  if (CC == AArch64CC::GE)
+    return AArch64CC::PL;
+  if (CC == AArch64CC::LT)
+    return AArch64CC::MI;
+  return CC;
+}
+
 // Applies a comparison adjustment to a cmp/cond instruction pair.
 void AArch64ConditionOptimizerImpl::applyCmpAdjustment(CmpCondPair &Pair,
                                                        const CmpInfo &Info) {
+  AArch64CC::CondCode CC = canonicalizeSignCondForZeroImm(Info.CC, Info.Imm);
   updateCmpInstr(Pair.CmpMI, Info.Imm, Info.Opc);
-  updateCondInstr(Pair.CondMI, Info.CC);
-  Pair.CC = Info.CC;
+  updateCondInstr(Pair.CondMI, CC);
+  Pair.CC = CC;
 }
 
 // Extracts the condition code from the result of analyzeBranch.
@@ -414,11 +436,26 @@ static bool isLessThan(AArch64CC::CondCode Cmp) {
   return Cmp == AArch64CC::LT || Cmp == AArch64CC::LO;
 }
 
+static bool isGreaterOrEqual(AArch64CC::CondCode Cmp) {
+  return Cmp == AArch64CC::GE || Cmp == AArch64CC::HS || Cmp == AArch64CC::PL;
+}
+
+static bool isLessOrEqual(AArch64CC::CondCode Cmp) {
+  return Cmp == AArch64CC::LE || Cmp == AArch64CC::LS || Cmp == AArch64CC::MI;
+}
+
+static bool isOrderedComparison(AArch64CC::CondCode Cmp) {
+  return isGreaterThan(Cmp) || isLessThan(Cmp) || isGreaterOrEqual(Cmp) ||
+         isLessOrEqual(Cmp);
+}
+
 bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
                                                     CmpCondPair &Second) {
-  if (!((isGreaterThan(First.CC) || isLessThan(First.CC)) &&
-        (isGreaterThan(Second.CC) || isLessThan(Second.CC))))
+  if (!isOrderedComparison(First.CC) || !isOrderedComparison(Second.CC))
     return false;
+
+  normalizeSignCondForZeroImm(First.CC, First.getImm());
+  normalizeSignCondForZeroImm(Second.CC, Second.getImm());
 
   int FirstImmTrueValue = First.getImm();
   int SecondImmTrueValue = Second.getImm();
@@ -436,21 +473,9 @@ bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
   if (((isGreaterThan(First.CC) && isLessThan(Second.CC)) ||
        (isLessThan(First.CC) && isGreaterThan(Second.CC))) &&
       std::abs(SecondImmTrueValue - FirstImmTrueValue) == 2) {
-    // This branch transforms machine instructions that correspond to
-    //
-    // 1) (a > {SecondImm} && ...) || (a < {FirstImm} && ...)
-    // 2) (a < {SecondImm} && ...) || (a > {FirstImm} && ...)
-    //
-    // into
-    //
-    // 1) (a >= {NewImm} && ...) || (a <= {NewImm} && ...)
-    // 2) (a <= {NewImm} && ...) || (a >= {NewImm} && ...)
-
-    // Verify both adjustments converge to identical comparisons (same
-    // immediate and opcode). This ensures CSE can eliminate the duplicate.
+    // (a > N && ...) || (a < M && ...)  ->  (a >= K && ...) || (a <= K && ...)
     if (FirstAdj.Imm != SecondAdj.Imm || FirstAdj.Opc != SecondAdj.Opc)
       return false;
-
     LLVM_DEBUG(dbgs() << "Optimized (opposite): "
                       << AArch64CC::getCondCodeName(First.CC) << " #"
                       << First.getImm() << ", "
@@ -463,35 +488,20 @@ bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
     applyCmpAdjustment(First, FirstAdj);
     applyCmpAdjustment(Second, SecondAdj);
     return true;
+  }
 
-  } else if (((isGreaterThan(First.CC) && isGreaterThan(Second.CC)) ||
-              (isLessThan(First.CC) && isLessThan(Second.CC))) &&
-             std::abs(SecondImmTrueValue - FirstImmTrueValue) == 1) {
-    // This branch transforms machine instructions that correspond to
-    //
-    // 1) (a > {SecondImm} && ...) || (a > {FirstImm} && ...)
-    // 2) (a < {SecondImm} && ...) || (a < {FirstImm} && ...)
-    //
-    // into
-    //
-    // 1) (a <= {NewImm} && ...) || (a >  {NewImm} && ...)
-    // 2) (a <  {NewImm} && ...) || (a >= {NewImm} && ...)
-
-    // GT -> GE transformation increases immediate value, so picking the
-    // smaller one; LT -> LE decreases immediate value so invert the choice.
+  if (((isGreaterThan(First.CC) && isGreaterThan(Second.CC)) ||
+       (isLessThan(First.CC) && isLessThan(Second.CC))) &&
+      std::abs(SecondImmTrueValue - FirstImmTrueValue) == 1) {
+    // (a > N && ...) || (a > M && ...)  ->  one side becomes inclusive
     bool AdjustFirst = (FirstImmTrueValue < SecondImmTrueValue);
     if (isLessThan(First.CC))
       AdjustFirst = !AdjustFirst;
-
     CmpCondPair &Target = AdjustFirst ? Second : First;
     CmpCondPair &ToChange = AdjustFirst ? First : Second;
     CmpInfo &Adj = AdjustFirst ? FirstAdj : SecondAdj;
-
-    // Verify the adjustment converges to the target's comparison (same
-    // immediate and opcode). This ensures CSE can eliminate the duplicate.
     if (Adj.Imm != Target.getImm() || Adj.Opc != Target.getOpc())
       return false;
-
     LLVM_DEBUG(dbgs() << "Optimized (same-direction): "
                       << AArch64CC::getCondCodeName(ToChange.CC) << " #"
                       << ToChange.getImm() << " -> "
@@ -501,8 +511,42 @@ bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
     return true;
   }
 
-  // Other transformation cases almost never occur due to generation of < or >
-  // comparisons instead of <= and >=.
+  if (((isGreaterOrEqual(First.CC) && isLessOrEqual(Second.CC)) ||
+       (isLessOrEqual(First.CC) && isGreaterOrEqual(Second.CC))) &&
+      std::abs(SecondImmTrueValue - FirstImmTrueValue) == 2) {
+    // (a >= N && ...) || (a <= M && ...) with M - N == 2  ->  both at K = N + 1
+    const int MidImm = std::min(FirstImmTrueValue, SecondImmTrueValue) + 1;
+    CmpInfo FirstInfo = {MidImm, First.getOpc(), First.CC};
+    CmpInfo SecondInfo = {MidImm, Second.getOpc(), Second.CC};
+    LLVM_DEBUG(dbgs() << "Optimized (opposite GE/LE): #" << First.getImm()
+                      << " / #" << Second.getImm() << " -> #" << MidImm
+                      << '\n');
+    applyCmpAdjustment(First, FirstInfo);
+    applyCmpAdjustment(Second, SecondInfo);
+    return true;
+  }
+
+  if (((isGreaterOrEqual(First.CC) && isGreaterOrEqual(Second.CC)) ||
+       (isLessOrEqual(First.CC) && isLessOrEqual(Second.CC))) &&
+      First.getOpc() == Second.getOpc() &&
+      std::abs(SecondImmTrueValue - FirstImmTrueValue) == 1) {
+    // (a >= N && ...) || (a >= M && ...)  ->  relax the lower threshold
+    bool AdjustFirst = (FirstImmTrueValue < SecondImmTrueValue);
+    AdjustFirst = !AdjustFirst;
+    CmpCondPair &Target = AdjustFirst ? Second : First;
+    CmpCondPair &ToChange = AdjustFirst ? First : Second;
+    CmpInfo &Adj = AdjustFirst ? FirstAdj : SecondAdj;
+    if (Adj.Imm != Target.getImm() || Adj.Opc != Target.getOpc())
+      return false;
+    LLVM_DEBUG(dbgs() << "Optimized (same-direction GE/LE): "
+                      << AArch64CC::getCondCodeName(ToChange.CC) << " #"
+                      << ToChange.getImm() << " -> "
+                      << AArch64CC::getCondCodeName(Adj.CC) << " #" << Adj.Imm
+                      << '\n');
+    applyCmpAdjustment(ToChange, Adj);
+    return true;
+  }
+
   return false;
 }
 
