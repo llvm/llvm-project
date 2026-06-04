@@ -1590,6 +1590,22 @@ define <2 x i16> @test_psdiv_h(<2 x i16> %a, <2 x i16> %b) {
   ret <2 x i16> %res
 }
 
+define <2 x i16> @test_psdiv_mulhsu_h(<2 x i16> %a) {
+; CHECK-LABEL: test_psdiv_mulhsu_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 1048569
+; CHECK-NEXT:    addi a1, a1, -1911
+; CHECK-NEXT:    pmv.hs a1, a1
+; CHECK-NEXT:    pmulh.h a1, a0, a1
+; CHECK-NEXT:    padd.h a0, a1, a0
+; CHECK-NEXT:    psrai.h a0, a0, 3
+; CHECK-NEXT:    psrli.h a1, a0, 15
+; CHECK-NEXT:    padd.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = sdiv <2 x i16> %a, splat (i16 15)
+  ret <2 x i16> %res
+}
+
 define <4 x i8> @test_psdiv_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-LABEL: test_psdiv_b:
 ; RV32:       # %bb.0:
@@ -1665,6 +1681,33 @@ define <2 x i16> @test_pudiv_h(<2 x i16> %a, <2 x i16> %b) {
 ; RV64-NEXT:    ret
   %res = udiv <2 x i16> %a, %b
   ret <2 x i16> %res
+}
+
+define <4 x i8> @test_psdiv_mulhsu_b(<4 x i8> %a) {
+; RV32-LABEL: test_psdiv_mulhsu_b:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pli.b a1, -119
+; RV32-NEXT:    pwmul.b a2, a0, a1
+; RV32-NEXT:    pncvth.b a1, a2
+; RV32-NEXT:    padd.b a0, a1, a0
+; RV32-NEXT:    psrai.b a0, a0, 3
+; RV32-NEXT:    psrli.b a1, a0, 7
+; RV32-NEXT:    padd.b a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psdiv_mulhsu_b:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pli.b a1, -119
+; RV64-NEXT:    pmul.h.b11 a2, a0, a1
+; RV64-NEXT:    pmul.h.b00 a1, a0, a1
+; RV64-NEXT:    ppairo.b a1, a1, a2
+; RV64-NEXT:    padd.b a0, a1, a0
+; RV64-NEXT:    psrai.b a0, a0, 3
+; RV64-NEXT:    psrli.b a1, a0, 7
+; RV64-NEXT:    padd.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = sdiv <4 x i8> %a, splat (i8 15)
+  ret <4 x i8> %res
 }
 
 define <4 x i8> @test_pudiv_b(<4 x i8> %a, <4 x i8> %b) {
@@ -2203,10 +2246,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB148_2
+; CHECK-NEXT:    bnez a3, .LBB150_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB148_2:
+; CHECK-NEXT:  .LBB150_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2217,10 +2260,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB149_2
+; CHECK-NEXT:    bnez a3, .LBB151_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB149_2:
+; CHECK-NEXT:  .LBB151_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
