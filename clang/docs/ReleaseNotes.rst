@@ -945,15 +945,8 @@ OpenMP Support
 
 SYCL Support
 ------------
-- Initial SYCL offload compilation support has been added to Clang. The
-  new ``-fsycl`` flag enables SYCL offloading, producing a SPIR-V device image
-  packaged into the host object. ``-fsycl-device-only`` and
-  ``-fsycl-host-only`` restrict compilation to the device or host side
-  respectively. (#GH117268)
-
 - SYCL compilations now default to ``-std=c++17`` when no explicit language
   standard is specified. Standards below C++17 are rejected with a diagnostic.
-  (#GH194014)
 
 - Clang now assumes default target for SYCL device compilation is 64-bit SPIR-V
   and it now diagnoses if a non-supporting target is specified via command line.
@@ -962,18 +955,18 @@ SYCL Support
 - The SYCL runtime shared library has been renamed from ``libsycl.so`` to
   ``libLLVMSYCL.so`` (``LLVMSYCL.lib`` / ``LLVMSYCLd.lib`` on Windows) to
   align with LLVM naming conventions. SYCL header include paths are now added
-  automatically for both host and device compilations. (#GH188770, #GH174877)
+  automatically for both host and device compilations.
 
 - SYCL runtime library linking is now supported on Windows. When ``-fsycl`` is
   specified, the driver automatically adds ``/MD`` if no explicit CRT flag is
   present, links the appropriate debug (``LLVMSYCLd.lib``) or release
   (``LLVMSYCL.lib``) library, and rejects static CRT flags (``/MT``,
   ``/MTd``) with a diagnostic. Use ``-nolibsycl`` to suppress automatic
-  library linking. (#GH194744)
+  library linking.
 
 - Fixed ``-nolibsycl`` being silently ignored on Linux: the SYCL runtime
   library was unconditionally added to the link line even when the flag was
-  passed. (#GH200252)
+  passed.
 
 Improvements
 ^^^^^^^^^^^^
