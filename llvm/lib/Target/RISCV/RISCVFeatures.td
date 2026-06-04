@@ -689,6 +689,32 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
 
+def FeatureStdExtZvqwdota8i
+    : RISCVExperimentalExtension<0, 2, "8-bit Integer Dot-Product",
+                                 [FeatureStdExtZve32x]>;
+
+def FeatureStdExtZvqwdota16i
+    : RISCVExperimentalExtension<0, 2, "16-bit Integer Dot-Product",
+                                 [FeatureStdExtZve64x]>;
+
+def HasStdExtZvqwdota8iOrZvqwdota16i
+    : Predicate<"Subtarget->hasStdExtZvqwdota8i() || Subtarget->hasStdExtZvqwdota16i()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvqwdota8i, FeatureStdExtZvqwdota16i),
+                         "'Zvqwdota8i' (8-bit Integer Dot-Product) or "
+                         "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
+
+def FeatureStdExtZvfwdota16bf
+    : RISCVExperimentalExtension<0, 2, "BF16 Dot-Product", [FeatureStdExtZve32f]>;
+def HasStdExtZvfwdota16bf : Predicate<"Subtarget->hasStdExtZvfwdota16bf()">,
+                            AssemblerPredicate<(all_of FeatureStdExtZvfwdota16bf),
+                                               "'Zvfwdota16bf' (BF16 Dot-Product)">;
+
+def FeatureStdExtZvfqwdota8f
+    : RISCVExperimentalExtension<0, 2, "OCP FP8 Dot-Product", [FeatureStdExtZve32f]>;
+def HasStdExtZvfqwdota8f : Predicate<"Subtarget->hasStdExtZvfqwdota8f()">,
+                           AssemblerPredicate<(all_of FeatureStdExtZvfqwdota8f),
+                                              "'Zvfqwdota8f' (OCP FP8 Dot-Product)">;
+
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
                                  [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
@@ -1733,15 +1759,6 @@ def FeatureVendorXqci
                       FeatureVendorXqcilia, FeatureVendorXqcilo,
                       FeatureVendorXqcilsm, FeatureVendorXqcisim,
                       FeatureVendorXqcisls, FeatureVendorXqcisync]>;
-
-// Rivos Extension(s)
-
-def FeatureVendorXRivosVizip
-    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;
-def HasVendorXRivosVizip
-    : Predicate<"Subtarget->hasVendorXRivosVizip()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
-                         "'XRivosVizip' (Rivos Vector Register Zips)">;
 
 // Andes Extension(s)
 
