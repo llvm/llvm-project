@@ -953,8 +953,10 @@ SYCL Support
   (#GH167358)
 
 - The SYCL runtime shared library has been renamed from ``libsycl.so`` to
-  ``libLLVMSYCL.so`` to align with LLVM naming conventions. SYCL header include
-  paths are now added automatically for both host and device compilations.
+  ``libLLVMSYCL.so`` to align with LLVM naming conventions.
+
+- SYCL header include paths are now added automatically for both host and
+  device compilations.
 
 - SYCL runtime library linking is now supported on Windows. When ``-fsycl`` is
   specified, the driver automatically adds ``/MD`` if no explicit CRT flag is
