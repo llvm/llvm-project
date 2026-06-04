@@ -64,3 +64,33 @@ movq %fs:foo@TPOFF(%rdi,%rsi,2), %rax
 movq %rcx, %fs:foo
 // CHECK:      movq 16(%r15), %r11
 // CHECK-NEXT: movq %rcx, foo(%r11)
+
+cmpq %fs:(%rdi), %rax
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: cmpq (%r11,%rdi), %rax
+
+cmpq %fs:(%rbx,%rcx), %rax
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: leaq (%r11,%rbx), %r11
+// CHECK-NEXT: cmpq (%r11,%rcx), %rax
+
+cmpq %fs:8(%rdi,%rsi,2), %rax
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: leaq (%r11,%rdi), %r11
+// CHECK-NEXT: cmpq 8(%r11,%rsi,2), %rax
+
+subq %fs:(%rdi), %rax
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: subq (%r11,%rdi), %rax
+
+cmoveq %fs:(%rdi), %rax
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: cmoveq (%r11,%rdi), %rax
+
+andnq %fs:(%rdi), %rax, %rbx
+// CHECK:      movq 16(%r15), %rbx
+// CHECK-NEXT: andnq (%rbx,%rdi), %rax, %rbx
+
+andnq %fs:(%rdi), %rax, %rax
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: andnq (%r11,%rdi), %rax, %rax
