@@ -15,7 +15,7 @@ func.func @alloc_and_dealloc() {
 // CPP:      module {
 // CPP-NEXT:   emitc.include <"cstdlib">
 // CPP-LABEL:  alloc_and_dealloc()
-// CPP-NEXT:   %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() {args = [i32]} : () -> !emitc.size_t
+// CPP-NEXT:   %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
 // CPP-NEXT:   %[[ALLOC_SIZE:.*]] = "emitc.constant"() <{value = 999 : index}> : () -> index
 // CPP-NEXT:   %[[ALLOC_TOTAL_SIZE:.*]] = emitc.mul %[[ALLOC]], %[[ALLOC_SIZE]] : (!emitc.size_t, index) -> !emitc.size_t
 // CPP-NEXT:   %[[ALLOC_PTR:.*]] = emitc.call_opaque "malloc"(%[[ALLOC_TOTAL_SIZE]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
@@ -27,7 +27,7 @@ func.func @alloc_and_dealloc() {
 // NOCPP:      module {
 // NOCPP-NEXT:   emitc.include <"stdlib.h">
 // NOCPP-LABEL:  alloc_and_dealloc()
-// NOCPP-NEXT:   %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() {args = [i32]} : () -> !emitc.size_t
+// NOCPP-NEXT:   %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
 // NOCPP-NEXT:   %[[ALLOC_SIZE:.*]] = "emitc.constant"() <{value = 999 : index}> : () -> index
 // NOCPP-NEXT:   %[[ALLOC_TOTAL_SIZE:.*]] = emitc.mul %[[ALLOC]], %[[ALLOC_SIZE]] : (!emitc.size_t, index) -> !emitc.size_t
 // NOCPP-NEXT:   %[[ALLOC_PTR:.*]] = emitc.call_opaque "malloc"(%[[ALLOC_TOTAL_SIZE]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
@@ -43,7 +43,7 @@ func.func @alloc_and_dealloc_aligned() {
 }
 
 // CPP-LABEL: alloc_and_dealloc_aligned
-// CPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() {args = [f32]} : () -> !emitc.size_t 
+// CPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() <{args = [f32]}> : () -> !emitc.size_t
 // CPP-NEXT: %[[ALLOC_SIZE:.*]] = "emitc.constant"() <{value = 999 : index}> : () -> index
 // CPP-NEXT: %[[ALLOC_TOTAL_SIZE:.*]] = emitc.mul %[[ALLOC]], %[[ALLOC_SIZE]] : (!emitc.size_t, index) -> !emitc.size_t
 // CPP-NEXT: %[[ALIGNMENT:.*]] = "emitc.constant"() <{value = 64 : index}> : () -> !emitc.size_t 
@@ -54,7 +54,7 @@ func.func @alloc_and_dealloc_aligned() {
 // CPP-NEXT: return
 
 // NOCPP-LABEL: alloc_and_dealloc_aligned
-// NOCPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() {args = [f32]} : () -> !emitc.size_t 
+// NOCPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() <{args = [f32]}> : () -> !emitc.size_t
 // NOCPP-NEXT: %[[ALLOC_SIZE:.*]] = "emitc.constant"() <{value = 999 : index}> : () -> index
 // NOCPP-NEXT: %[[ALLOC_TOTAL_SIZE:.*]] = emitc.mul %[[ALLOC]], %[[ALLOC_SIZE]] : (!emitc.size_t, index) -> !emitc.size_t
 // NOCPP-NEXT: %[[ALIGNMENT:.*]] = "emitc.constant"() <{value = 64 : index}> : () -> !emitc.size_t 
@@ -71,7 +71,7 @@ func.func @allocating_and_deallocating_multi() {
 }
 
 // CPP-LABEL: allocating_and_deallocating_multi
-// CPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() {args = [i32]} : () -> !emitc.size_t 
+// CPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
 // CPP-NEXT: %[[ALLOC_SIZE:.*]] = "emitc.constant"() <{value = 6993 : index}> : () -> index
 // CPP-NEXT: %[[ALLOC_TOTAL_SIZE:.*]] = emitc.mul %[[ALLOC]], %[[ALLOC_SIZE]] : (!emitc.size_t, index) -> !emitc.size_t
 // CPP-NEXT: %[[ALLOC_PTR:.*]] = emitc.call_opaque "malloc"(%[[ALLOC_TOTAL_SIZE]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">
@@ -81,7 +81,7 @@ func.func @allocating_and_deallocating_multi() {
 // CPP-NEXT: return
 
 // NOCPP-LABEL: allocating_and_deallocating_multi
-// NOCPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() {args = [i32]} : () -> !emitc.size_t 
+// NOCPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
 // NOCPP-NEXT: %[[ALLOC_SIZE:.*]] = "emitc.constant"() <{value = 6993 : index}> : () -> index
 // NOCPP-NEXT: %[[ALLOC_TOTAL_SIZE:.*]] = emitc.mul %[[ALLOC]], %[[ALLOC_SIZE]] : (!emitc.size_t, index) -> !emitc.size_t
 // NOCPP-NEXT: %[[ALLOC_PTR:.*]] = emitc.call_opaque "malloc"(%[[ALLOC_TOTAL_SIZE]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
