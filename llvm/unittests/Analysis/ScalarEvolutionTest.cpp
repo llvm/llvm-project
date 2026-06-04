@@ -1672,14 +1672,13 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
 TEST_F(ScalarEvolutionsTest, ForgetValueAddChainFolding) {
   LLVMContext C;
   SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(
-      "define i32 @foo(i32 %x) { "
-      "  %add1 = add i32 %x, 1 "
-      "  %add2 = add i32 %add1, 1 "
-      "  %add3 = add i32 %add2, 1 "
-      "  ret i32 %add3 "
-      "} ",
-      Err, C);
+  std::unique_ptr<Module> M = parseAssemblyString("define i32 @foo(i32 %x) { "
+                                                  "  %add1 = add i32 %x, 1 "
+                                                  "  %add2 = add i32 %add1, 1 "
+                                                  "  %add3 = add i32 %add2, 1 "
+                                                  "  ret i32 %add3 "
+                                                  "} ",
+                                                  Err, C);
 
   ASSERT_TRUE(M && "Could not parse module?");
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
