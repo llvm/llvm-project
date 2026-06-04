@@ -994,7 +994,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
       matrix multiply. Can be 1D, 2D, 3D, or 4D where leading dimensions are batch dimensions.
 
     - `rhs`: A vector value representing the right-hand-side matrix tile (B). Can be 1D, 2D, 3D, or 4D
-      where leading dimensions are batch dimensions, plus an optional trailing dimension for VNNI packing.
+      where leading dimensions are batch dimensions.
 
     - `acc`: [optional] A vector value representing the accumulator matrix tile (C). When present, the
       result is computed as `lhs * rhs + acc`; otherwise, the accumulator is implicitly assumed to be zero.

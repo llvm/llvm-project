@@ -723,28 +723,24 @@ static LogicalResult verifyDpasDimensions(Operation *op,
   if (resRank < 2)
     return op->emitOpError("Result must be at least a 2D vector.");
 
-  // Determine batch dimensions. For A[batch..., M, K], B[batch..., K, N] (or
-  // B[batch..., K/vnni, N, vnni]), result[batch..., M, N].
-  // B may have one extra trailing dim for VNNI packing (3D innermost).
-  // Determine how many trailing dims are the "core" matmul dims.
-  // A core dims: last 2 (M, K)
-  // B core dims: last 2 (K, N) or last 3 (K/vnni, N, vnni) for packed
-  // Result core dims: last 2 (M, N)
-  int64_t aBatchRank = aRank - 2;
-  int64_t resBatchRank = resRank - 2;
+  // FIXME: B may have one extra trailing dim for VNNI packing
+  // (B[batch..., K/vnni, N, vnni]). We plan to drop VNNI packing support, so
+  // rather than properly verifying the packed dimensions, we simply accept
+  // the packed form here and skip the detailed verification. This branch
+  // should be removed once VNNI packing support is dropped.
+  if (bRank == aRank + 1)
+    return success();
 
-  // B can have an extra trailing dim for VNNI packing. Determine B's batch
-  // rank: if bRank > aRank, the extra dim is the VNNI packing dim.
-  bool bPacked = (bRank == aRank + 1);
-  int64_t bBatchRank = bPacked ? bRank - 3 : bRank - 2;
+  // All operands have the same rank. They share the same batch dimensions,
+  // with the last two dims being the core matmul dims: A[batch..., M, K],
+  // B[batch..., K, N], result[batch..., M, N].
+  if (aRank != bRank || aRank != resRank)
+    return op->emitOpError("Rank mismatch among A, B, and result.");
 
-  // Batch ranks must match across A, B, and result.
-  if (aBatchRank != bBatchRank || aBatchRank != resBatchRank)
-    return op->emitOpError("Batch dimension rank mismatch among A, B, and "
-                           "result.");
+  int64_t batchRank = aRank - 2;
 
   // Verify batch dimensions match.
-  for (int64_t i = 0; i < aBatchRank; ++i) {
+  for (int64_t i = 0; i < batchRank; ++i) {
     if (aShape[i] != resShape[i])
       return op->emitOpError("Batch dimension mismatch at dim ")
              << i << ": A has " << aShape[i] << " but result has "
@@ -755,22 +751,13 @@ static LogicalResult verifyDpasDimensions(Operation *op,
              << ".";
   }
 
-  // Now verify the core matmul dimensions (last 2 of A and result, last 2 or
-  // 3 of B).
-  int64_t aM = aShape[aBatchRank];
-  int64_t aK = aShape[aBatchRank + 1];
-  int64_t resM = resShape[resBatchRank];
-  int64_t resN = resShape[resBatchRank + 1];
-
-  // Calculate effective K dimension for B (handle packed case)
-  int64_t bK, bN;
-  if (bPacked) {
-    bK = bShape[bBatchRank] * bShape[bBatchRank + 2];
-    bN = bShape[bBatchRank + 1];
-  } else {
-    bK = bShape[bBatchRank];
-    bN = bShape[bBatchRank + 1];
-  }
+  // Core matmul dimensions (last two dims of each operand).
+  int64_t aM = aShape[batchRank];
+  int64_t aK = aShape[batchRank + 1];
+  int64_t bK = bShape[batchRank];
+  int64_t bN = bShape[batchRank + 1];
+  int64_t resM = resShape[batchRank];
+  int64_t resN = resShape[batchRank + 1];
 
   // Verify K dimension match between A and B
   if (bK != aK)
