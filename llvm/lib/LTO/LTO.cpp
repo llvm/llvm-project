@@ -1948,12 +1948,10 @@ public:
         OldPrefix(OldPrefix), NewPrefix(NewPrefix),
         NativeObjectPrefix(NativeObjectPrefix),
         LinkedObjectsFile(LinkedObjectsFile) {
-    auto &Defs = CombinedIndex.cfiFunctionDefs();
-    CfiFunctionDefs.insert(Defs.getExportedThinLTOGUIDs().begin(),
-                           Defs.getExportedThinLTOGUIDs().end());
-    auto &Decls = CombinedIndex.cfiFunctionDecls();
-    CfiFunctionDecls.insert(Decls.getExportedThinLTOGUIDs().begin(),
-                            Decls.getExportedThinLTOGUIDs().end());
+    auto Defs = CombinedIndex.cfiFunctionDefs().getExportedThinLTOGUIDs();
+    CfiFunctionDefs.insert(Defs.begin(), Defs.end());
+    auto Decls = CombinedIndex.cfiFunctionDecls().getExportedThinLTOGUIDs();
+    CfiFunctionDecls.insert(Decls.begin(), Decls.end());
   }
 
   Error start(
@@ -2183,12 +2181,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   // Any functions referenced by the jump table in the regular LTO object must
   // be exported.
-  auto &Defs = ThinLTO.CombinedIndex.cfiFunctionDefs();
-  ExportedGUIDs.insert(Defs.getExportedThinLTOGUIDs().begin(),
-                       Defs.getExportedThinLTOGUIDs().end());
-  auto &Decls = ThinLTO.CombinedIndex.cfiFunctionDecls();
-  ExportedGUIDs.insert(Decls.getExportedThinLTOGUIDs().begin(),
-                       Decls.getExportedThinLTOGUIDs().end());
+  auto Defs = ThinLTO.CombinedIndex.cfiFunctionDefs().getExportedThinLTOGUIDs();
+  ExportedGUIDs.insert(Defs.begin(), Defs.end());
+  auto Decls =
+      ThinLTO.CombinedIndex.cfiFunctionDecls().getExportedThinLTOGUIDs();
+  ExportedGUIDs.insert(Decls.begin(), Decls.end());
 
   auto isExported = [&](StringRef ModuleIdentifier, ValueInfo VI) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);

@@ -5316,30 +5316,23 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
-  struct CfiFunctionRecord {
-    GlobalValue::GUID GUID = 0;
-    StringRef Name;
-    bool operator<(const CfiFunctionRecord &RHS) const {
-      return Name < RHS.Name;
-    }
-  };
-  SmallVector<CfiFunctionRecord, 4> Functions;
+  SmallVector<std::pair<StringRef, GlobalValue::GUID>, 4> Functions;
   auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
                               bitc::GlobalValueSummarySymtabCodes Code) {
     if (CfiIndex.empty())
       return;
     for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
-      auto Names = CfiIndex.getMatchingNamesForThinLTOGUID(GUID);
+      auto Names = CfiIndex.getNamesForGUID(GUID);
       for (StringRef Name : Names)
-        Functions.push_back({GUID, Name});
+        Functions.push_back({Name, GUID});
     }
     if (Functions.empty())
       return;
     llvm::sort(Functions);
     for (const auto &Record : Functions) {
-      NameVals.push_back(Record.GUID);
-      NameVals.push_back(StrtabBuilder.add(Record.Name));
-      NameVals.push_back(Record.Name.size());
+      NameVals.push_back(Record.second);
+      NameVals.push_back(StrtabBuilder.add(Record.first));
+      NameVals.push_back(Record.first.size());
     }
     Stream.EmitRecord(Code, NameVals);
     NameVals.clear();

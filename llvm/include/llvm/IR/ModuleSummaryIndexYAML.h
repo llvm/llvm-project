@@ -383,7 +383,6 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
       io.mapOptional("CfiFunctionDecls", CfiFunctionDecls);
       for (auto &[S, G] : CfiFunctionDecls)
         index.CfiFunctionDecls.addSymbolWithThinLTOGUID(S, G);
-      ;
     }
   }
 };

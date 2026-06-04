@@ -1346,6 +1346,8 @@ class CfiFunctionIndex {
 
 public:
   CfiFunctionIndex() = default;
+  CfiFunctionIndex(const CfiFunctionIndex &) = delete;
+  CfiFunctionIndex(CfiFunctionIndex &&) = default;
 
   /// API used for serialization, e.g. YAML.
   std::vector<std::pair<StringRef, GlobalValue::GUID>>
@@ -1354,7 +1356,7 @@ public:
     for (auto &[GUID, Names] : ThinLTOToNamesIndex)
       for (auto Name : Names)
         Symbols.emplace_back(Name, GUID);
-    llvm::sort(Symbols, std::less<>());
+    llvm::sort(Symbols);
     return Symbols;
   }
 
@@ -1367,7 +1369,7 @@ public:
   /// get the name(s) associated with a given ThinLTO GUID. This enables
   /// efficient identification of the subset of names that should be included in
   /// a module summary.
-  auto getMatchingNamesForThinLTOGUID(GlobalValue::GUID GUID) const {
+  auto getNamesForGUID(GlobalValue::GUID GUID) const {
     auto I = ThinLTOToNamesIndex.find(GUID);
     if (I == ThinLTOToNamesIndex.end())
       return make_range(NestedIterator{}, NestedIterator{});

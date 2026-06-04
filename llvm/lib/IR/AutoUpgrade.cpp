@@ -6362,24 +6362,28 @@ bool llvm::UpgradeModuleFlags(Module &M) {
 
 bool llvm::UpgradeCFIFunctionsMetadata(Module &M) {
   NamedMDNode *CFIConsts = M.getNamedMetadata("cfi.functions");
-  if (!CFIConsts)
+  // If this metadata has operands, we expect all of them to be either from
+  // before or from after the version change, so we can bail out fast if the
+  // first (if any) operands is of the new format.
+  auto MatchesVersion = [](const MDNode *Op) {
+    return Op->getNumOperands() >= 3 &&
+           isa<ConstantAsMetadata>(Op->getOperand(2)) &&
+           cast<ConstantAsMetadata>(Op->getOperand(2))
+               ->getType()
+               ->isIntegerTy(64);
+  };
+
+  if (!CFIConsts || !CFIConsts->getNumOperands() ||
+      MatchesVersion(CFIConsts->getOperand(0)))
     return false;
 
   bool Changed = false;
   for (unsigned I = 0, E = CFIConsts->getNumOperands(); I != E; ++I) {
     MDNode *Op = CFIConsts->getOperand(I);
-    if (Op->getNumOperands() >= 3 &&
-        isa<ConstantAsMetadata>(Op->getOperand(2)) &&
-        cast<ConstantAsMetadata>(Op->getOperand(2))->getType()->isIntegerTy(64))
-      continue;
-
-    if (Op->getNumOperands() < 2)
-      continue;
-
-    MDString *NameMD = dyn_cast_or_null<MDString>(Op->getOperand(0));
-    if (!NameMD)
-      continue;
-
+    assert(!MatchesVersion(Op) && "Unexpected mix of CFIConstant formats");
+    assert(Op->getNumOperands() >= 2 &&
+           "Expected at least 2 operands - name and linkage type");
+    MDString *NameMD = dyn_cast<MDString>(Op->getOperand(0));
     StringRef Name = NameMD->getString();
     GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
         GlobalValue::dropLLVMManglingEscape(Name));
