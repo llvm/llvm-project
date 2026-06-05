@@ -36,9 +36,9 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 524288
-; RV64IZbb-NEXT:    addiw a2, a1, -1
-; RV64IZbb-NEXT:    min a0, a0, a2
 ; RV64IZbb-NEXT:    max a0, a0, a1
+; RV64IZbb-NEXT:    addiw a1, a1, -1
+; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    ret
   %tmp = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y);
   ret i32 %tmp;
@@ -106,59 +106,53 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV32I-LABEL: func16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    lui a1, 8
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    bge a0, a1, .LBB2_3
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    lui a1, 1048568
-; RV32I-NEXT:    bge a1, a0, .LBB2_4
-; RV32I-NEXT:  .LBB2_2:
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB2_3:
-; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    lui a1, 1048568
 ; RV32I-NEXT:    blt a1, a0, .LBB2_2
-; RV32I-NEXT:  .LBB2_4:
+; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    lui a0, 1048568
+; RV32I-NEXT:  .LBB2_2:
+; RV32I-NEXT:    lui a1, 8
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    blt a0, a1, .LBB2_4
+; RV32I-NEXT:  # %bb.3:
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:  .LBB2_4:
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: func16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    lui a1, 8
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    bge a0, a1, .LBB2_3
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    lui a1, 1048568
-; RV64I-NEXT:    bge a1, a0, .LBB2_4
-; RV64I-NEXT:  .LBB2_2:
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB2_3:
-; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    blt a1, a0, .LBB2_2
-; RV64I-NEXT:  .LBB2_4:
+; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    lui a0, 1048568
+; RV64I-NEXT:  .LBB2_2:
+; RV64I-NEXT:    lui a1, 8
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    blt a0, a1, .LBB2_4
+; RV64I-NEXT:  # %bb.3:
+; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:  .LBB2_4:
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: func16:
 ; RV32IZbb:       # %bb.0:
 ; RV32IZbb-NEXT:    add a0, a0, a1
+; RV32IZbb-NEXT:    lui a1, 1048568
+; RV32IZbb-NEXT:    max a0, a0, a1
 ; RV32IZbb-NEXT:    lui a1, 8
 ; RV32IZbb-NEXT:    addi a1, a1, -1
 ; RV32IZbb-NEXT:    min a0, a0, a1
-; RV32IZbb-NEXT:    lui a1, 1048568
-; RV32IZbb-NEXT:    max a0, a0, a1
 ; RV32IZbb-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func16:
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    add a0, a0, a1
+; RV64IZbb-NEXT:    lui a1, 1048568
+; RV64IZbb-NEXT:    max a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 8
 ; RV64IZbb-NEXT:    addi a1, a1, -1
 ; RV64IZbb-NEXT:    min a0, a0, a1
-; RV64IZbb-NEXT:    lui a1, 1048568
-; RV64IZbb-NEXT:    max a0, a0, a1
 ; RV64IZbb-NEXT:    ret
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %y);
   ret i16 %tmp;
@@ -168,55 +162,55 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; RV32I-LABEL: func8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    li a1, 127
-; RV32I-NEXT:    bge a0, a1, .LBB3_3
-; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    li a1, -128
-; RV32I-NEXT:    bge a1, a0, .LBB3_4
+; RV32I-NEXT:    bge a1, a0, .LBB3_3
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    li a1, 127
+; RV32I-NEXT:    bge a0, a1, .LBB3_4
 ; RV32I-NEXT:  .LBB3_2:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB3_3:
-; RV32I-NEXT:    li a0, 127
-; RV32I-NEXT:    li a1, -128
-; RV32I-NEXT:    blt a1, a0, .LBB3_2
-; RV32I-NEXT:  .LBB3_4:
 ; RV32I-NEXT:    li a0, -128
+; RV32I-NEXT:    li a1, 127
+; RV32I-NEXT:    blt a0, a1, .LBB3_2
+; RV32I-NEXT:  .LBB3_4:
+; RV32I-NEXT:    li a0, 127
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: func8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    li a1, 127
-; RV64I-NEXT:    bge a0, a1, .LBB3_3
-; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a1, -128
-; RV64I-NEXT:    bge a1, a0, .LBB3_4
+; RV64I-NEXT:    bge a1, a0, .LBB3_3
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    li a1, 127
+; RV64I-NEXT:    bge a0, a1, .LBB3_4
 ; RV64I-NEXT:  .LBB3_2:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB3_3:
-; RV64I-NEXT:    li a0, 127
-; RV64I-NEXT:    li a1, -128
-; RV64I-NEXT:    blt a1, a0, .LBB3_2
-; RV64I-NEXT:  .LBB3_4:
 ; RV64I-NEXT:    li a0, -128
+; RV64I-NEXT:    li a1, 127
+; RV64I-NEXT:    blt a0, a1, .LBB3_2
+; RV64I-NEXT:  .LBB3_4:
+; RV64I-NEXT:    li a0, 127
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: func8:
 ; RV32IZbb:       # %bb.0:
 ; RV32IZbb-NEXT:    add a0, a0, a1
-; RV32IZbb-NEXT:    li a1, 127
-; RV32IZbb-NEXT:    min a0, a0, a1
 ; RV32IZbb-NEXT:    li a1, -128
 ; RV32IZbb-NEXT:    max a0, a0, a1
+; RV32IZbb-NEXT:    li a1, 127
+; RV32IZbb-NEXT:    min a0, a0, a1
 ; RV32IZbb-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func8:
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    add a0, a0, a1
-; RV64IZbb-NEXT:    li a1, 127
-; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    li a1, -128
 ; RV64IZbb-NEXT:    max a0, a0, a1
+; RV64IZbb-NEXT:    li a1, 127
+; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    ret
   %tmp = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %y);
   ret i8 %tmp;
@@ -226,55 +220,55 @@ define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; RV32I-LABEL: func3:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    li a1, 7
-; RV32I-NEXT:    bge a0, a1, .LBB4_3
-; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    li a1, -8
-; RV32I-NEXT:    bge a1, a0, .LBB4_4
+; RV32I-NEXT:    bge a1, a0, .LBB4_3
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    li a1, 7
+; RV32I-NEXT:    bge a0, a1, .LBB4_4
 ; RV32I-NEXT:  .LBB4_2:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB4_3:
-; RV32I-NEXT:    li a0, 7
-; RV32I-NEXT:    li a1, -8
-; RV32I-NEXT:    blt a1, a0, .LBB4_2
-; RV32I-NEXT:  .LBB4_4:
 ; RV32I-NEXT:    li a0, -8
+; RV32I-NEXT:    li a1, 7
+; RV32I-NEXT:    blt a0, a1, .LBB4_2
+; RV32I-NEXT:  .LBB4_4:
+; RV32I-NEXT:    li a0, 7
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: func3:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    li a1, 7
-; RV64I-NEXT:    bge a0, a1, .LBB4_3
-; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a1, -8
-; RV64I-NEXT:    bge a1, a0, .LBB4_4
+; RV64I-NEXT:    bge a1, a0, .LBB4_3
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    li a1, 7
+; RV64I-NEXT:    bge a0, a1, .LBB4_4
 ; RV64I-NEXT:  .LBB4_2:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB4_3:
-; RV64I-NEXT:    li a0, 7
-; RV64I-NEXT:    li a1, -8
-; RV64I-NEXT:    blt a1, a0, .LBB4_2
-; RV64I-NEXT:  .LBB4_4:
 ; RV64I-NEXT:    li a0, -8
+; RV64I-NEXT:    li a1, 7
+; RV64I-NEXT:    blt a0, a1, .LBB4_2
+; RV64I-NEXT:  .LBB4_4:
+; RV64I-NEXT:    li a0, 7
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: func3:
 ; RV32IZbb:       # %bb.0:
 ; RV32IZbb-NEXT:    add a0, a0, a1
-; RV32IZbb-NEXT:    li a1, 7
-; RV32IZbb-NEXT:    min a0, a0, a1
 ; RV32IZbb-NEXT:    li a1, -8
 ; RV32IZbb-NEXT:    max a0, a0, a1
+; RV32IZbb-NEXT:    li a1, 7
+; RV32IZbb-NEXT:    min a0, a0, a1
 ; RV32IZbb-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func3:
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    add a0, a0, a1
-; RV64IZbb-NEXT:    li a1, 7
-; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    li a1, -8
 ; RV64IZbb-NEXT:    max a0, a0, a1
+; RV64IZbb-NEXT:    li a1, 7
+; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    ret
   %tmp = call i4 @llvm.sadd.sat.i4(i4 %x, i4 %y);
   ret i4 %tmp;

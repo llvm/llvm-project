@@ -108,10 +108,10 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vqmovni8_smaxmin(<16 x i8> %s0) {
 ; CHECK-LABEL: vqmovni8_smaxmin:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i8 q1, #0x7
-; CHECK-NEXT:    vmin.s8 q0, q0, q1
 ; CHECK-NEXT:    vmov.i8 q1, #0xf8
 ; CHECK-NEXT:    vmax.s8 q0, q0, q1
+; CHECK-NEXT:    vmov.i8 q1, #0x7
+; CHECK-NEXT:    vmin.s8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp slt <16 x i8> %s0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>

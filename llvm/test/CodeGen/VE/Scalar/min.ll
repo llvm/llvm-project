@@ -213,7 +213,7 @@ define i64 @min2u64(i64, i64) {
 ; CHECK-LABEL: min2u64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpu.l %s2, %s0, %s1
-; CHECK-NEXT:    cmov.l.le %s1, %s0, %s2
+; CHECK-NEXT:    cmov.l.lt %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = icmp ule i64 %0, %1
@@ -257,7 +257,7 @@ define i32 @min2u32(i32, i32) {
 ; CHECK-LABEL: min2u32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpu.w %s2, %s0, %s1
-; CHECK-NEXT:    cmov.w.le %s1, %s0, %s2
+; CHECK-NEXT:    cmov.w.lt %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = icmp ule i32 %0, %1

@@ -37,20 +37,24 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    ldrd r5, r6, [r0, #-12]
 ; CHECK-NEXT:    ldr r4, [r0, #-4]
 ; CHECK-NEXT:    cmp r12, r5
-; CHECK-NEXT:    csel r5, r5, r12, gt
 ; CHECK-NEXT:    csinc r7, r10, r8, le
+; CHECK-NEXT:    cmp r5, r12
+; CHECK-NEXT:    csel r5, r5, r12, lt
 ; CHECK-NEXT:    cmp r5, r6
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    addgt.w r7, r8, #2
-; CHECK-NEXT:    csel r6, r6, r5, gt
+; CHECK-NEXT:    cmp r6, r5
+; CHECK-NEXT:    csel r6, r6, r5, lt
 ; CHECK-NEXT:    cmp r6, r4
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    addgt.w r7, r8, #3
-; CHECK-NEXT:    csel r6, r4, r6, gt
+; CHECK-NEXT:    cmp r4, r6
 ; CHECK-NEXT:    add.w r8, r8, #4
+; CHECK-NEXT:    csel r6, r4, r6, lt
 ; CHECK-NEXT:    cmp r6, r11
 ; CHECK-NEXT:    csel r10, r8, r7, gt
-; CHECK-NEXT:    csel r12, r11, r6, gt
+; CHECK-NEXT:    cmp r11, r6
+; CHECK-NEXT:    csel r12, r11, r6, lt
 ; CHECK-NEXT:    le lr, .LBB0_5
 ; CHECK-NEXT:  @ %bb.6: @ %while.end.loopexit.unr-lcssa.loopexit
 ; CHECK-NEXT:    ldr r6, [sp] @ 4-byte Reload
@@ -61,14 +65,16 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    sub.w r1, r1, r9
 ; CHECK-NEXT:    cmp r12, r7
 ; CHECK-NEXT:    csel r10, r1, r10, gt
-; CHECK-NEXT:    csel r12, r7, r12, gt
+; CHECK-NEXT:    cmp r7, r12
+; CHECK-NEXT:    csel r12, r7, r12, lt
 ; CHECK-NEXT:    cmp r6, #1
 ; CHECK-NEXT:    beq .LBB0_10
 ; CHECK-NEXT:  @ %bb.8: @ %while.body.epil.1
 ; CHECK-NEXT:    ldr r7, [r0, #8]
 ; CHECK-NEXT:    cmp r12, r7
 ; CHECK-NEXT:    csinc r10, r10, r1, le
-; CHECK-NEXT:    csel r12, r7, r12, gt
+; CHECK-NEXT:    cmp r7, r12
+; CHECK-NEXT:    csel r12, r7, r12, lt
 ; CHECK-NEXT:    cmp r6, #2
 ; CHECK-NEXT:    beq .LBB0_10
 ; CHECK-NEXT:  @ %bb.9: @ %while.body.epil.2
@@ -76,7 +82,8 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    cmp r12, r0
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    addgt.w r10, r1, #2
-; CHECK-NEXT:    csel r12, r0, r12, gt
+; CHECK-NEXT:    cmp r0, r12
+; CHECK-NEXT:    csel r12, r0, r12, lt
 ; CHECK-NEXT:  .LBB0_10: @ %while.end
 ; CHECK-NEXT:    str.w r12, [r2]
 ; CHECK-NEXT:    str.w r10, [r3]

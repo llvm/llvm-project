@@ -10,12 +10,12 @@ define void @print_res(ptr %p) nounwind {
 ; CHECK-NEXT:    lwz 4, 0(3)
 ; CHECK-NEXT:    addi 4, 4, -1
 ; CHECK-NEXT:    clrldi 5, 4, 32
-; CHECK-NEXT:    cmplwi 4, 3
-; CHECK-NEXT:    li 4, 3
-; CHECK-NEXT:    isellt 4, 5, 4
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    cmpldi 4, 1
-; CHECK-NEXT:    iselgt 4, 4, 5
+; CHECK-NEXT:    cmplwi 4, 1
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    iselgt 4, 5, 4
+; CHECK-NEXT:    li 5, 3
+; CHECK-NEXT:    cmpldi 4, 3
+; CHECK-NEXT:    isellt 4, 4, 5
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    mtctr 4
 ; CHECK-NEXT:    li 8, -1

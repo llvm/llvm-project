@@ -17324,7 +17324,7 @@ define void @flat_atomic_umin_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  .LBB107_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -17349,7 +17349,7 @@ define void @flat_atomic_umin_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -17383,7 +17383,7 @@ define void @flat_atomic_umin_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  .LBB107_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -17408,7 +17408,7 @@ define void @flat_atomic_umin_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -17437,7 +17437,7 @@ define void @flat_atomic_umin_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  .LBB107_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[6:7], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -17461,7 +17461,7 @@ define void @flat_atomic_umin_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -17501,7 +17501,7 @@ define void @flat_atomic_umin_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  .LBB108_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -17526,7 +17526,7 @@ define void @flat_atomic_umin_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -17562,7 +17562,7 @@ define void @flat_atomic_umin_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  .LBB108_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -17587,7 +17587,7 @@ define void @flat_atomic_umin_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -17618,7 +17618,7 @@ define void @flat_atomic_umin_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  .LBB108_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[6:7], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -17642,7 +17642,7 @@ define void @flat_atomic_umin_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -17678,7 +17678,7 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v7, v5
 ; GCN1-NEXT:    v_mov_b32_e32 v6, v4
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -17702,7 +17702,7 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[4:5], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[4:5], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GCN1-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
@@ -17736,7 +17736,7 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v7, v5
 ; GCN2-NEXT:    v_mov_b32_e32 v6, v4
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -17760,7 +17760,7 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[4:5], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[4:5], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GCN2-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
@@ -17797,7 +17797,7 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[8:9], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[8:9], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v3, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -17819,7 +17819,7 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -17862,7 +17862,7 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN1-NEXT:    v_mov_b32_e32 v8, v0
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[8:9], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[8:9], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v7, v3, v9, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -17885,7 +17885,7 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -17924,7 +17924,7 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN2-NEXT:    v_mov_b32_e32 v8, v0
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[8:9], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[8:9], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v7, v3, v9, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -17947,7 +17947,7 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -17981,7 +17981,7 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[8:9], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[8:9], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v3, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -18003,7 +18003,7 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -18048,7 +18048,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GCN1-NEXT:  .LBB111_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -18075,7 +18075,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[0:3], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -18114,7 +18114,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GCN2-NEXT:  .LBB111_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -18140,7 +18140,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -18172,7 +18172,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GCN3-NEXT:  .LBB111_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[2:3]
+; GCN3-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -18196,7 +18196,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -18241,7 +18241,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN1-NEXT:  .LBB112_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -18268,7 +18268,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[0:3], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -18309,7 +18309,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN2-NEXT:  .LBB112_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -18335,7 +18335,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -18369,7 +18369,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN3-NEXT:  .LBB112_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[2:3]
+; GCN3-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -18393,7 +18393,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -18433,7 +18433,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN1-NEXT:    v_mov_b32_e32 v8, v0
-; GCN1-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[8:9]
+; GCN1-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[8:9]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -18461,7 +18461,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[0:3], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
@@ -18497,7 +18497,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN2-NEXT:    v_mov_b32_e32 v8, v0
-; GCN2-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[8:9]
+; GCN2-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[8:9]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -18524,7 +18524,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
@@ -18553,7 +18553,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[8:9]
+; GCN3-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[8:9]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -18578,7 +18578,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v4, v2, s[0:3], 0 offen
@@ -18620,7 +18620,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN1-NEXT:    v_mov_b32_e32 v8, v0
-; GCN1-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[8:9]
+; GCN1-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[8:9]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -18648,7 +18648,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[0:3], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
@@ -18686,7 +18686,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN2-NEXT:    v_mov_b32_e32 v8, v0
-; GCN2-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[8:9]
+; GCN2-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[8:9]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -18713,7 +18713,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
@@ -18744,7 +18744,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[8:9]
+; GCN3-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[8:9]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -18769,7 +18769,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_u64_e32 vcc, s[6:7], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v4, v2, s[0:3], 0 offen
@@ -18816,7 +18816,7 @@ define void @flat_atomic_umin_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -18858,7 +18858,7 @@ define void @flat_atomic_umin_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -18897,7 +18897,7 @@ define void @flat_atomic_umin_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -18945,7 +18945,7 @@ define i64 @flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -18988,7 +18988,7 @@ define i64 @flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -19028,7 +19028,7 @@ define i64 @flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_u64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_u64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -19071,7 +19071,7 @@ define void @flat_atomic_min_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  .LBB117_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -19096,7 +19096,7 @@ define void @flat_atomic_min_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -19130,7 +19130,7 @@ define void @flat_atomic_min_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  .LBB117_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -19155,7 +19155,7 @@ define void @flat_atomic_min_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -19184,7 +19184,7 @@ define void @flat_atomic_min_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  .LBB117_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[6:7], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -19208,7 +19208,7 @@ define void @flat_atomic_min_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -19248,7 +19248,7 @@ define void @flat_atomic_min_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  .LBB118_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -19273,7 +19273,7 @@ define void @flat_atomic_min_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -19309,7 +19309,7 @@ define void @flat_atomic_min_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  .LBB118_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -19334,7 +19334,7 @@ define void @flat_atomic_min_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -19365,7 +19365,7 @@ define void @flat_atomic_min_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  .LBB118_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[6:7], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -19389,7 +19389,7 @@ define void @flat_atomic_min_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -19425,7 +19425,7 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v7, v5
 ; GCN1-NEXT:    v_mov_b32_e32 v6, v4
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -19449,7 +19449,7 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[4:5], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[4:5], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GCN1-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
@@ -19483,7 +19483,7 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v7, v5
 ; GCN2-NEXT:    v_mov_b32_e32 v6, v4
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v3, v7, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7] glc
@@ -19507,7 +19507,7 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[4:5], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[4:5], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GCN2-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
@@ -19544,7 +19544,7 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[8:9], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[8:9], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v3, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -19566,7 +19566,7 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -19609,7 +19609,7 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN1-NEXT:    v_mov_b32_e32 v8, v0
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[8:9], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[8:9], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v7, v3, v9, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -19632,7 +19632,7 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -19671,7 +19671,7 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN2-NEXT:    v_mov_b32_e32 v8, v0
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[8:9], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[8:9], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v7, v3, v9, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -19694,7 +19694,7 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -19728,7 +19728,7 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[8:9], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[8:9], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v3, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[6:9] glc
@@ -19750,7 +19750,7 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -19795,7 +19795,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GCN1-NEXT:  .LBB121_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -19822,7 +19822,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[0:3], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -19861,7 +19861,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GCN2-NEXT:  .LBB121_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -19887,7 +19887,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -19919,7 +19919,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GCN3-NEXT:  .LBB121_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[2:3]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -19943,7 +19943,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -19988,7 +19988,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN1-NEXT:  .LBB122_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[2:3]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -20015,7 +20015,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[0:3], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -20056,7 +20056,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN2-NEXT:  .LBB122_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[2:3]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -20082,7 +20082,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -20116,7 +20116,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:  .LBB122_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[2:3]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -20140,7 +20140,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
@@ -20180,7 +20180,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN1-NEXT:    v_mov_b32_e32 v8, v0
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[8:9]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[8:9]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20208,7 +20208,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[0:3], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
@@ -20244,7 +20244,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN2-NEXT:    v_mov_b32_e32 v8, v0
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[8:9]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[8:9]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20271,7 +20271,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
@@ -20300,7 +20300,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[8:9]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[8:9]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20325,7 +20325,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v4, v2, s[0:3], 0 offen
@@ -20367,7 +20367,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN1-NEXT:    v_mov_b32_e32 v8, v0
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[8:9]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[8:9]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20395,7 +20395,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[0:3], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
@@ -20433,7 +20433,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN2-NEXT:    v_mov_b32_e32 v8, v0
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[8:9]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[8:9]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20460,7 +20460,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
@@ -20491,7 +20491,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[8:9]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[8:9]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20516,7 +20516,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[6:7], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v4, v2, s[0:3], 0 offen
@@ -20567,7 +20567,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GCN1-NEXT:  .LBB125_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[2:3]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -20594,7 +20594,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[12:15], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s3
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v2, s[12:15], 0 offen
@@ -20638,7 +20638,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GCN2-NEXT:  .LBB125_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[2:3]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -20664,7 +20664,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s3
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v2, s[88:91], 0 offen
@@ -20708,7 +20708,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GCN3-NEXT:  .LBB125_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[2:3]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -20732,7 +20732,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s2
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v2, s[12:15], 0 offen
@@ -20778,7 +20778,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN1-NEXT:    v_mov_b32_e32 v8, v0
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[8:9]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[8:9]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20806,7 +20806,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[16:19], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s13
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v5, v2, s[16:19], 0 offen
@@ -20849,7 +20849,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN2-NEXT:    v_mov_b32_e32 v8, v0
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[8:9]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[8:9]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20876,7 +20876,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s12
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s13
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v5, v2, s[88:91], 0 offen
@@ -20919,7 +20919,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[8:9]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[8:9]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -20944,7 +20944,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s12
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s13
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v4, v2, s[16:19], 0 offen
@@ -20994,7 +20994,7 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GCN1-NEXT:  .LBB127_4: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[2:3]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -21021,7 +21021,7 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[12:15], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s3
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v2, s[12:15], 0 offen
@@ -21059,7 +21059,7 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GCN2-NEXT:  .LBB127_4: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[2:3]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -21085,7 +21085,7 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s3
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v2, s[88:91], 0 offen
@@ -21123,7 +21123,7 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GCN3-NEXT:  .LBB127_4: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[2:3]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v7, v2, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
@@ -21147,7 +21147,7 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s2
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v2, s[12:15], 0 offen
@@ -21189,7 +21189,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN1-NEXT:    v_mov_b32_e32 v8, v0
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[8:9]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[8:9]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN1-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -21217,7 +21217,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    buffer_load_dword v1, v3, s[16:19], 0 offen
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s13
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[0:1]
+; GCN1-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[0:1]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v5, v2, s[16:19], 0 offen
@@ -21258,7 +21258,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN2-NEXT:    v_mov_b32_e32 v8, v0
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[8:9]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[8:9]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN2-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -21285,7 +21285,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    v_mov_b32_e32 v5, s12
 ; GCN2-NEXT:    v_mov_b32_e32 v4, s13
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[0:1]
+; GCN2-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[0:1]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v5, v2, s[88:91], 0 offen
@@ -21326,7 +21326,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v9, v1
 ; GCN3-NEXT:    v_mov_b32_e32 v8, v0
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[8:9]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[8:9]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v7, v4, v9, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v6, v5, v8, vcc
 ; GCN3-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[6:9] glc
@@ -21351,7 +21351,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN3-NEXT:    v_mov_b32_e32 v4, s12
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s13
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_ge_i64_e32 vcc, s[12:13], v[0:1]
+; GCN3-NEXT:    v_cmp_gt_i64_e32 vcc, s[12:13], v[0:1]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v4, v2, s[16:19], 0 offen
@@ -21402,7 +21402,7 @@ define void @flat_atomic_min_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -21444,7 +21444,7 @@ define void @flat_atomic_min_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -21483,7 +21483,7 @@ define void @flat_atomic_min_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v0, v4, s[0:3], 0 offen
@@ -21531,7 +21531,7 @@ define i64 @flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN1-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN1-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN1-NEXT:    s_waitcnt vmcnt(0)
-; GCN1-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN1-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN1-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN1-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN1-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -21574,7 +21574,7 @@ define i64 @flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN2-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN2-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen
 ; GCN2-NEXT:    s_waitcnt vmcnt(0)
-; GCN2-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN2-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN2-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN2-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
@@ -21614,7 +21614,7 @@ define i64 @flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
 ; GCN3-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GCN3-NEXT:    s_waitcnt vmcnt(0)
-; GCN3-NEXT:    v_cmp_le_i64_e32 vcc, v[0:1], v[2:3]
+; GCN3-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GCN3-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
 ; GCN3-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
 ; GCN3-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen

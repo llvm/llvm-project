@@ -445,18 +445,18 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB10_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB10_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB10_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -464,18 +464,18 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB10_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB10_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB10_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i8 %b acquire
@@ -512,18 +512,18 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB11_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB11_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB11_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -531,18 +531,18 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB11_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB11_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB11_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i16 %b acquire
@@ -578,19 +578,18 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB12_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB12_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB12_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -598,19 +597,18 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB12_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB12_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB12_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i8 %b acquire
@@ -647,19 +645,18 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB13_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB13_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB13_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -667,19 +664,18 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB13_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB13_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB13_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i16 %b acquire
@@ -719,17 +715,17 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB14_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB14_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB14_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -737,17 +733,17 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB14_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB14_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB14_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i8 %b acquire
@@ -789,17 +785,17 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB15_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB15_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB15_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -807,17 +803,17 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB15_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB15_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB15_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i16 %b acquire
@@ -857,18 +853,17 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB16_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB16_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB16_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -876,18 +871,17 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB16_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB16_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB16_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i8 %b acquire
@@ -929,18 +923,17 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB17_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB17_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB17_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -948,18 +941,17 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB17_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB17_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB17_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i16 %b acquire
@@ -1837,18 +1829,18 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB38_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB38_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB38_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -1856,18 +1848,18 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB38_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB38_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB38_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i8 %b release
@@ -1904,18 +1896,18 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB39_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB39_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB39_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -1923,18 +1915,18 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB39_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB39_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB39_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i16 %b release
@@ -1970,19 +1962,18 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB40_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB40_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB40_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -1990,19 +1981,18 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB40_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB40_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB40_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i8 %b release
@@ -2039,19 +2029,18 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB41_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB41_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB41_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -2059,19 +2048,18 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB41_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB41_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB41_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i16 %b release
@@ -2111,17 +2099,17 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB42_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB42_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB42_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -2129,17 +2117,17 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB42_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB42_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB42_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i8 %b release
@@ -2181,17 +2169,17 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB43_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB43_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB43_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -2199,17 +2187,17 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB43_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB43_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB43_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i16 %b release
@@ -2249,18 +2237,17 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB44_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB44_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB44_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -2268,18 +2255,17 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB44_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB44_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB44_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i8 %b release
@@ -2321,18 +2307,17 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB45_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB45_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB45_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -2340,18 +2325,17 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB45_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB45_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB45_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i16 %b release
@@ -3229,18 +3213,18 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB66_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB66_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB66_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -3248,18 +3232,18 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB66_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB66_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB66_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i8 %b acq_rel
@@ -3296,18 +3280,18 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB67_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB67_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB67_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -3315,18 +3299,18 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB67_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB67_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB67_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i16 %b acq_rel
@@ -3362,19 +3346,18 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB68_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB68_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB68_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -3382,19 +3365,18 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB68_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB68_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB68_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i8 %b acq_rel
@@ -3431,19 +3413,18 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB69_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB69_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB69_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -3451,19 +3432,18 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB69_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB69_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB69_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i16 %b acq_rel
@@ -3503,17 +3483,17 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB70_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB70_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB70_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -3521,17 +3501,17 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB70_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB70_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB70_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i8 %b acq_rel
@@ -3573,17 +3553,17 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB71_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB71_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB71_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -3591,17 +3571,17 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB71_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB71_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB71_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i16 %b acq_rel
@@ -3641,18 +3621,17 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB72_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB72_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB72_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -3660,18 +3639,17 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB72_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB72_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB72_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i8 %b acq_rel
@@ -3713,18 +3691,17 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB73_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB73_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB73_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -3732,18 +3709,17 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB73_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB73_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB73_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i16 %b acq_rel
@@ -4623,18 +4599,18 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB94_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB94_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB94_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -4642,18 +4618,18 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB94_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB94_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB94_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i8 %b seq_cst
@@ -4690,18 +4666,18 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB95_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB95_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB95_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -4709,18 +4685,18 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB95_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB95_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB95_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i16 %b seq_cst
@@ -4756,19 +4732,18 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB96_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB96_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB96_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -4776,19 +4751,18 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB96_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB96_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB96_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i8 %b seq_cst
@@ -4825,19 +4799,18 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB97_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB97_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB97_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -4845,19 +4818,18 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB97_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB97_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB97_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i16 %b seq_cst
@@ -4897,17 +4869,17 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB98_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB98_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB98_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -4915,17 +4887,17 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB98_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB98_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB98_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i8 %b seq_cst
@@ -4967,17 +4939,17 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB99_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB99_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB99_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -4985,17 +4957,17 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB99_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB99_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB99_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i16 %b seq_cst
@@ -5035,18 +5007,17 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB100_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB100_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB100_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -5054,18 +5025,17 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB100_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB100_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB100_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i8 %b seq_cst
@@ -5107,18 +5077,17 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB101_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB101_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB101_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -5126,18 +5095,17 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB101_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB101_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas_db.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB101_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i16 %b seq_cst
@@ -6017,18 +5985,18 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB122_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB122_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB122_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -6036,18 +6004,18 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB122_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB122_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB122_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i8 %b monotonic
@@ -6084,18 +6052,18 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB123_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB123_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB123_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -6103,18 +6071,18 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB123_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a1, $a3
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB123_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB123_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i16 %b monotonic
@@ -6150,19 +6118,18 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB124_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas.b $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB124_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas.b $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB124_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -6170,19 +6137,18 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a1, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a1, $a1, 255
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB124_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    andi $a4, $a0, 255
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    andi $a3, $a0, 255
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas.b $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB124_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas.b $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB124_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i8 %b monotonic
@@ -6219,19 +6185,18 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB125_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-NEXT:    amcas.h $a0, $a4, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a5, .LBB125_1
+; LA64-LAMCAS-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-NEXT:    amcas.h $a0, $a3, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB125_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -6239,19 +6204,18 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a1, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB125_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a4, $a0, 15, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a4, $a4, 1
+; LA64-LAMCAS-LAM-BH-NEXT:    bstrpick.d $a3, $a0, 15, 0
+; LA64-LAMCAS-LAM-BH-NEXT:    sltu $a4, $a3, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a0, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a5, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas.h $a0, $a4, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a5, .LBB125_1
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a3, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a3, $a3, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas.h $a0, $a3, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB125_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i16 %b monotonic
@@ -6291,17 +6255,17 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB126_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB126_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB126_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -6309,17 +6273,17 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB126_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB126_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB126_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i8 %b monotonic
@@ -6361,17 +6325,17 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB127_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB127_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB127_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -6379,17 +6343,17 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB127_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB127_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a1, $a3
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB127_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw max ptr %a, i16 %b monotonic
@@ -6429,18 +6393,17 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB128_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas.b $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB128_1
+; LA64-LAMCAS-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas.b $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB128_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -6448,18 +6411,17 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.b $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB128_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas.b $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB128_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.b $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas.b $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB128_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i8 %b monotonic
@@ -6501,18 +6463,17 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS:       # %bb.0:
 ; LA64-LAMCAS-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-NEXT:  .LBB129_1: # %atomicrmw.start
 ; LA64-LAMCAS-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-NEXT:    amcas.h $a0, $a5, $a2
-; LA64-LAMCAS-NEXT:    bne $a0, $a4, .LBB129_1
+; LA64-LAMCAS-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-NEXT:    amcas.h $a0, $a4, $a2
+; LA64-LAMCAS-NEXT:    bne $a0, $a3, .LBB129_1
 ; LA64-LAMCAS-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-NEXT:    ret
 ;
@@ -6520,18 +6481,17 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-LAMCAS-LAM-BH:       # %bb.0:
 ; LA64-LAMCAS-LAM-BH-NEXT:    move $a2, $a0
 ; LA64-LAMCAS-LAM-BH-NEXT:    ld.h $a0, $a0, 0
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a1, $a1
 ; LA64-LAMCAS-LAM-BH-NEXT:    .p2align 4, , 16
 ; LA64-LAMCAS-LAM-BH-NEXT:  .LBB129_1: # %atomicrmw.start
 ; LA64-LAMCAS-LAM-BH-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a4, $a0
-; LA64-LAMCAS-LAM-BH-NEXT:    slt $a5, $a3, $a4
-; LA64-LAMCAS-LAM-BH-NEXT:    xori $a5, $a5, 1
-; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a6, $a1, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a5, $a0, $a5
-; LA64-LAMCAS-LAM-BH-NEXT:    or $a5, $a5, $a6
-; LA64-LAMCAS-LAM-BH-NEXT:    amcas.h $a0, $a5, $a2
-; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a4, .LBB129_1
+; LA64-LAMCAS-LAM-BH-NEXT:    ext.w.h $a3, $a0
+; LA64-LAMCAS-LAM-BH-NEXT:    slt $a4, $a3, $a1
+; LA64-LAMCAS-LAM-BH-NEXT:    masknez $a5, $a1, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    maskeqz $a4, $a3, $a4
+; LA64-LAMCAS-LAM-BH-NEXT:    or $a4, $a4, $a5
+; LA64-LAMCAS-LAM-BH-NEXT:    amcas.h $a0, $a4, $a2
+; LA64-LAMCAS-LAM-BH-NEXT:    bne $a0, $a3, .LBB129_1
 ; LA64-LAMCAS-LAM-BH-NEXT:  # %bb.2: # %atomicrmw.end
 ; LA64-LAMCAS-LAM-BH-NEXT:    ret
   %1 = atomicrmw min ptr %a, i16 %b monotonic

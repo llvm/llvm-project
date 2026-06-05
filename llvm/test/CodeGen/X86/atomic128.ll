@@ -178,13 +178,13 @@ define void @fetch_and_min(ptr %p, i128 %bits) {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB6_1: ## %atomicrmw.start
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpq %rax, %rsi
+; CHECK-NEXT:    cmpq %rsi, %rax
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    sbbq %r8, %rcx
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovgeq %rdx, %rcx
+; CHECK-NEXT:    cmovlq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovgeq %rax, %rbx
+; CHECK-NEXT:    cmovlq %rax, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB6_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
@@ -240,13 +240,13 @@ define void @fetch_and_umin(ptr %p, i128 %bits) {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB8_1: ## %atomicrmw.start
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpq %rax, %rsi
+; CHECK-NEXT:    cmpq %rsi, %rax
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    sbbq %r8, %rcx
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovaeq %rdx, %rcx
+; CHECK-NEXT:    cmovbq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovaeq %rax, %rbx
+; CHECK-NEXT:    cmovbq %rax, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB8_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end

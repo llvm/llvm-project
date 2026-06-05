@@ -137,7 +137,7 @@ define i128 @func_smin_fore_zero_i128(i128 noundef %0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sra.l %s2, %s1, 63
 ; CHECK-NEXT:    and %s0, %s2, %s0
-; CHECK-NEXT:    and %s1, %s2, %s1
+; CHECK-NEXT:    mins.l %s1, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call i128 @llvm.smin.i128(i128 %0, i128 0)
   ret i128 %2
@@ -192,7 +192,7 @@ define i128 @func_smin_back_zero_i128(i128 noundef %0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sra.l %s2, %s1, 63
 ; CHECK-NEXT:    and %s0, %s2, %s0
-; CHECK-NEXT:    and %s1, %s2, %s1
+; CHECK-NEXT:    mins.l %s1, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call i128 @llvm.smin.i128(i128 %0, i128 0)
   ret i128 %2

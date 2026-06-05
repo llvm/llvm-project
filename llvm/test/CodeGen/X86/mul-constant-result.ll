@@ -9,193 +9,161 @@
 define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-LABEL: mult:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    cmpl $2, %edx
+; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    movl $1, %esi
-; X86-NEXT:    jge .LBB0_2
+; X86-NEXT:    jle .LBB0_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl $1, %edx
 ; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    je .LBB0_4
 ; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:  .LBB0_4:
 ; X86-NEXT:    decl %ecx
 ; X86-NEXT:    cmpl $31, %ecx
-; X86-NEXT:    ja .LBB0_35
+; X86-NEXT:    ja .LBB0_38
 ; X86-NEXT:  # %bb.5:
 ; X86-NEXT:    jmpl *.LJTI0_0(,%ecx,4)
 ; X86-NEXT:  .LBB0_6:
 ; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_7:
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:  .LBB0_33:
 ; X86-NEXT:    leal (%eax,%eax,8), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
-; X86-NEXT:    jmp .LBB0_9
-; X86-NEXT:  .LBB0_8:
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $4, %ecx
-; X86-NEXT:    jmp .LBB0_9
-; X86-NEXT:  .LBB0_10:
-; X86-NEXT:    leal (%eax,%eax,4), %eax
-; X86-NEXT:    jmp .LBB0_18
-; X86-NEXT:  .LBB0_11:
-; X86-NEXT:    shll $2, %eax
-; X86-NEXT:    jmp .LBB0_18
-; X86-NEXT:  .LBB0_13:
-; X86-NEXT:    leal (%eax,%eax,2), %ecx
-; X86-NEXT:    jmp .LBB0_14
-; X86-NEXT:  .LBB0_15:
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    jmp .LBB0_12
-; X86-NEXT:  .LBB0_16:
-; X86-NEXT:    leal (%eax,%eax,4), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,4), %ecx
-; X86-NEXT:    jmp .LBB0_9
-; X86-NEXT:  .LBB0_17:
-; X86-NEXT:    leal (%eax,%eax,4), %eax
-; X86-NEXT:    jmp .LBB0_12
-; X86-NEXT:  .LBB0_19:
-; X86-NEXT:    shll $4, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_20:
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    shll $2, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_21:
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_22:
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    shll $5, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_23:
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:  .LBB0_33:
-; X86-NEXT:    leal (%eax,%eax,8), %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:  .LBB0_20:
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_24:
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    leal (%eax,%eax,4), %ecx
-; X86-NEXT:  .LBB0_14:
+; X86-NEXT:  .LBB0_17:
+; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_9:
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_18:
+; X86-NEXT:    leal (%eax,%eax,2), %ecx
 ; X86-NEXT:    leal (%eax,%ecx,4), %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_25:
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:  .LBB0_15:
 ; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    jmp .LBB0_18
-; X86-NEXT:  .LBB0_26:
-; X86-NEXT:    leal (%eax,%eax,4), %ecx
-; X86-NEXT:    leal (%eax,%ecx,4), %ecx
-; X86-NEXT:    jmp .LBB0_9
-; X86-NEXT:  .LBB0_27:
-; X86-NEXT:    leal (%eax,%eax), %ecx
-; X86-NEXT:    shll $4, %eax
-; X86-NEXT:    jmp .LBB0_28
-; X86-NEXT:  .LBB0_29:
-; X86-NEXT:    leal (,%eax,8), %ecx
-; X86-NEXT:    jmp .LBB0_38
-; X86-NEXT:  .LBB0_30:
-; X86-NEXT:    leal (%eax,%eax,8), %ecx
-; X86-NEXT:    jmp .LBB0_32
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_31:
 ; X86-NEXT:    leal (%eax,%eax,4), %ecx
-; X86-NEXT:  .LBB0_32:
-; X86-NEXT:    leal (%eax,%ecx,2), %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    leal (%ecx,%ecx,4), %ecx
+; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_34:
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $5, %ecx
-; X86-NEXT:    jmp .LBB0_38
-; X86-NEXT:  .LBB0_35:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:  .LBB0_36:
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:  .LBB0_30:
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_7:
+; X86-NEXT:    leal (%eax,%eax,2), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_21:
+; X86-NEXT:    shll $4, %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_8:
+; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_13:
+; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_37:
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    shll $5, %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_23:
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    leal (%eax,%eax,8), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_26:
+; X86-NEXT:    leal (%eax,%eax,4), %ecx
+; X86-NEXT:    leal (%eax,%ecx,4), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_10:
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_27:
+; X86-NEXT:    leal (%eax,%eax,4), %ecx
+; X86-NEXT:    leal (%eax,%ecx,4), %ecx
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_19:
+; X86-NEXT:    leal (%eax,%eax), %ecx
+; X86-NEXT:    shll $4, %eax
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_11:
+; X86-NEXT:    leal (,%eax,8), %ecx
+; X86-NEXT:    jmp .LBB0_12
+; X86-NEXT:  .LBB0_24:
+; X86-NEXT:    leal (%eax,%eax,8), %ecx
+; X86-NEXT:    leal (%eax,%ecx,2), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_16:
+; X86-NEXT:    leal (%eax,%eax,4), %ecx
+; X86-NEXT:    leal (%eax,%ecx,2), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_14:
+; X86-NEXT:    leal (%eax,%eax,8), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_36:
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shll $5, %ecx
+; X86-NEXT:    jmp .LBB0_12
+; X86-NEXT:  .LBB0_38:
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:  .LBB0_39:
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_28:
 ; X86-NEXT:    leal (%eax,%eax,2), %ecx
 ; X86-NEXT:    shll $3, %ecx
-; X86-NEXT:  .LBB0_38:
+; X86-NEXT:  .LBB0_12:
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_39:
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:  .LBB0_25:
 ; X86-NEXT:    shll $2, %eax
-; X86-NEXT:  .LBB0_12:
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_40:
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:  .LBB0_29:
 ; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    jmp .LBB0_18
-; X86-NEXT:  .LBB0_41:
+; X86-NEXT:    leal (%eax,%eax,2), %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_34:
 ; X86-NEXT:    leal (%eax,%eax,8), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:  .LBB0_9:
 ; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_42:
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:  .LBB0_35:
 ; X86-NEXT:    leal (%eax,%eax), %ecx
 ; X86-NEXT:    shll $5, %eax
-; X86-NEXT:  .LBB0_28:
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_43:
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:  .LBB0_32:
 ; X86-NEXT:    leal (%eax,%eax,8), %eax
-; X86-NEXT:  .LBB0_18:
 ; X86-NEXT:    leal (%eax,%eax,2), %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: mult:
 ; X64-HSW:       # %bb.0:
-; X64-HSW-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-HSW-NEXT:    cmpl $2, %esi
-; X64-HSW-NEXT:    movl $1, %ecx
 ; X64-HSW-NEXT:    movl %esi, %eax
-; X64-HSW-NEXT:    cmovgel %ecx, %eax
+; X64-HSW-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-HSW-NEXT:    testl %esi, %esi
+; X64-HSW-NEXT:    movl $1, %ecx
+; X64-HSW-NEXT:    cmovgl %ecx, %eax
 ; X64-HSW-NEXT:    cmovel %ecx, %eax
 ; X64-HSW-NEXT:    decl %edi
 ; X64-HSW-NEXT:    cmpl $31, %edi

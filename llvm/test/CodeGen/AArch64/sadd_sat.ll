@@ -49,14 +49,14 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 define i16 @func16(i16 %x, i16 %y) nounwind {
 ; CHECK-SD-LABEL: func16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sxth w8, w0
+; CHECK-SD-NEXT:    sxth w9, w0
+; CHECK-SD-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-SD-NEXT:    add w9, w9, w1, sxth
+; CHECK-SD-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-SD-NEXT:    csel w8, w9, w8, gt
 ; CHECK-SD-NEXT:    mov w9, #32767 // =0x7fff
-; CHECK-SD-NEXT:    add w8, w8, w1, sxth
 ; CHECK-SD-NEXT:    cmp w8, w9
-; CHECK-SD-NEXT:    csel w8, w8, w9, lt
-; CHECK-SD-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-SD-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-SD-NEXT:    csel w0, w8, w9, gt
+; CHECK-SD-NEXT:    csel w0, w8, w9, lt
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: func16:
@@ -77,13 +77,13 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: func8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sxtb w9, w0
-; CHECK-SD-NEXT:    mov w8, #127 // =0x7f
+; CHECK-SD-NEXT:    mov w8, #-128 // =0xffffff80
 ; CHECK-SD-NEXT:    add w9, w9, w1, sxtb
-; CHECK-SD-NEXT:    cmp w9, #127
-; CHECK-SD-NEXT:    csel w8, w9, w8, lt
-; CHECK-SD-NEXT:    mov w9, #-128 // =0xffffff80
-; CHECK-SD-NEXT:    cmn w8, #128
-; CHECK-SD-NEXT:    csel w0, w8, w9, gt
+; CHECK-SD-NEXT:    cmn w9, #128
+; CHECK-SD-NEXT:    csel w8, w9, w8, gt
+; CHECK-SD-NEXT:    mov w9, #127 // =0x7f
+; CHECK-SD-NEXT:    cmp w8, #127
+; CHECK-SD-NEXT:    csel w0, w8, w9, lt
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: func8:
@@ -105,13 +105,13 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    lsl w9, w1, #28
 ; CHECK-SD-NEXT:    sbfx w10, w0, #0, #4
-; CHECK-SD-NEXT:    mov w8, #7 // =0x7
+; CHECK-SD-NEXT:    mov w8, #-8 // =0xfffffff8
 ; CHECK-SD-NEXT:    add w9, w10, w9, asr #28
-; CHECK-SD-NEXT:    cmp w9, #7
-; CHECK-SD-NEXT:    csel w8, w9, w8, lt
-; CHECK-SD-NEXT:    mov w9, #-8 // =0xfffffff8
-; CHECK-SD-NEXT:    cmn w8, #8
-; CHECK-SD-NEXT:    csel w0, w8, w9, gt
+; CHECK-SD-NEXT:    cmn w9, #8
+; CHECK-SD-NEXT:    csel w8, w9, w8, gt
+; CHECK-SD-NEXT:    mov w9, #7 // =0x7
+; CHECK-SD-NEXT:    cmp w8, #7
+; CHECK-SD-NEXT:    csel w0, w8, w9, lt
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: func3:

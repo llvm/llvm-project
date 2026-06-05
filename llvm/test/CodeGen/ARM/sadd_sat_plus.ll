@@ -115,13 +115,13 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 ; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    ldr r1, .LCPI2_0
 ; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    blt .LBB2_2
+; CHECK-T1-NEXT:    bgt .LBB2_2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB2_2:
 ; CHECK-T1-NEXT:    ldr r1, .LCPI2_1
 ; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bgt .LBB2_4
+; CHECK-T1-NEXT:    blt .LBB2_4
 ; CHECK-T1-NEXT:  @ %bb.3:
 ; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB2_4:
@@ -129,9 +129,9 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 ; CHECK-T1-NEXT:    .p2align 2
 ; CHECK-T1-NEXT:  @ %bb.5:
 ; CHECK-T1-NEXT:  .LCPI2_0:
-; CHECK-T1-NEXT:    .long 32767 @ 0x7fff
-; CHECK-T1-NEXT:  .LCPI2_1:
 ; CHECK-T1-NEXT:    .long 4294934528 @ 0xffff8000
+; CHECK-T1-NEXT:  .LCPI2_1:
+; CHECK-T1-NEXT:    .long 32767 @ 0x7fff
 ;
 ; CHECK-T2NODSP-LABEL: func16:
 ; CHECK-T2NODSP:       @ %bb.0:
@@ -166,17 +166,20 @@ define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 ; CHECK-T1-NEXT:    sxtb r1, r1
 ; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    movs r1, #127
+; CHECK-T1-NEXT:    mvns r2, r1
+; CHECK-T1-NEXT:    cmp r0, r2
+; CHECK-T1-NEXT:    ble .LBB3_3
+; CHECK-T1-NEXT:  @ %bb.1:
+; CHECK-T1-NEXT:    cmp r0, #127
+; CHECK-T1-NEXT:    bge .LBB3_4
+; CHECK-T1-NEXT:  .LBB3_2:
+; CHECK-T1-NEXT:    bx lr
+; CHECK-T1-NEXT:  .LBB3_3:
+; CHECK-T1-NEXT:    mov r0, r2
 ; CHECK-T1-NEXT:    cmp r0, #127
 ; CHECK-T1-NEXT:    blt .LBB3_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    mov r0, r1
-; CHECK-T1-NEXT:  .LBB3_2:
-; CHECK-T1-NEXT:    mvns r1, r1
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bgt .LBB3_4
-; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB3_4:
+; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2NODSP-LABEL: func8:
@@ -213,17 +216,20 @@ define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; CHECK-T1-NEXT:    asrs r1, r1, #28
 ; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    movs r1, #7
+; CHECK-T1-NEXT:    mvns r2, r1
+; CHECK-T1-NEXT:    cmp r0, r2
+; CHECK-T1-NEXT:    ble .LBB4_3
+; CHECK-T1-NEXT:  @ %bb.1:
+; CHECK-T1-NEXT:    cmp r0, #7
+; CHECK-T1-NEXT:    bge .LBB4_4
+; CHECK-T1-NEXT:  .LBB4_2:
+; CHECK-T1-NEXT:    bx lr
+; CHECK-T1-NEXT:  .LBB4_3:
+; CHECK-T1-NEXT:    mov r0, r2
 ; CHECK-T1-NEXT:    cmp r0, #7
 ; CHECK-T1-NEXT:    blt .LBB4_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    mov r0, r1
-; CHECK-T1-NEXT:  .LBB4_2:
-; CHECK-T1-NEXT:    mvns r1, r1
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bgt .LBB4_4
-; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB4_4:
+; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2NODSP-LABEL: func4:

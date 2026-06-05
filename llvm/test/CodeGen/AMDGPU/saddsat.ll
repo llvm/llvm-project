@@ -22,8 +22,8 @@ define i8 @v_saddsat_i8(i8 %lhs, i8 %rhs) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u16_sdwa v0, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX8-NEXT:    v_min_i16_e32 v0, 0x7f, v0
 ; GFX8-NEXT:    v_max_i16_e32 v0, 0xff80, v0
+; GFX8-NEXT:    v_min_i16_e32 v0, 0x7f, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_saddsat_i8:

@@ -59,25 +59,25 @@ define i32 @select(i32 %a, ptr %b) #0 {
 ; RV32IC-NEXT:    bltu a2, a0, 0x26
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0x0(a1)
-; RV32IC-NEXT:    bgeu a0, a2, 0x2e
+; RV32IC-NEXT:    bltu a2, a0, 0x2e
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    bltu a0, a2, 0x36
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0x0(a1)
-; RV32IC-NEXT:    bgeu a2, a0, 0x3e
+; RV32IC-NEXT:    bltu a0, a2, 0x3e
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    blt a2, a0, 0x46
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0x0(a1)
-; RV32IC-NEXT:    bge a0, a2, 0x4e
+; RV32IC-NEXT:    blt a2, a0, 0x4e
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a2, 0x0(a1)
 ; RV32IC-NEXT:    blt a0, a2, 0x56
 ; RV32IC-NEXT:    c.mv a0, a2
 ; RV32IC-NEXT:    c.lw a1, 0x0(a1)
-; RV32IC-NEXT:    bge a1, a0, 0x5e
+; RV32IC-NEXT:    blt a0, a1, 0x5e
 ; RV32IC-NEXT:    c.mv a0, a1
 ; RV32IC-NEXT:    c.jr ra
   %val1 = load volatile i32, ptr %b

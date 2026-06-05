@@ -138,26 +138,18 @@ define fastcc void @search_tx_type() #0 {
 ; CHECK-NEXT:    slli a4, a1, 51
 ; CHECK-NEXT:    sext.w a3, a2
 ; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:    bltz a4, .LBB0_49
+; CHECK-NEXT:    bgez a4, .LBB0_45
 ; CHECK-NEXT:  # %bb.44: # %bb
-; CHECK-NEXT:    bge a3, a0, .LBB0_50
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB0_45: # %bb
-; CHECK-NEXT:    sext.w a2, a1
-; CHECK-NEXT:    blt a2, a0, .LBB0_47
-; CHECK-NEXT:  .LBB0_46: # %bb
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    blt a3, a0, .LBB0_47
+; CHECK-NEXT:  # %bb.46: # %bb
+; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB0_47: # %bb
-; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a1, a1
+; CHECK-NEXT:    max a0, a0, a1
 ; CHECK-NEXT:  # %bb.48: # %get_tx_mask.exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_49: # %bb
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    blt a3, a0, .LBB0_45
-; CHECK-NEXT:  .LBB0_50: # %bb
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:    sext.w a2, a2
-; CHECK-NEXT:    bge a2, a0, .LBB0_46
-; CHECK-NEXT:    j .LBB0_47
 ._crit_edge.i:
   %.in196.i = load i16, ptr null, align 2
   %i2 = load i16, ptr null, align 2

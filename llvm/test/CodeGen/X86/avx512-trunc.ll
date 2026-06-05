@@ -1279,8 +1279,8 @@ define <16 x i16> @smax_usat_trunc_dw_512(<16 x i32> %i) {
 define void @negative_test1_smax_usat_trunc_wb_256_mem(<16 x i16> %i, ptr %res) {
 ; KNL-LABEL: negative_test1_smax_usat_trunc_wb_256_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpminsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; KNL-NEXT:    vpmaxsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; KNL-NEXT:    vpminsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
@@ -1288,8 +1288,8 @@ define void @negative_test1_smax_usat_trunc_wb_256_mem(<16 x i16> %i, ptr %res) 
 ;
 ; SKX-LABEL: negative_test1_smax_usat_trunc_wb_256_mem:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpminsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; SKX-NEXT:    vpmaxsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; SKX-NEXT:    vpminsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; SKX-NEXT:    vpmovwb %ymm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq

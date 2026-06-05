@@ -614,6 +614,9 @@ namespace {
                             SDValue False, ISD::CondCode CC, const SDLoc &DL);
     SDValue foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
                              SDValue False, ISD::CondCode CC, const SDLoc &DL);
+    SDValue foldSelectToMinMax(const SDLoc &DL, EVT VT, SDValue LHS,
+                               SDValue RHS, SDValue TrueVal, SDValue FalseVal,
+                               ISD::CondCode CC);
     SDValue unfoldMaskedMerge(SDNode *N);
     SDValue unfoldExtremeBitClearingToShifts(SDNode *N);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
@@ -6283,6 +6286,37 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(Opcode, DL, VT, N1, N0);
+
+  // smax(smin(X, MinC), MaxC) -> smin(smax(X, MaxC), MinC) if MinC s> MaxC
+  // umax(umin(X, MinC), MaxC) -> umin(umax(X, MaxC), MinC) if MinC u> MaxC
+  if ((Opcode == ISD::SMAX || Opcode == ISD::UMAX) && N0.hasOneUse()) {
+    unsigned InnerMinOpc = Opcode == ISD::SMAX ? ISD::SMIN : ISD::UMIN;
+    if (N0.getOpcode() == InnerMinOpc) {
+      unsigned BitWidth = VT.getScalarSizeInBits();
+      auto getMinMaxClampConstant = [&](SDValue Op, APInt &Val) -> bool {
+        if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+          Val = C->getAPIntValue().sextOrTrunc(BitWidth);
+          return true;
+        }
+        if (!ISD::isConstantSplatVector(Op.getNode(), Val))
+          return false;
+        Val = Val.sextOrTrunc(BitWidth);
+        return true;
+      };
+      APInt MinCV, MaxCV;
+      if (getMinMaxClampConstant(N0.getOperand(1), MinCV) &&
+          getMinMaxClampConstant(N1, MaxCV)) {
+        bool Reorder =
+            Opcode == ISD::SMAX ? MinCV.sgt(MaxCV) : MinCV.ugt(MaxCV);
+        if (Reorder) {
+          unsigned InnerMaxOpc = Opcode == ISD::SMAX ? ISD::SMAX : ISD::UMAX;
+          SDValue NewMax =
+              DAG.getNode(InnerMaxOpc, DL, VT, N0.getOperand(0), N1);
+          return DAG.getNode(InnerMinOpc, DL, VT, NewMax, N0.getOperand(1));
+        }
+      }
+    }
+  }
 
   // fold vector ops
   if (VT.isVector())
@@ -12994,6 +13028,47 @@ SDValue DAGCombiner::foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
   return SDValue();
 }
 
+/// Fold (cmp X, Y) ? X : Y to min/max.
+SDValue DAGCombiner::foldSelectToMinMax(const SDLoc &DL, EVT VT, SDValue LHS,
+                                        SDValue RHS, SDValue TrueVal,
+                                        SDValue FalseVal, ISD::CondCode CC) {
+  if (!VT.isScalarInteger())
+    return SDValue();
+
+  if (TrueVal == RHS && FalseVal == LHS) {
+    std::swap(LHS, RHS);
+    CC = ISD::getSetCCSwappedOperands(CC);
+  }
+  if (TrueVal != LHS || FalseVal != RHS)
+    return SDValue();
+
+  unsigned Opc = 0;
+  switch (CC) {
+  case ISD::SETGT:
+  case ISD::SETGE:
+    Opc = ISD::SMAX;
+    break;
+  case ISD::SETLT:
+  case ISD::SETLE:
+    Opc = ISD::SMIN;
+    break;
+  case ISD::SETUGT:
+  case ISD::SETUGE:
+    Opc = ISD::UMAX;
+    break;
+  case ISD::SETULT:
+  case ISD::SETULE:
+    Opc = ISD::UMIN;
+    break;
+  default:
+    return SDValue();
+  }
+
+  if (!LegalOperations || hasOperation(Opc, VT))
+    return DAG.getNode(Opc, DL, VT, LHS, RHS);
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -13120,6 +13195,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (N0.getOpcode() == ISD::SETCC) {
     SDValue Cond0 = N0.getOperand(0), Cond1 = N0.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+
+    if (SDValue MinMax = foldSelectToMinMax(DL, VT, Cond0, Cond1, N1, N2, CC))
+      return MinMax;
 
     // select (fcmp lt x, y), x, y -> fminnum x, y
     // select (fcmp gt x, y), x, y -> fmaxnum x, y
@@ -14389,6 +14467,10 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   // fold select_cc lhs, rhs, x, x, cc -> x
   if (N2 == N3)
     return N2;
+
+  if (SDValue MinMax =
+          foldSelectToMinMax(DL, N->getValueType(0), N0, N1, N2, N3, CC))
+    return MinMax;
 
   // select_cc bool, 0, x, y, seteq -> select bool, y, x
   if (CC == ISD::SETEQ && !LegalTypes && N0.getValueType() == MVT::i1 &&
@@ -17054,9 +17136,6 @@ static SDValue detectUSatUPattern(SDValue In, EVT VT) {
 /// Detect patterns of truncation with signed saturation:
 /// (truncate (smin (smax (x, signed_min_of_dest_type),
 ///                  signed_max_of_dest_type)) to dest_type)
-/// or:
-/// (truncate (smax (smin (x, signed_max_of_dest_type),
-///                  signed_min_of_dest_type)) to dest_type).
 ///
 /// Return the source value to be truncated or SDValue() if the pattern was not
 /// matched.
@@ -17074,10 +17153,6 @@ static SDValue detectSSatSPattern(SDValue In, EVT VT) {
                           m_SpecificInt(SignedMax))))
     return Val;
 
-  if (sd_match(In, m_SMax(m_SMin(m_Value(Val), m_SpecificInt(SignedMax)),
-                          m_SpecificInt(SignedMin))))
-    return Val;
-
   return SDValue();
 }
 
@@ -17092,10 +17167,6 @@ static SDValue detectSSatUPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   SDValue Val;
   APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
   // Min == 0, Max is unsigned max of destination type.
-  if (sd_match(In, m_SMax(m_SMin(m_Value(Val), m_SpecificInt(UnsignedMax)),
-                          m_Zero())))
-    return Val;
-
   if (sd_match(In, m_SMin(m_SMax(m_Value(Val), m_Zero()),
                           m_SpecificInt(UnsignedMax))))
     return Val;

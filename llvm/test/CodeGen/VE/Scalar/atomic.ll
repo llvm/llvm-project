@@ -261,9 +261,8 @@ define signext i32 @test_atomic_fetch_umin_4() {
 ; CHECK-NEXT:  .LBB9_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    or %s2, 0, %s1
-; CHECK-NEXT:    cmpu.w %s3, 2, %s1
 ; CHECK-NEXT:    or %s1, 0, %s2
-; CHECK-NEXT:    cmov.w.le %s1, (63)0, %s3
+; CHECK-NEXT:    cmov.w.ne %s1, (63)0, %s2
 ; CHECK-NEXT:    cas.w %s1, (%s0), %s2
 ; CHECK-NEXT:    brne.w %s1, %s2, .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end

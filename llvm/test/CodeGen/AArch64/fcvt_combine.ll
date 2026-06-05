@@ -596,20 +596,20 @@ define <2 x i32> @test4_sat(<2 x double> %d) {
 define <2 x i16> @test5_sat(<2 x float> %f) {
 ; CHECK-NO16-SD-LABEL: test5_sat:
 ; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    movi v1.2s, #127, msl #8
 ; CHECK-NO16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #4
-; CHECK-NO16-SD-NEXT:    smin v0.2s, v0.2s, v1.2s
 ; CHECK-NO16-SD-NEXT:    mvni v1.2s, #127, msl #8
+; CHECK-NO16-SD-NEXT:    movi v2.2s, #127, msl #8
 ; CHECK-NO16-SD-NEXT:    smax v0.2s, v0.2s, v1.2s
+; CHECK-NO16-SD-NEXT:    smin v0.2s, v0.2s, v2.2s
 ; CHECK-NO16-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: test5_sat:
 ; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    movi v1.2s, #127, msl #8
 ; CHECK-FP16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #4
-; CHECK-FP16-SD-NEXT:    smin v0.2s, v0.2s, v1.2s
 ; CHECK-FP16-SD-NEXT:    mvni v1.2s, #127, msl #8
+; CHECK-FP16-SD-NEXT:    movi v2.2s, #127, msl #8
 ; CHECK-FP16-SD-NEXT:    smax v0.2s, v0.2s, v1.2s
+; CHECK-FP16-SD-NEXT:    smin v0.2s, v0.2s, v2.2s
 ; CHECK-FP16-SD-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: test5_sat:

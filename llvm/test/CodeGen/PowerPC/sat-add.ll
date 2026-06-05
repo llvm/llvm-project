@@ -9,9 +9,9 @@
 define i8 @unsigned_sat_constant_i8_using_min(i8 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i8_using_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 4, 3, 24
-; CHECK-NEXT:    cmplwi 4, 213
-; CHECK-NEXT:    li 4, -43
+; CHECK-NEXT:    clrlwi 3, 3, 24
+; CHECK-NEXT:    li 4, 213
+; CHECK-NEXT:    cmplwi 3, 213
 ; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    addi 3, 3, 42
 ; CHECK-NEXT:    blr
@@ -54,9 +54,10 @@ define i8 @unsigned_sat_constant_i8_using_cmp_notval(i8 %x) {
 define i16 @unsigned_sat_constant_i16_using_min(i16 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i16_using_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 4, 3, 16
-; CHECK-NEXT:    cmplwi 4, 65493
-; CHECK-NEXT:    li 4, -43
+; CHECK-NEXT:    clrlwi 3, 3, 16
+; CHECK-NEXT:    lis 4, 0
+; CHECK-NEXT:    cmplwi 3, 65493
+; CHECK-NEXT:    ori 4, 4, 65493
 ; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    addi 3, 3, 42
 ; CHECK-NEXT:    blr
@@ -186,11 +187,11 @@ define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 define i8 @unsigned_sat_variable_i8_using_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i8_using_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    not 6, 4
-; CHECK-NEXT:    clrlwi 5, 3, 24
-; CHECK-NEXT:    clrlwi 7, 6, 24
-; CHECK-NEXT:    cmplw 5, 7
-; CHECK-NEXT:    isellt 3, 3, 6
+; CHECK-NEXT:    not 5, 4
+; CHECK-NEXT:    clrlwi 3, 3, 24
+; CHECK-NEXT:    clrlwi 5, 5, 24
+; CHECK-NEXT:    cmplw 3, 5
+; CHECK-NEXT:    isellt 3, 3, 5
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    blr
   %noty = xor i8 %y, -1
@@ -237,11 +238,11 @@ define i8 @unsigned_sat_variable_i8_using_cmp_notval(i8 %x, i8 %y) {
 define i16 @unsigned_sat_variable_i16_using_min(i16 %x, i16 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i16_using_min:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    not 6, 4
-; CHECK-NEXT:    clrlwi 5, 3, 16
-; CHECK-NEXT:    clrlwi 7, 6, 16
-; CHECK-NEXT:    cmplw 5, 7
-; CHECK-NEXT:    isellt 3, 3, 6
+; CHECK-NEXT:    not 5, 4
+; CHECK-NEXT:    clrlwi 3, 3, 16
+; CHECK-NEXT:    clrlwi 5, 5, 16
+; CHECK-NEXT:    cmplw 3, 5
+; CHECK-NEXT:    isellt 3, 3, 5
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    blr
   %noty = xor i16 %y, -1

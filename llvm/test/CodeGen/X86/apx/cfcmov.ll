@@ -98,8 +98,8 @@ define void @cfcmov16mr(ptr %p, i16 %0) {
 ; CHECK-LABEL: cfcmov16mr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    cmpw %ax, %si
-; CHECK-NEXT:    cfcmovlew %si, (%rdi)
+; CHECK-NEXT:    cmpw %si, %ax
+; CHECK-NEXT:    cfcmovgew %si, (%rdi)
 ; CHECK-NEXT:    retq
   %2 = load i16, ptr %p, align 2
   %3 = icmp sgt i16 %0, %2
@@ -166,8 +166,8 @@ define void @loadstorediffptr(ptr %p, i32 %0) {
 ; CHECK-LABEL: loadstorediffptr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    cmpl %eax, %esi
-; CHECK-NEXT:    cmovbel %eax, %esi
+; CHECK-NEXT:    cmpl %esi, %eax
+; CHECK-NEXT:    cmoval %eax, %esi
 ; CHECK-NEXT:    movl %esi, 4(%rdi)
 ; CHECK-NEXT:    retq
   %2 = getelementptr [2 x i32], ptr %p, i32 0, i32 0

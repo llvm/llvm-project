@@ -374,14 +374,13 @@ define i64 @atomicrmw_umin_i64_acquire(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB7_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB7_2 Depth=1
-; LA32-NEXT:    sltu $a0, $fp, $a1
+; LA32-NEXT:    sltu $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB7_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB7_4: # in Loop: Header=BB7_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB7_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB7_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB7_1
@@ -819,14 +818,13 @@ define i64 @atomicrmw_min_i64_acquire(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB15_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB15_2 Depth=1
-; LA32-NEXT:    slt $a0, $fp, $a1
+; LA32-NEXT:    slt $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB15_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB15_4: # in Loop: Header=BB15_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB15_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB15_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB15_1
@@ -1224,14 +1222,13 @@ define i64 @atomicrmw_umin_i64_release(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB23_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB23_2 Depth=1
-; LA32-NEXT:    sltu $a0, $fp, $a1
+; LA32-NEXT:    sltu $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB23_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB23_4: # in Loop: Header=BB23_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB23_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB23_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB23_1
@@ -1669,14 +1666,13 @@ define i64 @atomicrmw_min_i64_release(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB31_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB31_2 Depth=1
-; LA32-NEXT:    slt $a0, $fp, $a1
+; LA32-NEXT:    slt $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB31_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB31_4: # in Loop: Header=BB31_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB31_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB31_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB31_1
@@ -2074,14 +2070,13 @@ define i64 @atomicrmw_umin_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB39_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB39_2 Depth=1
-; LA32-NEXT:    sltu $a0, $fp, $a1
+; LA32-NEXT:    sltu $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB39_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB39_4: # in Loop: Header=BB39_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB39_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB39_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB39_1
@@ -2519,14 +2514,13 @@ define i64 @atomicrmw_min_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB47_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB47_2 Depth=1
-; LA32-NEXT:    slt $a0, $fp, $a1
+; LA32-NEXT:    slt $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB47_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB47_4: # in Loop: Header=BB47_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB47_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB47_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB47_1
@@ -2924,14 +2918,13 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB55_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB55_2 Depth=1
-; LA32-NEXT:    sltu $a0, $fp, $a1
+; LA32-NEXT:    sltu $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB55_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB55_4: # in Loop: Header=BB55_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB55_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB55_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB55_1
@@ -3369,14 +3362,13 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB63_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB63_2 Depth=1
-; LA32-NEXT:    slt $a0, $fp, $a1
+; LA32-NEXT:    slt $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB63_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB63_4: # in Loop: Header=BB63_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB63_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB63_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB63_1
@@ -3774,14 +3766,13 @@ define i64 @atomicrmw_umin_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB71_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB71_2 Depth=1
-; LA32-NEXT:    sltu $a0, $fp, $a1
+; LA32-NEXT:    sltu $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB71_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB71_4: # in Loop: Header=BB71_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB71_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB71_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB71_1
@@ -4219,14 +4210,13 @@ define i64 @atomicrmw_min_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    beq $a1, $fp, .LBB79_4
 ; LA32-NEXT:  # %bb.3: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB79_2 Depth=1
-; LA32-NEXT:    slt $a0, $fp, $a1
+; LA32-NEXT:    slt $a0, $a1, $fp
 ; LA32-NEXT:    b .LBB79_5
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB79_4: # in Loop: Header=BB79_2 Depth=1
-; LA32-NEXT:    sltu $a0, $s0, $a4
+; LA32-NEXT:    sltu $a0, $a4, $s0
 ; LA32-NEXT:  .LBB79_5: # %atomicrmw.start
 ; LA32-NEXT:    # in Loop: Header=BB79_2 Depth=1
-; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    move $a2, $a4
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    bne $a0, $zero, .LBB79_1

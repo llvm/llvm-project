@@ -20,7 +20,7 @@ define void @test_csel(i32 %lhs32, i32 %rhs32, i64 %lhs64) minsize {
   store i64 %val2, ptr @var64
 ; CHECK: sxtw [[EXT_RHS:x[0-9]+]], {{[wx]}}[[RHS:[0-9]+]]
 ; CHECK: cmp [[LHS:x[0-9]+]], w[[RHS]], sxtw
-; CHECK: csel {{x[0-9]+}}, [[LHS]], [[EXT_RHS]], le
+; CHECK: csel {{x[0-9]+}}, [[LHS]], [[EXT_RHS]], lt
 
   ret void
 ; CHECK: ret

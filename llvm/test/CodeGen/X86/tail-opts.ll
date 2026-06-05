@@ -695,9 +695,9 @@ return:
 define i64 @TESTE(i64 %parami, i64 %paraml) nounwind readnone {
 ; CHECK-LABEL: TESTE:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    cmpq $2, %rdi
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    cmovgq %rdi, %rax
+; CHECK-NEXT:    cmovgeq %rdi, %rax
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    jle .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %bb.nph

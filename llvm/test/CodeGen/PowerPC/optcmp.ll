@@ -89,7 +89,7 @@ define i64 @foolb(i64 %a, i64 %b, ptr nocapture %c) #0 {
 ; CHECK-LABEL: foolb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub. 6, 3, 4
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    std 6, 0(5)
 ; CHECK-NEXT:    blr
 ;
@@ -97,7 +97,7 @@ define i64 @foolb(i64 %a, i64 %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    sub. 6, 3, 4
 ; CHECK-NO-ISEL-NEXT:    std 6, 0(5)
-; CHECK-NO-ISEL-NEXT:    blelr 0
+; CHECK-NO-ISEL-NEXT:    bltlr 0
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    mr 3, 4
 ; CHECK-NO-ISEL-NEXT:    blr

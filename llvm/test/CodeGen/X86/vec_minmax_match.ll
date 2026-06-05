@@ -164,8 +164,8 @@ define <4 x i32> @umin_vec2(<4 x i32> %x) {
 define <4 x i32> @clamp_signed1(<4 x i32> %x) {
 ; CHECK-LABEL: clamp_signed1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp2 = icmp slt <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %min = select <4 x i1> %cmp2, <4 x i32> %x, <4 x i32><i32 255, i32 255, i32 255, i32 255>
@@ -194,8 +194,8 @@ define <4 x i32> @clamp_signed2(<4 x i32> %x) {
 define <4 x i32> @clamp_unsigned1(<4 x i32> %x) {
 ; CHECK-LABEL: clamp_unsigned1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp2 = icmp ult <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %min = select <4 x i1> %cmp2, <4 x i32> %x, <4 x i32><i32 255, i32 255, i32 255, i32 255>

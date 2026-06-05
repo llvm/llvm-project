@@ -770,37 +770,39 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define i32 @smin_i32_inloop(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-LABEL: smin_i32_inloop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB8_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    mvn r0, #-2147483648
 ; CHECK-NEXT:    cmp r1, #4
 ; CHECK-NEXT:    bhs .LBB8_4
 ; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:    mvn r0, #-2147483648
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    b .LBB8_7
 ; CHECK-NEXT:  .LBB8_3:
 ; CHECK-NEXT:    mvn r0, #-2147483648
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:  .LBB8_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    subs r0, r3, #4
-; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
-; CHECK-NEXT:    mvn r0, #-2147483648
+; CHECK-NEXT:    sub.w lr, r3, #4
+; CHECK-NEXT:    add.w lr, r2, lr, lsr #2
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:  .LBB8_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
-; CHECK-NEXT:    vminv.s32 r0, q0
+; CHECK-NEXT:    mvn r4, #-2147483648
+; CHECK-NEXT:    vminv.s32 r4, q0
+; CHECK-NEXT:    cmp r0, r4
+; CHECK-NEXT:    csel r0, r0, r4, lt
 ; CHECK-NEXT:    le lr, .LBB8_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    cmp r3, r1
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:    popeq {r4, pc}
 ; CHECK-NEXT:  .LBB8_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r3
 ; CHECK-NEXT:    add.w r2, r12, r3, lsl #2
@@ -811,7 +813,7 @@ define i32 @smin_i32_inloop(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    le lr, .LBB8_8
 ; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -963,37 +965,39 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define i32 @smax_i32_inloop(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-LABEL: smax_i32_inloop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB10_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    mov.w r0, #-2147483648
 ; CHECK-NEXT:    cmp r1, #4
 ; CHECK-NEXT:    bhs .LBB10_4
 ; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:    mov.w r0, #-2147483648
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    b .LBB10_7
 ; CHECK-NEXT:  .LBB10_3:
 ; CHECK-NEXT:    mov.w r0, #-2147483648
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:  .LBB10_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    subs r0, r3, #4
-; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
-; CHECK-NEXT:    mov.w r0, #-2147483648
+; CHECK-NEXT:    sub.w lr, r3, #4
+; CHECK-NEXT:    add.w lr, r2, lr, lsr #2
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:  .LBB10_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
-; CHECK-NEXT:    vmaxv.s32 r0, q0
+; CHECK-NEXT:    mov.w r4, #-2147483648
+; CHECK-NEXT:    vmaxv.s32 r4, q0
+; CHECK-NEXT:    cmp r0, r4
+; CHECK-NEXT:    csel r0, r0, r4, gt
 ; CHECK-NEXT:    le lr, .LBB10_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    cmp r3, r1
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:    popeq {r4, pc}
 ; CHECK-NEXT:  .LBB10_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r3
 ; CHECK-NEXT:    add.w r2, r12, r3, lsl #2
@@ -1004,7 +1008,7 @@ define i32 @smax_i32_inloop(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    le lr, .LBB10_8
 ; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -1156,37 +1160,39 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define i32 @umin_i32_inloop(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-LABEL: umin_i32_inloop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB12_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:    cmp r1, #4
 ; CHECK-NEXT:    bhs .LBB12_4
 ; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    b .LBB12_7
 ; CHECK-NEXT:  .LBB12_3:
 ; CHECK-NEXT:    mov.w r0, #-1
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:  .LBB12_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    subs r0, r3, #4
-; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
-; CHECK-NEXT:    mov.w r0, #-1
+; CHECK-NEXT:    sub.w lr, r3, #4
+; CHECK-NEXT:    add.w lr, r2, lr, lsr #2
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:  .LBB12_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
-; CHECK-NEXT:    vminv.u32 r0, q0
+; CHECK-NEXT:    mov.w r4, #-1
+; CHECK-NEXT:    vminv.u32 r4, q0
+; CHECK-NEXT:    cmp r0, r4
+; CHECK-NEXT:    csel r0, r0, r4, lo
 ; CHECK-NEXT:    le lr, .LBB12_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    cmp r3, r1
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:    popeq {r4, pc}
 ; CHECK-NEXT:  .LBB12_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r3
 ; CHECK-NEXT:    add.w r2, r12, r3, lsl #2
@@ -1197,7 +1203,7 @@ define i32 @umin_i32_inloop(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    le lr, .LBB12_8
 ; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -1349,48 +1355,49 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define i32 @umax_i32_inloop(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-LABEL: umax_i32_inloop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r1, #1
-; CHECK-NEXT:    blt .LBB14_3
+; CHECK-NEXT:    blt .LBB14_8
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    cmp r1, #4
-; CHECK-NEXT:    bhs .LBB14_4
-; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    b .LBB14_7
-; CHECK-NEXT:  .LBB14_3:
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:  .LBB14_4: @ %vector.ph
+; CHECK-NEXT:    cmp r1, #4
+; CHECK-NEXT:    blo .LBB14_5
+; CHECK-NEXT:  @ %bb.2: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
 ; CHECK-NEXT:    subs r0, r3, #4
 ; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:  .LBB14_5: @ %vector.body
+; CHECK-NEXT:  .LBB14_3: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
-; CHECK-NEXT:    vmaxv.u32 r0, q0
-; CHECK-NEXT:    le lr, .LBB14_5
-; CHECK-NEXT:  @ %bb.6: @ %middle.block
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    vmaxv.u32 r4, q0
+; CHECK-NEXT:    cmp r0, r4
+; CHECK-NEXT:    csel r0, r0, r4, hi
+; CHECK-NEXT:    le lr, .LBB14_3
+; CHECK-NEXT:  @ %bb.4: @ %middle.block
 ; CHECK-NEXT:    cmp r3, r1
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r7, pc}
-; CHECK-NEXT:  .LBB14_7: @ %for.body.preheader1
+; CHECK-NEXT:    popeq {r4, pc}
+; CHECK-NEXT:  .LBB14_5: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r3
 ; CHECK-NEXT:    add.w r2, r12, r3, lsl #2
-; CHECK-NEXT:  .LBB14_8: @ %for.body
+; CHECK-NEXT:  .LBB14_6: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r1, [r2], #4
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, hi
-; CHECK-NEXT:    le lr, .LBB14_8
-; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    le lr, .LBB14_6
+; CHECK-NEXT:  @ %bb.7: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:  .LBB14_8:
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup

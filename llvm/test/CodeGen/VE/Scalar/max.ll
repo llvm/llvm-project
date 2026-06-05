@@ -215,7 +215,7 @@ define i64 @max2u64(i64, i64) {
 ; CHECK-LABEL: max2u64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpu.l %s2, %s0, %s1
-; CHECK-NEXT:    cmov.l.ge %s1, %s0, %s2
+; CHECK-NEXT:    cmov.l.gt %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = icmp uge i64 %0, %1
@@ -259,7 +259,7 @@ define i32 @max2u32(i32, i32) {
 ; CHECK-LABEL: max2u32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpu.w %s2, %s0, %s1
-; CHECK-NEXT:    cmov.w.ge %s1, %s0, %s2
+; CHECK-NEXT:    cmov.w.gt %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %3 = icmp uge i32 %0, %1

@@ -60,14 +60,14 @@ define i32 @stest_f64i32(double %x) {
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfdi
 ; RV64IF-NEXT:    lui a1, 524288
-; RV64IF-NEXT:    addiw a2, a1, -1
-; RV64IF-NEXT:    blt a0, a2, .LBB0_2
+; RV64IF-NEXT:    blt a1, a0, .LBB0_2
 ; RV64IF-NEXT:  # %bb.1: # %entry
-; RV64IF-NEXT:    mv a0, a2
-; RV64IF-NEXT:  .LBB0_2: # %entry
-; RV64IF-NEXT:    blt a1, a0, .LBB0_4
-; RV64IF-NEXT:  # %bb.3: # %entry
 ; RV64IF-NEXT:    lui a0, 524288
+; RV64IF-NEXT:  .LBB0_2: # %entry
+; RV64IF-NEXT:    addiw a1, a1, -1
+; RV64IF-NEXT:    blt a0, a1, .LBB0_4
+; RV64IF-NEXT:  # %bb.3: # %entry
+; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:  .LBB0_4: # %entry
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
@@ -88,17 +88,18 @@ define i32 @stest_f64i32(double %x) {
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rtz
 ; RV64IFD-NEXT:    lui a1, 524288
-; RV64IFD-NEXT:    addiw a2, a1, -1
-; RV64IFD-NEXT:    bge a0, a2, .LBB0_3
+; RV64IFD-NEXT:    bge a1, a0, .LBB0_3
 ; RV64IFD-NEXT:  # %bb.1: # %entry
-; RV64IFD-NEXT:    bge a1, a0, .LBB0_4
+; RV64IFD-NEXT:    addiw a1, a1, -1
+; RV64IFD-NEXT:    bge a0, a1, .LBB0_4
 ; RV64IFD-NEXT:  .LBB0_2: # %entry
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB0_3: # %entry
-; RV64IFD-NEXT:    mv a0, a2
-; RV64IFD-NEXT:    blt a1, a2, .LBB0_2
-; RV64IFD-NEXT:  .LBB0_4: # %entry
 ; RV64IFD-NEXT:    lui a0, 524288
+; RV64IFD-NEXT:    addiw a1, a1, -1
+; RV64IFD-NEXT:    blt a0, a1, .LBB0_2
+; RV64IFD-NEXT:  .LBB0_4: # %entry
+; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:    ret
 entry:
   %conv = fptosi double %x to i64
@@ -183,12 +184,12 @@ define i32 @ustest_f64i32(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixdfdi
-; RV32IF-NEXT:    beqz a1, .LBB2_2
+; RV32IF-NEXT:    bnez a1, .LBB2_2
 ; RV32IF-NEXT:  # %bb.1: # %entry
-; RV32IF-NEXT:    srli a2, a1, 31
+; RV32IF-NEXT:    li a2, 1
 ; RV32IF-NEXT:    j .LBB2_3
 ; RV32IF-NEXT:  .LBB2_2:
-; RV32IF-NEXT:    sltiu a2, a0, -1
+; RV32IF-NEXT:    slti a2, a1, 1
 ; RV32IF-NEXT:  .LBB2_3: # %entry
 ; RV32IF-NEXT:    addi a3, a2, -1
 ; RV32IF-NEXT:    neg a2, a2
@@ -216,15 +217,15 @@ define i32 @ustest_f64i32(double %x) {
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfdi
+; RV64IF-NEXT:    sgtz a1, a0
+; RV64IF-NEXT:    neg a1, a1
+; RV64IF-NEXT:    and a0, a1, a0
 ; RV64IF-NEXT:    li a1, -1
 ; RV64IF-NEXT:    srli a1, a1, 32
 ; RV64IF-NEXT:    blt a0, a1, .LBB2_2
 ; RV64IF-NEXT:  # %bb.1: # %entry
 ; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:  .LBB2_2: # %entry
-; RV64IF-NEXT:    sgtz a1, a0
-; RV64IF-NEXT:    neg a1, a1
-; RV64IF-NEXT:    and a0, a1, a0
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -243,15 +244,15 @@ define i32 @ustest_f64i32(double %x) {
 ; RV64IFD-LABEL: ustest_f64i32:
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rtz
+; RV64IFD-NEXT:    sgtz a1, a0
+; RV64IFD-NEXT:    neg a1, a1
+; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    li a1, -1
 ; RV64IFD-NEXT:    srli a1, a1, 32
 ; RV64IFD-NEXT:    blt a0, a1, .LBB2_2
 ; RV64IFD-NEXT:  # %bb.1: # %entry
 ; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:  .LBB2_2: # %entry
-; RV64IFD-NEXT:    sgtz a1, a0
-; RV64IFD-NEXT:    neg a1, a1
-; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
 entry:
   %conv = fptosi double %x to i64
@@ -277,17 +278,18 @@ define i32 @stest_f32i32(float %x) {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
 ; RV64-NEXT:    lui a1, 524288
-; RV64-NEXT:    addiw a2, a1, -1
-; RV64-NEXT:    bge a0, a2, .LBB3_3
+; RV64-NEXT:    bge a1, a0, .LBB3_3
 ; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    bge a1, a0, .LBB3_4
+; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    bge a0, a1, .LBB3_4
 ; RV64-NEXT:  .LBB3_2: # %entry
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB3_3: # %entry
-; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:    blt a1, a2, .LBB3_2
-; RV64-NEXT:  .LBB3_4: # %entry
 ; RV64-NEXT:    lui a0, 524288
+; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    blt a0, a1, .LBB3_2
+; RV64-NEXT:  .LBB3_4: # %entry
+; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    ret
 entry:
   %conv = fptosi float %x to i64
@@ -340,15 +342,15 @@ define i32 @ustest_f32i32(float %x) {
 ; RV64-LABEL: ustest_f32i32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    blt a0, a1, .LBB5_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB5_2: # %entry
-; RV64-NEXT:    sgtz a1, a0
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ret
 entry:
   %conv = fptosi float %x to i64
@@ -412,14 +414,14 @@ define i32 @stest_f16i32(half %x) {
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
 ; RV64-NEXT:    lui a1, 524288
-; RV64-NEXT:    addiw a2, a1, -1
-; RV64-NEXT:    blt a0, a2, .LBB6_2
+; RV64-NEXT:    blt a1, a0, .LBB6_2
 ; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:  .LBB6_2: # %entry
-; RV64-NEXT:    blt a1, a0, .LBB6_4
-; RV64-NEXT:  # %bb.3: # %entry
 ; RV64-NEXT:    lui a0, 524288
+; RV64-NEXT:  .LBB6_2: # %entry
+; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    blt a0, a1, .LBB6_4
+; RV64-NEXT:  # %bb.3: # %entry
+; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB6_4: # %entry
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
@@ -492,12 +494,12 @@ define i32 @ustest_f16i32(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    call __fixsfdi
-; RV32-NEXT:    beqz a1, .LBB8_2
+; RV32-NEXT:    bnez a1, .LBB8_2
 ; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    srli a2, a1, 31
+; RV32-NEXT:    li a2, 1
 ; RV32-NEXT:    j .LBB8_3
 ; RV32-NEXT:  .LBB8_2:
-; RV32-NEXT:    sltiu a2, a0, -1
+; RV32-NEXT:    slti a2, a1, 1
 ; RV32-NEXT:  .LBB8_3: # %entry
 ; RV32-NEXT:    addi a3, a2, -1
 ; RV32-NEXT:    neg a2, a2
@@ -526,15 +528,15 @@ define i32 @ustest_f16i32(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    blt a0, a1, .LBB8_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB8_2: # %entry
-; RV64-NEXT:    sgtz a1, a0
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
@@ -560,16 +562,16 @@ define i16 @stest_f64i16(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixdfsi
+; RV32IF-NEXT:    lui a1, 1048568
+; RV32IF-NEXT:    blt a1, a0, .LBB9_2
+; RV32IF-NEXT:  # %bb.1: # %entry
+; RV32IF-NEXT:    lui a0, 1048568
+; RV32IF-NEXT:  .LBB9_2: # %entry
 ; RV32IF-NEXT:    lui a1, 8
 ; RV32IF-NEXT:    addi a1, a1, -1
-; RV32IF-NEXT:    blt a0, a1, .LBB9_2
-; RV32IF-NEXT:  # %bb.1: # %entry
-; RV32IF-NEXT:    mv a0, a1
-; RV32IF-NEXT:  .LBB9_2: # %entry
-; RV32IF-NEXT:    lui a1, 1048568
-; RV32IF-NEXT:    blt a1, a0, .LBB9_4
+; RV32IF-NEXT:    blt a0, a1, .LBB9_4
 ; RV32IF-NEXT:  # %bb.3: # %entry
-; RV32IF-NEXT:    lui a0, 1048568
+; RV32IF-NEXT:    mv a0, a1
 ; RV32IF-NEXT:  .LBB9_4: # %entry
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    .cfi_restore ra
@@ -584,16 +586,16 @@ define i16 @stest_f64i16(double %x) {
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfsi
+; RV64IF-NEXT:    lui a1, 1048568
+; RV64IF-NEXT:    blt a1, a0, .LBB9_2
+; RV64IF-NEXT:  # %bb.1: # %entry
+; RV64IF-NEXT:    lui a0, 1048568
+; RV64IF-NEXT:  .LBB9_2: # %entry
 ; RV64IF-NEXT:    lui a1, 8
 ; RV64IF-NEXT:    addi a1, a1, -1
-; RV64IF-NEXT:    blt a0, a1, .LBB9_2
-; RV64IF-NEXT:  # %bb.1: # %entry
-; RV64IF-NEXT:    mv a0, a1
-; RV64IF-NEXT:  .LBB9_2: # %entry
-; RV64IF-NEXT:    lui a1, 1048568
-; RV64IF-NEXT:    blt a1, a0, .LBB9_4
+; RV64IF-NEXT:    blt a0, a1, .LBB9_4
 ; RV64IF-NEXT:  # %bb.3: # %entry
-; RV64IF-NEXT:    lui a0, 1048568
+; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:  .LBB9_4: # %entry
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
@@ -604,39 +606,33 @@ define i16 @stest_f64i16(double %x) {
 ; RV32IFD-LABEL: stest_f64i16:
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    fcvt.w.d a0, fa0, rtz
-; RV32IFD-NEXT:    lui a1, 8
-; RV32IFD-NEXT:    addi a1, a1, -1
-; RV32IFD-NEXT:    bge a0, a1, .LBB9_3
-; RV32IFD-NEXT:  # %bb.1: # %entry
-; RV32IFD-NEXT:    lui a1, 1048568
-; RV32IFD-NEXT:    bge a1, a0, .LBB9_4
-; RV32IFD-NEXT:  .LBB9_2: # %entry
-; RV32IFD-NEXT:    ret
-; RV32IFD-NEXT:  .LBB9_3: # %entry
-; RV32IFD-NEXT:    mv a0, a1
 ; RV32IFD-NEXT:    lui a1, 1048568
 ; RV32IFD-NEXT:    blt a1, a0, .LBB9_2
-; RV32IFD-NEXT:  .LBB9_4: # %entry
+; RV32IFD-NEXT:  # %bb.1: # %entry
 ; RV32IFD-NEXT:    lui a0, 1048568
+; RV32IFD-NEXT:  .LBB9_2: # %entry
+; RV32IFD-NEXT:    lui a1, 8
+; RV32IFD-NEXT:    addi a1, a1, -1
+; RV32IFD-NEXT:    blt a0, a1, .LBB9_4
+; RV32IFD-NEXT:  # %bb.3: # %entry
+; RV32IFD-NEXT:    mv a0, a1
+; RV32IFD-NEXT:  .LBB9_4: # %entry
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: stest_f64i16:
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    fcvt.w.d a0, fa0, rtz
-; RV64IFD-NEXT:    lui a1, 8
-; RV64IFD-NEXT:    addi a1, a1, -1
-; RV64IFD-NEXT:    bge a0, a1, .LBB9_3
-; RV64IFD-NEXT:  # %bb.1: # %entry
-; RV64IFD-NEXT:    lui a1, 1048568
-; RV64IFD-NEXT:    bge a1, a0, .LBB9_4
-; RV64IFD-NEXT:  .LBB9_2: # %entry
-; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB9_3: # %entry
-; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:    lui a1, 1048568
 ; RV64IFD-NEXT:    blt a1, a0, .LBB9_2
-; RV64IFD-NEXT:  .LBB9_4: # %entry
+; RV64IFD-NEXT:  # %bb.1: # %entry
 ; RV64IFD-NEXT:    lui a0, 1048568
+; RV64IFD-NEXT:  .LBB9_2: # %entry
+; RV64IFD-NEXT:    lui a1, 8
+; RV64IFD-NEXT:    addi a1, a1, -1
+; RV64IFD-NEXT:    blt a0, a1, .LBB9_4
+; RV64IFD-NEXT:  # %bb.3: # %entry
+; RV64IFD-NEXT:    mv a0, a1
+; RV64IFD-NEXT:  .LBB9_4: # %entry
 ; RV64IFD-NEXT:    ret
 entry:
   %conv = fptosi double %x to i32
@@ -724,15 +720,15 @@ define i16 @ustest_f64i16(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixdfsi
+; RV32IF-NEXT:    sgtz a1, a0
+; RV32IF-NEXT:    neg a1, a1
+; RV32IF-NEXT:    and a0, a1, a0
 ; RV32IF-NEXT:    lui a1, 16
 ; RV32IF-NEXT:    addi a1, a1, -1
 ; RV32IF-NEXT:    blt a0, a1, .LBB11_2
 ; RV32IF-NEXT:  # %bb.1: # %entry
 ; RV32IF-NEXT:    mv a0, a1
 ; RV32IF-NEXT:  .LBB11_2: # %entry
-; RV32IF-NEXT:    sgtz a1, a0
-; RV32IF-NEXT:    neg a1, a1
-; RV32IF-NEXT:    and a0, a1, a0
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -746,15 +742,15 @@ define i16 @ustest_f64i16(double %x) {
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfsi
+; RV64IF-NEXT:    sgtz a1, a0
+; RV64IF-NEXT:    neg a1, a1
+; RV64IF-NEXT:    and a0, a1, a0
 ; RV64IF-NEXT:    lui a1, 16
 ; RV64IF-NEXT:    addi a1, a1, -1
 ; RV64IF-NEXT:    blt a0, a1, .LBB11_2
 ; RV64IF-NEXT:  # %bb.1: # %entry
 ; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:  .LBB11_2: # %entry
-; RV64IF-NEXT:    sgtz a1, a0
-; RV64IF-NEXT:    neg a1, a1
-; RV64IF-NEXT:    and a0, a1, a0
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -764,29 +760,29 @@ define i16 @ustest_f64i16(double %x) {
 ; RV32IFD-LABEL: ustest_f64i16:
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    fcvt.w.d a0, fa0, rtz
+; RV32IFD-NEXT:    sgtz a1, a0
+; RV32IFD-NEXT:    neg a1, a1
+; RV32IFD-NEXT:    and a0, a1, a0
 ; RV32IFD-NEXT:    lui a1, 16
 ; RV32IFD-NEXT:    addi a1, a1, -1
 ; RV32IFD-NEXT:    blt a0, a1, .LBB11_2
 ; RV32IFD-NEXT:  # %bb.1: # %entry
 ; RV32IFD-NEXT:    mv a0, a1
 ; RV32IFD-NEXT:  .LBB11_2: # %entry
-; RV32IFD-NEXT:    sgtz a1, a0
-; RV32IFD-NEXT:    neg a1, a1
-; RV32IFD-NEXT:    and a0, a1, a0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: ustest_f64i16:
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    fcvt.w.d a0, fa0, rtz
+; RV64IFD-NEXT:    sgtz a1, a0
+; RV64IFD-NEXT:    neg a1, a1
+; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    lui a1, 16
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    blt a0, a1, .LBB11_2
 ; RV64IFD-NEXT:  # %bb.1: # %entry
 ; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:  .LBB11_2: # %entry
-; RV64IFD-NEXT:    sgtz a1, a0
-; RV64IFD-NEXT:    neg a1, a1
-; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
 entry:
   %conv = fptosi double %x to i32
@@ -802,39 +798,33 @@ define i16 @stest_f32i16(float %x) {
 ; RV32-LABEL: stest_f32i16:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
-; RV32-NEXT:    lui a1, 8
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    bge a0, a1, .LBB12_3
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    lui a1, 1048568
-; RV32-NEXT:    bge a1, a0, .LBB12_4
-; RV32-NEXT:  .LBB12_2: # %entry
-; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB12_3: # %entry
-; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    lui a1, 1048568
 ; RV32-NEXT:    blt a1, a0, .LBB12_2
-; RV32-NEXT:  .LBB12_4: # %entry
+; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    lui a0, 1048568
+; RV32-NEXT:  .LBB12_2: # %entry
+; RV32-NEXT:    lui a1, 8
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    blt a0, a1, .LBB12_4
+; RV32-NEXT:  # %bb.3: # %entry
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:  .LBB12_4: # %entry
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: stest_f32i16:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    fcvt.w.s a0, fa0, rtz
-; RV64-NEXT:    lui a1, 8
-; RV64-NEXT:    addi a1, a1, -1
-; RV64-NEXT:    bge a0, a1, .LBB12_3
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    lui a1, 1048568
-; RV64-NEXT:    bge a1, a0, .LBB12_4
-; RV64-NEXT:  .LBB12_2: # %entry
-; RV64-NEXT:    ret
-; RV64-NEXT:  .LBB12_3: # %entry
-; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    lui a1, 1048568
 ; RV64-NEXT:    blt a1, a0, .LBB12_2
-; RV64-NEXT:  .LBB12_4: # %entry
+; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    lui a0, 1048568
+; RV64-NEXT:  .LBB12_2: # %entry
+; RV64-NEXT:    lui a1, 8
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    blt a0, a1, .LBB12_4
+; RV64-NEXT:  # %bb.3: # %entry
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:  .LBB12_4: # %entry
 ; RV64-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -880,29 +870,29 @@ define i16 @ustest_f32i16(float %x) {
 ; RV32-LABEL: ustest_f32i16:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32-NEXT:    sgtz a1, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    lui a1, 16
 ; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    blt a0, a1, .LBB14_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB14_2: # %entry
-; RV32-NEXT:    sgtz a1, a0
-; RV32-NEXT:    neg a1, a1
-; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ustest_f32i16:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    lui a1, 16
 ; RV64-NEXT:    addi a1, a1, -1
 ; RV64-NEXT:    blt a0, a1, .LBB14_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB14_2: # %entry
-; RV64-NEXT:    sgtz a1, a0
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -923,16 +913,16 @@ define i16 @stest_f16i16(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32-NEXT:    lui a1, 1048568
+; RV32-NEXT:    blt a1, a0, .LBB15_2
+; RV32-NEXT:  # %bb.1: # %entry
+; RV32-NEXT:    lui a0, 1048568
+; RV32-NEXT:  .LBB15_2: # %entry
 ; RV32-NEXT:    lui a1, 8
 ; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    blt a0, a1, .LBB15_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:  .LBB15_2: # %entry
-; RV32-NEXT:    lui a1, 1048568
-; RV32-NEXT:    blt a1, a0, .LBB15_4
+; RV32-NEXT:    blt a0, a1, .LBB15_4
 ; RV32-NEXT:  # %bb.3: # %entry
-; RV32-NEXT:    lui a0, 1048568
+; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB15_4: # %entry
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
@@ -948,16 +938,16 @@ define i16 @stest_f16i16(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    lui a1, 1048568
+; RV64-NEXT:    blt a1, a0, .LBB15_2
+; RV64-NEXT:  # %bb.1: # %entry
+; RV64-NEXT:    lui a0, 1048568
+; RV64-NEXT:  .LBB15_2: # %entry
 ; RV64-NEXT:    lui a1, 8
 ; RV64-NEXT:    addi a1, a1, -1
-; RV64-NEXT:    blt a0, a1, .LBB15_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:  .LBB15_2: # %entry
-; RV64-NEXT:    lui a1, 1048568
-; RV64-NEXT:    blt a1, a0, .LBB15_4
+; RV64-NEXT:    blt a0, a1, .LBB15_4
 ; RV64-NEXT:  # %bb.3: # %entry
-; RV64-NEXT:    lui a0, 1048568
+; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB15_4: # %entry
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
@@ -1031,15 +1021,15 @@ define i16 @ustest_f16i16(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32-NEXT:    sgtz a1, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    lui a1, 16
 ; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    blt a0, a1, .LBB17_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB17_2: # %entry
-; RV32-NEXT:    sgtz a1, a0
-; RV32-NEXT:    neg a1, a1
-; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
@@ -1054,15 +1044,15 @@ define i16 @ustest_f16i16(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    lui a1, 16
 ; RV64-NEXT:    addi a1, a1, -1
 ; RV64-NEXT:    blt a0, a1, .LBB17_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB17_2: # %entry
-; RV64-NEXT:    sgtz a1, a0
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
@@ -1116,7 +1106,9 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IF-NEXT:    li s2, 0
 ; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    li a1, 0
-; RV32IF-NEXT:    j .LBB18_8
+; RV32IF-NEXT:    lui a4, 524288
+; RV32IF-NEXT:    beqz a4, .LBB18_6
+; RV32IF-NEXT:    j .LBB18_9
 ; RV32IF-NEXT:  .LBB18_2: # %fp-to-i-if-check.exp.size
 ; RV32IF-NEXT:    srai s0, a1, 31
 ; RV32IF-NEXT:    lui a3, 256
@@ -1140,10 +1132,10 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IF-NEXT:    srai a4, a1, 31
 ; RV32IF-NEXT:    srl a5, a0, a2
 ; RV32IF-NEXT:    and s3, a4, a5
-; RV32IF-NEXT:    bltz a1, .LBB18_6
+; RV32IF-NEXT:    bltz a1, .LBB18_7
 ; RV32IF-NEXT:  # %bb.4: # %fp-to-i-if-exp.small
 ; RV32IF-NEXT:    srl s4, a0, a1
-; RV32IF-NEXT:    j .LBB18_7
+; RV32IF-NEXT:    j .LBB18_8
 ; RV32IF-NEXT:  .LBB18_5: # %fp-to-i-if-exp.large
 ; RV32IF-NEXT:    sw a3, 16(sp)
 ; RV32IF-NEXT:    sw a0, 20(sp)
@@ -1230,14 +1222,18 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IF-NEXT:    add a1, a1, s8
 ; RV32IF-NEXT:    sltu a2, a0, s4
 ; RV32IF-NEXT:    add a1, a1, a2
-; RV32IF-NEXT:    j .LBB18_8
+; RV32IF-NEXT:    lui a4, 524288
+; RV32IF-NEXT:    bne s2, a4, .LBB18_9
 ; RV32IF-NEXT:  .LBB18_6:
+; RV32IF-NEXT:    snez a2, s1
+; RV32IF-NEXT:    j .LBB18_10
+; RV32IF-NEXT:  .LBB18_7:
 ; RV32IF-NEXT:    srl a1, a3, a2
 ; RV32IF-NEXT:    not a2, a2
 ; RV32IF-NEXT:    slli a0, a0, 1
 ; RV32IF-NEXT:    sll a0, a0, a2
 ; RV32IF-NEXT:    or s4, a1, a0
-; RV32IF-NEXT:  .LBB18_7: # %fp-to-i-if-exp.small
+; RV32IF-NEXT:  .LBB18_8: # %fp-to-i-if-exp.small
 ; RV32IF-NEXT:    mv a0, s4
 ; RV32IF-NEXT:    li a1, 0
 ; RV32IF-NEXT:    mv a2, s2
@@ -1283,51 +1279,46 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IF-NEXT:    add a2, a3, a2
 ; RV32IF-NEXT:    add a1, a2, a1
 ; RV32IF-NEXT:    add a1, a1, a4
-; RV32IF-NEXT:  .LBB18_8: # %fp-to-i-cleanup
-; RV32IF-NEXT:    lui a2, 524288
-; RV32IF-NEXT:    addi a3, a2, -1
-; RV32IF-NEXT:    beq s2, a3, .LBB18_10
-; RV32IF-NEXT:  # %bb.9: # %fp-to-i-cleanup
-; RV32IF-NEXT:    sltu a4, s2, a3
-; RV32IF-NEXT:    or a5, a0, a1
-; RV32IF-NEXT:    bnez a5, .LBB18_11
-; RV32IF-NEXT:    j .LBB18_12
-; RV32IF-NEXT:  .LBB18_10:
-; RV32IF-NEXT:    sltiu a4, s1, -1
-; RV32IF-NEXT:    or a5, a0, a1
-; RV32IF-NEXT:    beqz a5, .LBB18_12
-; RV32IF-NEXT:  .LBB18_11: # %fp-to-i-cleanup
-; RV32IF-NEXT:    srli a4, a1, 31
+; RV32IF-NEXT:    lui a4, 524288
+; RV32IF-NEXT:    beq s2, a4, .LBB18_6
+; RV32IF-NEXT:  .LBB18_9: # %fp-to-i-cleanup
+; RV32IF-NEXT:    sltu a2, a4, s2
+; RV32IF-NEXT:  .LBB18_10: # %fp-to-i-cleanup
+; RV32IF-NEXT:    and a3, a0, a1
+; RV32IF-NEXT:    li a5, -1
+; RV32IF-NEXT:    beq a3, a5, .LBB18_12
+; RV32IF-NEXT:  # %bb.11: # %fp-to-i-cleanup
+; RV32IF-NEXT:    srli a2, a1, 31
+; RV32IF-NEXT:    xori a2, a2, 1
 ; RV32IF-NEXT:  .LBB18_12: # %fp-to-i-cleanup
-; RV32IF-NEXT:    neg a5, a4
-; RV32IF-NEXT:    addi a6, a4, -1
-; RV32IF-NEXT:    bnez a4, .LBB18_14
+; RV32IF-NEXT:    bnez a2, .LBB18_14
 ; RV32IF-NEXT:  # %bb.13: # %fp-to-i-cleanup
-; RV32IF-NEXT:    mv s2, a3
+; RV32IF-NEXT:    lui s2, 524288
 ; RV32IF-NEXT:  .LBB18_14: # %fp-to-i-cleanup
-; RV32IF-NEXT:    or a3, a6, s1
-; RV32IF-NEXT:    and a1, a5, a1
-; RV32IF-NEXT:    and a4, a5, a0
-; RV32IF-NEXT:    beq s2, a2, .LBB18_16
+; RV32IF-NEXT:    addi a4, a4, -1
+; RV32IF-NEXT:    neg a3, a2
+; RV32IF-NEXT:    and a3, a3, s1
+; RV32IF-NEXT:    beq s2, a4, .LBB18_16
 ; RV32IF-NEXT:  # %bb.15: # %fp-to-i-cleanup
-; RV32IF-NEXT:    sltu a0, a2, s2
+; RV32IF-NEXT:    sltu a5, s2, a4
 ; RV32IF-NEXT:    j .LBB18_17
 ; RV32IF-NEXT:  .LBB18_16:
-; RV32IF-NEXT:    snez a0, a3
+; RV32IF-NEXT:    sltiu a5, a3, -1
 ; RV32IF-NEXT:  .LBB18_17: # %fp-to-i-cleanup
-; RV32IF-NEXT:    and a4, a4, a1
-; RV32IF-NEXT:    li a2, -1
-; RV32IF-NEXT:    beq a4, a2, .LBB18_19
+; RV32IF-NEXT:    addi a2, a2, -1
+; RV32IF-NEXT:    or a1, a2, a1
+; RV32IF-NEXT:    or a0, a2, a0
+; RV32IF-NEXT:    or a0, a0, a1
+; RV32IF-NEXT:    beqz a0, .LBB18_19
 ; RV32IF-NEXT:  # %bb.18: # %fp-to-i-cleanup
-; RV32IF-NEXT:    srli a1, a1, 31
-; RV32IF-NEXT:    xori a0, a1, 1
+; RV32IF-NEXT:    srli a5, a1, 31
 ; RV32IF-NEXT:  .LBB18_19: # %fp-to-i-cleanup
-; RV32IF-NEXT:    bnez a0, .LBB18_21
+; RV32IF-NEXT:    bnez a5, .LBB18_21
 ; RV32IF-NEXT:  # %bb.20: # %fp-to-i-cleanup
-; RV32IF-NEXT:    lui s2, 524288
+; RV32IF-NEXT:    mv s2, a4
 ; RV32IF-NEXT:  .LBB18_21: # %fp-to-i-cleanup
-; RV32IF-NEXT:    neg a0, a0
-; RV32IF-NEXT:    and a0, a0, a3
+; RV32IF-NEXT:    addi a0, a5, -1
+; RV32IF-NEXT:    or a0, a0, a3
 ; RV32IF-NEXT:    mv a1, s2
 ; RV32IF-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
@@ -1363,33 +1354,33 @@ define i64 @stest_f64i64(double %x) {
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfti
 ; RV64IF-NEXT:    li a2, -1
-; RV64IF-NEXT:    srli a3, a2, 1
-; RV64IF-NEXT:    beqz a1, .LBB18_2
+; RV64IF-NEXT:    slli a3, a2, 63
+; RV64IF-NEXT:    beq a1, a2, .LBB18_2
 ; RV64IF-NEXT:  # %bb.1: # %entry
 ; RV64IF-NEXT:    srli a4, a1, 63
-; RV64IF-NEXT:    j .LBB18_3
+; RV64IF-NEXT:    xori a4, a4, 1
+; RV64IF-NEXT:    beqz a4, .LBB18_3
+; RV64IF-NEXT:    j .LBB18_4
 ; RV64IF-NEXT:  .LBB18_2:
-; RV64IF-NEXT:    sltu a4, a0, a3
+; RV64IF-NEXT:    sltu a4, a3, a0
+; RV64IF-NEXT:    bnez a4, .LBB18_4
 ; RV64IF-NEXT:  .LBB18_3: # %entry
-; RV64IF-NEXT:    neg a5, a4
-; RV64IF-NEXT:    and a5, a5, a1
-; RV64IF-NEXT:    bnez a4, .LBB18_5
-; RV64IF-NEXT:  # %bb.4: # %entry
 ; RV64IF-NEXT:    mv a0, a3
-; RV64IF-NEXT:  .LBB18_5: # %entry
-; RV64IF-NEXT:    slli a1, a2, 63
-; RV64IF-NEXT:    beq a5, a2, .LBB18_7
-; RV64IF-NEXT:  # %bb.6: # %entry
-; RV64IF-NEXT:    srli a5, a5, 63
-; RV64IF-NEXT:    xori a2, a5, 1
-; RV64IF-NEXT:    beqz a2, .LBB18_8
-; RV64IF-NEXT:    j .LBB18_9
-; RV64IF-NEXT:  .LBB18_7:
-; RV64IF-NEXT:    sltu a2, a1, a0
-; RV64IF-NEXT:    bnez a2, .LBB18_9
+; RV64IF-NEXT:  .LBB18_4: # %entry
+; RV64IF-NEXT:    addi a4, a4, -1
+; RV64IF-NEXT:    or a1, a4, a1
+; RV64IF-NEXT:    srli a2, a2, 1
+; RV64IF-NEXT:    beqz a1, .LBB18_6
+; RV64IF-NEXT:  # %bb.5: # %entry
+; RV64IF-NEXT:    srli a1, a1, 63
+; RV64IF-NEXT:    beqz a1, .LBB18_7
+; RV64IF-NEXT:    j .LBB18_8
+; RV64IF-NEXT:  .LBB18_6:
+; RV64IF-NEXT:    sltu a1, a0, a2
+; RV64IF-NEXT:    bnez a1, .LBB18_8
+; RV64IF-NEXT:  .LBB18_7: # %entry
+; RV64IF-NEXT:    mv a0, a2
 ; RV64IF-NEXT:  .LBB18_8: # %entry
-; RV64IF-NEXT:    mv a0, a1
-; RV64IF-NEXT:  .LBB18_9: # %entry
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -1433,7 +1424,9 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IFD-NEXT:    li s2, 0
 ; RV32IFD-NEXT:    li a0, 0
 ; RV32IFD-NEXT:    li a1, 0
-; RV32IFD-NEXT:    j .LBB18_8
+; RV32IFD-NEXT:    lui a4, 524288
+; RV32IFD-NEXT:    beqz a4, .LBB18_6
+; RV32IFD-NEXT:    j .LBB18_9
 ; RV32IFD-NEXT:  .LBB18_2: # %fp-to-i-if-check.exp.size
 ; RV32IFD-NEXT:    lw a2, 8(sp)
 ; RV32IFD-NEXT:    srai s0, a1, 31
@@ -1458,10 +1451,10 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IFD-NEXT:    srai a4, a3, 31
 ; RV32IFD-NEXT:    srl a5, a1, a0
 ; RV32IFD-NEXT:    and s3, a4, a5
-; RV32IFD-NEXT:    bltz a3, .LBB18_6
+; RV32IFD-NEXT:    bltz a3, .LBB18_7
 ; RV32IFD-NEXT:  # %bb.4: # %fp-to-i-if-exp.small
 ; RV32IFD-NEXT:    srl s4, a1, a3
-; RV32IFD-NEXT:    j .LBB18_7
+; RV32IFD-NEXT:    j .LBB18_8
 ; RV32IFD-NEXT:  .LBB18_5: # %fp-to-i-if-exp.large
 ; RV32IFD-NEXT:    sw a2, 32(sp)
 ; RV32IFD-NEXT:    sw a1, 36(sp)
@@ -1548,14 +1541,18 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IFD-NEXT:    add a1, a1, s8
 ; RV32IFD-NEXT:    sltu a2, a0, s4
 ; RV32IFD-NEXT:    add a1, a1, a2
-; RV32IFD-NEXT:    j .LBB18_8
+; RV32IFD-NEXT:    lui a4, 524288
+; RV32IFD-NEXT:    bne s2, a4, .LBB18_9
 ; RV32IFD-NEXT:  .LBB18_6:
+; RV32IFD-NEXT:    snez a2, s1
+; RV32IFD-NEXT:    j .LBB18_10
+; RV32IFD-NEXT:  .LBB18_7:
 ; RV32IFD-NEXT:    srl a2, a2, a0
 ; RV32IFD-NEXT:    not a0, a0
 ; RV32IFD-NEXT:    slli a1, a1, 1
 ; RV32IFD-NEXT:    sll a0, a1, a0
 ; RV32IFD-NEXT:    or s4, a2, a0
-; RV32IFD-NEXT:  .LBB18_7: # %fp-to-i-if-exp.small
+; RV32IFD-NEXT:  .LBB18_8: # %fp-to-i-if-exp.small
 ; RV32IFD-NEXT:    mv a0, s4
 ; RV32IFD-NEXT:    li a1, 0
 ; RV32IFD-NEXT:    mv a2, s2
@@ -1601,51 +1598,46 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IFD-NEXT:    add a2, a3, a2
 ; RV32IFD-NEXT:    add a1, a2, a1
 ; RV32IFD-NEXT:    add a1, a1, a4
-; RV32IFD-NEXT:  .LBB18_8: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    lui a2, 524288
-; RV32IFD-NEXT:    addi a3, a2, -1
-; RV32IFD-NEXT:    beq s2, a3, .LBB18_10
-; RV32IFD-NEXT:  # %bb.9: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    sltu a4, s2, a3
-; RV32IFD-NEXT:    or a5, a0, a1
-; RV32IFD-NEXT:    bnez a5, .LBB18_11
-; RV32IFD-NEXT:    j .LBB18_12
-; RV32IFD-NEXT:  .LBB18_10:
-; RV32IFD-NEXT:    sltiu a4, s1, -1
-; RV32IFD-NEXT:    or a5, a0, a1
-; RV32IFD-NEXT:    beqz a5, .LBB18_12
-; RV32IFD-NEXT:  .LBB18_11: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    srli a4, a1, 31
+; RV32IFD-NEXT:    lui a4, 524288
+; RV32IFD-NEXT:    beq s2, a4, .LBB18_6
+; RV32IFD-NEXT:  .LBB18_9: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    sltu a2, a4, s2
+; RV32IFD-NEXT:  .LBB18_10: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    and a3, a0, a1
+; RV32IFD-NEXT:    li a5, -1
+; RV32IFD-NEXT:    beq a3, a5, .LBB18_12
+; RV32IFD-NEXT:  # %bb.11: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    srli a2, a1, 31
+; RV32IFD-NEXT:    xori a2, a2, 1
 ; RV32IFD-NEXT:  .LBB18_12: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    neg a5, a4
-; RV32IFD-NEXT:    addi a6, a4, -1
-; RV32IFD-NEXT:    bnez a4, .LBB18_14
+; RV32IFD-NEXT:    bnez a2, .LBB18_14
 ; RV32IFD-NEXT:  # %bb.13: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    mv s2, a3
+; RV32IFD-NEXT:    lui s2, 524288
 ; RV32IFD-NEXT:  .LBB18_14: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    or a3, a6, s1
-; RV32IFD-NEXT:    and a1, a5, a1
-; RV32IFD-NEXT:    and a4, a5, a0
-; RV32IFD-NEXT:    beq s2, a2, .LBB18_16
+; RV32IFD-NEXT:    addi a4, a4, -1
+; RV32IFD-NEXT:    neg a3, a2
+; RV32IFD-NEXT:    and a3, a3, s1
+; RV32IFD-NEXT:    beq s2, a4, .LBB18_16
 ; RV32IFD-NEXT:  # %bb.15: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    sltu a0, a2, s2
+; RV32IFD-NEXT:    sltu a5, s2, a4
 ; RV32IFD-NEXT:    j .LBB18_17
 ; RV32IFD-NEXT:  .LBB18_16:
-; RV32IFD-NEXT:    snez a0, a3
+; RV32IFD-NEXT:    sltiu a5, a3, -1
 ; RV32IFD-NEXT:  .LBB18_17: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    and a4, a4, a1
-; RV32IFD-NEXT:    li a2, -1
-; RV32IFD-NEXT:    beq a4, a2, .LBB18_19
+; RV32IFD-NEXT:    addi a2, a2, -1
+; RV32IFD-NEXT:    or a1, a2, a1
+; RV32IFD-NEXT:    or a0, a2, a0
+; RV32IFD-NEXT:    or a0, a0, a1
+; RV32IFD-NEXT:    beqz a0, .LBB18_19
 ; RV32IFD-NEXT:  # %bb.18: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    srli a1, a1, 31
-; RV32IFD-NEXT:    xori a0, a1, 1
+; RV32IFD-NEXT:    srli a5, a1, 31
 ; RV32IFD-NEXT:  .LBB18_19: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    bnez a0, .LBB18_21
+; RV32IFD-NEXT:    bnez a5, .LBB18_21
 ; RV32IFD-NEXT:  # %bb.20: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    lui s2, 524288
+; RV32IFD-NEXT:    mv s2, a4
 ; RV32IFD-NEXT:  .LBB18_21: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    neg a0, a0
-; RV32IFD-NEXT:    and a0, a0, a3
+; RV32IFD-NEXT:    addi a0, a5, -1
+; RV32IFD-NEXT:    or a0, a0, a3
 ; RV32IFD-NEXT:    mv a1, s2
 ; RV32IFD-NEXT:    lw ra, 92(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
@@ -1944,17 +1936,17 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IF-NEXT:    li a3, 1023
 ; RV32IF-NEXT:    bgeu a2, a3, .LBB20_2
 ; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    li s1, 0
+; RV32IF-NEXT:    li s2, 0
 ; RV32IF-NEXT:    li s6, 0
 ; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    li a1, 0
-; RV32IF-NEXT:    j .LBB20_6
+; RV32IF-NEXT:    j .LBB20_8
 ; RV32IF-NEXT:  .LBB20_2: # %fp-to-i-if-check.exp.size
 ; RV32IF-NEXT:    srai s0, a1, 31
 ; RV32IF-NEXT:    lui a3, 256
 ; RV32IF-NEXT:    snez a4, a0
 ; RV32IF-NEXT:    addi a0, a0, -1
-; RV32IF-NEXT:    ori s2, s0, 1
+; RV32IF-NEXT:    ori s1, s0, 1
 ; RV32IF-NEXT:    addi a5, a3, -1
 ; RV32IF-NEXT:    addi a3, a0, 1
 ; RV32IF-NEXT:    and a1, a1, a5
@@ -1972,10 +1964,10 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IF-NEXT:    srai a4, a1, 31
 ; RV32IF-NEXT:    srl a5, a0, a2
 ; RV32IF-NEXT:    and s3, a4, a5
-; RV32IF-NEXT:    bltz a1, .LBB20_7
+; RV32IF-NEXT:    bltz a1, .LBB20_6
 ; RV32IF-NEXT:  # %bb.4: # %fp-to-i-if-exp.small
 ; RV32IF-NEXT:    srl s4, a0, a1
-; RV32IF-NEXT:    j .LBB20_8
+; RV32IF-NEXT:    j .LBB20_7
 ; RV32IF-NEXT:  .LBB20_5: # %fp-to-i-if-exp.large
 ; RV32IF-NEXT:    sw a3, 16(sp)
 ; RV32IF-NEXT:    sw a0, 20(sp)
@@ -2009,10 +2001,10 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IF-NEXT:    or a2, a5, a7
 ; RV32IF-NEXT:    or a3, a1, a3
 ; RV32IF-NEXT:    sll s4, a4, a0
-; RV32IF-NEXT:    mv a0, s2
+; RV32IF-NEXT:    mv a0, s1
 ; RV32IF-NEXT:    mv a1, s0
 ; RV32IF-NEXT:    call __muldi3
-; RV32IF-NEXT:    mv s1, a0
+; RV32IF-NEXT:    mv s2, a0
 ; RV32IF-NEXT:    mv s5, a1
 ; RV32IF-NEXT:    mv a0, s0
 ; RV32IF-NEXT:    mv a1, s0
@@ -2020,69 +2012,66 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IF-NEXT:    mv a3, s3
 ; RV32IF-NEXT:    call __muldi3
 ; RV32IF-NEXT:    add a1, a1, s5
-; RV32IF-NEXT:    add s7, a0, s1
+; RV32IF-NEXT:    add s7, a0, s2
 ; RV32IF-NEXT:    sltu a0, s7, a0
 ; RV32IF-NEXT:    add s8, a1, a0
 ; RV32IF-NEXT:    mv a0, s3
 ; RV32IF-NEXT:    li a1, 0
-; RV32IF-NEXT:    mv a2, s2
+; RV32IF-NEXT:    mv a2, s1
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    call __muldi3
 ; RV32IF-NEXT:    mv s5, a0
 ; RV32IF-NEXT:    mv s6, a1
 ; RV32IF-NEXT:    mv a0, s4
 ; RV32IF-NEXT:    li a1, 0
-; RV32IF-NEXT:    mv a2, s2
+; RV32IF-NEXT:    mv a2, s1
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    call __muldi3
-; RV32IF-NEXT:    mv s1, a0
-; RV32IF-NEXT:    add s2, s5, a1
-; RV32IF-NEXT:    sltu a0, s2, s5
+; RV32IF-NEXT:    mv s2, a0
+; RV32IF-NEXT:    add s1, s5, a1
+; RV32IF-NEXT:    sltu a0, s1, s5
 ; RV32IF-NEXT:    add s5, s6, a0
 ; RV32IF-NEXT:    mv a0, s4
 ; RV32IF-NEXT:    li a1, 0
 ; RV32IF-NEXT:    mv a2, s0
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    call __muldi3
-; RV32IF-NEXT:    add s6, a0, s2
+; RV32IF-NEXT:    add s6, a0, s1
 ; RV32IF-NEXT:    sltu a0, s6, a0
 ; RV32IF-NEXT:    add a0, a1, a0
-; RV32IF-NEXT:    add s2, s5, a0
-; RV32IF-NEXT:    sltu s4, s2, s5
+; RV32IF-NEXT:    add s1, s5, a0
+; RV32IF-NEXT:    sltu s4, s1, s5
 ; RV32IF-NEXT:    mv a0, s3
 ; RV32IF-NEXT:    li a1, 0
 ; RV32IF-NEXT:    mv a2, s0
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    call __muldi3
 ; RV32IF-NEXT:    add a1, a1, s4
-; RV32IF-NEXT:    add s2, a0, s2
-; RV32IF-NEXT:    sltu a2, s2, a0
-; RV32IF-NEXT:    add a0, s2, s7
+; RV32IF-NEXT:    add s1, a0, s1
+; RV32IF-NEXT:    sltu a2, s1, a0
+; RV32IF-NEXT:    add a0, s1, s7
 ; RV32IF-NEXT:    add a1, a1, a2
 ; RV32IF-NEXT:    add a1, a1, s8
-; RV32IF-NEXT:    sltu a2, a0, s2
+; RV32IF-NEXT:    sltu a2, a0, s1
 ; RV32IF-NEXT:    add a1, a1, a2
-; RV32IF-NEXT:    bnez a1, .LBB20_9
+; RV32IF-NEXT:    j .LBB20_8
 ; RV32IF-NEXT:  .LBB20_6:
-; RV32IF-NEXT:    seqz a2, a0
-; RV32IF-NEXT:    j .LBB20_10
-; RV32IF-NEXT:  .LBB20_7:
 ; RV32IF-NEXT:    srl a1, a3, a2
 ; RV32IF-NEXT:    not a2, a2
 ; RV32IF-NEXT:    slli a0, a0, 1
 ; RV32IF-NEXT:    sll a0, a0, a2
 ; RV32IF-NEXT:    or s4, a1, a0
-; RV32IF-NEXT:  .LBB20_8: # %fp-to-i-if-exp.small
+; RV32IF-NEXT:  .LBB20_7: # %fp-to-i-if-exp.small
 ; RV32IF-NEXT:    mv a0, s4
 ; RV32IF-NEXT:    li a1, 0
-; RV32IF-NEXT:    mv a2, s2
+; RV32IF-NEXT:    mv a2, s1
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    call __muldi3
-; RV32IF-NEXT:    mv s1, a0
+; RV32IF-NEXT:    mv s2, a0
 ; RV32IF-NEXT:    mv s5, a1
 ; RV32IF-NEXT:    mv a0, s3
 ; RV32IF-NEXT:    li a1, 0
-; RV32IF-NEXT:    mv a2, s2
+; RV32IF-NEXT:    mv a2, s1
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    call __muldi3
 ; RV32IF-NEXT:    add s5, a0, s5
@@ -2102,7 +2091,7 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IF-NEXT:    mv a2, s0
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    call __muldi3
-; RV32IF-NEXT:    mv s2, a0
+; RV32IF-NEXT:    mv s1, a0
 ; RV32IF-NEXT:    mv s5, a1
 ; RV32IF-NEXT:    add s9, a0, s8
 ; RV32IF-NEXT:    mv a0, s0
@@ -2111,46 +2100,37 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IF-NEXT:    mv a3, s3
 ; RV32IF-NEXT:    call __muldi3
 ; RV32IF-NEXT:    add a0, s9, a0
-; RV32IF-NEXT:    sltu a2, s9, s2
+; RV32IF-NEXT:    sltu a2, s9, s1
 ; RV32IF-NEXT:    sltu a3, s8, s7
 ; RV32IF-NEXT:    sltu a4, a0, s9
 ; RV32IF-NEXT:    add a3, s5, a3
 ; RV32IF-NEXT:    add a2, a3, a2
 ; RV32IF-NEXT:    add a1, a2, a1
 ; RV32IF-NEXT:    add a1, a1, a4
-; RV32IF-NEXT:    beqz a1, .LBB20_6
-; RV32IF-NEXT:  .LBB20_9: # %fp-to-i-cleanup
-; RV32IF-NEXT:    srli a2, a1, 31
-; RV32IF-NEXT:  .LBB20_10: # %fp-to-i-cleanup
-; RV32IF-NEXT:    xori a3, a0, 1
-; RV32IF-NEXT:    or a3, a3, a1
-; RV32IF-NEXT:    seqz a3, a3
-; RV32IF-NEXT:    addi a3, a3, -1
-; RV32IF-NEXT:    and a3, a3, a2
-; RV32IF-NEXT:    neg a2, a3
-; RV32IF-NEXT:    bnez a3, .LBB20_12
-; RV32IF-NEXT:  # %bb.11: # %fp-to-i-cleanup
-; RV32IF-NEXT:    li a0, 1
-; RV32IF-NEXT:  .LBB20_12: # %fp-to-i-cleanup
-; RV32IF-NEXT:    and a4, a2, a1
-; RV32IF-NEXT:    beqz a4, .LBB20_14
-; RV32IF-NEXT:  # %bb.13: # %fp-to-i-cleanup
-; RV32IF-NEXT:    sgtz a1, a4
-; RV32IF-NEXT:    j .LBB20_15
-; RV32IF-NEXT:  .LBB20_14:
-; RV32IF-NEXT:    snez a1, a0
-; RV32IF-NEXT:  .LBB20_15: # %fp-to-i-cleanup
-; RV32IF-NEXT:    and a3, a2, s6
-; RV32IF-NEXT:    or a0, a0, a4
-; RV32IF-NEXT:    and a2, a2, s1
-; RV32IF-NEXT:    bnez a0, .LBB20_17
-; RV32IF-NEXT:  # %bb.16:
-; RV32IF-NEXT:    or a0, a2, a3
-; RV32IF-NEXT:    snez a1, a0
-; RV32IF-NEXT:  .LBB20_17: # %fp-to-i-cleanup
-; RV32IF-NEXT:    neg a1, a1
-; RV32IF-NEXT:    and a0, a1, a2
-; RV32IF-NEXT:    and a1, a1, a3
+; RV32IF-NEXT:  .LBB20_8: # %fp-to-i-cleanup
+; RV32IF-NEXT:    sgtz a2, a1
+; RV32IF-NEXT:    neg a2, a2
+; RV32IF-NEXT:    and a2, a2, a1
+; RV32IF-NEXT:    srli a1, a1, 31
+; RV32IF-NEXT:    addi a1, a1, -1
+; RV32IF-NEXT:    and a3, a1, a0
+; RV32IF-NEXT:    beqz a2, .LBB20_10
+; RV32IF-NEXT:  # %bb.9: # %fp-to-i-cleanup
+; RV32IF-NEXT:    srli a0, a2, 31
+; RV32IF-NEXT:    j .LBB20_11
+; RV32IF-NEXT:  .LBB20_10:
+; RV32IF-NEXT:    seqz a0, a3
+; RV32IF-NEXT:  .LBB20_11: # %fp-to-i-cleanup
+; RV32IF-NEXT:    xori a3, a3, 1
+; RV32IF-NEXT:    and a4, a1, s2
+; RV32IF-NEXT:    and a1, a1, s6
+; RV32IF-NEXT:    or a2, a3, a2
+; RV32IF-NEXT:    seqz a2, a2
+; RV32IF-NEXT:    addi a2, a2, -1
+; RV32IF-NEXT:    and a0, a2, a0
+; RV32IF-NEXT:    neg a2, a0
+; RV32IF-NEXT:    and a0, a2, a4
+; RV32IF-NEXT:    and a1, a2, a1
 ; RV32IF-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s1, 68(sp) # 4-byte Folded Reload
@@ -2184,20 +2164,13 @@ define i64 @ustest_f64i64(double %x) {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __fixdfti
-; RV64-NEXT:    slti a2, a1, 1
-; RV64-NEXT:    blez a1, .LBB20_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    li a1, 1
-; RV64-NEXT:  .LBB20_2: # %entry
-; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    srli a2, a1, 63
+; RV64-NEXT:    addi a2, a2, -1
 ; RV64-NEXT:    and a0, a2, a0
-; RV64-NEXT:    beqz a1, .LBB20_4
-; RV64-NEXT:  # %bb.3: # %entry
-; RV64-NEXT:    sgtz a1, a1
-; RV64-NEXT:    j .LBB20_5
-; RV64-NEXT:  .LBB20_4:
-; RV64-NEXT:    snez a1, a0
-; RV64-NEXT:  .LBB20_5: # %entry
+; RV64-NEXT:    sgtz a2, a1
+; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    slti a1, a1, 1
 ; RV64-NEXT:    neg a1, a1
 ; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -2239,16 +2212,16 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IFD-NEXT:    li a2, 1023
 ; RV32IFD-NEXT:    bgeu a0, a2, .LBB20_2
 ; RV32IFD-NEXT:  # %bb.1:
-; RV32IFD-NEXT:    li s1, 0
+; RV32IFD-NEXT:    li s2, 0
 ; RV32IFD-NEXT:    li s6, 0
 ; RV32IFD-NEXT:    li a0, 0
 ; RV32IFD-NEXT:    li a1, 0
-; RV32IFD-NEXT:    j .LBB20_6
+; RV32IFD-NEXT:    j .LBB20_8
 ; RV32IFD-NEXT:  .LBB20_2: # %fp-to-i-if-check.exp.size
 ; RV32IFD-NEXT:    lw a2, 8(sp)
 ; RV32IFD-NEXT:    srai s0, a1, 31
 ; RV32IFD-NEXT:    lui a3, 256
-; RV32IFD-NEXT:    ori s2, s0, 1
+; RV32IFD-NEXT:    ori s1, s0, 1
 ; RV32IFD-NEXT:    addi a3, a3, -1
 ; RV32IFD-NEXT:    and a1, a1, a3
 ; RV32IFD-NEXT:    snez a4, a2
@@ -2268,10 +2241,10 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IFD-NEXT:    srai a4, a3, 31
 ; RV32IFD-NEXT:    srl a5, a1, a0
 ; RV32IFD-NEXT:    and s3, a4, a5
-; RV32IFD-NEXT:    bltz a3, .LBB20_7
+; RV32IFD-NEXT:    bltz a3, .LBB20_6
 ; RV32IFD-NEXT:  # %bb.4: # %fp-to-i-if-exp.small
 ; RV32IFD-NEXT:    srl s4, a1, a3
-; RV32IFD-NEXT:    j .LBB20_8
+; RV32IFD-NEXT:    j .LBB20_7
 ; RV32IFD-NEXT:  .LBB20_5: # %fp-to-i-if-exp.large
 ; RV32IFD-NEXT:    sw a2, 32(sp)
 ; RV32IFD-NEXT:    sw a1, 36(sp)
@@ -2305,10 +2278,10 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IFD-NEXT:    or a2, a5, a7
 ; RV32IFD-NEXT:    or a3, a1, a3
 ; RV32IFD-NEXT:    sll s4, a4, a0
-; RV32IFD-NEXT:    mv a0, s2
+; RV32IFD-NEXT:    mv a0, s1
 ; RV32IFD-NEXT:    mv a1, s0
 ; RV32IFD-NEXT:    call __muldi3
-; RV32IFD-NEXT:    mv s1, a0
+; RV32IFD-NEXT:    mv s2, a0
 ; RV32IFD-NEXT:    mv s5, a1
 ; RV32IFD-NEXT:    mv a0, s0
 ; RV32IFD-NEXT:    mv a1, s0
@@ -2316,69 +2289,66 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IFD-NEXT:    mv a3, s3
 ; RV32IFD-NEXT:    call __muldi3
 ; RV32IFD-NEXT:    add a1, a1, s5
-; RV32IFD-NEXT:    add s7, a0, s1
+; RV32IFD-NEXT:    add s7, a0, s2
 ; RV32IFD-NEXT:    sltu a0, s7, a0
 ; RV32IFD-NEXT:    add s8, a1, a0
 ; RV32IFD-NEXT:    mv a0, s3
 ; RV32IFD-NEXT:    li a1, 0
-; RV32IFD-NEXT:    mv a2, s2
+; RV32IFD-NEXT:    mv a2, s1
 ; RV32IFD-NEXT:    li a3, 0
 ; RV32IFD-NEXT:    call __muldi3
 ; RV32IFD-NEXT:    mv s5, a0
 ; RV32IFD-NEXT:    mv s6, a1
 ; RV32IFD-NEXT:    mv a0, s4
 ; RV32IFD-NEXT:    li a1, 0
-; RV32IFD-NEXT:    mv a2, s2
+; RV32IFD-NEXT:    mv a2, s1
 ; RV32IFD-NEXT:    li a3, 0
 ; RV32IFD-NEXT:    call __muldi3
-; RV32IFD-NEXT:    mv s1, a0
-; RV32IFD-NEXT:    add s2, s5, a1
-; RV32IFD-NEXT:    sltu a0, s2, s5
+; RV32IFD-NEXT:    mv s2, a0
+; RV32IFD-NEXT:    add s1, s5, a1
+; RV32IFD-NEXT:    sltu a0, s1, s5
 ; RV32IFD-NEXT:    add s5, s6, a0
 ; RV32IFD-NEXT:    mv a0, s4
 ; RV32IFD-NEXT:    li a1, 0
 ; RV32IFD-NEXT:    mv a2, s0
 ; RV32IFD-NEXT:    li a3, 0
 ; RV32IFD-NEXT:    call __muldi3
-; RV32IFD-NEXT:    add s6, a0, s2
+; RV32IFD-NEXT:    add s6, a0, s1
 ; RV32IFD-NEXT:    sltu a0, s6, a0
 ; RV32IFD-NEXT:    add a0, a1, a0
-; RV32IFD-NEXT:    add s2, s5, a0
-; RV32IFD-NEXT:    sltu s4, s2, s5
+; RV32IFD-NEXT:    add s1, s5, a0
+; RV32IFD-NEXT:    sltu s4, s1, s5
 ; RV32IFD-NEXT:    mv a0, s3
 ; RV32IFD-NEXT:    li a1, 0
 ; RV32IFD-NEXT:    mv a2, s0
 ; RV32IFD-NEXT:    li a3, 0
 ; RV32IFD-NEXT:    call __muldi3
 ; RV32IFD-NEXT:    add a1, a1, s4
-; RV32IFD-NEXT:    add s2, a0, s2
-; RV32IFD-NEXT:    sltu a2, s2, a0
-; RV32IFD-NEXT:    add a0, s2, s7
+; RV32IFD-NEXT:    add s1, a0, s1
+; RV32IFD-NEXT:    sltu a2, s1, a0
+; RV32IFD-NEXT:    add a0, s1, s7
 ; RV32IFD-NEXT:    add a1, a1, a2
 ; RV32IFD-NEXT:    add a1, a1, s8
-; RV32IFD-NEXT:    sltu a2, a0, s2
+; RV32IFD-NEXT:    sltu a2, a0, s1
 ; RV32IFD-NEXT:    add a1, a1, a2
-; RV32IFD-NEXT:    bnez a1, .LBB20_9
+; RV32IFD-NEXT:    j .LBB20_8
 ; RV32IFD-NEXT:  .LBB20_6:
-; RV32IFD-NEXT:    seqz a2, a0
-; RV32IFD-NEXT:    j .LBB20_10
-; RV32IFD-NEXT:  .LBB20_7:
 ; RV32IFD-NEXT:    srl a2, a2, a0
 ; RV32IFD-NEXT:    not a0, a0
 ; RV32IFD-NEXT:    slli a1, a1, 1
 ; RV32IFD-NEXT:    sll a0, a1, a0
 ; RV32IFD-NEXT:    or s4, a2, a0
-; RV32IFD-NEXT:  .LBB20_8: # %fp-to-i-if-exp.small
+; RV32IFD-NEXT:  .LBB20_7: # %fp-to-i-if-exp.small
 ; RV32IFD-NEXT:    mv a0, s4
 ; RV32IFD-NEXT:    li a1, 0
-; RV32IFD-NEXT:    mv a2, s2
+; RV32IFD-NEXT:    mv a2, s1
 ; RV32IFD-NEXT:    li a3, 0
 ; RV32IFD-NEXT:    call __muldi3
-; RV32IFD-NEXT:    mv s1, a0
+; RV32IFD-NEXT:    mv s2, a0
 ; RV32IFD-NEXT:    mv s5, a1
 ; RV32IFD-NEXT:    mv a0, s3
 ; RV32IFD-NEXT:    li a1, 0
-; RV32IFD-NEXT:    mv a2, s2
+; RV32IFD-NEXT:    mv a2, s1
 ; RV32IFD-NEXT:    li a3, 0
 ; RV32IFD-NEXT:    call __muldi3
 ; RV32IFD-NEXT:    add s5, a0, s5
@@ -2398,7 +2368,7 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IFD-NEXT:    mv a2, s0
 ; RV32IFD-NEXT:    li a3, 0
 ; RV32IFD-NEXT:    call __muldi3
-; RV32IFD-NEXT:    mv s2, a0
+; RV32IFD-NEXT:    mv s1, a0
 ; RV32IFD-NEXT:    mv s5, a1
 ; RV32IFD-NEXT:    add s9, a0, s8
 ; RV32IFD-NEXT:    mv a0, s0
@@ -2407,46 +2377,37 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IFD-NEXT:    mv a3, s3
 ; RV32IFD-NEXT:    call __muldi3
 ; RV32IFD-NEXT:    add a0, s9, a0
-; RV32IFD-NEXT:    sltu a2, s9, s2
+; RV32IFD-NEXT:    sltu a2, s9, s1
 ; RV32IFD-NEXT:    sltu a3, s8, s7
 ; RV32IFD-NEXT:    sltu a4, a0, s9
 ; RV32IFD-NEXT:    add a3, s5, a3
 ; RV32IFD-NEXT:    add a2, a3, a2
 ; RV32IFD-NEXT:    add a1, a2, a1
 ; RV32IFD-NEXT:    add a1, a1, a4
-; RV32IFD-NEXT:    beqz a1, .LBB20_6
-; RV32IFD-NEXT:  .LBB20_9: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    srli a2, a1, 31
-; RV32IFD-NEXT:  .LBB20_10: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    xori a3, a0, 1
-; RV32IFD-NEXT:    or a3, a3, a1
-; RV32IFD-NEXT:    seqz a3, a3
-; RV32IFD-NEXT:    addi a3, a3, -1
-; RV32IFD-NEXT:    and a3, a3, a2
-; RV32IFD-NEXT:    neg a2, a3
-; RV32IFD-NEXT:    bnez a3, .LBB20_12
-; RV32IFD-NEXT:  # %bb.11: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    li a0, 1
-; RV32IFD-NEXT:  .LBB20_12: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    and a4, a2, a1
-; RV32IFD-NEXT:    beqz a4, .LBB20_14
-; RV32IFD-NEXT:  # %bb.13: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    sgtz a1, a4
-; RV32IFD-NEXT:    j .LBB20_15
-; RV32IFD-NEXT:  .LBB20_14:
-; RV32IFD-NEXT:    snez a1, a0
-; RV32IFD-NEXT:  .LBB20_15: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    and a3, a2, s6
-; RV32IFD-NEXT:    or a0, a0, a4
-; RV32IFD-NEXT:    and a2, a2, s1
-; RV32IFD-NEXT:    bnez a0, .LBB20_17
-; RV32IFD-NEXT:  # %bb.16:
-; RV32IFD-NEXT:    or a0, a2, a3
-; RV32IFD-NEXT:    snez a1, a0
-; RV32IFD-NEXT:  .LBB20_17: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    neg a1, a1
-; RV32IFD-NEXT:    and a0, a1, a2
-; RV32IFD-NEXT:    and a1, a1, a3
+; RV32IFD-NEXT:  .LBB20_8: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    sgtz a2, a1
+; RV32IFD-NEXT:    neg a2, a2
+; RV32IFD-NEXT:    and a2, a2, a1
+; RV32IFD-NEXT:    srli a1, a1, 31
+; RV32IFD-NEXT:    addi a1, a1, -1
+; RV32IFD-NEXT:    and a3, a1, a0
+; RV32IFD-NEXT:    beqz a2, .LBB20_10
+; RV32IFD-NEXT:  # %bb.9: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    srli a0, a2, 31
+; RV32IFD-NEXT:    j .LBB20_11
+; RV32IFD-NEXT:  .LBB20_10:
+; RV32IFD-NEXT:    seqz a0, a3
+; RV32IFD-NEXT:  .LBB20_11: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    xori a3, a3, 1
+; RV32IFD-NEXT:    and a4, a1, s2
+; RV32IFD-NEXT:    and a1, a1, s6
+; RV32IFD-NEXT:    or a2, a3, a2
+; RV32IFD-NEXT:    seqz a2, a2
+; RV32IFD-NEXT:    addi a2, a2, -1
+; RV32IFD-NEXT:    and a0, a2, a0
+; RV32IFD-NEXT:    neg a2, a0
+; RV32IFD-NEXT:    and a0, a2, a4
+; RV32IFD-NEXT:    and a1, a2, a1
 ; RV32IFD-NEXT:    lw ra, 92(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s1, 84(sp) # 4-byte Folded Reload
@@ -2517,7 +2478,9 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    li s2, 0
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    j .LBB21_5
+; RV32-NEXT:    lui a4, 524288
+; RV32-NEXT:    beqz a4, .LBB21_4
+; RV32-NEXT:    j .LBB21_6
 ; RV32-NEXT:  .LBB21_2: # %fp-to-i-if-check.exp.size
 ; RV32-NEXT:    srai s0, a1, 31
 ; RV32-NEXT:    slli a1, a1, 9
@@ -2526,7 +2489,7 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    srli a1, a1, 9
 ; RV32-NEXT:    or a1, a1, a2
 ; RV32-NEXT:    ori s2, s0, 1
-; RV32-NEXT:    bltu a3, a0, .LBB21_4
+; RV32-NEXT:    bltu a3, a0, .LBB21_5
 ; RV32-NEXT:  # %bb.3: # %fp-to-i-if-exp.small
 ; RV32-NEXT:    li a2, 150
 ; RV32-NEXT:    sub a2, a2, a0
@@ -2576,8 +2539,12 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    add a2, a3, a2
 ; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    add a1, a1, a4
-; RV32-NEXT:    j .LBB21_5
-; RV32-NEXT:  .LBB21_4: # %fp-to-i-if-exp.large
+; RV32-NEXT:    lui a4, 524288
+; RV32-NEXT:    bne s2, a4, .LBB21_6
+; RV32-NEXT:  .LBB21_4:
+; RV32-NEXT:    snez a2, s1
+; RV32-NEXT:    j .LBB21_7
+; RV32-NEXT:  .LBB21_5: # %fp-to-i-if-exp.large
 ; RV32-NEXT:    addi a0, a0, -150
 ; RV32-NEXT:    sw a1, 24(sp)
 ; RV32-NEXT:    sw zero, 28(sp)
@@ -2663,51 +2630,46 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    add a1, a1, s8
 ; RV32-NEXT:    sltu a2, a0, s4
 ; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:  .LBB21_5: # %fp-to-i-cleanup
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    addi a3, a2, -1
-; RV32-NEXT:    beq s2, a3, .LBB21_7
-; RV32-NEXT:  # %bb.6: # %fp-to-i-cleanup
-; RV32-NEXT:    sltu a4, s2, a3
-; RV32-NEXT:    or a5, a0, a1
-; RV32-NEXT:    bnez a5, .LBB21_8
-; RV32-NEXT:    j .LBB21_9
-; RV32-NEXT:  .LBB21_7:
-; RV32-NEXT:    sltiu a4, s1, -1
-; RV32-NEXT:    or a5, a0, a1
-; RV32-NEXT:    beqz a5, .LBB21_9
-; RV32-NEXT:  .LBB21_8: # %fp-to-i-cleanup
-; RV32-NEXT:    srli a4, a1, 31
+; RV32-NEXT:    lui a4, 524288
+; RV32-NEXT:    beq s2, a4, .LBB21_4
+; RV32-NEXT:  .LBB21_6: # %fp-to-i-cleanup
+; RV32-NEXT:    sltu a2, a4, s2
+; RV32-NEXT:  .LBB21_7: # %fp-to-i-cleanup
+; RV32-NEXT:    and a3, a0, a1
+; RV32-NEXT:    li a5, -1
+; RV32-NEXT:    beq a3, a5, .LBB21_9
+; RV32-NEXT:  # %bb.8: # %fp-to-i-cleanup
+; RV32-NEXT:    srli a2, a1, 31
+; RV32-NEXT:    xori a2, a2, 1
 ; RV32-NEXT:  .LBB21_9: # %fp-to-i-cleanup
-; RV32-NEXT:    neg a5, a4
-; RV32-NEXT:    addi a6, a4, -1
-; RV32-NEXT:    bnez a4, .LBB21_11
+; RV32-NEXT:    bnez a2, .LBB21_11
 ; RV32-NEXT:  # %bb.10: # %fp-to-i-cleanup
-; RV32-NEXT:    mv s2, a3
+; RV32-NEXT:    lui s2, 524288
 ; RV32-NEXT:  .LBB21_11: # %fp-to-i-cleanup
-; RV32-NEXT:    or a3, a6, s1
-; RV32-NEXT:    and a1, a5, a1
-; RV32-NEXT:    and a4, a5, a0
-; RV32-NEXT:    beq s2, a2, .LBB21_13
+; RV32-NEXT:    addi a4, a4, -1
+; RV32-NEXT:    neg a3, a2
+; RV32-NEXT:    and a3, a3, s1
+; RV32-NEXT:    beq s2, a4, .LBB21_13
 ; RV32-NEXT:  # %bb.12: # %fp-to-i-cleanup
-; RV32-NEXT:    sltu a0, a2, s2
+; RV32-NEXT:    sltu a5, s2, a4
 ; RV32-NEXT:    j .LBB21_14
 ; RV32-NEXT:  .LBB21_13:
-; RV32-NEXT:    snez a0, a3
+; RV32-NEXT:    sltiu a5, a3, -1
 ; RV32-NEXT:  .LBB21_14: # %fp-to-i-cleanup
-; RV32-NEXT:    and a4, a4, a1
-; RV32-NEXT:    li a2, -1
-; RV32-NEXT:    beq a4, a2, .LBB21_16
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    beqz a0, .LBB21_16
 ; RV32-NEXT:  # %bb.15: # %fp-to-i-cleanup
-; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    xori a0, a1, 1
+; RV32-NEXT:    srli a5, a1, 31
 ; RV32-NEXT:  .LBB21_16: # %fp-to-i-cleanup
-; RV32-NEXT:    bnez a0, .LBB21_18
+; RV32-NEXT:    bnez a5, .LBB21_18
 ; RV32-NEXT:  # %bb.17: # %fp-to-i-cleanup
-; RV32-NEXT:    lui s2, 524288
+; RV32-NEXT:    mv s2, a4
 ; RV32-NEXT:  .LBB21_18: # %fp-to-i-cleanup
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a0, a0, a3
+; RV32-NEXT:    addi a0, a5, -1
+; RV32-NEXT:    or a0, a0, a3
 ; RV32-NEXT:    mv a1, s2
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
@@ -2888,7 +2850,7 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    li s5, 0
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    j .LBB23_4
+; RV32-NEXT:    j .LBB23_5
 ; RV32-NEXT:  .LBB23_2: # %fp-to-i-if-check.exp.size
 ; RV32-NEXT:    srai s0, a1, 31
 ; RV32-NEXT:    slli a1, a1, 9
@@ -2897,7 +2859,7 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    srli a1, a1, 9
 ; RV32-NEXT:    or a1, a1, a2
 ; RV32-NEXT:    ori s2, s0, 1
-; RV32-NEXT:    bltu a3, a0, .LBB23_5
+; RV32-NEXT:    bltu a3, a0, .LBB23_4
 ; RV32-NEXT:  # %bb.3: # %fp-to-i-if-exp.small
 ; RV32-NEXT:    li a2, 150
 ; RV32-NEXT:    sub a2, a2, a0
@@ -2947,11 +2909,8 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    add a2, a3, a2
 ; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    add a1, a1, a4
-; RV32-NEXT:    bnez a1, .LBB23_6
-; RV32-NEXT:  .LBB23_4:
-; RV32-NEXT:    seqz a2, a0
-; RV32-NEXT:    j .LBB23_7
-; RV32-NEXT:  .LBB23_5: # %fp-to-i-if-exp.large
+; RV32-NEXT:    j .LBB23_5
+; RV32-NEXT:  .LBB23_4: # %fp-to-i-if-exp.large
 ; RV32-NEXT:    addi a0, a0, -150
 ; RV32-NEXT:    sw a1, 24(sp)
 ; RV32-NEXT:    sw zero, 28(sp)
@@ -3037,39 +2996,30 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    add a1, a1, s8
 ; RV32-NEXT:    sltu a2, a0, s2
 ; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:    beqz a1, .LBB23_4
-; RV32-NEXT:  .LBB23_6: # %fp-to-i-cleanup
-; RV32-NEXT:    srli a2, a1, 31
-; RV32-NEXT:  .LBB23_7: # %fp-to-i-cleanup
-; RV32-NEXT:    xori a3, a0, 1
-; RV32-NEXT:    or a3, a3, a1
-; RV32-NEXT:    seqz a3, a3
-; RV32-NEXT:    addi a3, a3, -1
-; RV32-NEXT:    and a3, a3, a2
-; RV32-NEXT:    neg a2, a3
-; RV32-NEXT:    bnez a3, .LBB23_9
-; RV32-NEXT:  # %bb.8: # %fp-to-i-cleanup
-; RV32-NEXT:    li a0, 1
-; RV32-NEXT:  .LBB23_9: # %fp-to-i-cleanup
-; RV32-NEXT:    and a4, a2, a1
-; RV32-NEXT:    beqz a4, .LBB23_11
-; RV32-NEXT:  # %bb.10: # %fp-to-i-cleanup
-; RV32-NEXT:    sgtz a1, a4
-; RV32-NEXT:    j .LBB23_12
-; RV32-NEXT:  .LBB23_11:
-; RV32-NEXT:    snez a1, a0
-; RV32-NEXT:  .LBB23_12: # %fp-to-i-cleanup
-; RV32-NEXT:    and a3, a2, s5
-; RV32-NEXT:    or a0, a0, a4
-; RV32-NEXT:    and a2, a2, s1
-; RV32-NEXT:    bnez a0, .LBB23_14
-; RV32-NEXT:  # %bb.13:
-; RV32-NEXT:    or a0, a2, a3
-; RV32-NEXT:    snez a1, a0
-; RV32-NEXT:  .LBB23_14: # %fp-to-i-cleanup
-; RV32-NEXT:    neg a1, a1
-; RV32-NEXT:    and a0, a1, a2
-; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:  .LBB23_5: # %fp-to-i-cleanup
+; RV32-NEXT:    sgtz a2, a1
+; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    and a2, a2, a1
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a3, a1, a0
+; RV32-NEXT:    beqz a2, .LBB23_7
+; RV32-NEXT:  # %bb.6: # %fp-to-i-cleanup
+; RV32-NEXT:    srli a0, a2, 31
+; RV32-NEXT:    j .LBB23_8
+; RV32-NEXT:  .LBB23_7:
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:  .LBB23_8: # %fp-to-i-cleanup
+; RV32-NEXT:    xori a3, a3, 1
+; RV32-NEXT:    and s1, a1, s1
+; RV32-NEXT:    and a1, a1, s5
+; RV32-NEXT:    or a2, a3, a2
+; RV32-NEXT:    seqz a2, a2
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    and a0, a2, a0
+; RV32-NEXT:    neg a2, a0
+; RV32-NEXT:    and a0, a2, s1
+; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 68(sp) # 4-byte Folded Reload
@@ -3101,20 +3051,13 @@ define i64 @ustest_f32i64(float %x) {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __fixsfti
-; RV64-NEXT:    slti a2, a1, 1
-; RV64-NEXT:    blez a1, .LBB23_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    li a1, 1
-; RV64-NEXT:  .LBB23_2: # %entry
-; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    srli a2, a1, 63
+; RV64-NEXT:    addi a2, a2, -1
 ; RV64-NEXT:    and a0, a2, a0
-; RV64-NEXT:    beqz a1, .LBB23_4
-; RV64-NEXT:  # %bb.3: # %entry
-; RV64-NEXT:    sgtz a1, a1
-; RV64-NEXT:    j .LBB23_5
-; RV64-NEXT:  .LBB23_4:
-; RV64-NEXT:    snez a1, a0
-; RV64-NEXT:  .LBB23_5: # %entry
+; RV64-NEXT:    sgtz a2, a1
+; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    slti a1, a1, 1
 ; RV64-NEXT:    neg a1, a1
 ; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -3140,50 +3083,8 @@ define i64 @stest_f16i64(half %x) {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
-; RV32-NEXT:    fcvt.w.s a2, fa0, rtz
-; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    srai a3, a2, 31
-; RV32-NEXT:    addi a4, a0, -1
-; RV32-NEXT:    beq a3, a4, .LBB24_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    sltu a5, a3, a4
-; RV32-NEXT:    bnez a3, .LBB24_3
-; RV32-NEXT:    j .LBB24_4
-; RV32-NEXT:  .LBB24_2:
-; RV32-NEXT:    sltiu a5, a2, -1
-; RV32-NEXT:    beqz a3, .LBB24_4
-; RV32-NEXT:  .LBB24_3: # %entry
-; RV32-NEXT:    srli a5, a3, 31
-; RV32-NEXT:  .LBB24_4: # %entry
-; RV32-NEXT:    neg a6, a5
-; RV32-NEXT:    addi a7, a5, -1
-; RV32-NEXT:    mv a1, a3
-; RV32-NEXT:    bnez a5, .LBB24_6
-; RV32-NEXT:  # %bb.5: # %entry
-; RV32-NEXT:    mv a1, a4
-; RV32-NEXT:  .LBB24_6: # %entry
-; RV32-NEXT:    or a2, a7, a2
-; RV32-NEXT:    and a3, a6, a3
-; RV32-NEXT:    beq a1, a0, .LBB24_8
-; RV32-NEXT:  # %bb.7: # %entry
-; RV32-NEXT:    sltu a0, a0, a1
-; RV32-NEXT:    li a4, -1
-; RV32-NEXT:    bne a3, a4, .LBB24_9
-; RV32-NEXT:    j .LBB24_10
-; RV32-NEXT:  .LBB24_8:
-; RV32-NEXT:    snez a0, a2
-; RV32-NEXT:    li a4, -1
-; RV32-NEXT:    beq a3, a4, .LBB24_10
-; RV32-NEXT:  .LBB24_9: # %entry
-; RV32-NEXT:    srli a3, a3, 31
-; RV32-NEXT:    xori a0, a3, 1
-; RV32-NEXT:  .LBB24_10: # %entry
-; RV32-NEXT:    bnez a0, .LBB24_12
-; RV32-NEXT:  # %bb.11: # %entry
-; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:  .LBB24_12: # %entry
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32-NEXT:    srai a1, a0, 31
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
@@ -3199,33 +3100,33 @@ define i64 @stest_f16i64(half %x) {
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    call __fixsfti
 ; RV64-NEXT:    li a2, -1
-; RV64-NEXT:    srli a3, a2, 1
-; RV64-NEXT:    beqz a1, .LBB24_2
+; RV64-NEXT:    slli a3, a2, 63
+; RV64-NEXT:    beq a1, a2, .LBB24_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    srli a4, a1, 63
-; RV64-NEXT:    j .LBB24_3
+; RV64-NEXT:    xori a4, a4, 1
+; RV64-NEXT:    beqz a4, .LBB24_3
+; RV64-NEXT:    j .LBB24_4
 ; RV64-NEXT:  .LBB24_2:
-; RV64-NEXT:    sltu a4, a0, a3
+; RV64-NEXT:    sltu a4, a3, a0
+; RV64-NEXT:    bnez a4, .LBB24_4
 ; RV64-NEXT:  .LBB24_3: # %entry
-; RV64-NEXT:    neg a5, a4
-; RV64-NEXT:    and a5, a5, a1
-; RV64-NEXT:    bnez a4, .LBB24_5
-; RV64-NEXT:  # %bb.4: # %entry
 ; RV64-NEXT:    mv a0, a3
-; RV64-NEXT:  .LBB24_5: # %entry
-; RV64-NEXT:    slli a1, a2, 63
-; RV64-NEXT:    beq a5, a2, .LBB24_7
-; RV64-NEXT:  # %bb.6: # %entry
-; RV64-NEXT:    srli a5, a5, 63
-; RV64-NEXT:    xori a2, a5, 1
-; RV64-NEXT:    beqz a2, .LBB24_8
-; RV64-NEXT:    j .LBB24_9
-; RV64-NEXT:  .LBB24_7:
-; RV64-NEXT:    sltu a2, a1, a0
-; RV64-NEXT:    bnez a2, .LBB24_9
+; RV64-NEXT:  .LBB24_4: # %entry
+; RV64-NEXT:    addi a4, a4, -1
+; RV64-NEXT:    or a1, a4, a1
+; RV64-NEXT:    srli a2, a2, 1
+; RV64-NEXT:    beqz a1, .LBB24_6
+; RV64-NEXT:  # %bb.5: # %entry
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    beqz a1, .LBB24_7
+; RV64-NEXT:    j .LBB24_8
+; RV64-NEXT:  .LBB24_6:
+; RV64-NEXT:    sltu a1, a0, a2
+; RV64-NEXT:    bnez a1, .LBB24_8
+; RV64-NEXT:  .LBB24_7: # %entry
+; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:  .LBB24_8: # %entry
-; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:  .LBB24_9: # %entry
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
@@ -3290,38 +3191,10 @@ define i64 @ustest_f16i64(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
-; RV32-NEXT:    srai a1, a0, 31
-; RV32-NEXT:    srli a2, a1, 31
-; RV32-NEXT:    seqz a3, a1
-; RV32-NEXT:    ori a4, a1, 1
-; RV32-NEXT:    or a2, a3, a2
-; RV32-NEXT:    seqz a3, a4
-; RV32-NEXT:    addi a3, a3, -1
-; RV32-NEXT:    and a4, a3, a2
-; RV32-NEXT:    neg a2, a4
-; RV32-NEXT:    mv a3, a1
-; RV32-NEXT:    bnez a4, .LBB26_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    li a3, 1
-; RV32-NEXT:  .LBB26_2: # %entry
-; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    beqz a1, .LBB26_4
-; RV32-NEXT:  # %bb.3: # %entry
-; RV32-NEXT:    sgtz a4, a1
-; RV32-NEXT:    j .LBB26_5
-; RV32-NEXT:  .LBB26_4:
-; RV32-NEXT:    snez a4, a3
-; RV32-NEXT:  .LBB26_5: # %entry
-; RV32-NEXT:    or a3, a3, a1
-; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    bnez a3, .LBB26_7
-; RV32-NEXT:  # %bb.6:
-; RV32-NEXT:    or a2, a0, a1
-; RV32-NEXT:    snez a4, a2
-; RV32-NEXT:  .LBB26_7: # %entry
-; RV32-NEXT:    neg a2, a4
-; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    and a1, a2, a1
+; RV32-NEXT:    sgtz a1, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
@@ -3336,20 +3209,13 @@ define i64 @ustest_f16i64(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    call __fixsfti
-; RV64-NEXT:    slti a2, a1, 1
-; RV64-NEXT:    blez a1, .LBB26_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    li a1, 1
-; RV64-NEXT:  .LBB26_2: # %entry
-; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    srli a2, a1, 63
+; RV64-NEXT:    addi a2, a2, -1
 ; RV64-NEXT:    and a0, a2, a0
-; RV64-NEXT:    beqz a1, .LBB26_4
-; RV64-NEXT:  # %bb.3: # %entry
-; RV64-NEXT:    sgtz a1, a1
-; RV64-NEXT:    j .LBB26_5
-; RV64-NEXT:  .LBB26_4:
-; RV64-NEXT:    snez a1, a0
-; RV64-NEXT:  .LBB26_5: # %entry
+; RV64-NEXT:    sgtz a2, a1
+; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    slti a1, a1, 1
 ; RV64-NEXT:    neg a1, a1
 ; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -3377,34 +3243,34 @@ define i32 @stest_f64i32_mm(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixdfdi
-; RV32IF-NEXT:    lui a2, 524288
-; RV32IF-NEXT:    addi a3, a2, -1
-; RV32IF-NEXT:    beqz a1, .LBB27_2
-; RV32IF-NEXT:  # %bb.1: # %entry
-; RV32IF-NEXT:    srli a4, a1, 31
-; RV32IF-NEXT:    j .LBB27_3
-; RV32IF-NEXT:  .LBB27_2:
-; RV32IF-NEXT:    sltu a4, a0, a3
-; RV32IF-NEXT:  .LBB27_3: # %entry
-; RV32IF-NEXT:    neg a5, a4
-; RV32IF-NEXT:    and a1, a5, a1
-; RV32IF-NEXT:    bnez a4, .LBB27_5
-; RV32IF-NEXT:  # %bb.4: # %entry
-; RV32IF-NEXT:    mv a0, a3
-; RV32IF-NEXT:  .LBB27_5: # %entry
 ; RV32IF-NEXT:    li a3, -1
-; RV32IF-NEXT:    beq a1, a3, .LBB27_7
-; RV32IF-NEXT:  # %bb.6: # %entry
-; RV32IF-NEXT:    srli a1, a1, 31
-; RV32IF-NEXT:    xori a1, a1, 1
-; RV32IF-NEXT:    beqz a1, .LBB27_8
-; RV32IF-NEXT:    j .LBB27_9
-; RV32IF-NEXT:  .LBB27_7:
-; RV32IF-NEXT:    sltu a1, a2, a0
-; RV32IF-NEXT:    bnez a1, .LBB27_9
-; RV32IF-NEXT:  .LBB27_8: # %entry
+; RV32IF-NEXT:    lui a2, 524288
+; RV32IF-NEXT:    beq a1, a3, .LBB27_2
+; RV32IF-NEXT:  # %bb.1: # %entry
+; RV32IF-NEXT:    srli a3, a1, 31
+; RV32IF-NEXT:    xori a3, a3, 1
+; RV32IF-NEXT:    beqz a3, .LBB27_3
+; RV32IF-NEXT:    j .LBB27_4
+; RV32IF-NEXT:  .LBB27_2:
+; RV32IF-NEXT:    sltu a3, a2, a0
+; RV32IF-NEXT:    bnez a3, .LBB27_4
+; RV32IF-NEXT:  .LBB27_3: # %entry
 ; RV32IF-NEXT:    lui a0, 524288
-; RV32IF-NEXT:  .LBB27_9: # %entry
+; RV32IF-NEXT:  .LBB27_4: # %entry
+; RV32IF-NEXT:    addi a3, a3, -1
+; RV32IF-NEXT:    or a1, a3, a1
+; RV32IF-NEXT:    addi a2, a2, -1
+; RV32IF-NEXT:    beqz a1, .LBB27_6
+; RV32IF-NEXT:  # %bb.5: # %entry
+; RV32IF-NEXT:    srli a1, a1, 31
+; RV32IF-NEXT:    beqz a1, .LBB27_7
+; RV32IF-NEXT:    j .LBB27_8
+; RV32IF-NEXT:  .LBB27_6:
+; RV32IF-NEXT:    sltu a1, a0, a2
+; RV32IF-NEXT:    bnez a1, .LBB27_8
+; RV32IF-NEXT:  .LBB27_7: # %entry
+; RV32IF-NEXT:    mv a0, a2
+; RV32IF-NEXT:  .LBB27_8: # %entry
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -3419,14 +3285,14 @@ define i32 @stest_f64i32_mm(double %x) {
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfdi
 ; RV64IF-NEXT:    lui a1, 524288
-; RV64IF-NEXT:    addiw a2, a1, -1
-; RV64IF-NEXT:    blt a0, a2, .LBB27_2
+; RV64IF-NEXT:    blt a1, a0, .LBB27_2
 ; RV64IF-NEXT:  # %bb.1: # %entry
-; RV64IF-NEXT:    mv a0, a2
-; RV64IF-NEXT:  .LBB27_2: # %entry
-; RV64IF-NEXT:    blt a1, a0, .LBB27_4
-; RV64IF-NEXT:  # %bb.3: # %entry
 ; RV64IF-NEXT:    lui a0, 524288
+; RV64IF-NEXT:  .LBB27_2: # %entry
+; RV64IF-NEXT:    addiw a1, a1, -1
+; RV64IF-NEXT:    blt a0, a1, .LBB27_4
+; RV64IF-NEXT:  # %bb.3: # %entry
+; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:  .LBB27_4: # %entry
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
@@ -3447,17 +3313,18 @@ define i32 @stest_f64i32_mm(double %x) {
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rtz
 ; RV64IFD-NEXT:    lui a1, 524288
-; RV64IFD-NEXT:    addiw a2, a1, -1
-; RV64IFD-NEXT:    bge a0, a2, .LBB27_3
+; RV64IFD-NEXT:    bge a1, a0, .LBB27_3
 ; RV64IFD-NEXT:  # %bb.1: # %entry
-; RV64IFD-NEXT:    bge a1, a0, .LBB27_4
+; RV64IFD-NEXT:    addiw a1, a1, -1
+; RV64IFD-NEXT:    bge a0, a1, .LBB27_4
 ; RV64IFD-NEXT:  .LBB27_2: # %entry
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB27_3: # %entry
-; RV64IFD-NEXT:    mv a0, a2
-; RV64IFD-NEXT:    blt a1, a2, .LBB27_2
-; RV64IFD-NEXT:  .LBB27_4: # %entry
 ; RV64IFD-NEXT:    lui a0, 524288
+; RV64IFD-NEXT:    addiw a1, a1, -1
+; RV64IFD-NEXT:    blt a0, a1, .LBB27_2
+; RV64IFD-NEXT:  .LBB27_4: # %entry
+; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:    ret
 entry:
   %conv = fptosi double %x to i64
@@ -3537,20 +3404,18 @@ define i32 @ustest_f64i32_mm(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixdfdi
-; RV32IF-NEXT:    bnez a1, .LBB29_2
-; RV32IF-NEXT:  # %bb.1: # %entry
-; RV32IF-NEXT:    li a2, 1
-; RV32IF-NEXT:    j .LBB29_3
-; RV32IF-NEXT:  .LBB29_2:
-; RV32IF-NEXT:    slti a2, a1, 1
-; RV32IF-NEXT:  .LBB29_3: # %entry
-; RV32IF-NEXT:    addi a3, a2, -1
+; RV32IF-NEXT:    sgtz a2, a1
+; RV32IF-NEXT:    srli a3, a1, 31
 ; RV32IF-NEXT:    neg a2, a2
-; RV32IF-NEXT:    or a0, a3, a0
+; RV32IF-NEXT:    addi a3, a3, -1
 ; RV32IF-NEXT:    and a1, a2, a1
-; RV32IF-NEXT:    srli a1, a1, 31
+; RV32IF-NEXT:    slti a2, a1, 1
+; RV32IF-NEXT:    seqz a1, a1
+; RV32IF-NEXT:    addi a2, a2, -1
 ; RV32IF-NEXT:    addi a1, a1, -1
-; RV32IF-NEXT:    and a0, a1, a0
+; RV32IF-NEXT:    and a1, a1, a2
+; RV32IF-NEXT:    and a0, a3, a0
+; RV32IF-NEXT:    or a0, a1, a0
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -3564,15 +3429,15 @@ define i32 @ustest_f64i32_mm(double %x) {
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfdi
+; RV64IF-NEXT:    sgtz a1, a0
+; RV64IF-NEXT:    neg a1, a1
+; RV64IF-NEXT:    and a0, a1, a0
 ; RV64IF-NEXT:    li a1, -1
 ; RV64IF-NEXT:    srli a1, a1, 32
 ; RV64IF-NEXT:    blt a0, a1, .LBB29_2
 ; RV64IF-NEXT:  # %bb.1: # %entry
 ; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:  .LBB29_2: # %entry
-; RV64IF-NEXT:    sgtz a1, a0
-; RV64IF-NEXT:    neg a1, a1
-; RV64IF-NEXT:    and a0, a1, a0
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -3591,15 +3456,15 @@ define i32 @ustest_f64i32_mm(double %x) {
 ; RV64IFD-LABEL: ustest_f64i32_mm:
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rtz
+; RV64IFD-NEXT:    sgtz a1, a0
+; RV64IFD-NEXT:    neg a1, a1
+; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    li a1, -1
 ; RV64IFD-NEXT:    srli a1, a1, 32
 ; RV64IFD-NEXT:    blt a0, a1, .LBB29_2
 ; RV64IFD-NEXT:  # %bb.1: # %entry
 ; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:  .LBB29_2: # %entry
-; RV64IFD-NEXT:    sgtz a1, a0
-; RV64IFD-NEXT:    neg a1, a1
-; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
 entry:
   %conv = fptosi double %x to i64
@@ -3623,17 +3488,18 @@ define i32 @stest_f32i32_mm(float %x) {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
 ; RV64-NEXT:    lui a1, 524288
-; RV64-NEXT:    addiw a2, a1, -1
-; RV64-NEXT:    bge a0, a2, .LBB30_3
+; RV64-NEXT:    bge a1, a0, .LBB30_3
 ; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    bge a1, a0, .LBB30_4
+; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    bge a0, a1, .LBB30_4
 ; RV64-NEXT:  .LBB30_2: # %entry
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB30_3: # %entry
-; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:    blt a1, a2, .LBB30_2
-; RV64-NEXT:  .LBB30_4: # %entry
 ; RV64-NEXT:    lui a0, 524288
+; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    blt a0, a1, .LBB30_2
+; RV64-NEXT:  .LBB30_4: # %entry
+; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    ret
 entry:
   %conv = fptosi float %x to i64
@@ -3683,15 +3549,15 @@ define i32 @ustest_f32i32_mm(float %x) {
 ; RV64-LABEL: ustest_f32i32_mm:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    blt a0, a1, .LBB32_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB32_2: # %entry
-; RV64-NEXT:    sgtz a1, a0
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ret
 entry:
   %conv = fptosi float %x to i64
@@ -3710,34 +3576,34 @@ define i32 @stest_f16i32_mm(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    call __fixsfdi
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    addi a3, a2, -1
-; RV32-NEXT:    beqz a1, .LBB33_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    srli a4, a1, 31
-; RV32-NEXT:    j .LBB33_3
-; RV32-NEXT:  .LBB33_2:
-; RV32-NEXT:    sltu a4, a0, a3
-; RV32-NEXT:  .LBB33_3: # %entry
-; RV32-NEXT:    neg a5, a4
-; RV32-NEXT:    and a1, a5, a1
-; RV32-NEXT:    bnez a4, .LBB33_5
-; RV32-NEXT:  # %bb.4: # %entry
-; RV32-NEXT:    mv a0, a3
-; RV32-NEXT:  .LBB33_5: # %entry
 ; RV32-NEXT:    li a3, -1
-; RV32-NEXT:    beq a1, a3, .LBB33_7
-; RV32-NEXT:  # %bb.6: # %entry
-; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    xori a1, a1, 1
-; RV32-NEXT:    beqz a1, .LBB33_8
-; RV32-NEXT:    j .LBB33_9
-; RV32-NEXT:  .LBB33_7:
-; RV32-NEXT:    sltu a1, a2, a0
-; RV32-NEXT:    bnez a1, .LBB33_9
-; RV32-NEXT:  .LBB33_8: # %entry
+; RV32-NEXT:    lui a2, 524288
+; RV32-NEXT:    beq a1, a3, .LBB33_2
+; RV32-NEXT:  # %bb.1: # %entry
+; RV32-NEXT:    srli a3, a1, 31
+; RV32-NEXT:    xori a3, a3, 1
+; RV32-NEXT:    beqz a3, .LBB33_3
+; RV32-NEXT:    j .LBB33_4
+; RV32-NEXT:  .LBB33_2:
+; RV32-NEXT:    sltu a3, a2, a0
+; RV32-NEXT:    bnez a3, .LBB33_4
+; RV32-NEXT:  .LBB33_3: # %entry
 ; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:  .LBB33_9: # %entry
+; RV32-NEXT:  .LBB33_4: # %entry
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    or a1, a3, a1
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    beqz a1, .LBB33_6
+; RV32-NEXT:  # %bb.5: # %entry
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    beqz a1, .LBB33_7
+; RV32-NEXT:    j .LBB33_8
+; RV32-NEXT:  .LBB33_6:
+; RV32-NEXT:    sltu a1, a0, a2
+; RV32-NEXT:    bnez a1, .LBB33_8
+; RV32-NEXT:  .LBB33_7: # %entry
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB33_8: # %entry
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
@@ -3753,14 +3619,14 @@ define i32 @stest_f16i32_mm(half %x) {
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
 ; RV64-NEXT:    lui a1, 524288
-; RV64-NEXT:    addiw a2, a1, -1
-; RV64-NEXT:    blt a0, a2, .LBB33_2
+; RV64-NEXT:    blt a1, a0, .LBB33_2
 ; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:  .LBB33_2: # %entry
-; RV64-NEXT:    blt a1, a0, .LBB33_4
-; RV64-NEXT:  # %bb.3: # %entry
 ; RV64-NEXT:    lui a0, 524288
+; RV64-NEXT:  .LBB33_2: # %entry
+; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    blt a0, a1, .LBB33_4
+; RV64-NEXT:  # %bb.3: # %entry
+; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB33_4: # %entry
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
@@ -3828,20 +3694,18 @@ define i32 @ustest_f16i32_mm(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    call __fixsfdi
-; RV32-NEXT:    bnez a1, .LBB35_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    li a2, 1
-; RV32-NEXT:    j .LBB35_3
-; RV32-NEXT:  .LBB35_2:
-; RV32-NEXT:    slti a2, a1, 1
-; RV32-NEXT:  .LBB35_3: # %entry
-; RV32-NEXT:    addi a3, a2, -1
+; RV32-NEXT:    sgtz a2, a1
+; RV32-NEXT:    srli a3, a1, 31
 ; RV32-NEXT:    neg a2, a2
-; RV32-NEXT:    or a0, a3, a0
+; RV32-NEXT:    addi a3, a3, -1
 ; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    slti a2, a1, 1
+; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    addi a2, a2, -1
 ; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    and a1, a1, a2
+; RV32-NEXT:    and a0, a3, a0
+; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
@@ -3856,15 +3720,15 @@ define i32 @ustest_f16i32_mm(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    blt a0, a1, .LBB35_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB35_2: # %entry
-; RV64-NEXT:    sgtz a1, a0
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
@@ -3888,16 +3752,16 @@ define i16 @stest_f64i16_mm(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixdfsi
+; RV32IF-NEXT:    lui a1, 1048568
+; RV32IF-NEXT:    blt a1, a0, .LBB36_2
+; RV32IF-NEXT:  # %bb.1: # %entry
+; RV32IF-NEXT:    lui a0, 1048568
+; RV32IF-NEXT:  .LBB36_2: # %entry
 ; RV32IF-NEXT:    lui a1, 8
 ; RV32IF-NEXT:    addi a1, a1, -1
-; RV32IF-NEXT:    blt a0, a1, .LBB36_2
-; RV32IF-NEXT:  # %bb.1: # %entry
-; RV32IF-NEXT:    mv a0, a1
-; RV32IF-NEXT:  .LBB36_2: # %entry
-; RV32IF-NEXT:    lui a1, 1048568
-; RV32IF-NEXT:    blt a1, a0, .LBB36_4
+; RV32IF-NEXT:    blt a0, a1, .LBB36_4
 ; RV32IF-NEXT:  # %bb.3: # %entry
-; RV32IF-NEXT:    lui a0, 1048568
+; RV32IF-NEXT:    mv a0, a1
 ; RV32IF-NEXT:  .LBB36_4: # %entry
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    .cfi_restore ra
@@ -3912,16 +3776,16 @@ define i16 @stest_f64i16_mm(double %x) {
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfsi
+; RV64IF-NEXT:    lui a1, 1048568
+; RV64IF-NEXT:    blt a1, a0, .LBB36_2
+; RV64IF-NEXT:  # %bb.1: # %entry
+; RV64IF-NEXT:    lui a0, 1048568
+; RV64IF-NEXT:  .LBB36_2: # %entry
 ; RV64IF-NEXT:    lui a1, 8
 ; RV64IF-NEXT:    addi a1, a1, -1
-; RV64IF-NEXT:    blt a0, a1, .LBB36_2
-; RV64IF-NEXT:  # %bb.1: # %entry
-; RV64IF-NEXT:    mv a0, a1
-; RV64IF-NEXT:  .LBB36_2: # %entry
-; RV64IF-NEXT:    lui a1, 1048568
-; RV64IF-NEXT:    blt a1, a0, .LBB36_4
+; RV64IF-NEXT:    blt a0, a1, .LBB36_4
 ; RV64IF-NEXT:  # %bb.3: # %entry
-; RV64IF-NEXT:    lui a0, 1048568
+; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:  .LBB36_4: # %entry
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
@@ -3932,39 +3796,33 @@ define i16 @stest_f64i16_mm(double %x) {
 ; RV32IFD-LABEL: stest_f64i16_mm:
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    fcvt.w.d a0, fa0, rtz
-; RV32IFD-NEXT:    lui a1, 8
-; RV32IFD-NEXT:    addi a1, a1, -1
-; RV32IFD-NEXT:    bge a0, a1, .LBB36_3
-; RV32IFD-NEXT:  # %bb.1: # %entry
-; RV32IFD-NEXT:    lui a1, 1048568
-; RV32IFD-NEXT:    bge a1, a0, .LBB36_4
-; RV32IFD-NEXT:  .LBB36_2: # %entry
-; RV32IFD-NEXT:    ret
-; RV32IFD-NEXT:  .LBB36_3: # %entry
-; RV32IFD-NEXT:    mv a0, a1
 ; RV32IFD-NEXT:    lui a1, 1048568
 ; RV32IFD-NEXT:    blt a1, a0, .LBB36_2
-; RV32IFD-NEXT:  .LBB36_4: # %entry
+; RV32IFD-NEXT:  # %bb.1: # %entry
 ; RV32IFD-NEXT:    lui a0, 1048568
+; RV32IFD-NEXT:  .LBB36_2: # %entry
+; RV32IFD-NEXT:    lui a1, 8
+; RV32IFD-NEXT:    addi a1, a1, -1
+; RV32IFD-NEXT:    blt a0, a1, .LBB36_4
+; RV32IFD-NEXT:  # %bb.3: # %entry
+; RV32IFD-NEXT:    mv a0, a1
+; RV32IFD-NEXT:  .LBB36_4: # %entry
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: stest_f64i16_mm:
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    fcvt.w.d a0, fa0, rtz
-; RV64IFD-NEXT:    lui a1, 8
-; RV64IFD-NEXT:    addi a1, a1, -1
-; RV64IFD-NEXT:    bge a0, a1, .LBB36_3
-; RV64IFD-NEXT:  # %bb.1: # %entry
-; RV64IFD-NEXT:    lui a1, 1048568
-; RV64IFD-NEXT:    bge a1, a0, .LBB36_4
-; RV64IFD-NEXT:  .LBB36_2: # %entry
-; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB36_3: # %entry
-; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:    lui a1, 1048568
 ; RV64IFD-NEXT:    blt a1, a0, .LBB36_2
-; RV64IFD-NEXT:  .LBB36_4: # %entry
+; RV64IFD-NEXT:  # %bb.1: # %entry
 ; RV64IFD-NEXT:    lui a0, 1048568
+; RV64IFD-NEXT:  .LBB36_2: # %entry
+; RV64IFD-NEXT:    lui a1, 8
+; RV64IFD-NEXT:    addi a1, a1, -1
+; RV64IFD-NEXT:    blt a0, a1, .LBB36_4
+; RV64IFD-NEXT:  # %bb.3: # %entry
+; RV64IFD-NEXT:    mv a0, a1
+; RV64IFD-NEXT:  .LBB36_4: # %entry
 ; RV64IFD-NEXT:    ret
 entry:
   %conv = fptosi double %x to i32
@@ -4049,15 +3907,15 @@ define i16 @ustest_f64i16_mm(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixdfsi
+; RV32IF-NEXT:    sgtz a1, a0
+; RV32IF-NEXT:    neg a1, a1
+; RV32IF-NEXT:    and a0, a1, a0
 ; RV32IF-NEXT:    lui a1, 16
 ; RV32IF-NEXT:    addi a1, a1, -1
 ; RV32IF-NEXT:    blt a0, a1, .LBB38_2
 ; RV32IF-NEXT:  # %bb.1: # %entry
 ; RV32IF-NEXT:    mv a0, a1
 ; RV32IF-NEXT:  .LBB38_2: # %entry
-; RV32IF-NEXT:    sgtz a1, a0
-; RV32IF-NEXT:    neg a1, a1
-; RV32IF-NEXT:    and a0, a1, a0
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -4071,15 +3929,15 @@ define i16 @ustest_f64i16_mm(double %x) {
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfsi
+; RV64IF-NEXT:    sgtz a1, a0
+; RV64IF-NEXT:    neg a1, a1
+; RV64IF-NEXT:    and a0, a1, a0
 ; RV64IF-NEXT:    lui a1, 16
 ; RV64IF-NEXT:    addi a1, a1, -1
 ; RV64IF-NEXT:    blt a0, a1, .LBB38_2
 ; RV64IF-NEXT:  # %bb.1: # %entry
 ; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:  .LBB38_2: # %entry
-; RV64IF-NEXT:    sgtz a1, a0
-; RV64IF-NEXT:    neg a1, a1
-; RV64IF-NEXT:    and a0, a1, a0
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -4089,29 +3947,29 @@ define i16 @ustest_f64i16_mm(double %x) {
 ; RV32IFD-LABEL: ustest_f64i16_mm:
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    fcvt.w.d a0, fa0, rtz
+; RV32IFD-NEXT:    sgtz a1, a0
+; RV32IFD-NEXT:    neg a1, a1
+; RV32IFD-NEXT:    and a0, a1, a0
 ; RV32IFD-NEXT:    lui a1, 16
 ; RV32IFD-NEXT:    addi a1, a1, -1
 ; RV32IFD-NEXT:    blt a0, a1, .LBB38_2
 ; RV32IFD-NEXT:  # %bb.1: # %entry
 ; RV32IFD-NEXT:    mv a0, a1
 ; RV32IFD-NEXT:  .LBB38_2: # %entry
-; RV32IFD-NEXT:    sgtz a1, a0
-; RV32IFD-NEXT:    neg a1, a1
-; RV32IFD-NEXT:    and a0, a1, a0
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: ustest_f64i16_mm:
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    fcvt.w.d a0, fa0, rtz
+; RV64IFD-NEXT:    sgtz a1, a0
+; RV64IFD-NEXT:    neg a1, a1
+; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    lui a1, 16
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    blt a0, a1, .LBB38_2
 ; RV64IFD-NEXT:  # %bb.1: # %entry
 ; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:  .LBB38_2: # %entry
-; RV64IFD-NEXT:    sgtz a1, a0
-; RV64IFD-NEXT:    neg a1, a1
-; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
 entry:
   %conv = fptosi double %x to i32
@@ -4125,39 +3983,33 @@ define i16 @stest_f32i16_mm(float %x) {
 ; RV32-LABEL: stest_f32i16_mm:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
-; RV32-NEXT:    lui a1, 8
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    bge a0, a1, .LBB39_3
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    lui a1, 1048568
-; RV32-NEXT:    bge a1, a0, .LBB39_4
-; RV32-NEXT:  .LBB39_2: # %entry
-; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB39_3: # %entry
-; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    lui a1, 1048568
 ; RV32-NEXT:    blt a1, a0, .LBB39_2
-; RV32-NEXT:  .LBB39_4: # %entry
+; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    lui a0, 1048568
+; RV32-NEXT:  .LBB39_2: # %entry
+; RV32-NEXT:    lui a1, 8
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    blt a0, a1, .LBB39_4
+; RV32-NEXT:  # %bb.3: # %entry
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:  .LBB39_4: # %entry
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: stest_f32i16_mm:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    fcvt.w.s a0, fa0, rtz
-; RV64-NEXT:    lui a1, 8
-; RV64-NEXT:    addi a1, a1, -1
-; RV64-NEXT:    bge a0, a1, .LBB39_3
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    lui a1, 1048568
-; RV64-NEXT:    bge a1, a0, .LBB39_4
-; RV64-NEXT:  .LBB39_2: # %entry
-; RV64-NEXT:    ret
-; RV64-NEXT:  .LBB39_3: # %entry
-; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    lui a1, 1048568
 ; RV64-NEXT:    blt a1, a0, .LBB39_2
-; RV64-NEXT:  .LBB39_4: # %entry
+; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    lui a0, 1048568
+; RV64-NEXT:  .LBB39_2: # %entry
+; RV64-NEXT:    lui a1, 8
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    blt a0, a1, .LBB39_4
+; RV64-NEXT:  # %bb.3: # %entry
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:  .LBB39_4: # %entry
 ; RV64-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -4200,29 +4052,29 @@ define i16 @ustest_f32i16_mm(float %x) {
 ; RV32-LABEL: ustest_f32i16_mm:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32-NEXT:    sgtz a1, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    lui a1, 16
 ; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    blt a0, a1, .LBB41_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB41_2: # %entry
-; RV32-NEXT:    sgtz a1, a0
-; RV32-NEXT:    neg a1, a1
-; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ustest_f32i16_mm:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    lui a1, 16
 ; RV64-NEXT:    addi a1, a1, -1
 ; RV64-NEXT:    blt a0, a1, .LBB41_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB41_2: # %entry
-; RV64-NEXT:    sgtz a1, a0
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -4241,16 +4093,16 @@ define i16 @stest_f16i16_mm(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32-NEXT:    lui a1, 1048568
+; RV32-NEXT:    blt a1, a0, .LBB42_2
+; RV32-NEXT:  # %bb.1: # %entry
+; RV32-NEXT:    lui a0, 1048568
+; RV32-NEXT:  .LBB42_2: # %entry
 ; RV32-NEXT:    lui a1, 8
 ; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    blt a0, a1, .LBB42_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:  .LBB42_2: # %entry
-; RV32-NEXT:    lui a1, 1048568
-; RV32-NEXT:    blt a1, a0, .LBB42_4
+; RV32-NEXT:    blt a0, a1, .LBB42_4
 ; RV32-NEXT:  # %bb.3: # %entry
-; RV32-NEXT:    lui a0, 1048568
+; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB42_4: # %entry
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
@@ -4266,16 +4118,16 @@ define i16 @stest_f16i16_mm(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    lui a1, 1048568
+; RV64-NEXT:    blt a1, a0, .LBB42_2
+; RV64-NEXT:  # %bb.1: # %entry
+; RV64-NEXT:    lui a0, 1048568
+; RV64-NEXT:  .LBB42_2: # %entry
 ; RV64-NEXT:    lui a1, 8
 ; RV64-NEXT:    addi a1, a1, -1
-; RV64-NEXT:    blt a0, a1, .LBB42_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:  .LBB42_2: # %entry
-; RV64-NEXT:    lui a1, 1048568
-; RV64-NEXT:    blt a1, a0, .LBB42_4
+; RV64-NEXT:    blt a0, a1, .LBB42_4
 ; RV64-NEXT:  # %bb.3: # %entry
-; RV64-NEXT:    lui a0, 1048568
+; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB42_4: # %entry
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
@@ -4346,15 +4198,15 @@ define i16 @ustest_f16i16_mm(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32-NEXT:    sgtz a1, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    lui a1, 16
 ; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    blt a0, a1, .LBB44_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:  .LBB44_2: # %entry
-; RV32-NEXT:    sgtz a1, a0
-; RV32-NEXT:    neg a1, a1
-; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
@@ -4369,15 +4221,15 @@ define i16 @ustest_f16i16_mm(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    lui a1, 16
 ; RV64-NEXT:    addi a1, a1, -1
 ; RV64-NEXT:    blt a0, a1, .LBB44_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB44_2: # %entry
-; RV64-NEXT:    sgtz a1, a0
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
@@ -4429,7 +4281,9 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    li s2, 0
 ; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    li a1, 0
-; RV32IF-NEXT:    j .LBB45_8
+; RV32IF-NEXT:    lui a4, 524288
+; RV32IF-NEXT:    beqz a4, .LBB45_6
+; RV32IF-NEXT:    j .LBB45_9
 ; RV32IF-NEXT:  .LBB45_2: # %fp-to-i-if-check.exp.size
 ; RV32IF-NEXT:    srai s0, a1, 31
 ; RV32IF-NEXT:    lui a3, 256
@@ -4453,10 +4307,10 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    srai a4, a1, 31
 ; RV32IF-NEXT:    srl a5, a0, a2
 ; RV32IF-NEXT:    and s3, a4, a5
-; RV32IF-NEXT:    bltz a1, .LBB45_6
+; RV32IF-NEXT:    bltz a1, .LBB45_7
 ; RV32IF-NEXT:  # %bb.4: # %fp-to-i-if-exp.small
 ; RV32IF-NEXT:    srl s4, a0, a1
-; RV32IF-NEXT:    j .LBB45_7
+; RV32IF-NEXT:    j .LBB45_8
 ; RV32IF-NEXT:  .LBB45_5: # %fp-to-i-if-exp.large
 ; RV32IF-NEXT:    sw a3, 16(sp)
 ; RV32IF-NEXT:    sw a0, 20(sp)
@@ -4543,14 +4397,18 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    add a1, a1, s8
 ; RV32IF-NEXT:    sltu a2, a0, s4
 ; RV32IF-NEXT:    add a1, a1, a2
-; RV32IF-NEXT:    j .LBB45_8
+; RV32IF-NEXT:    lui a4, 524288
+; RV32IF-NEXT:    bne s2, a4, .LBB45_9
 ; RV32IF-NEXT:  .LBB45_6:
+; RV32IF-NEXT:    snez a2, s1
+; RV32IF-NEXT:    j .LBB45_10
+; RV32IF-NEXT:  .LBB45_7:
 ; RV32IF-NEXT:    srl a1, a3, a2
 ; RV32IF-NEXT:    not a2, a2
 ; RV32IF-NEXT:    slli a0, a0, 1
 ; RV32IF-NEXT:    sll a0, a0, a2
 ; RV32IF-NEXT:    or s4, a1, a0
-; RV32IF-NEXT:  .LBB45_7: # %fp-to-i-if-exp.small
+; RV32IF-NEXT:  .LBB45_8: # %fp-to-i-if-exp.small
 ; RV32IF-NEXT:    mv a0, s4
 ; RV32IF-NEXT:    li a1, 0
 ; RV32IF-NEXT:    mv a2, s2
@@ -4596,51 +4454,46 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    add a2, a3, a2
 ; RV32IF-NEXT:    add a1, a2, a1
 ; RV32IF-NEXT:    add a1, a1, a4
-; RV32IF-NEXT:  .LBB45_8: # %fp-to-i-cleanup
-; RV32IF-NEXT:    lui a2, 524288
-; RV32IF-NEXT:    addi a3, a2, -1
-; RV32IF-NEXT:    beq s2, a3, .LBB45_10
-; RV32IF-NEXT:  # %bb.9: # %fp-to-i-cleanup
-; RV32IF-NEXT:    sltu a4, s2, a3
-; RV32IF-NEXT:    or a5, a0, a1
-; RV32IF-NEXT:    bnez a5, .LBB45_11
-; RV32IF-NEXT:    j .LBB45_12
-; RV32IF-NEXT:  .LBB45_10:
-; RV32IF-NEXT:    sltiu a4, s1, -1
-; RV32IF-NEXT:    or a5, a0, a1
-; RV32IF-NEXT:    beqz a5, .LBB45_12
-; RV32IF-NEXT:  .LBB45_11: # %fp-to-i-cleanup
-; RV32IF-NEXT:    srli a4, a1, 31
+; RV32IF-NEXT:    lui a4, 524288
+; RV32IF-NEXT:    beq s2, a4, .LBB45_6
+; RV32IF-NEXT:  .LBB45_9: # %fp-to-i-cleanup
+; RV32IF-NEXT:    sltu a2, a4, s2
+; RV32IF-NEXT:  .LBB45_10: # %fp-to-i-cleanup
+; RV32IF-NEXT:    and a3, a0, a1
+; RV32IF-NEXT:    li a5, -1
+; RV32IF-NEXT:    beq a3, a5, .LBB45_12
+; RV32IF-NEXT:  # %bb.11: # %fp-to-i-cleanup
+; RV32IF-NEXT:    srli a2, a1, 31
+; RV32IF-NEXT:    xori a2, a2, 1
 ; RV32IF-NEXT:  .LBB45_12: # %fp-to-i-cleanup
-; RV32IF-NEXT:    neg a5, a4
-; RV32IF-NEXT:    addi a6, a4, -1
-; RV32IF-NEXT:    bnez a4, .LBB45_14
+; RV32IF-NEXT:    bnez a2, .LBB45_14
 ; RV32IF-NEXT:  # %bb.13: # %fp-to-i-cleanup
-; RV32IF-NEXT:    mv s2, a3
+; RV32IF-NEXT:    lui s2, 524288
 ; RV32IF-NEXT:  .LBB45_14: # %fp-to-i-cleanup
-; RV32IF-NEXT:    or a3, a6, s1
-; RV32IF-NEXT:    and a1, a5, a1
-; RV32IF-NEXT:    and a4, a5, a0
-; RV32IF-NEXT:    beq s2, a2, .LBB45_16
+; RV32IF-NEXT:    addi a4, a4, -1
+; RV32IF-NEXT:    neg a3, a2
+; RV32IF-NEXT:    and a3, a3, s1
+; RV32IF-NEXT:    beq s2, a4, .LBB45_16
 ; RV32IF-NEXT:  # %bb.15: # %fp-to-i-cleanup
-; RV32IF-NEXT:    sltu a0, a2, s2
+; RV32IF-NEXT:    sltu a5, s2, a4
 ; RV32IF-NEXT:    j .LBB45_17
 ; RV32IF-NEXT:  .LBB45_16:
-; RV32IF-NEXT:    snez a0, a3
+; RV32IF-NEXT:    sltiu a5, a3, -1
 ; RV32IF-NEXT:  .LBB45_17: # %fp-to-i-cleanup
-; RV32IF-NEXT:    and a4, a4, a1
-; RV32IF-NEXT:    li a2, -1
-; RV32IF-NEXT:    beq a4, a2, .LBB45_19
+; RV32IF-NEXT:    addi a2, a2, -1
+; RV32IF-NEXT:    or a1, a2, a1
+; RV32IF-NEXT:    or a0, a2, a0
+; RV32IF-NEXT:    or a0, a0, a1
+; RV32IF-NEXT:    beqz a0, .LBB45_19
 ; RV32IF-NEXT:  # %bb.18: # %fp-to-i-cleanup
-; RV32IF-NEXT:    srli a1, a1, 31
-; RV32IF-NEXT:    xori a0, a1, 1
+; RV32IF-NEXT:    srli a5, a1, 31
 ; RV32IF-NEXT:  .LBB45_19: # %fp-to-i-cleanup
-; RV32IF-NEXT:    bnez a0, .LBB45_21
+; RV32IF-NEXT:    bnez a5, .LBB45_21
 ; RV32IF-NEXT:  # %bb.20: # %fp-to-i-cleanup
-; RV32IF-NEXT:    lui s2, 524288
+; RV32IF-NEXT:    mv s2, a4
 ; RV32IF-NEXT:  .LBB45_21: # %fp-to-i-cleanup
-; RV32IF-NEXT:    neg a0, a0
-; RV32IF-NEXT:    and a0, a0, a3
+; RV32IF-NEXT:    addi a0, a5, -1
+; RV32IF-NEXT:    or a0, a0, a3
 ; RV32IF-NEXT:    mv a1, s2
 ; RV32IF-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
@@ -4676,33 +4529,33 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    call __fixdfti
 ; RV64IF-NEXT:    li a2, -1
-; RV64IF-NEXT:    srli a3, a2, 1
-; RV64IF-NEXT:    beqz a1, .LBB45_2
+; RV64IF-NEXT:    slli a3, a2, 63
+; RV64IF-NEXT:    beq a1, a2, .LBB45_2
 ; RV64IF-NEXT:  # %bb.1: # %entry
 ; RV64IF-NEXT:    srli a4, a1, 63
-; RV64IF-NEXT:    j .LBB45_3
+; RV64IF-NEXT:    xori a4, a4, 1
+; RV64IF-NEXT:    beqz a4, .LBB45_3
+; RV64IF-NEXT:    j .LBB45_4
 ; RV64IF-NEXT:  .LBB45_2:
-; RV64IF-NEXT:    sltu a4, a0, a3
+; RV64IF-NEXT:    sltu a4, a3, a0
+; RV64IF-NEXT:    bnez a4, .LBB45_4
 ; RV64IF-NEXT:  .LBB45_3: # %entry
-; RV64IF-NEXT:    neg a5, a4
-; RV64IF-NEXT:    and a5, a5, a1
-; RV64IF-NEXT:    bnez a4, .LBB45_5
-; RV64IF-NEXT:  # %bb.4: # %entry
 ; RV64IF-NEXT:    mv a0, a3
-; RV64IF-NEXT:  .LBB45_5: # %entry
-; RV64IF-NEXT:    slli a1, a2, 63
-; RV64IF-NEXT:    beq a5, a2, .LBB45_7
-; RV64IF-NEXT:  # %bb.6: # %entry
-; RV64IF-NEXT:    srli a5, a5, 63
-; RV64IF-NEXT:    xori a2, a5, 1
-; RV64IF-NEXT:    beqz a2, .LBB45_8
-; RV64IF-NEXT:    j .LBB45_9
-; RV64IF-NEXT:  .LBB45_7:
-; RV64IF-NEXT:    sltu a2, a1, a0
-; RV64IF-NEXT:    bnez a2, .LBB45_9
+; RV64IF-NEXT:  .LBB45_4: # %entry
+; RV64IF-NEXT:    addi a4, a4, -1
+; RV64IF-NEXT:    or a1, a4, a1
+; RV64IF-NEXT:    srli a2, a2, 1
+; RV64IF-NEXT:    beqz a1, .LBB45_6
+; RV64IF-NEXT:  # %bb.5: # %entry
+; RV64IF-NEXT:    srli a1, a1, 63
+; RV64IF-NEXT:    beqz a1, .LBB45_7
+; RV64IF-NEXT:    j .LBB45_8
+; RV64IF-NEXT:  .LBB45_6:
+; RV64IF-NEXT:    sltu a1, a0, a2
+; RV64IF-NEXT:    bnez a1, .LBB45_8
+; RV64IF-NEXT:  .LBB45_7: # %entry
+; RV64IF-NEXT:    mv a0, a2
 ; RV64IF-NEXT:  .LBB45_8: # %entry
-; RV64IF-NEXT:    mv a0, a1
-; RV64IF-NEXT:  .LBB45_9: # %entry
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    .cfi_restore ra
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -4746,7 +4599,9 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    li s2, 0
 ; RV32IFD-NEXT:    li a0, 0
 ; RV32IFD-NEXT:    li a1, 0
-; RV32IFD-NEXT:    j .LBB45_8
+; RV32IFD-NEXT:    lui a4, 524288
+; RV32IFD-NEXT:    beqz a4, .LBB45_6
+; RV32IFD-NEXT:    j .LBB45_9
 ; RV32IFD-NEXT:  .LBB45_2: # %fp-to-i-if-check.exp.size
 ; RV32IFD-NEXT:    lw a2, 8(sp)
 ; RV32IFD-NEXT:    srai s0, a1, 31
@@ -4771,10 +4626,10 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    srai a4, a3, 31
 ; RV32IFD-NEXT:    srl a5, a1, a0
 ; RV32IFD-NEXT:    and s3, a4, a5
-; RV32IFD-NEXT:    bltz a3, .LBB45_6
+; RV32IFD-NEXT:    bltz a3, .LBB45_7
 ; RV32IFD-NEXT:  # %bb.4: # %fp-to-i-if-exp.small
 ; RV32IFD-NEXT:    srl s4, a1, a3
-; RV32IFD-NEXT:    j .LBB45_7
+; RV32IFD-NEXT:    j .LBB45_8
 ; RV32IFD-NEXT:  .LBB45_5: # %fp-to-i-if-exp.large
 ; RV32IFD-NEXT:    sw a2, 32(sp)
 ; RV32IFD-NEXT:    sw a1, 36(sp)
@@ -4861,14 +4716,18 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    add a1, a1, s8
 ; RV32IFD-NEXT:    sltu a2, a0, s4
 ; RV32IFD-NEXT:    add a1, a1, a2
-; RV32IFD-NEXT:    j .LBB45_8
+; RV32IFD-NEXT:    lui a4, 524288
+; RV32IFD-NEXT:    bne s2, a4, .LBB45_9
 ; RV32IFD-NEXT:  .LBB45_6:
+; RV32IFD-NEXT:    snez a2, s1
+; RV32IFD-NEXT:    j .LBB45_10
+; RV32IFD-NEXT:  .LBB45_7:
 ; RV32IFD-NEXT:    srl a2, a2, a0
 ; RV32IFD-NEXT:    not a0, a0
 ; RV32IFD-NEXT:    slli a1, a1, 1
 ; RV32IFD-NEXT:    sll a0, a1, a0
 ; RV32IFD-NEXT:    or s4, a2, a0
-; RV32IFD-NEXT:  .LBB45_7: # %fp-to-i-if-exp.small
+; RV32IFD-NEXT:  .LBB45_8: # %fp-to-i-if-exp.small
 ; RV32IFD-NEXT:    mv a0, s4
 ; RV32IFD-NEXT:    li a1, 0
 ; RV32IFD-NEXT:    mv a2, s2
@@ -4914,51 +4773,46 @@ define i64 @stest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    add a2, a3, a2
 ; RV32IFD-NEXT:    add a1, a2, a1
 ; RV32IFD-NEXT:    add a1, a1, a4
-; RV32IFD-NEXT:  .LBB45_8: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    lui a2, 524288
-; RV32IFD-NEXT:    addi a3, a2, -1
-; RV32IFD-NEXT:    beq s2, a3, .LBB45_10
-; RV32IFD-NEXT:  # %bb.9: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    sltu a4, s2, a3
-; RV32IFD-NEXT:    or a5, a0, a1
-; RV32IFD-NEXT:    bnez a5, .LBB45_11
-; RV32IFD-NEXT:    j .LBB45_12
-; RV32IFD-NEXT:  .LBB45_10:
-; RV32IFD-NEXT:    sltiu a4, s1, -1
-; RV32IFD-NEXT:    or a5, a0, a1
-; RV32IFD-NEXT:    beqz a5, .LBB45_12
-; RV32IFD-NEXT:  .LBB45_11: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    srli a4, a1, 31
+; RV32IFD-NEXT:    lui a4, 524288
+; RV32IFD-NEXT:    beq s2, a4, .LBB45_6
+; RV32IFD-NEXT:  .LBB45_9: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    sltu a2, a4, s2
+; RV32IFD-NEXT:  .LBB45_10: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    and a3, a0, a1
+; RV32IFD-NEXT:    li a5, -1
+; RV32IFD-NEXT:    beq a3, a5, .LBB45_12
+; RV32IFD-NEXT:  # %bb.11: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    srli a2, a1, 31
+; RV32IFD-NEXT:    xori a2, a2, 1
 ; RV32IFD-NEXT:  .LBB45_12: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    neg a5, a4
-; RV32IFD-NEXT:    addi a6, a4, -1
-; RV32IFD-NEXT:    bnez a4, .LBB45_14
+; RV32IFD-NEXT:    bnez a2, .LBB45_14
 ; RV32IFD-NEXT:  # %bb.13: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    mv s2, a3
+; RV32IFD-NEXT:    lui s2, 524288
 ; RV32IFD-NEXT:  .LBB45_14: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    or a3, a6, s1
-; RV32IFD-NEXT:    and a1, a5, a1
-; RV32IFD-NEXT:    and a4, a5, a0
-; RV32IFD-NEXT:    beq s2, a2, .LBB45_16
+; RV32IFD-NEXT:    addi a4, a4, -1
+; RV32IFD-NEXT:    neg a3, a2
+; RV32IFD-NEXT:    and a3, a3, s1
+; RV32IFD-NEXT:    beq s2, a4, .LBB45_16
 ; RV32IFD-NEXT:  # %bb.15: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    sltu a0, a2, s2
+; RV32IFD-NEXT:    sltu a5, s2, a4
 ; RV32IFD-NEXT:    j .LBB45_17
 ; RV32IFD-NEXT:  .LBB45_16:
-; RV32IFD-NEXT:    snez a0, a3
+; RV32IFD-NEXT:    sltiu a5, a3, -1
 ; RV32IFD-NEXT:  .LBB45_17: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    and a4, a4, a1
-; RV32IFD-NEXT:    li a2, -1
-; RV32IFD-NEXT:    beq a4, a2, .LBB45_19
+; RV32IFD-NEXT:    addi a2, a2, -1
+; RV32IFD-NEXT:    or a1, a2, a1
+; RV32IFD-NEXT:    or a0, a2, a0
+; RV32IFD-NEXT:    or a0, a0, a1
+; RV32IFD-NEXT:    beqz a0, .LBB45_19
 ; RV32IFD-NEXT:  # %bb.18: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    srli a1, a1, 31
-; RV32IFD-NEXT:    xori a0, a1, 1
+; RV32IFD-NEXT:    srli a5, a1, 31
 ; RV32IFD-NEXT:  .LBB45_19: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    bnez a0, .LBB45_21
+; RV32IFD-NEXT:    bnez a5, .LBB45_21
 ; RV32IFD-NEXT:  # %bb.20: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    lui s2, 524288
+; RV32IFD-NEXT:    mv s2, a4
 ; RV32IFD-NEXT:  .LBB45_21: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    neg a0, a0
-; RV32IFD-NEXT:    and a0, a0, a3
+; RV32IFD-NEXT:    addi a0, a5, -1
+; RV32IFD-NEXT:    or a0, a0, a3
 ; RV32IFD-NEXT:    mv a1, s2
 ; RV32IFD-NEXT:    lw ra, 92(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
@@ -5258,7 +5112,7 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    li s6, 0
 ; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    li a1, 0
-; RV32IF-NEXT:    j .LBB47_6
+; RV32IF-NEXT:    j .LBB47_8
 ; RV32IF-NEXT:  .LBB47_2: # %fp-to-i-if-check.exp.size
 ; RV32IF-NEXT:    srai s0, a1, 31
 ; RV32IF-NEXT:    lui a3, 256
@@ -5282,10 +5136,10 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    srai a4, a1, 31
 ; RV32IF-NEXT:    srl a5, a0, a2
 ; RV32IF-NEXT:    and s3, a4, a5
-; RV32IF-NEXT:    bltz a1, .LBB47_7
+; RV32IF-NEXT:    bltz a1, .LBB47_6
 ; RV32IF-NEXT:  # %bb.4: # %fp-to-i-if-exp.small
 ; RV32IF-NEXT:    srl s4, a0, a1
-; RV32IF-NEXT:    j .LBB47_8
+; RV32IF-NEXT:    j .LBB47_7
 ; RV32IF-NEXT:  .LBB47_5: # %fp-to-i-if-exp.large
 ; RV32IF-NEXT:    sw a3, 16(sp)
 ; RV32IF-NEXT:    sw a0, 20(sp)
@@ -5372,17 +5226,14 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    add a1, a1, s8
 ; RV32IF-NEXT:    sltu a2, a0, s1
 ; RV32IF-NEXT:    add a1, a1, a2
-; RV32IF-NEXT:    bnez a1, .LBB47_9
+; RV32IF-NEXT:    j .LBB47_8
 ; RV32IF-NEXT:  .LBB47_6:
-; RV32IF-NEXT:    seqz a2, a0
-; RV32IF-NEXT:    j .LBB47_10
-; RV32IF-NEXT:  .LBB47_7:
 ; RV32IF-NEXT:    srl a1, a3, a2
 ; RV32IF-NEXT:    not a2, a2
 ; RV32IF-NEXT:    slli a0, a0, 1
 ; RV32IF-NEXT:    sll a0, a0, a2
 ; RV32IF-NEXT:    or s4, a1, a0
-; RV32IF-NEXT:  .LBB47_8: # %fp-to-i-if-exp.small
+; RV32IF-NEXT:  .LBB47_7: # %fp-to-i-if-exp.small
 ; RV32IF-NEXT:    mv a0, s4
 ; RV32IF-NEXT:    li a1, 0
 ; RV32IF-NEXT:    mv a2, s1
@@ -5428,23 +5279,30 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    add a2, a3, a2
 ; RV32IF-NEXT:    add a1, a2, a1
 ; RV32IF-NEXT:    add a1, a1, a4
-; RV32IF-NEXT:    beqz a1, .LBB47_6
-; RV32IF-NEXT:  .LBB47_9: # %fp-to-i-cleanup
-; RV32IF-NEXT:    srli a2, a1, 31
-; RV32IF-NEXT:  .LBB47_10: # %fp-to-i-cleanup
-; RV32IF-NEXT:    xori a0, a0, 1
-; RV32IF-NEXT:    or a0, a0, a1
-; RV32IF-NEXT:    seqz a0, a0
-; RV32IF-NEXT:    addi a0, a0, -1
-; RV32IF-NEXT:    and a0, a0, a2
-; RV32IF-NEXT:    neg a0, a0
-; RV32IF-NEXT:    and a2, a0, s6
-; RV32IF-NEXT:    and a3, a0, s2
-; RV32IF-NEXT:    and a0, a0, a1
-; RV32IF-NEXT:    srli a0, a0, 31
-; RV32IF-NEXT:    addi a1, a0, -1
-; RV32IF-NEXT:    and a0, a1, a3
-; RV32IF-NEXT:    and a1, a1, a2
+; RV32IF-NEXT:  .LBB47_8: # %fp-to-i-cleanup
+; RV32IF-NEXT:    sgtz a2, a1
+; RV32IF-NEXT:    neg a2, a2
+; RV32IF-NEXT:    and a2, a2, a1
+; RV32IF-NEXT:    srli a1, a1, 31
+; RV32IF-NEXT:    addi a1, a1, -1
+; RV32IF-NEXT:    and a3, a1, a0
+; RV32IF-NEXT:    beqz a2, .LBB47_10
+; RV32IF-NEXT:  # %bb.9: # %fp-to-i-cleanup
+; RV32IF-NEXT:    srli a0, a2, 31
+; RV32IF-NEXT:    j .LBB47_11
+; RV32IF-NEXT:  .LBB47_10:
+; RV32IF-NEXT:    seqz a0, a3
+; RV32IF-NEXT:  .LBB47_11: # %fp-to-i-cleanup
+; RV32IF-NEXT:    xori a3, a3, 1
+; RV32IF-NEXT:    and a4, a1, s2
+; RV32IF-NEXT:    and a1, a1, s6
+; RV32IF-NEXT:    or a2, a3, a2
+; RV32IF-NEXT:    seqz a2, a2
+; RV32IF-NEXT:    addi a2, a2, -1
+; RV32IF-NEXT:    and a0, a2, a0
+; RV32IF-NEXT:    neg a2, a0
+; RV32IF-NEXT:    and a0, a2, a4
+; RV32IF-NEXT:    and a1, a2, a1
 ; RV32IF-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s1, 68(sp) # 4-byte Folded Reload
@@ -5478,17 +5336,15 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __fixdfti
-; RV64-NEXT:    mv a2, a1
-; RV64-NEXT:    blez a1, .LBB47_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    li a2, 1
-; RV64-NEXT:  .LBB47_2: # %entry
-; RV64-NEXT:    slti a1, a1, 1
-; RV64-NEXT:    srli a2, a2, 63
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    srli a2, a1, 63
 ; RV64-NEXT:    addi a2, a2, -1
 ; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    sgtz a2, a1
+; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    slti a1, a1, 1
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
@@ -5532,7 +5388,7 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    li s6, 0
 ; RV32IFD-NEXT:    li a0, 0
 ; RV32IFD-NEXT:    li a1, 0
-; RV32IFD-NEXT:    j .LBB47_6
+; RV32IFD-NEXT:    j .LBB47_8
 ; RV32IFD-NEXT:  .LBB47_2: # %fp-to-i-if-check.exp.size
 ; RV32IFD-NEXT:    lw a2, 8(sp)
 ; RV32IFD-NEXT:    srai s0, a1, 31
@@ -5557,10 +5413,10 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    srai a4, a3, 31
 ; RV32IFD-NEXT:    srl a5, a1, a0
 ; RV32IFD-NEXT:    and s3, a4, a5
-; RV32IFD-NEXT:    bltz a3, .LBB47_7
+; RV32IFD-NEXT:    bltz a3, .LBB47_6
 ; RV32IFD-NEXT:  # %bb.4: # %fp-to-i-if-exp.small
 ; RV32IFD-NEXT:    srl s4, a1, a3
-; RV32IFD-NEXT:    j .LBB47_8
+; RV32IFD-NEXT:    j .LBB47_7
 ; RV32IFD-NEXT:  .LBB47_5: # %fp-to-i-if-exp.large
 ; RV32IFD-NEXT:    sw a2, 32(sp)
 ; RV32IFD-NEXT:    sw a1, 36(sp)
@@ -5647,17 +5503,14 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    add a1, a1, s8
 ; RV32IFD-NEXT:    sltu a2, a0, s1
 ; RV32IFD-NEXT:    add a1, a1, a2
-; RV32IFD-NEXT:    bnez a1, .LBB47_9
+; RV32IFD-NEXT:    j .LBB47_8
 ; RV32IFD-NEXT:  .LBB47_6:
-; RV32IFD-NEXT:    seqz a2, a0
-; RV32IFD-NEXT:    j .LBB47_10
-; RV32IFD-NEXT:  .LBB47_7:
 ; RV32IFD-NEXT:    srl a2, a2, a0
 ; RV32IFD-NEXT:    not a0, a0
 ; RV32IFD-NEXT:    slli a1, a1, 1
 ; RV32IFD-NEXT:    sll a0, a1, a0
 ; RV32IFD-NEXT:    or s4, a2, a0
-; RV32IFD-NEXT:  .LBB47_8: # %fp-to-i-if-exp.small
+; RV32IFD-NEXT:  .LBB47_7: # %fp-to-i-if-exp.small
 ; RV32IFD-NEXT:    mv a0, s4
 ; RV32IFD-NEXT:    li a1, 0
 ; RV32IFD-NEXT:    mv a2, s1
@@ -5703,23 +5556,30 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    add a2, a3, a2
 ; RV32IFD-NEXT:    add a1, a2, a1
 ; RV32IFD-NEXT:    add a1, a1, a4
-; RV32IFD-NEXT:    beqz a1, .LBB47_6
-; RV32IFD-NEXT:  .LBB47_9: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    srli a2, a1, 31
-; RV32IFD-NEXT:  .LBB47_10: # %fp-to-i-cleanup
-; RV32IFD-NEXT:    xori a0, a0, 1
-; RV32IFD-NEXT:    or a0, a0, a1
-; RV32IFD-NEXT:    seqz a0, a0
-; RV32IFD-NEXT:    addi a0, a0, -1
-; RV32IFD-NEXT:    and a0, a0, a2
-; RV32IFD-NEXT:    neg a0, a0
-; RV32IFD-NEXT:    and a2, a0, s6
-; RV32IFD-NEXT:    and a3, a0, s2
-; RV32IFD-NEXT:    and a0, a0, a1
-; RV32IFD-NEXT:    srli a0, a0, 31
-; RV32IFD-NEXT:    addi a1, a0, -1
-; RV32IFD-NEXT:    and a0, a1, a3
-; RV32IFD-NEXT:    and a1, a1, a2
+; RV32IFD-NEXT:  .LBB47_8: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    sgtz a2, a1
+; RV32IFD-NEXT:    neg a2, a2
+; RV32IFD-NEXT:    and a2, a2, a1
+; RV32IFD-NEXT:    srli a1, a1, 31
+; RV32IFD-NEXT:    addi a1, a1, -1
+; RV32IFD-NEXT:    and a3, a1, a0
+; RV32IFD-NEXT:    beqz a2, .LBB47_10
+; RV32IFD-NEXT:  # %bb.9: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    srli a0, a2, 31
+; RV32IFD-NEXT:    j .LBB47_11
+; RV32IFD-NEXT:  .LBB47_10:
+; RV32IFD-NEXT:    seqz a0, a3
+; RV32IFD-NEXT:  .LBB47_11: # %fp-to-i-cleanup
+; RV32IFD-NEXT:    xori a3, a3, 1
+; RV32IFD-NEXT:    and a4, a1, s2
+; RV32IFD-NEXT:    and a1, a1, s6
+; RV32IFD-NEXT:    or a2, a3, a2
+; RV32IFD-NEXT:    seqz a2, a2
+; RV32IFD-NEXT:    addi a2, a2, -1
+; RV32IFD-NEXT:    and a0, a2, a0
+; RV32IFD-NEXT:    neg a2, a0
+; RV32IFD-NEXT:    and a0, a2, a4
+; RV32IFD-NEXT:    and a1, a2, a1
 ; RV32IFD-NEXT:    lw ra, 92(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s1, 84(sp) # 4-byte Folded Reload
@@ -5788,7 +5648,9 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    li s2, 0
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    j .LBB48_5
+; RV32-NEXT:    lui a4, 524288
+; RV32-NEXT:    beqz a4, .LBB48_4
+; RV32-NEXT:    j .LBB48_6
 ; RV32-NEXT:  .LBB48_2: # %fp-to-i-if-check.exp.size
 ; RV32-NEXT:    srai s0, a1, 31
 ; RV32-NEXT:    slli a1, a1, 9
@@ -5797,7 +5659,7 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    srli a1, a1, 9
 ; RV32-NEXT:    or a1, a1, a2
 ; RV32-NEXT:    ori s2, s0, 1
-; RV32-NEXT:    bltu a3, a0, .LBB48_4
+; RV32-NEXT:    bltu a3, a0, .LBB48_5
 ; RV32-NEXT:  # %bb.3: # %fp-to-i-if-exp.small
 ; RV32-NEXT:    li a2, 150
 ; RV32-NEXT:    sub a2, a2, a0
@@ -5847,8 +5709,12 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    add a2, a3, a2
 ; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    add a1, a1, a4
-; RV32-NEXT:    j .LBB48_5
-; RV32-NEXT:  .LBB48_4: # %fp-to-i-if-exp.large
+; RV32-NEXT:    lui a4, 524288
+; RV32-NEXT:    bne s2, a4, .LBB48_6
+; RV32-NEXT:  .LBB48_4:
+; RV32-NEXT:    snez a2, s1
+; RV32-NEXT:    j .LBB48_7
+; RV32-NEXT:  .LBB48_5: # %fp-to-i-if-exp.large
 ; RV32-NEXT:    addi a0, a0, -150
 ; RV32-NEXT:    sw a1, 24(sp)
 ; RV32-NEXT:    sw zero, 28(sp)
@@ -5934,51 +5800,46 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    add a1, a1, s8
 ; RV32-NEXT:    sltu a2, a0, s4
 ; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:  .LBB48_5: # %fp-to-i-cleanup
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    addi a3, a2, -1
-; RV32-NEXT:    beq s2, a3, .LBB48_7
-; RV32-NEXT:  # %bb.6: # %fp-to-i-cleanup
-; RV32-NEXT:    sltu a4, s2, a3
-; RV32-NEXT:    or a5, a0, a1
-; RV32-NEXT:    bnez a5, .LBB48_8
-; RV32-NEXT:    j .LBB48_9
-; RV32-NEXT:  .LBB48_7:
-; RV32-NEXT:    sltiu a4, s1, -1
-; RV32-NEXT:    or a5, a0, a1
-; RV32-NEXT:    beqz a5, .LBB48_9
-; RV32-NEXT:  .LBB48_8: # %fp-to-i-cleanup
-; RV32-NEXT:    srli a4, a1, 31
+; RV32-NEXT:    lui a4, 524288
+; RV32-NEXT:    beq s2, a4, .LBB48_4
+; RV32-NEXT:  .LBB48_6: # %fp-to-i-cleanup
+; RV32-NEXT:    sltu a2, a4, s2
+; RV32-NEXT:  .LBB48_7: # %fp-to-i-cleanup
+; RV32-NEXT:    and a3, a0, a1
+; RV32-NEXT:    li a5, -1
+; RV32-NEXT:    beq a3, a5, .LBB48_9
+; RV32-NEXT:  # %bb.8: # %fp-to-i-cleanup
+; RV32-NEXT:    srli a2, a1, 31
+; RV32-NEXT:    xori a2, a2, 1
 ; RV32-NEXT:  .LBB48_9: # %fp-to-i-cleanup
-; RV32-NEXT:    neg a5, a4
-; RV32-NEXT:    addi a6, a4, -1
-; RV32-NEXT:    bnez a4, .LBB48_11
+; RV32-NEXT:    bnez a2, .LBB48_11
 ; RV32-NEXT:  # %bb.10: # %fp-to-i-cleanup
-; RV32-NEXT:    mv s2, a3
+; RV32-NEXT:    lui s2, 524288
 ; RV32-NEXT:  .LBB48_11: # %fp-to-i-cleanup
-; RV32-NEXT:    or a3, a6, s1
-; RV32-NEXT:    and a1, a5, a1
-; RV32-NEXT:    and a4, a5, a0
-; RV32-NEXT:    beq s2, a2, .LBB48_13
+; RV32-NEXT:    addi a4, a4, -1
+; RV32-NEXT:    neg a3, a2
+; RV32-NEXT:    and a3, a3, s1
+; RV32-NEXT:    beq s2, a4, .LBB48_13
 ; RV32-NEXT:  # %bb.12: # %fp-to-i-cleanup
-; RV32-NEXT:    sltu a0, a2, s2
+; RV32-NEXT:    sltu a5, s2, a4
 ; RV32-NEXT:    j .LBB48_14
 ; RV32-NEXT:  .LBB48_13:
-; RV32-NEXT:    snez a0, a3
+; RV32-NEXT:    sltiu a5, a3, -1
 ; RV32-NEXT:  .LBB48_14: # %fp-to-i-cleanup
-; RV32-NEXT:    and a4, a4, a1
-; RV32-NEXT:    li a2, -1
-; RV32-NEXT:    beq a4, a2, .LBB48_16
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    beqz a0, .LBB48_16
 ; RV32-NEXT:  # %bb.15: # %fp-to-i-cleanup
-; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    xori a0, a1, 1
+; RV32-NEXT:    srli a5, a1, 31
 ; RV32-NEXT:  .LBB48_16: # %fp-to-i-cleanup
-; RV32-NEXT:    bnez a0, .LBB48_18
+; RV32-NEXT:    bnez a5, .LBB48_18
 ; RV32-NEXT:  # %bb.17: # %fp-to-i-cleanup
-; RV32-NEXT:    lui s2, 524288
+; RV32-NEXT:    mv s2, a4
 ; RV32-NEXT:  .LBB48_18: # %fp-to-i-cleanup
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a0, a0, a3
+; RV32-NEXT:    addi a0, a5, -1
+; RV32-NEXT:    or a0, a0, a3
 ; RV32-NEXT:    mv a1, s2
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
@@ -6156,7 +6017,7 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    li s5, 0
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    j .LBB50_4
+; RV32-NEXT:    j .LBB50_5
 ; RV32-NEXT:  .LBB50_2: # %fp-to-i-if-check.exp.size
 ; RV32-NEXT:    srai s0, a1, 31
 ; RV32-NEXT:    slli a1, a1, 9
@@ -6165,7 +6026,7 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    srli a1, a1, 9
 ; RV32-NEXT:    or a1, a1, a2
 ; RV32-NEXT:    ori s2, s0, 1
-; RV32-NEXT:    bltu a3, a0, .LBB50_5
+; RV32-NEXT:    bltu a3, a0, .LBB50_4
 ; RV32-NEXT:  # %bb.3: # %fp-to-i-if-exp.small
 ; RV32-NEXT:    li a2, 150
 ; RV32-NEXT:    sub a2, a2, a0
@@ -6215,11 +6076,8 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    add a2, a3, a2
 ; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    add a1, a1, a4
-; RV32-NEXT:    bnez a1, .LBB50_6
-; RV32-NEXT:  .LBB50_4:
-; RV32-NEXT:    seqz a2, a0
-; RV32-NEXT:    j .LBB50_7
-; RV32-NEXT:  .LBB50_5: # %fp-to-i-if-exp.large
+; RV32-NEXT:    j .LBB50_5
+; RV32-NEXT:  .LBB50_4: # %fp-to-i-if-exp.large
 ; RV32-NEXT:    addi a0, a0, -150
 ; RV32-NEXT:    sw a1, 24(sp)
 ; RV32-NEXT:    sw zero, 28(sp)
@@ -6305,23 +6163,30 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    add a1, a1, s8
 ; RV32-NEXT:    sltu a2, a0, s2
 ; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:    beqz a1, .LBB50_4
-; RV32-NEXT:  .LBB50_6: # %fp-to-i-cleanup
-; RV32-NEXT:    srli a2, a1, 31
-; RV32-NEXT:  .LBB50_7: # %fp-to-i-cleanup
-; RV32-NEXT:    xori a0, a0, 1
-; RV32-NEXT:    or a0, a0, a1
-; RV32-NEXT:    seqz a0, a0
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    and a0, a0, a2
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a2, a0, s5
-; RV32-NEXT:    and s1, a0, s1
-; RV32-NEXT:    and a0, a0, a1
-; RV32-NEXT:    srli a0, a0, 31
-; RV32-NEXT:    addi a1, a0, -1
-; RV32-NEXT:    and a0, a1, s1
-; RV32-NEXT:    and a1, a1, a2
+; RV32-NEXT:  .LBB50_5: # %fp-to-i-cleanup
+; RV32-NEXT:    sgtz a2, a1
+; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    and a2, a2, a1
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a3, a1, a0
+; RV32-NEXT:    beqz a2, .LBB50_7
+; RV32-NEXT:  # %bb.6: # %fp-to-i-cleanup
+; RV32-NEXT:    srli a0, a2, 31
+; RV32-NEXT:    j .LBB50_8
+; RV32-NEXT:  .LBB50_7:
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:  .LBB50_8: # %fp-to-i-cleanup
+; RV32-NEXT:    xori a3, a3, 1
+; RV32-NEXT:    and s1, a1, s1
+; RV32-NEXT:    and a1, a1, s5
+; RV32-NEXT:    or a2, a3, a2
+; RV32-NEXT:    seqz a2, a2
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    and a0, a2, a0
+; RV32-NEXT:    neg a2, a0
+; RV32-NEXT:    and a0, a2, s1
+; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 68(sp) # 4-byte Folded Reload
@@ -6353,17 +6218,15 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __fixsfti
-; RV64-NEXT:    mv a2, a1
-; RV64-NEXT:    blez a1, .LBB50_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    li a2, 1
-; RV64-NEXT:  .LBB50_2: # %entry
-; RV64-NEXT:    slti a1, a1, 1
-; RV64-NEXT:    srli a2, a2, 63
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    srli a2, a1, 63
 ; RV64-NEXT:    addi a2, a2, -1
 ; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    sgtz a2, a1
+; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    slti a1, a1, 1
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
@@ -6402,33 +6265,33 @@ define i64 @stest_f16i64_mm(half %x) {
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    call __fixsfti
 ; RV64-NEXT:    li a2, -1
-; RV64-NEXT:    srli a3, a2, 1
-; RV64-NEXT:    beqz a1, .LBB51_2
+; RV64-NEXT:    slli a3, a2, 63
+; RV64-NEXT:    beq a1, a2, .LBB51_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    srli a4, a1, 63
-; RV64-NEXT:    j .LBB51_3
+; RV64-NEXT:    xori a4, a4, 1
+; RV64-NEXT:    beqz a4, .LBB51_3
+; RV64-NEXT:    j .LBB51_4
 ; RV64-NEXT:  .LBB51_2:
-; RV64-NEXT:    sltu a4, a0, a3
+; RV64-NEXT:    sltu a4, a3, a0
+; RV64-NEXT:    bnez a4, .LBB51_4
 ; RV64-NEXT:  .LBB51_3: # %entry
-; RV64-NEXT:    neg a5, a4
-; RV64-NEXT:    and a5, a5, a1
-; RV64-NEXT:    bnez a4, .LBB51_5
-; RV64-NEXT:  # %bb.4: # %entry
 ; RV64-NEXT:    mv a0, a3
-; RV64-NEXT:  .LBB51_5: # %entry
-; RV64-NEXT:    slli a1, a2, 63
-; RV64-NEXT:    beq a5, a2, .LBB51_7
-; RV64-NEXT:  # %bb.6: # %entry
-; RV64-NEXT:    srli a5, a5, 63
-; RV64-NEXT:    xori a2, a5, 1
-; RV64-NEXT:    beqz a2, .LBB51_8
-; RV64-NEXT:    j .LBB51_9
-; RV64-NEXT:  .LBB51_7:
-; RV64-NEXT:    sltu a2, a1, a0
-; RV64-NEXT:    bnez a2, .LBB51_9
+; RV64-NEXT:  .LBB51_4: # %entry
+; RV64-NEXT:    addi a4, a4, -1
+; RV64-NEXT:    or a1, a4, a1
+; RV64-NEXT:    srli a2, a2, 1
+; RV64-NEXT:    beqz a1, .LBB51_6
+; RV64-NEXT:  # %bb.5: # %entry
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    beqz a1, .LBB51_7
+; RV64-NEXT:    j .LBB51_8
+; RV64-NEXT:  .LBB51_6:
+; RV64-NEXT:    sltu a1, a0, a2
+; RV64-NEXT:    bnez a1, .LBB51_8
+; RV64-NEXT:  .LBB51_7: # %entry
+; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:  .LBB51_8: # %entry
-; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:  .LBB51_9: # %entry
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
@@ -6490,21 +6353,10 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
-; RV32-NEXT:    srai a1, a0, 31
-; RV32-NEXT:    srli a2, a1, 31
-; RV32-NEXT:    seqz a3, a1
-; RV32-NEXT:    or a2, a3, a2
-; RV32-NEXT:    ori a3, a1, 1
-; RV32-NEXT:    seqz a3, a3
-; RV32-NEXT:    addi a3, a3, -1
-; RV32-NEXT:    and a2, a3, a2
-; RV32-NEXT:    neg a2, a2
-; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    srli a2, a1, 31
-; RV32-NEXT:    addi a2, a2, -1
-; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    and a1, a2, a1
+; RV32-NEXT:    sgtz a1, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
@@ -6519,17 +6371,15 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    call __fixsfti
-; RV64-NEXT:    mv a2, a1
-; RV64-NEXT:    blez a1, .LBB53_2
-; RV64-NEXT:  # %bb.1: # %entry
-; RV64-NEXT:    li a2, 1
-; RV64-NEXT:  .LBB53_2: # %entry
-; RV64-NEXT:    slti a1, a1, 1
-; RV64-NEXT:    srli a2, a2, 63
-; RV64-NEXT:    neg a1, a1
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    srli a2, a1, 63
 ; RV64-NEXT:    addi a2, a2, -1
 ; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    sgtz a2, a1
+; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    slti a1, a1, 1
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16

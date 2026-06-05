@@ -326,11 +326,11 @@ define <2 x i16> @basic_smin_smax(i16 %src0, i16 %src1) {
 ; SDAG-VI-LABEL: basic_smin_smax:
 ; SDAG-VI:       ; %bb.0:
 ; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
-; SDAG-VI-NEXT:    v_min_i16_e32 v1, 0xff, v1
-; SDAG-VI-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-VI-NEXT:    v_max_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; SDAG-VI-NEXT:    v_max_i16_e32 v0, 0, v0
+; SDAG-VI-NEXT:    v_max_i16_e32 v1, 0, v1
+; SDAG-VI-NEXT:    v_mov_b32_e32 v2, 0xff
+; SDAG-VI-NEXT:    v_min_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; SDAG-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
 ; SDAG-VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -460,11 +460,11 @@ define <2 x i16> @basic_smin_smax_combined(i16 %src0, i16 %src1) {
 ; SDAG-VI-LABEL: basic_smin_smax_combined:
 ; SDAG-VI:       ; %bb.0:
 ; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
+; SDAG-VI-NEXT:    v_max_i16_e32 v0, 0, v0
 ; SDAG-VI-NEXT:    v_max_i16_e32 v1, 0, v1
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v2, 0xff
 ; SDAG-VI-NEXT:    v_min_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; SDAG-VI-NEXT:    v_max_i16_e32 v0, 0, v0
+; SDAG-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
 ; SDAG-VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -835,29 +835,29 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; SDAG-VI-LABEL: vec_smin_smax:
 ; SDAG-VI:       ; %bb.0:
 ; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-VI-NEXT:    v_mov_b32_e32 v1, 0xff
-; SDAG-VI-NEXT:    v_min_i16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; SDAG-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-VI-NEXT:    v_max_i16_e32 v0, 0, v0
-; SDAG-VI-NEXT:    v_max_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; SDAG-VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; SDAG-VI-NEXT:    v_max_i16_e32 v1, 0, v0
+; SDAG-VI-NEXT:    v_max_i16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; SDAG-VI-NEXT:    v_mov_b32_e32 v2, 0xff
+; SDAG-VI-NEXT:    v_min_i16_e32 v1, 0xff, v1
+; SDAG-VI-NEXT:    v_min_i16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; SDAG-VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9-LABEL: vec_smin_smax:
 ; SDAG-GFX9:       ; %bb.0:
 ; SDAG-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX9-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX9-NEXT:    s_movk_i32 s4, 0xff
 ; SDAG-GFX9-NEXT:    v_pk_min_i16 v0, v0, s4 op_sel_hi:[1,0]
-; SDAG-GFX9-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX11-LABEL: vec_smin_smax:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
-; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX11-NEXT:    v_pk_max_i16 v0, v0, 0
+; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-GFX11-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
 ; SDAG-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX12-LABEL: vec_smin_smax:
@@ -867,9 +867,9 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; SDAG-GFX12-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
-; SDAG-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX12-NEXT:    v_pk_max_i16 v0, v0, 0
+; SDAG-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-GFX12-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
 ; SDAG-GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: vec_smin_smax:
@@ -1511,21 +1511,21 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-VI-LABEL: basic_smax_smin_vec_input:
 ; SDAG-VI:       ; %bb.0:
 ; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-VI-NEXT:    v_mov_b32_e32 v1, 0xff
-; SDAG-VI-NEXT:    v_min_i16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; SDAG-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-VI-NEXT:    v_max_i16_e32 v0, 0, v0
-; SDAG-VI-NEXT:    v_max_i16_sdwa v1, v1, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; SDAG-VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; SDAG-VI-NEXT:    v_max_i16_e32 v1, 0, v0
+; SDAG-VI-NEXT:    v_max_i16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; SDAG-VI-NEXT:    v_mov_b32_e32 v2, 0xff
+; SDAG-VI-NEXT:    v_min_i16_e32 v1, 0xff, v1
+; SDAG-VI-NEXT:    v_min_i16_sdwa v0, v0, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; SDAG-VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9-LABEL: basic_smax_smin_vec_input:
 ; SDAG-GFX9:       ; %bb.0:
 ; SDAG-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX9-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX9-NEXT:    s_movk_i32 s4, 0xff
 ; SDAG-GFX9-NEXT:    v_pk_min_i16 v0, v0, s4 op_sel_hi:[1,0]
-; SDAG-GFX9-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SDAG-GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
 ; SDAG-GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -1534,9 +1534,9 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-GFX11-TRUE16-LABEL: basic_smax_smin_vec_input:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX11-TRUE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX11-TRUE16-NEXT:    v_pk_max_i16 v1, v0, 0
+; SDAG-GFX11-TRUE16-NEXT:    v_pk_min_i16 v1, 0xff, v0 op_sel_hi:[0,1]
 ; SDAG-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v1.h
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
@@ -1545,9 +1545,9 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-GFX11-FAKE16-LABEL: basic_smax_smin_vec_input:
 ; SDAG-GFX11-FAKE16:       ; %bb.0:
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
-; SDAG-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX11-FAKE16-NEXT:    v_pk_max_i16 v0, v0, 0
+; SDAG-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SDAG-GFX11-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
 ; SDAG-GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SDAG-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX11-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
@@ -1561,9 +1561,9 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX12-TRUE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX12-TRUE16-NEXT:    v_pk_max_i16 v1, v0, 0
+; SDAG-GFX12-TRUE16-NEXT:    v_pk_min_i16 v1, 0xff, v0 op_sel_hi:[0,1]
 ; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v1.h
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
@@ -1576,9 +1576,9 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
-; SDAG-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-FAKE16-NEXT:    v_pk_max_i16 v0, v0, 0
+; SDAG-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SDAG-GFX12-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
 ; SDAG-GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SDAG-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1

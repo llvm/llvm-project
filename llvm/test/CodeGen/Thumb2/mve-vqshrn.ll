@@ -117,10 +117,10 @@ define arm_aapcs_vfpcc <16 x i8> @vqshrni8_smaxmin(<16 x i8> %so) {
 ; CHECK-LABEL: vqshrni8_smaxmin:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vshr.s8 q0, q0, #3
-; CHECK-NEXT:    vmov.i8 q1, #0x7
-; CHECK-NEXT:    vmin.s8 q0, q0, q1
 ; CHECK-NEXT:    vmov.i8 q1, #0xf8
 ; CHECK-NEXT:    vmax.s8 q0, q0, q1
+; CHECK-NEXT:    vmov.i8 q1, #0x7
+; CHECK-NEXT:    vmin.s8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %s0 = ashr <16 x i8> %so, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>

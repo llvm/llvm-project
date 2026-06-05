@@ -531,12 +531,12 @@ define void @atomic_fetch_min64(i64 %x) nounwind {
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X32-NEXT:    movl %ebx, %esi
-; X32-NEXT:    subl %eax, %esi
-; X32-NEXT:    movl %ecx, %esi
-; X32-NEXT:    sbbl %edx, %esi
-; X32-NEXT:    cmovgel %edx, %ecx
-; X32-NEXT:    cmovgel %eax, %ebx
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    subl %ebx, %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    sbbl %ecx, %esi
+; X32-NEXT:    cmovll %edx, %ecx
+; X32-NEXT:    cmovll %eax, %ebx
 ; X32-NEXT:    lock cmpxchg8b sc64
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -613,12 +613,12 @@ define void @atomic_fetch_umin64(i64 %x) nounwind {
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X32-NEXT:    movl %ebx, %esi
-; X32-NEXT:    subl %eax, %esi
-; X32-NEXT:    movl %ecx, %esi
-; X32-NEXT:    sbbl %edx, %esi
-; X32-NEXT:    cmovael %edx, %ecx
-; X32-NEXT:    cmovael %eax, %ebx
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    subl %ebx, %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    sbbl %ecx, %esi
+; X32-NEXT:    cmovbl %edx, %ecx
+; X32-NEXT:    cmovbl %eax, %ebx
 ; X32-NEXT:    lock cmpxchg8b sc64
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill

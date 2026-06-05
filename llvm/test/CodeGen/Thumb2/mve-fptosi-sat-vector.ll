@@ -1533,11 +1533,11 @@ define arm_aapcs_vfpcc <4 x i8> @test_signed_v4f32_v4i8(<4 x float> %f) {
 ;
 ; CHECK-MVEFP-LABEL: test_signed_v4f32_v4i8:
 ; CHECK-MVEFP:       @ %bb.0:
-; CHECK-MVEFP-NEXT:    vmov.i32 q1, #0x7f
+; CHECK-MVEFP-NEXT:    vmvn.i32 q1, #0x7f
 ; CHECK-MVEFP-NEXT:    vcvt.s32.f32 q0, q0
-; CHECK-MVEFP-NEXT:    vmvn.i32 q2, #0x7f
-; CHECK-MVEFP-NEXT:    vmin.s32 q0, q0, q1
-; CHECK-MVEFP-NEXT:    vmax.s32 q0, q0, q2
+; CHECK-MVEFP-NEXT:    vmov.i32 q2, #0x7f
+; CHECK-MVEFP-NEXT:    vmax.s32 q0, q0, q1
+; CHECK-MVEFP-NEXT:    vmin.s32 q0, q0, q2
 ; CHECK-MVEFP-NEXT:    bx lr
     %x = call <4 x i8> @llvm.fptosi.sat.v4f32.v4i8(<4 x float> %f)
     ret <4 x i8> %x
@@ -1592,11 +1592,11 @@ define arm_aapcs_vfpcc <4 x i13> @test_signed_v4f32_v4i13(<4 x float> %f) {
 ;
 ; CHECK-MVEFP-LABEL: test_signed_v4f32_v4i13:
 ; CHECK-MVEFP:       @ %bb.0:
-; CHECK-MVEFP-NEXT:    vmov.i32 q1, #0xfff
+; CHECK-MVEFP-NEXT:    vmvn.i32 q1, #0xfff
 ; CHECK-MVEFP-NEXT:    vcvt.s32.f32 q0, q0
-; CHECK-MVEFP-NEXT:    vmvn.i32 q2, #0xfff
-; CHECK-MVEFP-NEXT:    vmin.s32 q0, q0, q1
-; CHECK-MVEFP-NEXT:    vmax.s32 q0, q0, q2
+; CHECK-MVEFP-NEXT:    vmov.i32 q2, #0xfff
+; CHECK-MVEFP-NEXT:    vmax.s32 q0, q0, q1
+; CHECK-MVEFP-NEXT:    vmin.s32 q0, q0, q2
 ; CHECK-MVEFP-NEXT:    bx lr
     %x = call <4 x i13> @llvm.fptosi.sat.v4f32.v4i13(<4 x float> %f)
     ret <4 x i13> %x
@@ -1709,12 +1709,12 @@ define arm_aapcs_vfpcc <4 x i19> @test_signed_v4f32_v4i19(<4 x float> %f) {
 ; CHECK-MVEFP-LABEL: test_signed_v4f32_v4i19:
 ; CHECK-MVEFP:       @ %bb.0:
 ; CHECK-MVEFP-NEXT:    movs r0, #0
-; CHECK-MVEFP-NEXT:    vmov.i32 q1, #0x3ffff
 ; CHECK-MVEFP-NEXT:    vcvt.s32.f32 q0, q0
 ; CHECK-MVEFP-NEXT:    movt r0, #65532
+; CHECK-MVEFP-NEXT:    vmov.i32 q1, #0x3ffff
+; CHECK-MVEFP-NEXT:    vdup.32 q2, r0
+; CHECK-MVEFP-NEXT:    vmax.s32 q0, q0, q2
 ; CHECK-MVEFP-NEXT:    vmin.s32 q0, q0, q1
-; CHECK-MVEFP-NEXT:    vdup.32 q1, r0
-; CHECK-MVEFP-NEXT:    vmax.s32 q0, q0, q1
 ; CHECK-MVEFP-NEXT:    bx lr
     %x = call <4 x i19> @llvm.fptosi.sat.v4f32.v4i19(<4 x float> %f)
     ret <4 x i19> %x
@@ -3988,11 +3988,11 @@ define arm_aapcs_vfpcc <8 x i13> @test_signed_v8f16_v8i13(<8 x half> %f) {
 ;
 ; CHECK-MVEFP-LABEL: test_signed_v8f16_v8i13:
 ; CHECK-MVEFP:       @ %bb.0:
-; CHECK-MVEFP-NEXT:    vmvn.i16 q1, #0xf000
+; CHECK-MVEFP-NEXT:    vmov.i16 q1, #0xf000
 ; CHECK-MVEFP-NEXT:    vcvt.s16.f16 q0, q0
-; CHECK-MVEFP-NEXT:    vmov.i16 q2, #0xf000
-; CHECK-MVEFP-NEXT:    vmin.s16 q0, q0, q1
-; CHECK-MVEFP-NEXT:    vmax.s16 q0, q0, q2
+; CHECK-MVEFP-NEXT:    vmvn.i16 q2, #0xf000
+; CHECK-MVEFP-NEXT:    vmax.s16 q0, q0, q1
+; CHECK-MVEFP-NEXT:    vmin.s16 q0, q0, q2
 ; CHECK-MVEFP-NEXT:    bx lr
     %x = call <8 x i13> @llvm.fptosi.sat.v8f16.v8i13(<8 x half> %f)
     ret <8 x i13> %x

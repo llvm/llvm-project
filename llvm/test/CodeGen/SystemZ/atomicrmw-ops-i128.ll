@@ -193,15 +193,15 @@ define i128 @atomicrmw_min(ptr %src, i128 %b) {
 ; CHECK-NEXT:    je .LBB7_6
 ; CHECK-NEXT:  .LBB7_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vecg %v0, %v1
+; CHECK-NEXT:    vecg %v1, %v0
 ; CHECK-NEXT:    jlh .LBB7_4
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB7_2 Depth=1
-; CHECK-NEXT:    vchlgs %v2, %v1, %v0
+; CHECK-NEXT:    vchlgs %v2, %v0, %v1
 ; CHECK-NEXT:  .LBB7_4: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; CHECK-NEXT:    vlr %v2, %v1
-; CHECK-NEXT:    jnl .LBB7_1
+; CHECK-NEXT:    jl .LBB7_1
 ; CHECK-NEXT:  # %bb.5: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; CHECK-NEXT:    vlr %v2, %v0
@@ -271,15 +271,15 @@ define i128 @atomicrmw_umin(ptr %src, i128 %b) {
 ; CHECK-NEXT:    je .LBB9_6
 ; CHECK-NEXT:  .LBB9_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    veclg %v0, %v1
+; CHECK-NEXT:    veclg %v1, %v0
 ; CHECK-NEXT:    jlh .LBB9_4
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB9_2 Depth=1
-; CHECK-NEXT:    vchlgs %v2, %v1, %v0
+; CHECK-NEXT:    vchlgs %v2, %v0, %v1
 ; CHECK-NEXT:  .LBB9_4: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB9_2 Depth=1
 ; CHECK-NEXT:    vlr %v2, %v1
-; CHECK-NEXT:    jnl .LBB9_1
+; CHECK-NEXT:    jl .LBB9_1
 ; CHECK-NEXT:  # %bb.5: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB9_2 Depth=1
 ; CHECK-NEXT:    vlr %v2, %v0

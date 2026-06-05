@@ -156,13 +156,13 @@ entry:
 define i16 @stest_f64i16(double %x) {
 ; CHECK-LABEL: stest_f64i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs w8, d0
+; CHECK-NEXT:    fcvtzs w9, d0
+; CHECK-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-NEXT:    csel w8, w9, w8, gt
 ; CHECK-NEXT:    mov w9, #32767 // =0x7fff
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-NEXT:    csel w0, w8, w9, gt
+; CHECK-NEXT:    csel w0, w8, w9, lt
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi double %x to i32
@@ -195,9 +195,9 @@ define i16 @ustest_f64i16(double %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w8, d0
 ; CHECK-NEXT:    mov w9, #65535 // =0xffff
+; CHECK-NEXT:    bic w8, w8, w8, asr #31
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-NEXT:    csel w0, w8, w9, lt
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi double %x to i32
@@ -212,13 +212,13 @@ entry:
 define i16 @stest_f32i16(float %x) {
 ; CHECK-LABEL: stest_f32i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    fcvtzs w9, s0
+; CHECK-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-NEXT:    csel w8, w9, w8, gt
 ; CHECK-NEXT:    mov w9, #32767 // =0x7fff
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-NEXT:    csel w0, w8, w9, gt
+; CHECK-NEXT:    csel w0, w8, w9, lt
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -251,9 +251,9 @@ define i16 @ustest_f32i16(float %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w8, s0
 ; CHECK-NEXT:    mov w9, #65535 // =0xffff
+; CHECK-NEXT:    bic w8, w8, w8, asr #31
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-NEXT:    csel w0, w8, w9, lt
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -269,24 +269,24 @@ define i16 @stest_f16i16(half %x) {
 ; CHECK-CVT-LABEL: stest_f16i16:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-CVT-NEXT:    fcvtzs w9, s0
+; CHECK-CVT-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-CVT-NEXT:    csel w8, w9, w8, gt
 ; CHECK-CVT-NEXT:    mov w9, #32767 // =0x7fff
-; CHECK-CVT-NEXT:    fcvtzs w8, s0
 ; CHECK-CVT-NEXT:    cmp w8, w9
-; CHECK-CVT-NEXT:    csel w8, w8, w9, lt
-; CHECK-CVT-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-CVT-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-CVT-NEXT:    csel w0, w8, w9, gt
+; CHECK-CVT-NEXT:    csel w0, w8, w9, lt
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stest_f16i16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-FP16-NEXT:    fcvtzs w9, h0
+; CHECK-FP16-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-FP16-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-FP16-NEXT:    csel w8, w9, w8, gt
 ; CHECK-FP16-NEXT:    mov w9, #32767 // =0x7fff
 ; CHECK-FP16-NEXT:    cmp w8, w9
-; CHECK-FP16-NEXT:    csel w8, w8, w9, lt
-; CHECK-FP16-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-FP16-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-FP16-NEXT:    csel w0, w8, w9, gt
+; CHECK-FP16-NEXT:    csel w0, w8, w9, lt
 ; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptosi half %x to i32
@@ -328,19 +328,17 @@ define i16 @ustest_f16i16(half %x) {
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    mov w9, #65535 // =0xffff
-; CHECK-CVT-NEXT:    fcvtzs w8, s0
+; CHECK-CVT-NEXT:    fcvtzu w8, s0
 ; CHECK-CVT-NEXT:    cmp w8, w9
-; CHECK-CVT-NEXT:    csel w8, w8, w9, lt
-; CHECK-CVT-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-CVT-NEXT:    csel w0, w8, w9, lt
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: ustest_f16i16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-FP16-NEXT:    fcvtzu w8, h0
 ; CHECK-FP16-NEXT:    mov w9, #65535 // =0xffff
 ; CHECK-FP16-NEXT:    cmp w8, w9
-; CHECK-FP16-NEXT:    csel w8, w8, w9, lt
-; CHECK-FP16-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-FP16-NEXT:    csel w0, w8, w9, lt
 ; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptosi half %x to i32
@@ -678,13 +676,13 @@ entry:
 define i16 @stest_f64i16_mm(double %x) {
 ; CHECK-LABEL: stest_f64i16_mm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs w8, d0
+; CHECK-NEXT:    fcvtzs w9, d0
+; CHECK-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-NEXT:    csel w8, w9, w8, gt
 ; CHECK-NEXT:    mov w9, #32767 // =0x7fff
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-NEXT:    csel w0, w8, w9, gt
+; CHECK-NEXT:    csel w0, w8, w9, lt
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi double %x to i32
@@ -714,9 +712,9 @@ define i16 @ustest_f64i16_mm(double %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w8, d0
 ; CHECK-NEXT:    mov w9, #65535 // =0xffff
+; CHECK-NEXT:    bic w8, w8, w8, asr #31
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-NEXT:    csel w0, w8, w9, lt
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi double %x to i32
@@ -729,13 +727,13 @@ entry:
 define i16 @stest_f32i16_mm(float %x) {
 ; CHECK-LABEL: stest_f32i16_mm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    fcvtzs w9, s0
+; CHECK-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-NEXT:    csel w8, w9, w8, gt
 ; CHECK-NEXT:    mov w9, #32767 // =0x7fff
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-NEXT:    csel w0, w8, w9, gt
+; CHECK-NEXT:    csel w0, w8, w9, lt
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -765,9 +763,9 @@ define i16 @ustest_f32i16_mm(float %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w8, s0
 ; CHECK-NEXT:    mov w9, #65535 // =0xffff
+; CHECK-NEXT:    bic w8, w8, w8, asr #31
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-NEXT:    csel w0, w8, w9, lt
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptosi float %x to i32
@@ -781,24 +779,24 @@ define i16 @stest_f16i16_mm(half %x) {
 ; CHECK-CVT-LABEL: stest_f16i16_mm:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-CVT-NEXT:    fcvtzs w9, s0
+; CHECK-CVT-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-CVT-NEXT:    csel w8, w9, w8, gt
 ; CHECK-CVT-NEXT:    mov w9, #32767 // =0x7fff
-; CHECK-CVT-NEXT:    fcvtzs w8, s0
 ; CHECK-CVT-NEXT:    cmp w8, w9
-; CHECK-CVT-NEXT:    csel w8, w8, w9, lt
-; CHECK-CVT-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-CVT-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-CVT-NEXT:    csel w0, w8, w9, gt
+; CHECK-CVT-NEXT:    csel w0, w8, w9, lt
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stest_f16i16_mm:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-FP16-NEXT:    fcvtzs w9, h0
+; CHECK-FP16-NEXT:    mov w8, #-32768 // =0xffff8000
+; CHECK-FP16-NEXT:    cmn w9, #8, lsl #12 // =32768
+; CHECK-FP16-NEXT:    csel w8, w9, w8, gt
 ; CHECK-FP16-NEXT:    mov w9, #32767 // =0x7fff
 ; CHECK-FP16-NEXT:    cmp w8, w9
-; CHECK-FP16-NEXT:    csel w8, w8, w9, lt
-; CHECK-FP16-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-FP16-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-FP16-NEXT:    csel w0, w8, w9, gt
+; CHECK-FP16-NEXT:    csel w0, w8, w9, lt
 ; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptosi half %x to i32
@@ -837,19 +835,17 @@ define i16 @ustest_f16i16_mm(half %x) {
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    mov w9, #65535 // =0xffff
-; CHECK-CVT-NEXT:    fcvtzs w8, s0
+; CHECK-CVT-NEXT:    fcvtzu w8, s0
 ; CHECK-CVT-NEXT:    cmp w8, w9
-; CHECK-CVT-NEXT:    csel w8, w8, w9, lt
-; CHECK-CVT-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-CVT-NEXT:    csel w0, w8, w9, lt
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: ustest_f16i16_mm:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-FP16-NEXT:    fcvtzu w8, h0
 ; CHECK-FP16-NEXT:    mov w9, #65535 // =0xffff
 ; CHECK-FP16-NEXT:    cmp w8, w9
-; CHECK-FP16-NEXT:    csel w8, w8, w9, lt
-; CHECK-FP16-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-FP16-NEXT:    csel w0, w8, w9, lt
 ; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptosi half %x to i32
@@ -899,11 +895,11 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl __fixdfti
-; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csinc x8, x1, xzr, lt
-; CHECK-NEXT:    csel x9, x0, xzr, lt
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    csel x0, xzr, x9, mi
+; CHECK-NEXT:    bic x8, x1, x1, asr #63
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    csel x9, xzr, x0, mi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csel x0, x9, xzr, lt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -952,11 +948,11 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csinc x8, x1, xzr, lt
-; CHECK-NEXT:    csel x9, x0, xzr, lt
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    csel x0, xzr, x9, mi
+; CHECK-NEXT:    bic x8, x1, x1, asr #63
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    csel x9, xzr, x0, mi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csel x0, x9, xzr, lt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -1005,19 +1001,16 @@ entry:
 }
 
 define i64 @ustest_f16i64_mm(half %x) {
-; CHECK-LABEL: ustest_f16i64_mm:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixhfti
-; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csinc x8, x1, xzr, lt
-; CHECK-NEXT:    csel x9, x0, xzr, lt
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    csel x0, xzr, x9, mi
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: ustest_f16i64_mm:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    fcvtzu w0, s0
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: ustest_f16i64_mm:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtzu w0, h0
+; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptosi half %x to i128
   %spec.store.select = call i128 @llvm.smin.i128(i128 %conv, i128 18446744073709551616)
