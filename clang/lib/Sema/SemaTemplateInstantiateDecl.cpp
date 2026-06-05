@@ -1067,13 +1067,6 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
-    if (auto *A = dyn_cast<HLSLMatrixLayoutAttr>(TmplAttr)) {
-      if (!HLSL().diagnoseInstantiatedMatrixLayoutAttr(New, A) &&
-          !New->hasAttr<HLSLMatrixLayoutAttr>())
-        New->addAttr(A->clone(Context));
-      continue;
-    }
-
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -5385,6 +5378,8 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   if (!PatternDecl)
     return true;
 
+  ParmVarDecl *OrigParam = Param;
+
   unsigned NumLevels = PatternDecl->getTemplateDepth();
   MultiLevelTemplateArgumentList TemplateArgs;
   // The default argument for a templated function must always be defined on
@@ -5396,19 +5391,28 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
         Info->getTemplate()->getFirstDecl(), Info->TemplateArguments->asArray(),
         NumLevels);
   } else {
+    FunctionDecl *OrigFD = FD;
     if (Info)
       FD = InstantiateFunctionDeclaration(
           cast<FunctionTemplateDecl>(Info->getTemplate()->getFirstDecl()),
           Info->TemplateArguments, CallLoc);
     else
       FD = FD->getFirstDecl();
+    if (FD != OrigFD)
+      Param =
+          cast<ParmVarDecl>(FD->getParamDecl(Param->getFunctionScopeIndex()));
+
     TemplateArgs =
         getTemplateInstantiationArgs(FD, /*Innermost=*/std::nullopt, NumLevels);
   }
 
   // Instantiate the expression.
-  if (SubstDefaultArgument(CallLoc, Param, TemplateArgs, /*ForCallExpr*/ true))
+  if (Param->hasUninstantiatedDefaultArg() &&
+      SubstDefaultArgument(CallLoc, Param, TemplateArgs, /*ForCallExpr*/ true))
     return true;
+
+  if (Param != OrigParam)
+    OrigParam->setDefaultArg(Param->getDefaultArg());
 
   if (ASTMutationListener *L = getASTMutationListener())
     L->DefaultArgumentInstantiated(Param);
@@ -6008,6 +6012,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         assert(NewFunction && "Failed to instantiate function template");
         assert(NewFunction != Function && "Expected a new specialization");
         assert(declaresSameEntity(NewFunction, Function));
+        if (TemplateSpecializationKind TSK =
+                Info->getTemplateSpecializationKind();
+            TSK == TSK_ExplicitInstantiationDefinition ||
+            TSK == TSK_ExplicitInstantiationDeclaration)
+          NewFunction->setTemplateSpecializationKind(
+              TSK, Info->getPointOfInstantiation());
         Function = NewFunction;
       }
     } else {

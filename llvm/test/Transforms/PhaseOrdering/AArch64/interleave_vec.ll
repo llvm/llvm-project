@@ -1085,42 +1085,13 @@ define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
 ; CHECK-SAME: i64 [[N:%.*]], float [[A:%.*]], ptr readonly captures(none) [[X:%.*]], ptr noalias captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N]], 0
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
-; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[N]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 5
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 6
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[LOOP_PREHEADER11:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], 9223372036854775806
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 5
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[A]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <10 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <10 x float>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC5:%.*]] = load <10 x float>, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <10 x float> [[WIDE_VEC]], [[TMP5]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <10 x float> [[WIDE_VEC5]], [[TMP8]]
-; CHECK-NEXT:    store <10 x float> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT]], label %[[LOOP_PREHEADER11]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[LOOP_PREHEADER11:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER11]]:
-; CHECK-NEXT:    [[I1_PH:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I1:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[I1_PH]], %[[LOOP_PREHEADER11]] ]
+; CHECK-NEXT:    [[I1:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER11]] ]
 ; CHECK-NEXT:    [[XGEP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[I1]]
 ; CHECK-NEXT:    [[YGEP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[I1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[XGEP1]], align 4
@@ -1138,7 +1109,7 @@ define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
 ; CHECK-NEXT:    store float [[AXPY5]], ptr [[YGEP5]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I1]], 5
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[N]], [[I_NEXT]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -1204,6 +1175,4 @@ exit:
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META1]]}
 ;.

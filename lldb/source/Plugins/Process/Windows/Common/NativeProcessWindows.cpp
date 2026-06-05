@@ -633,6 +633,18 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
                           wp.m_hardware);
   }
 
+  if (StateType state = GetState();
+      state == eStateStopped || state == eStateCrashed) {
+    if (Status error = thread->DoStop(); error.Fail()) {
+      Log *log = GetLog(WindowsLog::Thread);
+      LLDB_LOG(log, "failed to suspend newly-created thread {0}: {1}",
+               thread->GetID(), error);
+    }
+    ThreadStopInfo stop_info;
+    stop_info.reason = lldb::eStopReasonNone;
+    thread->SetStopReason(stop_info, "");
+  }
+
   m_threads.push_back(std::move(thread));
 }
 

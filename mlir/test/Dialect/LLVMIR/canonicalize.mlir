@@ -427,3 +427,19 @@ llvm.func @inline_asm_side_effects(%x : i32) {
   llvm.inline_asm has_side_effects "inline asm with side effects", "r" %x : (i32) -> ()
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: func @metadata_as_value_dedup
+llvm.func @metadata_as_value_dedup() -> i32 {
+  // CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK-NOT: llvm.mlir.metadata_as_value
+  %0 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  %1 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]])
+  %2 = llvm.call_intrinsic "llvm.read_register.i32"(%0) : (!llvm.metadata) -> i32
+  // CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]])
+  %3 = llvm.call_intrinsic "llvm.read_register.i32"(%1) : (!llvm.metadata) -> i32
+  %4 = llvm.add %2, %3 : i32
+  llvm.return %4 : i32
+}

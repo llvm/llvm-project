@@ -32,7 +32,7 @@ namespace TestFunctionRedecl {
 // CHECK-LABEL: Dumping TestFunctionRedecl:
 // CHECK: |-FunctionTemplateDecl 0x[[TestFunctionRedecl_T1:[^ ]+]] <line:[[@LINE-4]]:{{.+}} f external-linkage
 // CHECK: | |-FunctionDecl 0x[[TestFunctionRedecl_D1:[^ ]+]] {{.+}} f 'void ()'
-// CHECK: | |-FunctionDecl {{.+}} prev 0x[[TestFunctionRedecl_S1:[^ ]+]] <col:22, col:32> col:27 f 'void ()' implicit_instantiation instantiated_from 0x[[TestFunctionRedecl_D1]] external-linkage
+// CHECK: | |-FunctionDecl {{.+}} prev 0x[[TestFunctionRedecl_S1:[^ ]+]] <col:22, col:32> col:27 f 'void ()' explicit_instantiation_definition instantiated_from 0x[[TestFunctionRedecl_D1]] external-linkage
 // CHECK: | `-FunctionDecl 0x[[TestFunctionRedecl_S1]] {{.+}} f 'void ()' explicit_instantiation_definition instantiated_from 0x[[TestFunctionRedecl_D2:[^ ]+]] external-linkage
 // CHECK: |-FunctionTemplateDecl 0x[[TestFunctionRedecl_T2:[^ ]+]] prev 0x[[TestFunctionRedecl_T1]] <line:[[@LINE-7]]:{{.+}} f external-linkage
 // CHECK: | |-FunctionDecl 0x[[TestFunctionRedecl_D2]] prev 0x[[TestFunctionRedecl_D1]] {{.+}} f 'void ()'

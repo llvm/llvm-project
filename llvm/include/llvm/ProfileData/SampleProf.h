@@ -1706,10 +1706,6 @@ using namespace sampleprof;
 template <> struct DenseMapInfo<SampleContext> {
   static inline SampleContext getEmptyKey() { return SampleContext(); }
 
-  static inline SampleContext getTombstoneKey() {
-    return SampleContext(FunctionId(~1ULL));
-  }
-
   static unsigned getHashValue(const SampleContext &Val) {
     return Val.getHashCode();
   }
