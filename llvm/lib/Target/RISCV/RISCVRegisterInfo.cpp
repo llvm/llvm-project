@@ -823,11 +823,10 @@ bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
                                            MCRegister Reg) const {
   auto const &STI = MF.getSubtarget<RISCVSubtarget>();
   if (!STI.getRegisterInfo()->isGeneralPurposeRegister(MF, Reg))
-    llvm::report_fatal_error(
+    llvm::reportFatalInternalError(
         "isArgumentRegister is not implemented for non-GPR registers");
 
-  return llvm::any_of(RISCV::getArgGPRs(STI.getTargetABI()),
-                      [&](MCPhysReg R) { return Reg == R; });
+  return llvm::is_contained(RISCV::getArgGPRs(STI.getTargetABI()), Reg);
 }
 
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {

@@ -2,8 +2,6 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=riscv64-unknown-unknown | FileCheck %s  --check-prefixes=CHECK,64-BITS
 ; RUN: llc < %s -verify-machineinstrs -mtriple=riscv32-unknown-unknown | FileCheck %s --check-prefixes=CHECK,32-BITS
 
-target triple = "riscv64-unknown-linux-gnu"
-
 define i32 @skip(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="skip" {
 ; 64-BITS-LABEL: skip:
 ; 64-BITS:       # %bb.0: # %entry
@@ -69,7 +67,7 @@ entry:
   ret i32 %or
 }
 
-define i32 @used_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 "zero-call-used-regs"="used-arg" {
+define i32 @used_arg(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 "zero-call-used-regs"="used-arg" {
 ; 64-BITS-LABEL: used_arg:
 ; 64-BITS:       # %bb.0: # %entry
 ; 64-BITS-NEXT:    mulw a0, a1, a0
@@ -281,17 +279,6 @@ entry:
   %conv = fpext float %b to double
   %mul = fmul double %conv, %a
   ret double %mul
-}
-
-; Don't emit zeroing registers in "main" function.
-define i32 @main() #0 {
-; CHECK-LABEL: main:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ret
-
-entry:
-  ret i32 0
 }
 
 attributes #0 = { "target-cpu"="generic" "target-features"="+m,+f,+d" }

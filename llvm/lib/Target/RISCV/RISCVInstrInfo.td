@@ -2130,9 +2130,8 @@ def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
 
 // Used by -fzero-call-used-regs to zero out registers.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
-    isCodeGenOnly = 0 in
-def PseudoClearGPR : Pseudo<(outs GPR:$rd), (ins), [],
-                             "clear_gpr", "$rd">,
+    isCodeGenOnly = true in
+def PseudoClearGPR : Pseudo<(outs GPR:$rd), (ins), []>,
                      PseudoInstExpansion<(ADDI GPR:$rd, X0, 0)>;
 
 // Pessimistically assume the stack pointer will be clobbered

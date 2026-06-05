@@ -3942,13 +3942,12 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                         bool AllowSideEffects) const {
 
   const MachineFunction &MF = *MBB.getParent();
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
   const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearGPR), Reg);
   } else {
-    llvm::report_fatal_error(
+    llvm::reportFatalInternalError(
         "buildClearRegister is not implemented for non-GPR registers");
   }
 }
