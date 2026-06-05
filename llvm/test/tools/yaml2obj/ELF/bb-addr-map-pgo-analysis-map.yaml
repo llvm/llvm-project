@@ -67,9 +67,15 @@ Sections:
                Size:          0x00000002
                Metadata:      0x00000003
 
-## Check that yaml2obj generates a warning when we use unsupported feature.
-# RUN: yaml2obj --docnum=2  %s 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
+## An invalid feature warns and skips the entry: only the version and feature
+## bytes are emitted, even when BBRanges/PGOAnalyses follow.
+# RUN: yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=INVALID-FEATURE-DATA
 # INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0x100
+# INVALID-FEATURE-DATA:      Name: .llvm_bb_addr_map
+# INVALID-FEATURE-DATA:      SectionData (
+# INVALID-FEATURE-DATA-NEXT:   0000: 0200 |
+# INVALID-FEATURE-DATA-NEXT: )
 
 --- !ELF
 FileHeader:
@@ -83,3 +89,14 @@ Sections:
       - Version: 2
 ##  Specify unsupported feature
         Feature: 0x100
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+              - ID:            1
+                AddressOffset: 0x00000001
+                Size:          0x00000002
+                Metadata:      0x00000003
+    PGOAnalyses:
+      - FuncEntryCount: 100
+        PGOBBEntries:
+          - BBFreq: 100
