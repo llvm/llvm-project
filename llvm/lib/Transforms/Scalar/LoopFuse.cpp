@@ -470,8 +470,8 @@ private:
 public:
   LoopFuser(LoopInfo &LI, DominatorTree &DT, DependenceInfo &DI,
             ScalarEvolution &SE, PostDominatorTree &PDT,
-            OptimizationRemarkEmitter &ORE, const DataLayout &DL,
-            AssumptionCache &AC, const TargetTransformInfo &TTI)
+            OptimizationRemarkEmitter &ORE, AssumptionCache &AC,
+            const TargetTransformInfo &TTI)
       : LDT(LI), DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy), LI(LI),
         DT(DT), DI(DI), SE(SE), PDT(PDT), ORE(ORE), AC(AC), TTI(TTI) {}
 
@@ -1895,7 +1895,6 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-  const DataLayout &DL = F.getDataLayout();
 
   // Ensure loops are in simplifed form which is a pre-requisite for loop fusion
   // pass. Added only for new PM since the legacy PM has already added
@@ -1908,7 +1907,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (Changed)
     PDT.recalculate(F);
 
-  LoopFuser LF(LI, DT, DI, SE, PDT, ORE, DL, AC, TTI);
+  LoopFuser LF(LI, DT, DI, SE, PDT, ORE, AC, TTI);
   Changed |= LF.fuseLoops(F);
   if (!Changed)
     return PreservedAnalyses::all();
