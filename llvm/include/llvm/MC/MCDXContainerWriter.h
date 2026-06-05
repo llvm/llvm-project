@@ -73,6 +73,7 @@ class LLVM_ABI DXContainerObjectWriter final : public MCDXContainerBaseWriter,
 
 protected:
   ArrayRef<MCDXContainerPart> collectParts() override;
+  bool shouldSkipSection(StringRef SectionName, size_t SectionSize) override;
 
 public:
   DXContainerObjectWriter(std::unique_ptr<MCDXContainerTargetWriter> MOTW,

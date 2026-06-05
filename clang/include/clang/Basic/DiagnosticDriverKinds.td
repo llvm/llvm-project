@@ -883,6 +883,16 @@ def err_drv_dxc_Fre_requires_Fo_metal
     : Error<"-Fre option requires -Fo option when targeting Metal">;
 def err_drv_dxc_invalid_shader_hash
     : Error<"cannot specify both /Zss and /Zsb">;
+def err_drv_no_debug_info_for_embed_debug
+    : Error<"must enable debug info with /Zi for /Qembed_debug">;
+def err_drv_no_debug_info_for_Fd
+    : Error<"/Fd specified, but no Debug Info was found in the shader; "
+            "please use the /Zi or /Zs switch to generate debug information "
+            "compiling this shader">;
+def warn_drv_dxc_no_output_for_debug
+    : Warning<"no output provided for debug - embedding PDB in shader "
+              "container; use /Qembed_debug to silence this warning">,
+      InGroup<DiagGroup<"default-embed-debug">>;
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<
