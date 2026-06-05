@@ -377,7 +377,7 @@ Example usage for a project using a compile commands database:
             for (const auto &Bitcode : Bitcodes) {
 
               llvm::scope_exit ArenaGuard(
-                  [] { clang::doc::TransientArena.Reset(); });
+                  [] { clang::doc::getTransientArena().Reset(); });
               llvm::BitstreamCursor Stream(Bitcode);
               doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
@@ -391,7 +391,8 @@ Example usage for a project using a compile commands database:
               }
               for (auto &I : *ReadInfos) {
                 if (auto Err = doc::mergeSingleInfo(
-                        Reduced, std::move(I), clang::doc::PersistentArena)) {
+                        Reduced, std::move(I),
+                        clang::doc::getPersistentArena())) {
                   std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
                   Diags.Report(DiagIDBitcodeMerging)
                       << toString(std::move(Err));

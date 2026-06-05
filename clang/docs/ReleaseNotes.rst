@@ -357,6 +357,11 @@ New Compiler Flags
 - New option ``-fcrash-diagnostics-tar`` added to create an archive of crash
   reproducer files for easier bug filing.
 
+- There are a new pair of flags for riscv32 called ``-mzilsd-word-align`` and
+  ``-mzilsd-strict-align`` which control whether Zilsd accesses are allowed to
+  be aligned to 4-byte alignment rather than fully unaligned or fully (8-byte)
+  aligned.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -964,9 +969,29 @@ OpenMP Support
 
 SYCL Support
 ------------
+- SYCL compilations now default to ``-std=c++17`` when no explicit language
+  standard is specified. Standards below C++17 are rejected with a diagnostic.
+
 - Clang now assumes default target for SYCL device compilation is 64-bit SPIR-V
   and it now diagnoses if a non-supporting target is specified via command line.
   (#GH167358)
+
+- The SYCL runtime shared library has been renamed from ``libsycl.so`` to
+  ``libLLVMSYCL.so`` to align with LLVM naming conventions.
+
+- SYCL header include paths are now added automatically for both host and
+  device compilations.
+
+- SYCL runtime library linking is now supported on Windows. When ``-fsycl`` is
+  specified, Clang automatically adds ``/MD`` if no explicit CRT flag is
+  present, links the appropriate debug (``LLVMSYCLd.lib``) or release
+  (``LLVMSYCL.lib``) library, and rejects static CRT flags (``/MT``,
+  ``/MTd``) with a diagnostic. Use ``-nolibsycl`` to suppress automatic
+  library linking.
+
+- Fixed ``-nolibsycl`` being silently ignored on Linux: the SYCL runtime
+  library was unconditionally added to the link line even when the flag was
+  passed.
 
 Improvements
 ^^^^^^^^^^^^
