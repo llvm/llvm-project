@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
+@skipIfWindows
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -17,7 +18,6 @@ class TestCase(TestBase):
         TestBase.setUp(self)
         self.runCmd("command script import lldb.utils.pipe")
 
-    @skipIfWindows
     def test_pipe_to_grep(self):
         """Test piping an LLDB command through grep."""
         self.expect("pipe help help | grep Syntax", substrs=["Syntax"])
@@ -26,7 +26,6 @@ class TestCase(TestBase):
         """Test running a plain LLDB command (passthrough)."""
         self.expect("pipe help help", substrs=["Syntax"])
 
-    @skipIfWindows
     def test_pipe_chain(self):
         """Test piping through multiple shell commands."""
         self.expect("pipe help help | tr s-z S-Z | grep -i syntax", substrs=["SYnTaX"])
@@ -61,17 +60,14 @@ class TestCase(TestBase):
         """Test running a plain shell command (not an LLDB command)."""
         self.expect("pipe echo hello", substrs=["hello"])
 
-    @skipIfWindows
     def test_shell_command_with_pipe(self):
         """Test running a shell command piped to another shell command."""
         self.expect("pipe echo hello world | tr a-z A-Z", substrs=["HELLO WORLD"])
 
-    @skipIfWindows
     def test_quoted_pipe_not_split(self):
         """Test that a pipe character inside quotes is not treated as a split."""
         self.expect("pipe echo 'abc|def' | tr a-c A-C", substrs=["ABC|def"])
 
-    @skipIfWindows
     def test_pipe_without_spaces(self):
         """Test that pipe works without spaces around the | operator."""
         self.expect("pipe help help|grep Syntax", substrs=["Syntax"])
