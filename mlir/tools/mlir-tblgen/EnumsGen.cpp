@@ -317,10 +317,6 @@ template<> struct DenseMapInfo<{0}> {{
     return static_cast<{0}>(StorageInfo::getEmptyKey());
   }
 
-  static inline {0} getTombstoneKey() {{
-    return static_cast<{0}>(StorageInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const {0} &val) {{
     return StorageInfo::getHashValue(static_cast<{1}>(val));
   }

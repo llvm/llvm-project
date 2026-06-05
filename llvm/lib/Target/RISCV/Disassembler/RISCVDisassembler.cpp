@@ -239,6 +239,31 @@ static DecodeStatus DecodeTRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeYBNDSWImm(MCInst &Inst, uint64_t Imm, int64_t Address,
+                                    const MCDisassembler *Decoder) {
+  assert(isUInt<9>(Imm) && "Invalid immediate");
+  uint64_t Result;
+  if (Imm == 0) {
+    // If imm[8:0] == 0, result is 4096.
+    Result = 4096;
+  } else if (Imm <= 255) {
+    // If imm[8] == 0 and imm[7:0] != 0, result is imm[7:0].
+    Result = Imm;
+  } else {
+    uint64_t Imm7To0 = Imm & 0xFF;
+    if (Imm7To0 <= 31) {
+      // If imm[8] == 1 and imm[7:5] == 0 (i.e. imm[7:0] <= 31), result is
+      // `256 | (imm[3:0] << 4) | (imm[4] << 3)`.
+      Result = 256 + ((Imm & 0xF) << 4) + (((Imm >> 4) & 1) << 3);
+    } else {
+      // Otherwise, result is imm[7:0] << 4.
+      Result = Imm7To0 << 4;
+    }
+  }
+  Inst.addOperand(MCOperand::createImm(Result));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
@@ -314,6 +339,20 @@ static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
 
   if (!Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) &&
       !isUInt<5>(Imm))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeUImm7EqXLenOperand(MCInst &Inst, uint32_t Imm,
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<7>(Imm) && "Invalid immediate");
+
+  uint32_t ExpectedValue =
+      Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) ? 64 : 32;
+  if (Imm != ExpectedValue)
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));
@@ -447,10 +486,6 @@ static constexpr FeatureBitset XCVFeatureGroup = {
     RISCV::FeatureVendorXCValu,      RISCV::FeatureVendorXCVsimd,
     RISCV::FeatureVendorXCVbi};
 
-static constexpr FeatureBitset XRivosFeatureGroup = {
-    RISCV::FeatureVendorXRivosVizip,
-};
-
 static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
     RISCV::FeatureVendorXqcibi,  RISCV::FeatureVendorXqcibm,
@@ -503,7 +538,6 @@ static constexpr FeatureBitset XAIFGroup = {RISCV::FeatureVendorXAIFET};
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
-    {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
     {DecoderTableXVentana32,
      {RISCV::FeatureVendorXVentanaCondOps},

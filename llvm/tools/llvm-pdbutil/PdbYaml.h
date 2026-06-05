@@ -110,7 +110,7 @@ struct PdbTpiStream {
   std::vector<CodeViewYAML::LeafRecord> Records;
 };
 
-struct DXContainerStream {
+struct PdbDXContainerStream {
   DXContainerYAML::Object DXC;
 };
 
@@ -128,7 +128,7 @@ struct PdbObject {
   std::optional<PdbDbiStream> DbiStream;
   std::optional<PdbTpiStream> TpiStream;
   std::optional<PdbTpiStream> IpiStream;
-  std::optional<DXContainerStream> DXContainerStream;
+  std::optional<PdbDXContainerStream> DXContainerStream;
   std::optional<PdbPublicsStream> PublicsStream;
 
   std::optional<std::vector<StringRef>> StringTable;
@@ -151,6 +151,6 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbPublicsStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::NamedStreamMapping)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbModiStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiModuleInfo)
-LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::DXContainerStream)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDXContainerStream)
 
 #endif // LLVM_TOOLS_LLVMPDBDUMP_PDBYAML_H

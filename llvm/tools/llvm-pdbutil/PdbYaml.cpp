@@ -241,7 +241,7 @@ void MappingTraits<PdbDbiModuleInfo>::mapping(IO &IO, PdbDbiModuleInfo &Obj) {
   IO.mapOptional("Modi", Obj.Modi);
 }
 
-void MappingTraits<DXContainerStream>::mapping(
-    IO &IO, pdb::yaml::DXContainerStream &Obj) {
+void MappingTraits<PdbDXContainerStream>::mapping(
+    IO &IO, pdb::yaml::PdbDXContainerStream &Obj) {
   IO.mapRequired("DXContainer", Obj.DXC);
 }
