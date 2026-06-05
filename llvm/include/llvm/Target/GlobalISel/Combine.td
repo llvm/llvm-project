@@ -2193,7 +2193,7 @@ def integer_reassoc_combines: GICombineGroup<[
   C2MinusAPlusC1,
   AMinusC1MinusC2,
   C1Minus2MinusC2,
-  AMinusC1PlusC2,
+  AMinusC1PlusC2
 ]>;
 
 def max_min_combines: GICombineGroup<[
