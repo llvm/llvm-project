@@ -680,6 +680,7 @@ Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 - Fixed ``init_priority`` attribute by delaying type checks until after the type is deduced.
+- Fixed a crash in optimized builds when ``returns_nonnull`` was applied to a non-pointer return type. (#GH197206)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1036,6 +1036,17 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (auto *A = dyn_cast<ReturnsNonNullAttr>(TmplAttr)) {
+      auto *FD = cast<FunctionDecl>(New);
+      QualType ResultType = getFunctionOrMethodResultType(FD);
+      if (!isValidPointerAttrType(ResultType))
+        Diag(A->getLocation(), diag::warn_attribute_return_pointers_only)
+            << A << SourceRange() << getFunctionOrMethodResultSourceRange(FD);
+      else if (!New->hasAttr<ReturnsNonNullAttr>())
+        New->addAttr(A->clone(Context));
+      continue;
+    }
+
     if (auto *A = dyn_cast<OwnerAttr>(TmplAttr)) {
       if (!New->hasAttr<OwnerAttr>())
         New->addAttr(A->clone(Context));
