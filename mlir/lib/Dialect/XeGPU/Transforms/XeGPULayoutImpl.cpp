@@ -617,7 +617,7 @@ xegpu::inferInsertSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 /// Infers the source layout attribute for extract operation
 /// given the result layout attribute, result shape, and source shape. Adds
 /// leading dimensions to the source layout to match the source shape size.
-// TODO: add layout attribute interface: expandDims() and use it here.
+// TODO: add layout attribute interface: expandDim() and use it here.
 // TODO: add propagation support for extract op
 xegpu::DistributeLayoutAttr
 xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
@@ -730,14 +730,14 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   //
   // Mirrors use case 2's elegant shape: walk the dst-side groups and call
   // a single layout-attribute primitive per group. Here the primitive is
-  // `expandDims(dim, targetShape)`, the inverse of `collapseDims`. It applies
+  // `expandDim(dim, targetShape)`, the inverse of `collapseDims`. It applies
   // the per-field distribution policy required for a no-data-movement collapse
   // (sg_layout/lane_layout spread outer-to-inner; sg_data/lane_data/inst_data
   // fill innermost-first; inst_data is seeded from lane_layout * lane_data).
-  // See LayoutAttr::expandDims for the full policy.
+  // See LayoutAttr::expandDim for the full policy.
   //
   // Iteration goes innermost-first (reverse dst order) so that each
-  // expandDims/dropDims call only mutates dst positions whose indices are
+  // expandDim/dropDims call only mutates dst positions whose indices are
   // unaffected by earlier calls.
   SmallVector<SmallVector<int64_t>> collapseDims;
   if (xegpu::matchDimCollapse(srcShape, resShape, collapseDims)) {
@@ -757,7 +757,7 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
       targetShape.reserve(srcDims.size());
       for (int64_t d : srcDims)
         targetShape.push_back(srcShape[d]);
-      srcLayout = srcLayout.expandDims(dstIdx, targetShape);
+      srcLayout = srcLayout.expandDim(dstIdx, targetShape);
     }
     return srcLayout;
   }

@@ -224,7 +224,7 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       `order` is rewritten so the expanded dims appear innermost-fastest in the
                       original dim's slot.}],
                     "xegpu::DistributeLayoutAttr",
-                    "expandDims",
+                    "expandDim",
                     (ins "int64_t": $dim, "ArrayRef<int64_t>": $targetShape)>,
     InterfaceMethod<[{Derive a new layout by trasnposing it using `permutation`.}],
                     "xegpu::DistributeLayoutAttr",
@@ -598,7 +598,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     // multiple adjacent dimensions whose shape is given by `targetShape`.
     // See the interface method documentation for the per-field distribution
     // policy.
-    DistributeLayoutAttr expandDims(int64_t dim, ArrayRef<int64_t> targetShape);
+    DistributeLayoutAttr expandDim(int64_t dim, ArrayRef<int64_t> targetShape);
 
     // Derive a new layout by transposing the layout using `permutation`.
     DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);
@@ -836,7 +836,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     // multiple adjacent dimensions whose shape is given by `targetShape`.
     // See the interface method documentation for the per-field distribution
     // policy.
-    DistributeLayoutAttr expandDims(int64_t dim, ArrayRef<int64_t> targetShape);
+    DistributeLayoutAttr expandDim(int64_t dim, ArrayRef<int64_t> targetShape);
 
     // Derive a new layout by transposing the layout using `permutation`.
     DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);
