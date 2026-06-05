@@ -1456,9 +1456,9 @@ define <4 x i8> @test_pmulhsu_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV64-NEXT:    psrli.h a0, a0, 8
 ; RV64-NEXT:    srli a1, a0, 48
 ; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    srli a3, a0, 16
 ; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    ppaire.b a0, a0, a2
+; RV64-NEXT:    ppaire.b a0, a0, a3
 ; RV64-NEXT:    ppaire.h a0, a0, a1
 ; RV64-NEXT:    ret
   %a_ext = sext <4 x i8> %a to <4 x i16>
@@ -1484,8 +1484,8 @@ define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pmulhsu_b_commuted:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pwcvtu.b a0, a0
 ; RV64-NEXT:    pwcvtu.b a1, a1
+; RV64-NEXT:    pwcvtu.b a0, a0
 ; RV64-NEXT:    psext.h.b a1, a1
 ; RV64-NEXT:    pmul.w.h11 a2, a0, a1
 ; RV64-NEXT:    pmul.w.h00 a0, a0, a1
@@ -1493,9 +1493,9 @@ define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
 ; RV64-NEXT:    psrli.h a0, a0, 8
 ; RV64-NEXT:    srli a1, a0, 48
 ; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    srli a3, a0, 16
 ; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    ppaire.b a0, a0, a2
+; RV64-NEXT:    ppaire.b a0, a0, a3
 ; RV64-NEXT:    ppaire.h a0, a0, a1
 ; RV64-NEXT:    ret
   %a_ext = zext <4 x i8> %a to <4 x i16>

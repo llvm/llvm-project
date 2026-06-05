@@ -1037,6 +1037,16 @@ define <vscale x 8 x i64> @vdiv_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; RV32-V:       # %bb.0:
 ; RV32-V-NEXT:    addi sp, sp, -16
 ; RV32-V-NEXT:    .cfi_def_cfa_offset 16
+; RV32-V-NEXT:    lui a0, 559241
+; RV32-V-NEXT:    addi a1, a0, -1911
+; RV32-V-NEXT:    addi a0, a0, -1912
+; RV32-V-NEXT:    sw a1, 8(sp)
+; RV32-V-NEXT:    sw a0, 12(sp)
+; RV32-V-NEXT:    addi a0, sp, 8
+; RV32-V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV32-V-NEXT:    vlse64.v v16, (a0), zero
+; RV32-V-NEXT:    vmulhsu.vv v8, v8, v16
+; RV32-V-NEXT:    li a0, 63
 ; RV32-V-NEXT:    vsrl.vx v16, v8, a0
 ; RV32-V-NEXT:    vsra.vi v8, v8, 3
 ; RV32-V-NEXT:    vadd.vv v8, v8, v16
@@ -1057,10 +1067,10 @@ define <vscale x 8 x i64> @vdiv_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; RV64-V-NEXT:    addi a0, a0, -1911
 ; RV64-V-NEXT:    slli a1, a0, 32
 ; RV64-V-NEXT:    add a0, a0, a1
-; RV64-V-NEXT:    li a1, 63
-; RV64-V-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; RV64-V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-V-NEXT:    vmulhsu.vx v8, v8, a0
-; RV64-V-NEXT:    vsrl.vx v16, v8, a1
+; RV64-V-NEXT:    li a0, 63
+; RV64-V-NEXT:    vsrl.vx v16, v8, a0
 ; RV64-V-NEXT:    vsra.vi v8, v8, 3
 ; RV64-V-NEXT:    vadd.vv v8, v8, v16
 ; RV64-V-NEXT:    ret
