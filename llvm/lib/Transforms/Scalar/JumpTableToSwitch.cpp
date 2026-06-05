@@ -12,7 +12,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -215,9 +214,9 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  auto FuncToGuid = [InLTO = this->InLTO](const Function &Fct) {
-    if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
-      return AssignGUIDPass::getGUID(Fct);
+  auto FuncToGuid = [&](const Function &Fct) {
+    if (const auto MaybeGUID = Fct.getGUIDIfAssigned(); MaybeGUID)
+      return *MaybeGUID;
 
     return Function::getGUIDAssumingExternalLinkage(
         getIRPGOFuncName(Fct, InLTO));

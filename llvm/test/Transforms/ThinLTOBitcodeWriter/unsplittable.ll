@@ -21,7 +21,7 @@
 ; CHECK: @llvm.global_ctors = appending global
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @f, ptr null }]
 
-; CHECK: @g = internal global i8 42, !type !0
+; CHECK: @g = internal global i8 42, !type !1
 @g = internal global i8 42, !type !0
 
 declare void @sink(ptr)

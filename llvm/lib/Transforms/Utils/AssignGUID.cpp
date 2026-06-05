@@ -1,0 +1,41 @@
+//===-- AssignGUID.cpp - Unique identifier assignment pass ------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides a pass which assigns GUID (globally unique identifier)
+// metadata to every GlobalValue in the module, according to its current name,
+// linkage, and originating file. It is idempotent -- if GUID metadata is
+// already present, it does nothing.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/Transforms/Utils/AssignGUID.h"
+#include "llvm/Support/Debug.h"
+
+using namespace llvm;
+
+void AssignGUIDPass::runOnModule(Module &M) {
+  for (auto &GV : M.globals()) {
+    if (GV.isDeclaration())
+      continue;
+    GV.assignGUID();
+  }
+  for (auto &F : M.functions()) {
+    if (F.isDeclaration())
+      continue;
+    F.assignGUID();
+  }
+}
+
+void AssignGUIDPass::assignGUIDForMergedGV(GlobalVariable &GV) {
+  // FIXME: merging adds all the guids of the original GVs. We currently drop
+  // that metadata from GV first, but we may want to remember those later, if
+  // we had a motivation for that. In that case, we need some other metadata
+  // to maintain that association.
+  GV.eraseMetadata(LLVMContext::MD_unique_id);
+  GV.assignGUID();
+}
