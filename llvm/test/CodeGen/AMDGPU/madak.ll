@@ -697,10 +697,9 @@ define amdgpu_kernel void @s_v_madak_f32(ptr addrspace(1) noalias %out, ptr addr
 ;
 ; GFX11-MAD-LABEL: s_v_madak_f32:
 ; GFX11-MAD:       ; %bb.0:
-; GFX11-MAD-NEXT:    s_clause 0x1
 ; GFX11-MAD-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-MAD-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-MAD-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-MAD-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-MAD-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-MAD-NEXT:    s_waitcnt lgkmcnt(0)

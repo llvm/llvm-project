@@ -348,14 +348,14 @@ define amdgpu_kernel void @fadd_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-SDAG-LABEL: fadd_v32_vs:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_clause 0x2
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-SDAG-NEXT:    s_clause 0x1
 ; GFX1250-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4 nv
 ; GFX1250-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4 nv
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_dual_lshlrev_b32 v56, 7, v0 :: v_dual_mov_b32 v32, s40
+; GFX1250-SDAG-NEXT:    v_lshlrev_b32_e32 v56, 7, v0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_clause 0x7
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[0:3], v56, s[0:1] offset:16
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:48
@@ -365,18 +365,18 @@ define amdgpu_kernel void @fadd_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:96
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:64
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:112
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v33, s41 :: v_dual_mov_b32 v34, s42
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v35, s43 :: v_dual_mov_b32 v36, s38
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v39, s49 :: v_dual_mov_b32 v40, s50
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v41, s51 :: v_dual_mov_b32 v42, s44
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v37, s39 :: v_dual_mov_b32 v38, s48
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v55, s23 :: v_dual_mov_b32 v51, s11
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v32, s40 :: v_dual_mov_b32 v33, s41
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v34, s42 :: v_dual_mov_b32 v35, s43
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v40, s50 :: v_dual_mov_b32 v41, s51
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v38, s48 :: v_dual_mov_b32 v39, s49
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v52, s20 :: v_dual_mov_b32 v53, s21
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v54, s22 :: v_dual_mov_b32 v49, s15
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v50, s10 :: v_dual_mov_b32 v45, s47
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v54, s22 :: v_dual_mov_b32 v55, s23
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v50, s10 :: v_dual_mov_b32 v51, s11
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v46, s12 :: v_dual_mov_b32 v47, s13
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v48, s14 :: v_dual_mov_b32 v43, s45
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v44, s46
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v48, s14 :: v_dual_mov_b32 v49, s15
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v42, s44 :: v_dual_mov_b32 v43, s45
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v44, s46 :: v_dual_mov_b32 v45, s47
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v36, s38 :: v_dual_mov_b32 v37, s39
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x7
 ; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[32:33]
 ; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[34:35]
@@ -1635,14 +1635,14 @@ define amdgpu_kernel void @fmul_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-SDAG-LABEL: fmul_v32_vs:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_clause 0x2
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-SDAG-NEXT:    s_clause 0x1
 ; GFX1250-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4 nv
 ; GFX1250-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4 nv
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_dual_lshlrev_b32 v56, 7, v0 :: v_dual_mov_b32 v32, s40
+; GFX1250-SDAG-NEXT:    v_lshlrev_b32_e32 v56, 7, v0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_clause 0x7
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[0:3], v56, s[0:1] offset:16
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:48
@@ -1652,18 +1652,18 @@ define amdgpu_kernel void @fmul_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:96
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:64
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:112
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v33, s41 :: v_dual_mov_b32 v34, s42
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v35, s43 :: v_dual_mov_b32 v36, s38
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v39, s49 :: v_dual_mov_b32 v40, s50
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v41, s51 :: v_dual_mov_b32 v42, s44
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v37, s39 :: v_dual_mov_b32 v38, s48
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v55, s23 :: v_dual_mov_b32 v51, s11
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v32, s40 :: v_dual_mov_b32 v33, s41
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v34, s42 :: v_dual_mov_b32 v35, s43
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v40, s50 :: v_dual_mov_b32 v41, s51
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v38, s48 :: v_dual_mov_b32 v39, s49
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v52, s20 :: v_dual_mov_b32 v53, s21
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v54, s22 :: v_dual_mov_b32 v49, s15
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v50, s10 :: v_dual_mov_b32 v45, s47
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v54, s22 :: v_dual_mov_b32 v55, s23
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v50, s10 :: v_dual_mov_b32 v51, s11
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v46, s12 :: v_dual_mov_b32 v47, s13
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v48, s14 :: v_dual_mov_b32 v43, s45
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v44, s46
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v48, s14 :: v_dual_mov_b32 v49, s15
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v42, s44 :: v_dual_mov_b32 v43, s45
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v44, s46 :: v_dual_mov_b32 v45, s47
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v36, s38 :: v_dual_mov_b32 v37, s39
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x7
 ; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[32:33]
 ; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[34:35]

@@ -163,10 +163,9 @@ define amdgpu_kernel void @v_ctpop_i64_user(ptr addrspace(1) noalias %out, ptr a
 ;
 ; GFX12-LABEL: v_ctpop_i64_user:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 3, v0

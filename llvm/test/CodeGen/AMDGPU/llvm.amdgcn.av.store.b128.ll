@@ -1224,15 +1224,15 @@ define amdgpu_kernel void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset,
 ;
 ; GFX1100-SDAG-LABEL: global_store_saddr_uniform_ptr_in_vgprs:
 ; GFX1100-SDAG:       ; %bb.0:
+; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1100-SDAG-NEXT:    s_clause 0x1
 ; GFX1100-SDAG-NEXT:    s_load_b32 s6, s[4:5], 0x24
 ; GFX1100-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1100-SDAG-NEXT:    ds_load_b64 v[4:5], v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v6, s6
-; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
+; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX1100-SDAG-NEXT:    global_store_b128 v6, v[0:3], s[0:1]
@@ -1241,12 +1241,13 @@ define amdgpu_kernel void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset,
 ; GFX1250-SDAG-LABEL: global_store_saddr_uniform_ptr_in_vgprs:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SDAG-NEXT:    s_clause 0x1
 ; GFX1250-SDAG-NEXT:    s_load_b32 s6, s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v6, s6
 ; GFX1250-SDAG-NEXT:    ds_load_b64 v[4:5], v0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v6, s6
 ; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
@@ -1313,20 +1314,19 @@ define amdgpu_kernel void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset,
 ;
 ; GFX1100-ISEL-LABEL: global_store_saddr_uniform_ptr_in_vgprs:
 ; GFX1100-ISEL:       ; %bb.0:
+; GFX1100-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1100-ISEL-NEXT:    s_clause 0x1
 ; GFX1100-ISEL-NEXT:    s_load_b32 s6, s[4:5], 0x24
 ; GFX1100-ISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
 ; GFX1100-ISEL-NEXT:    s_mov_b32 s7, 0
-; GFX1100-ISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1100-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
 ; GFX1100-ISEL-NEXT:    ds_load_b64 v[0:1], v0
 ; GFX1100-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
+; GFX1100-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-ISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
-; GFX1100-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-ISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
-; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
+; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1100-ISEL-NEXT:    global_store_b128 v[4:5], v[0:3], off
 ; GFX1100-ISEL-NEXT:    s_endpgm
 ;
@@ -1412,15 +1412,15 @@ define amdgpu_kernel void @global_store_saddr_uniform_ptr_in_vgprs_immoffset(i32
 ;
 ; GFX1100-SDAG-LABEL: global_store_saddr_uniform_ptr_in_vgprs_immoffset:
 ; GFX1100-SDAG:       ; %bb.0:
+; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1100-SDAG-NEXT:    s_clause 0x1
 ; GFX1100-SDAG-NEXT:    s_load_b32 s6, s[4:5], 0x24
 ; GFX1100-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1100-SDAG-NEXT:    ds_load_b64 v[4:5], v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v6, s6
-; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
+; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX1100-SDAG-NEXT:    global_store_b128 v6, v[0:3], s[0:1] offset:-120
@@ -1429,12 +1429,13 @@ define amdgpu_kernel void @global_store_saddr_uniform_ptr_in_vgprs_immoffset(i32
 ; GFX1250-SDAG-LABEL: global_store_saddr_uniform_ptr_in_vgprs_immoffset:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SDAG-NEXT:    s_clause 0x1
 ; GFX1250-SDAG-NEXT:    s_load_b32 s6, s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v6, s6
 ; GFX1250-SDAG-NEXT:    ds_load_b64 v[4:5], v0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v6, s6
 ; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
@@ -1501,20 +1502,19 @@ define amdgpu_kernel void @global_store_saddr_uniform_ptr_in_vgprs_immoffset(i32
 ;
 ; GFX1100-ISEL-LABEL: global_store_saddr_uniform_ptr_in_vgprs_immoffset:
 ; GFX1100-ISEL:       ; %bb.0:
+; GFX1100-ISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1100-ISEL-NEXT:    s_clause 0x1
 ; GFX1100-ISEL-NEXT:    s_load_b32 s6, s[4:5], 0x24
 ; GFX1100-ISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
 ; GFX1100-ISEL-NEXT:    s_mov_b32 s7, 0
-; GFX1100-ISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1100-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
 ; GFX1100-ISEL-NEXT:    ds_load_b64 v[0:1], v0
 ; GFX1100-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
+; GFX1100-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-ISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
-; GFX1100-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-ISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
-; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
+; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1100-ISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1100-ISEL-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:-120
 ; GFX1100-ISEL-NEXT:    s_endpgm
 ;
