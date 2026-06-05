@@ -739,15 +739,13 @@ static void diagnoseUnknownAVMetadata(const MachineInstr &MI,
                                       StringRef Suffix) {
   const MachineFunction *MF = MI.getMF();
   const Function &Fn = MF->getFunction();
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
-  OS << "unknown amdgcn-av metadata '" << Suffix << '\'';
-  Fn.getContext().diagnose(
-      DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
+  Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+      Fn, Twine("unknown amdgcn-av metadata '") + Suffix + Twine('\''),
+      MI.getDebugLoc(), DS_Warning));
 }
 
 static bool hasAVNoneMMRA(const MachineInstr &MI) {
-  auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
+  MMRAMetadata MMRA(MI.getMMRAMetadata());
   if (!MMRA)
     return false;
   bool TagFound = false;
