@@ -3,9 +3,15 @@ import sys
 
 from argparse import Namespace
 from lit.Test import Test
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from lit.ProgressBar import SimpleProgressBar
 
 
-def create_display(opts, tests, total_tests, workers):
+def create_display(
+    opts: Namespace, tests: List[Test], total_tests: int, workers: int
+) -> "Display":
     if opts.print_result_after == "off" and not opts.useProgressBar:
         return NopDisplay()
 
@@ -30,7 +36,7 @@ def create_display(opts, tests, total_tests, workers):
 
 
 class ProgressPredictor:
-    def __init__(self, tests):
+    def __init__(self, tests: List[Test]) -> None:
         self.completed = 0
         self.time_elapsed = 0.0
         self.predictable_tests_remaining = 0
@@ -96,10 +102,10 @@ class Display:
     def __init__(
         self,
         opts: Namespace,
-        tests: list[Test],
-        header: str | None,
-        progress_bar,
-    ):
+        tests: List[Test],
+        header: Optional[str],
+        progress_bar: Optional[SimpleProgressBar],
+    ) -> None:
         self.opts = opts
         self.num_tests = len(tests)
         self.header = header
@@ -107,7 +113,7 @@ class Display:
         self.progress_bar = progress_bar
         self.completed = 0
 
-    def print_header(self):
+    def print_header(self) -> None:
         if self.header:
             print(self.header)
         if self.progress_bar:
@@ -128,7 +134,7 @@ class Display:
             percent = self.progress_predictor.update(test)
             self.progress_bar.update(percent, test.getFullName())
 
-    def clear(self, interrupted):
+    def clear(self, interrupted: bool) -> None:
         if self.progress_bar:
             self.progress_bar.clear(interrupted)
 

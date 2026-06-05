@@ -2,6 +2,7 @@ import lit.TestRunner
 import lit.util
 
 from .base import FileBasedTest
+from typing import Any, List
 
 
 class ShTest(FileBasedTest):
@@ -17,8 +18,11 @@ class ShTest(FileBasedTest):
     """
 
     def __init__(
-        self, execute_external=False, extra_substitutions=[], preamble_commands=[]
-    ):
+        self,
+        execute_external: bool = False,
+        extra_substitutions: List[Any] = [],
+        preamble_commands: List[Any] = [],
+    ) -> None:
         self.execute_external = execute_external
         self.extra_substitutions = extra_substitutions
         self.preamble_commands = preamble_commands

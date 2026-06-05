@@ -1,12 +1,21 @@
+from __future__ import annotations
+
+from typing import Any, List, Tuple, Union
+
+
 class Command:
-    def __init__(self, args, redirects):
+    def __init__(
+        self,
+        args: List[Union[str, GlobItem]],
+        redirects: List[Union[Tuple[Tuple[str], str], Any]],
+    ) -> None:
         self.args = list(args)
         self.redirects = list(redirects)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Command(%r, %r)" % (self.args, self.redirects)
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Command") -> bool:
         if not isinstance(other, Command):
             return False
 
@@ -37,7 +46,7 @@ class Command:
 
 
 class GlobItem:
-    def __init__(self, pattern):
+    def __init__(self, pattern: str) -> None:
         self.pattern = pattern
 
     def __repr__(self):
@@ -62,15 +71,17 @@ class GlobItem:
 
 
 class Pipeline:
-    def __init__(self, commands, negate=False, pipe_err=False):
+    def __init__(
+        self, commands: List[Command], negate: bool = False, pipe_err: bool = False
+    ) -> None:
         self.commands = commands
         self.negate = negate
         self.pipe_err = pipe_err
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Pipeline(%r, %r, %r)" % (self.commands, self.negate, self.pipe_err)
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Pipeline") -> bool:
         if not isinstance(other, Pipeline):
             return False
 
@@ -92,13 +103,13 @@ class Pipeline:
 
 
 class Seq:
-    def __init__(self, lhs, op, rhs):
+    def __init__(self, lhs: Pipeline, op: str, rhs: Pipeline) -> None:
         assert op in (";", "&", "||", "&&")
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Seq(%r, %r, %r)" % (self.lhs, self.op, self.rhs)
 
     def __eq__(self, other):

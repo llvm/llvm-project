@@ -2,24 +2,25 @@ import itertools
 
 import lit.util
 from lit.ShCommands import Command, GlobItem, Pipeline, Seq
+from typing import Iterator, Optional, Tuple, Union
 
 
 class ShLexer:
-    def __init__(self, data, win32Escapes=False):
+    def __init__(self, data: str, win32Escapes: bool = False) -> None:
         self.data = data
         self.pos = 0
         self.end = len(data)
         self.win32Escapes = win32Escapes
 
-    def eat(self):
+    def eat(self) -> str:
         c = self.data[self.pos]
         self.pos += 1
         return c
 
-    def look(self):
+    def look(self) -> str:
         return self.data[self.pos]
 
-    def maybe_eat(self, c):
+    def maybe_eat(self, c: str) -> bool:
         """
         maybe_eat(c) - Consume the character c if it is the next character,
         returning True if a character was consumed."""
@@ -28,7 +29,7 @@ class ShLexer:
             return True
         return False
 
-    def lex_arg_fast(self, c):
+    def lex_arg_fast(self, c: str) -> Optional[Union[GlobItem, str]]:
         # Get the leading whitespace free section.
         chunk = self.data[self.pos - 1 :].split(None, 1)[0]
 
@@ -48,7 +49,7 @@ class ShLexer:
         self.pos = self.pos - 1 + len(chunk)
         return GlobItem(chunk) if "*" in chunk or "?" in chunk else chunk
 
-    def lex_arg_slow(self, c):
+    def lex_arg_slow(self, c: str) -> str:
         if c in "'\"":
             parts = [self.lex_arg_quoted(c)]
         else:
@@ -110,7 +111,7 @@ class ShLexer:
         token = "".join(parts)
         return GlobItem(token) if unquoted_glob_char else token
 
-    def lex_arg_quoted(self, delim):
+    def lex_arg_quoted(self, delim: str) -> str:
         parts = []
         while self.pos != self.end:
             c = self.eat()
@@ -155,10 +156,10 @@ class ShLexer:
                 raise ValueError("Fast path failure: %r != %r" % (self.pos, end))
         return reference
 
-    def lex_arg(self, c):
+    def lex_arg(self, c: str) -> Union[GlobItem, str]:
         return self.lex_arg_fast(c) or self.lex_arg_slow(c)
 
-    def lex_one_token(self):
+    def lex_one_token(self) -> Union[GlobItem, Tuple[str], str]:
         """
         lex_one_token - Lex a single 'sh' token."""
 
@@ -190,7 +191,7 @@ class ShLexer:
 
         return self.lex_arg(c)
 
-    def lex(self):
+    def lex(self) -> Iterator[Union[str, GlobItem, Tuple[str]]]:
         while self.pos != self.end:
             if self.look().isspace():
                 self.eat()
@@ -202,23 +203,25 @@ class ShLexer:
 
 
 class ShParser:
-    def __init__(self, data, win32Escapes=False, pipefail=False):
+    def __init__(
+        self, data: str, win32Escapes: bool = False, pipefail: bool = False
+    ) -> None:
         self.data = data
         self.pipefail = pipefail
         self.tokens = ShLexer(data, win32Escapes=win32Escapes).lex()
 
-    def lex(self):
+    def lex(self) -> Optional[Union[GlobItem, str, Tuple[str]]]:
         for item in self.tokens:
             return item
         return None
 
-    def look(self):
+    def look(self) -> Optional[Union[GlobItem, Tuple[str], str]]:
         token = self.lex()
         if token is not None:
             self.tokens = itertools.chain([token], self.tokens)
         return token
 
-    def parse_command(self):
+    def parse_command(self) -> Command:
         tok = self.lex()
         if not tok:
             raise ValueError("empty command!")
@@ -253,7 +256,7 @@ class ShParser:
 
         return Command(args, redirects)
 
-    def parse_pipeline(self):
+    def parse_pipeline(self) -> Pipeline:
         negate = False
 
         commands = [self.parse_command()]
@@ -262,7 +265,7 @@ class ShParser:
             commands.append(self.parse_command())
         return Pipeline(commands, negate, self.pipefail)
 
-    def parse(self):
+    def parse(self) -> Union[Seq, Pipeline]:
         lhs = self.parse_pipeline()
 
         while self.look():

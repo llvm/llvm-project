@@ -1,9 +1,10 @@
 import getopt
 import sys
 from io import StringIO
+from typing import List, Union
 
 
-def convertToCaretAndMNotation(data):
+def convertToCaretAndMNotation(data: Union[str, bytes]) -> bytes:
     newdata = StringIO()
     if isinstance(data, str):
         data = bytearray(data.encode())
@@ -26,7 +27,7 @@ def convertToCaretAndMNotation(data):
     return newdata.getvalue().encode()
 
 
-def main(argv):
+def main(argv: List[str]) -> None:
     arguments = argv[1:]
     short_options = "v"
     long_options = ["show-nonprinting"]

@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import argparse
 import enum
 import os
+import re
 import shlex
 import sys
 
 import lit.reports
 import lit.util
+from typing import Any, Callable, List, Optional, Union
 
 
 @enum.unique
@@ -23,7 +27,7 @@ class TestOutputLevel(enum.IntEnum):
     ALL = 3
 
     @classmethod
-    def create(cls, value):
+    def create(cls, value: str) -> "TestOutputLevel":
         if value == "off":
             return cls.OFF
         if value == "failed":
@@ -36,14 +40,16 @@ class TestOutputLevel(enum.IntEnum):
 
 
 class TestOutputAction(argparse.Action):
-    def __init__(self, option_strings, dest, **kwargs):
+    def __init__(self, option_strings: List[str], dest: str, **kwargs) -> None:
         super().__init__(option_strings, dest, nargs=None, **kwargs)
 
     def __call__(self, parser, namespace, value, option_string=None):
         TestOutputAction.setOutputLevel(namespace, self.dest, value)
 
     @classmethod
-    def setOutputLevel(cls, namespace, dest, value):
+    def setOutputLevel(
+        cls, namespace: argparse.Namespace, dest: str, value: str
+    ) -> None:
         setattr(namespace, dest, value)
         if dest == "test_output" and TestOutputLevel.create(
             namespace.print_result_after
@@ -56,13 +62,25 @@ class TestOutputAction(argparse.Action):
 
 
 class AliasAction(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+    def __init__(
+        self,
+        option_strings: List[str],
+        dest: str,
+        nargs: Optional[Union[int, str]] = None,
+        **kwargs,
+    ) -> None:
         self.expansion = kwargs.pop("alias", None)
         if not self.expansion:
             raise ValueError("no aliases expansion provided")
         super().__init__(option_strings, dest, nargs=0, **kwargs)
 
-    def __call__(self, parser, namespace, value, option_string=None):
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        value: Any,
+        option_string: Optional[str] = None,
+    ) -> None:
         for e in self.expansion:
             if callable(e):
                 e(namespace)
@@ -71,7 +89,7 @@ class AliasAction(argparse.Action):
                 setattr(namespace, dest, val)
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="lit", fromfile_prefix_chars="@")
     parser.add_argument(
         "test_paths",
@@ -551,7 +569,7 @@ def parse_args():
     return opts
 
 
-def _positive_int(arg):
+def _positive_int(arg: str) -> int:
     return _int(arg, "positive", lambda i: i > 0)
 
 
@@ -559,7 +577,7 @@ def _non_negative_int(arg):
     return _int(arg, "non-negative", lambda i: i >= 0)
 
 
-def _int(arg, kind, pred):
+def _int(arg: str, kind: str, pred: Callable) -> int:
     desc = "requires {} integer, but found '{}'"
     try:
         i = int(arg)
@@ -588,16 +606,14 @@ def _float(arg, kind, pred):
     return f
 
 
-def _case_insensitive_regex(arg):
-    import re
-
+def _case_insensitive_regex(arg: str) -> re.Pattern:
     try:
         return re.compile(arg, re.IGNORECASE)
     except re.error as reason:
         raise _error("invalid regular expression: '{}', {}", arg, reason)
 
 
-def _semicolon_list(arg):
+def _semicolon_list(arg: str) -> List[str]:
     return arg.split(";")
 
 

@@ -8,6 +8,11 @@ import re
 import sys
 
 import util
+from typing import List, Optional, Tuple
+
+# A directory tree node: (dirname, child_trees).
+# child_trees is None for a file, [] for an empty dir, or a list of nodes.
+DirTree = Tuple[str, Optional[List["DirTree"]]]
 
 
 class DiffFlags:
@@ -25,7 +30,7 @@ class DiffFlags:
         "strip_trailing_cr",
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ignore_all_space = False
         self.ignore_space_change = False
         self.ignore_matching_lines = False
@@ -36,7 +41,7 @@ class DiffFlags:
         self.strip_trailing_cr = False
 
 
-def getDirTree(path, basedir=""):
+def getDirTree(path: str, basedir: str = "") -> DirTree:
     # Tree is a tuple of form (dirname, child_trees).
     # An empty dir has child_trees = [], a file has child_trees = None.
     child_trees = []
@@ -48,7 +53,7 @@ def getDirTree(path, basedir=""):
         return path, sorted(child_trees)
 
 
-def compareTwoFiles(flags, filepaths):
+def compareTwoFiles(flags: DiffFlags, filepaths: List[str]) -> int:
     filelines = []
     for file in filepaths:
         if file == "-":
@@ -70,7 +75,9 @@ def compareTwoFiles(flags, filepaths):
             return compareTwoBinaryFiles(flags, filepaths, filelines)
 
 
-def compareTwoBinaryFiles(flags, filepaths, filelines):
+def compareTwoBinaryFiles(
+    flags: DiffFlags, filepaths: List[str], filelines: List[List[bytes]]
+) -> int:
     exitCode = 0
     diffs = difflib.diff_bytes(
         difflib.unified_diff,
@@ -87,7 +94,12 @@ def compareTwoBinaryFiles(flags, filepaths, filelines):
     return exitCode
 
 
-def compareTwoTextFiles(flags, filepaths, filelines_bin, encoding):
+def compareTwoTextFiles(
+    flags: DiffFlags,
+    filepaths: List[str],
+    filelines_bin: List[List[bytes]],
+    encoding: str,
+) -> int:
     filelines = []
     for lines_bin in filelines_bin:
         lines = []
@@ -134,7 +146,7 @@ def compareTwoTextFiles(flags, filepaths, filelines_bin, encoding):
     return exitCode
 
 
-def printDirVsFile(dir_path, file_path):
+def printDirVsFile(dir_path: str, file_path: str) -> None:
     if os.path.getsize(file_path):
         msg = "File %s is a directory while file %s is a regular file"
     else:
@@ -142,7 +154,7 @@ def printDirVsFile(dir_path, file_path):
     sys.stdout.write(msg % (dir_path, file_path) + "\n")
 
 
-def printFileVsDir(file_path, dir_path):
+def printFileVsDir(file_path: str, dir_path: str) -> None:
     if os.path.getsize(file_path):
         msg = "File %s is a regular file while file %s is a directory"
     else:
@@ -150,11 +162,15 @@ def printFileVsDir(file_path, dir_path):
     sys.stdout.write(msg % (file_path, dir_path) + "\n")
 
 
-def printOnlyIn(basedir, path, name):
+def printOnlyIn(basedir: str, path: str, name: str) -> None:
     sys.stdout.write("Only in %s: %s\n" % (os.path.join(basedir, path), name))
 
 
-def compareDirTrees(flags, dir_trees, base_paths=["", ""]):
+def compareDirTrees(
+    flags: DiffFlags,
+    dir_trees: List[DirTree],
+    base_paths: List[str] = ["", ""],
+) -> int:
     # Dirnames of the trees are not checked, it's caller's responsibility,
     # as top-level dirnames are always different. Base paths are important
     # for doing os.walk, but we don't put it into tree's dirname in order
@@ -225,7 +241,7 @@ def compareDirTrees(flags, dir_trees, base_paths=["", ""]):
     return exitCode
 
 
-def main(argv):
+def main(argv: List[str]):
     if sys.platform == "win32":
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, newline="\n")
 

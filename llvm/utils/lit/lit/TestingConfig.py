@@ -1,5 +1,12 @@
+from __future__ import annotations
+
 import os
 import sys
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Union
+
+if TYPE_CHECKING:
+    from lit.LitConfig import LitConfig
+    from lit.formats.base import TestFormat
 
 
 class TestingConfig:
@@ -8,7 +15,7 @@ class TestingConfig:
     """
 
     @staticmethod
-    def fromdefaults(litConfig):
+    def fromdefaults(litConfig: LitConfig) -> "TestingConfig":
         """
         fromdefaults(litConfig) -> TestingConfig
 
@@ -128,7 +135,7 @@ class TestingConfig:
             maxIndividualTestTime=litConfig.maxIndividualTestTime,
         )
 
-    def load_from_path(self, path, litConfig):
+    def load_from_path(self, path: str, litConfig: LitConfig) -> None:
         """
         load_from_path(path, litConfig)
 
@@ -169,24 +176,24 @@ class TestingConfig:
 
     def __init__(
         self,
-        parent,
-        name,
-        suffixes,
-        test_format,
-        environment,
-        substitutions,
-        unsupported,
-        test_exec_root,
-        test_source_root,
-        excludes,
-        available_features,
-        pipefail,
-        limit_to_features=[],
-        is_early=False,
-        parallelism_group=None,
-        standalone_tests=False,
-        maxIndividualTestTime=0,
-    ):
+        parent: Optional["TestingConfig"],
+        name: str,
+        suffixes: Set[Any],
+        test_format: Optional["TestFormat"],
+        environment: Dict[str, str],
+        substitutions: List[Any],
+        unsupported: bool,
+        test_exec_root: Optional[str],
+        test_source_root: Optional[str],
+        excludes: List[Any],
+        available_features: List[Any],
+        pipefail: bool,
+        limit_to_features: List[Any] = [],
+        is_early: bool = False,
+        parallelism_group: Optional[Union[str, Callable]] = None,
+        standalone_tests: bool = False,
+        maxIndividualTestTime: Optional[int] = 0,
+    ) -> None:
         self.parent = parent
         self.name = str(name)
         self.suffixes = set(suffixes)
@@ -228,7 +235,7 @@ class TestingConfig:
             )
         self._recursiveExpansionLimit = value
 
-    def finish(self, litConfig):
+    def finish(self, litConfig: LitConfig) -> None:
         """finish() - Finish this config object, after loading is complete."""
 
         self.name = str(self.name)

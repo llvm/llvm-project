@@ -2,11 +2,12 @@ import sys
 import subprocess
 import resource
 import os
+from typing import List
 
 ULIMIT_ENV_VAR_PREFIX = "LIT_INTERNAL_ULIMIT_"
 
 
-def main(argv):
+def main(argv: List[str]):
     command_args = argv[1:]
     for env_var in os.environ:
         if env_var.startswith(ULIMIT_ENV_VAR_PREFIX):

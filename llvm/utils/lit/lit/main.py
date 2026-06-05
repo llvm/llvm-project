@@ -20,9 +20,11 @@ import lit.Test
 import lit.util
 from lit.formats.googletest import GoogleTest
 from lit.TestTimes import record_test_times
+from argparse import Namespace
+from typing import Any, Dict, List, Union
 
 
-def main(builtin_params={}):
+def main(builtin_params: Dict[Any, Any] = {}) -> None:
     opts = lit.cl_arguments.parse_args()
     params = create_params(builtin_params, opts.user_params)
     is_windows = platform.system() == "Windows"
@@ -47,9 +49,7 @@ def main(builtin_params={}):
         maxIndividualTestTime=opts.maxIndividualTestTime,
     )
 
-    discovered_tests = lit.discovery.find_tests_for_inputs(
-        lit_config, opts.test_paths
-    )
+    discovered_tests = lit.discovery.find_tests_for_inputs(lit_config, opts.test_paths)
     if not discovered_tests:
         sys.stderr.write("error: did not discover any tests for provided path(s)\n")
         sys.exit(2)
@@ -68,7 +68,6 @@ def main(builtin_params={}):
         )
         print(" ".join(sorted(features)))
         sys.exit(0)
-
 
     determine_order(discovered_tests, opts.order)
 
@@ -157,7 +156,9 @@ def main(builtin_params={}):
             sys.exit(1)
 
 
-def create_params(builtin_params, user_params):
+def create_params(
+    builtin_params: Dict[Any, Any], user_params: List[Any]
+) -> Dict[Any, Any]:
     def parse(p):
         return p.split("=", 1) if "=" in p else (p, "")
 
@@ -190,7 +191,9 @@ def print_discovered(tests, show_suites, show_tests):
             print("  %s" % t.getFullName())
 
 
-def determine_order(tests, order):
+def determine_order(
+    tests: List[lit.Test.Test], order: lit.cl_arguments.TestOrder
+) -> None:
     from lit.cl_arguments import TestOrder
 
     enum_order = TestOrder(order)
@@ -226,7 +229,7 @@ def filter_by_shard(tests, run, shards, lit_config):
     return selected_tests
 
 
-def mark_xfail(selected_tests, opts):
+def mark_xfail(selected_tests: List[lit.Test.Test], opts: Namespace) -> None:
     for t in selected_tests:
         test_file = os.sep.join(t.path_in_suite)
         test_full_name = t.getFullName()
@@ -238,7 +241,7 @@ def mark_xfail(selected_tests, opts):
             t.exclude_xfail = True
 
 
-def mark_unsupported(selected_tests, opts):
+def mark_unsupported(selected_tests: List[lit.Test.Test], opts: Namespace) -> None:
     for t in selected_tests:
         test_file = os.sep.join(t.path_in_suite)
         test_full_name = t.getFullName()
@@ -250,14 +253,21 @@ def mark_unsupported(selected_tests, opts):
             t.unsupported_not = True
 
 
-def mark_excluded(discovered_tests, selected_tests):
+def mark_excluded(
+    discovered_tests: List[lit.Test.Test], selected_tests: List[lit.Test.Test]
+) -> None:
     excluded_tests = set(discovered_tests) - set(selected_tests)
     result = lit.Test.Result(lit.Test.EXCLUDED)
     for t in excluded_tests:
         t.setResult(result)
 
 
-def run_tests(tests, lit_config, opts, discovered_tests):
+def run_tests(
+    tests: List[lit.Test.Test],
+    lit_config: lit.LitConfig.LitConfig,
+    opts: Namespace,
+    discovered_tests: int,
+) -> None:
     workers = min(len(tests), opts.workers)
     display = lit.display.create_display(opts, tests, discovered_tests, workers)
 
@@ -284,7 +294,7 @@ def run_tests(tests, lit_config, opts, discovered_tests):
         sys.stderr.write("%s, skipping remaining tests\n" % error)
 
 
-def execute_in_tmp_dir(run, lit_config):
+def execute_in_tmp_dir(run: lit.run.Run, lit_config: lit.LitConfig.LitConfig) -> None:
     # Create a temp directory inside the normal temp directory so that we can
     # try to avoid temporary test file leaks. The user can avoid this behavior
     # by setting LIT_PRESERVES_TMP in the environment, so they can easily use
@@ -323,7 +333,7 @@ def print_histogram(tests):
         lit.util.printHistogram(test_times, title="Tests")
 
 
-def print_results(tests, elapsed, opts):
+def print_results(tests: List[lit.Test.Test], elapsed: float, opts: Namespace) -> None:
     tests_by_code = {code: [] for code in lit.Test.ResultCode.all_codes()}
     total_tests = len(tests)
     for test in tests:
@@ -340,7 +350,12 @@ def print_results(tests, elapsed, opts):
     print_summary(total_tests, tests_by_code, opts.terse_summary, elapsed)
 
 
-def print_group(tests, code, shown_codes, printPathRelativeCWD):
+def print_group(
+    tests: List[Union[Any, lit.Test.Test]],
+    code: lit.Test.ResultCode,
+    shown_codes: List[Any],
+    printPathRelativeCWD: bool,
+) -> None:
     if not tests:
         return
     if not code.isFailure and code not in shown_codes:
@@ -352,7 +367,12 @@ def print_group(tests, code, shown_codes, printPathRelativeCWD):
     sys.stdout.write("\n")
 
 
-def print_summary(total_tests, tests_by_code, quiet, elapsed):
+def print_summary(
+    total_tests: int,
+    tests_by_code: Dict[lit.Test.ResultCode, List[Union[Any, lit.Test.Test]]],
+    quiet: bool,
+    elapsed: float,
+) -> None:
     if not quiet:
         print("\nTesting Time: %.2fs" % elapsed)
 
@@ -366,7 +386,7 @@ def print_summary(total_tests, tests_by_code, quiet, elapsed):
     max_label_len = max(len(label) for label, _ in groups)
     max_count_len = max(len(str(count)) for _, count in groups)
 
-    for (label, count) in groups:
+    for label, count in groups:
         label = label.ljust(max_label_len)
         count = str(count).rjust(max_count_len)
         print("  %s: %s (%.2f%%)" % (label, count, float(count) / total_tests * 100))

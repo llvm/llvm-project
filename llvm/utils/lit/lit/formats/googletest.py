@@ -9,6 +9,7 @@ import lit.Test
 import lit.TestRunner
 import lit.util
 from .base import TestFormat
+from typing import List, Tuple
 
 kIsWindows = sys.platform in ["win32", "cygwin"]
 
@@ -282,7 +283,9 @@ class GoogleTest(TestFormat):
         return cmd
 
     @staticmethod
-    def post_process_shard_results(selected_tests, discovered_tests):
+    def post_process_shard_results(
+        selected_tests: List[lit.Test.Test], discovered_tests: List[lit.Test.Test]
+    ) -> Tuple[List[lit.Test.Test], List[lit.Test.Test]]:
         def remove_gtest(tests):
             return [t for t in tests if t.gtest_json_file is None]
 

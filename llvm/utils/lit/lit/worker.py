@@ -5,6 +5,9 @@ Exception: in single process mode _execute is called directly.
 For efficiency, we copy all data needed to execute all tests into each worker
 and store it in global variables. This reduces the cost of each task.
 """
+
+from __future__ import annotations
+
 import contextlib
 import os
 import signal
@@ -14,13 +17,17 @@ import traceback
 import lit.Test
 import lit.util
 from lit.TestRunner import TestUpdaterException
+from typing import TYPE_CHECKING, Any, Dict, Iterator
+
+if TYPE_CHECKING:
+    from lit.LitConfig import LitConfig
 
 
 _lit_config = None
 _parallelism_semaphores = None
 
 
-def initialize(lit_config, parallelism_semaphores):
+def initialize(lit_config: LitConfig, parallelism_semaphores: Dict[Any, Any]) -> None:
     """Copy data shared by all test executions into worker processes"""
     global _lit_config
     global _parallelism_semaphores
@@ -33,7 +40,7 @@ def initialize(lit_config, parallelism_semaphores):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-def execute(test):
+def execute(test: lit.Test.Test) -> lit.Test.Test:
     """Run one test in a multiprocessing.Pool
 
     Side effects in this function and functions it calls are not visible in the
@@ -51,11 +58,13 @@ def execute(test):
 
 # TODO(python3): replace with contextlib.nullcontext
 @contextlib.contextmanager
-def NopSemaphore():
+def NopSemaphore() -> Iterator[None]:
     yield
 
 
-def _get_parallelism_semaphore(test):
+def _get_parallelism_semaphore(
+    test: lit.Test.Test,
+) -> contextlib._GeneratorContextManager:
     pg = test.config.parallelism_group
     if callable(pg):
         pg = pg(test)
@@ -63,7 +72,7 @@ def _get_parallelism_semaphore(test):
 
 
 # Do not inline! Directly used by LitTestCase.py
-def _execute(test, lit_config):
+def _execute(test: lit.Test.Test, lit_config: LitConfig) -> lit.Test.Result:
     start = time.time()
     result = _execute_test_handle_errors(test, lit_config)
     result.elapsed = time.time() - start
@@ -72,7 +81,9 @@ def _execute(test, lit_config):
     return result
 
 
-def _execute_test_handle_errors(test, lit_config):
+def _execute_test_handle_errors(
+    test: lit.Test.Test, lit_config: LitConfig
+) -> lit.Test.Result:
     try:
         result = test.config.test_format.execute(test, lit_config)
         return _adapt_result(result)
@@ -91,7 +102,7 @@ def _execute_test_handle_errors(test, lit_config):
 
 # Support deprecated result from execute() which returned the result
 # code and additional output as a tuple.
-def _adapt_result(result):
+def _adapt_result(result: lit.Test.Result) -> lit.Test.Result:
     if isinstance(result, lit.Test.Result):
         return result
     assert isinstance(result, tuple)

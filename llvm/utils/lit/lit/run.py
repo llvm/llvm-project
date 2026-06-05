@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import multiprocessing
 import os
 import platform
@@ -6,6 +8,11 @@ import time
 import lit.Test
 import lit.util
 import lit.worker
+from typing import TYPE_CHECKING, Callable, List, Optional
+
+if TYPE_CHECKING:
+    from lit.LitConfig import LitConfig
+    from multiprocessing.pool import ApplyResult
 
 # Windows has a limit of 60 workers per pool.
 # This is defined in the multiprocessing module implementation.
@@ -13,8 +20,9 @@ import lit.worker
 WINDOWS_MAX_WORKERS_PER_POOL = 60
 
 
-def _ceilDiv(a, b):
+def _ceilDiv(a: int, b: int) -> int:
     return (a + b - 1) // b
+
 
 class MaxFailuresError(Exception):
     pass
@@ -28,8 +36,14 @@ class Run:
     """A concrete, configured testing run."""
 
     def __init__(
-        self, tests, lit_config, workers, progress_callback, max_failures, timeout
-    ):
+        self,
+        tests: List[lit.Test.Test],
+        lit_config: LitConfig,
+        workers: int,
+        progress_callback: Callable,
+        max_failures: Optional[int],
+        timeout: Optional[float],
+    ) -> None:
         self.tests = tests
         self.lit_config = lit_config
         self.workers = workers
@@ -38,7 +52,7 @@ class Run:
         self.timeout = timeout
         assert workers > 0
 
-    def execute(self):
+    def execute(self) -> None:
         """
         Execute the tests in the run using up to the specified number of
         parallel tasks, and inform the caller of each individual result. The
@@ -71,7 +85,7 @@ class Run:
                 if test.result is None:
                     test.setResult(skipped)
 
-    def _execute(self, deadline):
+    def _execute(self, deadline: float) -> None:
         self._increase_process_limit()
 
         semaphores = {
@@ -140,7 +154,7 @@ class Run:
             for pool in pools:
                 pool.join()
 
-    def _wait_for(self, async_results, deadline):
+    def _wait_for(self, async_results: List[ApplyResult], deadline: float) -> None:
         timeout = deadline - time.time()
         idx = 0
         while len(async_results) > 0:
@@ -160,7 +174,9 @@ class Run:
     # Update local test object "in place" from remote test object.  This
     # ensures that the original test object which is used for printing test
     # results reflects the changes.
-    def _update_test(self, local_test, remote_test):
+    def _update_test(
+        self, local_test: lit.Test.Test, remote_test: lit.Test.Test
+    ) -> None:
         # Needed for getMissingRequiredFeatures()
         local_test.requires = remote_test.requires
         local_test.result = remote_test.result
@@ -169,7 +185,7 @@ class Run:
     # Some tests use threads internally, and at least on Linux each of these
     # threads counts toward the current process limit. Try to raise the (soft)
     # process limit so that tests don't fail due to resource exhaustion.
-    def _increase_process_limit(self):
+    def _increase_process_limit(self) -> None:
         ncpus = lit.util.usable_core_count()
         desired_limit = self.workers * ncpus * 2  # the 2 is a safety factor
 

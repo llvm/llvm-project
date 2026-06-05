@@ -9,6 +9,7 @@ from io import StringIO
 
 import lit.util
 from lit.ShellEnvironment import (
+    ShellEnvironment,
     InternalShellError,
     ShellCommandResult,
     expand_glob_expressions,
@@ -16,9 +17,10 @@ from lit.ShellEnvironment import (
     processRedirects,
     updateEnv,
 )
+from lit.ShCommands import Command
 
 
-def executeBuiltinCd(cmd, shenv):
+def executeBuiltinCd(cmd: Command, shenv: ShellEnvironment) -> ShellCommandResult:
     """executeBuiltinCd - Change the current directory."""
     if len(cmd.args) != 2:
         raise InternalShellError(cmd, "'cd' supports only one argument")
@@ -29,7 +31,7 @@ def executeBuiltinCd(cmd, shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
-def executeBuiltinPushd(cmd, shenv):
+def executeBuiltinPushd(cmd: Command, shenv: ShellEnvironment) -> ShellCommandResult:
     """executeBuiltinPushd - Change the current dir and save the old."""
     if len(cmd.args) != 2:
         raise InternalShellError(cmd, "'pushd' supports only one argument")
@@ -38,7 +40,7 @@ def executeBuiltinPushd(cmd, shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
-def executeBuiltinPopd(cmd, shenv):
+def executeBuiltinPopd(cmd: Command, shenv: ShellEnvironment) -> ShellCommandResult:
     """executeBuiltinPopd - Restore a previously saved working directory."""
     if len(cmd.args) != 1:
         raise InternalShellError(cmd, "'popd' does not support arguments")
@@ -48,7 +50,7 @@ def executeBuiltinPopd(cmd, shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
-def executeBuiltinExport(cmd, shenv):
+def executeBuiltinExport(cmd: Command, shenv: ShellEnvironment) -> ShellCommandResult:
     """executeBuiltinExport - Set an environment variable."""
     if len(cmd.args) != 2:
         raise InternalShellError(cmd, "'export' supports only one argument")
@@ -56,7 +58,7 @@ def executeBuiltinExport(cmd, shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
-def executeBuiltinEcho(cmd, shenv):
+def executeBuiltinEcho(cmd: Command, shenv: ShellEnvironment) -> ShellCommandResult:
     """Interpret a redirected echo or @echo command"""
     opened_files = []
     stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv, opened_files)
@@ -113,7 +115,9 @@ def executeBuiltinEcho(cmd, shenv):
     return ShellCommandResult(cmd, output, "", 0, False)
 
 
-def executeBuiltinMkdir(cmd, cmd_shenv):
+def executeBuiltinMkdir(
+    cmd: Command, cmd_shenv: ShellEnvironment
+) -> ShellCommandResult:
     """executeBuiltinMkdir - Create new directories."""
     args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
     try:
@@ -149,7 +153,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
     return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
 
 
-def executeBuiltinRm(cmd, cmd_shenv):
+def executeBuiltinRm(cmd: Command, cmd_shenv: ShellEnvironment) -> ShellCommandResult:
     """executeBuiltinRm - Removes (deletes) files or directories."""
     args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
     try:
@@ -310,6 +314,8 @@ def executeBuiltinUlimit(cmd, shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
-def executeBuiltinColon(cmd, cmd_shenv):
+def executeBuiltinColon(
+    cmd: Command, cmd_shenv: ShellEnvironment
+) -> ShellCommandResult:
     """executeBuiltinColon - Discard arguments and exit with status 0."""
     return ShellCommandResult(cmd, "", "", 0, False)

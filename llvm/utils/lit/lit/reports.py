@@ -9,6 +9,8 @@ import tempfile
 from xml.sax.saxutils import quoteattr as quo
 
 import lit.Test
+from io import TextIOWrapper
+from typing import List
 
 
 def by_suite_and_test_path(test):
@@ -18,12 +20,12 @@ def by_suite_and_test_path(test):
 
 
 class Report:
-    def __init__(self, output_file):
+    def __init__(self, output_file: str) -> None:
         self.output_file = output_file
         # Set by the option parser later.
         self.use_unique_output_file_name = False
 
-    def write_results(self, tests, elapsed):
+    def write_results(self, tests: List[lit.Test.Test], elapsed: float) -> None:
         if self.use_unique_output_file_name:
             filename, ext = os.path.splitext(os.path.basename(self.output_file))
             fd, _ = tempfile.mkstemp(
@@ -44,7 +46,9 @@ class Report:
 
 
 class JsonReport(Report):
-    def _write_results_to_file(self, tests, elapsed, file):
+    def _write_results_to_file(
+        self, tests: List[lit.Test.Test], elapsed: float, file: TextIOWrapper
+    ) -> None:
         unexecuted_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED}
         tests = [t for t in tests if t.result.code not in unexecuted_codes]
         # Construct the data we will write.
@@ -257,12 +261,16 @@ class ResultDBReport(Report):
                     tests_data.append(
                         gen_resultdb_test_entry(
                             test_name=micro_full_name,
-                            start_time=micro_test.start
-                            if micro_test.start
-                            else test.result.start,
-                            elapsed_time=micro_test.elapsed
-                            if micro_test.elapsed
-                            else test.result.elapsed,
+                            start_time=(
+                                micro_test.start
+                                if micro_test.start
+                                else test.result.start
+                            ),
+                            elapsed_time=(
+                                micro_test.elapsed
+                                if micro_test.elapsed
+                                else test.result.elapsed
+                            ),
                             test_output=micro_test.output,
                             result_code=micro_test.code,
                             is_expected=not micro_test.code.isFailure,

@@ -4,7 +4,8 @@ import subprocess
 import tempfile
 
 import lit.util
-from lit.ShCommands import GlobItem
+from lit.ShCommands import Command, GlobItem
+from typing import Any, Dict, List, Optional, Union
 
 kIsWindows = platform.system() == "Windows"
 
@@ -32,8 +33,14 @@ class ShellCommandResult:
     )
 
     def __init__(
-        self, command, stdout, stderr, exitCode, timeoutReached, outputFiles=[]
-    ):
+        self,
+        command: Command,
+        stdout: str,
+        stderr: str,
+        exitCode: int,
+        timeoutReached: bool,
+        outputFiles: List[Any] = [],
+    ) -> None:
         self.command = command
         self.stdout = stdout
         self.stderr = stderr
@@ -49,7 +56,6 @@ class InternalShellError(Exception):
 
 
 class ShellEnvironment:
-
     """Mutable shell environment containing things like CWD and env vars.
 
     Environment variables are not implemented, but cwd tracking is. In addition,
@@ -61,7 +67,14 @@ class ShellEnvironment:
     # https://github.com/llvm/llvm-project/issues/200531
     __slots__ = ("cwd", "env", "umask", "dirStack", "ulimit", "normalize_slashes")
 
-    def __init__(self, cwd, env, umask=-1, ulimit=None, normalize_slashes=False):
+    def __init__(
+        self,
+        cwd: str,
+        env: Dict[str, str],
+        umask: int = -1,
+        ulimit: Optional[Dict[str, Any]] = None,
+        normalize_slashes: bool = False,
+    ) -> None:
         self.cwd = cwd
         self.env = dict(env)
         self.umask = umask
@@ -69,7 +82,7 @@ class ShellEnvironment:
         self.ulimit = ulimit if ulimit else {}
         self.normalize_slashes = normalize_slashes
 
-    def change_dir(self, newdir):
+    def change_dir(self, newdir: str) -> None:
         if os.path.isabs(newdir):
             self.cwd = newdir
         else:
@@ -80,7 +93,7 @@ class ShellEnvironment:
 # Skips the command, and parses its arguments.
 # Modifies env accordingly.
 # Returns copy of args without the command or its arguments.
-def updateEnv(env, args):
+def updateEnv(env: ShellEnvironment, args: List[str]) -> List[Union[Any, str]]:
     arg_idx_next = len(args)
     unset_next_env_var = False
     for arg_idx, arg in enumerate(args[1:]):
@@ -110,7 +123,12 @@ def updateEnv(env, args):
     return args[arg_idx_next:]
 
 
-def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
+def processRedirects(
+    cmd: Command,
+    stdin_source: int,
+    cmd_shenv: ShellEnvironment,
+    opened_files: List[Any],
+) -> List[int]:
     """Return the standard fds for cmd after applying redirects
 
     Returns the three standard file descriptors for the new child process.  Each
@@ -205,20 +223,20 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     return std_fds
 
 
-def expand_glob(arg, cwd):
+def expand_glob(arg: str, cwd: str) -> List[str]:
     if isinstance(arg, GlobItem):
         return sorted(arg.resolve(cwd))
     return [arg]
 
 
-def expand_glob_expressions(args, cwd):
+def expand_glob_expressions(args: List[str], cwd: str) -> List[str]:
     result = [args[0]]
     for arg in args[1:]:
         result.extend(expand_glob(arg, cwd))
     return result
 
 
-def quote_windows_command(seq):
+def quote_windows_command(seq: List[str]) -> str:
     r"""
     Reimplement Python's private subprocess.list2cmdline for MSys compatibility
 
