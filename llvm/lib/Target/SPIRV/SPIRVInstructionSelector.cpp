@@ -1517,20 +1517,23 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
         .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
         .constrainAllUses(TII, TRI, RBI);
 
+    SPIRVTypeInst MantissaTy = GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
         .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(GR.getSPIRVTypeID(MantissaTy))
         .addImm(static_cast<uint32_t>(Ex.first))
         .addImm(Opcode)
         .add(I.getOperand(2))
         .addUse(PointerVReg)
         .constrainAllUses(TII, TRI, RBI);
 
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
-        .addDef(I.getOperand(1).getReg())
-        .addUse(GR.getSPIRVTypeID(PointeeTy))
-        .addUse(PointerVReg)
-        .constrainAllUses(TII, TRI, RBI);
+    Register ExpResReg = I.getOperand(1).getReg();
+    if (!MRI->use_nodbg_empty(ExpResReg))
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+          .addDef(ExpResReg)
+          .addUse(GR.getSPIRVTypeID(PointeeTy))
+          .addUse(PointerVReg)
+          .constrainAllUses(TII, TRI, RBI);
     return true;
   }
   return false;
@@ -6832,9 +6835,11 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
   // from I.getDefs() or I.getOperands().
   if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
     MachineIRBuilder MIRBuilder(I);
+    SPIRVTypeInst FloatType =
+        GR.getSPIRVTypeForVReg(I.getOperand(I.getNumExplicitDefs()).getReg());
     // Get pointer type for alloca variable.
     const SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
-        ResType, MIRBuilder, SPIRV::StorageClass::Function);
+        FloatType, MIRBuilder, SPIRV::StorageClass::Function);
     // Create new register for the pointer type of alloca variable.
     Register PtrTyReg =
         MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
@@ -6860,7 +6865,7 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
             .addDef(ResVReg)
-            .addUse(GR.getSPIRVTypeID(ResType))
+            .addUse(GR.getSPIRVTypeID(FloatType))
             .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
             .addImm(CL::modf)
             .setMIFlags(I.getFlags())
@@ -6869,11 +6874,11 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     // Assign the integral part stored in the ptr to the second element of the
     // result.
     Register IntegralPartReg = I.getOperand(1).getReg();
-    if (IntegralPartReg.isValid()) {
+    if (IntegralPartReg.isValid() && !MRI->use_nodbg_empty(IntegralPartReg)) {
       // Load the value from the pointer to integral part.
       auto LoadMIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
                          .addDef(IntegralPartReg)
-                         .addUse(GR.getSPIRVTypeID(ResType))
+                         .addUse(GR.getSPIRVTypeID(FloatType))
                          .addUse(Variable);
       LoadMIB.constrainAllUses(TII, TRI, RBI);
       return true;
