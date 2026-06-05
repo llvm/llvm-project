@@ -340,6 +340,29 @@ def SPIRV_CLCoshOp : SPIRV_CLUnaryArithmeticOp<"cosh", 15, SPIRV_Float > {
 
 // -----
 
+def SPIRV_CLErfcOp : SPIRV_CLUnaryArithmeticOp<"erfc", 17, SPIRV_Float> {
+  let summary = [{
+    Complementary error function of x.
+  }];
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.erfc %0 : f32
+    %3 = spirv.CL.erfc %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLErfOp : SPIRV_CLUnaryArithmeticOp<"erf", 18, SPIRV_Float> {
   let summary = [{
     Error function of x encountered in integrating the normal distribution.
