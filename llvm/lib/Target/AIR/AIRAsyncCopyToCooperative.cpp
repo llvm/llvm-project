@@ -198,7 +198,6 @@ static bool lowerAsyncCopy(CallInst *CI, Module &M, unsigned TGSize) {
 }
 
 static bool asyncCopyToCooperative(Module &M, unsigned TGSize) {
-  return false;
   if (!moduleUsesMMA(M) || !moduleHasAsyncCopy(M))
     return false;
   if (!mmaReadsAsyncArena(M))
