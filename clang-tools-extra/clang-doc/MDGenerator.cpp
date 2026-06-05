@@ -12,7 +12,11 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+<<<<<<< Updated upstream
 #include "llvm/Support/Debug.h"
+=======
+#include "llvm/Support/DebugLog.h"
+>>>>>>> Stashed changes
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -221,8 +225,12 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
       llvm::BumpPtrAllocator Arena;
       auto Nodes = markdown::parseMarkdown(ParagraphText, Arena);
 
+<<<<<<< Updated upstream
       LLVM_DEBUG(llvm::dbgs() << "[clang-doc] paragraph -> " << Nodes.size()
                               << " Markdown node(s)\n");
+=======
+      LDBG() << "paragraph -> " << Nodes.size() << " Markdown node(s)";
+>>>>>>> Stashed changes
 
       if (!Nodes.empty()) {
         for (const auto &Node : Nodes)
