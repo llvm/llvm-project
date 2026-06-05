@@ -2472,6 +2472,31 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   return true;
 }
 
+/// Strengthen the no-signed-wrap flag on subscripts that validation has proven
+/// to stay within their array bounds.
+///
+/// validateDelinearizationResult() proves 0 <= Subscripts[I] < Sizes[I-1] for
+/// every I >= 1. An affine recurrence confined to such a range cannot
+/// signed-wrap, but the flag is not always present on the SCEV (e.g. it is lost
+/// when a narrower induction variable is zero-extended). Recording it here lets
+/// checkSubscript() classify these subscripts as linear instead of NonLinear.
+/// The outermost subscript (index 0) is not range-checked, so it is left
+/// untouched.
+static void
+markValidatedSubscriptsNoSignedWrap(ScalarEvolution &SE,
+                                    SmallVectorImpl<const SCEV *> &Subscripts) {
+  for (const SCEV *&Subscript : drop_begin(Subscripts)) {
+    const auto *AddRec = dyn_cast<SCEVAddRecExpr>(Subscript);
+    if (!AddRec || !AddRec->isAffine() || AddRec->hasNoSignedWrap())
+      continue;
+    SCEV::NoWrapFlags Flags =
+        ScalarEvolution::setFlags(AddRec->getNoWrapFlags(), SCEV::FlagNSW);
+    Subscript =
+        SE.getAddRecExpr(AddRec->getStart(), AddRec->getStepRecurrence(SE),
+                         AddRec->getLoop(), Flags);
+  }
+}
+
 /// Try to delinearize \p SrcAccessFn and \p DstAccessFn if the underlying
 /// arrays accessed are fixed-size arrays. Return true if delinearization was
 /// successful.
@@ -2523,6 +2548,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
       DstSubscripts.clear();
       return false;
     }
+    markValidatedSubscriptsNoSignedWrap(*SE, SrcSubscripts);
+    markValidatedSubscriptsNoSignedWrap(*SE, DstSubscripts);
   }
   LLVM_DEBUG({
     dbgs() << "Delinearized subscripts of fixed-size array\n"
@@ -2580,10 +2607,13 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // and dst.
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
-  if (!DisableDelinearizationChecks)
+  if (!DisableDelinearizationChecks) {
     if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts) ||
         !validateDelinearizationResult(*SE, Sizes, DstSubscripts))
       return false;
+    markValidatedSubscriptsNoSignedWrap(*SE, SrcSubscripts);
+    markValidatedSubscriptsNoSignedWrap(*SE, DstSubscripts);
+  }
 
   return true;
 }
