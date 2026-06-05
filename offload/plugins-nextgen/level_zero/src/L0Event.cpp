@@ -81,7 +81,7 @@ Expected<L0EventTy *> EventPoolTy::getEventObject() {
   }
 
   auto *Ret = EventObjects.back();
-  if (auto Err = Ret->reset(/* SkipZeReset */ UseCounterBasedEvents))
+  if (auto Err = Ret->reset(/* SkipEventReset */ UseCounterBasedEvents))
     return std::move(Err);
 
   EventObjects.pop_back();
