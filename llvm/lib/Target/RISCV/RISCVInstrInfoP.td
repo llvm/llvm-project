@@ -2079,6 +2079,13 @@ let append Predicates = [IsRV32] in {
   // 32-bit averaging patterns
   def : PatGprGpr<avgfloors, AADD, i32>;
   def : PatGprGpr<avgflooru, AADDU, i32>;
+  def : PatGprGpr<riscv_asub, ASUB, i32>;
+  def : PatGprGpr<riscv_asubu, ASUBU, i32>;
+
+  // 32-bit multiply high rounding patterns
+  def : PatGprGpr<riscv_mulhr, MULHR, i32>;
+  def : PatGprGpr<riscv_mulhru, MULHRU, i32>;
+  def : PatGprGpr<riscv_mulhrsu, MULHRSU, i32>;
 
   // Halfword multiply patterns where one operand is a sext.h or zext.h and
   // the other is a sext.h or zext.h or is known to be sign/zero-extended. We
