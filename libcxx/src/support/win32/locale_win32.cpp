@@ -279,12 +279,7 @@ const char* __get_locale_encoding(__locale_t loc) {
   bool is_ansi  = ::AreFileApisANSI();
   auto codepage = is_ansi ? CP_ACP : CP_OEMCP;
   int ret       = ::MultiByteToWideChar(
-      codepage,
-      MB_ERR_INVALID_CHARS,
-      locale_name,
-      static_cast<int>(locale_name_view.size()),
-      locale_wbuffer,
-      LOCALE_NAME_MAX_LENGTH);
+      codepage, MB_ERR_INVALID_CHARS, locale_name, __sv.size(), locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
 
   if (ret <= 0)
     return nullptr;
