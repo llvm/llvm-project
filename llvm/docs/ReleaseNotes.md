@@ -236,6 +236,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Support for the experimental `XRivosVizip` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 * Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
+* Adds experimental assembler support for the 'Zvvmtls` and 'Zvvmttls` (RISC-V
+  Matrix Tile Load/Store) extensions.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
 * Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
 * `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
