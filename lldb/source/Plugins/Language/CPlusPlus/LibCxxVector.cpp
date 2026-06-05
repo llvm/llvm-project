@@ -37,6 +37,8 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
+  lldb::ChildCacheState UpdateVectorWithLayoutSubobject(ValueObject *layout);
+
   ValueObject *m_start = nullptr;
   ValueObject *m_finish = nullptr;
   CompilerType m_element_type;
@@ -126,40 +128,50 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
                                            m_element_type);
 }
 
-static ValueObjectSP GetDataPointer(ValueObject &root) {
-  auto [cap_sp, is_compressed_pair] =
-      GetValueOrOldCompressedPair(root, "__cap_", "__end_cap_");
-  if (!cap_sp)
-    return nullptr;
-
-  if (is_compressed_pair)
-    return GetFirstValueOfLibCXXCompressedPair(*cap_sp);
-
-  return cap_sp;
-}
-
 lldb::ChildCacheState
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   m_start = m_finish = nullptr;
-  ValueObjectSP data_sp(GetDataPointer(m_backend));
 
-  if (!data_sp)
+  // Determine if this version of libc++'s `std::vector` uses `__vector_layout`.
+  ValueObjectSP layout_sp = m_backend.GetChildMemberWithName("__layout_");
+  ValueObject *target = layout_sp ? layout_sp.get() : &m_backend;
+
+  ValueObjectSP begin_sp = target->GetChildMemberWithName("__begin_");
+  if (!begin_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_element_type = data_sp->GetCompilerType().GetPointeeType();
+  m_element_type = begin_sp->GetCompilerType().GetPointeeType();
   llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
-  if (!size_or_err)
+  if (!size_or_err) {
     LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
                     "{0}");
-  else {
-    m_element_size = *size_or_err;
-
-    if (m_element_size > 0) {
-      // store raw pointers or end up with a circular dependency
-      m_start = m_backend.GetChildMemberWithName("__begin_").get();
-      m_finish = m_backend.GetChildMemberWithName("__end_").get();
-    }
+    return lldb::ChildCacheState::eRefetch;
   }
+
+  m_element_size = *size_or_err;
+  if (m_element_size == 0) {
+    return lldb::ChildCacheState::eRefetch;
+  }
+
+  // store raw pointers or end up with a circular dependency
+  m_start = begin_sp.get();
+
+  if (ValueObjectSP end_sp = target->GetChildMemberWithName("__end_")) {
+    m_finish = end_sp.get();
+    return lldb::ChildCacheState::eRefetch;
+  }
+
+  ValueObjectSP size_sp = target->GetChildMemberWithName("__size_");
+  if (!size_sp || !size_sp->GetCompilerType().IsInteger())
+    return lldb::ChildCacheState::eRefetch;
+
+  uint64_t begin_addr = m_start->GetValueAsUnsigned(0);
+  uint64_t size = size_sp->GetValueAsUnsigned(0);
+  uint64_t end_addr = begin_addr + size * m_element_size;
+  m_finish = CreateChildValueObjectFromAddress(
+                 "__end_", end_addr, m_backend.GetExecutionContextRef(),
+                 m_start->GetCompilerType(), false)
+                 .get();
   return lldb::ChildCacheState::eRefetch;
 }
 
