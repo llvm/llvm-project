@@ -10,12 +10,15 @@ define ptx_kernel void @kernel() {
 ; LABEL: @lower_alloca
 ; PTX-LABEL: .visible .entry kernel(
   %A = alloca i32
-; CHECK: addrspacecast ptr %A to ptr addrspace(5)
-; CHECK: store i32 0, ptr addrspace(5) {{%.+}}
-; LOWERALLOCAONLY: [[V1:%.*]] = addrspacecast ptr %A to ptr addrspace(5)
-; LOWERALLOCAONLY: [[V2:%.*]] = addrspacecast ptr addrspace(5) [[V1]] to ptr
-; LOWERALLOCAONLY: store i32 0, ptr [[V2]], align 4
-; PTX: st.local.b32 [{{%rd[0-9]+}}], 0
+; CHECK: [[A:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK: [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
+; CHECK: store i32 0, ptr addrspace(5) [[A]]
+; CHECK: call void @callee(ptr [[GENERIC]])
+; LOWERALLOCAONLY: [[A:%.*]] = alloca i32, align 4, addrspace(5)
+; LOWERALLOCAONLY: [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
+; LOWERALLOCAONLY: store i32 0, ptr addrspace(5) [[A]], align 4
+; LOWERALLOCAONLY: call void @callee(ptr [[GENERIC]])
+; PTX: st.local.b32 [{{.*}}], 0
   store i32 0, ptr %A
   call void @callee(ptr %A)
   ret void
