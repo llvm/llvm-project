@@ -1130,6 +1130,18 @@ typename regex_traits<_CharT>::string_type
 regex_traits<_CharT>::__transform_primary(_ForwardIterator __f, _ForwardIterator __l, char) const {
   const string_type __s(__f, __l);
   string_type __d = __col_->transform(__s.data(), __s.data() + __s.size());
+#    if defined(__FreeBSD__)
+  // FreeBSD's strxfrm() emits the weights one collation level at a time,
+  // separating the levels with a byte ('.') that is chosen to sort below every
+  // weight byte.  Primary equivalence only depends on the first (primary)
+  // level, so drop everything from the first separator onwards.  This keeps
+  // characters that share a primary weight equal (e.g. 'A' and 'A-acute' in
+  // cs_CZ) even when the lower levels expand to a different number of weights,
+  // which the fixed-size logic below could not handle.
+  typename string_type::size_type __sep = __d.find('.');
+  if (__sep != string_type::npos)
+    __d.erase(__sep);
+#    else
   switch (__d.size()) {
   case 1:
     break;
@@ -1140,6 +1152,7 @@ regex_traits<_CharT>::__transform_primary(_ForwardIterator __f, _ForwardIterator
     __d.clear();
     break;
   }
+#    endif
   return __d;
 }
 
@@ -1150,6 +1163,15 @@ typename regex_traits<_CharT>::string_type
 regex_traits<_CharT>::__transform_primary(_ForwardIterator __f, _ForwardIterator __l, wchar_t) const {
   const string_type __s(__f, __l);
   string_type __d = __col_->transform(__s.data(), __s.data() + __s.size());
+#      if defined(__FreeBSD__)
+  // As in the char overload above, FreeBSD's wcsxfrm() separates the collation
+  // levels with a weight (the value 1) that sorts below every real weight.
+  // Keep only the primary level so primary-equivalent characters compare equal
+  // regardless of how many weights their lower levels expand to.
+  typename string_type::size_type __sep = __d.find(static_cast<_CharT>(1));
+  if (__sep != string_type::npos)
+    __d.erase(__sep);
+#      else
   switch (__d.size()) {
   case 1:
     break;
@@ -1160,6 +1182,7 @@ regex_traits<_CharT>::__transform_primary(_ForwardIterator __f, _ForwardIterator
     __d.clear();
     break;
   }
+#      endif
   return __d;
 }
 #    endif
