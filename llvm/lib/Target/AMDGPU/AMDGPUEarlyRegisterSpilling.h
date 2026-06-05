@@ -205,7 +205,6 @@ public:
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addRequired<VirtRegMapWrapperLegacy>();
     AU.addRequired<AMDGPUNextUseAnalysisLegacyPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
