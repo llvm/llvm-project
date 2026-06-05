@@ -5938,11 +5938,12 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
 
-  if (FMF.noNaNs()) {
-    // fsub nnan x, x ==> 0.0
-    if (Op0 == Op1)
-      return Constant::getNullValue(Op0->getType());
+  // fsub x, x ==> 0.0 if x is known never NaN or Inf (x-x = NaN for Inf).
+  // This fires with explicit nnan flag, or when ValueTracking can prove it.
+  if (Op0 == Op1 && (FMF.noNaNs() || isKnownNeverInfOrNaN(Op0, Q)))
+    return Constant::getNullValue(Op0->getType());
 
+  if (FMF.noNaNs()) {
     // With nnan: {+/-}Inf - X --> {+/-}Inf
     if (match(Op0, m_Inf()))
       return Op0;
