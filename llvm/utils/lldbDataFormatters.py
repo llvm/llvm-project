@@ -6,7 +6,6 @@ Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 
 from __future__ import annotations
 
-import collections
 from typing import Literal, Optional
 import lldb
 
@@ -448,14 +447,7 @@ class PointerUnionSynthProvider:
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
     raw_value = valobj.GetNonSyntheticValue()
     num_entries = raw_value.GetChildMemberWithName("NumEntries").unsigned
-    num_tombstones = raw_value.GetChildMemberWithName("NumTombstones").unsigned
-
-    summary = f"size={num_entries}"
-    if num_tombstones == 1:
-        # The heuristic to identify valid entries does not handle the case of a
-        # single tombstone. The summary calls attention to this.
-        summary = f"tombstones=1, {summary}"
-    return summary
+    return f"size={num_entries}"
 
 
 class DenseMapSynthetic:
@@ -492,31 +484,16 @@ class DenseMapSynthetic:
         if num_entries == 0:
             return
 
-        buckets = self.valobj.GetChildMemberWithName("Buckets")
         num_buckets = self.valobj.GetChildMemberWithName("NumBuckets").unsigned
+        used = self.valobj.GetChildMemberWithName("Used")
 
-        # Bucket entries contain one of the following:
-        #   1. Valid key-value
-        #   2. Empty key
-        #   3. Tombstone key (a deleted entry)
-        #
-        # NumBuckets is always greater than NumEntries. The empty key, and
-        # potentially the tombstone key, will occur multiple times. A key that
-        # is repeated is either the empty key or the tombstone key.
-
-        # For each key, collect a list of buckets it appears in.
-        key_buckets: dict[str, list[int]] = collections.defaultdict(list)
+        # Occupancy is tracked in a packed 1-bit-per-bucket "used" array of
+        # uint32_t words. A bucket holds a valid entry iff its bit is set;
+        # empty and erased buckets are clear.
         for index in range(num_buckets):
-            bucket = buckets.GetValueForExpressionPath(f"[{index}]")
-            key = bucket.GetChildAtIndex(0)
-            key_buckets[str(key.data)].append(index)
-
-        # Heuristic: This is not a multi-map, any repeated (non-unique) keys are
-        # either the the empty key or the tombstone key. Populate child_buckets
-        # with the indexes of entries containing unique keys.
-        for indexes in key_buckets.values():
-            if len(indexes) == 1:
-                self.child_buckets.append(indexes[0])
+            word = used.GetValueForExpressionPath(f"[{index >> 5}]").unsigned
+            if (word >> (index & 31)) & 1:
+                self.child_buckets.append(index)
 
 
 class DenseSetSynthetic:
