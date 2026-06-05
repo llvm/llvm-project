@@ -981,6 +981,9 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
                          E.castAs<CFGLifetimeEnds>().getVarDecl(), Pred);
       return;
     case CFGElement::CleanupFunction:
+      ProcessCleanupFunction(E.castAs<CFGCleanupFunction>(), Pred);
+      return;
+    case CFGElement::LifetimeEnds:
     case CFGElement::FullExprCleanup:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
@@ -1608,6 +1611,32 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   }
   VisitCXXDestructor(T, MR, BTE,
                      /*IsBase=*/false, CleanPred, Dst, CallOpts);
+}
+
+void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction CF, ExplodedNode *Pred) {
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+
+  const FunctionDecl *FD = CF.getFunctionDecl();
+  SVal VF = svalBuilder.getFunctionPointer(FD);
+
+  const VarDecl *VD = CF.getVarDecl();
+  SVal VLoc = State->getLValue(VD, SF);
+
+  const CallExpr *CE = nullptr; // CF.getPseudoCallExpr();
+  // assert(CE->getNumArgs() == 1 && "Invalid cleanup function definition!");
+  const Expr *Callee = nullptr; // CE->getCallee();
+  const Expr *VarAddr = nullptr; // CE->getArg(0);
+  State = State->BindExpr(Callee, SF, VF, false);
+  State = State->BindExpr(VarAddr, SF, VLoc, false);
+
+  // Copied from ExprEngine::VisitCallExpr
+  CallEventManager &CEMgr = getStateManager().getCallEventManager();
+  CallEventRef<> CallTemplate = CEMgr.getSimpleCall(CE, State, SF, CF);
+  ExplodedNodeSet Dst;
+  evalCall(Dst, Pred, *CallTemplate);
+
+  Engine.enqueueStmtNode(Dst, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
