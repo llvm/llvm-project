@@ -22,7 +22,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -179,16 +178,14 @@ static bool lowerAsyncCopy(CallInst *CI, Module &M, unsigned TGSize) {
   Value *DstPitchF = B.CreateUDiv(DstStrideBytes, Four, "ci.dstpitchf");
   int64_t KMax = (Total + (int64_t)Step - 1) / (int64_t)Step;
   for (int64_t k = 0; k < KMax; ++k) {
-    Value *I = B.CreateAdd(FlatI64, ConstantInt::get(I64, k * (int64_t)Step),
-                           "ci.i");
+    Value *I =
+        B.CreateAdd(FlatI64, ConstantInt::get(I64, k * (int64_t)Step), "ci.i");
     Value *Valid = B.CreateICmpULT(I, TotalC, "ci.valid");
     Value *II = B.CreateSelect(Valid, I, ConstantInt::get(I64, 0), "ci.ii");
     Value *R = B.CreateUDiv(II, WF, "ci.r");
     Value *C = B.CreateURem(II, WF, "ci.c");
-    Value *DstIdx =
-        B.CreateAdd(B.CreateMul(R, DstPitchF), C, "ci.dstidx");
-    Value *SrcIdx =
-        B.CreateAdd(B.CreateMul(R, SrcPitchF), C, "ci.srcidx");
+    Value *DstIdx = B.CreateAdd(B.CreateMul(R, DstPitchF), C, "ci.dstidx");
+    Value *SrcIdx = B.CreateAdd(B.CreateMul(R, SrcPitchF), C, "ci.srcidx");
     Value *DstP = B.CreateGEP(F32, Dst, DstIdx, "ci.dstp");
     Value *SrcP = B.CreateGEP(F32, Src, SrcIdx, "ci.srcp");
     Value *V = B.CreateAlignedLoad(F32, SrcP, Align(4), "ci.v");
@@ -201,8 +198,7 @@ static bool lowerAsyncCopy(CallInst *CI, Module &M, unsigned TGSize) {
 }
 
 static bool asyncCopyToCooperative(Module &M, unsigned TGSize) {
-  if (::getenv("AIR_DISABLE_COOP_COPY"))
-    return false;
+  return false;
   if (!moduleUsesMMA(M) || !moduleHasAsyncCopy(M))
     return false;
   if (!mmaReadsAsyncArena(M))

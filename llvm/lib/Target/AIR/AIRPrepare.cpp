@@ -1249,16 +1249,11 @@ static bool rewriteTGGlobalGEPs(Module &M) {
 
   // 14e: iterate; scalarized i8 GEPs form chains that peel one level per pass.
   // The iteration bound is defensive padding over the observed chain depth.
-  int LastFiringIter = -1;
   for (int Iter = 0; Iter < 8; Iter++) {
     if (!fixResidualI8GEPs(M))
       break;
-    LastFiringIter = Iter;
     Changed = true;
   }
-  if (std::getenv("AIR_PREPARE_LOG_I8GEP_ITER") && LastFiringIter >= 0)
-    errs() << "[air-prepare] fixResidualI8GEPs last firing Iter="
-           << LastFiringIter << "\n";
 
   Changed |= fixMismatchedTGGEPs(M);
   Changed |= scalarizeMixedWidthTGVecStores(M);
