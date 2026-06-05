@@ -111,6 +111,12 @@ static StringRef asPreposition(BadOffsetKind Problem) {
   return Prepositions[static_cast<int>(Problem)];
 }
 
+struct CheckFlags {
+  bool CheckUnderflow;
+  bool OffsetObviouslyNonnegative;
+  bool AcceptPastTheEnd;
+};
+
 class BoundsCheckResult {
 public:
   enum class Kind { Underflow, Overflow, TaintBug, Paradox, Valid };
@@ -123,7 +129,6 @@ private:
   std::optional<NonLoc> Extent;
   ProgramStateRef State = nullptr;
 
-public:
   BoundsCheckResult(NonLoc Offs, std::optional<NonLoc> E)
       : Offset(Offs), Extent(E) {}
 
@@ -135,6 +140,13 @@ public:
     K = K_;
     State = S;
   }
+
+public:
+  friend BoundsCheckResult checkBounds(ProgramStateRef State,
+                                                 SValBuilder &SVB,
+                                                 NonLoc Offset,
+                                                 std::optional<NonLoc> Extent,
+                                                 CheckFlags Flags);
 
   bool assumedNonNegative() const { return AssumedNonNegative; }
 
@@ -182,11 +194,11 @@ private:
   }
 };
 
-struct CheckFlags {
-  bool CheckUnderflow;
-  bool OffsetObviouslyNonnegative;
-  bool AcceptPastTheEnd;
-};
+BoundsCheckResult checkBounds(ProgramStateRef State,
+                                                 SValBuilder &SVB,
+                                                 NonLoc Offset,
+                                                 std::optional<NonLoc> Extent,
+                                                 CheckFlags Flags);
 
 // NOTE: The `ArraySubscriptExpr` and `UnaryOperator` callbacks are `PostStmt`
 // instead of `PreStmt` because the current implementation passes the whole
@@ -202,9 +214,6 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
   BugType TaintBT{this, "Out-of-bound access", categories::TaintedData};
 
   void handleAccessExpr(const Expr *E, CheckerContext &C) const;
-  BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
-                                NonLoc Offset, std::optional<NonLoc> Extent,
-                                CheckFlags Flags) const;
 
   void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, Messages Msgs,
                  NonLoc Offset, std::optional<NonLoc> Extent,
@@ -235,7 +244,6 @@ public:
 };
 
 } // anonymous namespace
-
 /// For a given Location that can be represented as a symbolic expression
 /// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
 /// Arr and the distance of Location from the beginning of Arr (expressed in a
@@ -697,11 +705,12 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   }
 }
 
-BoundsCheckResult ArrayBoundChecker::checkBounds(ProgramStateRef State,
+namespace {
+BoundsCheckResult checkBounds(ProgramStateRef State,
                                                  SValBuilder &SVB,
                                                  NonLoc Offset,
                                                  std::optional<NonLoc> Extent,
-                                                 CheckFlags Flags) const {
+                                                 CheckFlags Flags) {
   BoundsCheckResult Res(Offset, Extent);
 
   // CHECK LOWER BOUND
@@ -799,6 +808,7 @@ BoundsCheckResult ArrayBoundChecker::checkBounds(ProgramStateRef State,
   Res.finalize(BoundsCheckResult::Kind::Valid, State);
   return Res;
 }
+} // anonymous namespace
 
 void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
                                              ProgramStateRef ErrorState,
