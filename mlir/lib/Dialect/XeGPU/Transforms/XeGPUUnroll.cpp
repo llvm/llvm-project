@@ -306,11 +306,12 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
                                              mixedOffsets.end());
 
       for (auto [idx, batchTdesc] : llvm::enumerate(batchTdescs)) {
+        Value tdesc = batchTdesc;
         auto createPrefetch = [&](SmallVector<OpFoldResult> offsets) -> Value {
           SmallVector<OpFoldResult> fullOffsets(batchRank,
                                                 rewriter.getIndexAttr(0));
           fullOffsets.append(offsets.begin(), offsets.end());
-          xegpu::PrefetchNdOp::create(rewriter, loc, batchTdesc, fullOffsets,
+          xegpu::PrefetchNdOp::create(rewriter, loc, tdesc, fullOffsets,
                                       op.getL1HintAttr(), op.getL2HintAttr(),
                                       op.getL3HintAttr(), layout);
           return nullptr;
@@ -388,12 +389,13 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
                                              mixedOffsets.end());
 
       for (auto [idx, batchTdesc] : llvm::enumerate(batchTdescs)) {
+        Value tdesc = batchTdesc;
         auto createLoad = [&](SmallVector<OpFoldResult> offsets) {
           SmallVector<OpFoldResult> fullOffsets(batchRank,
                                                 rewriter.getIndexAttr(0));
           fullOffsets.append(offsets.begin(), offsets.end());
           return xegpu::LoadNdOp::create(
-              rewriter, loc, newValueTy, batchTdesc, fullOffsets,
+              rewriter, loc, newValueTy, tdesc, fullOffsets,
               op.getPackedAttr(), op.getTransposeAttr(), op.getL1HintAttr(),
               op.getL2HintAttr(), op.getL3HintAttr(), layout);
         };
@@ -472,12 +474,13 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
                                              mixedOffsets.end());
 
       for (auto [idx, batchTdesc] : llvm::enumerate(batchTdescs)) {
+        Value tdesc = batchTdesc;
         auto createStore = [&](SmallVector<OpFoldResult> offsets) {
           SmallVector<OpFoldResult> fullOffsets(batchRank,
                                                 rewriter.getIndexAttr(0));
           fullOffsets.append(offsets.begin(), offsets.end());
           xegpu::StoreNdOp::create(rewriter, loc, convertedValues[valueIndex++],
-                                   batchTdesc, fullOffsets, op.getL1HintAttr(),
+                                   tdesc, fullOffsets, op.getL1HintAttr(),
                                    op.getL2HintAttr(), op.getL3HintAttr(),
                                    layout);
           return (Value) nullptr;
