@@ -260,7 +260,7 @@ char * pass_pointer(char * arg) { return arg; }
 
 typedef int vecint __attribute__ ((vector_size(16)));
 vecint pass_vector_type(vecint arg) { return arg; }
-// CHECKNOVEC-LABEL: define <4 x i32> @pass_vector_type(ptr dead_on_return %{{.*}})
+// CHECKNOVEC-LABEL: define <4 x i32> @pass_vector_type(ptr align 8 dead_on_return %{{.*}})
 // CHECKVEC-LABEL: define <4 x i32> @pass_vector_type(<4 x i32>  %{{.*}})
 
 // Union with just a single float element are treated as float inside a struct.

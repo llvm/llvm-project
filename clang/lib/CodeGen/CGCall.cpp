@@ -3061,13 +3061,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       //
       // This is different from indirect *not* byval, where the object
       // exists already, and the align attribute is purely
-      // informative.
+      // informative (but is still useful for optimization passes).
       assert(!Align.isZero());
-
-      // For now, only add this when we have a byval argument.
-      // TODO: be less lazy about updating test cases.
-      if (AI.getIndirectByVal())
-        Attrs.addAlignmentAttr(Align.getQuantity());
+      Attrs.addAlignmentAttr(Align.getQuantity());
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();
