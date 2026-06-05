@@ -3979,6 +3979,8 @@ Error BitcodeReader::materializeMetadata() {
     }
   }
 
+  UpgradeCFIFunctionsMetadata(*TheModule);
+
   DeferredMetadataInfo.clear();
   return Error::success();
 }
@@ -8149,24 +8151,42 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
       auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
-      for (unsigned I = 0; I != Record.size(); I += 2) {
-        StringRef Name(Strtab.data() + Record[I],
-                       static_cast<size_t>(Record[I + 1]));
-        GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-            GlobalValue::dropLLVMManglingEscape(Name));
-        CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, GUID);
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
       }
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
       auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
-      for (unsigned I = 0; I != Record.size(); I += 2) {
-        StringRef Name(Strtab.data() + Record[I],
-                       static_cast<size_t>(Record[I + 1]));
-        GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-            GlobalValue::dropLLVMManglingEscape(Name));
-        CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, GUID);
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
       }
       break;
     }
