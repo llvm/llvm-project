@@ -47,6 +47,9 @@ extern "C" {
     __builtin_trap();
   }
 }
+
+#undef _GLIBCXX_USE_C99_INTTYPES_TR1
+
 #endif //__cplusplus
 
 #if !defined(__HIPCC_RTC__)
@@ -111,14 +114,23 @@ __attribute__((weak)) inline __device__ void free(void *__ptr) {
 #endif //__cplusplus
 
 #if !defined(__HIPCC_RTC__)
+namespace std
+{
+  typedef unsigned long int size_t;
+}
+using std::size_t;
+typedef unsigned long int uint64_t;
+typedef unsigned int uint32_t;
+typedef unsigned short uint16_t;
+typedef unsigned char uint8_t;
+#define __SIZE_TYPE__ size_t
 #include <cmath>
-#include <cstdlib>
 #include <stdlib.h>
 #if __has_include("hip/hip_version.h")
 #include "hip/hip_version.h"
 #endif // __has_include("hip/hip_version.h")
 #else
-typedef __SIZE_TYPE__ size_t;
+#define __SIZE_TYPE__ size_t
 // Define macros which are needed to declare HIP device API's without standard
 // C/C++ headers. This is for readability so that these API's can be written
 // the same way as non-hipRTC use case. These macros need to be popped so that
@@ -148,8 +160,34 @@ typedef __SIZE_TYPE__ size_t;
 #include <__clang_hip_cmath.h>
 #include <__clang_cuda_complex_builtins.h>
 #include <algorithm>
+#define int_least8_t __int_least8_t
+#define int_least16_t __int_least16_t
+#define int_least32_t __int_least32_t
+#define int_least64_t __int_least64_t
+#define uint_least8_t __uint_least8_t 
+#define uint_least16_t __uint_least16_t 
+#define uint_least32_t __uint_least32_t 
+#define uint_least64_t __uint_least64_t 
+#define int_fast8_t __int_least8_t
+#define int_fast16_t __int_least16_t
+#define int_fast32_t __int_least32_t
+#define int_fast64_t __int_least64_t
+#define uint_fast8_t __uint_least8_t 
+#define uint_fast16_t __uint_least16_t 
+#define uint_fast32_t __uint_least32_t 
+#define uint_fast64_t __uint_least64_t
+#define intmax_t __intmax_t
+#define uintmax_t __uintmax_t
+#define intptr_t int64_t
+#define uintptr_t uint64_t
+#define UINTPTR_MAX 0xFFFFFFFFFFFFFFFFUL
+#define SCNd32 "d"
+#define SCNu32 "u"
+#define SCNd64 "l"
+#define SCNu64 "lu"
 #include <complex>
 #include <new>
+
 #endif // __HIPCC_RTC__
 
 #define __CLANG_HIP_RUNTIME_WRAPPER_INCLUDED__ 1
