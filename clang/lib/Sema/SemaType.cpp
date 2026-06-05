@@ -9129,6 +9129,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       }
       attr.setUsedAsTypeAttr();
       break;
+    case ParsedAttr::AT_HLSLRowMajor:
+    case ParsedAttr::AT_HLSLColumnMajor:
+      if (Attr *A =
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
+        type = state.getAttributedType(A, type, type);
+      attr.setUsedAsTypeAttr();
+      break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
       if (!handleObjCPointerTypeAttr(state, attr, type))
         distributeObjCPointerTypeAttr(state, attr, type);
@@ -10016,7 +10023,7 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   // parameter object. This rule makes no difference before C++20 so we apply
   // it unconditionally.
   if (const auto *SNTTPE = dyn_cast<SubstNonTypeTemplateParmExpr>(IDExpr))
-    return SNTTPE->getParameterType(Context);
+    IDExpr = SNTTPE->getReplacement();
 
   //     - if e is an unparenthesized id-expression or an unparenthesized class
   //       member access (5.2.5), decltype(e) is the type of the entity named

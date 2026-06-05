@@ -15,7 +15,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_ASSIGNABLE_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_ASSIGNABLE_H
 
-#include "src/__support/CPP/type_traits/integral_constant.h"
+#include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/CPP/utility/declval.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"

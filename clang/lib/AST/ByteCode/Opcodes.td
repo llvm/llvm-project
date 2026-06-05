@@ -329,6 +329,7 @@ def GetPtrLocal : OffsetOpcode {
 def GetRefLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+def GetRefGlobal : OffsetOpcode;
 
 def CheckRefInit : Opcode {}
 
@@ -848,6 +849,8 @@ def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
+def CheckDynamicCast : Opcode {}
+
 def InvalidStore : Opcode { let Args = [ArgTypePtr]; }
 def CheckPseudoDtor : Opcode {}
 

@@ -2226,6 +2226,9 @@ protected:
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
+  static constexpr unsigned TemplateTypeParmTypeDepthBits = 15;
+  static constexpr unsigned TemplateTypeParmTypeIndexBits = 16;
+
   class TemplateTypeParmTypeBitfields {
     friend class TemplateTypeParmType;
 
@@ -2233,14 +2236,14 @@ protected:
     unsigned : NumTypeBits;
 
     /// The depth of the template parameter.
-    unsigned Depth : 15;
+    unsigned Depth : TemplateTypeParmTypeDepthBits;
 
     /// Whether this is a template parameter pack.
     LLVM_PREFERRED_TYPE(bool)
     unsigned ParameterPack : 1;
 
     /// The index of the template parameter.
-    unsigned Index : 16;
+    unsigned Index : TemplateTypeParmTypeIndexBits;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
@@ -7062,6 +7065,8 @@ class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
                  (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
         TTPDecl(TTPDecl) {
     assert(!TTPDecl == Canon.isNull());
+    assert(D < (1 << TemplateTypeParmTypeDepthBits) && "Depth too large");
+    assert(I < (1 << TemplateTypeParmTypeIndexBits) && "Index too large");
     TemplateTypeParmTypeBits.Depth = D;
     TemplateTypeParmTypeBits.Index = I;
     TemplateTypeParmTypeBits.ParameterPack = PP;

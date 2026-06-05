@@ -120,8 +120,8 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    DependencyConsumer &Consumer, DependencyScanningService &Service,
-    CompilerInvocation &Inv, DependencyActionController &Controller,
+    DependencyScanningService &Service, CompilerInvocation &Inv,
+    DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     SmallVector<StringRef> &StableDirs);
 } // namespace dependencies

@@ -121,6 +121,140 @@ The Instrumentor provides fine-grained control over what gets instrumented:
 - **Target regex**: Match against the target triple (e.g., ``x86_64-.*-linux``)
 - **Host/GPU toggle**: Separately enable/disable CPU and GPU instrumentation
 - **Function filtering**: Exclude runtime functions from instrumentation via a regular expression
+- **Property filters**: Filter individual instrumentation points based on static properties (see Property Filtering below)
+
+Property Filtering
+------------------
+
+The Instrumentor supports fine-grained filtering of individual instrumentation
+opportunities based on their static properties. This allows you to instrument
+only specific operations that meet certain criteria, such as:
+
+- Only atomic loads with specific orderings
+- Only volatile memory accesses
+- Functions with specific name patterns
+- Allocations above a certain size threshold
+
+Property filters are specified using the ``filter`` field in the configuration JSON for each instrumentation opportunity.
+
+Filter Syntax
+^^^^^^^^^^^^^
+
+The filter expression language supports:
+
+**Integer comparisons:**
+  - ``==`` (equal)
+  - ``!=`` (not equal)
+  - ``<`` (less than)
+  - ``>`` (greater than)
+  - ``<=`` (less than or equal)
+  - ``>=`` (greater than or equal)
+
+**String comparisons:**
+  - ``==`` (equal, with quoted string)
+  - ``!=`` (not equal, with quoted string)
+  - ``.startswith(\"prefix\")`` (prefix check, with quoted string)
+
+**Pointer comparisons:**
+  - ``==null`` (null pointer check)
+  - ``!=null`` (non-null pointer check)
+
+**Logical operators:**
+  - ``&&`` (logical AND)
+  - ``||`` (logical OR)
+
+**Important notes:**
+
+- If a property value is dynamic (not a compile-time constant), the filter is assumed to pass
+- Empty filters always pass
+- String literals must be enclosed in double quotes (with proper escaping)
+- Property names are specific to each instrumentation opportunity (see Available Properties below)
+
+Filter Examples
+^^^^^^^^^^^^^^^
+
+**Filter only atomic loads:**
+
+.. code-block:: json
+
+   {
+     "instruction_post": {
+       "load": {
+         "enabled": true,
+         "filter": "atomicity_ordering>0",
+         "pointer": true,
+         "value": true
+       }
+     }
+   }
+
+**Filter volatile stores or acquire and release operations:**
+
+.. code-block:: json
+
+   {
+     "instruction_post": {
+       "store": {
+         "enabled": true,
+         "filter": "is_volatile==1 || atomicity_ordering==6",
+         "pointer": true,
+         "value": true
+       }
+     }
+   }
+
+**Filter functions by name prefix:**
+
+.. code-block:: json
+
+   {
+     "function_pre": {
+       "function": {
+         "enabled": true,
+         "filter": "name.startswith(\"test_\")",
+         "name": true
+       }
+     }
+   }
+
+**Complex filter with multiple conditions:**
+
+.. code-block:: json
+
+   {
+     "instruction_post": {
+       "load": {
+         "enabled": true,
+         "filter": "(atomicity_ordering==4 || atomicity_ordering==7) && sync_scope_id==0",
+         "pointer": true,
+         "value": true,
+         "atomicity_ordering": true
+       }
+     }
+   }
+
+Available Properties
+^^^^^^^^^^^^^^^^^^^^
+
+The properties available for filtering depend on the instrumentation
+opportunity type but generally include all values that can be passed to the
+runtime, filtered using their respective name.
+
+**Load/Store instructions:**
+  - ``atomicity_ordering`` (integer): 0=non-atomic, 1=Unordered, 2=Monotonic, 4=Acquire, 5=Release, 6=AcquireRelease, 7=SequentiallyConsistent
+  - ``sync_scope_id`` (integer): synchronization scope identifier
+  - ``is_volatile`` (integer): 1 if volatile, 0 otherwise
+  - ``alignment`` (integer): alignment in bytes
+  - ``value_size`` (integer): size of loaded value in bytes
+
+**Function instrumentation:**
+  - ``name`` (string): function name
+  - ``num_arguments`` (integer): number of function arguments
+  - ``is_main`` (integer): 1 if this is the main function, 0 otherwise
+
+**Alloca instructions:**
+  - ``size`` (integer): allocation size in bytes (if constant)
+  - ``alignment`` (integer): allocation alignment in bytes
 
 Configuration System
 ====================
@@ -201,6 +335,7 @@ Argument Configuration
 For each instrumentation opportunity, arguments are configured with:
 
 - **enabled**: Boolean to enable/disable the entire opportunity
+- **filter**: Optional string expression to filter instrumentation based on static properties (see Property Filtering)
 - **<argument_name>**: Boolean to enable/disable passing this argument
 - **<argument_name>.replace**: Boolean to enable value replacement (only for replaceable arguments)
 - **<argument_name>.description**: Human-readable description of the argument
@@ -700,6 +835,24 @@ Common Issues
   - ``host_enabled`` / ``gpu_enabled`` settings
   - ``target_regex`` matches your target
   - Runtime functions aren't being instrumented (they should be automatically excluded)
+  - Property filters (``filter`` field) are correctly specified
+
+**Less instrumentation than expected**
+  Property filters may be excluding instrumentation points:
+
+  - Check if the ``filter`` field is set for the instrumentation opportunity
+  - Remember that filters only apply to static (compile-time constant) properties
+  - Dynamic values always pass the filter
+  - Use empty filter (``"filter": ""``) or remove the field to disable filtering
+  - Test your filter expression by examining the IR properties
+
+**Filter syntax errors**
+  Invalid filter expressions will be reported as errors:
+
+  - Ensure string literals are quoted: ``"name==\"foo\""`` not ``"name==foo"``
+  - Use correct operators: ``&&`` for AND, ``||`` for OR
+  - Property names must match exactly
+  - Close all parentheses and quotes
 
 Debugging Instrumented Code
 ----------------------------

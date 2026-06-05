@@ -18,7 +18,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Region.h"
-#include "llvm/ADT/Twine.h"
 #include <optional>
 
 namespace mlir {

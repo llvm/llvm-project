@@ -58,6 +58,7 @@ class CanonicalLoopInfo;
 
 namespace clang {
 class ASTContext;
+class AsmConstraintsInfo;
 class CXXDestructorDecl;
 class CXXForRangeStmt;
 class CXXTryStmt;
@@ -259,6 +260,7 @@ class CodeGenFunction : public CodeGenTypeCache {
   void operator=(const CodeGenFunction &) = delete;
 
   friend class CGCXXABI;
+  friend class clang::AsmConstraintsInfo;
 
 public:
   /// A jump destination is an abstract label, branching to which may
@@ -2960,10 +2962,13 @@ public:
   /// aggregate type.
   AggValueSlot CreateAggTemp(QualType T, const Twine &Name = "tmp",
                              RawAddress *Alloca = nullptr) {
+    RawAddress Addr = CreateMemTemp(T, Name);
+    if (Alloca)
+      *Alloca = Addr;
     return AggValueSlot::forAddr(
-        CreateMemTemp(T.getUnqualifiedType(), Name, Alloca), T.getQualifiers(),
-        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
-        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+        Addr, T.getQualifiers(), AggValueSlot::IsNotDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
   }
 
   /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
@@ -5445,11 +5450,11 @@ public:
   void maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
                                SourceLocation Loc);
 
-private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
+private:
   // Adds a convergence_ctrl token with |ParentToken| as parent convergence
   // instr to the call |Input|.
   llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
@@ -5496,86 +5501,6 @@ private:
   EmitAsmInputLValue(const TargetInfo::ConstraintInfo &Info, LValue InputValue,
                      QualType InputType, std::string &ConstraintStr,
                      SourceLocation Loc);
-
-  /// This structure holds the information gathered about the constraints for an
-  /// inline assembly statement. It helps in separating the constraint
-  /// processing from the code generation.
-  struct AsmConstraintsInfo {
-    // The output and input constraints.
-    SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos;
-    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos;
-
-    // Constraint strings.
-    std::string Constraints;
-    std::string InOutConstraints;
-
-    // Keep track of out constraints for tied input operand.
-    std::vector<std::string> OutputConstraints;
-
-    // Keep track of argument types.
-    std::vector<llvm::Value *> Args;
-    std::vector<llvm::Type *> ArgTypes;
-    std::vector<llvm::Type *> ArgElemTypes;
-
-    // Keep track of result register constraints.
-    std::vector<LValue> ResultRegDests;
-    std::vector<QualType> ResultRegQualTys;
-    std::vector<llvm::Type *> ResultRegTypes;
-    std::vector<llvm::Type *> ResultTruncRegTypes;
-
-    llvm::BitVector ResultTypeRequiresCast;
-
-    // Keep track of in/out constraints.
-    std::vector<llvm::Value *> InOutArgs;
-    std::vector<llvm::Type *> InOutArgTypes;
-    std::vector<llvm::Type *> InOutArgElemTypes;
-
-    // Destination blocks for 'asm gotos'.
-    llvm::BasicBlock *DefaultDest = nullptr;
-    SmallVector<llvm::BasicBlock *, 3> IndirectDests;
-
-    std::vector<std::optional<std::pair<unsigned, unsigned>>> ResultBounds;
-
-    // An inline asm can be marked readonly if it meets the following
-    // conditions:
-    //
-    //   - it doesn't have any sideeffects
-    //   - it doesn't clobber memory
-    //   - it doesn't return a value by-reference
-    //
-    // It can be marked readnone if it doesn't have any input memory
-    // constraints in addition to meeting the conditions listed above.
-    bool ReadOnly = true;
-    bool ReadNone = true;
-
-    AsmConstraintsInfo(
-        SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-        SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos)
-        : OutputConstraintInfos(OutputConstraintInfos),
-          InputConstraintInfos(InputConstraintInfos) {}
-  };
-
-  void EmitAsmStmt(
-      const AsmStmt &S,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos);
-  void EmitAsmStores(const AsmStmt &S,
-                     const llvm::ArrayRef<llvm::Value *> RegResults,
-                     const AsmConstraintsInfo &AsmInfo);
-  void UpdateAsmCallInst(const AsmStmt &S, llvm::CallBase &Result,
-                         const AsmConstraintsInfo &AsmInfo, bool HasSideEffect,
-                         bool HasUnwindClobber, bool NoMerge, bool NoConvergent,
-                         std::vector<llvm::Value *> &RegResults);
-  bool GetOutputAndInputConstraints(
-      const AsmStmt &S,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos);
-  void HandleOutputConstraints(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
-  void HandleMSStyleAsmBlob(const AsmStmt &S, std::string &AsmString,
-                            AsmConstraintsInfo &AsmInfo);
-  void HandleInputConstraints(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
-  bool HandleLabels(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
-  bool HandleClobbers(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
 
   /// Attempts to statically evaluate the object size of E. If that
   /// fails, emits code to figure the size of E out for us. This is

@@ -284,6 +284,9 @@ public:
   void recordPotentialODRUsedVariable(MultiExprArg Args,
                                       OverloadCandidateSet &CandidateSet);
 
+  /// Null-tolerant wrapper for FunctionDecl::isImplicitHDExplicitInstantiation.
+  static bool isImplicitHDExplicitInstantiation(const FunctionDecl *FD);
+
 private:
   unsigned ForceHostDeviceDepth = 0;
 
@@ -303,10 +306,6 @@ template <> struct DenseMapInfo<clang::SemaCUDA::FunctionDeclAndLoc> {
 
   static FunctionDeclAndLoc getEmptyKey() {
     return {FDBaseInfo::getEmptyKey(), clang::SourceLocation()};
-  }
-
-  static FunctionDeclAndLoc getTombstoneKey() {
-    return {FDBaseInfo::getTombstoneKey(), clang::SourceLocation()};
   }
 
   static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {

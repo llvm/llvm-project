@@ -26,6 +26,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instruction.h"
@@ -1669,6 +1670,21 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .StartsWith("inc.32.p", true)
                      .StartsWith("dec.32.p", true)
                      .Default(false);
+      else if (Name.consume_front("atomic."))
+        // nvvm.atomic.{add,exch,max,min,inc,dec,and,or,xor}.gen.{i,f}.{cta,sys}
+        // nvvm.atomic.cas.gen.i.{cta,sys}
+        Expand = StringSwitch<bool>(Name)
+                     .StartsWith("add.gen.", true)
+                     .StartsWith("exch.gen.", true)
+                     .StartsWith("max.gen.", true)
+                     .StartsWith("min.gen.", true)
+                     .StartsWith("inc.gen.", true)
+                     .StartsWith("dec.gen.", true)
+                     .StartsWith("and.gen.", true)
+                     .StartsWith("or.gen.", true)
+                     .StartsWith("xor.gen.", true)
+                     .StartsWith("cas.gen.", true)
+                     .Default(false);
       else if (Name.consume_front("bitcast."))
         // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
         Expand =
@@ -2701,10 +2717,9 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
 
   if (Name == "abs.i" || Name == "abs.ll") {
     Value *Arg = CI->getArgOperand(0);
-    Value *Neg = Builder.CreateNeg(Arg, "neg");
-    Value *Cmp = Builder.CreateICmpSGE(
-        Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
-    Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
+    Rep = Builder.CreateIntrinsic(Intrinsic::abs, {Arg->getType()},
+                                  {Arg, Builder.getTrue()},
+                                  /*FMFSource=*/nullptr, "abs");
   } else if (Name == "abs.bf16" || Name == "abs.bf16x2") {
     Type *Ty = (Name == "abs.bf16")
                    ? Builder.getBFloatTy()
@@ -2725,16 +2740,56 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
              Name.starts_with("atomic.load.add.f64.p")) {
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
-    Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
-                                  AtomicOrdering::Monotonic);
+    Rep = Builder.CreateAtomicRMW(
+        AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(), AtomicOrdering::Monotonic,
+        CI->getContext().getOrInsertSyncScopeID("device"));
+    // The default scope for atomic.load.* intrinsics is device
+    // (= gpu scope in ptx), but the default LLVM atomic scope is
+    // "system"
   } else if (Name.starts_with("atomic.load.inc.32.p") ||
              Name.starts_with("atomic.load.dec.32.p")) {
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
     auto Op = Name.starts_with("atomic.load.inc") ? AtomicRMWInst::UIncWrap
                                                   : AtomicRMWInst::UDecWrap;
-    Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
-                                  AtomicOrdering::Monotonic);
+    Rep = Builder.CreateAtomicRMW(
+        Op, Ptr, Val, MaybeAlign(), AtomicOrdering::Monotonic,
+        CI->getContext().getOrInsertSyncScopeID("device"));
+    // See comment above.
+  } else if (Name.starts_with("atomic.") && Name.contains(".gen.")) {
+    // nvvm.atomic.{op}.gen.{i,f}.{cta,sys} -> atomicrmw / cmpxchg.
+    StringRef Op = Name.substr(StringRef("atomic.").size());
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Val = CI->getArgOperand(1);
+    SyncScope::ID SSID = CI->getContext().getOrInsertSyncScopeID(
+        Op.contains(".cta.") ? "block" : "");
+    if (Op.starts_with("cas.")) {
+      Value *New = CI->getArgOperand(2);
+      Value *Pair = Builder.CreateAtomicCmpXchg(
+          Ptr, Val, New, MaybeAlign(), AtomicOrdering::Monotonic,
+          AtomicOrdering::Monotonic, SSID);
+      Rep = Builder.CreateExtractValue(Pair, 0);
+    } else {
+      // Note we don't upgrade anything to AtomicRMWInst::UMin/UMax.  This is
+      // because we were actually missing those intrinsics!
+      AtomicRMWInst::BinOp BinOp =
+          StringSwitch<AtomicRMWInst::BinOp>(Op)
+              .StartsWith("add.gen.f", AtomicRMWInst::FAdd)
+              .StartsWith("add.gen.i", AtomicRMWInst::Add)
+              .StartsWith("exch.", AtomicRMWInst::Xchg)
+              .StartsWith("max.", AtomicRMWInst::Max)
+              .StartsWith("min.", AtomicRMWInst::Min)
+              .StartsWith("inc.", AtomicRMWInst::UIncWrap)
+              .StartsWith("dec.", AtomicRMWInst::UDecWrap)
+              .StartsWith("and.", AtomicRMWInst::And)
+              .StartsWith("or.", AtomicRMWInst::Or)
+              .StartsWith("xor.", AtomicRMWInst::Xor)
+              .Default(AtomicRMWInst::BAD_BINOP);
+      assert(BinOp != AtomicRMWInst::BAD_BINOP &&
+             "unexpected nvvm scoped atomic intrinsic");
+      Rep = Builder.CreateAtomicRMW(BinOp, Ptr, Val, MaybeAlign(),
+                                    AtomicOrdering::Monotonic, SSID);
+    }
   } else if (Name == "clz.ll") {
     // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
     Value *Arg = CI->getArgOperand(0);
@@ -4889,32 +4944,24 @@ static Metadata *unwrapMAVMetadataOp(CallBase *CI, unsigned Op) {
   return nullptr;
 }
 
-static MDNode *getDebugLocSafe(const Instruction *I) {
-  // The MDNode attached to this instruction might not be the correct type,
-  // as the verifier has not yet be run. Fetch it as a bare MDNode.
-  return I->getDebugLoc().getAsMDNode();
-}
-
 /// Convert debug intrinsic calls to non-instruction debug records.
 /// \p Name - Final part of the intrinsic name, e.g. 'value' in llvm.dbg.value.
 /// \p CI - The debug intrinsic call.
 static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
   DbgRecord *DR = nullptr;
   if (Name == "label") {
-    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(unwrapMAVOp(CI, 0),
-                                                        CI->getDebugLoc());
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(unwrapMAVOp(CI, 0));
   } else if (Name == "assign") {
     DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
         DbgVariableRecord::LocationType::Assign, unwrapMAVMetadataOp(CI, 0),
         unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), unwrapMAVOp(CI, 3),
         unwrapMAVMetadataOp(CI, 4),
         /*The address is a Value ref, it will be stored as a Metadata */
-        unwrapMAVOp(CI, 5), getDebugLocSafe(CI));
+        unwrapMAVOp(CI, 5));
   } else if (Name == "declare") {
     DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
         DbgVariableRecord::LocationType::Declare, unwrapMAVMetadataOp(CI, 0),
-        unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), nullptr, nullptr, nullptr,
-        getDebugLocSafe(CI));
+        unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), nullptr, nullptr, nullptr);
   } else if (Name == "addr") {
     // Upgrade dbg.addr to dbg.value with DW_OP_deref.
     MDNode *ExprNode = unwrapMAVOp(CI, 2);
@@ -4925,8 +4972,7 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
     }
     DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
         DbgVariableRecord::LocationType::Value, unwrapMAVMetadataOp(CI, 0),
-        unwrapMAVOp(CI, 1), ExprNode, nullptr, nullptr, nullptr,
-        getDebugLocSafe(CI));
+        unwrapMAVOp(CI, 1), ExprNode, nullptr, nullptr, nullptr);
   } else if (Name == "value") {
     // An old version of dbg.value had an extra offset argument.
     unsigned VarOp = 1;
@@ -4942,8 +4988,9 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
     DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
         DbgVariableRecord::LocationType::Value, unwrapMAVMetadataOp(CI, 0),
         unwrapMAVOp(CI, VarOp), unwrapMAVOp(CI, ExprOp), nullptr, nullptr,
-        nullptr, getDebugLocSafe(CI));
+        nullptr);
   }
+  DR->setDebugLoc(CI->getDebugLoc());
   assert(DR && "Unhandled intrinsic kind in upgrade to DbgRecord");
   CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
 }
@@ -6307,6 +6354,50 @@ bool llvm::UpgradeModuleFlags(Module &M) {
                     ConstantInt::get(Int8Ty, SwiftMajorVersion));
     M.addModuleFlag(Module::Error, "Swift Minor Version",
                     ConstantInt::get(Int8Ty, SwiftMinorVersion));
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+bool llvm::UpgradeCFIFunctionsMetadata(Module &M) {
+  NamedMDNode *CFIConsts = M.getNamedMetadata("cfi.functions");
+  // If this metadata has operands, we expect all of them to be either from
+  // before or from after the format change handled here, so we can bail out
+  // fast if the first (if any) operands is of the new format.
+  auto MatchesVersion = [](const MDNode *Op) {
+    return Op->getNumOperands() >= 3 &&
+           isa<ConstantAsMetadata>(Op->getOperand(2)) &&
+           cast<ConstantAsMetadata>(Op->getOperand(2))
+               ->getType()
+               ->isIntegerTy(64);
+  };
+
+  if (!CFIConsts || !CFIConsts->getNumOperands() ||
+      MatchesVersion(CFIConsts->getOperand(0)))
+    return false;
+
+  bool Changed = false;
+  for (unsigned I = 0, E = CFIConsts->getNumOperands(); I != E; ++I) {
+    MDNode *Op = CFIConsts->getOperand(I);
+    assert(!MatchesVersion(Op) && "Unexpected mix of CFIConstant formats");
+    assert(Op->getNumOperands() >= 2 &&
+           "Expected at least 2 operands - name and linkage type");
+    MDString *NameMD = dyn_cast<MDString>(Op->getOperand(0));
+    StringRef Name = NameMD->getString();
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(Name));
+
+    SmallVector<Metadata *, 4> Elts;
+    Elts.push_back(Op->getOperand(0));
+    Elts.push_back(Op->getOperand(1));
+    Elts.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt64Ty(M.getContext()), GUID)));
+
+    for (unsigned J = 2, EJ = Op->getNumOperands(); J != EJ; ++J)
+      Elts.push_back(Op->getOperand(J));
+
+    CFIConsts->setOperand(I, MDNode::get(M.getContext(), Elts));
     Changed = true;
   }
 

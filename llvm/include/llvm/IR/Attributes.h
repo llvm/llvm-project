@@ -532,12 +532,6 @@ template <> struct DenseMapInfo<AttributeSet, void> {
     return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
   }
 
-  static AttributeSet getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
-    return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
-  }
-
   static unsigned getHashValue(AttributeSet AS) {
     return (unsigned((uintptr_t)AS.SetNode) >> 4) ^
            (unsigned((uintptr_t)AS.SetNode) >> 9);
@@ -1103,12 +1097,6 @@ public:
 template <> struct DenseMapInfo<AttributeList, void> {
   static AttributeList getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
-    return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
-  }
-
-  static AttributeList getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(-2);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
     return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
   }
