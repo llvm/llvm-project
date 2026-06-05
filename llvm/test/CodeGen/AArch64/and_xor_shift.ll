@@ -39,21 +39,34 @@ entry:
 }
 
 define i64 @right_opt(i64 %bits) {
-; CHECK-SD-LABEL: right_opt:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    lsr x8, x0, #30
-; CHECK-SD-NEXT:    eor w8, w8, w0
-; CHECK-SD-NEXT:    and x0, x8, #0x10000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: right_opt:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    eor x8, x0, x0, lsr #30
-; CHECK-GI-NEXT:    and x0, x8, #0x10000000
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: right_opt:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    eor x8, x0, x0, lsr #30
+; CHECK-NEXT:    and x0, x8, #0x10000000
+; CHECK-NEXT:    ret
 entry:
   %shr = lshr i64 %bits, 30
   %xor = xor i64 %shr, %bits
   %and = and i64 %xor, 268435456
+  ret i64 %and
+}
+
+define i64 @right_opt_32bit_logical_mask(i64 %bits) {
+; CHECK-SD-LABEL: right_opt_32bit_logical_mask:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    eor x8, x0, x0, lsr #30
+; CHECK-SD-NEXT:    and w0, w8, #0x55555555
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: right_opt_32bit_logical_mask:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    eor x8, x0, x0, lsr #30
+; CHECK-GI-NEXT:    mov w9, #1431655765 // =0x55555555
+; CHECK-GI-NEXT:    and x0, x8, x9
+; CHECK-GI-NEXT:    ret
+entry:
+  %shr = lshr i64 %bits, 30
+  %xor = xor i64 %shr, %bits
+  %and = and i64 %xor, 1431655765 ; 0x55555555
   ret i64 %and
 }

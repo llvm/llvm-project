@@ -446,6 +446,7 @@ public:
   bool trySelectCastScalableToFixedLengthVector(SDNode *N);
 
   bool trySelectXAR(SDNode *N);
+  bool trySelectMaskedTruncatedXorLsr(SDNode *N);
 
   SDValue tryFoldCselToFMaxMin(SDNode &N);
 
@@ -5027,6 +5028,153 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   return true;
 }
 
+// Match:
+//   zext (and (xor (trunc (srl X, C)), (trunc X)), Mask)
+// or:
+//   and ((any|zero|sign)_extend
+//          (xor (trunc (srl X, C)), (trunc X))), Mask
+//
+// and select as:
+//   eor xTmp, X, X, lsr C
+//   and xDst, xTmp, Mask
+// or, when Mask is only encodable as a 32-bit logical immediate:
+//   eor xTmp, X, X, lsr C
+//   and wDst, wTmp, Mask
+bool AArch64DAGToDAGISel::trySelectMaskedTruncatedXorLsr(SDNode *N) {
+  if (N->getValueType(0) != MVT::i64)
+    return false;
+
+  SDLoc DL(N);
+  SDValue Xor;
+  uint64_t MaskImm = 0;
+
+  auto matchAndImm = [](SDValue And, SDValue &LHS, uint64_t &Imm) -> bool {
+    if (And.getOpcode() != ISD::AND)
+      return false;
+
+    SDValue AndLHS = And.getOperand(0);
+    SDValue AndRHS = And.getOperand(1);
+
+    if (isIntImmediate(AndRHS, Imm)) {
+      LHS = AndLHS;
+      return true;
+    }
+
+    if (isIntImmediate(AndLHS, Imm)) {
+      LHS = AndRHS;
+      return true;
+    }
+
+    return false;
+  };
+
+  if (N->getOpcode() == ISD::ZERO_EXTEND) {
+    SDValue And = N->getOperand(0);
+    if (And.getValueType() != MVT::i32 || !And.hasOneUse())
+      return false;
+
+    if (!matchAndImm(And, Xor, MaskImm))
+      return false;
+  } else if (N->getOpcode() == ISD::AND) {
+    SDValue Ext;
+    if (!matchAndImm(SDValue(N, 0), Ext, MaskImm))
+      return false;
+
+    if (Ext.getOpcode() != ISD::ANY_EXTEND &&
+        Ext.getOpcode() != ISD::ZERO_EXTEND &&
+        Ext.getOpcode() != ISD::SIGN_EXTEND)
+      return false;
+
+    if (!Ext.hasOneUse())
+      return false;
+
+    if (Ext.getOperand(0).getValueType() != MVT::i32)
+      return false;
+
+    Xor = Ext.getOperand(0);
+  } else {
+    return false;
+  }
+
+  if (!isUInt<32>(MaskImm))
+    return false;
+
+  if (Xor.getOpcode() != ISD::XOR || Xor.getValueType() != MVT::i32 ||
+      !Xor.hasOneUse())
+    return false;
+
+  auto matchShiftedXor = [](SDValue MaybeShift, SDValue MaybeBase,
+                            SDValue &MatchedBase,
+                            uint64_t &MatchedShiftAmt) -> bool {
+    if (MaybeShift.getOpcode() != ISD::TRUNCATE ||
+        MaybeBase.getOpcode() != ISD::TRUNCATE)
+      return false;
+
+    SDValue Shift = MaybeShift.getOperand(0);
+    SDValue Base = MaybeBase.getOperand(0);
+
+    if (Shift.getValueType() != MVT::i64 || Base.getValueType() != MVT::i64)
+      return false;
+
+    if (Shift.getOpcode() != ISD::SRL || !Shift.hasOneUse() ||
+        !MaybeShift.hasOneUse())
+      return false;
+
+    uint64_t ShiftAmt = 0;
+    if (!isIntImmediate(Shift.getOperand(1), ShiftAmt))
+      return false;
+
+    if (ShiftAmt == 0 || ShiftAmt >= 64)
+      return false;
+
+    if (Shift.getOperand(0) != Base)
+      return false;
+
+    MatchedBase = Base;
+    MatchedShiftAmt = ShiftAmt;
+    return true;
+  };
+
+  SDValue Base;
+  uint64_t ShiftAmt = 0;
+  if (!matchShiftedXor(Xor.getOperand(0), Xor.getOperand(1), Base, ShiftAmt) &&
+      !matchShiftedXor(Xor.getOperand(1), Xor.getOperand(0), Base, ShiftAmt))
+    return false;
+
+  uint64_t MaskEncoding = 0;
+  bool UseANDWri = false;
+  if (!AArch64_AM::processLogicalImmediate(MaskImm, 64, MaskEncoding)) {
+    if (!AArch64_AM::processLogicalImmediate(MaskImm, 32, MaskEncoding))
+      return false;
+    UseANDWri = true;
+  }
+
+  unsigned Shifter =
+      AArch64_AM::getShifterImm(AArch64_AM::LSR, unsigned(ShiftAmt));
+  SDValue ShifterOp = CurDAG->getTargetConstant(Shifter, DL, MVT::i32);
+  SDNode *Eor = CurDAG->getMachineNode(AArch64::EORXrs, DL, MVT::i64, Base,
+                                       Base, ShifterOp);
+
+  if (!UseANDWri) {
+    SDValue MaskOp = CurDAG->getTargetConstant(MaskEncoding, DL, MVT::i64);
+    SDValue Ops[] = {SDValue(Eor, 0), MaskOp};
+    CurDAG->SelectNodeTo(N, AArch64::ANDXri, MVT::i64, Ops);
+    return true;
+  }
+
+  SDValue EorLo = CurDAG->getTargetExtractSubreg(AArch64::sub_32, DL, MVT::i32,
+                                                 SDValue(Eor, 0));
+  SDValue MaskOp = CurDAG->getTargetConstant(MaskEncoding, DL, MVT::i32);
+  SDNode *And =
+      CurDAG->getMachineNode(AArch64::ANDWri, DL, MVT::i32, EorLo, MaskOp);
+
+  SDValue SubReg = CurDAG->getTargetConstant(AArch64::sub_32, DL, MVT::i32);
+  SDValue Ops[] = {SDValue(And, 0), SubReg};
+  CurDAG->SelectNodeTo(N, AArch64::SUBREG_TO_REG, MVT::i64, Ops);
+
+  return true;
+}
+
 void AArch64DAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -5067,8 +5215,11 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     break;
   }
 
-  case ISD::SRL:
   case ISD::AND:
+    if (trySelectMaskedTruncatedXorLsr(Node))
+      return;
+    [[fallthrough]];
+  case ISD::SRL:
   case ISD::SRA:
   case ISD::SIGN_EXTEND_INREG:
     if (tryBitfieldExtractOp(Node))
@@ -5084,6 +5235,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 
   case ISD::SIGN_EXTEND:
     if (tryBitfieldExtractOpFromSExt(Node))
+      return;
+    break;
+  case ISD::ZERO_EXTEND:
+    if (trySelectMaskedTruncatedXorLsr(Node))
       return;
     break;
 
