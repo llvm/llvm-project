@@ -494,6 +494,13 @@ static bool mergeByteMMA(Module &M,
   if (ByteGlobals.empty() || MMAGlobals.size() != 1)
     return false;
 
+  for (auto &GV : M.globals()) {
+    if (GV.getAddressSpace() != ASThreadgroup)
+      continue;
+    if (GV.getName().starts_with("__tg_cvt_"))
+      return false;
+  }
+
   bool Changed = false;
   auto &Ctx = M.getContext();
   auto &DL = M.getDataLayout();
