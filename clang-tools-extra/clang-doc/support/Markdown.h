@@ -36,9 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 
-namespace clang {
-namespace doc {
-namespace markdown {
+namespace clang::doc::markdown {
 
 enum class NodeKind {
   // Block nodes
@@ -69,8 +67,6 @@ struct MDNode {
 llvm::ArrayRef<MDNode> parseMarkdown(llvm::StringRef ParagraphText,
                                      llvm::BumpPtrAllocator &Arena);
 
-} // namespace markdown
-} // namespace doc
-} // namespace clang
+} // namespace clang::doc::markdown
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MARKDOWN_H
