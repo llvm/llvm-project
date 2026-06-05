@@ -135,21 +135,21 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ;
 ; PTX-LABEL: escape_ptr(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot2[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot2[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b32 %r<3>;
-; PTX-NEXT:    .reg .b64 %rd<3>;
+; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot2;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    add.u64 %rd1, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
-; PTX-NEXT:    ld.param.b32 %r1, [escape_ptr_param_1+4];
-; PTX-NEXT:    st.local.b32 [%rd2+4], %r1;
-; PTX-NEXT:    ld.param.b32 %r2, [escape_ptr_param_1];
-; PTX-NEXT:    st.local.b32 [%rd2], %r2;
+; PTX-NEXT:    ld.param.b32 %rd3, [escape_ptr_param_1+4];
+; PTX-NEXT:    shl.b64 %rd4, %rd3, 32;
+; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_param_1];
+; PTX-NEXT:    or.b64 %rd6, %rd4, %rd5;
+; PTX-NEXT:    st.local.b64 [%rd2], %rd6;
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd1;
@@ -175,25 +175,25 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ;
 ; PTX-LABEL: escape_ptr_gep(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot3[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot3[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b32 %r<3>;
-; PTX-NEXT:    .reg .b64 %rd<4>;
+; PTX-NEXT:    .reg .b64 %rd<8>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot3;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    add.u64 %rd1, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
-; PTX-NEXT:    ld.param.b32 %r1, [escape_ptr_gep_param_1+4];
-; PTX-NEXT:    st.local.b32 [%rd2+4], %r1;
-; PTX-NEXT:    ld.param.b32 %r2, [escape_ptr_gep_param_1];
-; PTX-NEXT:    st.local.b32 [%rd2], %r2;
-; PTX-NEXT:    add.s64 %rd3, %rd1, 4;
+; PTX-NEXT:    ld.param.b32 %rd3, [escape_ptr_gep_param_1+4];
+; PTX-NEXT:    shl.b64 %rd4, %rd3, 32;
+; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_gep_param_1];
+; PTX-NEXT:    or.b64 %rd6, %rd4, %rd5;
+; PTX-NEXT:    st.local.b64 [%rd2], %rd6;
+; PTX-NEXT:    or.b64 %rd7, %rd1, 4;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0], %rd3;
+; PTX-NEXT:    st.param.b64 [param0], %rd7;
 ; PTX-NEXT:    call.uni _Z6escapePv, (param0);
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
@@ -216,11 +216,10 @@ define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeon
 ;
 ; PTX-LABEL: escape_ptr_store(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot4[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot4[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b32 %r<3>;
-; PTX-NEXT:    .reg .b64 %rd<5>;
+; PTX-NEXT:    .reg .b64 %rd<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot4;
@@ -229,10 +228,11 @@ define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeon
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; PTX-NEXT:    add.u64 %rd3, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd4, %SPL, 0;
-; PTX-NEXT:    ld.param.b32 %r1, [escape_ptr_store_param_1+4];
-; PTX-NEXT:    st.local.b32 [%rd4+4], %r1;
-; PTX-NEXT:    ld.param.b32 %r2, [escape_ptr_store_param_1];
-; PTX-NEXT:    st.local.b32 [%rd4], %r2;
+; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_store_param_1+4];
+; PTX-NEXT:    shl.b64 %rd6, %rd5, 32;
+; PTX-NEXT:    ld.param.b32 %rd7, [escape_ptr_store_param_1];
+; PTX-NEXT:    or.b64 %rd8, %rd6, %rd7;
+; PTX-NEXT:    st.local.b64 [%rd4], %rd8;
 ; PTX-NEXT:    st.global.b64 [%rd2], %rd3;
 ; PTX-NEXT:    ret;
 entry:
@@ -254,11 +254,10 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ;
 ; PTX-LABEL: escape_ptr_gep_store(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot5[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot5[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b32 %r<3>;
-; PTX-NEXT:    .reg .b64 %rd<6>;
+; PTX-NEXT:    .reg .b64 %rd<10>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot5;
@@ -267,12 +266,13 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; PTX-NEXT:    add.u64 %rd3, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd4, %SPL, 0;
-; PTX-NEXT:    ld.param.b32 %r1, [escape_ptr_gep_store_param_1+4];
-; PTX-NEXT:    st.local.b32 [%rd4+4], %r1;
-; PTX-NEXT:    ld.param.b32 %r2, [escape_ptr_gep_store_param_1];
-; PTX-NEXT:    st.local.b32 [%rd4], %r2;
-; PTX-NEXT:    add.s64 %rd5, %rd3, 4;
-; PTX-NEXT:    st.global.b64 [%rd2], %rd5;
+; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_gep_store_param_1+4];
+; PTX-NEXT:    shl.b64 %rd6, %rd5, 32;
+; PTX-NEXT:    ld.param.b32 %rd7, [escape_ptr_gep_store_param_1];
+; PTX-NEXT:    or.b64 %rd8, %rd6, %rd7;
+; PTX-NEXT:    st.local.b64 [%rd4], %rd8;
+; PTX-NEXT:    or.b64 %rd9, %rd3, 4;
+; PTX-NEXT:    st.global.b64 [%rd2], %rd9;
 ; PTX-NEXT:    ret;
 entry:
   %b = getelementptr inbounds nuw i8, ptr %s, i64 4
@@ -294,11 +294,10 @@ define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonl
 ;
 ; PTX-LABEL: escape_ptrtoint(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot6[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot6[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b32 %r<3>;
-; PTX-NEXT:    .reg .b64 %rd<5>;
+; PTX-NEXT:    .reg .b64 %rd<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot6;
@@ -307,10 +306,11 @@ define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonl
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; PTX-NEXT:    add.u64 %rd3, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd4, %SPL, 0;
-; PTX-NEXT:    ld.param.b32 %r1, [escape_ptrtoint_param_1+4];
-; PTX-NEXT:    st.local.b32 [%rd4+4], %r1;
-; PTX-NEXT:    ld.param.b32 %r2, [escape_ptrtoint_param_1];
-; PTX-NEXT:    st.local.b32 [%rd4], %r2;
+; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptrtoint_param_1+4];
+; PTX-NEXT:    shl.b64 %rd6, %rd5, 32;
+; PTX-NEXT:    ld.param.b32 %rd7, [escape_ptrtoint_param_1];
+; PTX-NEXT:    or.b64 %rd8, %rd6, %rd7;
+; PTX-NEXT:    st.local.b64 [%rd4], %rd8;
 ; PTX-NEXT:    st.global.b64 [%rd2], %rd3;
 ; PTX-NEXT:    ret;
 entry:

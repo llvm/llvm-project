@@ -502,6 +502,8 @@ public:
     FLI = FuncInfo;
   }
 
+  FunctionLoweringInfo *getFunctionLoweringInfo() const { return FLI; }
+
   /// Clear state and free memory necessary to make this
   /// SelectionDAG ready to process a new block.
   LLVM_ABI void clear();

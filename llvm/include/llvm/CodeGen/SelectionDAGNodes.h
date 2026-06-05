@@ -1970,6 +1970,10 @@ LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
 
+/// Return the non-addrspacecasted source operand of \p V if it exists.
+/// If \p V is not an addrspacecast, it is returned as-is.
+LLVM_ABI SDValue peekThroughAddrSpaceCasts(SDValue V);
+
 /// Return the non-frozen source operand of \p V if it exists.
 /// If \p V is not a freeze, it is returned as-is.
 inline SDValue peekThroughFreeze(SDValue V) {
