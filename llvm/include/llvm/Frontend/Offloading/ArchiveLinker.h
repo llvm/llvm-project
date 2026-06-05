@@ -74,9 +74,9 @@ struct Symbol {
 struct InputDesc {
   enum class Kind { File, Library };
 
-  StringRef Value;       // File path, or library name for -l (the value after -l).
+  StringRef Value; // File path, or library name for -l (the value after -l).
   Kind InputKind;
-  bool WholeArchive;     // --whole-archive state in effect at this input.
+  bool WholeArchive; // --whole-archive state in effect at this input.
 };
 
 /// Result of archive member resolution.
@@ -103,10 +103,10 @@ struct ResolvedInputs {
 /// \param IsFatBinary Optional predicate to identify "fat binary" inputs that
 ///        should be passed through without symbol scanning (e.g., nvlink's
 ///        cubin detection). If null, all inputs are scanned normally.
-Expected<ResolvedInputs>
-resolveArchiveMembers(ArrayRef<InputDesc> Order, ArrayRef<StringRef> SearchPaths,
-                      ArrayRef<StringRef> ForcedUndefs = {}, StringRef Root = "",
-                      function_ref<bool(MemoryBufferRef)> IsFatBinary = nullptr);
+Expected<ResolvedInputs> resolveArchiveMembers(
+    ArrayRef<InputDesc> Order, ArrayRef<StringRef> SearchPaths,
+    ArrayRef<StringRef> ForcedUndefs = {}, StringRef Root = "",
+    function_ref<bool(MemoryBufferRef)> IsFatBinary = nullptr);
 
 } // namespace offloading
 } // namespace llvm
