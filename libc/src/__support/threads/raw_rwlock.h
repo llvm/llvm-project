@@ -405,22 +405,55 @@ private:
       }
 
       // Phase 7: unregister ourselves as a pending reader/writer.
+      bool writer_serial_changed = false;
       {
         // Similarly, the unregister operation should also be an atomic
         // transaction.
         WaitingQueue::Guard guard = queue.acquire(is_pshared);
         guard.pending_count<role>()--;
-        // Clear the flag if we are the last reader. The flag must be
+        // Clear the flag if we are the last one. The flag must be
         // cleared otherwise operations like trylock may fail even though
         // there is no competitors.
         if (guard.pending_count<role>() == 0)
           RwState::fetch_clear_pending_bit<role>(state,
                                                  cpp::MemoryOrder::RELAXED);
+        if constexpr (role == Role::Writer) {
+          int new_serial =
+              guard.serialization<role>().load(cpp::MemoryOrder::RELAXED);
+          writer_serial_changed = new_serial != serial_number;
+        }
       }
 
       // Phase 8: exit the loop is timeout is reached.
-      if (timeout_flag)
+      if (timeout_flag) {
+        // When a timeout triggers, the waiting thread wakes up, unregisters
+        // itself from the waiting queue, and exits. However, if the timing-out
+        // thread is preempted after waking up but before it can unregister,
+        // and a concurrent unlock occurs during this window, the timing-out
+        // thread may consume the wake-up signal.
+        //
+        // For example, assume the lock is in writer-preference mode and a
+        // writer (W0) holds the lock. A reader (R) and another writer (W1,
+        // with a short timeout) arrive and join the queue. W1's timeout
+        // expires, so it wakes up and attempts to acquire the queue lock,
+        // but is preempted before succeeding. W0 then releases the lock and,
+        // preferring writers, sends a wake-up signal to W1. When W1 resumes,
+        // it acquires the queue lock, unregisters, and exits due to the
+        // timeout, ignoring the wake-up signal. As a result, the reader (R)
+        // is left waiting indefinitely, leading to a deadlock.
+        //
+        // To fix this, we track whether the serialization number changed
+        // specifically for writers, and propagate the wake signal if it did.
+        // If the timing-out thread is a reader, signal consumption is safe
+        // because:
+        // 1. If there are pending writers, they will be woken up first.
+        // 2. Otherwise, if there are pending readers, they are all woken up
+        //    via broadcasting (notify_all), so one reader timing out does not
+        //    steal others' signal.
+        if (writer_serial_changed)
+          notify_pending_threads();
         return LockResult::TimedOut;
+      }
 
       // Phase 9: reload the state and retry the acquisition.
       old = RwState::spin_reload<role>(state, get_preference(), spin_count);
