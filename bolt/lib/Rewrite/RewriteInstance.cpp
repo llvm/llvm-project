@@ -4253,7 +4253,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       // weird ASLR mapping addresses (4KB aligned)
       if (opts::Hugify && !BC->HasFixedLoadAddress &&
           Section->getName() == LastNonColdSectionName)
-        Address = alignTo(Address, Section->getAlignment());
+        Address += BC->PageAlign;
     }
 
     // Make sure we allocate enough space for huge pages.
