@@ -221,9 +221,8 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
       llvm::BumpPtrAllocator Arena;
       auto Nodes = markdown::parseMarkdown(ParagraphText, Arena);
 
-      LLVM_DEBUG(llvm::dbgs()
-                 << "[clang-doc] paragraph -> " << Nodes.size()
-                 << " Markdown node(s)\n");
+      LLVM_DEBUG(llvm::dbgs() << "[clang-doc] paragraph -> " << Nodes.size()
+                              << " Markdown node(s)\n");
 
       if (!Nodes.empty()) {
         for (const auto &Node : Nodes)
