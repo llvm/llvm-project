@@ -20,15 +20,19 @@
 #include "llvm/Config/llvm-config.h"
 #include "gtest/gtest.h"
 
-namespace {
 using namespace clang;
 using namespace ento;
+
+REGISTER_TRAIT_WITH_PROGRAMSTATE(TestLifetimeEndReportCountTrait, unsigned)
+
+namespace {
 
 class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
   const BugType LifetimeEndNode{this, "LifetimeEndReporter"};
 
-  bool report(CheckerContext &C, const Twine &Description) const {
-    ExplodedNode *Node = C.generateNonFatalErrorNode(C.getState());
+  bool report(CheckerContext &C, const Twine &Description,
+              ProgramStateRef State) const {
+    ExplodedNode *Node = C.generateNonFatalErrorNode(State);
     if (!Node)
       return false;
 
@@ -40,7 +44,13 @@ class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
 
 public:
   void checkLifetimeEnd(const VarDecl *D, CheckerContext &C) const {
-    report(C, D->getDeclName().getAsString() + " LIFETIME END");
+    ProgramStateRef State = C.getState();
+    // Intentionally add a unique number to each report to avoid deduplication.
+    unsigned Count = State->get<TestLifetimeEndReportCountTrait>();
+    State = State->set<TestLifetimeEndReportCountTrait>(Count + 1);
+    auto Description = llvm::formatv("{0} LIFETIME END {1}",
+                                     D->getDeclName().getAsString(), Count);
+    report(C, Description, State);
   }
 };
 
@@ -70,7 +80,7 @@ void foo() {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
       Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
-  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END\n");
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END 0\n");
 }
 
 TEST(CheckLifetimeEnd, CFGLifetimeDisabled) {
@@ -98,7 +108,7 @@ TEST(CheckLifetimeEnd, NonTrivialDtor) {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
       Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
-  EXPECT_EQ(Diags, "test.LifetimeEndReporter: a LIFETIME END\n");
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: a LIFETIME END 0\n");
 }
 
 TEST(CheckLifetimeEnd, MultipleVariablesAndNestedScopes) {
@@ -115,10 +125,10 @@ void foo() {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
       Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
-  EXPECT_EQ(Diags, "test.LifetimeEndReporter: a LIFETIME END\n"
-                   "test.LifetimeEndReporter: b LIFETIME END\n"
-                   "test.LifetimeEndReporter: c LIFETIME END\n"
-                   "test.LifetimeEndReporter: d LIFETIME END\n");
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: a LIFETIME END 3\n"
+                   "test.LifetimeEndReporter: b LIFETIME END 2\n"
+                   "test.LifetimeEndReporter: c LIFETIME END 1\n"
+                   "test.LifetimeEndReporter: d LIFETIME END 0\n");
 }
 
 TEST(CheckLifetimeEnd, LocalStaticVariable) {
@@ -132,7 +142,7 @@ void foo() {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
       Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
-  EXPECT_EQ(Diags, "test.LifetimeEndReporter: j LIFETIME END\n");
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: j LIFETIME END 0\n");
 }
 
 TEST(CheckLifetimeEnd, GlobalVariable) {
@@ -146,7 +156,7 @@ void foo() {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
       Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
-  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END\n");
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END 0\n");
 }
 
 TEST(CheckLifetimeEnd, LoopBodyVariable) {
@@ -162,14 +172,18 @@ void foo() {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
       Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
-  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END\n");
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END 0\n");
 }
 
 TEST(CheckLifetimeEnd, ForLoopInductionVariable) {
   constexpr auto Code = R"(
 void foo() {
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 2; i++) {
     int j = 0;
+    {
+       int nested = 0;
+    }
+    ++j;
   }
 }
   )";
@@ -177,8 +191,11 @@ void foo() {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
       Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
-  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END\n"
-                   "test.LifetimeEndReporter: j LIFETIME END\n");
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: i LIFETIME END 4\n"
+                   "test.LifetimeEndReporter: j LIFETIME END 1\n"
+                   "test.LifetimeEndReporter: j LIFETIME END 3\n"
+                   "test.LifetimeEndReporter: nested LIFETIME END 0\n"
+                   "test.LifetimeEndReporter: nested LIFETIME END 2\n");
 }
 
 TEST(CheckLifetimeEnd, LifetimeExtendedTemporary) {
@@ -191,7 +208,7 @@ void foo() {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
       Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
-  EXPECT_EQ(Diags, "test.LifetimeEndReporter: r LIFETIME END\n");
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: r LIFETIME END 0\n");
 }
 
 } // namespace
