@@ -440,7 +440,7 @@ void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
   // Closing the ConPTY signals EOF on the parent-side STDOUT pipe so the
-  // read thread can exit. Tear it down before the inferior is reaped.
+  // read thread can exit. Tear it down before the debuggee is destroyed.
   StopStdioForwarding();
 
   ProcessDebugger::OnExitProcess(exit_code);
