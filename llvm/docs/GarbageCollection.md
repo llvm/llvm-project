@@ -1,19 +1,16 @@
-=====================================
-Garbage Collection with LLVM
-=====================================
+# Garbage Collection with LLVM
 
-.. contents::
-   :local:
+```{contents}
+:local:
+```
 
-Abstract
-========
+## Abstract
 
 This document covers how to integrate LLVM into a compiler for a language which
 supports garbage collection.  **Note that LLVM itself does not provide a
 garbage collector.**  You must provide your own.
 
-Quick Start
-============
+## Quick Start
 
 First, you should pick a collector strategy.  LLVM includes a number of built-in
 ones, but you can also implement a loadable plugin with a custom definition.
@@ -24,21 +21,21 @@ of the collector itself.
 Next, mark your generated functions as using your chosen collector strategy.
 From C++, you can call:
 
-.. code-block:: c++
-
+```c++
   F.setGC(<collector description name>);
+```
 
 
 This will produce IR like the following fragment:
 
-.. code-block:: llvm
-
+```llvm
   define void @foo() gc "<collector description name>" { ... }
+```
 
 
 When generating LLVM IR for your functions, you will need to:
 
-* Use ``@llvm.gcread`` and/or ``@llvm.gcwrite`` in place of standard load and
+* Use `@llvm.gcread` and/or `@llvm.gcwrite` in place of standard load and
   store instructions.  These intrinsics are used to represent load and store
   barriers.  If your collector does not require such barriers, you can skip
   this step.
@@ -59,23 +56,21 @@ When generating LLVM IR for your functions, you will need to:
 You will need to identify roots (i.e. references to heap objects your collector
 needs to know about) in your generated IR, so that LLVM can encode them into
 your final stack maps.  Depending on the collector strategy chosen, this is
-accomplished by using either the ``@llvm.gcroot`` intrinsics or a
-``gc.statepoint`` relocation sequence.
+accomplished by using either the `@llvm.gcroot` intrinsics or a
+`gc.statepoint` relocation sequence.
 
 Don't forget to create a root for each intermediate value that is generated when
-evaluating an expression.  In ``h(f(), g())``, the result of ``f()`` could
-easily be collected if evaluating ``g()`` triggers a collection.
+evaluating an expression.  In `h(f(), g())`, the result of `f()` could
+easily be collected if evaluating `g()` triggers a collection.
 
 Finally, you need to link your runtime library with the generated program
 executable (for a static compiler) or ensure the appropriate symbols are
 available for the runtime linker (for a JIT compiler).
 
 
-Introduction
-============
+## Introduction
 
-What is Garbage Collection?
----------------------------
+### What is Garbage Collection?
 
 Garbage collection is a widely used technique that frees the programmer from
 having to know the lifetimes of heap objects, making software easier to produce
@@ -86,15 +81,14 @@ conservative and accurate.
 Conservative garbage collection often does not require any special support from
 either the language or the compiler: it can handle non-type-safe programming
 languages (such as C/C++) and does not require any special information from the
-compiler.  The `Boehm collector
-<https://hboehm.info/gc/>`__ is an example of a
+compiler.  The [Boehm collector](https://hboehm.info/gc/) is an example of a
 state-of-the-art conservative collector.
 
 Accurate garbage collection requires the ability to identify all pointers in the
 program at run-time (which requires that the source-language be type-safe in
 most cases).  Identifying pointers at run-time requires compiler support to
 locate all places that hold live pointer variables at run-time, including the
-:ref:`processor stack and registers <gcroot>`.
+{ref}`processor stack and registers <gcroot>`.
 
 Conservative garbage collection is attractive because it does not require any
 special compiler support, but it does have problems.  In particular, because the
@@ -115,11 +109,9 @@ techniques dominates any low-level losses.
 This document describes the mechanisms and interfaces provided by LLVM to
 support accurate garbage collection.
 
-Goals and non-goals
--------------------
+### Goals and non-goals
 
-LLVM's intermediate representation provides :ref:`garbage collection intrinsics
-<gc_intrinsics>` that offer support for a broad class of collector models.  For
+LLVM's intermediate representation provides {ref}`garbage collection intrinsics <gc_intrinsics>` that offer support for a broad class of collector models.  For
 instance, the intrinsics permit:
 
 * semi-space collectors
@@ -145,7 +137,7 @@ be part of your language's runtime library.  LLVM provides a framework for
 describing the garbage collector's requirements to the compiler.  In particular,
 LLVM provides support for generating stack maps at call sites, polling for a
 safepoint, and emitting load and store barriers.  You can also extend LLVM -
-possibly through a loadable :ref:`code generation plugins <plugin>` - to
+possibly through a loadable {ref}`code generation plugins <plugin>` - to
 generate code and data structures which conform to the *binary interface*
 specified by the *runtime library*.  This is similar to the relationship between
 LLVM and DWARF debugging info, for example.  The difference primarily lies in
@@ -191,27 +183,24 @@ extension points.  If you don't already have a specific binary interface
 you need to support, we recommend trying to use one of these built-in collector
 strategies.
 
-.. _gc_intrinsics:
+(gc_intrinsics)=
 
-LLVM IR Features
-================
+## LLVM IR Features
 
 This section describes the garbage collection facilities provided by the
-:doc:`LLVM intermediate representation <LangRef>`.  The exact behavior of these
-IR features is specified by the selected :ref:`GC strategy description
-<plugin>`.
+{doc}`LLVM intermediate representation <LangRef>`.  The exact behavior of these
+IR features is specified by the selected {ref}`GC strategy description <plugin>`.
 
-Specifying GC code generation: ``gc "..."``
--------------------------------------------
+### Specifying GC code generation: `gc "..."`
 
-.. code-block:: text
-
+```text
   define <returntype> @name(...) gc "name" { ... }
+```
 
-The ``gc`` function attribute is used to specify the desired GC strategy to the
-compiler.  Its programmatic equivalent is the ``setGC`` method of ``Function``.
+The `gc` function attribute is used to specify the desired GC strategy to the
+compiler.  Its programmatic equivalent is the `setGC` method of `Function`.
 
-Setting ``gc "name"`` on a function triggers a search for a matching subclass
+Setting `gc "name"` on a function triggers a search for a matching subclass
 of GCStrategy.  Some collector strategies are built in.  You can add others
 using either the loadable plugin mechanism, or by patching your copy of LLVM.
 It is the selected GC strategy which defines the exact nature of the code
@@ -220,35 +209,32 @@ generated to support GC.  If none is found, the compiler will raise an error.
 Specifying the GC style on a per-function basis allows LLVM to link together
 programs that use different garbage collection algorithms (or none at all).
 
-.. _gcroot:
+(gcroot)=
 
-Identifying GC roots on the stack
-----------------------------------
+### Identifying GC roots on the stack
 
 LLVM currently supports two different mechanisms for describing references in
-compiled code at safepoints.  ``llvm.gcroot`` is the older mechanism;
-``gc.statepoint`` has been added more recently.  At the moment, you can choose
-either implementation (on a per :ref:`GC strategy <plugin>` basis).  Longer
-term, we will probably either migrate away from ``llvm.gcroot`` entirely, or
+compiled code at safepoints.  `llvm.gcroot` is the older mechanism;
+`gc.statepoint` has been added more recently.  At the moment, you can choose
+either implementation (on a per {ref}`GC strategy <plugin>` basis).  Longer
+term, we will probably either migrate away from `llvm.gcroot` entirely, or
 substantially merge their implementations. Note that most new development
-work is focused on ``gc.statepoint``.
+work is focused on `gc.statepoint`.
 
-Using ``gc.statepoint``
-^^^^^^^^^^^^^^^^^^^^^^^^
-:doc:`This page <Statepoints>` contains detailed documentation for
-``gc.statepoint``.
+#### Using `gc.statepoint`
+{doc}`This page <Statepoints>` contains detailed documentation for
+`gc.statepoint`.
 
-Using ``llvm.gcwrite``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Using `llvm.gcwrite`
 
-.. code-block:: llvm
-
+```llvm
   void @llvm.gcroot(i8** %ptrloc, i8* %metadata)
+```
 
-The ``llvm.gcroot`` intrinsic is used to inform LLVM that a stack variable
+The `llvm.gcroot` intrinsic is used to inform LLVM that a stack variable
 references an object on the heap and is to be tracked for garbage collection.
 The exact impact on generated code is specified by the Function's selected
-:ref:`GC strategy <plugin>`.  All calls to ``llvm.gcroot`` **must** reside
+{ref}`GC strategy <plugin>`.  All calls to `llvm.gcroot` **must** reside
 inside the first basic block.
 
 The first argument **must** be a value referring to an alloca instruction or a
@@ -258,35 +244,34 @@ address.  If your target collector uses tags, use a null pointer for metadata.
 
 A compiler which performs manual SSA construction **must** ensure that SSA
 values representing GC references are stored into the alloca passed to the
-respective ``gcroot`` before every call site and reloaded after every call.
-A compiler which uses mem2reg to raise imperative code using ``alloca`` into
-SSA form need only add a call to ``@llvm.gcroot`` for those variables which
+respective `gcroot` before every call site and reloaded after every call.
+A compiler which uses mem2reg to raise imperative code using `alloca` into
+SSA form need only add a call to `@llvm.gcroot` for those variables which
 are pointers into the GC heap.
 
-It is also important to mark intermediate values with ``llvm.gcroot``.  For
-example, consider ``h(f(), g())``.  Beware leaking the result of ``f()`` in the
-case that ``g()`` triggers a collection.  Note that stack variables must be
-initialized and marked with ``llvm.gcroot`` in the function's prologue.
+It is also important to mark intermediate values with `llvm.gcroot`.  For
+example, consider `h(f(), g())`.  Beware leaking the result of `f()` in the
+case that `g()` triggers a collection.  Note that stack variables must be
+initialized and marked with `llvm.gcroot` in the function's prologue.
 
-The ``%metadata`` argument can be used to avoid requiring heap objects to have
-'isa' pointers or tag bits. [Appel89_, Goldberg91_, Tolmach94_] If specified,
+The `%metadata` argument can be used to avoid requiring heap objects to have
+'isa' pointers or tag bits. [[Appel89](#appel89), [Goldberg91](#goldberg91), [Tolmach94](#tolmach94)] If specified,
 its value will be tracked along with the location of the pointer in the stack
 frame.
 
 Consider the following fragment of Java code:
 
-.. code-block:: java
-
+```java
    {
      Object X;   // A null-initialized reference to an object
      ...
    }
+```
 
 This block (which may be located in the middle of a function or in a loop nest),
 could be compiled to this LLVM code:
 
-.. code-block:: llvm
-
+```llvm
   Entry:
      ;; In the entry block for the function, allocate the
      ;; stack space for X, which is an LLVM pointer.
@@ -310,9 +295,9 @@ could be compiled to this LLVM code:
      ;; it, to indicate that the value is no longer live.
      store %Object* null, %Object** %X
      ...
+```
 
-Reading and writing references in the heap
-------------------------------------------
+### Reading and writing references in the heap
 
 Some collectors need to be informed when the mutator (the program that needs
 garbage collection) either reads a pointer from or writes a pointer to a field
@@ -324,11 +309,10 @@ computation, so the overall performance impact of the barrier is tolerable.
 Barriers often require access to the *object pointer* rather than the *derived
 pointer* (which is a pointer to the field within the object).  Accordingly,
 these intrinsics take both pointers as separate arguments for completeness.  In
-this snippet, ``%object`` is the object pointer, and ``%derived`` is the derived
+this snippet, `%object` is the object pointer, and `%derived` is the derived
 pointer:
 
-.. code-block:: llvm
-
+```llvm
   ;; An array type.
   %class.Array = type { %class.Object, i32, [0 x %class.Object*] }
   ...
@@ -338,73 +322,70 @@ pointer:
 
   ;; Compute the derived pointer.
   %derived = getelementptr %object, i32 0, i32 2, i32 %n
+```
 
 LLVM does not enforce this relationship between the object and derived pointer
-(although a particular :ref:`collector strategy <plugin>` might).  However, it
+(although a particular {ref}`collector strategy <plugin>` might).  However, it
 would be an unusual collector that violated it.
 
 The use of these intrinsics is naturally optional if the target GC does not
 require the corresponding barrier.  The GC strategy used with such a collector
-should replace the intrinsic calls with the corresponding ``load`` or
-``store`` instruction if they are used.
+should replace the intrinsic calls with the corresponding `load` or
+`store` instruction if they are used.
 
 One known deficiency with the current design is that the barrier intrinsics do
 not include the size or alignment of the underlying operation performed.  It is
 currently assumed that the operation is of pointer size and the alignment is
 assumed to be the target machine's default alignment.
 
-Write barrier: ``llvm.gcwrite``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Write barrier: `llvm.gcwrite`
 
-.. code-block:: llvm
-
+```llvm
   void @llvm.gcwrite(i8* %value, i8* %object, i8** %derived)
+```
 
-For write barriers, LLVM provides the ``llvm.gcwrite`` intrinsic function.  It
-has exactly the same semantics as a non-volatile ``store`` to the derived
+For write barriers, LLVM provides the `llvm.gcwrite` intrinsic function.  It
+has exactly the same semantics as a non-volatile `store` to the derived
 pointer (the third argument).  The exact code generated is specified by the
-Function's selected :ref:`GC strategy <plugin>`.
+Function's selected {ref}`GC strategy <plugin>`.
 
 Many important algorithms require write barriers, including generational and
 concurrent collectors.  Additionally, write barriers could be used to implement
 reference counting.
 
-Read barrier: ``llvm.gcread``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Read barrier: `llvm.gcread`
 
-.. code-block:: llvm
-
+```llvm
   i8* @llvm.gcread(i8* %object, i8** %derived)
+```
 
-For read barriers, LLVM provides the ``llvm.gcread`` intrinsic function.  It has
-exactly the same semantics as a non-volatile ``load`` from the derived pointer
+For read barriers, LLVM provides the `llvm.gcread` intrinsic function.  It has
+exactly the same semantics as a non-volatile `load` from the derived pointer
 (the second argument).  The exact code generated is specified by the Function's
-selected :ref:`GC strategy <plugin>`.
+selected {ref}`GC strategy <plugin>`.
 
 Read barriers are needed by fewer algorithms than write barriers, and may have a
 greater performance impact since pointer reads are more frequent than writes.
 
-.. _plugin:
+(plugin)=
 
-.. _builtin-gc-strategies:
+(builtin-gc-strategies)=
 
-Built-In GC Strategies
-======================
+## Built-In GC Strategies
 
 LLVM includes built-in support for several varieties of garbage collectors.
 
-The Shadow Stack GC
-----------------------
+### The Shadow Stack GC
 
 To use this collector strategy, mark your functions with:
 
-.. code-block:: c++
-
+```c++
   F.setGC("shadow-stack");
+```
 
 Unlike many GC algorithms which rely on a cooperative code generator to compile
 stack maps, this algorithm carefully maintains a linked list of stack roots
-[:ref:`Henderson2002 <henderson02>`].  This so-called "shadow stack" mirrors the
+[[Henderson2002](#henderson02)].  This so-called "shadow stack" mirrors the
 machine stack.  Maintaining this data structure is slower than using a stack map
 compiled into the executable as constant data, but has a significant portability
 advantage because it requires no special support from the target code generator,
@@ -417,13 +398,13 @@ The tradeoff for this simplicity and portability is:
 * Not thread-safe.
 
 Still, it's an easy way to get started.  After your compiler and runtime are up
-and running, writing a :ref:`plugin <plugin>` will allow you to take advantage
-of :ref:`more advanced GC features <collector-algos>` of LLVM in order to
+and running, writing a {ref}`plugin <plugin>` will allow you to take advantage
+of {ref}`more advanced GC features <collector-algos>` of LLVM in order to
 improve performance.
 
 
 The shadow stack doesn't imply a memory allocation algorithm.  A semispace
-collector or building atop ``malloc`` are great places to start, and can be
+collector or building atop `malloc` are great places to start, and can be
 implemented with very little code.
 
 When it comes time to collect, however, your runtime needs to traverse the stack
@@ -431,8 +412,7 @@ roots, and for this it needs to integrate with the shadow stack.  Luckily, doing
 so is very simple. (This code is heavily commented to help you understand the
 data structure, but there are only 20 lines of meaningful code.)
 
-.. code-block:: c++
-
+```c++
   /// The map for a single function's stack frame.  One of these is
   ///        compiled as constant data into the executable for each function.
   ///
@@ -479,58 +459,55 @@ data structure, but there are only 20 lines of meaningful code.)
         Visitor(&R->Roots[i], NULL);
     }
   }
+```
 
 
-The 'Erlang' and 'OCaml' GCs
------------------------------
+### The 'Erlang' and 'OCaml' GCs
 
-LLVM ships with two example collectors which leverage the ``gcroot``
+LLVM ships with two example collectors which leverage the `gcroot`
 mechanisms.  To our knowledge, these are not actually used by any language
 runtime, but they do provide a reasonable starting point for someone interested
-in writing a ``gcroot`` compatible GC plugin.  In particular, these are the
+in writing a `gcroot` compatible GC plugin.  In particular, these are the
 only in-tree examples of how to produce a custom binary stack map format using
-a ``gcroot`` strategy.
+a `gcroot` strategy.
 
 As their names imply, the binary format produced is intended to model that
 used by the Erlang and OCaml compilers respectively.
 
-.. _statepoint_example_gc:
+(statepoint_example_gc)=
 
-The Statepoint Example GC
--------------------------
+### The Statepoint Example GC
 
-.. code-block:: c++
-
+```c++
   F.setGC("statepoint-example");
+```
 
 This GC provides an example of how one might use the infrastructure provided
-by ``gc.statepoint``. This example GC is compatible with the
-:ref:`PlaceSafepoints` and :ref:`RewriteStatepointsForGC` utility passes
-which simplify ``gc.statepoint`` sequence insertion. If you need to build a
-custom GC strategy around the ``gc.statepoints`` mechanisms, it is recommended
+by `gc.statepoint`. This example GC is compatible with the
+{ref}`PlaceSafepoints` and {ref}`RewriteStatepointsForGC` utility passes
+which simplify `gc.statepoint` sequence insertion. If you need to build a
+custom GC strategy around the `gc.statepoints` mechanisms, it is recommended
 that you use this one as a starting point.
 
 This GC strategy does not support read or write barriers.  As a result, these
 intrinsics are lowered to normal loads and stores.
 
 The stack map format generated by this GC strategy can be found in the
-:ref:`stackmap-section` using a format documented :ref:`here
-<statepoint-stackmap-format>`. This format is intended to be the standard
+{ref}`stackmap-section` using a format documented {ref}`here <statepoint-stackmap-format>`. This format is intended to be the standard
 format supported by LLVM going forward.
 
-The CoreCLR GC
--------------------------
+### The CoreCLR GC
 
-.. code-block:: c++
-
+```c++
   F.setGC("coreclr");
+```
 
-This GC leverages the ``gc.statepoint`` mechanism to support the
-`CoreCLR <https://github.com/dotnet/coreclr>`__ runtime.
+This GC leverages the `gc.statepoint` mechanism to support the
+[CoreCLR](https://github.com/dotnet/coreclr) runtime.
 
 Support for this GC strategy is a work in progress. This strategy will
 differ from
-:ref:`statepoint-example GC<statepoint_example_gc>` strategy in
+{ref}`statepoint-example GC <statepoint_example_gc>` strategy in
 certain aspects like:
 
 * Base-pointers of interior pointers are not explicitly
@@ -541,8 +518,7 @@ certain aspects like:
 * Safe-point polls are only needed before loop-back edges
   and before tail-calls (not needed at function-entry).
 
-Custom GC Strategies
-====================
+## Custom GC Strategies
 
 If none of the built-in GC strategy descriptions met your needs above, you will
 need to define a custom GCStrategy and possibly, a custom LLVM pass to perform
@@ -557,38 +533,36 @@ you need a patched build, please ask for advice on llvm-dev.  There may be an
 easy way we can extend the support to make it work for your use case without
 requiring a custom build.
 
-Collector Requirements
-----------------------
+### Collector Requirements
 
 You should be able to leverage any existing collector library that includes the following elements:
 
-#. A memory allocator which exposes an allocation function your compiled
+1. A memory allocator which exposes an allocation function your compiled
    code can call.
 
-#. A binary format for the stack map.  A stack map describes the location
+1. A binary format for the stack map.  A stack map describes the location
    of references at a safepoint and is used by precise collectors to identify
    references within a stack frame on the machine stack. Note that collectors
    which conservatively scan the stack don't require such a structure.
 
-#. A stack crawler to discover functions on the call stack, and enumerate the
+1. A stack crawler to discover functions on the call stack, and enumerate the
    references listed in the stack map for each call site.
 
-#. A mechanism for identifying references in global locations (e.g. global
+1. A mechanism for identifying references in global locations (e.g. global
    variables).
 
-#. If your collector requires them, an LLVM IR implementation of your collector's
+1. If your collector requires them, an LLVM IR implementation of your collector's
    load and store barriers.  Note that since many collectors don't require
    barriers at all, LLVM defaults to lowering such barriers to normal loads
    and stores unless you arrange otherwise.
 
 
-Implementing a collector plugin
--------------------------------
+### Implementing a collector plugin
 
-User code specifies which GC code generation to use with the ``gc`` function
-attribute or, equivalently, with the ``setGC`` method of ``Function``.
+User code specifies which GC code generation to use with the `gc` function
+attribute or, equivalently, with the `setGC` method of `Function`.
 
-To implement a GC plugin, it is necessary to subclass ``llvm::GCStrategy``,
+To implement a GC plugin, it is necessary to subclass `llvm::GCStrategy`,
 which can be accomplished in a few lines of boilerplate code.  LLVM's
 infrastructure provides access to several important algorithms.  For an
 uncontroversial collector, all that remains may be to compile LLVM's computed
@@ -598,13 +572,11 @@ runtime library).  This can be accomplished in about 100 lines of code.
 This is not the appropriate place to implement a garbage collected heap or a
 garbage collector itself.  That code should exist in the language's runtime
 library.  The compiler plugin is responsible for generating code which conforms
-to the binary interface defined by the library, most essentially the :ref:`stack map
-<stack-map>`.
+to the binary interface defined by the library, most essentially the {ref}`stack map <stack-map>`.
 
-To subclass ``llvm::GCStrategy`` and register it with the compiler:
+To subclass `llvm::GCStrategy` and register it with the compiler:
 
-.. code-block:: c++
-
+```c++
   // lib/MyGC/MyGC.cpp - Example LLVM GC plugin
 
   #include "llvm/CodeGen/GCStrategy.h"
@@ -622,13 +594,14 @@ To subclass ``llvm::GCStrategy`` and register it with the compiler:
     GCRegistry::Add<MyGC>
     X("mygc", "My bespoke garbage collector.");
   }
+```
 
 This boilerplate collector does nothing.  More specifically:
 
-* ``llvm.gcread`` calls are replaced with the corresponding ``load``
+* `llvm.gcread` calls are replaced with the corresponding `load`
   instruction.
 
-* ``llvm.gcwrite`` calls are replaced with the corresponding ``store``
+* `llvm.gcwrite` calls are replaced with the corresponding `store`
   instruction.
 
 * No safe points are added to the code.
@@ -638,8 +611,7 @@ This boilerplate collector does nothing.  More specifically:
 Using the LLVM makefiles, this code
 can be compiled as a plugin using a simple makefile:
 
-.. code-block:: make
-
+```make
   # lib/MyGC/Makefile
 
   LEVEL := ../..
@@ -647,132 +619,91 @@ can be compiled as a plugin using a simple makefile:
   LOADABLE_MODULE = 1
 
   include $(LEVEL)/Makefile.common
+```
 
-Once the plugin is compiled, code using it may be compiled using ``llc
--load=MyGC.so`` (though MyGC.so may have some other platform-specific
+Once the plugin is compiled, code using it may be compiled using `llc`
+`-load=MyGC.so` (though MyGC.so may have some other platform-specific
 extension):
 
-::
-
+```console
   $ cat sample.ll
   define void @f() gc "mygc" {
   entry:
     ret void
   }
   $ llvm-as < sample.ll | llc -load=MyGC.so
+```
 
 It is also possible to statically link the collector plugin into tools, such as
 a language-specific compiler front-end.
 
-.. _collector-algos:
+(collector-algos)=
 
-Overview of available features
-------------------------------
+### Overview of available features
 
-``GCStrategy`` provides a range of features through which a plugin may do useful
+`GCStrategy` provides a range of features through which a plugin may do useful
 work.  Some of these are callbacks, some are algorithms that can be enabled,
 disabled, or customized.  This matrix summarizes the supported (and planned)
 features and correlates them with the collection techniques which typically
 require them.
 
-.. |v| unicode:: 0x2714
-   :trim:
-
-.. |x| unicode:: 0x2718
-   :trim:
-
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| Algorithm  | Done | Shadow | refcount | mark- | copying | incremental | threaded | concurrent |
-|            |      | stack  |          | sweep |         |             |          |            |
-+============+======+========+==========+=======+=========+=============+==========+============+
-| stack map  | |v|  |        |          | |x|   | |x|     | |x|         | |x|      | |x|        |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| initialize | |v|  | |x|    | |x|      | |x|   | |x|     | |x|         | |x|      | |x|        |
-| roots      |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| derived    | NO   |        |          |       |         |             | **N**\*  | **N**\*    |
-| pointers   |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| **custom   | |v|  |        |          |       |         |             |          |            |
-| lowering** |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *gcroot*   | |v|  | |x|    | |x|      |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *gcwrite*  | |v|  |        | |x|      |       |         | |x|         |          | |x|        |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *gcread*   | |v|  |        |          |       |         |             |          | |x|        |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| **safe     |      |        |          |       |         |             |          |            |
-| points**   |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *in        | |v|  |        |          | |x|   | |x|     | |x|         | |x|      | |x|        |
-| calls*     |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *before    | |v|  |        |          |       |         |             | |x|      | |x|        |
-| calls*     |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *for       | NO   |        |          |       |         |             | **N**    | **N**      |
-| loops*     |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *before    | |v|  |        |          |       |         |             | |x|      | |x|        |
-| escape*    |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| emit code  | NO   |        |          |       |         |             | **N**    | **N**      |
-| at safe    |      |        |          |       |         |             |          |            |
-| points     |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| **output** |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *assembly* | |v|  |        |          | |x|   | |x|     | |x|         | |x|      | |x|        |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *JIT*      | NO   |        |          | **?** | **?**   | **?**       | **?**    | **?**      |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| *obj*      | NO   |        |          | **?** | **?**   | **?**       | **?**    | **?**      |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| live       | NO   |        |          | **?** | **?**   | **?**       | **?**    | **?**      |
-| analysis   |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| register   | NO   |        |          | **?** | **?**   | **?**       | **?**    | **?**      |
-| map        |      |        |          |       |         |             |          |            |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| \* Derived pointers only pose a hazard to copying collections.                                |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| **?** denotes a feature which could be utilized if available.                                 |
-+------------+------+--------+----------+-------+---------+-------------+----------+------------+
+| Algorithm | Done | Shadow stack | refcount | mark-sweep | copying | incremental | threaded | concurrent |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| stack map | ✓ |  |  | ✘ | ✘ | ✘ | ✘ | ✘ |
+| initialize<br>roots | ✓ | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| derived<br>pointers | NO |  |  |  |  |  | **N**\* | **N**\* |
+| **custom<br>lowering** | ✓ |  |  |  |  |  |  |  |
+| *gcroot* | ✓ | ✘ | ✘ |  |  |  |  |  |
+| *gcwrite* | ✓ |  | ✘ |  |  | ✘ |  | ✘ |
+| *gcread* | ✓ |  |  |  |  |  |  | ✘ |
+| **safe<br>points** |  |  |  |  |  |  |  |  |
+| *in<br>calls* | ✓ |  |  | ✘ | ✘ | ✘ | ✘ | ✘ |
+| *before<br>calls* | ✓ |  |  |  |  |  | ✘ | ✘ |
+| *for<br>loops* | NO |  |  |  |  |  | **N** | **N** |
+| *before<br>escape* | ✓ |  |  |  |  |  | ✘ | ✘ |
+| emit code<br>at safe<br>points | NO |  |  |  |  |  | **N** | **N** |
+| **output** |  |  |  |  |  |  |  |  |
+| *assembly* | ✓ |  |  | ✘ | ✘ | ✘ | ✘ | ✘ |
+| *JIT* | NO |  |  | **?** | **?** | **?** | **?** | **?** |
+| *obj* | NO |  |  | **?** | **?** | **?** | **?** | **?** |
+| live<br>analysis | NO |  |  | **?** | **?** | **?** | **?** | **?** |
+| register<br>map | NO |  |  | **?** | **?** | **?** | **?** | **?** |
+| \* Derived pointers only pose a hazard to copying collections. |  |  |  |  |  |  |  |  |
+| **?** denotes a feature which could be utilized if available. |  |  |  |  |  |  |  |  |
 
 To be clear, the collection techniques above are defined as:
 
 Shadow Stack
-  The mutator carefully maintains a linked list of stack roots.
+: The mutator carefully maintains a linked list of stack roots.
 
 Reference Counting
-  The mutator maintains a reference count for each object and frees an object
+: The mutator maintains a reference count for each object and frees an object
   when its count falls to zero.
 
 Mark-Sweep
-  When the heap is exhausted, the collector marks reachable objects starting
+: When the heap is exhausted, the collector marks reachable objects starting
   from the roots, then deallocates unreachable objects in a sweep phase.
 
 Copying
-  As reachability analysis proceeds, the collector copies objects from one heap
+: As reachability analysis proceeds, the collector copies objects from one heap
   area to another, compacting them in the process.  Copying collectors enable
   highly efficient "bump pointer" allocation and can improve locality of
   reference.
 
 Incremental
-  (Including generational collectors.) Incremental collectors generally have all
+: (Including generational collectors.) Incremental collectors generally have all
   the properties of a copying collector (regardless of whether the mature heap
   is compacting), but bring the added complexity of requiring write barriers.
 
 Threaded
-  Denotes a multithreaded mutator; the collector must still stop the mutator
+: Denotes a multithreaded mutator; the collector must still stop the mutator
   ("stop the world") before beginning reachability analysis.  Stopping a
   multithreaded mutator is a complicated problem.  It generally requires highly
   platform-specific code in the runtime, and the production of carefully
   designed machine code at safe points.
 
 Concurrent
-  In this technique, the mutator and the collector run concurrently, with the
+: In this technique, the mutator and the collector run concurrently, with the
   goal of eliminating pause times.  In a *cooperative* collector, the mutator
   further aids with collection should a pause occur, allowing collection to take
   advantage of multiprocessor hosts.  The "stop the world" problem of threaded
@@ -784,37 +715,35 @@ suitable for a wide variety of collectors, but does not currently extend to
 multithreaded programs.  This will be added in the future as there is
 interest.
 
-.. _stack-map:
+(stack-map)=
 
-Computing stack maps
---------------------
+### Computing stack maps
 
 LLVM automatically computes a stack map.  One of the most important features
-of a ``GCStrategy`` is to compile this information into the executable in
+of a `GCStrategy` is to compile this information into the executable in
 the binary representation expected by the runtime library.
 
 The stack map consists of the location and identity of each GC root in the
 each function in the module.  For each root:
 
-* ``RootNum``: The index of the root.
+* `RootNum`: The index of the root.
 
-* ``StackOffset``: The offset of the object relative to the frame pointer.
+* `StackOffset`: The offset of the object relative to the frame pointer.
 
-* ``RootMetadata``: The value passed as the ``%metadata`` parameter to the
-  ``@llvm.gcroot`` intrinsic.
+* `RootMetadata`: The value passed as the `%metadata` parameter to the
+  `@llvm.gcroot` intrinsic.
 
 Also, for the function as a whole:
 
-* ``getFrameSize()``: The overall size of the function's initial stack frame,
+* `getFrameSize()`: The overall size of the function's initial stack frame,
    not accounting for any dynamic allocation.
 
-* ``roots_size()``: The count of roots in the function.
+* `roots_size()`: The count of roots in the function.
 
-To access the stack map, use ``GCFunctionMetadata::roots_begin()`` and
--``end()`` from the :ref:`GCMetadataPrinter <assembly>`:
+To access the stack map, use `GCFunctionMetadata::roots_begin()` and
+-`end()` from the {ref}`GCMetadataPrinter <assembly>`:
 
-.. code-block:: c++
-
+```c++
   for (iterator I = begin(), E = end(); I != E; ++I) {
     GCFunctionInfo *FI = *I;
     unsigned FrameSize = FI->getFrameSize();
@@ -828,26 +757,25 @@ To access the stack map, use ``GCFunctionMetadata::roots_begin()`` and
       Constant *RootMetadata = RI->Metadata;
     }
   }
+```
 
-If the ``llvm.gcroot`` intrinsic is eliminated before code generation by a
+If the `llvm.gcroot` intrinsic is eliminated before code generation by a
 custom lowering pass, LLVM will compute an empty stack map.  This may be useful
 for collector plugins which implement reference counting or a shadow stack.
 
-.. _init-roots:
+(init-roots)=
 
-Initializing roots to null
----------------------------
+### Initializing roots to null
 
 It is recommended that frontends initialize roots explicitly to avoid
 potentially confusing the optimizer.  This prevents the GC from visiting
 uninitialized pointers, which will almost certainly cause it to crash.
 
-As a fallback, LLVM will automatically initialize each root to ``null``
+As a fallback, LLVM will automatically initialize each root to `null`
 upon entry to the function.  Support for this mode in code generation is
 largely a legacy detail to keep old collector implementations working.
 
-Custom lowering of intrinsics
-------------------------------
+### Custom lowering of intrinsics
 
 For GCs which use barriers or unusual treatment of stack roots, the
 implementor is responsible for providing a custom pass to lower the
@@ -860,10 +788,9 @@ ShadowStackGCLowering pass.
 There is currently no way to register such a custom lowering pass
 without building a custom copy of LLVM.
 
-.. _safe-points:
+(safe-points)=
 
-Generating safe points
------------------------
+### Generating safe points
 
 LLVM provides support for associating stackmaps with the return address of
 a call.  Any loop or return safepoints required by a given collector design
@@ -871,10 +798,9 @@ can be modeled via calls to runtime routines, or potentially patchable call
 sequences.  Using gcroot, all call instructions are inferred to be possible
 safepoints and will thus have an associated stackmap.
 
-.. _assembly:
+(assembly)=
 
-Emitting assembly code: ``GCMetadataPrinter``
----------------------------------------------
+### Emitting assembly code: `GCMetadataPrinter`
 
 LLVM allows a plugin to print arbitrary assembly code before and after the rest
 of a module's assembly code.  At the end of the module, the GC can compile the
@@ -883,22 +809,21 @@ yet computed.)
 
 Since AsmWriter and CodeGen are separate components of LLVM, a separate abstract
 base class and registry is provided for printing assembly code, the
-``GCMetadaPrinter`` and ``GCMetadataPrinterRegistry``.  The AsmWriter will look
-for such a subclass if the ``GCStrategy`` sets ``UsesMetadata``:
+`GCMetadaPrinter` and `GCMetadataPrinterRegistry`.  The AsmWriter will look
+for such a subclass if the `GCStrategy` sets `UsesMetadata`:
 
-.. code-block:: c++
-
+```c++
   MyGC::MyGC() {
     UsesMetadata = true;
   }
+```
 
 This separation allows JIT-only clients to be smaller.
 
 Note that LLVM does not currently have analogous APIs to support code generation
 in the JIT, nor using the object writers.
 
-.. code-block:: c++
-
+```c++
   // lib/MyGC/MyGCPrinter.cpp - Example LLVM GC printer
 
   #include "llvm/CodeGen/GCMetadataPrinter.h"
@@ -917,14 +842,14 @@ in the JIT, nor using the object writers.
     GCMetadataPrinterRegistry::Add<MyGCPrinter>
     X("mygc", "My bespoke garbage collector.");
   }
+```
 
-The collector should use ``AsmPrinter`` to print portable assembly code.  The
+The collector should use `AsmPrinter` to print portable assembly code.  The
 collector itself contains the stack map for the entire module, and may access
-the ``GCFunctionInfo`` using its own ``begin()`` and ``end()`` methods.  Here's
+the `GCFunctionInfo` using its own `begin()` and `end()` methods.  Here's
 a realistic example:
 
-.. code-block:: c++
-
+```c++
   #include "llvm/CodeGen/AsmPrinter.h"
   #include "llvm/IR/Function.h"
   #include "llvm/IR/DataLayout.h"
@@ -1002,27 +927,26 @@ a realistic example:
       }
     }
   }
+```
 
-References
-==========
+## References
 
-.. _appel89:
+(appel89)=
 
 [Appel89] Runtime Tags Aren't Necessary. Andrew W. Appel. Lisp and Symbolic
 Computation 19(7):703-705, July 1989.
 
-.. _goldberg91:
+(goldberg91)=
 
 [Goldberg91] Tag-free garbage collection for strongly typed programming
 languages. Benjamin Goldberg. ACM SIGPLAN PLDI'91.
 
-.. _tolmach94:
+(tolmach94)=
 
 [Tolmach94] Tag-free garbage collection using explicit type parameters. Andrew
 Tolmach. Proceedings of the 1994 ACM conference on LISP and functional
 programming.
 
-.. _henderson02:
+(henderson02)=
 
-[Henderson2002] `Accurate Garbage Collection in an Uncooperative Environment
-<http://citeseer.ist.psu.edu/henderson02accurate.html>`__
+[Henderson2002] [Accurate Garbage Collection in an Uncooperative Environment](http://citeseer.ist.psu.edu/henderson02accurate.html)
