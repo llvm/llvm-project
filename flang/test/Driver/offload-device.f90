@@ -1,8 +1,8 @@
 ! -foffload-device tells the frontend we are compiling for the auxiliary target,
-! i.e. not the host device.
+! i.e. not the host device. Test for CUDA and OpenMP offloading modes.
 
-! RUN: %flang -target aarch64-linux-gnu --offload-arch=sm_80 --offload-arch=gfx90a -### %s -fopenmp 2>&1 | FileCheck %s --check-prefixes=CHECK,OPENMP
-! RUN: %flang -target aarch64-linux-gnu --offload-arch=sm_80 -### -xcuda %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CUDA
+! RUN: %flang -target aarch64-linux-gnu --no-offloadlib --offload-arch=sm_80 --offload-arch=gfx90a %s -fopenmp -### 2>&1 | FileCheck %s --check-prefixes=CHECK,OPENMP
+! RUN: %flang -target aarch64-linux-gnu --no-offloadlib --offload-arch=sm_80 -xcuda %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK,CUDA
 
 ! Compiled as CUDA, device-compilation is done first
 ! CUDA: flang{{(\.exe)?}}" "-fc1" "-triple" "nvptx64-nvidia-cuda"
@@ -20,5 +20,5 @@
 ! OPENMP-SAME: "-foffload-device"
 
 
-module device_modfile
+module offload_device
 end module
