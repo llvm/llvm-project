@@ -379,26 +379,26 @@ private:
 // ---------------------------------------------------------------------------
 
 /// Map a parsed trait-set name to the corresponding LLVM OMP TraitSet enum.
-llvm::omp::TraitSet mapTraitSet(parser::OmpTraitSetSelectorName::Value name);
+llvm::omp::TraitSet MapTraitSet(parser::OmpTraitSetSelectorName::Value name);
 
 /// Map a parsed trait-selector name (plus its containing set) to the
 /// corresponding LLVM OMP TraitSelector enum.
-llvm::omp::TraitSelector mapTraitSelector(
+llvm::omp::TraitSelector MapTraitSelector(
     const parser::OmpTraitSelectorName &name, llvm::omp::TraitSet set);
 
 /// Try to constant-fold a user condition expression to a boolean.
-std::optional<bool> evaluateUserCondition(
+std::optional<bool> EvaluateUserCondition(
     SemanticsContext &semaCtx, const parser::ScalarExpr &scalarExpr);
 
 /// Extract the optional score value from trait properties.
-llvm::APInt *getTraitScore(
+llvm::APInt *GetTraitScore(
     const std::optional<parser::OmpTraitSelector::Properties> &props,
     SemanticsContext &semaCtx, std::optional<llvm::APInt> &scoreStorage);
 
 /// Collect trait property names (vendor, kind, arch, isa, etc.) into a VMI.
 /// Non-name properties (clause, extension) are silently skipped; the caller is
 /// responsible for diagnosing them before invoking this function.
-void processTraitProperties(llvm::omp::VariantMatchInfo &vmi,
+void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
     llvm::omp::TraitSet set, llvm::omp::TraitSelector selector,
     const std::optional<parser::OmpTraitSelector::Properties> &props,
     llvm::APInt *scorePtr);

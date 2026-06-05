@@ -1149,7 +1149,7 @@ static void processTraitProperties(
     if (!name)
       TODO(loc, "clause or extension trait matching in METADIRECTIVE");
   }
-  semantics::omp::processTraitProperties(vmi, set, selector, props, scorePtr);
+  semantics::omp::ProcessTraitProperties(vmi, set, selector, props, scorePtr);
 }
 
 /// Process user={condition(...)} trait properties. Constant conditions are
@@ -1170,7 +1170,7 @@ static std::optional<DynamicUserCondition> processUserConditionTrait(
       continue;
 
     if (auto constValue =
-            semantics::omp::evaluateUserCondition(semaCtx, *scalarExpr)) {
+            semantics::omp::EvaluateUserCondition(semaCtx, *scalarExpr)) {
       vmi.addTrait(*constValue ? llvm::omp::TraitProperty::user_condition_true
                                : llvm::omp::TraitProperty::user_condition_false,
                    "<condition>", scorePtr);
@@ -1198,14 +1198,14 @@ makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
   for (const auto &traitSet : ctxSel.v) {
     using TSSName = parser::OmpTraitSetSelectorName;
     auto setName = std::get<TSSName>(traitSet.t).v;
-    llvm::omp::TraitSet set = semantics::omp::mapTraitSet(setName);
+    llvm::omp::TraitSet set = semantics::omp::MapTraitSet(setName);
 
     for (const auto &trait :
          std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
       const auto &selectorName =
           std::get<parser::OmpTraitSelectorName>(trait.t);
       llvm::omp::TraitSelector selector =
-          semantics::omp::mapTraitSelector(selectorName, set);
+          semantics::omp::MapTraitSelector(selectorName, set);
       const auto &props =
           std::get<std::optional<parser::OmpTraitSelector::Properties>>(
               trait.t);
@@ -1217,7 +1217,7 @@ makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
 
       std::optional<llvm::APInt> score;
       llvm::APInt *scorePtr =
-          semantics::omp::getTraitScore(props, semaCtx, score);
+          semantics::omp::GetTraitScore(props, semaCtx, score);
 
       if (selector == llvm::omp::TraitSelector::user_condition) {
         if (std::optional<DynamicUserCondition> userCond =

@@ -1856,7 +1856,7 @@ WithReason<bool> LoopSequence::isRectangular(
 // declare-variant semantic recording.
 // ---------------------------------------------------------------------------
 
-llvm::omp::TraitSet mapTraitSet(parser::OmpTraitSetSelectorName::Value name) {
+llvm::omp::TraitSet MapTraitSet(parser::OmpTraitSetSelectorName::Value name) {
   switch (name) {
   case parser::OmpTraitSetSelectorName::Value::Construct:
     return llvm::omp::TraitSet::construct;
@@ -1872,7 +1872,7 @@ llvm::omp::TraitSet mapTraitSet(parser::OmpTraitSetSelectorName::Value name) {
   llvm_unreachable("unknown trait set");
 }
 
-llvm::omp::TraitSelector mapTraitSelector(
+llvm::omp::TraitSelector MapTraitSelector(
     const parser::OmpTraitSelectorName &name, llvm::omp::TraitSet set) {
   if (const auto *val =
           std::get_if<parser::OmpTraitSelectorName::Value>(&name.u)) {
@@ -1908,7 +1908,7 @@ llvm::omp::TraitSelector mapTraitSelector(
   return llvm::omp::getOpenMPContextTraitSelectorKind(name.ToString(), set);
 }
 
-std::optional<bool> evaluateUserCondition(
+std::optional<bool> EvaluateUserCondition(
     SemanticsContext &semaCtx, const parser::ScalarExpr &scalarExpr) {
   const auto *typedExpr = GetExpr(semaCtx, scalarExpr);
   if (!typedExpr)
@@ -1926,7 +1926,7 @@ std::optional<bool> evaluateUserCondition(
   return std::nullopt;
 }
 
-llvm::APInt *getTraitScore(
+llvm::APInt *GetTraitScore(
     const std::optional<parser::OmpTraitSelector::Properties> &props,
     SemanticsContext &semaCtx, std::optional<llvm::APInt> &scoreStorage) {
   if (!props)
@@ -1949,7 +1949,7 @@ llvm::APInt *getTraitScore(
   return &*scoreStorage;
 }
 
-void processTraitProperties(llvm::omp::VariantMatchInfo &vmi,
+void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
     llvm::omp::TraitSet set, llvm::omp::TraitSelector selector,
     const std::optional<parser::OmpTraitSelector::Properties> &props,
     llvm::APInt *scorePtr) {
