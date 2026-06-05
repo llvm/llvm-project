@@ -1,7 +1,7 @@
 # TODO: Clean up this directory and its dependencies
 set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND ProcessUtility)
 
-set(LLDB_PLUGIN_PROCESS_UTILITY_SOURCES
+add_lldb_library(lldbPluginProcessUtility
   AuxVector.cpp
   FreeBSDSignals.cpp
   GDBRemoteSignals.cpp
@@ -64,11 +64,6 @@ set(LLDB_PLUGIN_PROCESS_UTILITY_SOURCES
   RegisterInfoPOSIXDynamic_riscv32.cpp
   StopInfoMachException.cpp
   ThreadMemory.cpp
-)
-
-
-add_lldb_library(lldbPluginProcessUtility
-    ${LLDB_PLUGIN_PROCESS_UTILITY_SOURCES}
 
   LINK_COMPONENTS
     Support
