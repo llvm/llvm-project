@@ -795,6 +795,10 @@ public:
     }
     setResult(CB, std::move(RetVal));
 
+    for (auto &ByValArgs : CurrentFrame->CalleeByValArgs)
+      Ctx.free(*ByValArgs);
+    CurrentFrame->CalleeByValArgs.clear();
+
     if (auto *II = dyn_cast<InvokeInst>(&CB))
       jumpTo(*II, II->getNormalDest());
     else if (CurrentFrame->State == FrameState::Pending)
@@ -1660,7 +1664,7 @@ public:
 
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
-    // TODO: handle byval/initializes
+    // TODO: handle initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
            "Forgot to call returnFromCallee before entering a new call.");
@@ -1711,10 +1715,50 @@ public:
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
+
       // CallBase::paramHasAttr also checks parameter attributes at known
       // callee. We do it explicitly to avoid duplication.
       AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
       AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
+
+      if (auto *ByValTy = CB.getParamByValType(I)) {
+        if (ArgVal.isPoison()) {
+          reportImmediateUB() << "Invalid poison byval pointer argument.";
+          return;
+        }
+
+        uint64_t Size = Ctx.getEffectiveTypeAllocSize(ByValTy);
+        MaybeAlign AllocAlign = AttrsAtCallSite.getAlignment();
+        if (AllocAlign.has_value()) {
+          if (MaybeAlign CalleeAlign = AttrsAtCallee.getAlignment())
+            AllocAlign = std::max(AllocAlign.value(), CalleeAlign.value());
+        } else {
+          AllocAlign = AttrsAtCallee.getAlignment();
+        }
+        if (!AllocAlign.has_value())
+          AllocAlign = DL.getABITypeAlign(ByValTy);
+        // Byval pointers cannot be passed via variadic arguments.
+        auto Obj = Ctx.allocate(
+            Size, AllocAlign.value().value(), Callee->getArg(I)->getName(),
+            ArgTy->getPointerAddressSpace(), MemInitKind::Uninitialized,
+            MemAllocKind::Stack);
+        if (!Obj) {
+          reportError()
+              << "Insufficient stack space for byval pointer argument.";
+          return;
+        }
+        CurrentFrame->CalleeByValArgs.push_back(Obj);
+
+        auto &SrcPtr = ArgVal.asPointer();
+        auto Val = load(SrcPtr, AllocAlign.value(), ByValTy, /*NoUndef=*/false);
+        if (hasProgramExited())
+          return;
+        auto TgtPtr = Ctx.deriveFromMemoryObject(std::move(Obj));
+        store(TgtPtr, AllocAlign.value(), Val, ByValTy);
+        if (hasProgramExited())
+          return;
+        ArgVal = std::move(TgtPtr);
+      }
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
     }
 
