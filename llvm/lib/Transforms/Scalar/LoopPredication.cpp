@@ -904,7 +904,7 @@ bool LoopPredication::isLoopProfitableToPredicate() {
   // predicate on that latch check.
   auto *LatchExitBlock = LatchTerm->getSuccessor(LatchBrExitIdx);
   if (isa<UnreachableInst>(LatchTerm) ||
-      LatchExitBlock->getTerminatingDeoptimizeCall())
+      LatchExitBlock->getPostdominatingDeoptimizeCall())
     return false;
 
   // Latch terminator has no valid profile data, so nothing to check
@@ -916,7 +916,6 @@ bool LoopPredication::isLoopProfitableToPredicate() {
       [&](const BasicBlock *ExitingBlock,
           const BasicBlock *ExitBlock) -> BranchProbability {
     auto *Term = ExitingBlock->getTerminator();
-    unsigned NumSucc = Term->getNumSuccessors();
     if (MDNode *ProfileData = getValidBranchWeightMDNode(*Term)) {
       SmallVector<uint32_t> Weights;
       extractBranchWeights(ProfileData, Weights);
@@ -926,16 +925,25 @@ bool LoopPredication::isLoopProfitableToPredicate() {
           Numerator += Weight;
         Denominator += Weight;
       }
-      // If all weights are zero act as if there was no profile data
-      if (Denominator == 0)
-        return BranchProbability::getBranchProbability(1, NumSucc);
-      return BranchProbability::getBranchProbability(Numerator, Denominator);
-    } else {
-      assert(LatchBlock != ExitingBlock &&
-             "Latch term should always have profile data!");
-      // No profile data, so we choose the weight as 1/num_of_succ(Src)
-      return BranchProbability::getBranchProbability(1, NumSucc);
+      if (Denominator != 0)
+        return BranchProbability::getBranchProbability(Numerator, Denominator);
+      // Fall-through: If all weights are zero, treat this as if there was
+      // no profile data.
     }
+
+    // For non-latch exits with no useful profile data, treat an exit that
+    // leads to unreachable or to a deoptimize as cold. Does not apply
+    //  to the latch (already bailed out above).
+    if (ExitingBlock != LatchBlock) {
+      auto *ExitTerm = ExitBlock->getTerminator();
+      if (isa<UnreachableInst>(ExitTerm) ||
+          ExitBlock->getPostdominatingDeoptimizeCall())
+        return BranchProbability::getZero();
+    }
+
+    // Otherwise, assume the exit edge is one of N equally likely successors.
+    unsigned NumSucc = Term->getNumSuccessors();
+    return BranchProbability::getBranchProbability(1, NumSucc);
   };
 
   BranchProbability LatchExitProbability =
