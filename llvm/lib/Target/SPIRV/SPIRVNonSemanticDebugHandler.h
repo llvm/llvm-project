@@ -42,9 +42,9 @@ class SPIRVSubtarget;
 ///   beginModule()                    -- collect compile-unit metadata.
 ///   prepareModuleOutput()            -- add extension + ext inst set to MAI.
 ///   emitNonSemanticDebugStrings()    -- OpString for NSDI strings (sec. 7).
-///   emitNonSemanticGlobalDebugInfo() -- emit DebugSource, DebugTypeBasic,
-///                                       DebugTypePointer, DebugTypeFunction,
-///                                       DebugCompilationUnit.
+///   emitNonSemanticGlobalDebugInfo() -- emit DebugSource,
+///                                       DebugCompilationUnit, DebugTypeBasic,
+///                                       DebugTypePointer, DebugTypeFunction.
 ///   beginFunctionImpl()              -- no-op (no per-function DI yet).
 ///   endFunctionImpl()                -- no-op.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
