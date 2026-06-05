@@ -331,9 +331,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
 
 VPValue *VPPredicator::createMaskDisjunction(ArrayRef<EdgeTy> Edges,
                                              VPBasicBlock *VPBB) {
-  auto Dsts = map_range(Edges, [](auto E) { return E.second; });
-  const VPBasicBlock *PostDom = *Dsts.begin();
-  for (const VPBasicBlock *VPBB : drop_begin(Dsts))
+  const VPBasicBlock *PostDom = Edges[0].second;
+  for (auto [_, VPBB] : drop_begin(Edges))
     PostDom =
         cast<VPBasicBlock>(VPPDT.findNearestCommonDominator(PostDom, VPBB));
   assert(VPPDT.dominates(VPBB, PostDom) && "Edges don't postdominate VPBB");
