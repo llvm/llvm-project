@@ -2135,13 +2135,20 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       return QualType();
   }
 
-  // Multi-dimensional arrays of WebAssembly references are not allowed.
-  if (Context.getTargetInfo().getTriple().isWasm() && T->isArrayType()) {
-    const auto *ATy = dyn_cast<ArrayType>(T);
-    if (ATy && ATy->getElementType().isWebAssemblyReferenceType()) {
+  // Multi-dimensional arrays of WebAssembly references are not allowed. The
+  // element type is either an array whose element is a reference type, or a
+  // WebAssembly table (a zero-length reference array already lowered to a
+  // WebAssemblyTableType).
+  if (Context.getTargetInfo().getTriple().isWasm()) {
+    if (T->isWebAssemblyTableType()) {
       Diag(Loc, diag::err_wasm_reftype_multidimensional_array);
       return QualType();
     }
+    if (const auto *ATy = dyn_cast<ArrayType>(T))
+      if (ATy->getElementType().isWebAssemblyReferenceType()) {
+        Diag(Loc, diag::err_wasm_reftype_multidimensional_array);
+        return QualType();
+      }
   }
 
   if (T->isSizelessType() && !T.isWebAssemblyReferenceType()) {
@@ -2362,6 +2369,18 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       return QualType();
     }
   }
+
+  // On WebAssembly, a zero-length array of a reference type is a table. Give it
+  // a dedicated WebAssemblyTableType so that it is distinguished from an
+  // ordinary array. WebAssembly tables are not first-class: a table object may
+  // only be created by a global declaration and used as an argument to the
+  // table builtins. Other uses (locals, parameters, return values, struct or
+  // union members, taking a pointer, sizeof, ...) are rejected by the
+  // WebAssemblyTableType checks elsewhere.
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(T))
+    if (CAT->getZExtSize() == 0 &&
+        CAT->getElementType().isWebAssemblyReferenceType())
+      T = Context.getWebAssemblyTableType(CAT->getElementType());
 
   return T;
 }
@@ -6300,6 +6319,11 @@ namespace {
       TL.setLBracketLoc(Chunk.Loc);
       TL.setRBracketLoc(Chunk.EndLoc);
       TL.setSizeExpr(static_cast<Expr*>(Chunk.Arr.NumElts));
+    }
+    void VisitWebAssemblyTableTypeLoc(WebAssemblyTableTypeLoc TL) {
+      // A WebAssembly table is formed from a zero-length array declarator.
+      assert(Chunk.Kind == DeclaratorChunk::Array);
+      TL.setKWLoc(Chunk.Loc);
     }
     void VisitFunctionTypeLoc(FunctionTypeLoc TL) {
       assert(Chunk.Kind == DeclaratorChunk::Function);

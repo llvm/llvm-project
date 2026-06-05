@@ -1486,6 +1486,15 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
     // Checks for scalar type are sufficient for these types too.
     CheckScalarType(Entity, IList, DeclType, Index, StructuredList,
                     StructuredIndex);
+  } else if (DeclType->isWebAssemblyTableType()) {
+    // A WebAssembly table is a zero-length aggregate; only an empty initializer
+    // list (e.g. `= {}`) is valid.
+    if (IList->getNumInits() != 0) {
+      if (!VerifyOnly)
+        SemaRef.Diag(IList->getBeginLoc(), diag::err_illegal_initializer_type)
+            << DeclType;
+      hadError = true;
+    }
   } else if (DeclType->isDependentType()) {
     // C++ [over.match.class.deduct]p1.5:
     //   brace elision is not considered for any aggregate element that has a

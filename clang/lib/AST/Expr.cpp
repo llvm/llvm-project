@@ -3444,6 +3444,11 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
       return true;
     }
 
+    // A WebAssembly table is a zero-length aggregate; an initializer
+    // list for it must be empty so is always constant.
+    if (ILE->getType()->isWebAssemblyTableType())
+      return true;
+
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
       auto *RD = ILE->getType()->castAsRecordDecl();

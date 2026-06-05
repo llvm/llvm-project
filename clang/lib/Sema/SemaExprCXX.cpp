@@ -986,8 +986,8 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
     return true;
   }
 
-  // Cannot throw WebAssembly table.
-  if (isPointer && Ty.isWebAssemblyReferenceType()) {
+  // Cannot throw a WebAssembly table.
+  if (ExceptionObjectTy->isWebAssemblyTableType()) {
     Diag(ThrowLoc, diag::err_wasm_table_art) << 2 << E->getSourceRange();
     return true;
   }
