@@ -4,8 +4,8 @@
 ## the filename in its output. If the filename contains the string "_main", then the
 ## check will incorrectly get triggered. 
 
-RUN: llvm-objdump --macho --function-starts - < %p/Inputs/hello.exe.macho-i386 | FileCheck %s --check-prefix=32-BIT --implicit-check-not=_main
-RUN: llvm-objdump --macho --function-starts=addrs - < %p/Inputs/hello.exe.macho-i386 | FileCheck %s --check-prefix=32-BIT --implicit-check-not=_main
+RUN: llvm-objdump --no-leading-headers --macho --function-starts - < %p/Inputs/hello.exe.macho-i386 | FileCheck %s --check-prefix=32-BIT --implicit-check-not=_main
+RUN: llvm-objdump --no-leading-headers --macho --function-starts=addrs - < %p/Inputs/hello.exe.macho-i386 | FileCheck %s --check-prefix=32-BIT --implicit-check-not=_main
 32-BIT: 00001f40
 
 RUN: llvm-objdump --macho --function-starts=names - < %p/Inputs/hello.exe.macho-i386 | FileCheck %s --check-prefix=32-BIT-NAMES
@@ -14,8 +14,8 @@ RUN: llvm-objdump --macho --function-starts=names - < %p/Inputs/hello.exe.macho-
 RUN: llvm-objdump --macho --function-starts=both - < %p/Inputs/hello.exe.macho-i386 | FileCheck %s --check-prefix=32-BIT-BOTH
 32-BIT-BOTH: 00001f40 _main
 
-RUN: llvm-objdump --macho --function-starts - < %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=64-BIT --implicit-check-not=_main
-RUN: llvm-objdump --macho --function-starts=addrs - < %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=64-BIT --implicit-check-not=_main
+RUN: llvm-objdump --no-leading-headers --macho --function-starts - < %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=64-BIT --implicit-check-not=_main
+RUN: llvm-objdump --no-leading-headers --macho --function-starts=addrs - < %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=64-BIT --implicit-check-not=_main
 64-BIT: 0000000100000f30
 
 RUN: llvm-objdump --macho --function-starts=names - < %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=64-BIT-NAMES
