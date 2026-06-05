@@ -1593,6 +1593,26 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
+  // Regarding def-use chains that begin at an LCSSA PHI in the inner loop exit
+  // and end at any instruction in the outer loop latch, we currently support
+  // only the case where the chain contains only PHI nodes. Since we already
+  // call `tightlyNested()`, we know that if there is a def-use chain that we
+  // don't support (i.e., a chain that contains a non-PHI user), then the
+  // non-PHI user must be in the outer loop latch.
+  if (InnerLoop->getExitBlock() != OuterLoop->getLoopLatch())
+    for (PHINode &PHI : OuterLoop->getLoopLatch()->phis())
+      if (any_of(PHI.users(), [](const User *U) { return !isa<PHINode>(U); })) {
+        LLVM_DEBUG(dbgs() << "Outer loop latch PHI has a non-PHI user.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLatchPHI",
+                                          OuterLoop->getStartLoc(),
+                                          OuterLoop->getHeader())
+                 << "Cannot interchange loops because an outer loop latch PHI "
+                    "node has a non-PHI user.";
+        });
+        return false;
+      }
+
   return true;
 }
 
@@ -2245,14 +2265,12 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
 
     assert(all_of(P.users(),
                   [OuterHeader, OuterExit, IncI, InnerHeader](User *U) {
-                    if (!isa<PHINode>(U))
-                      return true;
                     return (cast<PHINode>(U)->getParent() == OuterHeader &&
                             IncI->getParent() == InnerHeader) ||
                            cast<PHINode>(U)->getParent() == OuterExit;
                   }) &&
-           "Can only replace phis iff the phi-uses are in the loop nest exit "
-           "or the incoming value is defined in the inner header (it will "
+           "Can only replace phis iff the uses are in the loop nest exit or "
+           "the incoming value is defined in the inner header (it will "
            "dominate all loop blocks after interchanging)");
     P.replaceAllUsesWith(IncI);
     P.eraseFromParent();
