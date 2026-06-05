@@ -59,6 +59,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/RegisterFlags.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
@@ -100,10 +101,6 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
-
-#ifdef _WIN32
-#include "Plugins/Process/Windows/Common/IOHandlerProcessSTDIOWindows.h"
-#endif
 
 #if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"

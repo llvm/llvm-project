@@ -46,7 +46,6 @@
 #include "ExceptionRecord.h"
 #include "ForwardDecl.h"
 #include "LocalDebugDelegate.h"
-#include "Plugins/Process/Utility/IOHandlerProcessSTDIOWindows.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
 
