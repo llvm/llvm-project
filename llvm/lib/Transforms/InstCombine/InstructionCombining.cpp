@@ -1820,7 +1820,17 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
     NewTV = foldOperationIntoSelectOperand(Op, SI, TV, *this);
   if (!NewFV)
     NewFV = foldOperationIntoSelectOperand(Op, SI, FV, *this);
-  return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
+
+  SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
+
+  // Preserve metadata that remains valid for the transformed select.
+  NewSel->copyMetadata(*SI,
+                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable});
+
+  // Preserve source location information.
+  NewSel->setDebugLoc(SI->getDebugLoc());
+
+  return NewSel;
 }
 
 static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
@@ -3568,10 +3578,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
 
           if (NewC.has_value()) {
-            Value *NewOp = Builder.CreateBinOp(
+            Value *NewOp = Builder.CreateExactBinOp(
                 static_cast<Instruction::BinaryOps>(ExactIns->getOpcode()), V,
-                ConstantInt::get(V->getType(), *NewC));
-            cast<BinaryOperator>(NewOp)->setIsExact();
+                ConstantInt::get(V->getType(), *NewC), /*IsExact=*/true);
             return GetElementPtrInst::Create(Builder.getInt8Ty(),
                                              GEP.getPointerOperand(), NewOp,
                                              GEP.getNoWrapFlags());

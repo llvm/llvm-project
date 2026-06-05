@@ -108,6 +108,16 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
+// PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
+// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
+// when they disagree. This flag is an escape hatch to use atom.add anyway,
+// trading correct denormal handling for the speed of the native instruction.
+static cl::opt<bool> AllowFTZAtomics(
+    "nvptx-allow-ftz-atomics", cl::Hidden,
+    cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
+             "FTZ behavior does not match the function's denormal mode."),
+    cl::init(false));
+
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
 static cl::opt<bool> UseApproxLog2F32(
@@ -7475,21 +7485,53 @@ NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
-  if (AI->isFloatingPointOperation()) {
-    if (AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
-      if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
-          STI.getPTXVersion() >= 63)
-        return AtomicExpansionKind::None;
-      if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
-          STI.getPTXVersion() >= 78)
-        return AtomicExpansionKind::None;
-      if (Ty->isFloatTy())
-        return AtomicExpansionKind::None;
-      if (Ty->isDoubleTy() && STI.hasAtomAddF64())
+  // Try to lower LLVM atomicrmw fadd to PTX atomic.add.  This is complicated
+  // by the weird FTZ behavior PTX atom.add has:
+  //   - atom.add.f32 on global memory flushes denormals
+  //   - atom.add.f32 on shared memory does not flush denormals
+  //   - atom.add.f16 and atomic.add.bf16 never flush denormals
+  //
+  // We lower to atom.add only if the function's FTZ behavior matches that of
+  // atom.add; otherwise, we lower to a CAS loop. But we always allow
+  // atomic.add.bf16; even though it never flushes denormals, we never flush
+  // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
+  if (AI->isFloatingPointOperation() &&
+      AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+    const bool FTZ =
+        AI->getFunction()->getDenormalMode(APFloat::IEEEsingle()).Output ==
+        DenormalMode::PreserveSign;
+
+    // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
+    if (Ty->isFloatTy()) {
+      bool UseNative = AllowFTZAtomics;
+      switch (AI->getPointerAddressSpace()) {
+      case llvm::ADDRESS_SPACE_GLOBAL:
+        UseNative |= FTZ;
+        break;
+      case llvm::ADDRESS_SPACE_SHARED:
+      case llvm::ADDRESS_SPACE_SHARED_CLUSTER:
+        UseNative |= !FTZ;
+        break;
+      }
+      if (UseNative)
         return AtomicExpansionKind::None;
     }
-    return AtomicExpansionKind::CmpXChg;
+
+    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
+        STI.getSmVersion() >= 70 && STI.getPTXVersion() >= 63)
+      return AtomicExpansionKind::None;
+
+    if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
+        STI.getPTXVersion() >= 78)
+      return AtomicExpansionKind::None;
+
+    if (Ty->isDoubleTy() && STI.hasAtomAddF64())
+      return AtomicExpansionKind::None;
   }
+
+  // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
+  if (AI->isFloatingPointOperation())
+    return AtomicExpansionKind::CmpXChg;
 
   assert(Ty->isIntegerTy() && "Ty should be integer at this point");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
