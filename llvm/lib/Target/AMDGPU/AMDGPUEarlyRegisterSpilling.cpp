@@ -575,125 +575,14 @@ void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
   }
 }
 
-SetVectorType AMDGPUEarlyRegisterSpilling::collectUsesThatNeedRestoreInstrs(
-    Register DefRegToSpill, MachineInstr *CurMI, MachineInstr *SpillInstruction,
-    const SetVectorType &UnreachableUses) {
-
-  MachineBasicBlock *CurMBB = CurMI->getParent();
-  MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
-  MachineLoop *OutermostLoopOfCurLoop = nullptr;
-  if (CurLoop)
-    OutermostLoopOfCurLoop = CurLoop->getOutermostLoop();
-  MachineBasicBlock *SpillBlock = SpillInstruction->getParent();
-  SetVectorType DominatedUses;
-
-  if (!CurLoop) {
-    // During the selection of the live-registers, we make sure that we do not
-    // have uses inside the loop for this case.
-    for (MachineInstr &U : MRI->use_nodbg_instructions(DefRegToSpill)) {
-      if (&U == SpillInstruction)
-        continue;
-
-      if (UnreachableUses.contains(&U))
-        continue;
-
-      if (U.isPHI()) {
-        for (auto *PhiOpMBB : getPhiBlocksOfSpillReg(&U, DefRegToSpill)) {
-          if (DT->dominates(SpillBlock, PhiOpMBB)) {
-            DominatedUses.insert(&U);
-          }
-        }
-      } else if (DT->dominates(SpillInstruction, &U)) {
-        DominatedUses.insert(&U);
-      }
-    }
-  } else {
-    // We want to emit restore instructions only for the livethrough uses.
-    // The rest will be live.
-    for (MachineInstr &U : MRI->use_nodbg_instructions(DefRegToSpill)) {
-      if (&U == SpillInstruction)
-        continue;
-
-      if (UnreachableUses.contains(&U))
-        continue;
-
-      auto AreLoopsIndependent =
-          [OutermostLoopOfCurLoop](MachineLoop *UseLoop, MachineLoop *CurLoop) {
-            return (!UseLoop ||
-                    (UseLoop && CurLoop && !UseLoop->contains(CurLoop) &&
-                     !OutermostLoopOfCurLoop->contains(UseLoop)));
-          };
-      if (U.isPHI()) {
-        for (auto *PhiOpMBB : getPhiBlocksOfSpillReg(&U, DefRegToSpill)) {
-          if (DT->dominates(SpillBlock, PhiOpMBB)) {
-            MachineLoop *UseLoop = MLI->getLoopFor(U.getParent());
-            if (AreLoopsIndependent(UseLoop, CurLoop))
-              DominatedUses.insert(&U);
-          }
-        }
-      } else if (DT->dominates(SpillInstruction, &U)) {
-        MachineLoop *UseLoop = MLI->getLoopFor(U.getParent());
-        if (AreLoopsIndependent(UseLoop, CurLoop))
-          DominatedUses.insert(&U);
-      }
-    }
-  }
-  return DominatedUses;
-}
-
-void AMDGPUEarlyRegisterSpilling::emitRestores(
-    Register DefRegToSpill, MachineInstr *CurMI, MachineInstr *SpillInstruction,
-    const SetVectorType &UnreachableUses, const TargetRegisterClass *RC,
-    int FI) {
-  assert(MRI->hasOneDef(DefRegToSpill) &&
-         "The Register does not have one definition");
-  MachineInstr *InstrOfDefRegToSpill =
-      MRI->getOneDef(DefRegToSpill)->getParent();
-
-  // Collect the uses that are dominated by SpillInstruction
-  SetVectorType DominatedUses = collectUsesThatNeedRestoreInstrs(
-      DefRegToSpill, CurMI, SpillInstruction, UnreachableUses);
-
-  SmallVector<MachineInstr *> RestoreInstrs;
-  SmallVector<MachineInstr *> RestoreUses;
-  emitRestoreInstrsForDominatedUses(DefRegToSpill, SpillInstruction, CurMI,
-                                    DominatedUses, RestoreInstrs, RestoreUses,
-                                    FI);
-
-  // Update the live interval analysis.
-  updateIndexes(InstrOfDefRegToSpill);
-  updateIndexes(SpillInstruction);
-  updateLiveness(InstrOfDefRegToSpill);
-  updateLiveness(SpillInstruction);
-
-  if (InstrOfDefRegToSpill != CurMI) {
-    updateIndexes(CurMI);
-    updateLiveness(CurMI);
-  }
-
-  for (auto *Use : RestoreInstrs) {
-    updateIndexes(Use);
-    updateLiveness(Use);
-  }
-
-  for (auto *Use : RestoreUses) {
-    updateIndexes(Use);
-    updateLiveness(Use);
-  }
-}
-
 // We have to collect the unreachable uses before we emit the spill instruction.
 // This is due to the fact that some unreachable uses might become reachable if
 // we spill in common dominator.
-std::pair<SetVectorType, SetVectorType>
-AMDGPUEarlyRegisterSpilling::collectNonDominatedReachableAndUnreachableUses(
-    MachineBasicBlock *SpillBlock, Register DefRegToSpill,
-    MachineInstr *CurMI) {
-  // The reachable uses are the ones that can be reached by the SpillBlock.
-  SetVectorType NonDominatedReachableUses;
-  // The non-dominated uses are the uses that cannot be reached by the
-  // SpillBlock.
-  SetVectorType UnreachableUses;
+void AMDGPUEarlyRegisterSpilling::classifyUses(
+    MachineBasicBlock *SpillBlock, Register DefRegToSpill, MachineInstr *CurMI,
+    SetVectorType &DominatedUses, SetVectorType &NonDominatedReachableUses,
+    SetVectorType &UnreachableUses) {
+
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *OutermostLoopOfCurLoop = nullptr;
@@ -714,6 +603,8 @@ AMDGPUEarlyRegisterSpilling::collectNonDominatedReachableAndUnreachableUses(
           MachineLoop *UseLoop = MLI->getLoopFor(U.getParent());
           if (UseLoop && CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
             UnreachableUses.insert(&U);
+          } else {
+            DominatedUses.insert(&U);
           }
         } else if (NUA->isReachable(SpillBlock, PhiOpMBB)) {
           MachineLoop *UseLoop = MLI->getLoopFor(PhiOpMBB);
@@ -732,6 +623,8 @@ AMDGPUEarlyRegisterSpilling::collectNonDominatedReachableAndUnreachableUses(
         MachineLoop *UseLoop = MLI->getLoopFor(UMBB);
         if (UseLoop && CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
           UnreachableUses.insert(&U);
+        } else {
+          DominatedUses.insert(&U);
         }
       } else if (NUA->isReachable(SpillBlock, UMBB)) {
         MachineLoop *UseLoop = MLI->getLoopFor(UMBB);
@@ -745,8 +638,6 @@ AMDGPUEarlyRegisterSpilling::collectNonDominatedReachableAndUnreachableUses(
       }
     }
   }
-
-  return {NonDominatedReachableUses, UnreachableUses};
 }
 
 // Find the common dominator of the reachable uses and the block that we
@@ -904,24 +795,33 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     MachineInstr *SpillInstruction = nullptr;
     MachineBasicBlock *SpillBlock = nullptr;
     MachineBasicBlock::iterator WhereToSpill;
-    SetVectorType NonDominatedReachableUses;
-    SetVectorType UnreachableUses;
 
     std::tie(SpillBlock, WhereToSpill) = getWhereToSpill(CurMI, DefRegToSpill);
     if (SpillBlock == nullptr)
       continue;
+
     // The next step is to check if there are any uses which are reachable
     // from the SpillBlock. In this case, we have to emit the spill in the
     // common dominator of the SpillBlock and the blocks of the reachable
     // uses.
-    std::tie(NonDominatedReachableUses, UnreachableUses) =
-        collectNonDominatedReachableAndUnreachableUses(SpillBlock,
-                                                       DefRegToSpill, CurMI);
 
-    if (NonDominatedReachableUses.empty() && !UnreachableUses.empty() &&
-        (UnreachableUses.size() ==
-         llvm::range_size(MRI->use_nodbg_operands(DefRegToSpill))))
+    // The dominated uses are the ones that are dominated by the SpillBlock.
+    SetVectorType DominatedUses;
+    // The reachable uses are the ones that can be reached by the SpillBlock.
+    SetVectorType NonDominatedReachableUses;
+    // The unreachable uses are the ones that are not reachable by the
+    // SpillBlock.
+    SetVectorType UnreachableUses;
+    classifyUses(SpillBlock, DefRegToSpill, CurMI, DominatedUses,
+                 NonDominatedReachableUses, UnreachableUses);
+
+    if (NonDominatedReachableUses.empty() && DominatedUses.empty() &&
+        !UnreachableUses.empty()) {
+      assert(UnreachableUses.size() ==
+                 llvm::range_size(MRI->use_nodbg_operands(DefRegToSpill)) &&
+             "Missing uses\n");
       continue;
+    }
 
     MachineBasicBlock *CommonDominatorToSpill = nullptr;
     if (!NonDominatedReachableUses.empty()) {
@@ -934,6 +834,9 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
       // masks or the spill should have a superset mask compared to the uses.
       if (!CommonDominatorToSpill)
         continue;
+
+      for (auto *U : NonDominatedReachableUses)
+        DominatedUses.insert(U);
 
       SpillBlock = CommonDominatorToSpill;
       WhereToSpill = SpillBlock->getFirstTerminator();
@@ -966,10 +869,37 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     LLVM_DEBUG(dbgs() << "Spill block = "
                       << SpillInstruction->getParent()->getName() << "\n");
 
+    MachineInstr *InstrOfDefRegToSpill =
+        MRI->getOneDef(DefRegToSpill)->getParent();
+
+    SmallVector<MachineInstr *> RestoreInstrs;
+    SmallVector<MachineInstr *> RestoreUses;
     // Find the restore locations, emit the restore instructions and maintain
     // SSA when needed.
-    emitRestores(DefRegToSpill, CurMI, SpillInstruction, UnreachableUses, RC,
-                 FI);
+    emitRestoreInstrsForDominatedUses(DefRegToSpill, SpillInstruction, CurMI,
+                                      DominatedUses, RestoreInstrs, RestoreUses,
+                                      FI);
+
+    // Update the live interval analysis.
+    updateIndexes(InstrOfDefRegToSpill);
+    updateIndexes(SpillInstruction);
+    updateLiveness(InstrOfDefRegToSpill);
+    updateLiveness(SpillInstruction);
+
+    if (InstrOfDefRegToSpill != CurMI) {
+      updateIndexes(CurMI);
+      updateLiveness(CurMI);
+    }
+
+    for (auto *Use : RestoreInstrs) {
+      updateIndexes(Use);
+      updateLiveness(Use);
+    }
+
+    for (auto *Use : RestoreUses) {
+      updateIndexes(Use);
+      updateLiveness(Use);
+    }
   }
   // Reset the tracker because it has already read the next instruction which
   // we might have modified by emitting a spill or restore instruction.

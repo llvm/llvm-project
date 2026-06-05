@@ -77,19 +77,6 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   getWhereToSpillIfDefintionInLoop(MachineInstr *CurMI,
                                    MachineBasicBlock *DefRegMBB);
 
-  /// Collect all uses that need a restore instruction and return them.
-  SetVectorType
-  collectUsesThatNeedRestoreInstrs(Register DefRegToSpill, MachineInstr *CurMI,
-                                   MachineInstr *SpillInstruction,
-                                   const SetVectorType &UnreachableUses);
-
-  /// Find the restore locations, emit the restore instructions and maintain
-  /// SSA when needed.
-  void emitRestores(Register DefRegToSpill, MachineInstr *CurMI,
-                    MachineInstr *SpillInstruction,
-                    const SetVectorType &UnreachableUses,
-                    const TargetRegisterClass *RC, int FI);
-
   /// Main spill function that emits the spill and restore code.
   void spill(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker,
              unsigned NumOfSpills);
@@ -122,10 +109,10 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
                              const SetVectorType &NonDominatedReachableUses);
 
   /// Collect Non Dominated Reachable and Unreachable uses.
-  std::pair<SetVectorType, SetVectorType>
-  collectNonDominatedReachableAndUnreachableUses(MachineBasicBlock *SpillBlock,
-                                                 Register DefRegToSpill,
-                                                 MachineInstr *CurMI);
+  void classifyUses(MachineBasicBlock *SpillBlock, Register DefRegToSpill,
+                    MachineInstr *CurMI, SetVectorType &DominatedUses,
+                    SetVectorType &NonDominatedReachableUses,
+                    SetVectorType &UnreachableUses);
 
   /// Helper functions to update the live interval analysis which is used by
   /// the Register Pressure Tracker.
