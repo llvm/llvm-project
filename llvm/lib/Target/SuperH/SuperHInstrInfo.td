@@ -89,6 +89,20 @@ def imm8 : Operand<i8>, ImmLeaf<i32, [{return isInt<8>(Imm);}]> {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
+    // No-arg instruction
+    class Op<bits<16> op, string opcodestr>
+        : SHInstOP<op, (outs), (ins), opcodestr>;
+
+    // Rn
+    class Op_r<bits<16> op, string opcodestr>
+        : SHInstOP_N4<op, (outs GPR:$n), (ins),
+                         !strconcat(opcodestr, " $n")>;
+
+    // R0, Rn
+    class Op_rr0<bits<16> op, string opcodestr>
+        : SHInstOP_N4<op, (outs GPR:$n), (ins),
+                         !strconcat(opcodestr, " r0, $n")>;
+
     // imm -> Sign Extension -> Rn
     class Op_ir<bits<16> op, string opcodestr>
         : SHInstOP_N4_I8<op, (outs GPR:$n), (ins imm8:$imm),
@@ -121,8 +135,8 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 //===----------------------------------------------------------------------===//
 
 // NOP instruction, does nothing.
-def NOP : SHInstOP<0b0000000000000000, (outs), (ins), "nop">;
-def RTS : SHInstOP<0b0000000000001011, (outs), (ins), "rts">;
+def NOP : Op<0b0000000000000000, "nop">;
+def RTS : Op<0b0000000000001011, "rts">;
 
 //===----------------------------------------------------------------------===//
 // Subsystems
