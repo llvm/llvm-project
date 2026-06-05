@@ -5,10 +5,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// CIR: !rec_IncompleteC = !cir.record<class "IncompleteC" incomplete>
-// CIR: !rec_Base = !cir.record<class "Base" {!s32i}>
-// CIR: !rec_CompleteC = !cir.record<class "CompleteC" {!s32i, !s8i}>
-// CIR: !rec_Derived = !cir.record<class "Derived" {!rec_Base, !s32i}>
+// CIR: !rec_IncompleteC = !cir.struct<class "IncompleteC" incomplete>
+// CIR: !rec_Base = !cir.struct<class "Base" {!s32i}>
+// CIR: !rec_CompleteC = !cir.struct<class "CompleteC" {!s32i, !s8i}>
+// CIR: !rec_Derived = !cir.struct<class "Derived" {!rec_Base, !s32i}>
 
 // Note: LLVM and OGCG do not emit the type for incomplete classes.
 

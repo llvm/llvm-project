@@ -2558,7 +2558,7 @@ class sme2_cvt_vg2_single<string mnemonic, bits<5> op,
 multiclass sme2_cvt_vg2_single<string mnemonic, bits<5> op, ValueType out_vt,
                                ValueType in_vt, SDPatternOperator intrinsic> {
   def NAME :  sme2_cvt_vg2_single<mnemonic, op, ZPR16, ZZ_s_mul_r>;
-  def : SVE2p1_Cvt_VG2_Pat<NAME, intrinsic, out_vt, in_vt>;
+  def : SVE_Cvt_VG2_Pat<NAME, intrinsic, out_vt, in_vt>;
 }
 
 // SME2 multi-vec FP8 down convert two registers

@@ -7,7 +7,7 @@
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !void = !cir.void
-!rec_E = !cir.record<struct "E" padded {!u8i}>
+!rec_E = !cir.struct<"E" padded {!u8i}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 
@@ -17,7 +17,7 @@ cir.global constant linkonce_odr @_ZTI1E
     = #cir.typeinfo<{
         #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
             : !cir.ptr<!u8i>}>
-    : !cir.record<struct  {!cir.ptr<!u8i>}>
+    : !cir.struct<{!cir.ptr<!u8i>}>
 
 cir.func private @_Z8mayThrowv()
 cir.func private @_ZN1EC1ERKS_(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)
@@ -65,7 +65,7 @@ cir.func @bad_kind() {
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !void = !cir.void
-!rec_E = !cir.record<struct "E" padded {!u8i}>
+!rec_E = !cir.struct<"E" padded {!u8i}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 
@@ -75,7 +75,7 @@ cir.global constant linkonce_odr @_ZTI1E
     = #cir.typeinfo<{
         #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
             : !cir.ptr<!u8i>}>
-    : !cir.record<struct  {!cir.ptr<!u8i>}>
+    : !cir.struct<{!cir.ptr<!u8i>}>
 
 cir.func private @_Z8mayThrowv()
 
@@ -118,7 +118,7 @@ cir.func @copy_fn_no_body() {
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !void = !cir.void
-!rec_E = !cir.record<struct "E" padded {!u8i}>
+!rec_E = !cir.struct<"E" padded {!u8i}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 
@@ -128,7 +128,7 @@ cir.global constant linkonce_odr @_ZTI1E
     = #cir.typeinfo<{
         #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
             : !cir.ptr<!u8i>}>
-    : !cir.record<struct  {!cir.ptr<!u8i>}>
+    : !cir.struct<{!cir.ptr<!u8i>}>
 
 cir.func private @_Z8mayThrowv()
 cir.func private @_ZN1EC1ERKS_(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)

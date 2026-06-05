@@ -66,9 +66,6 @@ template <> struct DenseMapInfo<SPIRVTypeInst> {
   static SPIRVTypeInst getEmptyKey() {
     return {MIInfo::getEmptyKey(), SPIRVTypeInst::UncheckedConstructor()};
   }
-  static SPIRVTypeInst getTombstoneKey() {
-    return {MIInfo::getTombstoneKey(), SPIRVTypeInst::UncheckedConstructor()};
-  }
   static unsigned getHashValue(SPIRVTypeInst Ty) {
     return MIInfo::getHashValue(Ty.MI);
   }
