@@ -5809,6 +5809,25 @@ def MSVaCopy : Builtin {
   let Prototype = "void(char*&, char*&)";
 }
 
+// z/OS-compatible va_list functions.
+def ZOSVaStart : Builtin {
+  let Spellings = ["__builtin_zos_va_start"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(char**, ...)";
+}
+
+def ZOSVaEnd : Builtin {
+  let Spellings = ["__builtin_zos_va_end"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(char**)";
+}
+
+def ZOSVaCopy : Builtin {
+  let Spellings = ["__builtin_zos_va_copy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(char**, char**)";
+}
+
 // Arithmetic Fence: to prevent FP reordering and reassociation optimizations
 // FIXME: Should this just be a Builtin?
 def ArithmeticFence : LangBuiltin<"ALL_LANGUAGES"> {

@@ -17203,7 +17203,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
                                 Expr *E, TypeSourceInfo *TInfo,
                                 SourceLocation RPLoc) {
   Expr *OrigExpr = E;
-  bool IsMS = false;
+  VAArgExpr::VarArgKind VAKind = VAArgExpr::VA_Std;
 
   // CUDA device global function does not support varargs.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
@@ -17228,13 +17228,31 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
     if (Context.hasSameType(MSVaListType, E->getType())) {
       if (CheckForModifiableLvalue(E, BuiltinLoc, *this))
         return ExprError();
-      IsMS = true;
+      VAKind = VAArgExpr::VA_MS;
     }
   }
 
   // Get the va_list type
   QualType VaListType = Context.getBuiltinVaListType();
-  if (!IsMS) {
+
+  // It might be a __builtin_zos_va_list!
+  if (!E->isTypeDependent() && Context.getTargetInfo().hasBuiltinZOSVaList()) {
+    // E->getType() can be:
+    //  - va_list: equal to array (char*)[2] (inside function)
+    //  - char **: decayed array (va_list passed as parameter)
+    // We need to check for both cases.
+    QualType ZOSVaListType = Context.getBuiltinZOSVaListType();
+    assert(ZOSVaListType->isArrayType() &&
+           "__builtin_zos_va_list must be an array type");
+    QualType DecayedType = Context.getArrayDecayedType(ZOSVaListType);
+    if (Context.hasSameType(ZOSVaListType, E->getType()) ||
+        Context.hasSameType(DecayedType, E->getType())) {
+      VAKind = VAArgExpr::VA_ZOS;
+      VaListType = ZOSVaListType;
+    }
+  }
+
+  if (VAKind != VAArgExpr::VA_MS) {
     if (VaListType->isArrayType()) {
       // Deal with implicit array decay; for example, on x86-64,
       // va_list is an array, but it's supposed to decay to
@@ -17263,7 +17281,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
     }
   }
 
-  if (!IsMS && !E->isTypeDependent() &&
+  if ((VAKind != VAArgExpr::VA_MS) && !E->isTypeDependent() &&
       !Context.hasSameType(VaListType, E->getType()))
     return ExprError(
         Diag(E->getBeginLoc(),
@@ -17358,7 +17376,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   }
 
   QualType T = TInfo->getType().getNonLValueExprType(Context);
-  return new (Context) VAArgExpr(BuiltinLoc, E, TInfo, RPLoc, T, IsMS);
+  return new (Context) VAArgExpr(BuiltinLoc, E, TInfo, RPLoc, T, VAKind);
 }
 
 ExprResult Sema::ActOnGNUNullExpr(SourceLocation TokenLoc) {

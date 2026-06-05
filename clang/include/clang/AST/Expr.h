@@ -4958,28 +4958,37 @@ public:
 
 /// Represents a call to the builtin function \c __builtin_va_arg.
 class VAArgExpr : public Expr {
+public:
+  enum VarArgKind { VA_Std = 0, VA_MS, VA_ZOS };
+
+private:
   Stmt *Val;
-  llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfo;
+  llvm::PointerIntPair<TypeSourceInfo *, 2, VarArgKind> TInfo;
   SourceLocation BuiltinLoc, RParenLoc;
 public:
   VAArgExpr(SourceLocation BLoc, Expr *e, TypeSourceInfo *TInfo,
-            SourceLocation RPLoc, QualType t, bool IsMS)
+            SourceLocation RPLoc, QualType t, VarArgKind VaKind)
       : Expr(VAArgExprClass, t, VK_PRValue, OK_Ordinary), Val(e),
-        TInfo(TInfo, IsMS), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
+        TInfo(TInfo, VaKind), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
     setDependence(computeDependence(this));
   }
 
   /// Create an empty __builtin_va_arg expression.
   explicit VAArgExpr(EmptyShell Empty)
-      : Expr(VAArgExprClass, Empty), Val(nullptr), TInfo(nullptr, false) {}
+      : Expr(VAArgExprClass, Empty), Val(nullptr), TInfo(nullptr, VA_Std) {}
 
   const Expr *getSubExpr() const { return cast<Expr>(Val); }
   Expr *getSubExpr() { return cast<Expr>(Val); }
   void setSubExpr(Expr *E) { Val = E; }
 
+  VarArgKind getVarargABI() { return TInfo.getInt(); }
+  void setVarargABI(int Kind) { TInfo.setInt(static_cast<VarArgKind>(Kind)); }
+
   /// Returns whether this is really a Win64 ABI va_arg expression.
-  bool isMicrosoftABI() const { return TInfo.getInt(); }
-  void setIsMicrosoftABI(bool IsMS) { TInfo.setInt(IsMS); }
+  bool isMicrosoftABI() const { return TInfo.getInt() == VA_MS; }
+
+  /// Returns whether this is really a z/OS ABI va_arg expression.
+  bool isZOSABI() const { return TInfo.getInt() == VA_ZOS; }
 
   TypeSourceInfo *getWrittenTypeInfo() const { return TInfo.getPointer(); }
   void setWrittenTypeInfo(TypeSourceInfo *TI) { TInfo.setPointer(TI); }

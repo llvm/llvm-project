@@ -6976,6 +6976,36 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateStore(ArgPtr, DestAddr));
   }
 
+  case Builtin::BI__builtin_zos_va_start:
+  case Builtin::BI__builtin_zos_va_end: {
+    // The va_list is an array with 2 elements, called curr and next.
+    // Element curr is set to 0. For builtin_zos_va_start, next is initialized
+    // with a call to @llvm.va_start. Otherwise, next is passed to @llvm.va_end.
+    Address VAList = EmitZOSVAListRef(E->getArg(0));
+    llvm::Type *VAListTy = ConvertType(getContext().getBuiltinZOSVaListType());
+    VAList = VAList.withElementType(VAListTy);
+    Address Curr = Builder.CreateConstArrayGEP(VAList, 0, "curr");
+    Value *Zero = llvm::Constant::getNullValue(VoidPtrTy);
+    Builder.CreateStore(Zero, Curr);
+    Address Next = Builder.CreateConstArrayGEP(VAList, 1, "next");
+    return RValue::get(
+        EmitVAStartEnd(Next.emitRawPointer(*this),
+                       BuiltinID == Builtin::BI__builtin_zos_va_start));
+  }
+  case Builtin::BI__builtin_zos_va_copy: {
+    // Lower this manually because later  can't reliably determine the type.
+    Address Dest = EmitZOSVAListRef(E->getArg(0));
+    Address Src = EmitZOSVAListRef(E->getArg(1));
+    // Value *SizeVal = llvm::ConstantInt::get(Int64Ty, 2 *
+    // getPointerSize().getQuantity());
+    llvm::Type *VAListTy = ConvertType(getContext().getBuiltinZOSVaListType());
+    uint64_t SizeBytes =
+        CGM.getDataLayout().getTypeAllocSize(VAListTy).getFixedValue();
+    Value *SizeVal = llvm::ConstantInt::get(Int64Ty, SizeBytes);
+    Builder.CreateMemCpy(Dest, Src, SizeVal, false);
+    return RValue::get(Dest.emitRawPointer(*this));
+  }
+
   case Builtin::BI__builtin_get_device_side_mangled_name: {
     auto Name = CGM.getCUDARuntime().getDeviceSideName(
         cast<DeclRefExpr>(E->getArg(0)->IgnoreImpCasts())->getDecl());
