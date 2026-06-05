@@ -854,16 +854,16 @@ struct GraphTraits<ArgumentGraph *> : public GraphTraits<ArgumentGraphNode *> {
   static ChildIteratorType nodes_end(ArgumentGraph *AG) { return AG->end(); }
 };
 
-struct ArgProperties {
+struct ArgAccessProperties {
   bool IsRead = false;
   bool IsWrite = false;
   bool IsFree = false;
 
-  static ArgProperties all() { return {true, true, true}; }
+  static ArgAccessProperties all() { return {true, true, true}; }
 
   bool hasAll() const { return IsRead && IsWrite && IsFree; }
 
-  ArgProperties &operator|=(const ArgProperties &Other) {
+  ArgAccessProperties &operator|=(const ArgAccessProperties &Other) {
     IsRead |= Other.IsRead;
     IsWrite |= Other.IsWrite;
     IsFree |= Other.IsFree;
@@ -874,7 +874,7 @@ struct ArgProperties {
 } // end namespace llvm
 
 /// Returns Attribute::None, Attribute::ReadOnly or Attribute::ReadNone.
-static ArgProperties
+static ArgAccessProperties
 determinePointerAccessAttrs(Argument *A,
                             const SmallPtrSet<Argument *, 8> &SCCNodes) {
   SmallVector<Use *, 32> Worklist;
@@ -882,9 +882,9 @@ determinePointerAccessAttrs(Argument *A,
 
   // inalloca arguments are always clobbered by the call.
   if (A->hasInAllocaAttr() || A->hasPreallocatedAttr())
-    return ArgProperties::all();
+    return ArgAccessProperties::all();
 
-  ArgProperties Props;
+  ArgAccessProperties Props;
 
   for (Use &U : A->uses()) {
     Visited.insert(&U);
@@ -912,7 +912,7 @@ determinePointerAccessAttrs(Argument *A,
     if (capturesAnyProvenance(Info.UseCC)) {
       // Handle indirect access via captured provenance.
       if (!capturesReadProvenanceOnly(Info.UseCC))
-        return ArgProperties::all();
+        return ArgAccessProperties::all();
       Props.IsRead = true;
     }
 
@@ -1071,31 +1071,29 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
   return Changed;
 }
 
-static bool addAccessAttrs(Argument *A, ArgProperties Props) {
+static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   assert(A && "Argument must not be null.");
 
   bool Changed = false;
-  if (!Props.IsFree) {
-    if (!A->hasAttribute(Attribute::NoFree)) {
-      ++NumNoFreeArg;
-      A->addAttr(Attribute::NoFree);
-      Changed = true;
-    }
+  if (!Props.IsFree && !A->hasAttribute(Attribute::NoFree)) {
+    ++NumNoFreeArg;
+    A->addAttr(Attribute::NoFree);
+    Changed = true;
   }
 
   if (Props.IsRead && Props.IsWrite)
     return Changed;
 
-  Attribute::AttrKind R;
+  Attribute::AttrKind Attr;
   if (Props.IsRead)
-    R = Attribute::ReadOnly;
+    Attr = Attribute::ReadOnly;
   else if (Props.IsWrite)
-    R = Attribute::WriteOnly;
+    Attr = Attribute::WriteOnly;
   else
-    R = Attribute::ReadNone;
+    Attr = Attribute::ReadNone;
 
   // If the argument already has the attribute, nothing needs to be done.
-  if (A->hasAttribute(R))
+  if (A->hasAttribute(Attr))
     return false;
 
   // Otherwise, remove potentially conflicting attribute, add the new one,
@@ -1104,12 +1102,12 @@ static bool addAccessAttrs(Argument *A, ArgProperties Props) {
   A->removeAttr(Attribute::ReadOnly);
   A->removeAttr(Attribute::ReadNone);
   // Remove conflicting writable attribute.
-  if (R == Attribute::ReadNone || R == Attribute::ReadOnly)
+  if (Attr == Attribute::ReadNone || Attr == Attribute::ReadOnly)
     A->removeAttr(Attribute::Writable);
-  A->addAttr(R);
-  if (R == Attribute::ReadOnly)
+  A->addAttr(Attr);
+  if (Attr == Attribute::ReadOnly)
     ++NumReadOnlyArg;
-  else if (R == Attribute::WriteOnly)
+  else if (Attr == Attribute::WriteOnly)
     ++NumWriteOnlyArg;
   else
     ++NumReadNoneArg;
@@ -1409,7 +1407,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     // Also, a readonly/readnone pointer may be returned, but returning a
     // pointer is capturing it.
 
-    ArgProperties Props;
+    ArgAccessProperties Props;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       Argument *A = N->Definition;
       Props |= determinePointerAccessAttrs(A, ArgumentSCCNodes);
