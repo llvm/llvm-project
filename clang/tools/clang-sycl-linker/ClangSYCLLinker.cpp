@@ -240,7 +240,6 @@ getInput(const ArgList &Args) {
   Inputs.ForcedUndefs = ForcedUndefs;
   Inputs.Root = "";
 
-  // Resolve archive members (no fat binary predicate for SYCL)
   Expected<offloading::ResolvedInputs> ResolvedOrErr =
       offloading::resolveArchiveMembers(Inputs);
   if (!ResolvedOrErr)
