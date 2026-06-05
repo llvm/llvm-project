@@ -474,11 +474,9 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
 }
 
 static Messages getNonTaintMsgs(const ASTContext &ACtx,
-                                const MemSpaceRegion *Space,
-                                const SubRegion *Region, NonLoc Offset,
+                                std::string RegName, NonLoc Offset,
                                 std::optional<NonLoc> Extent, SVal Location,
                                 BadOffsetKind Problem) {
-  std::string RegName = getRegionName(Space, Region);
   const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
   assert(EReg && "this checker only handles element access");
   QualType ElemType = EReg->getElementType();
@@ -533,10 +531,8 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx,
           std::string(Buf)};
 }
 
-static Messages getTaintMsgs(const MemSpaceRegion *Space,
-                             const SubRegion *Region, const char *OffsetName,
+static Messages getTaintMsgs(std::string RegName, const char *OffsetName,
                              bool AlsoMentionUnderflow) {
-  std::string RegName = getRegionName(Space, Region);
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be {2}too large",
@@ -658,6 +654,8 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
 
   BoundsCheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
+  std::string RN = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
+
   switch (Res.getKind()) {
   case BoundsCheckResult::Kind::Paradox:
     // The current state is paradoxical (due to bad modeling of casts we
@@ -669,7 +667,6 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   case BoundsCheckResult::Kind::Valid: {
     const NoteTag *Tag = nullptr;
     if (Res.hasAssumption()) {
-      std::string RN = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
       SizeUnit SU = SizeUnit::forExpr(E, C);
       Tag = C.getNoteTag(
           [Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
@@ -690,14 +687,14 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         OffsetName = "index";
 
     Messages Msgs =
-        getTaintMsgs(Space, Reg, OffsetName,
+        getTaintMsgs(RN, OffsetName,
                      /*AlsoMentionUnderflow=*/Res.assumedNonNegative());
     reportOOB(C, Res.getState(), Msgs, ByteOffset, Extent,
               /*IsTaintBug=*/true);
     return;
   }
   default: {
-    Messages Msgs = getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
+    Messages Msgs = getNonTaintMsgs(C.getASTContext(), RN, ByteOffset,
                                     Extent, Location, *Res.getBadOffsetKind());
     reportOOB(C, Res.getState(), Msgs, ByteOffset, Extent);
     return;
