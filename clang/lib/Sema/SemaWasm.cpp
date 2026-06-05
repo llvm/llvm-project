@@ -317,20 +317,33 @@ bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
 
 WebAssemblyImportModuleAttr *
 SemaWasm::mergeImportModuleAttr(Decl *D,
-                                const WebAssemblyImportModuleAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-
-  if (const auto *ExistingAttr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
-    if (ExistingAttr->getImportModule() == AL.getImportModule())
+                                 const WebAssemblyImportModuleAttr &AL) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (const auto *ExistingAttr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
+      if (ExistingAttr->getImportModule() == AL.getImportModule())
+        return nullptr;
+      Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
+          << 0 << ExistingAttr->getImportModule() << AL.getImportModule();
+      Diag(AL.getLoc(), diag::note_previous_attribute);
       return nullptr;
-    Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
-        << 0 << ExistingAttr->getImportModule() << AL.getImportModule();
-    Diag(AL.getLoc(), diag::note_previous_attribute);
-    return nullptr;
-  }
-  if (FD->hasBody()) {
-    Diag(AL.getLoc(), diag::warn_import_on_definition) << 0;
-    return nullptr;
+    }
+    if (FD->hasBody()) {
+      Diag(AL.getLoc(), diag::warn_import_on_definition) << 0 << 0;
+      return nullptr;
+    }
+  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (const auto *ExistingAttr = VD->getAttr<WebAssemblyImportModuleAttr>()) {
+      if (ExistingAttr->getImportModule() == AL.getImportModule())
+        return nullptr;
+      Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
+          << 0 << ExistingAttr->getImportModule() << AL.getImportModule();
+      Diag(AL.getLoc(), diag::note_previous_attribute);
+      return nullptr;
+    }
+    if (VD->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
+      Diag(AL.getLoc(), diag::warn_import_on_definition) << 0 << 1;
+      return nullptr;
+    }
   }
   return ::new (getASTContext())
       WebAssemblyImportModuleAttr(getASTContext(), AL, AL.getImportModule());
@@ -338,22 +351,60 @@ SemaWasm::mergeImportModuleAttr(Decl *D,
 
 WebAssemblyImportNameAttr *
 SemaWasm::mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-
-  if (const auto *ExistingAttr = FD->getAttr<WebAssemblyImportNameAttr>()) {
-    if (ExistingAttr->getImportName() == AL.getImportName())
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (const auto *ExistingAttr = FD->getAttr<WebAssemblyImportNameAttr>()) {
+      if (ExistingAttr->getImportName() == AL.getImportName())
+        return nullptr;
+      Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
+          << 1 << ExistingAttr->getImportName() << AL.getImportName();
+      Diag(AL.getLoc(), diag::note_previous_attribute);
       return nullptr;
-    Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
-        << 1 << ExistingAttr->getImportName() << AL.getImportName();
-    Diag(AL.getLoc(), diag::note_previous_attribute);
-    return nullptr;
-  }
-  if (FD->hasBody()) {
-    Diag(AL.getLoc(), diag::warn_import_on_definition) << 1;
-    return nullptr;
+    }
+    if (FD->hasBody()) {
+      Diag(AL.getLoc(), diag::warn_import_on_definition) << 1 << 0;
+      return nullptr;
+    }
+  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (const auto *ExistingAttr = VD->getAttr<WebAssemblyImportNameAttr>()) {
+      if (ExistingAttr->getImportName() == AL.getImportName())
+        return nullptr;
+      Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
+          << 1 << ExistingAttr->getImportName() << AL.getImportName();
+      Diag(AL.getLoc(), diag::note_previous_attribute);
+      return nullptr;
+    }
+    if (VD->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
+      Diag(AL.getLoc(), diag::warn_import_on_definition) << 1 << 1;
+      return nullptr;
+    }
   }
   return ::new (getASTContext())
       WebAssemblyImportNameAttr(getASTContext(), AL, AL.getImportName());
+}
+
+WebAssemblyExportNameAttr *
+SemaWasm::mergeExportNameAttr(Decl *D, const WebAssemblyExportNameAttr &AL) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (const auto *ExistingAttr = FD->getAttr<WebAssemblyExportNameAttr>()) {
+      if (ExistingAttr->getExportName() == AL.getExportName())
+        return nullptr;
+      Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
+          << 2 << ExistingAttr->getExportName() << AL.getExportName();
+      Diag(AL.getLoc(), diag::note_previous_attribute);
+      return nullptr;
+    }
+  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (const auto *ExistingAttr = VD->getAttr<WebAssemblyExportNameAttr>()) {
+      if (ExistingAttr->getExportName() == AL.getExportName())
+        return nullptr;
+      Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import)
+          << 2 << ExistingAttr->getExportName() << AL.getExportName();
+      Diag(AL.getLoc(), diag::note_previous_attribute);
+      return nullptr;
+    }
+  }
+  return ::new (getASTContext())
+      WebAssemblyExportNameAttr(getASTContext(), AL, AL.getExportName());
 }
 
 void SemaWasm::handleWebAssemblyImportModuleAttr(Decl *D,
