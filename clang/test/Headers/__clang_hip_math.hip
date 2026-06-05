@@ -3878,7 +3878,7 @@ extern "C" __device__ double test_log2(double x) {
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 // DEFAULT-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // DEFAULT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// DEFAULT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// DEFAULT-NEXT:    [[TMP3:%.*]] = sitofp contract i32 [[TMP2]] to float
 // DEFAULT-NEXT:    [[TMP4:%.*]] = tail call contract float @llvm.fabs.f32(float [[X]])
 // DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp contract one float [[TMP4]], +inf
 // DEFAULT-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
@@ -3892,7 +3892,7 @@ extern "C" __device__ double test_log2(double x) {
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float nofpclass(nan inf) [[X]])
 // FINITEONLY-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // FINITEONLY-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// FINITEONLY-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// FINITEONLY-NEXT:    [[TMP3:%.*]] = sitofp nnan ninf contract i32 [[TMP2]] to float
 // FINITEONLY-NEXT:    ret float [[TMP3]]
 //
 // APPROX-LABEL: define dso_local float @test_logbf(
@@ -3901,7 +3901,7 @@ extern "C" __device__ double test_log2(double x) {
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 // APPROX-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // APPROX-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// APPROX-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// APPROX-NEXT:    [[TMP3:%.*]] = sitofp contract i32 [[TMP2]] to float
 // APPROX-NEXT:    [[TMP4:%.*]] = tail call contract float @llvm.fabs.f32(float [[X]])
 // APPROX-NEXT:    [[TMP5:%.*]] = fcmp contract one float [[TMP4]], +inf
 // APPROX-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
@@ -3915,7 +3915,7 @@ extern "C" __device__ double test_log2(double x) {
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 // NCRDIV-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // NCRDIV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// NCRDIV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// NCRDIV-NEXT:    [[TMP3:%.*]] = sitofp contract i32 [[TMP2]] to float
 // NCRDIV-NEXT:    [[TMP4:%.*]] = tail call contract float @llvm.fabs.f32(float [[X]])
 // NCRDIV-NEXT:    [[TMP5:%.*]] = fcmp contract one float [[TMP4]], +inf
 // NCRDIV-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
@@ -3929,7 +3929,7 @@ extern "C" __device__ double test_log2(double x) {
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = sitofp contract i32 [[TMP2]] to float
 // AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = tail call contract addrspace(4) float @llvm.fabs.f32(float [[X]])
 // AMDGCNSPIRV-NEXT:    [[TMP5:%.*]] = fcmp contract one float [[TMP4]], +inf
 // AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
@@ -3947,7 +3947,7 @@ extern "C" __device__ float test_logbf(float x) {
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 // DEFAULT-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
 // DEFAULT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// DEFAULT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// DEFAULT-NEXT:    [[TMP3:%.*]] = sitofp contract i32 [[TMP2]] to double
 // DEFAULT-NEXT:    [[TMP4:%.*]] = tail call contract double @llvm.fabs.f64(double [[X]])
 // DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp contract one double [[TMP4]], +inf
 // DEFAULT-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
@@ -3961,7 +3961,7 @@ extern "C" __device__ float test_logbf(float x) {
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double nofpclass(nan inf) [[X]])
 // FINITEONLY-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
 // FINITEONLY-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// FINITEONLY-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// FINITEONLY-NEXT:    [[TMP3:%.*]] = sitofp nnan ninf contract i32 [[TMP2]] to double
 // FINITEONLY-NEXT:    ret double [[TMP3]]
 //
 // APPROX-LABEL: define dso_local double @test_logb(
@@ -3970,7 +3970,7 @@ extern "C" __device__ float test_logbf(float x) {
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 // APPROX-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
 // APPROX-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// APPROX-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// APPROX-NEXT:    [[TMP3:%.*]] = sitofp contract i32 [[TMP2]] to double
 // APPROX-NEXT:    [[TMP4:%.*]] = tail call contract double @llvm.fabs.f64(double [[X]])
 // APPROX-NEXT:    [[TMP5:%.*]] = fcmp contract one double [[TMP4]], +inf
 // APPROX-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
@@ -3984,7 +3984,7 @@ extern "C" __device__ float test_logbf(float x) {
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 // NCRDIV-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
 // NCRDIV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// NCRDIV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// NCRDIV-NEXT:    [[TMP3:%.*]] = sitofp contract i32 [[TMP2]] to double
 // NCRDIV-NEXT:    [[TMP4:%.*]] = tail call contract double @llvm.fabs.f64(double [[X]])
 // NCRDIV-NEXT:    [[TMP5:%.*]] = fcmp contract one double [[TMP4]], +inf
 // NCRDIV-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
@@ -3998,7 +3998,7 @@ extern "C" __device__ float test_logbf(float x) {
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call addrspace(4) { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = sitofp contract i32 [[TMP2]] to double
 // AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = tail call contract addrspace(4) double @llvm.fabs.f64(double [[X]])
 // AMDGCNSPIRV-NEXT:    [[TMP5:%.*]] = fcmp contract one double [[TMP4]], +inf
 // AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = select contract i1 [[TMP5]], double [[TMP3]], double [[TMP4]]

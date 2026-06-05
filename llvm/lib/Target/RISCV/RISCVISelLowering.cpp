@@ -580,11 +580,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::USUBSAT, VTs, Legal);
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
+    setOperationAction(ISD::BITREVERSE, VTs, Legal);
     for (MVT VT : VTs) {
       if (VT != MVT::v2i32)
         setOperationAction({ISD::ABS, ISD::ABDS, ISD::ABDU}, VT, Legal);
-      if (VT.getVectorElementType() != MVT::i8)
+      if (VT.getVectorElementType() != MVT::i8) {
         setOperationAction(ISD::SSHLSAT, VT, Custom);
+        setOperationAction(ISD::BSWAP, VT, Legal);
+      }
     }
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BUILD_VECTOR, VTs, Legal);
@@ -637,6 +640,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, P64VecVTs, Custom);
       setOperationAction(ISD::SSHLSAT, {MVT::v2i32, MVT::v4i16}, Custom);
+      setOperationAction(ISD::BSWAP, MVT::v4i16, Legal);
+      setOperationAction(ISD::BITREVERSE, {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::BUILD_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
@@ -16359,6 +16364,38 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNegative(N0.getOperand(0), DL, VT);
 }
 
+// Fold (add X, (mulhs X, C)) -> (mulhsu X, C) if C is negative. This occurs
+// in the expansion of sdiv i32 X, 7 using magic multiply.
+//
+// mulhs returns the hi from X * C = hi * 2^32 + lo.
+//
+// Since C<0, u(C) as an unsigned constant is 2^32 + C = u(C).
+// mulhsu computes
+//  X * u(C0) = X * (C + 2^32)
+//            = X * 2^32 + C * X // C * X is the same as mulhs
+//            = X * 2^32 + hi * 2^32 + lo
+//            = (X + hi) * 2^32 + lo
+// So mulhsu computes (X + hi).
+// TODO: Support vectors.
+static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
+                              const RISCVSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!Subtarget.hasStdExtZmmul() || VT != Subtarget.getXLenVT())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  SDValue X, Mulh;
+  APInt C;
+  if (!sd_match(N,
+                m_Add(m_Value(X),
+                      m_OneUse(m_Value(Mulh, m_BinOp(ISD::MULHS, m_Deferred(X),
+                                                     m_ConstInt(C)))))) ||
+      !C.isNegative())
+    return SDValue();
+
+  return DAG.getNode(RISCVISD::MULHSU, SDLoc(N), VT, X, Mulh.getOperand(1));
+}
+
 static SDValue performADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -16378,6 +16415,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
+  if (SDValue V = combineAddMulh(N, DAG, Subtarget))
     return V;
 
   // fold (add (select lhs, rhs, cc, 0, y), x) ->
@@ -16631,7 +16670,8 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, VT, Min);
 }
 
-// Handle P extension truncate patterns:
+// Handle P extension truncate patterns, both on packed vectors and on scalar
+// i32 (the RV32-only asub/asubu and mulhr* instructions):
 // ASUB/ASUBU: (trunc (srl (sub ([s|z]ext a), ([s|z]ext b)), 1))
 // MULHSU: (trunc (srl (mul (sext a), (zext b)), EltBits))
 // MULHR*: (trunc (srl (add (mul (sext a), (zext b)), round_const), EltBits))
@@ -16643,21 +16683,10 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   if (VT != MVT::v4i16 && VT != MVT::v2i16 && VT != MVT::v8i8 &&
-      VT != MVT::v4i8 && VT != MVT::v2i32)
+      VT != MVT::v4i8 && VT != MVT::v2i32 && VT != MVT::i32)
     return SDValue();
 
-  // Check if shift amount is a splat constant
-  SDValue ShAmt = N0.getOperand(1);
-  if (ShAmt.getOpcode() != ISD::BUILD_VECTOR)
-    return SDValue();
-
-  BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(ShAmt.getNode());
-  if (!BV)
-    return SDValue();
-  SDValue Splat = BV->getSplatValue();
-  if (!Splat)
-    return SDValue();
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat);
+  ConstantSDNode *C = isConstOrConstSplat(N0.getOperand(1));
   if (!C)
     return SDValue();
 
@@ -16668,17 +16697,11 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
   // Check for rounding pattern: (add (mul ...), round_const)
   bool IsRounding = false;
   if (Op.getOpcode() == ISD::ADD && (EltBits == 16 || EltBits == 32)) {
-    SDValue AddRHS = Op.getOperand(1);
-    if (auto *RndBV = dyn_cast<BuildVectorSDNode>(AddRHS.getNode())) {
-      if (auto *RndC =
-              dyn_cast_or_null<ConstantSDNode>(RndBV->getSplatValue())) {
-        uint64_t ExpectedRnd = 1ULL << (EltBits - 1);
-        if (RndC->getZExtValue() == ExpectedRnd &&
-            Op.getOperand(0).getOpcode() == ISD::MUL) {
-          Op = Op.getOperand(0);
-          IsRounding = true;
-        }
-      }
+    ConstantSDNode *RndC = isConstOrConstSplat(Op.getOperand(1));
+    if (RndC && RndC->getZExtValue() == (1ULL << (EltBits - 1)) &&
+        Op.getOperand(0).getOpcode() == ISD::MUL) {
+      Op = Op.getOperand(0);
+      IsRounding = true;
     }
   }
 
@@ -16738,6 +16761,9 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
         return SDValue();
       }
     } else {
+      // Scalar mulhsu is handled elsewhere, only match the packed MULHSU here.
+      if (!VT.isVector())
+        return SDValue();
       if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
         Opc = RISCVISD::MULHSU;
         // commuted case
@@ -16757,7 +16783,9 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  if (VT.isFixedLengthVector() && Subtarget.hasStdExtP())
+  // P truncate patterns: packed vectors, plus RV32-only scalar i32.
+  if (Subtarget.hasStdExtP() &&
+      (VT.isFixedLengthVector() || (VT == MVT::i32 && !Subtarget.is64Bit())))
     return combinePExtTruncate(N, DAG, Subtarget);
 
   // Pre-promote (i1 (truncate (srl X, Y))) on RV64 with Zbs without zero

@@ -1776,7 +1776,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // SVE supports truncating stores of 64 and 128-bit vectors
     setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
     setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
-    setTruncStoreAction(MVT::v2i64, MVT::v2i32, Custom);
     setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
@@ -3759,13 +3758,13 @@ static bool isLegalArithImmed(uint64_t C) {
   return IsLegal;
 }
 
-bool isLegalCmpImmed(APInt C) {
+bool isLegalCmpImmed(const APInt &C) {
   // Works for negative immediates too, as it can be written as an ADDS
   // instruction with a negated immediate.
   return isLegalArithImmed(C.abs().getZExtValue());
 }
 
-unsigned numberOfInstrToLoadImm(APInt C) {
+unsigned numberOfInstrToLoadImm(const APInt &C) {
   uint64_t Imm = C.getZExtValue();
   SmallVector<AArch64_IMM::ImmInsnModel> Insn;
   AArch64_IMM::expandMOVImm(Imm, 32, Insn);
@@ -4230,7 +4229,8 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
 // emitComparison() converts comparison with one or negative one to comparison
 // with 0. Note that this only works for signed comparisons because of how ANDS
 // works.
-static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
+static bool shouldBeAdjustedToZero(SDValue LHS, const APInt &C,
+                                   ISD::CondCode &CC) {
   // Only works for ANDS and AND.
   if (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != AArch64ISD::ANDS)
     return false;
@@ -13136,18 +13136,22 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
 #define GET_REGISTER_MATCHER
 #include "AArch64GenAsmMatcher.inc"
 
+Register AArch64TargetLowering::matchRegisterName(StringRef RegName) const {
+  return MatchRegisterName(RegName);
+}
+
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register AArch64TargetLowering::
 getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const {
-  Register Reg = MatchRegisterName(RegName);
-  if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
-    const AArch64RegisterInfo *MRI = Subtarget->getRegisterInfo();
-    unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
-    if (!Subtarget->isXRegisterReserved(DwarfRegNum) &&
-        !MRI->isReservedReg(MF, Reg))
-      Reg = Register();
-  }
+  Register Reg = matchRegisterName(RegName);
+  // llvm.read_register / llvm.write_register instrisinc handled through the
+  // generic SelectionDAG path can only access a register that is not
+  // allocatable: reading one would use an undefined physical register, and its
+  // contents are not meaningful. Reject anything allocatable here so the
+  // generic path diagnoses rather than emitting invalid code.
+  if (Reg && !Subtarget->getRegisterInfo()->isReservedReg(MF, Reg))
+    Reg = Register();
   return Reg;
 }
 
@@ -28461,7 +28465,7 @@ static SDValue performDUPCombine(SDNode *N,
       EVT ElemVT = VT.getVectorElementType();
       if ((ExtType == ISD::EXTLOAD || ExtType == ISD::ZEXTLOAD) &&
           (MemVT == MVT::i8 || MemVT == MVT::i16 || MemVT == MVT::i32) &&
-          ElemVT != MemVT && LD->hasOneUse()) {
+          ElemVT != MemVT && Op.hasOneUse()) {
         EVT Vec128VT = EVT::getVectorVT(*DCI.DAG.getContext(), ElemVT,
                                         128 / ElemVT.getSizeInBits());
         SDValue ScalarToVec =

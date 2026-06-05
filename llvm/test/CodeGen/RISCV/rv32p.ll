@@ -902,6 +902,88 @@ define i32 @aaddu2_i32(i32 %a, i32 %b) {
   ret i32 %res
 }
 
+define i32 @asub_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: asub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asub a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %sub = sub i64 %ext.a, %ext.b
+  %shift = ashr i64 %sub, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @asubu_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: asubu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %sub = sub i64 %ext.a, %ext.b
+  %shift = lshr i64 %sub, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhr_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhr a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhru_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhru_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhru a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhrsu_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhrsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhrsu_i32_commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhrsu_i32_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a1, a0
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
 define i64 @wmul_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: wmul_i32:
 ; CHECK:       # %bb.0:
