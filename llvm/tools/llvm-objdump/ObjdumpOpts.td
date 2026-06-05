@@ -249,7 +249,7 @@ defm prefix : Eq<"prefix", "Add prefix to absolute paths">,
 def source_dir : Separate<["--"], "source-dir">,
   MetaVarName<"<dir>">,
   HelpText<"Add a directory to the front of the source search path when "
-           "looking up source files. May be specified multiple times.">;
+           "looking up source files. May be specified multiple times">;
 def : Separate<["-"], "source-dir">, Alias<source_dir>;
 
 def substitute_path : MultiArg<["--"], "substitute-path", 2>,

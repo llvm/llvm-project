@@ -39,6 +39,8 @@ combined with other commands:
 
 .. option:: --disassemble-symbols=<symbol1[,symbol2,...]>
 
+.. option:: --disassemble=symbol1 --disassemble=symbol2 ...
+
   Disassemble only the specified symbols. Takes demangled symbol names when
   :option:`--demangle` is specified, otherwise takes mangled symbol names.
   Implies :option:`--disassemble`.
@@ -244,8 +246,6 @@ OPTIONS
   the path. This option may be specified multiple times; rules are evaluated in
   the order given and the first matching rule is used, as in GDB
   ``set substitute-path``.
-
-.. option:: --source-dir <dir>
 
 .. option:: -source-dir <dir>
 

@@ -1,0 +1,100 @@
+;; Test --substitute-path and --source-dir with --source and --line-numbers.
+;;
+;; The object records source paths under /wrong/Inputs, but the source file
+;; lives in this test's Inputs directory. Without path remapping, --source
+;; cannot load the file from disk.
+;;
+;; --source-dir: one directory per flag; later flags on the command line are
+;; searched before earlier ones.
+;;
+;; --substitute-path: rules are tried in command-line order; the first match
+;; wins (same as GDB set substitute-path).
+
+; RUN: sed -e "s,SRC_COMPDIR,/wrong/Inputs,g" %p/Inputs/source-interleave.ll > %t.ll
+; RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
+; REQUIRES: x86-registered-target
+
+; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers %t.o | FileCheck %s --check-prefix=LINE
+; RUN: llvm-objdump --no-print-imm-hex -d --source %t.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
+
+; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong %/p %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+; RUN: llvm-objdump --no-print-imm-hex -d --source --source-dir %/p/Inputs %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wron %/p %t.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
+
+; First --source-dir misses (no source file under %/p alone); second finds
+; Inputs/source-interleave-x86_64.c via basename lookup.
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --source-dir %/p/Inputs --source-dir %/p %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+; More specific rule listed first wins (GDB example: /wrong/Inputs before /wrong).
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path /wrong/Inputs %/p/Inputs \
+; RUN:   --substitute-path /wrong /nowhere %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+; Broader rule listed first matches; later rule is not applied (miss on remapped path).
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path /wrong /nowhere \
+; RUN:   --substitute-path /wrong/Inputs %/p/Inputs %t.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING-SUBST -DFILE=%t.o
+
+; First substitute rule is a no-match; second matching rule remaps the path.
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path /wron /nowhere \
+; RUN:   --substitute-path /wrong %/p %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+; Empty <to> strips the matched prefix (GDB allows this); use --source-dir to
+; resolve the resulting relative path.
+; RUN: echo '--substitute-path' > %t-empty-to.rsp
+; RUN: echo '/wrong' >> %t-empty-to.rsp
+; RUN: echo '""' >> %t-empty-to.rsp
+; RUN: llvm-objdump --no-print-imm-hex -d --source @%t-empty-to.rsp \
+; RUN:   --source-dir %/p/Inputs %t.o | FileCheck %s --check-prefix=SOURCE
+
+; Empty <to> without --source-dir: relative path is not resolved; warn once, no crash.
+; RUN: llvm-objdump --no-print-imm-hex -d --source @%t-empty-to.rsp %t.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-EMPTY-TO -DFILE=%t.o
+
+; Empty <from> is rejected (use a response file so the shell does not drop "").
+; RUN: echo '--substitute-path' > %t-empty-from.rsp
+; RUN: echo '""' >> %t-empty-from.rsp
+; RUN: echo '%/p' >> %t-empty-from.rsp
+; RUN: not llvm-objdump @%t-empty-from.rsp %t.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=SUBST-ERR-FROM
+
+; SUBST-ERR-FROM: llvm-objdump{{.*}}: error: --substitute-path: <from> must not be empty
+
+; LINE: <foo>:
+; LINE-NEXT: ; foo():
+; LINE-NEXT: ; {{.*}}source-interleave-x86_64.c:2
+; LINE-NEXT: pushq
+; LINE: ; {{.*}}source-interleave-x86_64.c:3
+; LINE-NEXT: movq
+; LINE-NEXT: movl
+; LINE-NEXT: popq
+; LINE-NEXT: retq
+
+; SOURCE-MISSING: warning: '[[FILE]]': failed to find source {{[/\\]}}wrong{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c
+
+; SOURCE-MISSING-SUBST: warning: '[[FILE]]': failed to find source {{[/\\]}}nowhere{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c
+
+; SOURCE-EMPTY-TO: <foo>:
+; SOURCE-EMPTY-TO: warning: '[[FILE]]': failed to find source {{.*}}Inputs{{[/\\]}}source-interleave-x86_64.c
+; SOURCE-EMPTY-TO: pushq
+; SOURCE-EMPTY-TO-NOT: ; int foo
+
+; SOURCE: <foo>:
+; SOURCE-NEXT: ; int foo() {
+; SOURCE-NEXT: pushq
+; SOURCE: ; return a;
+; SOURCE-NEXT: movq
+; SOURCE-NEXT: movl
+; SOURCE-NEXT: popq
+; SOURCE-NEXT: retq
