@@ -15,6 +15,19 @@ define <2 x float> @extract_subvector_with_offset(ptr %arg0) {
   ret <2 x float> %v2
 }
 
+define <2 x float> @large_offset_without_signed_overflow(ptr %p) {
+; CHECK-LABEL: define <2 x float> @large_offset_without_signed_overflow(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 -9223372036854775808
+; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %q = getelementptr i8, ptr %p, i64 9223372036854775800
+  %v = load <4 x float>, ptr %q, align 8
+  %r = shufflevector <4 x float> %v, <4 x float> poison, <2 x i32> <i32 2, i32 3>
+  ret <2 x float> %r
+}
+
 ; GEP base type i32: 10 * sizeof(i32) = 40 bytes.
 define <2 x float> @extract_subvector_with_offset_gep_i32(ptr %arg0) {
 ; CHECK-LABEL: define <2 x float> @extract_subvector_with_offset_gep_i32(
