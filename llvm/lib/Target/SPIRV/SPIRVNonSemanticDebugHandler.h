@@ -74,7 +74,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // during section 7; section 10 uses getCachedOpStringReg() (lookup only).
   StringMap<MCRegister> OpStringContentCache;
 
-#ifndef NDEBUG
+#ifndef NDEBUG // Only declare the variable for debugging purposes.
   // True after emitNonSemanticDebugStrings() emitted the NSDI OpStrings for
   // this module. SPIRVAsmPrinter calls that before
   // emitNonSemanticGlobalDebugInfo().
