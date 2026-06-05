@@ -1,5 +1,4 @@
-// RUN: %clang_cl /clang:-emit-llvm /pathmap:%p=x:/path-to/ /Fo:%t.bc /c %s
-// RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=CHECK-PREFIX-MAP 
+// RUN: %clang_cl /clang:-emit-llvm /pathmap:%p=x:/path-to/ -clang:-S -clang:-o- -- %s  2>&1 | FileCheck %s --check-prefix=CHECK-PREFIX-MAP 
 
 // CHECK-PREFIX-MAP: c"x:\\path-to\\cl-pathmap.cpp\00"
 
