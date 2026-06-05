@@ -2694,6 +2694,9 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
+  // The new LHS is a different value, so a samesign (or any other
+  // poison-generating) flag asserted about the old operands may no longer hold.
+  ICmp.dropPoisonGeneratingFlags();
 
   Instruction &DeadI = cast<Instruction>(*VariantLHS);
   salvageDebugInfo(DeadI);
@@ -2775,6 +2778,9 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
+  // The new LHS is a different value, so a samesign (or any other
+  // poison-generating) flag asserted about the old operands may no longer hold.
+  ICmp.dropPoisonGeneratingFlags();
 
   Instruction &DeadI = cast<Instruction>(*VariantLHS);
   salvageDebugInfo(DeadI);

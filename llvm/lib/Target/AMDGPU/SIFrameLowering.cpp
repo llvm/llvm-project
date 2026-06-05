@@ -1131,6 +1131,9 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
     IsCalleeSaved.set(CSRegs[I]);
   }
   auto ProcessReg = [&](MCPhysReg Reg) {
+    // VCC is not preserved across calls.
+    if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
+      return;
     if (IsCalleeSaved.test(Reg) || !MRI.isPhysRegModified(Reg))
       return;
     MCRegister DwarfReg = MCRI->getDwarfRegNum(Reg, false);
@@ -1311,6 +1314,11 @@ void SIFrameLowering::emitCSRSpillStores(
         LiveUnits.addReg(Reg);
     }
   }
+
+  // Remove the spill entry created for EXEC. It is needed only for CFISaves in
+  // the prologue.
+  if (TRI.isCFISavedRegsSpillEnabled())
+    FuncInfo->removePrologEpilogSGPRSpillEntry(TRI.getExec());
 }
 
 void SIFrameLowering::emitCSRSpillRestores(
@@ -1879,6 +1887,13 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
     MFI->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 
+  if (TRI->isCFISavedRegsSpillEnabled()) {
+    Register Exec = TRI->getExec();
+    assert(!MFI->hasPrologEpilogSGPRSpillEntry(Exec) &&
+           "Re-reserving spill slot for EXEC");
+    getVGPRSpillLaneOrTempRegister(MF, LiveUnits, Exec, RC);
+  }
+
   // Functions that don't return to the caller don't need to preserve
   // the FP and BP.
   const Function &F = MF.getFunction();
@@ -2217,7 +2232,7 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   // on frames with alignment requirements.
   if (ST.hasFlatScratchEnabled()) {
     if (TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                               SIInstrFlags::FlatScratch))
+                               AMDGPU::FlatAddrSpace::FlatScratch))
       return false;
   } else {
     if (TII->isLegalMUBUFImmOffset(MaxOffset))
