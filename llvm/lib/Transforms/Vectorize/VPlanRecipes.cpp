@@ -1464,6 +1464,47 @@ bool VPInstruction::isSingleScalar() const {
   }
 }
 
+void VPInstruction::addOperand(VPValue *Op) {
+#ifndef NDEBUG
+  Type *Ty = Op->getScalarType();
+  switch (getOpcode()) {
+  case VPInstruction::AnyOf:
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
+    assert(Ty == getOperand(0)->getScalarType() &&
+           "types of operand 0 and new operand must match");
+    break;
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::BuildVector:
+  case VPInstruction::BuildStructVector:
+    assert(Ty == getOperand(0)->getScalarType() &&
+           "appended operand must match operand 0's scalar type");
+    break;
+  case VPInstruction::ExtractLane:
+    assert(Ty == getOperand(1)->getScalarType() &&
+           "appended operand must match operand 1's scalar type");
+    break;
+  case VPInstruction::ExtractLastActive: {
+    // The recipe is constructed with 3 operands (result, data, mask). Extra
+    // operands beyond that are appended in (data, mask) pairs.
+    constexpr unsigned NumInitialOperands = 3;
+    assert(getNumOperands() >= NumInitialOperands &&
+           "ExtractLastActive must have at least the initial 3 operands");
+    bool IsMaskSlot = ((getNumOperands() - NumInitialOperands) & 1u) == 1u;
+    assert((IsMaskSlot ? Ty->isIntegerTy(1)
+                       : Ty == getOperand(1)->getScalarType()) &&
+           "ExtractLastActive expects alternating data/mask operands "
+           "matching operand 1's type and i1, respectively");
+    break;
+  }
+  default:
+    llvm_unreachable("opcode does not support growing the operand list "
+                     "outside of construction");
+  }
+#endif
+  VPUser::addOperand(Op);
+}
+
 void VPInstruction::execute(VPTransformState &State) {
   assert(!isMasked() && "cannot execute masked VPInstruction");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
@@ -3056,7 +3097,7 @@ void VPVectorEndPointerRecipe::materializeOffset(unsigned Part) {
   VPValue *Offset = Builder.createAdd(
       Offset0,
       Builder.createOverflowingOp(Instruction::Mul, {PartxStride, VF}));
-  addOperand(Offset);
+  addOffset(Offset);
 }
 
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
