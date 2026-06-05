@@ -5078,12 +5078,11 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
       return SectionKV.first && SectionKV.first->getOutputName() == Name;
     };
   };
-  auto EHFrameHdrIt = llvm::find_if(
-      OutputSections, HasOutputName(getEHFrameHdrSectionName()));
+  auto EHFrameHdrIt =
+      llvm::find_if(OutputSections, HasOutputName(getEHFrameHdrSectionName()));
   auto EHFrameIt = llvm::find_if(OutputSections, HasOutputName(".eh_frame"));
   if (EHFrameHdrIt != OutputSections.end() &&
-      EHFrameIt != OutputSections.end() &&
-      EHFrameIt < EHFrameHdrIt)
+      EHFrameIt != OutputSections.end() && EHFrameIt < EHFrameHdrIt)
     std::rotate(EHFrameIt, EHFrameHdrIt, std::next(EHFrameHdrIt));
 
   // Assign indices to sections.
