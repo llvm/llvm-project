@@ -936,19 +936,29 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
       continue;
 
     // Verify all members have the same access range (End - Start).
-    // MergedHigh = BaseHigh + max_offsets is only correct when every
-    // member's range equals BaseHigh - BaseLow. We check by subtracting
-    // ranges and testing for zero, which lets SCEV simplify algebraically
-    // even when the individual range SCEVs aren't pointer-identical.
+    // MergedHigh = BaseHigh + max_offsets is only correct when every member's
+    // range equals BaseHigh - BaseLow. Compute the ranges first and compare
+    // them by subtracting, so algebraically equal but non-identical SCEVs still
+    // match. Bail out if any subtraction produces SCEVCouldNotCompute.
     const SCEV *BaseRange = SE->getMinusSCEV(BaseHigh, BaseLow);
+    if (isa<SCEVCouldNotCompute>(BaseRange)) {
+      LLVM_DEBUG(dbgs() << "LAA:   Base access range not computable, "
+                           "skipping DepSet\n");
+      continue;
+    }
     if (any_of(AllMembers, [&](unsigned Idx) {
           const SCEV *Range =
               SE->getMinusSCEV(Pointers[Idx].End, Pointers[Idx].Start);
-          return Range != BaseRange &&
-                 !SE->getMinusSCEV(Range, BaseRange)->isZero();
+          if (isa<SCEVCouldNotCompute>(Range))
+            return true;
+          if (Range == BaseRange)
+            return false;
+          const SCEV *RangeDiff = SE->getMinusSCEV(Range, BaseRange);
+          return isa<SCEVCouldNotCompute>(RangeDiff) || !RangeDiff->isZero();
         })) {
-      LLVM_DEBUG(dbgs() << "LAA:   Member with different access range, "
-                           "skipping DepSet\n");
+      LLVM_DEBUG(dbgs()
+                 << "LAA:   Member with different or not computable access "
+                    "range, skipping DepSet\n");
       continue;
     }
 
