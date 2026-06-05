@@ -32,6 +32,20 @@ mlir::Block *replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
                                     mlir::Location loc,
                                     mlir::RewriterBase &rewriter);
 
+/// Replace a `cir::ThrowOp` with a `cir::TryThrowOp` whose unwind
+/// destination is \p unwindDest. The throw's parent block is split
+/// immediately after the throw; the resulting suffix block (which should
+/// contain the `cir.unreachable` that follows every throw) becomes the
+/// try_throw's normal destination and is returned to the caller.
+///
+/// All attributes of the original throw other than the operand segment
+/// sizes (which `TryThrowOp::create` sets itself) are copied onto the new
+/// try_throw, and the original throw is erased.
+mlir::Block *replaceThrowWithTryThrow(cir::ThrowOp throwOp,
+                                      mlir::Block *unwindDest,
+                                      mlir::Location loc,
+                                      mlir::RewriterBase &rewriter);
+
 /// Collect ops in blocks that are unreachable from their region's entry,
 /// appending them to \p ops. Used by CIR passes that drive
 /// `applyPartialConversion` and need to feed it operations the conversion

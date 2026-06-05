@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerInfo.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VCSRevision.h"
 #include <type_traits>
 
 using namespace llvm;
@@ -37,4 +40,47 @@ void DebugName::setFilename(StringRef DebugFilename) {
 void DebugName::write(raw_ostream &OS) const {
   writeStruct(OS, Parameters);
   writeString(OS, Filename.substr(0, Parameters.NameLength));
+}
+
+CompilerVersion::CompilerVersion() {
+  Parameters.Major = LLVM_VERSION_MAJOR;
+  Parameters.Minor = LLVM_VERSION_MINOR;
+  Parameters.Flags = dxbc::CompilerVersionFlags::Default;
+#ifndef NDEBUG
+  Parameters.Flags |= dxbc::CompilerVersionFlags::Debug;
+#endif
+  Parameters.CommitCount = 0;
+  Parameters.ContentSizeInBytes = 0;
+#ifdef LLVM_REVISION
+  CommitSha = LLVM_REVISION;
+#else
+  CommitSha = "";
+#endif
+  CustomVersionString = PACKAGE_VERSION;
+  updateContentSize();
+}
+
+void CompilerVersion::setCommitSha(StringRef CommitSha) {
+  this->CommitSha = CommitSha;
+  updateContentSize();
+}
+
+void CompilerVersion::setVersionString(StringRef VersionString) {
+  this->CustomVersionString = VersionString;
+  updateContentSize();
+}
+
+void CompilerVersion::updateContentSize() {
+  this->Parameters.ContentSizeInBytes =
+      CommitSha.size() + 1 + CustomVersionString.size() + 1;
+}
+
+void CompilerVersion::write(raw_ostream &OS) const {
+  writeStruct(OS, Parameters);
+  SmallString<64> Content;
+  raw_svector_ostream ContentStream(Content);
+  writeString(ContentStream, CommitSha);
+  writeString(ContentStream, CustomVersionString);
+  Content.resize(Parameters.ContentSizeInBytes);
+  OS.write(Content.data(), Parameters.ContentSizeInBytes);
 }

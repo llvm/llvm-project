@@ -98,11 +98,11 @@ class HARDFLOAT { list<Predicate> HardFloatPredicate = [IsNotSoftFloat]; }
 
 // FP immediate patterns.
 def fpimm0 : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fpimm0neg : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(-0.0);
+  return N->isNegZero();
 }]>;
 
 //===----------------------------------------------------------------------===//
