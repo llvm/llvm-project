@@ -53,7 +53,7 @@ void basic_ptrace_test() {
 
   errno = 0;
   // We're reading the value of test_variable from the child process. As the
-  // child is a fork our ourselves, the variable will have the same address in
+  // child is a fork of ourselves, the variable will have the same address in
   // both processes.
   long value =
       LIBC_NAMESPACE::ptrace(PTRACE_PEEKDATA, pid, &test_variable, nullptr);
