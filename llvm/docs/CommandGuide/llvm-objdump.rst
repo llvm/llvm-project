@@ -39,8 +39,6 @@ combined with other commands:
 
 .. option:: --disassemble-symbols=<symbol1[,symbol2,...]>
 
-.. option:: --disassemble=symbol1 --disassemble=symbol2 ...
-
   Disassemble only the specified symbols. Takes demangled symbol names when
   :option:`--demangle` is specified, otherwise takes mangled symbol names.
   Implies :option:`--disassemble`.
@@ -247,7 +245,7 @@ OPTIONS
   the order given and the first matching rule is used, as in GDB
   ``set substitute-path``.
 
-.. option:: --source-dir=<dir>
+.. option:: --source-dir <dir>
 
 .. option:: -source-dir <dir>
 
@@ -257,9 +255,8 @@ OPTIONS
   directory with the full path appended, then each search directory with only
   the file name.
 
-  Multiple directories may be given in one argument separated by ``:`` (``;``
-  on Windows). This option may be specified multiple times; each directory is
-  appended to the search path in the order given.
+  This option may be specified multiple times; each ``--source-dir`` adds one
+  directory. Later options on the command line are searched before earlier ones.
 
 .. option:: --print-imm-hex
 

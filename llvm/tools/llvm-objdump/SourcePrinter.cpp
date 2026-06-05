@@ -14,7 +14,6 @@
 
 #include "SourcePrinter.h"
 #include "llvm-objdump.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
@@ -91,9 +90,6 @@ static std::string applySubstitutePaths(StringRef FileName) {
   normalizeSourcePath(Directory);
 
   for (const auto &[From, To] : SubstitutePaths) {
-    if (From.empty())
-      continue;
-
     SmallString<256> FromPath(From);
     normalizeSourcePath(FromPath);
     StringRef Dir = Directory;
@@ -709,7 +705,8 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
       SmallVector<StringRef, 8> SearchDirs;
       for (const std::string &Dir : SourceDirs)
         SearchDirs.push_back(Dir);
-      if (auto Resolved = findSourceFilePath(LineInfo.FileName, SearchDirs))
+      if (std::optional<std::string> Resolved =
+              findSourceFilePath(LineInfo.FileName, SearchDirs))
         PathToOpen = std::move(*Resolved);
     }
 

@@ -84,6 +84,7 @@
 #include <optional>
 #include <set>
 #include <system_error>
+#include <unordered_map>
 #include <utility>
 
 using namespace llvm;
@@ -3905,17 +3906,17 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   UnwindShowWODPool = InputArgs.hasArg(OBJDUMP_unwind_show_wod_pool);
   Prefix = InputArgs.getLastArgValue(OBJDUMP_prefix).str();
   parseIntArg(InputArgs, OBJDUMP_prefix_strip, PrefixStrip);
-  for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_substitute_path))
-    SubstitutePaths.emplace_back(A->getValue(0), A->getValue(1));
-  for (StringRef Dirs : InputArgs.getAllArgValues(OBJDUMP_source_dir)) {
-#if defined(_WIN32)
-    for (StringRef Dir : llvm::split(Dirs, ";"))
-#else
-    for (StringRef Dir : llvm::split(Dirs, ":"))
-#endif
-      if (!Dir.empty())
-        SourceDirs.insert(SourceDirs.end(), Dir.str());
+  for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_substitute_path)) {
+    StringRef From = A->getValue(0);
+    StringRef To = A->getValue(1);
+    if (From.empty())
+      reportCmdLineError(A->getSpelling() +
+                         ": <from> must not be empty");
+    SubstitutePaths.emplace_back(From.str(), A->getValue(1));
   }
+  for (StringRef Dir : InputArgs.getAllArgValues(OBJDUMP_source_dir))
+    if (!Dir.empty())
+      SourceDirs.insert(SourceDirs.begin(), Dir.str());
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
     DbgVariables = StringSwitch<DebugFormat>(A->getValue())
                        .Case("ascii", DFASCII)
