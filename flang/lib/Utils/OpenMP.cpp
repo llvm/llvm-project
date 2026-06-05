@@ -216,7 +216,6 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
         firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
   };
 
-  llvm::SmallVector<mlir::Value> clauseMapVars;
   llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
   llvm::SmallVector<mlir::Value> memberMapOps;
 

@@ -4125,3 +4125,23 @@ func.func @omp_target_data_map_iterated(%lb : index, %ub : index, %step : index,
   omp.target_data map_entries(%map : !llvm.ptr) map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @omp_target_map_iterated
+func.func @omp_target_map_iterated(%lb : index, %ub : index, %step : index,
+                                   %addr : !llvm.ptr) -> () {
+  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+
+  // CHECK: %[[IT:.*]] = omp.iterator
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  // CHECK: omp.target map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%{{.*}} -> {{.*}} : !llvm.ptr)
+  omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}

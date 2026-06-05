@@ -544,6 +544,25 @@ llvm.func @target_update_map_iterator(%addr : !llvm.ptr) {
 
 // -----
 
+llvm.func @target_map_iterated_unsupported(%addr : !llvm.ptr) {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @target_data_map_iterator(%addr : !llvm.ptr) {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %c10 = llvm.mlir.constant(10 : i64) : i64

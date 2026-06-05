@@ -2555,7 +2555,7 @@ def AffinityEntryOp : OpenMP_Op<"affinity_entry", [Pure]> {
 // Iterator Op
 //===----------------------------------------------------------------------===//
 
-def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments],
+def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
                            clauses = [OpenMP_LoopRelatedClause]> {
   let summary = "OpenMP iterator modifier";
   let description = [{

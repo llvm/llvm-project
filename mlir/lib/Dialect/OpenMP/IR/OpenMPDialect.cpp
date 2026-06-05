@@ -2407,11 +2407,8 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
                                   "'omp.iterator' ops";
 
     // Check that the iterator body yields a value defined by omp.map.info.
-    auto yieldOp = dyn_cast<mlir::omp::YieldOp>(
-        iterOp.getRegion().front().getTerminator());
-    if (!yieldOp || yieldOp.getResults().empty())
-      continue;
-
+    auto yieldOp =
+        cast<mlir::omp::YieldOp>(iterOp.getRegion().front().getTerminator());
     auto yieldedMapInfo =
         yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
     if (!yieldedMapInfo)
@@ -2608,11 +2605,6 @@ LogicalResult TargetOp::verify() {
   if (failed(verifyMapInfoDefinedArgs(*this, "has_device_addr",
                                       getHasDeviceAddrVars())))
     return failure();
-
-  if (!getMapIterated().empty())
-    return emitOpError()
-           << "'map_iterated' is not yet supported on 'omp.target' without "
-              "target-region capture bindings";
 
   if (failed(verifyMapClause(*this, getMapVars(), getMapIterated())))
     return failure();
