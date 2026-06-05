@@ -1734,6 +1734,8 @@ TEST(ScudoCombinedTest, StressThreadTSDSharedMultiThreadSetTSDs) {
       ;
 
     std::vector<std::thread *> SetThreads;
+    // Create 10 threads running at once to keep the total threads from
+    // getting too high and causing problems.
     for (scudo::sptr I = 2; I < 12; I++) {
       SetThreads.emplace_back(new std::thread([&Allocator, I]() {
         Allocator->setOption(scudo::Option::MaxTSDsCount, I);

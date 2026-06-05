@@ -234,7 +234,7 @@ private:
   // capability.
   NOINLINE TSD<Allocator> *getTSDSlow(TSD<Allocator> *CurrentTSD) {
     const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
-    if (UNLIKELY(TotalTSDs < 1U)) {
+    if (UNLIKELY(TotalTSDs <= 1U)) {
       CurrentTSD->lock();
       return CurrentTSD;
     }
