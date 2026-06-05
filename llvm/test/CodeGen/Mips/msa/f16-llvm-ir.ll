@@ -3856,5 +3856,94 @@ entry:
   ret half %r
 }
 
+define i32 @fptosi_f16_i32(ptr %p) {
+; MIPS32-LABEL: fptosi_f16_i32:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lh $1, 0($4)
+; MIPS32-NEXT:    fill.h $w0, $1
+; MIPS32-NEXT:    fexupr.w $w0, $w0
+; MIPS32-NEXT:    fexupr.d $w0, $w0
+; MIPS32-NEXT:    copy_s.w $1, $w0[0]
+; MIPS32-NEXT:    mtc1 $1, $f1
+; MIPS32-NEXT:    copy_s.w $1, $w0[1]
+; MIPS32-NEXT:    mthc1 $1, $f1
+; MIPS32-NEXT:    trunc.w.d $f0, $f1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    mfc1 $2, $f0
+;
+; MIPS64-N32-LABEL: fptosi_f16_i32:
+; MIPS64-N32:       # %bb.0: # %entry
+; MIPS64-N32-NEXT:    sll $1, $4, 0
+; MIPS64-N32-NEXT:    lh $1, 0($1)
+; MIPS64-N32-NEXT:    fill.h $w0, $1
+; MIPS64-N32-NEXT:    fexupr.w $w0, $w0
+; MIPS64-N32-NEXT:    fexupr.d $w0, $w0
+; MIPS64-N32-NEXT:    copy_s.d $1, $w0[0]
+; MIPS64-N32-NEXT:    dmtc1 $1, $f0
+; MIPS64-N32-NEXT:    trunc.w.d $f0, $f0
+; MIPS64-N32-NEXT:    jr $ra
+; MIPS64-N32-NEXT:    mfc1 $2, $f0
+;
+; MIPS64-N64-LABEL: fptosi_f16_i32:
+; MIPS64-N64:       # %bb.0: # %entry
+; MIPS64-N64-NEXT:    lh $1, 0($4)
+; MIPS64-N64-NEXT:    fill.h $w0, $1
+; MIPS64-N64-NEXT:    fexupr.w $w0, $w0
+; MIPS64-N64-NEXT:    fexupr.d $w0, $w0
+; MIPS64-N64-NEXT:    copy_s.d $1, $w0[0]
+; MIPS64-N64-NEXT:    dmtc1 $1, $f0
+; MIPS64-N64-NEXT:    trunc.w.d $f0, $f0
+; MIPS64-N64-NEXT:    jr $ra
+; MIPS64-N64-NEXT:    mfc1 $2, $f0
+entry:
+  %x = load half, ptr %p, align 2
+  %r = fptosi half %x to i32
+  ret i32 %r
+}
+
+define i32 @fptoui_f16_i32(ptr %p) {
+; MIPS32-LABEL: fptoui_f16_i32:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lh $1, 0($4)
+; MIPS32-NEXT:    fill.h $w0, $1
+; MIPS32-NEXT:    fexupr.w $w0, $w0
+; MIPS32-NEXT:    fexupr.d $w0, $w0
+; MIPS32-NEXT:    copy_s.w $1, $w0[0]
+; MIPS32-NEXT:    mtc1 $1, $f1
+; MIPS32-NEXT:    copy_s.w $1, $w0[1]
+; MIPS32-NEXT:    mthc1 $1, $f1
+; MIPS32-NEXT:    trunc.w.d $f0, $f1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    mfc1 $2, $f0
+;
+; MIPS64-N32-LABEL: fptoui_f16_i32:
+; MIPS64-N32:       # %bb.0: # %entry
+; MIPS64-N32-NEXT:    sll $1, $4, 0
+; MIPS64-N32-NEXT:    lh $1, 0($1)
+; MIPS64-N32-NEXT:    fill.h $w0, $1
+; MIPS64-N32-NEXT:    fexupr.w $w0, $w0
+; MIPS64-N32-NEXT:    fexupr.d $w0, $w0
+; MIPS64-N32-NEXT:    copy_s.d $1, $w0[0]
+; MIPS64-N32-NEXT:    dmtc1 $1, $f0
+; MIPS64-N32-NEXT:    trunc.w.d $f0, $f0
+; MIPS64-N32-NEXT:    jr $ra
+; MIPS64-N32-NEXT:    mfc1 $2, $f0
+;
+; MIPS64-N64-LABEL: fptoui_f16_i32:
+; MIPS64-N64:       # %bb.0: # %entry
+; MIPS64-N64-NEXT:    lh $1, 0($4)
+; MIPS64-N64-NEXT:    fill.h $w0, $1
+; MIPS64-N64-NEXT:    fexupr.w $w0, $w0
+; MIPS64-N64-NEXT:    fexupr.d $w0, $w0
+; MIPS64-N64-NEXT:    copy_s.d $1, $w0[0]
+; MIPS64-N64-NEXT:    dmtc1 $1, $f0
+; MIPS64-N64-NEXT:    trunc.w.d $f0, $f0
+; MIPS64-N64-NEXT:    jr $ra
+; MIPS64-N64-NEXT:    mfc1 $2, $f0
+entry:
+  %x = load half, ptr %p, align 2
+  %r = fptoui half %x to i32
+  ret i32 %r
+}
 
 attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
