@@ -4,8 +4,8 @@
 // RUN: %clang -target aarch64 -mtune=oryon-1 -### -c %s 2>&1 | FileCheck -check-prefix=Phoenix-TUNE %s
 // RUN: %clang -target aarch64 -mlittle-endian -mtune=oryon-1 -### -c %s 2>&1 | FileCheck -check-prefix=Phoenix-TUNE %s
 // RUN: %clang -target aarch64_be -mlittle-endian -mtune=oryon-1 -### -c %s 2>&1 | FileCheck -check-prefix=Phoenix-TUNE %s
-// Phoenix: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "oryon-1" "-target-feature" "+v8.6a"
-// Phoenix-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic"
+// Phoenix: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "oryon-1" "-target-feature" "+v8.6a"
+// Phoenix-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "generic"
 
 // RUN: %clang -target arm64 -mcpu=oryon-1 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-Phoenix %s
 // RUN: %clang -target arm64 -mlittle-endian -mcpu=oryon-1 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-Phoenix %s
