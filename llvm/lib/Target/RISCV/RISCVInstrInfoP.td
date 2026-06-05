@@ -2178,6 +2178,8 @@ let append Predicates = [IsRV32] in {
             (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 8)>;
   def : Pat<(v4i8 (mulhu GPR:$rs1, GPR:$rs2)),
             (PNSRLI_B (PWMULU_B GPR:$rs1, GPR:$rs2), 8)>;
+  def : Pat<(v4i8 (riscv_mulhsu GPR:$rs1, GPR:$rs2)),
+            (PNSRLI_B (PWMULSU_B GPR:$rs1, GPR:$rs2), 8)>;
 
   // 8/16-bit bitreverse patterns
   // FIXME: Use BREV8 with Zbkb.
@@ -2191,6 +2193,14 @@ let append Predicates = [IsRV32] in {
   def : StPat<store, SW, GPR, v2i16>;
   def : LdPat<load, LW, v4i8>;
   def : LdPat<load, LW, v2i16>;
+
+  // Zero-extend patterns using wzip*p with zero
+  def : Pat<(v4i16 (zext (v4i8 GPR:$rs))), (WZIP8P GPR:$rs, (v4i8 X0))>;
+  def : Pat<(v2i32 (zext (v2i16 GPR:$rs))), (WZIP16P GPR:$rs, (v2i16 X0))>;
+
+  // Sign-extend patterns using pwadd with zero
+  def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
+  def : Pat<(v2i32 (sext (v2i16 GPR:$rs))), (PWADD_H GPR:$rs, (v2i16 X0))>;
 
   // Build vector patterns
   def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
@@ -2497,6 +2507,9 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v8i8 (mulhu GPR:$rs1, GPR:$rs2)),
             (PPAIRO_B (PMULU_H_B00 GPR:$rs1, GPR:$rs2),
                       (PMULU_H_B11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v8i8 (riscv_mulhsu GPR:$rs1, GPR:$rs2)),
+            (PPAIRO_B (PMULSU_H_B00 GPR:$rs1, GPR:$rs2),
+                      (PMULSU_H_B11 GPR:$rs1, GPR:$rs2))>;
 
   // 32-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
@@ -2580,5 +2593,9 @@ let append Predicates = [IsRV64] in {
 
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
+
+  // Zero-extend patterns using zip*p with zero
+  def : Pat<(v4i16 (zext_invec (v8i8 GPR:$rs))), (ZIP8P GPR:$rs, (v8i8 X0))>;
+  def : Pat<(v2i32 (zext_invec (v4i16 GPR:$rs))), (ZIP16P GPR:$rs, (v4i16 X0))>;
 } // append Predicates = [IsRV64]
 } // Predicates = [HasStdExtP]
