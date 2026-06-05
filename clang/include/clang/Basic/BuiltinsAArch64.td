@@ -439,4 +439,6 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def __stlxr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned short volatile *, unsigned short)">;
 	def __stlxr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned int volatile *, unsigned int)">;
 	def __stlxr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned long long int volatile *, unsigned long long int)">;
+
+	def __clrex : AArch64NoPrefixTargetLibBuiltin<"void (unsigned char)">;
 }

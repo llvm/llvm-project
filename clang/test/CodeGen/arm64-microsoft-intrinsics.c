@@ -826,6 +826,13 @@ unsigned char check__stlxr64(unsigned long long int volatile *p, unsigned long l
 // CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
 // CHECK-LINUX: error: call to undeclared function '__stlxr64'
 
+void check__clrex(void) {
+  __clrex(15);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @check__clrex(){{.*}}{
+// CHECK-MSCOMPAT:       call void @llvm.aarch64.clrex(i32 15)
+// CHECK-LINUX: error: call to undeclared function '__clrex'
+
 void test__stlr8(unsigned __int8 volatile *p, unsigned __int8 v)
 {
   __stlr8 (p, v);

@@ -14,6 +14,11 @@ void check__hlt() {
   __hlt(65536); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
+void check__clrex(unsigned char x) {
+  __clrex(16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __clrex(x); // expected-error {{argument to '__clrex' must be a constant integer}}
+}
+
 void check__getReg(void) {
   __getReg(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __getReg(32); // expected-error-re {{argument value {{.*}} is outside the valid range}}
