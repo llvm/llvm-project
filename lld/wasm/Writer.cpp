@@ -650,7 +650,7 @@ void Writer::populateTargetFeatures() {
                  sym->importModule && sym->importModule == "env";
         }))
       error(fileName + ": object file uses globals for thread context, "
-                       "but --cooperative-threading was specified");
+                       "but --cooperative-multithreading was specified");
   }
 
   if (inferFeatures)
