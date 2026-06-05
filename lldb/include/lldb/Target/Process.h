@@ -362,6 +362,7 @@ class Process : public std::enable_shared_from_this<Process>,
   friend class StopInfo;
   friend class Target;
   friend class ThreadList;
+  friend class MemoryCache;
 
 public:
   /// Broadcaster event bits definitions.

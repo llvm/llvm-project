@@ -198,7 +198,6 @@ DECLARE_TSAN_FUNCTION(__tsan_func_exit)
 
 /// Required OMPT inquiry functions.
 static ompt_get_parallel_info_t ompt_get_parallel_info;
-static ompt_get_thread_data_t ompt_get_thread_data;
 
 typedef char ompt_tsan_clockid;
 
@@ -1171,7 +1170,6 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
   }
   ompt_get_parallel_info =
       (ompt_get_parallel_info_t)lookup("ompt_get_parallel_info");
-  ompt_get_thread_data = (ompt_get_thread_data_t)lookup("ompt_get_thread_data");
 
   if (ompt_get_parallel_info == NULL) {
     fprintf(stderr, "Could not get inquiry function 'ompt_get_parallel_info', "

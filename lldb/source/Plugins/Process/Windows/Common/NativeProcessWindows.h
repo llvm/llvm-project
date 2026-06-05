@@ -9,6 +9,7 @@
 #ifndef liblldb_NativeProcessWindows_h_
 #define liblldb_NativeProcessWindows_h_
 
+#include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/lldb-forward.h"
 
@@ -21,6 +22,7 @@ class HostProcess;
 class NativeProcessWindows;
 class NativeThreadWindows;
 class NativeDebugDelegate;
+class PseudoConsole;
 
 using NativeDebugDelegateSP = std::shared_ptr<NativeDebugDelegate>;
 
@@ -46,6 +48,8 @@ public:
       return Extension::libraries;
     }
   };
+
+  ~NativeProcessWindows() override;
 
   Status Resume(const ResumeActionList &resume_actions) override;
 
@@ -155,6 +159,23 @@ private:
   /// Whether we've seen the loader breakpoint that fires once per process at
   /// launch / attach.
   bool m_initial_stop_seen = false;
+
+  /// PseudoConsole for the lldb-server stdio-forwarding path.
+  std::shared_ptr<PseudoConsole> m_pty;
+
+  /// Wraps a ConnectionConPTY around the PTY's parent-side STDOUT HANDLE.
+  ThreadedCommunication m_stdio_communication;
+
+  /// Bridge between m_stdio_communication's read thread and
+  /// NativeDelegate::NewProcessOutput.
+  static void STDIOReadThreadBytesReceived(void *baton, const void *src,
+                                           size_t src_len);
+
+  /// Wire up m_stdio_communication on m_pty's STDOUT HANDLE.
+  void StartStdioForwarding();
+
+  /// Tear down the read thread and disconnect m_stdio_communication.
+  void StopStdioForwarding();
 };
 
 //------------------------------------------------------------------
@@ -194,8 +215,9 @@ public:
     m_process.OnUnloadDll(module_addr);
   }
 
-  void OnDebugString(const std::string &string) override {
-    m_process.OnDebugString(string);
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override {
+    m_process.OnDebugString(debug_string_addr, is_unicode, length_lower_word);
   }
 
   void OnDebuggerError(const Status &error, uint32_t type) override {
