@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-//  constexpr span& operator=(const span& other) noexcept = default;
+// constexpr span& operator=(const span& other) noexcept = default;
 
 #include <span>
 #include <cassert>
@@ -26,15 +27,13 @@ constexpr bool doAssign(T lhs, T rhs) {
   return lhs.data() == rhs.data() && lhs.size() == rhs.size();
 }
 
-struct A {};
-
 constexpr int carr1[] = {1, 2, 3, 4};
 constexpr int carr2[] = {3, 4, 5};
 constexpr int carr3[] = {7, 8};
 int arr[]             = {5, 6, 7, 9};
 std::string strs[]    = {"ABC", "DEF", "GHI"};
 
-int main(int, char**) {
+int main() {
   //  constexpr dynamically sized assignment
   {
     //  On systems where 'ptrdiff_t' is a synonym for 'int',
@@ -63,118 +62,118 @@ int main(int, char**) {
         {carr3, 1U},
         {carr3, 2U}};
 
-    static_assert(std::size(spans) == 13, "");
+    static_assert(std::size(spans) == 13);
 
     //  No for loops in constexpr land :-(
-    static_assert(doAssign(spans[0], spans[0]), "");
-    static_assert(doAssign(spans[0], spans[1]), "");
-    static_assert(doAssign(spans[0], spans[2]), "");
-    static_assert(doAssign(spans[0], spans[3]), "");
-    static_assert(doAssign(spans[0], spans[4]), "");
-    static_assert(doAssign(spans[0], spans[5]), "");
-    static_assert(doAssign(spans[0], spans[6]), "");
-    static_assert(doAssign(spans[0], spans[7]), "");
-    static_assert(doAssign(spans[0], spans[8]), "");
-    static_assert(doAssign(spans[0], spans[9]), "");
-    static_assert(doAssign(spans[0], spans[10]), "");
-    static_assert(doAssign(spans[0], spans[11]), "");
-    static_assert(doAssign(spans[0], spans[12]), "");
+    static_assert(doAssign(spans[0], spans[0]));
+    static_assert(doAssign(spans[0], spans[1]));
+    static_assert(doAssign(spans[0], spans[2]));
+    static_assert(doAssign(spans[0], spans[3]));
+    static_assert(doAssign(spans[0], spans[4]));
+    static_assert(doAssign(spans[0], spans[5]));
+    static_assert(doAssign(spans[0], spans[6]));
+    static_assert(doAssign(spans[0], spans[7]));
+    static_assert(doAssign(spans[0], spans[8]));
+    static_assert(doAssign(spans[0], spans[9]));
+    static_assert(doAssign(spans[0], spans[10]));
+    static_assert(doAssign(spans[0], spans[11]));
+    static_assert(doAssign(spans[0], spans[12]));
 
-    static_assert(doAssign(spans[1], spans[1]), "");
-    static_assert(doAssign(spans[1], spans[2]), "");
-    static_assert(doAssign(spans[1], spans[3]), "");
-    static_assert(doAssign(spans[1], spans[4]), "");
-    static_assert(doAssign(spans[1], spans[5]), "");
-    static_assert(doAssign(spans[1], spans[6]), "");
-    static_assert(doAssign(spans[1], spans[7]), "");
-    static_assert(doAssign(spans[1], spans[8]), "");
-    static_assert(doAssign(spans[1], spans[9]), "");
-    static_assert(doAssign(spans[1], spans[10]), "");
-    static_assert(doAssign(spans[1], spans[11]), "");
-    static_assert(doAssign(spans[1], spans[12]), "");
+    static_assert(doAssign(spans[1], spans[1]));
+    static_assert(doAssign(spans[1], spans[2]));
+    static_assert(doAssign(spans[1], spans[3]));
+    static_assert(doAssign(spans[1], spans[4]));
+    static_assert(doAssign(spans[1], spans[5]));
+    static_assert(doAssign(spans[1], spans[6]));
+    static_assert(doAssign(spans[1], spans[7]));
+    static_assert(doAssign(spans[1], spans[8]));
+    static_assert(doAssign(spans[1], spans[9]));
+    static_assert(doAssign(spans[1], spans[10]));
+    static_assert(doAssign(spans[1], spans[11]));
+    static_assert(doAssign(spans[1], spans[12]));
 
-    static_assert(doAssign(spans[2], spans[2]), "");
-    static_assert(doAssign(spans[2], spans[3]), "");
-    static_assert(doAssign(spans[2], spans[4]), "");
-    static_assert(doAssign(spans[2], spans[5]), "");
-    static_assert(doAssign(spans[2], spans[6]), "");
-    static_assert(doAssign(spans[2], spans[7]), "");
-    static_assert(doAssign(spans[2], spans[8]), "");
-    static_assert(doAssign(spans[2], spans[9]), "");
-    static_assert(doAssign(spans[2], spans[10]), "");
-    static_assert(doAssign(spans[2], spans[11]), "");
-    static_assert(doAssign(spans[2], spans[12]), "");
+    static_assert(doAssign(spans[2], spans[2]));
+    static_assert(doAssign(spans[2], spans[3]));
+    static_assert(doAssign(spans[2], spans[4]));
+    static_assert(doAssign(spans[2], spans[5]));
+    static_assert(doAssign(spans[2], spans[6]));
+    static_assert(doAssign(spans[2], spans[7]));
+    static_assert(doAssign(spans[2], spans[8]));
+    static_assert(doAssign(spans[2], spans[9]));
+    static_assert(doAssign(spans[2], spans[10]));
+    static_assert(doAssign(spans[2], spans[11]));
+    static_assert(doAssign(spans[2], spans[12]));
 
-    static_assert(doAssign(spans[3], spans[3]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[10]), "");
-    static_assert(doAssign(spans[3], spans[11]), "");
-    static_assert(doAssign(spans[3], spans[12]), "");
+    static_assert(doAssign(spans[3], spans[3]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[10]));
+    static_assert(doAssign(spans[3], spans[11]));
+    static_assert(doAssign(spans[3], spans[12]));
 
-    static_assert(doAssign(spans[4], spans[4]), "");
-    static_assert(doAssign(spans[4], spans[5]), "");
-    static_assert(doAssign(spans[4], spans[6]), "");
-    static_assert(doAssign(spans[4], spans[7]), "");
-    static_assert(doAssign(spans[4], spans[8]), "");
-    static_assert(doAssign(spans[4], spans[9]), "");
-    static_assert(doAssign(spans[4], spans[10]), "");
-    static_assert(doAssign(spans[4], spans[11]), "");
-    static_assert(doAssign(spans[4], spans[12]), "");
+    static_assert(doAssign(spans[4], spans[4]));
+    static_assert(doAssign(spans[4], spans[5]));
+    static_assert(doAssign(spans[4], spans[6]));
+    static_assert(doAssign(spans[4], spans[7]));
+    static_assert(doAssign(spans[4], spans[8]));
+    static_assert(doAssign(spans[4], spans[9]));
+    static_assert(doAssign(spans[4], spans[10]));
+    static_assert(doAssign(spans[4], spans[11]));
+    static_assert(doAssign(spans[4], spans[12]));
 
-    static_assert(doAssign(spans[5], spans[5]), "");
-    static_assert(doAssign(spans[5], spans[6]), "");
-    static_assert(doAssign(spans[5], spans[7]), "");
-    static_assert(doAssign(spans[5], spans[8]), "");
-    static_assert(doAssign(spans[5], spans[9]), "");
-    static_assert(doAssign(spans[5], spans[10]), "");
-    static_assert(doAssign(spans[5], spans[11]), "");
-    static_assert(doAssign(spans[5], spans[12]), "");
+    static_assert(doAssign(spans[5], spans[5]));
+    static_assert(doAssign(spans[5], spans[6]));
+    static_assert(doAssign(spans[5], spans[7]));
+    static_assert(doAssign(spans[5], spans[8]));
+    static_assert(doAssign(spans[5], spans[9]));
+    static_assert(doAssign(spans[5], spans[10]));
+    static_assert(doAssign(spans[5], spans[11]));
+    static_assert(doAssign(spans[5], spans[12]));
 
-    static_assert(doAssign(spans[6], spans[6]), "");
-    static_assert(doAssign(spans[6], spans[7]), "");
-    static_assert(doAssign(spans[6], spans[8]), "");
-    static_assert(doAssign(spans[6], spans[9]), "");
-    static_assert(doAssign(spans[6], spans[10]), "");
-    static_assert(doAssign(spans[6], spans[11]), "");
-    static_assert(doAssign(spans[6], spans[12]), "");
+    static_assert(doAssign(spans[6], spans[6]));
+    static_assert(doAssign(spans[6], spans[7]));
+    static_assert(doAssign(spans[6], spans[8]));
+    static_assert(doAssign(spans[6], spans[9]));
+    static_assert(doAssign(spans[6], spans[10]));
+    static_assert(doAssign(spans[6], spans[11]));
+    static_assert(doAssign(spans[6], spans[12]));
 
-    static_assert(doAssign(spans[7], spans[7]), "");
-    static_assert(doAssign(spans[7], spans[8]), "");
-    static_assert(doAssign(spans[7], spans[9]), "");
-    static_assert(doAssign(spans[7], spans[10]), "");
-    static_assert(doAssign(spans[7], spans[11]), "");
-    static_assert(doAssign(spans[7], spans[12]), "");
+    static_assert(doAssign(spans[7], spans[7]));
+    static_assert(doAssign(spans[7], spans[8]));
+    static_assert(doAssign(spans[7], spans[9]));
+    static_assert(doAssign(spans[7], spans[10]));
+    static_assert(doAssign(spans[7], spans[11]));
+    static_assert(doAssign(spans[7], spans[12]));
 
-    static_assert(doAssign(spans[8], spans[8]), "");
-    static_assert(doAssign(spans[8], spans[9]), "");
-    static_assert(doAssign(spans[8], spans[10]), "");
-    static_assert(doAssign(spans[8], spans[11]), "");
-    static_assert(doAssign(spans[8], spans[12]), "");
+    static_assert(doAssign(spans[8], spans[8]));
+    static_assert(doAssign(spans[8], spans[9]));
+    static_assert(doAssign(spans[8], spans[10]));
+    static_assert(doAssign(spans[8], spans[11]));
+    static_assert(doAssign(spans[8], spans[12]));
 
-    static_assert(doAssign(spans[9], spans[9]), "");
-    static_assert(doAssign(spans[9], spans[10]), "");
-    static_assert(doAssign(spans[9], spans[11]), "");
-    static_assert(doAssign(spans[9], spans[12]), "");
+    static_assert(doAssign(spans[9], spans[9]));
+    static_assert(doAssign(spans[9], spans[10]));
+    static_assert(doAssign(spans[9], spans[11]));
+    static_assert(doAssign(spans[9], spans[12]));
 
-    static_assert(doAssign(spans[10], spans[10]), "");
-    static_assert(doAssign(spans[10], spans[11]), "");
-    static_assert(doAssign(spans[10], spans[12]), "");
+    static_assert(doAssign(spans[10], spans[10]));
+    static_assert(doAssign(spans[10], spans[11]));
+    static_assert(doAssign(spans[10], spans[12]));
 
-    static_assert(doAssign(spans[11], spans[11]), "");
-    static_assert(doAssign(spans[11], spans[12]), "");
+    static_assert(doAssign(spans[11], spans[11]));
+    static_assert(doAssign(spans[11], spans[12]));
 
-    static_assert(doAssign(spans[12], spans[12]), "");
+    static_assert(doAssign(spans[12], spans[12]));
 
     //      for (size_t i = 0; i < std::size(spans); ++i)
     //          for (size_t j = i; j < std::size(spans); ++j)
-    //              static_assert(doAssign(spans[i], spans[j]), "");
+    //              static_assert(doAssign(spans[i], spans[j]));
   }
 
   //  constexpr statically sized assignment
@@ -188,39 +187,39 @@ int main(int, char**) {
         spanType{carr2 + 1, 2},
         spanType{carr3, 2}};
 
-    static_assert(std::size(spans) == 6, "");
+    static_assert(std::size(spans) == 6);
 
     //  No for loops in constexpr land :-(
-    static_assert(doAssign(spans[0], spans[0]), "");
-    static_assert(doAssign(spans[0], spans[1]), "");
-    static_assert(doAssign(spans[0], spans[2]), "");
-    static_assert(doAssign(spans[0], spans[3]), "");
-    static_assert(doAssign(spans[0], spans[4]), "");
-    static_assert(doAssign(spans[0], spans[5]), "");
+    static_assert(doAssign(spans[0], spans[0]));
+    static_assert(doAssign(spans[0], spans[1]));
+    static_assert(doAssign(spans[0], spans[2]));
+    static_assert(doAssign(spans[0], spans[3]));
+    static_assert(doAssign(spans[0], spans[4]));
+    static_assert(doAssign(spans[0], spans[5]));
 
-    static_assert(doAssign(spans[1], spans[1]), "");
-    static_assert(doAssign(spans[1], spans[2]), "");
-    static_assert(doAssign(spans[1], spans[3]), "");
-    static_assert(doAssign(spans[1], spans[4]), "");
-    static_assert(doAssign(spans[1], spans[5]), "");
+    static_assert(doAssign(spans[1], spans[1]));
+    static_assert(doAssign(spans[1], spans[2]));
+    static_assert(doAssign(spans[1], spans[3]));
+    static_assert(doAssign(spans[1], spans[4]));
+    static_assert(doAssign(spans[1], spans[5]));
 
-    static_assert(doAssign(spans[2], spans[2]), "");
-    static_assert(doAssign(spans[2], spans[3]), "");
-    static_assert(doAssign(spans[2], spans[4]), "");
-    static_assert(doAssign(spans[2], spans[5]), "");
+    static_assert(doAssign(spans[2], spans[2]));
+    static_assert(doAssign(spans[2], spans[3]));
+    static_assert(doAssign(spans[2], spans[4]));
+    static_assert(doAssign(spans[2], spans[5]));
 
-    static_assert(doAssign(spans[3], spans[3]), "");
-    static_assert(doAssign(spans[3], spans[4]), "");
-    static_assert(doAssign(spans[3], spans[5]), "");
+    static_assert(doAssign(spans[3], spans[3]));
+    static_assert(doAssign(spans[3], spans[4]));
+    static_assert(doAssign(spans[3], spans[5]));
 
-    static_assert(doAssign(spans[4], spans[4]), "");
-    static_assert(doAssign(spans[4], spans[5]), "");
+    static_assert(doAssign(spans[4], spans[4]));
+    static_assert(doAssign(spans[4], spans[5]));
 
-    static_assert(doAssign(spans[5], spans[5]), "");
+    static_assert(doAssign(spans[5], spans[5]));
 
     //      for (size_t i = 0; i < std::size(spans); ++i)
     //          for (size_t j = i; j < std::size(spans); ++j)
-    //              static_assert(doAssign(spans[i], spans[j]), "");
+    //              static_assert(doAssign(spans[i], spans[j]));
   }
 
   //  dynamically sized assignment

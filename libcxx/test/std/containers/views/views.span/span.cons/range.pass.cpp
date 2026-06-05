@@ -5,12 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-//  template<class R>
-//    constexpr explicit(Extent != dynamic_extent) span(R&& r);
+// template<class R>
+//   constexpr explicit(Extent != dynamic_extent) span(R&& r);
 
 #include <span>
 #include <cassert>
@@ -79,7 +80,7 @@ static_assert(!std::is_convertible_v<BorrowedContiguousSizedRange&, std::span<ch
 static_assert(std::is_convertible_v<const BorrowedContiguousSizedRange&, std::span<const char>>);
 static_assert(!std::is_convertible_v<const BorrowedContiguousSizedRange&, std::span<const char, 3>>);
 
-int main(int, char**) {
+int main() {
   test();
   static_assert(test());
 

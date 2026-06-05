@@ -5,12 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-// [[nodiscard]] constexpr bool empty() const noexcept;
+// constexpr bool empty() const noexcept;
 //
+// Effects:
+//   - Equivalent to: return size() == 0;
 
 #include <span>
 #include <cassert>
@@ -22,27 +25,27 @@ struct A {};
 constexpr int iArr1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 int iArr2[]           = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
-int main(int, char**) {
-  static_assert(noexcept(std::span<int>().empty()), "");
-  static_assert(noexcept(std::span<int, 0>().empty()), "");
+int main() {
+  static_assert(noexcept(std::span<int>().empty()));
+  static_assert(noexcept(std::span<int, 0>().empty()));
 
-  static_assert(std::span<int>().empty(), "");
-  static_assert(std::span<long>().empty(), "");
-  static_assert(std::span<double>().empty(), "");
-  static_assert(std::span<A>().empty(), "");
-  static_assert(std::span<std::string>().empty(), "");
+  static_assert(std::span<int>().empty());
+  static_assert(std::span<long>().empty());
+  static_assert(std::span<double>().empty());
+  static_assert(std::span<A>().empty());
+  static_assert(std::span<std::string>().empty());
 
-  static_assert(std::span<int, 0>().empty(), "");
-  static_assert(std::span<long, 0>().empty(), "");
-  static_assert(std::span<double, 0>().empty(), "");
-  static_assert(std::span<A, 0>().empty(), "");
-  static_assert(std::span<std::string, 0>().empty(), "");
+  static_assert(std::span<int, 0>().empty());
+  static_assert(std::span<long, 0>().empty());
+  static_assert(std::span<double, 0>().empty());
+  static_assert(std::span<A, 0>().empty());
+  static_assert(std::span<std::string, 0>().empty());
 
-  static_assert(!std::span<const int>(iArr1, 1).empty(), "");
-  static_assert(!std::span<const int>(iArr1, 2).empty(), "");
-  static_assert(!std::span<const int>(iArr1, 3).empty(), "");
-  static_assert(!std::span<const int>(iArr1, 4).empty(), "");
-  static_assert(!std::span<const int>(iArr1, 5).empty(), "");
+  static_assert(!std::span<const int>(iArr1, 1).empty());
+  static_assert(!std::span<const int>(iArr1, 2).empty());
+  static_assert(!std::span<const int>(iArr1, 3).empty());
+  static_assert(!std::span<const int>(iArr1, 4).empty());
+  static_assert(!std::span<const int>(iArr1, 5).empty());
 
   assert((std::span<int>().empty()));
   assert((std::span<long>().empty()));

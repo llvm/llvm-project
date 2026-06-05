@@ -5,24 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-//   template<class It, class EndOrSize>
-//     span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
-//
-//   template<class T, size_t N>
-//     span(T (&)[N]) -> span<T, N>;
-//
-//   template<class T, size_t N>
-//     span(array<T, N>&) -> span<T, N>;
-//
-//   template<class T, size_t N>
-//     span(const array<T, N>&) -> span<const T, N>;
-//
-//   template<class R>
-//     span(R&&) -> span<remove_reference_t<ranges::range_reference_t<R>>>;
+// template<class It, class EndOrSize>
+//   span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<It>>>; // until C++26
+// template<class It, class EndOrSize>
+//   span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<It>>,
+//                               maybe-static-ext<EndOrSize>>; // since C++26
+// template<class T, size_t N>
+//   span(T (&)[N]) -> span<T, N>;
+// template<class T, size_t N>
+//   span(array<T, N>&) -> span<T, N>;
+// template<class T, size_t N>
+//   span(const array<T, N>&) -> span<const T, N>;
+// template<class R>
+//   span(R&&) -> span<remove_reference_t<ranges::range_reference_t<R>>>;
 
 #include <span>
 #include <array>
@@ -130,7 +130,7 @@ void test_range_std_container() {
   }
 }
 
-int main(int, char**) {
+int main() {
   test_iterator_sentinel();
   test_c_array();
   test_std_array();

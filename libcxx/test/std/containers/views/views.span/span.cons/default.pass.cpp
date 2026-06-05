@@ -5,7 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
@@ -56,11 +57,11 @@ void testRuntimeSpan() {
 
 struct A {};
 
-int main(int, char**) {
-  static_assert(testConstexprSpan<int>(), "");
-  static_assert(testConstexprSpan<long>(), "");
-  static_assert(testConstexprSpan<double>(), "");
-  static_assert(testConstexprSpan<A>(), "");
+int main() {
+  static_assert(testConstexprSpan<int>());
+  static_assert(testConstexprSpan<long>());
+  static_assert(testConstexprSpan<double>());
+  static_assert(testConstexprSpan<A>());
 
   testRuntimeSpan<int>();
   testRuntimeSpan<long>();
@@ -70,9 +71,9 @@ int main(int, char**) {
 
   checkCV();
 
-  static_assert(std::is_default_constructible_v<std::span<int, std::dynamic_extent>>, "");
-  static_assert(std::is_default_constructible_v<std::span<int, 0>>, "");
-  static_assert(!std::is_default_constructible_v<std::span<int, 2>>, "");
+  static_assert(std::is_default_constructible_v<std::span<int, std::dynamic_extent>>);
+  static_assert(std::is_default_constructible_v<std::span<int, 0>>);
+  static_assert(!std::is_default_constructible_v<std::span<int, 2>>);
 
   return 0;
 }

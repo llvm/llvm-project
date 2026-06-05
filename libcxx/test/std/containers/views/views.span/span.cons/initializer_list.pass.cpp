@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
@@ -15,7 +15,6 @@
 #include <cstddef>
 #include <span>
 
-#include "test_convertible.h"
 #include "test_macros.h"
 
 struct Sink {
@@ -60,7 +59,7 @@ bool test_P2447R4_annex_c_examples() {
   return true;
 }
 
-int main(int, char**) {
+int main() {
   assert(test());
   static_assert(test());
 

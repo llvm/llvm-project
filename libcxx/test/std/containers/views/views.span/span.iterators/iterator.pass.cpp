@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
@@ -84,9 +84,9 @@ constexpr bool test() {
   return true;
 }
 
-int main(int, char**) {
+int main() {
   test();
-  static_assert(test(), "");
+  static_assert(test());
 
   return 0;
 }

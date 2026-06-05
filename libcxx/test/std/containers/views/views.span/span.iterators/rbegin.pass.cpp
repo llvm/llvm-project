@@ -5,7 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
@@ -50,24 +51,24 @@ bool operator==(A, A) { return true; }
 constexpr int iArr1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 int iArr2[]           = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
-int main(int, char**) {
-  static_assert(testConstexprSpan(std::span<int>()), "");
-  static_assert(testConstexprSpan(std::span<long>()), "");
-  static_assert(testConstexprSpan(std::span<double>()), "");
-  static_assert(testConstexprSpan(std::span<A>()), "");
-  static_assert(testConstexprSpan(std::span<std::string>()), "");
+int main() {
+  static_assert(testConstexprSpan(std::span<int>()));
+  static_assert(testConstexprSpan(std::span<long>()));
+  static_assert(testConstexprSpan(std::span<double>()));
+  static_assert(testConstexprSpan(std::span<A>()));
+  static_assert(testConstexprSpan(std::span<std::string>()));
 
-  static_assert(testConstexprSpan(std::span<int, 0>()), "");
-  static_assert(testConstexprSpan(std::span<long, 0>()), "");
-  static_assert(testConstexprSpan(std::span<double, 0>()), "");
-  static_assert(testConstexprSpan(std::span<A, 0>()), "");
-  static_assert(testConstexprSpan(std::span<std::string, 0>()), "");
+  static_assert(testConstexprSpan(std::span<int, 0>()));
+  static_assert(testConstexprSpan(std::span<long, 0>()));
+  static_assert(testConstexprSpan(std::span<double, 0>()));
+  static_assert(testConstexprSpan(std::span<A, 0>()));
+  static_assert(testConstexprSpan(std::span<std::string, 0>()));
 
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 1)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 2)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 3)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 4)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 5)), "");
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 1)));
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 2)));
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 3)));
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 4)));
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 5)));
 
   testRuntimeSpan(std::span<int>());
   testRuntimeSpan(std::span<long>());

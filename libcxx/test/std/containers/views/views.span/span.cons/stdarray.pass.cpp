@@ -5,24 +5,21 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-// template<size_t N>
-//     constexpr span(array<value_type, N>& arr) noexcept;
-// template<size_t N>
-//     constexpr span(const array<value_type, N>& arr) noexcept;
+// template<class T, size_t N> constexpr span(array<T, N>& arr) noexcept;
+// template<class T, size_t N> constexpr span(const array<T, N>& arr) noexcept;
 //
-// Remarks: These constructors shall not participate in overload resolution unless:
+// Constraints: Let U be remove_pointer_t<decltype(std::data(arr))>.
 //   - extent == dynamic_extent || N == extent is true, and
-//   - remove_pointer_t<decltype(data(arr))>(*)[] is convertible to ElementType(*)[].
-//
+//   - is_convertible_v<U(*)[], element_type(*)[]> is true.
 
 #include <span>
 #include <array>
 #include <cassert>
-#include <string>
 
 #include "test_macros.h"
 
@@ -35,28 +32,28 @@ void checkCV() {
 
   //  Types the same (dynamic sized)
   {
-    std::span< int> s1{arr}; // a span<               int> pointing at int.
+    std::span<int> s1{arr}; // a span<int> pointing at int.
   }
 
   //  Types the same (static sized)
   {
-    std::span< int, 3> s1{arr}; // a span<               int> pointing at int.
+    std::span<int, 3> s1{arr}; // a span<int> pointing at int.
   }
 
   //  types different (dynamic sized)
   {
-    std::span<const int> s1{arr};          // a span<const          int> pointing at int.
-    std::span< volatile int> s2{arr};      // a span<      volatile int> pointing at int.
-    std::span< volatile int> s3{arr};      // a span<      volatile int> pointing at const int.
+    std::span<const int> s1{arr};          // a span<const int> pointing at int.
+    std::span<volatile int> s2{arr};       // a span<volatile int> pointing at int.
+    std::span<volatile int> s3{arr};       // a span<volatile int> pointing at const int.
     std::span<const volatile int> s4{arr}; // a span<const volatile int> pointing at int.
   }
 
   //  types different (static sized)
   {
-    std::span<const int, 3> s1{arr};          // a span<const          int> pointing at int.
-    std::span< volatile int, 3> s2{arr};      // a span<      volatile int> pointing at int.
-    std::span< volatile int, 3> s3{arr};      // a span<      volatile int> pointing at const int.
-    std::span<const volatile int, 3> s4{arr}; // a span<const volatile int> pointing at int.
+    std::span<const int, 3> s1{arr};           // a span<const int> pointing at int.
+    std::span<volatile int, 3> s2{arr};        // a span<volatile int> pointing at int.
+    std::span<volatile int, 3> s3{arr};        // a span<volatile int> pointing at const int.
+    std::span<const volatile int, 3> s4{arr};  // a span<const volatile int> pointing at int.
   }
 }
 
@@ -82,12 +79,12 @@ constexpr bool testConstructorConstArray() {
 
 template <typename T>
 constexpr bool testConstructors() {
-  static_assert(testConstructorArray<T, T>(), "");
-  static_assert(testConstructorArray<const T, const T>(), "");
-  static_assert(testConstructorArray<const T, T>(), "");
-  static_assert(testConstructorConstArray<T, T>(), "");
-  static_assert(testConstructorConstArray<const T, const T>(), "");
-  static_assert(testConstructorConstArray<const T, T>(), "");
+  static_assert(testConstructorArray<T, T>());
+  static_assert(testConstructorArray<const T, const T>());
+  static_assert(testConstructorArray<const T, T>());
+  static_assert(testConstructorConstArray<T, T>());
+  static_assert(testConstructorConstArray<const T, const T>());
+  static_assert(testConstructorConstArray<const T, T>());
 
   return testConstructorArray<T, T>() && testConstructorArray<const T, const T>() &&
          testConstructorArray<const T, T>() && testConstructorConstArray<T, T>() &&
@@ -96,7 +93,7 @@ constexpr bool testConstructors() {
 
 struct A {};
 
-int main(int, char**) {
+int main() {
   assert(testConstructors<int>());
   assert(testConstructors<long>());
   assert(testConstructors<double>());

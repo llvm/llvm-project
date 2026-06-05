@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-//  constexpr span(const span& other) noexcept = default;
+// constexpr span(const span& other) noexcept = default;
 
 #include <span>
 #include <cassert>
@@ -107,7 +107,7 @@ constexpr bool test_all() {
   return true;
 }
 
-int main(int, char**) {
+int main() {
   test_all();
   static_assert(test_all());
 
