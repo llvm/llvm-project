@@ -99,6 +99,7 @@ void error() {
     int FieldFromVar;
     int FieldFromField;
   } InferredField;
+
   InferredField.FieldFromVar = ThreadID * 2;
   while (j < InferredField.FieldFromVar) {
     // CHECK-NOTES: :[[@LINE-1]]:10: warning: backward branch (while loop) is ID-dependent due to member reference to 'FieldFromVar' and may cause performance degradation [altera-id-dependent-backward-branch]
