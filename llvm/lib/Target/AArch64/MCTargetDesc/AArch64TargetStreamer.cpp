@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_BARE_METAL)
+#define EJIT_BARE_METAL
+#endif
+
 #include "AArch64TargetStreamer.h"
 #include "AArch64MCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"

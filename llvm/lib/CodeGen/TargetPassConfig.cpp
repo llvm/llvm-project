@@ -11,6 +11,10 @@
 //
 //===---------------------------------------------------------------------===//
 
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_BARE_METAL)
+#define EJIT_BARE_METAL
+#endif
+
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"

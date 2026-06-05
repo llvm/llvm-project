@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_BARE_METAL)
+#define EJIT_BARE_METAL
+#endif
+
 #include "llvm/CodeGen/AsmPrinter.h"
 #ifndef EJIT_BARE_METAL
 #include "CodeViewDebug.h"
