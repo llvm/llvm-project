@@ -116,7 +116,7 @@ LIBC_INLINE double cos(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       return x + r_lo;
 #else
-      // Overall errors <= 2 * ulp(x^2/6) + |x| * 2^-69.
+      // Overall errors <= ulp(x^2/2) + 2^-69.
       double err = fputil::multiply_add(x_sq, 0x1.0p-53, 0x1.0p-69);
       double r_lo_u = r_lo + err;
       double r_lo_l = r_lo - err;
