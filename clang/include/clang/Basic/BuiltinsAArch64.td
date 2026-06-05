@@ -424,4 +424,9 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def __ldxr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
 	def __ldxr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
 	def __ldxr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile *)">;
+
+	def __ldaxr8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char const volatile *)">;
+	def __ldaxr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
+	def __ldaxr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
+	def __ldaxr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile *)">;
 }
