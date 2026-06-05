@@ -41,7 +41,7 @@
 ; RUN: llvm-ar rc %t/libs/libdevice.a %t/libs/lib1.bc %t/libs/lib2.bc
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
-; DEVLIBS:      link: inputs: {{.*}}.bc, {{.*}}.bc, lib1.bc, lib2.bc output: [[LLVMLINKOUT:.*]].bc
+; DEVLIBS:      link: inputs: {{.*}}.bc, {{.*}}.bc, {{.*}}libdevice.a(lib1.bc), {{.*}}libdevice.a(lib2.bc) output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
 ; DEVLIBS-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; DEVLIBS-NOT:  {{.+}}
@@ -49,13 +49,13 @@
 ; Test -L short form (joined) and -l with archive using --whole-archive.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-SHORT
-; DEVLIBS-SHORT: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc output: {{.*}}.bc
+; DEVLIBS-SHORT: link: inputs: {{.*}}.bc, {{.*}}libdevice.a(lib1.bc), {{.*}}libdevice.a(lib2.bc) output: {{.*}}.bc
 ;
 ; Test that search continues past the first -L when the library is not found there. libdevice.a exists only in %t/libs (the second -L).
 ; RUN: mkdir -p %t/empty
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/empty -L %t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-FALLTHROUGH
-; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc output: {{.*}}.bc
+; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc, {{.*}}libdevice.a(lib1.bc), {{.*}}libdevice.a(lib2.bc) output: {{.*}}.bc
 ;
 ; Test a simple case with a random file (not bitcode) as input.
 ; RUN: touch %t/dummy.o
@@ -70,7 +70,7 @@
 ; RUN: llvm-ar rc %t/libinvalid.a %t/invalid.txt
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc -L %t --whole-archive -l invalid -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=ARCHIVE-INVALID-MEMBER
-; ARCHIVE-INVALID-MEMBER: Unsupported file type: '{{.*}}invalid.txt'
+; ARCHIVE-INVALID-MEMBER: Unsupported file type: '{{.*}}libinvalid.a(invalid.txt)'
 ;
 ; Test mixed archive: valid bitcode member + invalid member.
 ; The error should clearly identify which member is invalid.
@@ -78,7 +78,7 @@
 ; RUN: llvm-ar rc %t/libmixed.a %t/libs/lib1.bc %t/invalid.txt
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc -L %t --whole-archive -l mixed -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=ARCHIVE-MIXED-INVALID
-; ARCHIVE-MIXED-INVALID: Unsupported file type: '{{.*}}invalid.txt'
+; ARCHIVE-MIXED-INVALID: Unsupported file type: '{{.*}}libmixed.a(invalid.txt)'
 ;
 ; Test to see if device library related errors are emitted.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs -l device -l nonexistent -o a.spv 2>&1 \

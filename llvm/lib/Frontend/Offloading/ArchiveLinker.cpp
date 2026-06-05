@@ -218,10 +218,13 @@ resolveArchiveMembers(const Inputs &In,
         auto ChildBufferOrErr = Child.getMemoryBufferRef();
         if (!ChildBufferOrErr)
           return ChildBufferOrErr.takeError();
+        // Include archive name in buffer identifier for better diagnostics
+        std::string BufferIdentifier =
+            (*Filename + "(" + ChildBufferOrErr->getBufferIdentifier() + ")")
+                .str();
         std::unique_ptr<MemoryBuffer> ChildBuffer =
-            MemoryBuffer::getMemBufferCopy(
-                ChildBufferOrErr->getBuffer(),
-                ChildBufferOrErr->getBufferIdentifier());
+            MemoryBuffer::getMemBufferCopy(ChildBufferOrErr->getBuffer(),
+                                           BufferIdentifier);
         InputFiles.emplace_back(std::move(ChildBuffer), !Desc.WholeArchive);
       }
       if (Err)
