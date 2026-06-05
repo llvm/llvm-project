@@ -5172,6 +5172,13 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
       return rewriter.notifyMatchFailure(linearizeOp,
                                          "linearize isn't disjoint");
 
+    // A linearize with no inputs has an empty basis and folds to a constant
+    // zero; there is nothing to split, and reading its last basis element
+    // below would be out of bounds.
+    if (linearizeOp.getStaticBasis().empty())
+      return rewriter.notifyMatchFailure(
+          linearizeOp, "linearize has no basis elements (no inputs)");
+
     int64_t target = linearizeOp.getStaticBasis().back();
     if (ShapedType::isDynamic(target))
       return rewriter.notifyMatchFailure(
