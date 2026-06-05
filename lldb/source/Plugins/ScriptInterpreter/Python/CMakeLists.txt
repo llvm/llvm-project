@@ -69,6 +69,11 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
       ${PYTHON_SABI_LIBRARY_DIRS})
   endif()
 
+  if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+    lldb_record_dynamic_script_interpreter_exports(
+      lldbPluginScriptInterpreterPython)
+  endif()
+
   # Static variant linked directly by unit tests. Separate compilation is
   # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
   # shared between the test binary and the plugin code.
@@ -89,8 +94,8 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   )
   target_include_directories(lldbStaticScriptInterpreterPython
     PUBLIC ${Python3_INCLUDE_DIRS})
-
-  target_link_directories(lldbStaticScriptInterpreterPython PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
+  target_link_directories(lldbStaticScriptInterpreterPython
+    PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
 else()
   add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     ${python_plugin_sources}

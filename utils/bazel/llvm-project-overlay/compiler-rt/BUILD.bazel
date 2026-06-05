@@ -283,6 +283,14 @@ filegroup(
     ] + glob(["lib/builtins/aarch64/sme-libc-opt-*.S"]),
 )
 
+filegroup(
+    name = "builtins_aarch64_sme_os_srcs",
+    srcs = select({
+        "@platforms//os:macos": [":builtins_aarch64_apple_sme_srcs"],
+        "//conditions:default": [":builtins_aarch64_sme_srcs"],
+    }),
+)
+
 # A list of (pat, size, model) tuples for AArch64's outline atomics.
 AARCH64_OUTLINE_ATOMICS = [
     (pat, size, model)
@@ -333,6 +341,7 @@ filegroup(
     srcs = [
         "lib/builtins/cpu_model/aarch64.c",
         "lib/builtins/cpu_model/aarch64.h",
+        ":builtins_aarch64_sme_os_srcs",
     ] + [
         AARCH64_OUTLINE_ATOMICS_FMT.format(pat, size, model)
         for (pat, size, model) in AARCH64_OUTLINE_ATOMICS
