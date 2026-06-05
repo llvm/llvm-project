@@ -46,28 +46,36 @@ static void warnAboutLeftoverTransformations(Loop *L,
   }
 
   if (hasVectorizeTransformation(L) == TM_ForcedByUser) {
-    LLVM_DEBUG(dbgs() << "Leftover vectorization transformation\n");
-    std::optional<ElementCount> VectorizeWidth =
-        getOptionalElementCountLoopAttribute(L);
-    std::optional<int> InterleaveCount =
-        getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
+    // OpenMP SIMD loops are represented as annotated parallel loops.  They can
+    // still legally execute without loop-vectorization, so avoid turning these
+    // cases into transform-warning diagnostics that are commonly promoted to
+    // hard errors by -Werror builds.
+    if (!L->isAnnotatedParallel()) {
+      LLVM_DEBUG(dbgs() << "Leftover vectorization transformation\n");
+      std::optional<ElementCount> VectorizeWidth =
+          getOptionalElementCountLoopAttribute(L);
+      std::optional<int> InterleaveCount =
+          getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
 
-    if (!VectorizeWidth || VectorizeWidth->isVector())
-      ORE->emit(
-          DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
-                                            "FailedRequestedVectorization",
-                                            L->getStartLoc(), L->getHeader())
-          << "loop not vectorized: the optimizer was unable to perform the "
-             "requested transformation; the transformation might be disabled "
-             "or specified as part of an unsupported transformation ordering");
-    else if (InterleaveCount.value_or(0) != 1)
-      ORE->emit(
-          DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
-                                            "FailedRequestedInterleaving",
-                                            L->getStartLoc(), L->getHeader())
-          << "loop not interleaved: the optimizer was unable to perform the "
-             "requested transformation; the transformation might be disabled "
-             "or specified as part of an unsupported transformation ordering");
+      if (!VectorizeWidth || VectorizeWidth->isVector())
+        ORE->emit(
+            DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
+                                              "FailedRequestedVectorization",
+                                              L->getStartLoc(), L->getHeader())
+            << "loop not vectorized: the optimizer was unable to perform the "
+               "requested transformation; the transformation might be disabled "
+               "or specified as part of an unsupported transformation "
+               "ordering");
+      else if (InterleaveCount.value_or(0) != 1)
+        ORE->emit(
+            DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
+                                              "FailedRequestedInterleaving",
+                                              L->getStartLoc(), L->getHeader())
+            << "loop not interleaved: the optimizer was unable to perform the "
+               "requested transformation; the transformation might be disabled "
+               "or specified as part of an unsupported transformation "
+               "ordering");
+    }
   }
 
   if (hasDistributeTransformation(L) == TM_ForcedByUser) {
