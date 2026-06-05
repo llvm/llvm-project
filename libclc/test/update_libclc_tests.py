@@ -92,7 +92,9 @@ def file_requires_feature(path: Path, feature: str) -> bool:
     return False
 
 
-def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str, clang: Path) -> bool:
+def process_file(
+    cl_file: Path, triple: str, cpu: str, check_prefix: str, clang: Path
+) -> bool:
     original = cl_file.read_bytes()
     orig_lines = original.splitlines(keepends=True)
     saved_run = {i: orig_lines[i] for i in _run_line_indices(original)}
@@ -141,7 +143,10 @@ def main():
     else:
         clang_in_path = shutil.which("clang")
         if not clang_in_path:
-            print("Error: clang not found in PATH; use --clang-binary to specify.", file=sys.stderr)
+            print(
+                "Error: clang not found in PATH; use --clang-binary to specify.",
+                file=sys.stderr,
+            )
             sys.exit(1)
         clang = Path(clang_in_path)
 
