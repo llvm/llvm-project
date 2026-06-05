@@ -2116,12 +2116,11 @@ static bool hasVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
 InstructionCost
 LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                                               ElementCount VF) const {
-  // Vector library variants are priced by VPWidenCallRecipe::computeCost and
-  // should not reach this function.
-  assert((VF.isScalar() ||
-          !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI)) &&
-         "getVectorCallCost does not price vector library variants");
-
+  // A call with a vector library variant is normally priced by
+  // VPWidenCallRecipe::computeCost. It can still reach here via
+  // computePredInstDiscount, which queries the cost before the call's widening
+  // decision is made; in that case the predicated call is being considered for
+  // scalarization, so fall through to the scalarization cost below.
   Type *RetTy = CI->getType();
   SmallVector<Type *, 4> Tys;
   for (auto &ArgOp : CI->args())
