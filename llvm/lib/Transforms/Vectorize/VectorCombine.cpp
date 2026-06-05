@@ -7017,7 +7017,8 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   InstructionCost OldCost = TTI.getInstructionCost(&I, CostKind);
   for (LoadInst *LI : Loads) {
     OldCost += TTI.getInstructionCost(LI, CostKind);
-    if (auto *GEP = dyn_cast<GEPOperator>(LI->getPointerOperand())) {
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+        GEP && GEP->hasOneUse()) {
       SmallVector<const Value *> Indices(GEP->indices());
       OldCost +=
           TTI.getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
