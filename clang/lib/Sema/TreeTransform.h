@@ -16711,7 +16711,7 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
   // special members were never instantiated.
   EnterExpressionEvaluationContext ConstantEvaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-      /*LambdaContextDecl=*/nullptr,
+      Sema::ReuseLambdaContextDecl,
       Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
 
   ExprResult Replacement = getDerived().TransformExpr(OrigReplacement);
