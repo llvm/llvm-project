@@ -24,15 +24,15 @@
 // pass them uniformly to non-ObjC inputs (e.g. assembly files via a shared
 // response file); they carry NoArgumentUnused so they don't trigger
 // -Wunused-command-line-argument under -Werror.
-// RUN: %clang -target arm64-apple-macosx11 -Werror \
+// RUN: %clang -### -target arm64-apple-macosx11 -Werror \
 // RUN:   -fobjc-constant-literals -fconstant-nsnumber-literals \
 // RUN:   -fconstant-nsarray-literals -fconstant-nsdictionary-literals \
-// RUN:   -x assembler -c %s -o /dev/null 2>&1 \
+// RUN:   -x assembler -c %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=IGNORED --allow-empty
-// RUN: %clang -target arm64-apple-macosx11 -Werror \
+// RUN: %clang -### -target arm64-apple-macosx11 -Werror \
 // RUN:   -fno-objc-constant-literals -fno-constant-nsnumber-literals \
 // RUN:   -fno-constant-nsarray-literals -fno-constant-nsdictionary-literals \
-// RUN:   -x assembler -c %s -o /dev/null 2>&1 \
+// RUN:   -x assembler -c %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=IGNORED --allow-empty
 
 // IGNORED-NOT: argument unused during compilation
@@ -43,8 +43,8 @@
 
 // The same flags must also be ignored (and not forwarded to cc1) when compiling
 // non-ObjC C/C++ inputs.
-// RUN: %clang -target arm64-apple-macosx11 -Werror \
+// RUN: %clang -### -target arm64-apple-macosx11 -Werror \
 // RUN:   -fobjc-constant-literals -fconstant-nsnumber-literals \
 // RUN:   -fconstant-nsarray-literals -fconstant-nsdictionary-literals \
-// RUN:   -x c++ -c %s -o /dev/null 2>&1 \
+// RUN:   -x c++ -c %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=IGNORED --allow-empty
