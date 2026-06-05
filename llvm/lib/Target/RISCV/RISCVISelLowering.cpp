@@ -652,7 +652,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Legal);
       setOperationAction({ISD::SELECT, ISD::VSELECT}, {MVT::v4i16, MVT::v8i8},
                          Custom);
-      setOperationAction(ISD::MUL, {MVT::v4i16, MVT::v8i8}, Custom);
+      setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU},
+                         {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction({ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
                          {MVT::v4i16, MVT::v2i32}, Legal);
       setOperationAction(ISD::SETCC, P64VecVTs, Legal);
@@ -8962,8 +8963,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::MULHS:
-  case ISD::MULHU:
   case ISD::SDIV:
   case ISD::SREM:
   case ISD::UDIV:
@@ -8999,9 +8998,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
-  case ISD::MUL: {
+  case ISD::MUL:
+  case ISD::MULHS:
+  case ISD::MULHU: {
     EVT VT = Op.getValueType();
-    // Split 64-bit vector AND/OR/XOR/MUL on RV32 with P extension
+    // Split 64-bit vector AND/OR/XOR/MUL/MULHS/MULHU on RV32 with P extension
     if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
         (VT == MVT::v4i16 || VT == MVT::v8i8)) {
       SDLoc DL(Op);
@@ -16395,7 +16396,9 @@ static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
                               const RISCVSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegal(ISD::MULHS, VT))
+  bool IsPExtPackedDoubleType =
+      VT.isSimple() && Subtarget.isPExtPackedDoubleType(VT.getSimpleVT());
+  if (!TLI.isOperationLegal(ISD::MULHS, VT) && !IsPExtPackedDoubleType)
     return SDValue();
 
   using namespace SDPatternMatch;
@@ -16408,7 +16411,20 @@ static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
       !C.isNegative())
     return SDValue();
 
-  return DAG.getNode(RISCVISD::MULHSU, SDLoc(N), VT, X, Mulh.getOperand(1));
+  SDLoc DL(N);
+
+  // We need to split double wide vectors ourselves, op legalization won't
+  // run for custom nodes.
+  if (IsPExtPackedDoubleType) {
+    MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
+    auto [XLo, XHi] = DAG.SplitVector(X, DL, HalfVT, HalfVT);
+    auto [CLo, CHi] = DAG.SplitVector(Mulh.getOperand(1), DL, HalfVT, HalfVT);
+    SDValue ResLo = DAG.getNode(RISCVISD::MULHSU, DL, HalfVT, XLo, CLo);
+    SDValue ResHi = DAG.getNode(RISCVISD::MULHSU, DL, HalfVT, XHi, CHi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
+  }
+
+  return DAG.getNode(RISCVISD::MULHSU, DL, VT, X, Mulh.getOperand(1));
 }
 
 static SDValue performADDCombine(SDNode *N,
