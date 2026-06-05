@@ -434,6 +434,9 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
   case InvalidTy:
     llvm_unreachable("ArgType must be valid");
 
+  case UnsupportedTy:
+    return NoMatch;
+
   case UnknownTy:
     return Match;
 
@@ -710,6 +713,8 @@ ArgType::matchesArgType(ASTContext &C, const ArgType &Other) const {
   // Per matchesType.
   if (K == AK::InvalidTy || Other.K == AK::InvalidTy)
     return NoMatch;
+  if (K == AK::UnsupportedTy || Other.K == AK::UnsupportedTy)
+    return NoMatch;
   if (K == AK::UnknownTy || Other.K == AK::UnknownTy)
     return Match;
 
@@ -800,6 +805,8 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
     llvm_unreachable("No representative type for Invalid ArgType");
   case UnknownTy:
     llvm_unreachable("No representative type for Unknown ArgType");
+  case UnsupportedTy:
+    llvm_unreachable("No representative type for Unsupported ArgType");
   case AnyCharTy:
     Res = C.CharTy;
     break;
@@ -834,7 +841,10 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
 }
 
 std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
-  std::string S = getRepresentativeType(C).getAsString(C.getPrintingPolicy());
+  std::string S;
+  if (K != UnsupportedTy)
+    S = getRepresentativeType(C).getAsString(C.getPrintingPolicy());
+
   std::string Alias;
   if (Name) {
     // Use a specific name for this type, e.g. "size_t".
@@ -848,9 +858,11 @@ std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
       Alias.clear();
   }
 
-  if (!Alias.empty())
-    return std::string("'") + Alias + "' (aka '" + S + "')";
-  return std::string("'") + S + "'";
+  if (Alias.empty())
+    return std::string("'") + S + "'";
+
+  return std::string("'") + Alias + "'" +
+         (K == UnsupportedTy ? "" : " (aka '" + S + "')");
 }
 
 //===----------------------------------------------------------------------===//

@@ -10706,6 +10706,10 @@ def warn_missing_format_string : Warning<
 def warn_scanf_nonzero_width : Warning<
   "zero field width in scanf format string is unused">,
   InGroup<Format>;
+def warn_format_unsupported_type
+    : Warning<"format specifier requires type %0 which is not supported in "
+              "this implementation">,
+      InGroup<Format>;
 def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,

@@ -668,11 +668,11 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsLongDouble:
       return Ctx.LongDoubleTy;
     case LengthModifier::AsDecimal32:
-      return ArgType(Ctx.DoubleTy, "_Decimal32");
+      return ArgType::Unsupported("_Decimal32");
     case LengthModifier::AsDecimal64:
-      return ArgType(Ctx.DoubleTy, "_Decimal64");
+      return ArgType::Unsupported("_Decimal64");
     case LengthModifier::AsDecimal128:
-      return ArgType(Ctx.LongDoubleTy, "_Decimal128");
+      return ArgType::Unsupported("_Decimal128");
     default:
       return Ctx.DoubleTy;
     }

@@ -380,11 +380,11 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
     case LengthModifier::AsLongDouble:
       return ArgType::PtrTo(Ctx.LongDoubleTy);
     case LengthModifier::AsDecimal32:
-      return ArgType::PtrTo(ArgType(Ctx.FloatTy, "_Decimal32"));
+      return ArgType::PtrTo(ArgType::Unsupported("_Decimal32"));
     case LengthModifier::AsDecimal64:
-      return ArgType::PtrTo(ArgType(Ctx.DoubleTy, "_Decimal64"));
+      return ArgType::PtrTo(ArgType::Unsupported("_Decimal64"));
     case LengthModifier::AsDecimal128:
-      return ArgType::PtrTo(ArgType(Ctx.LongDoubleTy, "_Decimal128"));
+      return ArgType::PtrTo(ArgType::Unsupported("_Decimal128"));
     default:
       return ArgType::Invalid();
     }

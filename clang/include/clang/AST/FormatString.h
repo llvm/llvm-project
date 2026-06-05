@@ -266,6 +266,7 @@ public:
   enum Kind {
     UnknownTy,
     InvalidTy,
+    UnsupportedTy,
     SpecificTy,
     ObjCPointerTy,
     CPointerTy,
@@ -316,7 +317,13 @@ public:
   ArgType(CanQualType T) : K(SpecificTy), T(T) {}
 
   static ArgType Invalid() { return ArgType(InvalidTy); }
+  static ArgType Unsupported(const char *N) {
+    ArgType A(UnsupportedTy);
+    A.Name = N;
+    return A;
+  }
   bool isValid() const { return K != InvalidTy; }
+  bool isUnsupported() const { return K == UnsupportedTy; }
 
   bool isSizeT() const { return TK == TypeKind::SizeT; }
 
