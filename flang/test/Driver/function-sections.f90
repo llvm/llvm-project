@@ -8,6 +8,9 @@
 ! RUN: %flang -### -target x86_64-none-linux-gnu %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=CHECK-NOFS --check-prefix=CHECK-NODS
 
+! RUN: %flang -### -target aarch64-unknown-linux-gnu %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=CHECK-NOFS --check-prefix=CHECK-NODS
+
 ! RUN: %flang -### -target powerpc64-ibm-aix-xcoff %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=CHECK-NOFS
 
