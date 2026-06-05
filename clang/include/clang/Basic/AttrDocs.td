@@ -395,7 +395,7 @@ The ``warn_unused`` attribute can be placed on the declaration of a structure or
 When the ``-Wunused-variable`` diagnostic is enabled, local variables of types which have a non-trivial constructor or destructor are considered "used" by virtue of the constructor or destructor invocations involved.
 Declaring the type with the ``warn_unused`` attribute strengthens the "use" requirements to require a direct access to the variable, such as passing it as an argument to a call, calling a member function on it, taking the address of it, etc.
 
-This attribute is available in both C and C++ language modes but is primarily useful in C++ for classes which have a non-trivial constructor or destructor.
+This attribute is available in both C and C++ language modes but is primarily useful in C++ for classes which have a non-trivial constructor or destructor but act as a value type rather than an RAII type.
 
 ..code-block:: c++
 
