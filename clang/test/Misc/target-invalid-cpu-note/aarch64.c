@@ -37,6 +37,7 @@
 // CHECK-SAME: {{^}}, apple-s7
 // CHECK-SAME: {{^}}, apple-s8
 // CHECK-SAME: {{^}}, apple-s9
+// CHECK-SAME: {{^}}, armagicpu
 // CHECK-SAME: {{^}}, c1-nano
 // CHECK-SAME: {{^}}, c1-premium
 // CHECK-SAME: {{^}}, c1-pro
@@ -106,4 +107,3 @@
 // CHECK-SAME: {{^}}, thunderxt88
 // CHECK-SAME: {{^}}, tsv110
 // CHECK-SAME: {{$}}
-
