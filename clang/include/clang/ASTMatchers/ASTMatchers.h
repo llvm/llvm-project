@@ -8369,7 +8369,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
 AST_MATCHER_FUNCTION(internal::Matcher<Expr>, nullPointerConstant) {
   return anyOf(
       gnuNullExpr(), cxxNullPtrLiteralExpr(),
-      integerLiteral(equals(0), hasParent(expr(hasType(pointerType())))));
+      integerLiteral(equals(0), hasParent(castExpr(hasCastKind(CK_NullToPointer)))));
 }
 
 /// Matches the DecompositionDecl the binding belongs to.

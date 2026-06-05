@@ -4049,6 +4049,7 @@ TEST_P(ASTMatchersTest, NullPointerConstant) {
   EXPECT_TRUE(matches("char *cp = (char *)0;", expr(nullPointerConstant())));
   EXPECT_TRUE(matches("int *ip = 0;", expr(nullPointerConstant())));
   EXPECT_FALSE(matches("int i = 0;", expr(nullPointerConstant())));
+  EXPECT_FALSE(matches("int *p[1]; (void)p[0];", expr(nullPointerConstant())));
 }
 
 TEST_P(ASTMatchersTest, NullPointerConstant_GNUNull) {
