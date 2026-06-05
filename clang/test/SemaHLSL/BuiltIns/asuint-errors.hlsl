@@ -11,6 +11,7 @@ uint4 test_asuint_too_many_arg(float p0, float p1) {
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: requires 3 arguments, but 2 were provided}}
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: requires 3 arguments, but 2 were provided}}
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: requires 3 arguments, but 2 were provided}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function template not viable: requires 3 arguments, but 2 were provided}}
 }
 
 uint test_asuint_double(double p1) {

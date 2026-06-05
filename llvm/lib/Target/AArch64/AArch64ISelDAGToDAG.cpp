@@ -1957,6 +1957,10 @@ void AArch64DAGToDAGISel::SelectPostLoad(SDNode *N, unsigned NumVecs,
       ReplaceUses(SDValue(N, i),
           CurDAG->getTargetExtractSubreg(SubRegIdx + i, dl, VT, SuperReg));
 
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+
   // Update the chain
   ReplaceUses(SDValue(N, NumVecs + 1), SDValue(Ld, 2));
   CurDAG->RemoveDeadNode(N);
@@ -2522,6 +2526,10 @@ void AArch64DAGToDAGISel::SelectPostStore(SDNode *N, unsigned NumVecs,
                    N->getOperand(NumVecs + 2), // Incremental
                    N->getOperand(0)};          // Chain
   SDNode *St = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
 }
@@ -4262,8 +4270,8 @@ static int getIntOperandFromRegisterString(StringRef RegString) {
 
   // Need to combine the integer fields of the string into a single value
   // based on the bit encoding of MRS/MSR instruction.
-  return (Ops[0] << 14) | (Ops[1] << 11) | (Ops[2] << 7) |
-         (Ops[3] << 3) | (Ops[4]);
+  return (Ops[0] << 14) | (Ops[1] << 11) | (Ops[2] << 7) | (Ops[3] << 3) |
+         (Ops[4]);
 }
 
 // Lower the read_register intrinsic to an MRS instruction node if the special
@@ -4296,6 +4304,24 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
         Opcode64Bit = AArch64::ADR;
         Imm = 0;
       } else {
+        // Not a system register. It may name an allocatable 64-bit GPR/FPR read
+        // by the MSVC __getReg/__getRegFp intrinsics. Emit a pseudo that
+        // carries the source register as an immediate so the read does not
+        // reference an undefined physical register (which the machine verifier
+        // rejects); the AsmPrinter materializes the real mov/fmov.
+        Register PReg = Subtarget->getTargetLowering()->matchRegisterName(
+            RegString->getString());
+        unsigned PseudoOp = 0;
+        if (AArch64::GPR64RegClass.contains(PReg))
+          PseudoOp = AArch64::READ_REGISTER_GPR64;
+        else if (AArch64::FPR64RegClass.contains(PReg))
+          PseudoOp = AArch64::READ_REGISTER_FPR64;
+        if (!ReadIs128Bit && PseudoOp && N->getValueType(0) == MVT::i64) {
+          CurDAG->SelectNodeTo(N, PseudoOp, MVT::i64, MVT::Other,
+                               {CurDAG->getTargetConstant(PReg, DL, MVT::i32),
+                                N->getOperand(0)});
+          return true;
+        }
         return false;
       }
     }
@@ -4380,8 +4406,28 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
     else
       Imm = AArch64SysReg::parseGenericRegister(RegString->getString());
 
-    if (Imm == -1)
+    if (Imm == -1) {
+      // Used by the MSVC __setReg/__setRegFp intrinsics. Copy the value into
+      // the physical register and keep it live with a FAKE_USE so the write is
+      // not dead-eliminated. (getRegisterByName rejects allocatable registers,
+      // so the generic write path cannot handle these.)
+      Register PReg = Subtarget->getTargetLowering()->matchRegisterName(
+          RegString->getString());
+      bool IsGPR = AArch64::GPR64RegClass.contains(PReg);
+      bool IsFPR = AArch64::FPR64RegClass.contains(PReg);
+      if (!WriteIs128Bit && (IsGPR || IsFPR) &&
+          N->getOperand(2).getValueType() == MVT::i64) {
+        SDValue Copy =
+            CurDAG->getCopyToReg(N->getOperand(0), DL, PReg, N->getOperand(2));
+        SDValue RegOp = CurDAG->getRegister(PReg, MVT::i64);
+        SDNode *FakeUse = CurDAG->getMachineNode(TargetOpcode::FAKE_USE, DL,
+                                                 MVT::Other, {RegOp, Copy});
+        ReplaceUses(SDValue(N, 0), SDValue(FakeUse, 0));
+        CurDAG->RemoveDeadNode(N);
+        return true;
+      }
       return false;
+    }
   }
 
   SDValue InChain = N->getOperand(0);
@@ -7654,7 +7700,7 @@ FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
 static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
                                                 unsigned NumVec) {
   assert(NumVec > 0 && NumVec < 5 && "Invalid number of vectors.");
-  if (!PredVT.isScalableVector() || PredVT.getVectorElementType() != MVT::i1)
+  if (!PredVT.isScalableVectorOf(MVT::i1))
     return EVT();
 
   if (PredVT != MVT::nxv16i1 && PredVT != MVT::nxv8i1 &&
@@ -7882,8 +7928,7 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
 }
 
 bool AArch64DAGToDAGISel::SelectAnyPredicate(SDValue N) {
-  EVT VT = N.getValueType();
-  return VT.isScalableVector() && VT.getVectorElementType() == MVT::i1;
+  return N.getValueType().isScalableVectorOf(MVT::i1);
 }
 
 bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,

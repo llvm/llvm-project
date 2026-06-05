@@ -761,7 +761,8 @@ struct TypeSpec {
 // R703 declaration-type-spec ->
 //        intrinsic-type-spec | TYPE ( intrinsic-type-spec ) |
 //        TYPE ( derived-type-spec ) | CLASS ( derived-type-spec ) |
-//        CLASS ( * ) | TYPE ( * )
+//        CLASS ( * ) | TYPE ( * ) |
+//        TYPEOF ( data-ref ) | CLASSOF ( data-ref )
 // Legacy extension: RECORD /struct/
 struct DeclarationTypeSpec {
   UNION_CLASS_BOILERPLATE(DeclarationTypeSpec);
@@ -770,8 +771,10 @@ struct DeclarationTypeSpec {
   EMPTY_CLASS(ClassStar);
   EMPTY_CLASS(TypeStar);
   WRAPPER_CLASS(Record, Name);
+  WRAPPER_CLASS(TypeOf, common::Indirection<DataRef>);
+  WRAPPER_CLASS(ClassOf, common::Indirection<DataRef>);
   std::variant<IntrinsicTypeSpec, Type, Class, ClassStar, TypeStar, Record,
-      VectorTypeSpec>
+      VectorTypeSpec, TypeOf, ClassOf>
       u;
 };
 
@@ -2254,11 +2257,11 @@ struct ConcurrentHeader {
 // F'2023 R1131 reduce-operation -> reduction-operator
 // CUF reduction-op -> reduction-operator
 // OpenACC 3.3 2.5.15 reduction-operator ->
-//                      + | * | .AND. | .OR. | .EQV. | .NEQV. |
+//                      + | - | * | .AND. | .OR. | .EQV. | .NEQV. |
 //                      MAX | MIN | IAND | IOR | IEOR
 struct ReductionOperator {
-  ENUM_CLASS(
-      Operator, Plus, Multiply, Max, Min, Iand, Ior, Ieor, And, Or, Eqv, Neqv)
+  ENUM_CLASS(Operator, Plus, Minus, Multiply, Max, Min, Iand, Ior, Ieor, And,
+      Or, Eqv, Neqv)
   WRAPPER_CLASS_BOILERPLATE(ReductionOperator, Operator);
   CharBlock source;
 };
@@ -3193,10 +3196,13 @@ struct ProcedureStmt {
   std::tuple<Kind, std::list<Name>> t;
 };
 
-// R1502 interface-specification -> interface-body | procedure-stmt
+// R1502 interface-specification ->
+//         interface-body | procedure-stmt | compiler-directive
 struct InterfaceSpecification {
   UNION_CLASS_BOILERPLATE(InterfaceSpecification);
-  std::variant<InterfaceBody, Statement<ProcedureStmt>> u;
+  std::variant<InterfaceBody, Statement<ProcedureStmt>,
+      common::Indirection<CompilerDirective>>
+      u;
 };
 
 // R1504 end-interface-stmt -> END INTERFACE [generic-spec]
@@ -4585,7 +4591,7 @@ struct OmpDeviceSafesyncClause {
 // device-type-clause ->
 //    DEVICE_TYPE(ANY | HOST | NOHOST)              // since 5.0
 struct OmpDeviceTypeClause {
-  ENUM_CLASS(DeviceTypeDescription, Any, Host, Nohost)
+  using DeviceTypeDescription = common::OmpDeviceType;
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
 };
 
@@ -5638,7 +5644,7 @@ struct AccClauseList {
 struct OpenACCRoutineConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCRoutineConstruct);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, AccClauseList> t;
+  std::tuple<Verbatim, std::list<Name>, AccClauseList> t;
 };
 
 struct OpenACCCacheConstruct {

@@ -415,7 +415,7 @@ func.func @illegal_fill_memref_with_tensor_return
 func.func @illegal_fill_tensor_with_memref_return
   (%arg0 : tensor<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
 {
-  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any type values, but got 'memref<?x?xf32>'}}
+  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any non-token type values, but got 'memref<?x?xf32>'}}
   %0 = linalg.fill ins(%arg1 : f32) outs(%arg0 : tensor<?x?xf32>) -> memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
@@ -468,7 +468,7 @@ func.func @invalid_scalar_input_matmul(%arg0: f32, %arg1: memref<3x4xf32>, %arg2
 // -----
 
 func.func @invalid_scalar_output_matmul(%arg0: memref<2x3xf32>, %arg1: memref<3x4xf32>, %arg2: f32) {
-  // expected-error @+1 {{'linalg.matmul' op operand #2 must be variadic of shaped of any type values, but got 'f32'}}
+  // expected-error @+1 {{'linalg.matmul' op operand #2 must be variadic of shaped of any non-token type values, but got 'f32'}}
   linalg.matmul ins(%arg0, %arg1 : memref<2x3xf32>, memref<3x4xf32>)
                 outs(%arg2 : f32)
   return

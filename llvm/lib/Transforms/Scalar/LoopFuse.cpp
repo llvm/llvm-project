@@ -75,6 +75,7 @@ STATISTIC(InvalidLoopStructure, "Loop has invalid structure");
 STATISTIC(AddressTakenBB, "Basic block has address taken");
 STATISTIC(MayThrowException, "Loop may throw an exception");
 STATISTIC(ContainsVolatileAccess, "Loop contains a volatile access");
+STATISTIC(ContainsAtomicAccess, "Loop contains an atomic access");
 STATISTIC(NotSimplifiedForm, "Loop is not in simplified form");
 STATISTIC(InvalidDependencies, "Dependencies prevent fusion");
 STATISTIC(UnknownTripCount, "Loop has unknown trip count");
@@ -181,19 +182,18 @@ struct FusionCandidate {
           reportInvalidCandidate(MayThrowException);
           return;
         }
-        if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-          if (SI->isVolatile()) {
-            invalidate();
-            reportInvalidCandidate(ContainsVolatileAccess);
-            return;
-          }
+        if (I.isVolatile()) {
+          invalidate();
+          reportInvalidCandidate(ContainsVolatileAccess);
+          return;
         }
-        if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-          if (LI->isVolatile()) {
-            invalidate();
-            reportInvalidCandidate(ContainsVolatileAccess);
-            return;
-          }
+        // Atomic accesses impose ordering/synchronization constraints that the
+        // dependence analysis used for fusion does not model, so reordering
+        // them across the fused body could be unsafe.
+        if (I.isAtomic()) {
+          invalidate();
+          reportInvalidCandidate(ContainsAtomicAccess);
+          return;
         }
         if (I.mayWriteToMemory())
           MemWrites.push_back(&I);
@@ -665,7 +665,11 @@ private:
                       << " iterations of the first loop. \n");
 
     ValueToValueMapTy VMap;
-    peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
+    // LoopFusion is a function pass that neither requires nor preserves
+    // LCSSA, so peelLoop need not preserve it across its internal
+    // simplifyLoop call.
+    peelLoop(FC0.L, PeelCount, /*PeelLast=*/false, &LI, &SE, DT, &AC,
+             /*PreserveLCSSA=*/false, VMap);
     FC0.Peeled = true;
     LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
@@ -797,15 +801,18 @@ private:
           continue;
         }
 
-        // Ensure that FC0 and FC1 have identical guards.
-        // If one (or both) are not guarded, this check is not necessary.
-        if (FC0.GuardBranch && FC1.GuardBranch &&
-            !haveIdenticalGuards(FC0, FC1) && !TCDifference) {
-          LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
-                               "guards. Not Fusing.\n");
-          reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                     NonIdenticalGuards);
-          continue;
+        // If TCDifference is not set or if it is zero, peeling is not needed.
+        // In this case we must ensure if the loops are guarded the guards
+        // are identical.
+        if (!TCDifference || *TCDifference == 0) {
+          if (FC0.GuardBranch && FC1.GuardBranch &&
+              !haveIdenticalGuards(FC0, FC1)) {
+            LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
+                                 "guards. Not Fusing.\n");
+            reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
+                                                       NonIdenticalGuards);
+            continue;
+          }
         }
 
         if (FC0.GuardBranch) {
@@ -1138,11 +1145,17 @@ private:
 
     assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
-    if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
-      LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
-                           "dependency\n");
-      NumDA++;
-      return true;
+    if (DepResult->isScalar(CurLoopLevel, true)) {
+      if (DepResult->isInput() || DepResult->isOutput()) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant "
+                          << (DepResult->isInput() ? "input" : "output")
+                          << " dependency\n");
+        NumDA++;
+        return true;
+      }
+      LLVM_DEBUG(
+          dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
+      return false;
     }
 
     unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
@@ -1300,20 +1313,21 @@ private:
     assert(FC0.GuardBranch && FC1.GuardBranch &&
            "Expecting FC0 and FC1 to be guarded loops.");
 
-    if (auto FC0CmpInst =
-            dyn_cast<Instruction>(FC0.GuardBranch->getCondition()))
-      if (auto FC1CmpInst =
-              dyn_cast<Instruction>(FC1.GuardBranch->getCondition()))
-        if (!FC0CmpInst->isIdenticalTo(FC1CmpInst))
-          return false;
+    auto *FC0CmpInst = dyn_cast<Instruction>(FC0.GuardBranch->getCondition());
+    auto *FC1CmpInst = dyn_cast<Instruction>(FC1.GuardBranch->getCondition());
+    if ((!FC0CmpInst || !FC1CmpInst) &&
+        FC0.GuardBranch->getCondition() != FC1.GuardBranch->getCondition())
+      return false;
+
+    if (FC0CmpInst && FC1CmpInst && !FC0CmpInst->isIdenticalTo(FC1CmpInst))
+      return false;
 
     // The compare instructions are identical.
     // Now make sure the successor of the guards have the same flow into/around
     // the loop
     if (FC0.GuardBranch->getSuccessor(0) == FC0.Preheader)
       return (FC1.GuardBranch->getSuccessor(0) == FC1.Preheader);
-    else
-      return (FC1.GuardBranch->getSuccessor(1) == FC1.Preheader);
+    return (FC1.GuardBranch->getSuccessor(1) == FC1.Preheader);
   }
 
   /// Modify the latch branch of FC to be unconditional since successors of the

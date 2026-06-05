@@ -29,19 +29,19 @@ define void @test() {
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
 ; AVX2:    ir<%v2> = load from index 2
-; AVX2:  Cost of 8 for VF 4: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX2:  Cost of 8 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
 ; AVX2:    ir<%v2> = load from index 2
-; AVX2:  Cost of 16 for VF 8: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX2:  Cost of 16 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
 ; AVX2:    ir<%v2> = load from index 2
-; AVX2:  Cost of 32 for VF 16: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX2:  Cost of 32 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
 ; AVX2:    ir<%v2> = load from index 2
@@ -49,15 +49,15 @@ define void @test() {
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX512:  Cost of 4 for VF 2: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX512:  Cost of 4 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
-; AVX512:  Cost of 9.5 for VF 4: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX512:  Cost of 9.5 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
-; AVX512:  Cost of 18 for VF 8: INTERLEAVE-GROUP with factor 3 at %v0, ir<%in0>
+; AVX512:  Cost of 18 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2

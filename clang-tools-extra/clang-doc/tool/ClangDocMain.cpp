@@ -113,6 +113,10 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<bool>
+    Pretty("pretty-json", llvm::cl::desc("Serialize JSON with whitespace."),
+           llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
     "format", llvm::cl::desc("Format for outputted docs."),
     llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
@@ -309,7 +313,7 @@ Example usage for a project using a compile commands database:
         Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
         SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
         {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FormatEnum,
-        FTimeTrace);
+        FTimeTrace, Pretty);
 
     if (Format == "html")
       ExitOnErr(getHtmlFiles(argv[0], CDCtx));
@@ -373,7 +377,7 @@ Example usage for a project using a compile commands database:
             for (const auto &Bitcode : Bitcodes) {
 
               llvm::scope_exit ArenaGuard(
-                  [] { clang::doc::TransientArena.Reset(); });
+                  [] { clang::doc::getTransientArena().Reset(); });
               llvm::BitstreamCursor Stream(Bitcode);
               doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
@@ -387,7 +391,8 @@ Example usage for a project using a compile commands database:
               }
               for (auto &I : *ReadInfos) {
                 if (auto Err = doc::mergeSingleInfo(
-                        Reduced, std::move(I), clang::doc::PersistentArena)) {
+                        Reduced, std::move(I),
+                        clang::doc::getPersistentArena())) {
                   std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
                   Diags.Report(DiagIDBitcodeMerging)
                       << toString(std::move(Err));

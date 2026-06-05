@@ -91,7 +91,8 @@ public:
   void OnLoadDll(const ModuleSpec &module_spec,
                  lldb::addr_t module_addr) override;
   void OnUnloadDll(lldb::addr_t module_addr) override;
-  void OnDebugString(const std::string &string) override;
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
@@ -118,6 +119,10 @@ protected:
                                MemoryRegionInfo &info) override;
 
 private:
+  llvm::Error ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                              uint16_t length_lower_word,
+                              llvm::SmallVectorImpl<char> &output);
+
   struct WatchpointInfo {
     uint32_t slot_id;
     lldb::addr_t address;

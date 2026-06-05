@@ -1156,6 +1156,11 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
       let mayLoad = 0;
     }
 
+    def _CFI_SAVE : PseudoInstSI<(outs), (ins sgpr_class:$data, i32imm:$addr)> {
+      let mayStore = 1;
+      let mayLoad = 0;
+    }
+
     def _RESTORE : PseudoInstSI <
       (outs sgpr_class:$data),
       (ins i32imm:$addr)> {
@@ -1221,6 +1226,19 @@ multiclass SI_SPILL_VGPR <SIRegisterClassLike vgpr_class,
         (ins vgpr_class:$vdata, i32imm:$vaddr,
              SReg_32:$soffset, i32imm:$offset),
         !if(HasMask, (ins SReg_32:$mask), (ins)))> {
+      let mayStore = 1;
+      let mayLoad = 0;
+      // (2 * 4) + (8 * num_subregs) bytes maximum
+      int MaxSize = !add(!shl(!srl(vgpr_class.Size, 5), !add(UsesTmp, 3)), 8);
+      // Size field is unsigned char and cannot fit more.
+      let Size = !if(!le(MaxSize, 256), MaxSize, 252);
+    }
+
+    def _CFI_SAVE
+        : VPseudoInstSI<(outs),
+                        !con((ins vgpr_class:$vdata, i32imm:$vaddr,
+                                 SReg_32:$soffset, i32imm:$offset),
+                             !if(HasMask, (ins SReg_32:$mask), (ins)))> {
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
@@ -1328,6 +1346,24 @@ def SI_PC_ADD_REL_OFFSET64 : SPseudoInstSI <
       (i64 (SIpc_add_rel_offset64 tglobaladdr:$ptr)))]> {
   let SubtargetPredicate = Has64BitLiterals;
 }
+
+def : GCNPat<
+  (p0 blockaddress:$ba),
+  (SI_PC_ADD_REL_OFFSET64 $ba)
+>;
+
+let SubtargetPredicate = HasSmemPrefetchInsts in {
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (i64 tblockaddress:$ptr), imm:$len),
+    (S_PREFETCH_INST (SI_PC_ADD_REL_OFFSET64 tblockaddress:$ptr), 0,
+                     (i32 SGPR_NULL), (as_i8timm $len))
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (i64 tblockaddress:$ptr), (i32 SReg_32:$len)),
+    (S_PREFETCH_INST (SI_PC_ADD_REL_OFFSET64 tblockaddress:$ptr), 0, $len, 0)
+  >;
+} // End let SubtargetPredicate = HasSmemPrefetchInsts
 
 def : GCNPat<
   (AMDGPUtrap timm:$trapid),
