@@ -344,7 +344,7 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  return match(this, m_ContainsMatchingVectorElement(m_Isa<ConstantExpr>()));
+  return containsMatchingVectorElement(IsaPred<ConstantExpr>);
 }
 
 bool Constant::containsMatchingVectorElement(
