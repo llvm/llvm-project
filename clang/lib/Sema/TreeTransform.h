@@ -16701,6 +16701,19 @@ template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     SubstNonTypeTemplateParmExpr *E) {
   Expr *OrigReplacement = E->getReplacement()->IgnoreImplicitAsWritten();
+
+  // Insert a constant-evaluated context for the transform.
+  // Otherwise, when a normalized constraint places the replacement inside
+  // an unevaluated operand (e.g. decltype), entities it refers to are not
+  // odr-used, and the constant evaluation performed by CheckTemplateArgument
+  // below can spuriously fail for otherwise valid replacements,
+  // e.g. when a call materializes a function parameter of class type whose
+  // special members were never instantiated.
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      /*LambdaContextDecl=*/nullptr,
+      Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
+
   ExprResult Replacement = getDerived().TransformExpr(OrigReplacement);
   if (Replacement.isInvalid())
     return true;
