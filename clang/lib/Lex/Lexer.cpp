@@ -1633,7 +1633,7 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts,
                             bool &IsExtension) {
   if (LangOpts.AsmPreprocessor) {
     return false;
-  } else if (LangOpts.DollarMacros && '$' == C) {
+  } else if ((LangOpts.DollarMacros || LangOpts.DollarIdents) && '$' == C) {
     return true;
   } else if (LangOpts.CPlusPlus || LangOpts.C23) {
     // A non-leading codepoint must have the XID_Continue property.
