@@ -5764,6 +5764,17 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::SPLAT_VECTOR:
     return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind, Depth + 1);
 
+  case ISD::SELECT: {
+    return !canCreateUndefOrPoison(Op, DemandedElts, Kind,
+                                   /*ConsiderFlags*/ true, Depth) &&
+           isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind,
+                                            Depth + 1) &&
+           isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedElts,
+                                            Kind, Depth + 1) &&
+           isGuaranteedNotToBeUndefOrPoison(Op.getOperand(2), DemandedElts,
+                                            Kind, Depth + 1);
+  }
+
   case ISD::VECTOR_SHUFFLE: {
     APInt DemandedLHS, DemandedRHS;
     auto *SVN = cast<ShuffleVectorSDNode>(Op);
