@@ -2148,6 +2148,8 @@ let append Predicates = [IsRV32] in {
             (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 8)>;
   def : Pat<(v4i8 (mulhu GPR:$rs1, GPR:$rs2)),
             (PNSRLI_B (PWMULU_B GPR:$rs1, GPR:$rs2), 8)>;
+  def : Pat<(v4i8 (riscv_mulhsu GPR:$rs1, GPR:$rs2)),
+            (PNSRLI_B (PWMULSU_B GPR:$rs1, GPR:$rs2), 8)>;
 
   // 8/16-bit bitreverse patterns
   // FIXME: Use BREV8 with Zbkb.
@@ -2463,6 +2465,9 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v8i8 (mulhu GPR:$rs1, GPR:$rs2)),
             (PPAIRO_B (PMULU_H_B00 GPR:$rs1, GPR:$rs2),
                       (PMULU_H_B11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v8i8 (riscv_mulhsu GPR:$rs1, GPR:$rs2)),
+            (PPAIRO_B (PMULSU_H_B00 GPR:$rs1, GPR:$rs2),
+                      (PMULSU_H_B11 GPR:$rs1, GPR:$rs2))>;
 
   // 32-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;

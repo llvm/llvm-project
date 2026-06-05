@@ -16391,11 +16391,11 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
 //            = X * 2^32 + hi * 2^32 + lo
 //            = (X + hi) * 2^32 + lo
 // So mulhsu computes (X + hi).
-// TODO: Support vectors.
 static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
                               const RISCVSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
-  if (!Subtarget.hasStdExtZmmul() || VT != Subtarget.getXLenVT())
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isOperationLegal(ISD::MULHS, VT))
     return SDValue();
 
   using namespace SDPatternMatch;
