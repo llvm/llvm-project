@@ -75,8 +75,8 @@ struct InputDesc {
   enum class Kind { File, Library };
 
   StringRef Value; // File path, or library name for -l (the value after -l).
-  Kind InputKind;
-  bool WholeArchive; // --whole-archive state in effect at this input.
+  Kind InputKind = Kind::File;
+  bool WholeArchive = false; // --whole-archive state in effect at this input.
 };
 
 /// Result of archive member resolution.
