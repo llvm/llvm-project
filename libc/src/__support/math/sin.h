@@ -29,6 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 LIBC_INLINE double
 sin_accurate(double x, uint16_t x_e, unsigned k,
              const range_reduction_double_internal::LargeRangeReduction
@@ -66,6 +67,7 @@ sin_accurate(double x, uint16_t x_e, unsigned k,
 
   return static_cast<double>(r);
 }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LIBC_INLINE double sin(double x) {
   using namespace math::range_reduction_double_internal;
