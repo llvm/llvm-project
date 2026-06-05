@@ -43,7 +43,7 @@ define void @fptoui_v8f32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    fcvtzu.4s v3, v2
 ; CHECK-NEXT:    tbl.16b v1, { v3, v4 }, v0
 ; CHECK-NEXT:    str d1, [x1], #16
-; CHECK-NEXT:    b.eq LBB0_1
+; CHECK-NEXT:    b.ne LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
@@ -59,7 +59,7 @@ loop:
   store <8 x i8> %c, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -127,7 +127,7 @@ define void @fptoui_2x_v8f32_to_v8i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB2_1
+; CHECK-NEXT:    b.ne LBB2_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
@@ -147,7 +147,7 @@ loop:
   store <16 x i8> %s, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -194,7 +194,7 @@ define void @fptoui_2x_v8f32_to_v8i8_in_loop_no_concat_shuffle(ptr %A, ptr %B, p
 ; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB3_1
+; CHECK-NEXT:    b.ne LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh5
@@ -214,7 +214,7 @@ loop:
   store <16 x i8> %s, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -259,7 +259,7 @@ define void @fptoui_v16f32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    fcvtzu.4s v3, v7
 ; CHECK-NEXT:    tbl.16b v1, { v3, v4, v5, v6 }, v0
 ; CHECK-NEXT:    str q1, [x1], #32
-; CHECK-NEXT:    b.eq LBB4_1
+; CHECK-NEXT:    b.ne LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh7
@@ -275,7 +275,7 @@ loop:
   store <16 x i8> %c, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -330,7 +330,7 @@ define void @fptoui_2x_v16f32_to_v16i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-NEXT:    tbl.16b v1, { v16, v17, v18, v19 }, v0
 ; CHECK-NEXT:    tbl.16b v2, { v20, v21, v22, v23 }, v0
 ; CHECK-NEXT:    stp q2, q1, [x9]
-; CHECK-NEXT:    b.eq LBB5_1
+; CHECK-NEXT:    b.ne LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh8, Lloh9
@@ -350,7 +350,7 @@ loop:
   store <32 x i8> %s, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -370,7 +370,7 @@ define void @fptoui_v8f32_to_v8i16_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB6_1
+; CHECK-NEXT:    b.ne LBB6_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -385,7 +385,7 @@ loop:
   store <8 x i16> %c, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -412,7 +412,7 @@ define void @fptoui_2x_v8f32_to_v8i16_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-NEXT:    uzp1.8h v0, v0, v1
 ; CHECK-NEXT:    uzp1.8h v1, v2, v3
 ; CHECK-NEXT:    stp q0, q1, [x9]
-; CHECK-NEXT:    b.eq LBB7_1
+; CHECK-NEXT:    b.ne LBB7_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -431,7 +431,7 @@ loop:
   store <16 x i16> %s, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -495,7 +495,7 @@ define void @uitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ucvtf.4s v3, v3
 ; CHECK-NEXT:    ucvtf.4s v2, v2
 ; CHECK-NEXT:    stp q2, q3, [x9]
-; CHECK-NEXT:    b.eq LBB8_1
+; CHECK-NEXT:    b.ne LBB8_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh11, Lloh13
@@ -512,7 +512,7 @@ loop:
   store <8 x float> %conv, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -623,7 +623,7 @@ define void @uitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ucvtf.4s v4, v4
 ; CHECK-NEXT:    stp q6, q5, [x9, #32]
 ; CHECK-NEXT:    stp q4, q7, [x9]
-; CHECK-NEXT:    b.eq LBB9_1
+; CHECK-NEXT:    b.ne LBB9_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh21
@@ -643,7 +643,7 @@ loop:
   store <16 x float> %conv, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void

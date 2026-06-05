@@ -655,7 +655,6 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   Value convertedVal = *converted;
   MemRefType memRefTy = dyn_cast<MemRefType>(convertedVal.getType());
 
-  bool isRebox = firMemref.getDefiningOp<fir::ReboxOp>() != nullptr;
   bool isDescriptor = mlir::isa<fir::BaseBoxType>(firMemref.getType()) ||
                       firMemref.getDefiningOp<fir::BoxAddrOp>() != nullptr;
 
@@ -669,6 +668,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
     collectSliceInfoFrom(rebox, sliceInfo);
   auto srcTy = cast<MemRefType>((*converted).getType());
+  std::optional<int64_t> complexPartIdx;
   if (sliceInfo.hasProjectedSlice) {
     if (auto complexTy = dyn_cast<mlir::ComplexType>(srcTy.getElementType())) {
       if (!sliceInfo.projectedSliceStart ||
@@ -680,24 +680,25 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
                "0 (real) or 1 (imaginary), bailing out of conversion\n");
         return failure();
       }
-      auto projection = *sliceInfo.projectedSliceStart;
+      complexPartIdx = *sliceInfo.projectedSliceStart;
       SmallVector<int64_t> shape(srcTy.getShape());
       shape.push_back(2);
-      Value compMemref =
+      convertedVal =
           fir::ConvertOp::create(
               rewriter, loc, MemRefType::get(shape, complexTy.getElementType()),
               *converted)
               .getResult();
+      memRefTy = cast<MemRefType>(convertedVal.getType());
       indices.push_back(
-          arith::ConstantIndexOp::create(rewriter, loc, projection));
-      return std::pair{compMemref, indices};
+          arith::ConstantIndexOp::create(rewriter, loc, *complexPartIdx));
     }
   }
 
   // Static shape does not imply contiguous layout for descriptor-backed
-  // entities (e.g. boxed array sections with non-unit stride). Keep the
-  // reinterpret-cast path so descriptor strides are preserved.
-  if (memRefTy.hasStaticShape() && !isRebox && !isDescriptor)
+  // entities (e.g. boxed array sections with non-unit stride). Projected
+  // complex %re/%im also need reinterpret_cast even when the converted type
+  // is statically shaped (e.g. memref<Nx2xT>).
+  if (!complexPartIdx && memRefTy.hasStaticShape() && !isDescriptor)
     return std::pair{*converted, indices};
 
   unsigned rank = arrayCoorOp.getIndices().size();
@@ -724,23 +725,30 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   //     matches CodeGen XArrayCoorOp's non-boxed branch.
   //
   //   box_dims path: query the descriptor at runtime. Required when:
-  //     (a) the slice is projected (physical layout is owned by the box);
-  //     (b) we have no shape information at all; or
-  //     (c) the array_coor base is a fir.box that is NOT a fir.embox result.
+  //     (a) we have no shape information at all; or
+  //     (b) the array_coor base is a fir.box that is NOT a fir.embox result;
+  //         or a fir.box with a projected slice (layout in the descriptor); or
+  //     (c) embox cannot supply layout for this coor (non-embox box above).
   //         getFIRConvert materializes fir.box_addr(box) -- an opaque pointer
   //         with no layout in its type -- so strides must come from the
   //         descriptor. This matches CodeGen XArrayCoorOp's boxed branch
   //         (getStrideFromBox); shape/shape_shift on array_coor is
   //         informational only (lower bounds for index translation).
-  const bool descriptorOwnsLayout = sliceInfo.hasProjectedSlice ||
-                                    shapeVec.empty() ||
-                                    (firMemrefIsBox && !firMemrefIsEmbox);
+  //     Projected complex %re/%im on a bare ref uses the shapeVec path with
+  //     strides scaled by two scalar slots per complex.
+  const bool boxNeedsDescriptorStrides =
+      firMemrefIsBox && (!firMemrefIsEmbox || sliceInfo.hasProjectedSlice);
+  const bool descriptorOwnsLayout =
+      shapeVec.empty() || boxNeedsDescriptorStrides;
   if (descriptorOwnsLayout) {
-    // Rebuild the MemRef view from descriptor metadata instead of from slice
-    // triplets. Reached only when firMemref is a fir.box value (case b/c), or
-    // for projected slices (case a) where the source remains the box.
-    auto boxElementSize =
-        fir::BoxEleSizeOp::create(rewriter, loc, indexTy, firMemref);
+    // Complex %re/%im: memref_stride = box_dims_byte_stride / sizeof(T),
+    Value boxElementSize =
+        complexPartIdx
+            ? arith::ConstantIndexOp::create(
+                  rewriter, loc,
+                  memRefTy.getElementType().getIntOrFloatBitWidth() / 8)
+            : fir::BoxEleSizeOp::create(rewriter, loc, indexTy, firMemref)
+                  .getResult();
 
     for (unsigned i = 0; i < rank; ++i) {
       Value dim = arith::ConstantIndexOp::create(rewriter, loc, rank - i - 1);
@@ -772,14 +780,33 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       Value stride = shapeVec[0];
       for (unsigned j = 1; j <= i - 1; ++j)
         stride = arith::MulIOp::create(rewriter, loc, shapeVec[j], stride);
+      if (complexPartIdx)
+        stride = arith::MulIOp::create(
+            rewriter, loc, stride,
+            arith::ConstantIndexOp::create(rewriter, loc, 2));
       strides.push_back(castTypeToIndexType(stride, rewriter));
     }
 
     sizes.push_back(castTypeToIndexType(shapeVec[0], rewriter));
-    strides.push_back(oneIdx);
+    // shapeVec strides count array elements (complexes).  After fir.convert to
+    // memref<...x2xT>, each step along an array dim must skip two scalars (re
+    // then im), so multiply by 2.  (Box path uses byte_stride / sizeof(T) for
+    // the same spacing; no /8 here because extents are already index units.)
+    if (complexPartIdx)
+      strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, 2));
+    else
+      strides.push_back(oneIdx);
   }
 
-  assert(strides.size() == sizes.size() && sizes.size() == rank);
+  // fir.convert above already made memref<...x2xT>; sizes/strides built so far
+  // cover only the array section (rank from array_coor).  Finish the
+  // reinterpret_cast layout with the pair dim that view already has: extent 2
+  // (re and im), stride 1 (contiguous scalars — index 0/1 from array_coor).
+  if (complexPartIdx) {
+    sizes.push_back(arith::ConstantIndexOp::create(rewriter, loc, 2));
+    strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, 1));
+    ++rank;
+  }
 
   int64_t dynamicOffset = ShapedType::kDynamic;
   SmallVector<int64_t> dynamicStrides(rank, ShapedType::kDynamic);
@@ -793,7 +820,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   Value offset = arith::ConstantIndexOp::create(rewriter, loc, 0);
 
   auto reinterpret = memref::ReinterpretCastOp::create(
-      rewriter, loc, memRefTy, *converted, offset, sizes, strides);
+      rewriter, loc, memRefTy, convertedVal, offset, sizes, strides);
 
   Value result = reinterpret->getResult(0);
   return std::pair{result, indices};

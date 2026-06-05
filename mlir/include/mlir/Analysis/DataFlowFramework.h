@@ -817,12 +817,6 @@ struct DenseMapInfo<mlir::ProgramPoint> {
         (mlir::Block *)pointer,
         mlir::Block::iterator((mlir::Operation *)pointer));
   }
-  static mlir::ProgramPoint getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::ProgramPoint(
-        (mlir::Block *)pointer,
-        mlir::Block::iterator((mlir::Operation *)pointer));
-  }
   static unsigned getHashValue(mlir::ProgramPoint pp) {
     return hash_combine(pp.getBlock(), pp.getPoint().getNodePtr());
   }
