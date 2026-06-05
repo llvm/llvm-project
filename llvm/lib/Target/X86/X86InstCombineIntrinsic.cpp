@@ -2424,6 +2424,17 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512_mask_cmp_sd: {
     // These intrinsics only demand the 0th element of their input vectors. If
     // we can simplify the input based on that, do so now.
+    //
+    // NOTE: Only operands 0 and 1 (the scalar-as-vector FP inputs) may be
+    // touched here. For the mask.cmp.ss/sd intrinsics, operand 2 is the
+    // comparison predicate (0..31) and operand 4 is the SAE/embedded-rounding
+    // control; both encode semantics that a plain fcmp cannot represent
+    // (signaling-vs-quiet predicates and FP-exception suppression). Do NOT add
+    // a fold that lowers these to fcmp/select unless it first proves the
+    // predicate is an SSE-compatible *quiet* form and the SAE operand is the
+    // exception-enabled default (4 == _MM_FROUND_CUR_DIRECTION); otherwise the
+    // signaling/QNaN-trap behavior would be silently dropped. The comi/ucomi
+    // intrinsics share this case but have only the two FP operands.
     bool MadeChange = false;
     Value *Arg0 = II.getArgOperand(0);
     Value *Arg1 = II.getArgOperand(1);

@@ -802,6 +802,67 @@ define i8 @test_cmp_sd(<2 x double> %a, <2 x double> %b, i8 %mask) {
   ret i8 %3
 }
 
+; The mask.cmp.ss/sd predicate (arg2) and SAE/rounding (arg4) immediates carry
+; signaling-vs-quiet and exception-suppression semantics that a plain fcmp cannot
+; represent. InstCombine may only simplify the demanded (lane 0) operands; it must
+; never fold these intrinsics to fcmp, and must preserve arg2/arg4 verbatim.
+
+; predicate 20 = _CMP_NEQ_US (unordered, *signaling*) - aliases fcmp une but traps.
+define i8 @test_cmp_ss_signaling_pred(<4 x float> %a, <4 x float> %b, i8 %mask) {
+; CHECK-LABEL: @test_cmp_ss_signaling_pred(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], i32 20, i8 [[MASK:%.*]], i32 4)
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %1 = insertelement <4 x float> %a, float 1.000000e+00, i32 1
+  %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
+  %3 = insertelement <4 x float> %2, float 3.000000e+00, i32 3
+  %4 = insertelement <4 x float> %b, float 4.000000e+00, i32 1
+  %5 = insertelement <4 x float> %4, float 5.000000e+00, i32 2
+  %6 = insertelement <4 x float> %5, float 6.000000e+00, i32 3
+  %7 = tail call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %3, <4 x float> %6, i32 20, i8 %mask, i32 4)
+  ret i8 %7
+}
+
+; SAE = 8 = _MM_FROUND_NO_EXC (suppress FP exceptions) - cannot be modeled by fcmp.
+define i8 @test_cmp_ss_sae(<4 x float> %a, <4 x float> %b, i8 %mask) {
+; CHECK-LABEL: @test_cmp_ss_sae(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], i32 4, i8 [[MASK:%.*]], i32 8)
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %1 = insertelement <4 x float> %a, float 1.000000e+00, i32 1
+  %2 = insertelement <4 x float> %1, float 2.000000e+00, i32 2
+  %3 = insertelement <4 x float> %2, float 3.000000e+00, i32 3
+  %4 = insertelement <4 x float> %b, float 4.000000e+00, i32 1
+  %5 = insertelement <4 x float> %4, float 5.000000e+00, i32 2
+  %6 = insertelement <4 x float> %5, float 6.000000e+00, i32 3
+  %7 = tail call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %3, <4 x float> %6, i32 4, i8 %mask, i32 8)
+  ret i8 %7
+}
+
+; Lane 0 is a QNaN constant with predicate 4 (_CMP_NEQ_UQ) and SAE = 8. The
+; intrinsic must survive unchanged (not be folded to an fcmp that ignores the
+; QNaN class / SAE suppression).
+define i8 @test_cmp_ss_qnan_lane0(<4 x float> %b, i8 %mask) {
+; CHECK-LABEL: @test_cmp_ss_qnan_lane0(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> <float +qnan, float poison, float poison, float poison>, <4 x float> [[B:%.*]], i32 4, i8 [[MASK:%.*]], i32 8)
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %1 = tail call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> <float 0x7FF8000000000000, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, <4 x float> %b, i32 4, i8 %mask, i32 8)
+  ret i8 %1
+}
+
+; sd variant: signaling predicate 20 + SAE 8 must both be preserved.
+define i8 @test_cmp_sd_signaling_sae(<2 x double> %a, <2 x double> %b, i8 %mask) {
+; CHECK-LABEL: @test_cmp_sd_signaling_sae(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], i32 20, i8 [[MASK:%.*]], i32 8)
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %1 = insertelement <2 x double> %a, double 1.000000e+00, i32 1
+  %2 = insertelement <2 x double> %b, double 2.000000e+00, i32 1
+  %3 = tail call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %1, <2 x double> %2, i32 20, i8 %mask, i32 8)
+  ret i8 %3
+}
+
 define i64 @test(float %f, double %d) {
 ;
 ; CHECK-LABEL: @test(
