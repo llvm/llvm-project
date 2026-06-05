@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGBuiltin.h"
 #include "CodeGenFunction.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicsS390.h"
@@ -34,6 +35,54 @@ static Value *EmitSystemZIntrinsicWithCC(CodeGenFunction &CGF,
   Value *CC = CGF.Builder.CreateExtractValue(Call, 1);
   CGF.Builder.CreateStore(CC, CCPtr);
   return CGF.Builder.CreateExtractValue(Call, 0);
+}
+
+/// For z/OS, the builtin __cs1 has the following signature:
+/// int __cs1(void * Comparand,
+///           void * Destination,
+///           void * Exchange);
+/// Whereas the llvm 'cmpxchg' instruction has the following syntax:
+/// compxchg *Destination, Comparand, Exchange.
+/// So we need to swap Comparand & Destination and dereference Comparand &
+/// Exchange when invoking CreateAtomicCmpXchng. For this reason we can not use
+/// the utility function MakeAtomicCmpXchgValue.
+static Value *EmitAtomicCmpXchgForZOSIntrin(CodeGenFunction &CGF,
+                                            const CallExpr *E,
+                                            llvm::Type *IntType, bool HasAddr) {
+
+  CharUnits Alignment =
+      CGF.getContext().toCharUnitsFromBits(IntType->getScalarSizeInBits());
+  llvm::Value *DestinationPtr = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Value *ComparandPtr = CGF.EmitScalarExpr(E->getArg(0));
+
+  Address DestinationAddr = Address(DestinationPtr, IntType, Alignment);
+  Address ComparandAddr = Address(ComparandPtr, IntType, Alignment);
+
+  llvm::Value *Comparand = CGF.Builder.CreateLoad(ComparandAddr);
+  llvm::Value *Exchange;
+  if (HasAddr) {
+    llvm::Value *ExchangePtr = CGF.EmitScalarExpr(E->getArg(2));
+    Address ExchangeAddr = Address(ExchangePtr, IntType, Alignment);
+    Exchange = CGF.Builder.CreateLoad(ExchangeAddr);
+  } else {
+    Exchange =
+        EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)),
+                  E->getArg(2)->getType(), cast<llvm::IntegerType>(IntType));
+  }
+
+  Value *Result = CGF.Builder.CreateAtomicCmpXchg(
+      DestinationAddr, Comparand, Exchange,
+      llvm::AtomicOrdering::SequentiallyConsistent,
+      llvm::AtomicOrdering::SequentiallyConsistent);
+
+  // Store Destination in Comparand.
+  CGF.Builder.CreateStore(CGF.Builder.CreateExtractValue(Result, 0),
+                          ComparandAddr);
+
+  // Extract boolean success flag, inverse it and zext it to int.
+  llvm::Value *RetVal =
+      CGF.Builder.CreateNot(CGF.Builder.CreateExtractValue(Result, 1));
+  return CGF.Builder.CreateZExt(RetVal, CGF.ConvertType(E->getType()));
 }
 
 Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
@@ -68,11 +117,25 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::s390_ntstg);
     return Builder.CreateCall(F, {Data, Address});
   }
+  case SystemZ::BI__cs: {
+    return EmitAtomicCmpXchgForZOSIntrin(*this, E, Int32Ty, false);
+  }
+  case SystemZ::BI__cs1: {
+    return EmitAtomicCmpXchgForZOSIntrin(*this, E, Int32Ty, true);
+  }
+  case SystemZ::BI__csg:
+  case SystemZ::BI__cds1: {
+    return EmitAtomicCmpXchgForZOSIntrin(*this, E, Int64Ty, true);
+  }
+  case SystemZ::BI__cdsg: {
+    llvm::Type *Int128Ty = llvm::IntegerType::get(getLLVMContext(), 128);
+    return EmitAtomicCmpXchgForZOSIntrin(*this, E, Int128Ty, true);
+  }
 
-  // Vector builtins.  Note that most vector builtins are mapped automatically
-  // to target-specific LLVM intrinsics.  The ones handled specially here can
-  // be represented via standard LLVM IR, which is preferable to enable common
-  // LLVM optimizations.
+    // Vector builtins.  Note that most vector builtins are mapped automatically
+    // to target-specific LLVM intrinsics.  The ones handled specially here can
+    // be represented via standard LLVM IR, which is preferable to enable common
+    // LLVM optimizations.
 
   case SystemZ::BI__builtin_s390_vclzb:
   case SystemZ::BI__builtin_s390_vclzh:
