@@ -202,9 +202,8 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (!GV->isDeclaration()) {
     if (!getWasmMetadata(*GV, "wasm.import.module").empty() ||
         !getWasmMetadata(*GV, "wasm.import.name").empty()) {
-      OutContext.reportError(SMLoc(),
-                             "definition of global '" + GV->getName() +
-                                 "' cannot have import metadata");
+      OutContext.reportError(SMLoc(), "definition of global '" + GV->getName() +
+                                          "' cannot have import metadata");
       return;
     }
   }

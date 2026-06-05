@@ -317,7 +317,7 @@ bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
 
 WebAssemblyImportModuleAttr *
 SemaWasm::mergeImportModuleAttr(Decl *D,
-                                 const WebAssemblyImportModuleAttr &AL) {
+                                const WebAssemblyImportModuleAttr &AL) {
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (const auto *ExistingAttr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
       if (ExistingAttr->getImportModule() == AL.getImportModule())

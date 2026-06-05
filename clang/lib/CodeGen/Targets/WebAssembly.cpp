@@ -64,7 +64,8 @@ public:
         const auto *NameAttr = VD->getAttr<WebAssemblyImportNameAttr>();
         if (ModuleAttr || NameAttr) {
           if (VD->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
-            auto AttrLoc = ModuleAttr ? ModuleAttr->getLocation() : NameAttr->getLocation();
+            auto AttrLoc = ModuleAttr ? ModuleAttr->getLocation()
+                                      : NameAttr->getLocation();
             CGM.getDiags().Report(AttrLoc, diag::err_fe_backend_unsupported)
                 << "import attribute cannot be applied to a definition";
             return;
@@ -73,19 +74,23 @@ public:
           if (ModuleAttr) {
             Global->setMetadata(
                 "wasm.import.module",
-                llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, ModuleAttr->getImportModule())));
+                llvm::MDNode::get(
+                    Ctx,
+                    llvm::MDString::get(Ctx, ModuleAttr->getImportModule())));
           }
           if (NameAttr) {
             Global->setMetadata(
                 "wasm.import.name",
-                llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, NameAttr->getImportName())));
+                llvm::MDNode::get(
+                    Ctx, llvm::MDString::get(Ctx, NameAttr->getImportName())));
           }
         }
         if (const auto *Attr = VD->getAttr<WebAssemblyExportNameAttr>()) {
           llvm::LLVMContext &Ctx = CGM.getLLVMContext();
           Global->setMetadata(
               "wasm.export.name",
-              llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, Attr->getExportName())));
+              llvm::MDNode::get(
+                  Ctx, llvm::MDString::get(Ctx, Attr->getExportName())));
         }
       }
       return;
@@ -96,7 +101,8 @@ public:
       const auto *NameAttr = FD->getAttr<WebAssemblyImportNameAttr>();
       if (ModuleAttr || NameAttr) {
         if (FD->isThisDeclarationADefinition()) {
-          auto AttrLoc = ModuleAttr ? ModuleAttr->getLocation() : NameAttr->getLocation();
+          auto AttrLoc =
+              ModuleAttr ? ModuleAttr->getLocation() : NameAttr->getLocation();
           CGM.getDiags().Report(AttrLoc, diag::err_fe_backend_unsupported)
               << "import attribute cannot be applied to a definition";
           auto *NonConstFD = const_cast<FunctionDecl *>(FD);
