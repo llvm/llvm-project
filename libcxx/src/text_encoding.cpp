@@ -14,6 +14,10 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
+#if defined(__ANDROID__)
+// UTF-8 is the always the environment encoding on Android.
+std::text_encoding __get_locale_encoding([[maybe_unused]] const char* __name) { return std::text_encoding::id::UTF8; }
+#else
 static text_encoding __make_text_encoding(const char* __name) {
   if (__name == nullptr)
     return text_encoding{};
@@ -25,10 +29,6 @@ static text_encoding __make_text_encoding(const char* __name) {
   return text_encoding(__name_view);
 }
 
-#if defined(__ANDROID__)
-// UTF-8 is the always the environment encoding on Android.
-std::text_encoding __get_locale_encoding([[maybe_unused]] const char* __name) { return std::text_encoding::id::UTF8; }
-#else
 std::text_encoding __get_locale_encoding(const char* __name) {
   if (__name == nullptr)
     return __make_text_encoding(__locale::__get_locale_encoding(static_cast<__locale::__locale_t>(nullptr)));
