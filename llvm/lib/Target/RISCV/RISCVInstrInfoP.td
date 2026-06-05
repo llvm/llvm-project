@@ -2206,6 +2206,11 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
 
+  // Truncate patterns using pnsrli.
+  // FIXME: Support general shift+trunc
+  def : Pat<(v4i8 (trunc (v4i16 GPRPair:$rs))), (PNSRLI_B GPRPair:$rs, 0)>;
+  def : Pat<(v2i16 (trunc (v2i32 GPRPair:$rs))), (PNSRLI_H GPRPair:$rs, 0)>;
+
   // Basic 8-bit arithmetic patterns
   def : PatGprPairGprPair<add, PADD_DB, v8i8>;
   def : PatGprPairGprPair<sub, PSUB_DB, v8i8>;
@@ -2597,5 +2602,10 @@ let append Predicates = [IsRV64] in {
   // Zero-extend patterns using zip*p with zero
   def : Pat<(v4i16 (zext_invec (v8i8 GPR:$rs))), (ZIP8P GPR:$rs, (v8i8 X0))>;
   def : Pat<(v2i32 (zext_invec (v4i16 GPR:$rs))), (ZIP16P GPR:$rs, (v4i16 X0))>;
+
+  // Sign extend inreg patterns using psext. sext_invec is lowered to
+  // zext_invec+sext_inreg.
+  def : Pat<(v4i16 (sext_inreg GPR:$rs1, v4i8)), (PSEXT_H_B GPR:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPR:$rs1, v2i16)), (PSEXT_W_H GPR:$rs1)>;
 } // append Predicates = [IsRV64]
 } // Predicates = [HasStdExtP]
