@@ -12,6 +12,7 @@ import time
 class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
+    @skipIfWindows  # Fails in pre-merge CI
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_commands(self):
         """
