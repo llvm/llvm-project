@@ -6120,16 +6120,22 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   if (!DL->typeSizeEqualsStoreSize(EltTy))
     return false;
 
-  uint64_t MaxInt64 =
-      static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
   uint64_t ElementSizeBits = DL->getTypeStoreSizeInBits(EltTy);
-  assert((ElementSizeBits <= MaxInt64) && "element size far too large?");
-  int64_t ElementSizeBitsI64 = static_cast<int64_t>(ElementSizeBits);
+  if (ElementSizeBits % 8 != 0)
+    return false;
+  uint64_t ElementSizeBytes = ElementSizeBits / 8;
   unsigned NumElts = VT->getNumElements();
   Value *CommonBase = nullptr;
-  int64_t StartBitOffset = 0, FirstLoadByteOffset = 0;
+  APInt StartByteOffset(1, 0), FirstLoadByteOffset(1, 0);
   LoadInst *FirstLI = nullptr;
   GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
+  auto GetLaneByteOffset = [ElementSizeBytes](uint64_t Lane,
+                                              unsigned IndexBits) {
+    return APInt(IndexBits, Lane, /*isSigned=*/false,
+                 /*implicitTrunc=*/true) *
+           APInt(IndexBits, ElementSizeBytes, /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
+  };
   SmallPtrSet<LoadInst *, 4> Loads;
   for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
     // Step 1: Trace this result lane through shuffle users to find the source
@@ -6156,22 +6162,21 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
                              MemoryLocation::get(LI), AA))
       return false;
 
-    // Step 2: Convert the load pointer and selected source lane into an
-    // absolute bit offset: byte offset of the load pointer plus lane offset
-    // within the load.
+    // Step 2: Convert the load pointer and selected source lane into a byte
+    // offset in the pointer index type.
     int64_t LoadByteOffset = 0;
     Value *Base = GetPointerBaseWithConstantOffset(LI->getPointerOperand(),
                                                    LoadByteOffset, *DL);
-    int64_t SourceLaneBitOffset =
-        (LoadByteOffset * 8) + (IL.second * ElementSizeBitsI64);
+    unsigned IndexBits = DL->getIndexTypeSizeInBits(Base->getType());
+    APInt LoadByteOffsetAP(IndexBits, LoadByteOffset, /*isSigned=*/true);
+    APInt SourceByteOffset =
+        LoadByteOffsetAP +
+        GetLaneByteOffset(static_cast<uint64_t>(IL.second), IndexBits);
     if (Lane == 0) {
-      if (SourceLaneBitOffset % 8 != 0)
-        return false;
-
       CommonBase = Base;
-      StartBitOffset = SourceLaneBitOffset;
+      StartByteOffset = SourceByteOffset;
       FirstLI = LI;
-      FirstLoadByteOffset = LoadByteOffset;
+      FirstLoadByteOffset = LoadByteOffsetAP;
       NewGEPFlags = getConstantGEPNoWrapFlagsToBase(LI->getPointerOperand(),
                                                     CommonBase, *DL);
       // The selected lane is inside the original vector load's memory range.
@@ -6184,13 +6189,12 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
       // result lane.
       if (Base != CommonBase)
         return false;
+      if (IndexBits != StartByteOffset.getBitWidth())
+        return false;
 
-      assert(Lane <= MaxInt64 / static_cast<uint64_t>(ElementSizeBitsI64) &&
-             "lane offset far too large?");
-
-      int64_t ExpectedBitOffset =
-          StartBitOffset + static_cast<int64_t>(Lane) * ElementSizeBitsI64;
-      if (SourceLaneBitOffset != ExpectedBitOffset)
+      APInt ExpectedByteOffset =
+          StartByteOffset + GetLaneByteOffset(Lane, IndexBits);
+      if (SourceByteOffset != ExpectedByteOffset)
         return false;
     }
 
@@ -6210,13 +6214,15 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
     }
   }
 
-  int64_t StartByteOffset = StartBitOffset / 8;
   Type *IndexTy = DL->getIndexType(CommonBase->getType());
-  auto *StartByteOffsetValue = ConstantInt::get(IndexTy, StartByteOffset,
-                                                /*isSigned=*/true);
-  int64_t ByteOffsetFromFirstLoad = StartByteOffset - FirstLoadByteOffset;
+  auto *StartByteOffsetValue = ConstantInt::get(IndexTy, StartByteOffset);
+  APInt ByteOffsetFromFirstLoad = StartByteOffset - FirstLoadByteOffset;
+  unsigned AlignOffsetBits =
+      std::min<unsigned>(ByteOffsetFromFirstLoad.getBitWidth(), 64);
+  uint64_t ByteOffsetFromFirstLoadForAlign =
+      ByteOffsetFromFirstLoad.getLoBits(AlignOffsetBits).getZExtValue();
   Align NewAlign =
-      commonAlignment(FirstLI->getAlign(), ByteOffsetFromFirstLoad);
+      commonAlignment(FirstLI->getAlign(), ByteOffsetFromFirstLoadForAlign);
   // Step 4: Model the replacement: one vector load from the adjusted alignment
   // and the byte-offset GEP that CreatePtrAdd will emit.
   InstructionCost NewCost =
