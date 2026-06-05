@@ -63,7 +63,8 @@ static SrcMgr::ContentCache *cloneContentCache(llvm::BumpPtrAllocator &Alloc,
   return Clone;
 }
 
-static bool pathDiffersIgnoringWindowsSlashes(FileEntryRef LHS, FileEntryRef RHS) {
+static bool pathDiffersIgnoringWindowsSlashes(FileEntryRef LHS,
+                                              FileEntryRef RHS) {
   std::string LHSPath = llvm::sys::path::convert_to_slash(LHS.getName());
   std::string RHSPath = llvm::sys::path::convert_to_slash(RHS.getName());
   StringRef LHSRef(LHSPath);
