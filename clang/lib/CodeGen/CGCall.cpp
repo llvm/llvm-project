@@ -5730,7 +5730,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           IRCallArgs[FirstIRArg] = Val;
           break;
         }
-        // No clean source address (rare): fall through to byval-temp.
+        // No addressable source for this Indirect arg (rare; e.g. a scalar
+        // RValue the ABI classifies as Indirect). The fall-through below
+        // would create a current-frame byval-temp that dangles past the
+        // tail-call teardown. Refuse cleanly; codegen continues producing
+        // IR but the error prevents it from reaching the backend.
+        CGM.getDiags().Report(MustTailCall->getBeginLoc(),
+                              diag::err_musttail_unsupported_indirect_arg);
       }
 
       if (I->isAggregate()) {
