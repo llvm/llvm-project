@@ -312,20 +312,13 @@ bool Constant::isElementWiseEqual(Value *Y) const {
 static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
-  if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
+  if (C->getType()->isVectorTy()) {
     if (HasFn(C))
       return true;
     if (isa<ConstantAggregateZero>(C))
       return false;
-    if (isa<ScalableVectorType>(C->getType()))
-      return false;
 
-    for (unsigned i = 0, e = cast<FixedVectorType>(VTy)->getNumElements();
-         i != e; ++i) {
-      if (Constant *Elem = C->getAggregateElement(i))
-        if (HasFn(Elem))
-          return true;
-    }
+    return C->containsMatchingVectorElement(HasFn);
   }
 
   return false;
