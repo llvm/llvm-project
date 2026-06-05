@@ -12,7 +12,7 @@ class TestDAP_launch_extra_launch_commands(lldbdap_testcase.DAPTestCaseBase):
     Tests the "launchCommands" with extra launching settings
     """
 
-    @skipIfWindows  # Fails in pre-merge CI
+    @skipIfWindows  # Wait for module events fails.
     # Flakey on 32-bit Arm Linux.
     @skipIf(oslist=["linux"], archs=["arm$"])
     def test(self):
