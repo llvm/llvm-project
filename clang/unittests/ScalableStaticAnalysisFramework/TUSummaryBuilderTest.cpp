@@ -275,6 +275,7 @@ struct TUSummaryBuilderLinkageTest : TUSummaryBuilderTest {
   std::unique_ptr<ASTUnit> AST;
   static constexpr auto Internal = EntityLinkageType::Internal;
   static constexpr auto External = EntityLinkageType::External;
+  static constexpr auto None = EntityLinkageType::None;
 
   const FunctionDecl *findFnByName(StringRef Name) {
     return ssaf::findFnByName(Name, AST->getASTContext());
@@ -334,6 +335,47 @@ TEST_F(TUSummaryBuilderLinkageTest, ConstGlobalHasInternalLinkage) {
   const auto *VD = findDeclByName<VarDecl>("glob", AST->getASTContext());
   ASSERT_TRUE(VD);
   EXPECT_EQ(getLinkageFor(Extractor.addEntity(VD)), Internal);
+}
+
+// See 'getLinkageForDecl' in
+// ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.cpp
+
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfExternalFunctionIsExternal) {
+  AST = tooling::buildASTFromCode("void target(int *ptr) {}");
+  const auto *PVD = findDeclByName<ParmVarDecl>("ptr", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfInlineFunctionIsExternal) {
+  AST = tooling::buildASTFromCode("inline void target(int *ptr) {}");
+  const auto *PVD = findDeclByName<ParmVarDecl>("ptr", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfStaticFunctionIsInternal) {
+  AST = tooling::buildASTFromCode("static void target(int *ptr) {}");
+  const auto *PVD = findDeclByName<ParmVarDecl>("ptr", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), Internal);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfAnonNamespaceFunctionIsInternal) {
+  AST = tooling::buildASTFromCode("namespace {\n"
+                                  "  void target(int *ptr) {}\n"
+                                  "}");
+  const auto *PVD = findDeclByName<ParmVarDecl>("ptr", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), Internal);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfClassMemberFunctionIsExternal) {
+  AST = tooling::buildASTFromCode(
+      "class C { public: void target(int *ptr) {} };");
+  const auto *PVD = findDeclByName<ParmVarDecl>("ptr", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), External);
 }
 
 } // namespace

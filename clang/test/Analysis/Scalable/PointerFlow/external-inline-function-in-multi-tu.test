@@ -1,0 +1,63 @@
+// For an 'inline' function with multiple definitions in different
+// translation units (TUs), its call sites in different TUs and one of
+// its definitions, which is chosen by the linker, are properly connected
+// during bounds propagation.
+
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+
+// Extract per-TU PointerFlow + UnsafeBufferUsage summaries.
+// RUN: %clang_cc1 -fsyntax-only -I %t %t/tu1.cpp \
+// RUN:   --ssaf-extract-summaries=PointerFlow \
+// RUN:   --ssaf-extract-summaries=UnsafeBufferUsage \
+// RUN:   --ssaf-tu-summary-file=%t/tu1.summary.json
+// RUN: %clang_cc1 -fsyntax-only -I %t %t/tu2.cpp \
+// RUN:   --ssaf-extract-summaries=PointerFlow \
+// RUN:   --ssaf-extract-summaries=UnsafeBufferUsage \
+// RUN:   --ssaf-tu-summary-file=%t/tu2.summary.json
+
+// Link the two TU summaries into a single LU summary.
+// RUN: clang-ssaf-linker %t/tu1.summary.json %t/tu2.summary.json \
+// RUN:   -o %t/lu.json
+
+// Run UnsafeBufferReachableAnalysis on the linked LU summary.
+// RUN: clang-ssaf-analyzer %t/lu.json -o %t/wpa.json \
+// RUN:   -a UnsafeBufferReachableAnalysisResult
+
+// RUN: FileCheck %s --input-file=%t/wpa.json
+
+//--- shared.h
+inline int shared_inline(int *p) {
+  int * l = p;      
+  return l[5];
+}
+
+//--- tu1.cpp
+#include "shared.h"
+int f(int *x) {
+  return shared_inline(x);
+}
+
+//--- tu2.cpp
+#include "shared.h"
+int g(int *y) {
+  return shared_inline(y);
+}
+
+
+// Check that these parameters are all reachable from the local variable 'l':
+// parameter 'y' of function 'g',
+// parameter 'x' of function 'f', and
+// parameter 'p' of function 'shared_inline'
+
+// CHECK-DAG: "suffix": "1",{{[[:space:]]+}}"usr": "c:@F@f#*I#"
+// CHECK-DAG: "suffix": "1",{{[[:space:]]+}}"usr": "c:@F@g#*I#"
+// CHECK-DAG: "suffix": "1",{{[[:space:]]+}}"usr": "c:@F@shared_inline#*I#"
+// CHECK-DAG: "usr": "c:shared.h@{{[0-9]+}}@F@shared_inline#{{.*}}@l"
+
+// Confirm UnsafeBufferReachableAnalysisResult is present in the output.
+// CHECK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+
+
