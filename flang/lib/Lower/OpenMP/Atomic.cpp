@@ -563,12 +563,11 @@ void Fortran::lower::omp::lowerAtomic(
     // e : expecteVal
     // d : desiredVal
 
-    // Check for compound clauses (fail, capture, weak) that are not yet
+    // Check for compound clauses (fail, capture) that are not yet
     // supported with atomic compare.
     if (llvm::any_of(clauses, [](const omp::Clause &clause) {
           return clause.id == llvm::omp::Clause::OMPC_fail ||
-                 clause.id == llvm::omp::Clause::OMPC_capture ||
-                 clause.id == llvm::omp::Clause::OMPC_weak;
+                 clause.id == llvm::omp::Clause::OMPC_capture;
         })) {
       TODO(loc, "Compound clauses of OpenMP ATOMIC COMPARE");
     }
@@ -617,6 +616,11 @@ void Fortran::lower::omp::lowerAtomic(
     }
 
     mlir::UnitAttr weakAttr = nullptr;
+    if (llvm::any_of(clauses, [](const omp::Clause &clause) {
+          return clause.id == llvm::omp::Clause::OMPC_weak;
+        })) {
+      weakAttr = builder.getUnitAttr();
+    }
     mlir::Operation *atomicOp = mlir::omp::AtomicCompareOp::create(
         builder, loc, atomAddr, weakAttr, hint,
         makeMemOrderAttr(converter, memOrder));
