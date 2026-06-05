@@ -1027,7 +1027,7 @@ static void createOptionalSymbols() {
   if (ctx.sym.firstPageEnd)
     ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
 
-  // For non-shared memory programs we still need to define __tls_base since we
+  // For non-multithreaded programs we still need to define __tls_base since we
   // allow object files built with TLS to be linked into single threaded
   // programs, and such object files can contain references to this symbol.
   //
