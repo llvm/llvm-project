@@ -13,7 +13,7 @@
 #include "lldb/Host/File.h"
 #include "lldb/Target/Process.h"
 
-using HANDLE = void*;
+using HANDLE = void *;
 
 using namespace lldb_private;
 
