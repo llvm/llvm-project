@@ -19,7 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
-#define DEBUG_TYPE "clang-doc-md-generator"
+#define DEBUG_TYPE "clang-doc"
 
 using namespace llvm;
 
