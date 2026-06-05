@@ -548,6 +548,7 @@ TEST_F(SourceManagerTest, windowsSeparatorSpellingsReuseOriginalFileName) {
   constexpr StringRef WinFooPath = "C:\\dir\\foo.h";
 
   AddFile(FooPath);
+  AddHardLink(WinFooPath, FooPath);
 
   auto FooOrErr = FileMgr.getFileRef(FooPath);
   auto WinFooOrErr = FileMgr.getFileRef(WinFooPath);
