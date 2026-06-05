@@ -1561,6 +1561,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_mul:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() * tmp.GetScalar();

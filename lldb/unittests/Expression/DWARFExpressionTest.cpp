@@ -602,9 +602,9 @@ TEST(DWARFExpression, TypedBinaryOpsRejectMismatchedTypes) {
 
   TypedDwarfDelegate unit;
   constexpr uint8_t opcodes[] = {
-      DW_OP_plus, DW_OP_minus, DW_OP_div, DW_OP_mod,  DW_OP_and, DW_OP_or,
-      DW_OP_xor,  DW_OP_shl,   DW_OP_shr, DW_OP_shra, DW_OP_lt,  DW_OP_le,
-      DW_OP_gt,   DW_OP_ge,    DW_OP_eq,  DW_OP_ne,
+      DW_OP_plus, DW_OP_minus, DW_OP_div, DW_OP_mod, DW_OP_mul,  DW_OP_and,
+      DW_OP_or,   DW_OP_xor,   DW_OP_shl, DW_OP_shr, DW_OP_shra, DW_OP_lt,
+      DW_OP_le,   DW_OP_gt,    DW_OP_ge,  DW_OP_eq,  DW_OP_ne,
   };
 
   for (uint8_t opcode : opcodes) {
