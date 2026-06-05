@@ -1342,8 +1342,8 @@ gpu.module @xevm_module {
 // CHECK: %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<1x4xf8E8M0FNU> to vector<4xf8E8M0FNU>
 // CHECK: %[[BUNDLE:.*]] = vector.bitcast %[[FLAT]] : vector<4xf8E8M0FNU> to vector<1xi32>
 // CHECK: %[[ELEM:.*]] = vector.extract %[[BUNDLE]][0] : i32 from vector<1xi32>
-// CHECK: %[[OFFSET:.*]] = arith.constant 0 : i32
-// CHECK: %[[WIDTH:.*]] = arith.constant 8 : i32
+// CHECK-DAG: %[[OFFSET:.*]] = arith.constant 0 : i32
+// CHECK-DAG: %[[WIDTH:.*]] = arith.constant 8 : i32
 // CHECK: %[[SHUF:.*]], %{{.*}} = gpu.shuffle up %[[ELEM]], %[[OFFSET]], %[[WIDTH]] : i32
 // CHECK: %[[INS:.*]] = vector.insert %[[SHUF]], %[[ZERO]] [0] : i32 into vector<1xi32>
 // CHECK: %[[TMPFLAT:.*]] = vector.bitcast %[[INS]] : vector<1xi32> to vector<4xf8E8M0FNU>
