@@ -90,15 +90,6 @@ private:
   void optimizeAtomic(Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
                       bool ValDivergent, bool IsLDS) const;
 
-  Value *optimizeAtomicImpl(IRBuilder<> &B, Instruction &I,
-                            AtomicRMWInst::BinOp Op, unsigned ValIdx,
-                            bool ValDivergent) const;
-
-  Value *optimizeAtomicWithDynamicThreshold(IRBuilder<> &B, Instruction &I,
-                                            AtomicRMWInst::BinOp Op,
-                                            unsigned ValIdx,
-                                            unsigned Threshold) const;
-
 public:
   AMDGPUAtomicOptimizerImpl() = delete;
 
@@ -661,16 +652,19 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
                                                unsigned ValIdx,
                                                bool ValDivergent,
                                                bool IsLDS) const {
-  // Check !amdgpu.atomic.lds.dpp metadata for per-atomic DPP control.
-  //   !{!"none"}    – skip DPP optimization entirely for this atomic.
-  //   !{!"dynamic"} – use a dynamic active-lane-count branch.
-  StringRef LDSDPPMode;
+  // The DPP scan has a fixed overhead, so it only pays off with enough active
+  // lanes. The !amdgpu.expected.active.lanes metadata hints at how many lanes
+  // are expected to be active; for a divergent LDS atomic, when that count is
+  // small (<= 5), skip DPP and let each lane issue its own atomic.
+  //
+  // FIXME: The threshold was tuned empirically on gfx12. The DPP scan overhead
+  // differs across subtargets, so the break-even point may differ too; this may
+  // need to become subtarget-dependent.
   if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP) {
-    if (MDNode *MD = I.getMetadata("amdgpu.atomic.lds.dpp")) {
-      if (MD->getNumOperands() == 1)
-        if (auto *S = dyn_cast<MDString>(MD->getOperand(0)))
-          LDSDPPMode = S->getString();
-      if (LDSDPPMode == "none")
+    if (MDNode *MD = I.getMetadata("amdgpu.expected.active.lanes")) {
+      auto *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
+      constexpr unsigned ActiveLanesThreshold = 5;
+      if (CI->getValue().ule(ActiveLanesThreshold))
         return;
     }
   }
@@ -707,43 +701,6 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     B.SetInsertPoint(&I);
   }
 
-  Value *Result = nullptr;
-  if (LDSDPPMode == "dynamic") {
-    constexpr unsigned DynamicThreshold = 5;
-    Result =
-        optimizeAtomicWithDynamicThreshold(B, I, Op, ValIdx, DynamicThreshold);
-  } else {
-    Result = optimizeAtomicImpl(B, I, Op, ValIdx, ValDivergent);
-  }
-
-  // Handle pixel shader reconvergence and replace original instruction.
-  if (Result) {
-    if (IsPixelShader) {
-      // Need a final PHI to reconverge to above the helper lane branch mask.
-      B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
-
-      PHINode *PHI = B.CreatePHI(I.getType(), 2);
-      PHI->addIncoming(PoisonValue::get(I.getType()), PixelEntryBB);
-      PHI->addIncoming(Result, I.getParent());
-      I.replaceAllUsesWith(PHI);
-    } else {
-      // Replace the original atomic instruction with the new one.
-      I.replaceAllUsesWith(Result);
-    }
-  }
-
-  // And delete the original.
-  I.eraseFromParent();
-}
-
-// Replace a single atomic with a wavefront-wide scan/reduction followed by a
-// single-lane atomic, then reconstruct per-lane results. Returns the per-lane
-// result, or nullptr when the result is unused.
-Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
-                                                     Instruction &I,
-                                                     AtomicRMWInst::BinOp Op,
-                                                     unsigned ValIdx,
-                                                     bool ValDivergent) const {
   Type *const Ty = I.getType();
   Type *Int32Ty = B.getInt32Ty();
   bool isAtomicFloatingPointTy = Ty->isFloatingPointTy();
@@ -1022,83 +979,23 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
       // first active lane.
       Result = B.CreateSelect(Cond, BroadcastI, Result);
     }
-    return Result;
+
+    if (IsPixelShader) {
+      // Need a final PHI to reconverge to above the helper lane branch mask.
+      B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
+
+      PHINode *const PHI = B.CreatePHI(Ty, 2);
+      PHI->addIncoming(PoisonValue::get(Ty), PixelEntryBB);
+      PHI->addIncoming(Result, I.getParent());
+      I.replaceAllUsesWith(PHI);
+    } else {
+      // Replace the original atomic instruction with the new one.
+      I.replaceAllUsesWith(Result);
+    }
   }
-  return nullptr;
-}
 
-// Generate a dynamic branch based on the active lane count so that the
-// optimized scan path is only used when enough lanes are active to amortise
-// its overhead.  When the active count is at or below the threshold, each
-// lane independently issues its own atomic, which is cheaper for small
-// groups.
-//
-// This function builds the outer threshold CFG and delegates the actual
-// atomic optimization to optimizeAtomicImpl.
-//
-// CFG produced (the OptimizedPath sub-CFG is built by optimizeAtomicImpl):
-//
-//  EntryBB:
-//    Ballot / Ctpop -> ActiveCount
-//    cmp ActiveCount > Threshold
-//    br -> OptBB or NoOptBB
-//
-//  OptBB:
-//    [optimizeAtomicImpl rewrites I here, creating its own internal CFG]
-//    br -> TailBB
-//
-//  NoOptBB:
-//    original atomic (unoptimized, each lane issues its own)
-//    br -> TailBB
-//
-//  TailBB:
-//    PHI merges results from both paths
-Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicWithDynamicThreshold(
-    IRBuilder<> &B, Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
-    unsigned Threshold) const {
-  Type *Ty = I.getType();
-  const bool NeedResult = !I.use_empty();
-
-  // Count active lanes and build the threshold condition.
-  Type *WaveTy = B.getIntNTy(ST.getWavefrontSize());
-  CallInst *Ballot =
-      B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
-  Value *Ctpop = B.CreateIntCast(
-      B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), B.getInt32Ty(), false);
-  Value *ThresholdCond = B.CreateICmpUGT(Ctpop, B.getInt32(Threshold));
-
-  // Split at I into: EntryBB -> OptBB (then) / NoOptBB (else) -> TailBB.
-  Instruction *ThenTerm = nullptr, *ElseTerm = nullptr;
-  SplitBlockAndInsertIfThenElse(ThresholdCond, &I, &ThenTerm, &ElseTerm,
-                                nullptr, &DTU, nullptr);
-  BasicBlock *NoOptBB = ElseTerm->getParent();
-  BasicBlock *TailBB = I.getParent();
-
-  // NoOptBB: each lane independently issues its own atomic (unoptimized).
-  Instruction *NoOptNewI = I.clone();
-  NoOptNewI->insertBefore(ElseTerm->getIterator());
-
-  // Move I into OptBB so that optimizeAtomicImpl rewrites only the optimized
-  // path.  I's uses are temporarily non-dominating; they will be fixed when
-  // optimizeAtomic does replaceAllUsesWith after we return.
-  I.moveBefore(ThenTerm->getIterator());
-  B.SetInsertPoint(&I);
-
-  // Delegate the full scan/reduction + single-lane atomic + result
-  // reconstruction to optimizeAtomicImpl.
-  Value *OptResult =
-      optimizeAtomicImpl(B, I, Op, ValIdx, /*ValDivergent=*/true);
-
-  if (!NeedResult)
-    return nullptr;
-
-  // After optimizeAtomicImpl, I sits in the exit block of the optimized
-  // sub-CFG.  Merge the optimized and no-opt results in TailBB.
-  B.SetInsertPoint(TailBB, TailBB->getFirstNonPHIIt());
-  PHINode *MergePHI = B.CreatePHI(Ty, 2);
-  MergePHI->addIncoming(OptResult, I.getParent());
-  MergePHI->addIncoming(NoOptNewI, NoOptBB);
-  return MergePHI;
+  // And delete the original.
+  I.eraseFromParent();
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUAtomicOptimizer, DEBUG_TYPE,

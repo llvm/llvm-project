@@ -2234,47 +2234,42 @@ and
 
   !0 = !{}
 
-.. _amdgpu_atomic_lds_dpp:
+.. _amdgpu_expected_active_lanes:
 
-'``amdgpu.atomic.lds.dpp``' Metadata
+'``amdgpu.expected.active.lanes``' Metadata
 -------------------------------------------------
 
-Controls the DPP-based atomic optimization strategy for this LDS
-:ref:`atomicrmw <i_atomicrmw>` instruction. When the
-``-amdgpu-atomic-optimizer-strategy=DPP`` pass is active and the value
-operand is divergent, the metadata operand selects one of the following
-modes:
+A profiling-derived hint describing how many lanes of the wavefront are
+expected to be active when this :ref:`atomicrmw <i_atomicrmw>` instruction
+executes. The metadata has a single ``i32`` constant operand giving the
+expected number of active lanes as an absolute count (the same value is used
+for both wave32 and wave64 targets). This structure is enforced by the
+verifier.
 
-``!"none"``
-  Disables the DPP optimization entirely for this atomic. Every lane
-  issues its own independent atomic operation. This is useful when
-  profiling or front-end heuristics indicate that the DPP scan overhead
-  is not profitable (e.g. the atomic is rarely contended or typically
-  executed by very few lanes). As a rule of thumb, if the active lane
-  count is mostly below the internal threshold (currently 5), ``!"none"``
-  is suggested.
+The AMDGPU atomic optimizer uses the hint as follows. When the
+``-amdgpu-atomic-optimizer-strategy=DPP`` strategy is active, the value
+operand is divergent, and the atomic is in the LDS (``addrspace(3)``) address
+space, the optimizer normally replaces the per-lane atomics with a single
+wavefront-wide DPP scan. That scan has a fixed overhead that is only
+worthwhile when enough lanes participate. If the expected active lane count
+is small (currently ``<= 5``), the optimizer skips the DPP scan and instead
+lets each lane issue its own atomic.
 
-``!"dynamic"``
-  Inserts a runtime check of the active lane count. If the number of
-  active lanes exceeds an internal threshold (currently 5), the
-  wavefront takes the DPP scan path (one atomic for the whole
-  wavefront). Otherwise, each lane independently issues its own atomic,
-  avoiding the DPP scan overhead. This is useful when the active lane
-  count sometimes exceeds the threshold and sometimes does not.
-
-Without this metadata the optimizer unconditionally applies the DPP scan
-to every eligible LDS atomic.
+The metadata is ignored for non-LDS atomics and when the DPP strategy is not
+in use. Without this metadata the optimizer unconditionally applies the DPP
+scan to every eligible LDS atomic.
 
 .. code-block:: llvm
 
-  ; Skip DPP — each lane issues its own ds_add_rtn_u32.
-  %old0 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.atomic.lds.dpp !0
+  ; Few expected active lanes (<= 5): DPP is skipped and each lane issues its
+  ; own ds_add_rtn_u32.
+  %old0 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !0
 
-  ; DPP scan is used only when more than 5 lanes are active.
-  %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.atomic.lds.dpp !1
+  ; Many expected active lanes (> 5): the DPP scan is applied.
+  %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !1
 
-  !0 = !{!"none"}
-  !1 = !{!"dynamic"}
+  !0 = !{i32 4}
+  !1 = !{i32 32}
 
 
 LLVM IR Attributes
