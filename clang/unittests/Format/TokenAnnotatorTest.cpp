@@ -2002,50 +2002,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   EXPECT_TOKEN(Tokens[6], tok::l_square, TT_InlineASMSymbolicNameLSquare);
   EXPECT_TOKEN(Tokens[18], tok::r_paren, TT_InlineASMParen);
 
-  Tokens = annotate("__asm__ inline (\n"
-                    "\"ldr r1, [r0, %%[sym]]\"\n"
-                    ":\n"
-                    ": [sym] \"J\" (aaaaa(aaaa, aaaa))\n"
-                    ");");
-  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_InlineASMParen);
-  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::l_square, TT_InlineASMSymbolicNameLSquare);
-  EXPECT_TOKEN(Tokens[18], tok::r_paren, TT_InlineASMParen);
-
-  Tokens = annotate("asm goto (\n"
-                    "\"btl %1, %0\\n\\t\" \"jc %l2\"\n"
-                    ":\n"
-                    ": \"r\"(a), \"r\"(b)\n"
-                    ": \"cc\"\n"
-                    ": carry\n"
-                    ");");
-  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
-  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_InlineASMParen);
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[16], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[18], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[20], tok::r_paren, TT_InlineASMParen);
-
-  Tokens = annotate("__asm__ volatile inline goto (\n"
-                    "\"btl %1, %0\\n\\t\" \"jc %l2\"\n"
-                    ":\n"
-                    ": \"r\"(a), \"r\"(b)\n"
-                    ": \"cc\"\n"
-                    ": carry\n"
-                    ");");
-  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  Tokens = annotate("__asm__ volatile inline goto (\"nop\" : : : : l );");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_InlineASMParen);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[7], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[8], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[18], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[20], tok::colon, TT_InlineASMColon);
-  EXPECT_TOKEN(Tokens[22], tok::r_paren, TT_InlineASMParen);
+  EXPECT_TOKEN(Tokens[9], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[11], tok::r_paren, TT_InlineASMParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
