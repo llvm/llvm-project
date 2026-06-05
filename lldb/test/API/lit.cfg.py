@@ -194,6 +194,10 @@ if lldb_use_simulator:
     else:
         lit_config.error("Unknown simulator id '{}'".format(lldb_use_simulator))
 
+# Simulator tests can interfer with each other when they access the same device
+# kind, so prevent them from running at the same time.
+lit_config.parallelism_groups["apple-simulator"] = 1
+
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
 # requires that killProcessAndChildren() is supported on the platform and
 # lit complains if the value is set but it is not supported.
