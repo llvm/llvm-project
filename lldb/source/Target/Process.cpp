@@ -1602,7 +1602,7 @@ llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
                                                  BreakpointAction action,
                                                  bool forbid_delay) {
   // Breakpoints immediately affect running processes, so do not delay them.
-  forbid_delay |= IsRunning();
+  forbid_delay |= StateIsRunningState(GetPrivateState());
 
   if (forbid_delay)
     if (llvm::Error E = FlushDelayedBreakpoints())
@@ -2072,6 +2072,19 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                           llvm::MutableArrayRef<uint8_t> buffer) {
+  llvm::SmallVector<Range<lldb::addr_t, size_t>> fixed_ranges;
+  fixed_ranges.reserve(ranges.size());
+  for (const Range<lldb::addr_t, size_t> &range : ranges)
+    fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
+                              range.GetByteSize());
+  if (!GetDisableMemoryCache())
+    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
+  return DoReadMemoryRanges(fixed_ranges, buffer);
+}
+
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+Process::DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                            llvm::MutableArrayRef<uint8_t> buffer) {
   auto total_ranges_len = llvm::sum_of(
       llvm::map_range(ranges, [](auto range) { return range.size; }));
   // If the buffer is not large enough, this is a programmer error.

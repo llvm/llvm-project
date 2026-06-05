@@ -27,6 +27,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -391,9 +392,16 @@ UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
+  if (!m_dyld_up) {
+    llvm::StringRef dyld_name;
+    if (GetTarget().GetArchitecture().GetMachine() == llvm::Triple::riscv32 &&
+        GetTarget().GetArchitecture().GetTriple().getOS() ==
+            llvm::Triple::UnknownOS)
+      dyld_name = DynamicLoaderStatic::GetPluginNameStatic();
+    else
+      dyld_name = DynamicLoaderPOSIXDYLD::GetPluginNameStatic();
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, dyld_name));
+  }
   return m_dyld_up.get();
 }
 
@@ -1083,8 +1091,14 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   case llvm::Triple::OpenBSD:
     return parseOpenBSDNotes(*notes_or_error);
   default:
-    return llvm::createStringError(
-        "Don't know how to parse core file. Unsupported OS.");
+    // Treat bare-metal 32-bit RISC-V like Linux.
+    if (GetTarget().GetArchitecture().GetMachine() == llvm::Triple::riscv32 &&
+        GetTarget().GetArchitecture().GetTriple().getOS() ==
+            llvm::Triple::UnknownOS)
+      return parseLinuxNotes(*notes_or_error);
+    else
+      return llvm::createStringError(
+          "don't know how to parse core file: unsupported OS");
   }
 }
 

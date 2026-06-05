@@ -463,9 +463,9 @@ static bool dominates(MachineBasicBlock::const_iterator A,
   return &*I == A;
 }
 
-/// If a register in \p Uses doesn't dominate \p Src, try to move \p Src so it
-/// does. Returns false if doesn't dominate and we can't move. \p MO must be in
-/// the same basic block as \Src.
+/// If a register in \p Defs doesn't dominate \p Use, try to move Use so it
+/// does. Returns false if any def doesn't dominate and we can't move Use. Each
+/// def must be in the same block as Use.
 bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
                                           MachineInstr &Use) const {
   MachineInstr *Dest = &Use;

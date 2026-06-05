@@ -12,6 +12,7 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -225,9 +226,17 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   // above.
   if (!RISCVVType::isValidVType(Imm) ||
       (RISCVVType::isAltFmt(Imm) &&
-       !(STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+       !(STI.hasFeature(RISCV::FeatureStdExtZvqwdota8i) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvqwdota16i) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfwdota16bf) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfqwdota8f) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
          STI.hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
-         STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))) ||
+         STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvqwbdota8i) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvqwbdota16i) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfqwbdota8f) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfwbdota16bf))) ||
       (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;

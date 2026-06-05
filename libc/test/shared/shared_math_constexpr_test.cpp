@@ -266,6 +266,7 @@ static_assert(0.0f16 == LIBC_NAMESPACE::shared::nearbyintf16(0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::nextafterf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::rintf16(0.0f16));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf16(0.0f16));
+static_assert(0 == LIBC_NAMESPACE::shared::isnanf16(0.0f16));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf16(0.0f16));
 static_assert(1 == [] {
   const char arg{};
