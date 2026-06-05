@@ -802,6 +802,28 @@ void DAP::SetTarget(const lldb::SBTarget target) {
             lldb::SBTarget::eBroadcastBitNewTargetCreated);
     listener.StartListeningForEvents(this->broadcaster,
                                      eBroadcastBitStopEventThread);
+
+    // Replay "module"/eReasonNew events for any modules already loaded into
+    // the target.
+    lldb::SBMutex api_mutex = this->target.GetAPIMutex();
+    const std::scoped_lock<lldb::SBMutex, std::mutex> guard(
+        api_mutex, this->modules_mutex);
+    const uint32_t num_modules = this->target.GetNumModules();
+    for (uint32_t i = 0; i < num_modules; ++i) {
+      lldb::SBModule module = this->target.GetModuleAtIndex(i);
+      std::optional<protocol::Module> p_module =
+          CreateModule(this->target, module);
+      if (!p_module)
+        continue;
+      llvm::StringRef module_id = p_module->id;
+      if (this->modules.contains(module_id))
+        continue;
+      this->modules.insert(module_id);
+      Send(protocol::Event{
+          "module",
+          protocol::ModuleEventBody{std::move(p_module).value(),
+                                    protocol::ModuleEventBody::eReasonNew}});
+    }
   }
 }
 
