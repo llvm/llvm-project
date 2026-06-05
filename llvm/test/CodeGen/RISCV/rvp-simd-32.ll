@@ -1220,6 +1220,133 @@ define <4 x i8> @test_psra_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
   ret <4 x i8> %res
 }
 
+; Test packed multiply high signed for v4i8
+define <4 x i8> @test_pmulh_b(<4 x i8> %a, <4 x i8> %b) {
+; RV32-LABEL: test_pmulh_b:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pwmul.b a0, a0, a1
+; RV32-NEXT:    pncvth.b a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulh_b:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmul.h.b11 a2, a0, a1
+; RV64-NEXT:    pmul.h.b00 a0, a0, a1
+; RV64-NEXT:    ppairo.b a0, a0, a2
+; RV64-NEXT:    ret
+  %a_ext = sext <4 x i8> %a to <4 x i16>
+  %b_ext = sext <4 x i8> %b to <4 x i16>
+  %mul = mul <4 x i16> %a_ext, %b_ext
+  %shift = lshr <4 x i16> %mul, splat (i16 8)
+  %res = trunc <4 x i16> %shift to <4 x i8>
+  ret <4 x i8> %res
+}
+
+; Test packed multiply high unsigned for v4i8
+define <4 x i8> @test_pmulhu_b(<4 x i8> %a, <4 x i8> %b) {
+; RV32-LABEL: test_pmulhu_b:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pwmulu.b a0, a0, a1
+; RV32-NEXT:    pncvth.b a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulhu_b:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulu.h.b11 a2, a0, a1
+; RV64-NEXT:    pmulu.h.b00 a0, a0, a1
+; RV64-NEXT:    ppairo.b a0, a0, a2
+; RV64-NEXT:    ret
+  %a_ext = zext <4 x i8> %a to <4 x i16>
+  %b_ext = zext <4 x i8> %b to <4 x i16>
+  %mul = mul <4 x i16> %a_ext, %b_ext
+  %shift = lshr <4 x i16> %mul, splat (i16 8)
+  %res = trunc <4 x i16> %shift to <4 x i8>
+  ret <4 x i8> %res
+}
+
+; Test packed multiply high signed-unsigned for v4i8
+define <4 x i8> @test_pmulhsu_b(<4 x i8> %a, <4 x i8> %b) {
+; RV32-LABEL: test_pmulhsu_b:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pwcvt.b a2, a0
+; RV32-NEXT:    pwcvtu.b a0, a1
+; RV32-NEXT:    pwmul.h a4, a3, a1
+; RV32-NEXT:    pncvt.h a1, a4
+; RV32-NEXT:    pwmul.h a2, a2, a0
+; RV32-NEXT:    pncvt.h a0, a2
+; RV32-NEXT:    psrli.dh a0, a0, 8
+; RV32-NEXT:    srli a3, a1, 16
+; RV32-NEXT:    srli a2, a0, 16
+; RV32-NEXT:    ppaire.db a0, a0, a2
+; RV32-NEXT:    pack a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulhsu_b:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pwcvtu.b a0, a0
+; RV64-NEXT:    pwcvtu.b a1, a1
+; RV64-NEXT:    pslli.h a0, a0, 8
+; RV64-NEXT:    psrai.h a0, a0, 8
+; RV64-NEXT:    pmul.w.h11 a2, a0, a1
+; RV64-NEXT:    pmul.w.h00 a0, a0, a1
+; RV64-NEXT:    ppaire.h a0, a0, a2
+; RV64-NEXT:    psrli.h a0, a0, 8
+; RV64-NEXT:    srli a1, a0, 48
+; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    ppaire.b a1, a2, a1
+; RV64-NEXT:    srli a2, a0, 16
+; RV64-NEXT:    ppaire.b a0, a0, a2
+; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    ret
+  %a_ext = sext <4 x i8> %a to <4 x i16>
+  %b_ext = zext <4 x i8> %b to <4 x i16>
+  %mul = mul <4 x i16> %a_ext, %b_ext
+  %shift = lshr <4 x i16> %mul, splat (i16 8)
+  %res = trunc <4 x i16> %shift to <4 x i8>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
+; RV32-LABEL: test_pmulhsu_b_commuted:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pwcvtu.b a2, a0
+; RV32-NEXT:    pwcvt.b a0, a1
+; RV32-NEXT:    pwmul.h a4, a3, a1
+; RV32-NEXT:    pncvt.h a1, a4
+; RV32-NEXT:    pwmul.h a2, a2, a0
+; RV32-NEXT:    pncvt.h a0, a2
+; RV32-NEXT:    psrli.dh a0, a0, 8
+; RV32-NEXT:    srli a3, a1, 16
+; RV32-NEXT:    srli a2, a0, 16
+; RV32-NEXT:    ppaire.db a0, a0, a2
+; RV32-NEXT:    pack a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulhsu_b_commuted:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pwcvtu.b a0, a0
+; RV64-NEXT:    pwcvtu.b a1, a1
+; RV64-NEXT:    pslli.h a1, a1, 8
+; RV64-NEXT:    psrai.h a1, a1, 8
+; RV64-NEXT:    pmul.w.h11 a2, a0, a1
+; RV64-NEXT:    pmul.w.h00 a0, a0, a1
+; RV64-NEXT:    ppaire.h a0, a0, a2
+; RV64-NEXT:    psrli.h a0, a0, 8
+; RV64-NEXT:    srli a1, a0, 48
+; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    ppaire.b a1, a2, a1
+; RV64-NEXT:    srli a2, a0, 16
+; RV64-NEXT:    ppaire.b a0, a0, a2
+; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    ret
+  %a_ext = zext <4 x i8> %a to <4 x i16>
+  %b_ext = sext <4 x i8> %b to <4 x i16>
+  %mul = mul <4 x i16> %a_ext, %b_ext
+  %shift = lshr <4 x i16> %mul, splat (i16 8)
+  %res = trunc <4 x i16> %shift to <4 x i8>
+  ret <4 x i8> %res
+}
+
 ; Test packed multiply high signed for v2i16
 define <2 x i16> @test_pmulh_h(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: test_pmulh_h:
@@ -2012,10 +2139,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB144_2
+; CHECK-NEXT:    bnez a3, .LBB148_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB144_2:
+; CHECK-NEXT:  .LBB148_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2026,10 +2153,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB145_2
+; CHECK-NEXT:    bnez a3, .LBB149_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB145_2:
+; CHECK-NEXT:  .LBB149_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res

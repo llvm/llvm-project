@@ -1726,7 +1726,9 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
-  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
+  const FunctionDecl *Definition;
+  if (!Func->getDecl()->getBody(Definition))
+    return;
   if (!Definition)
     return;
 
