@@ -181,7 +181,7 @@ class SHInstOP_N4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   // Opcode
   let Opcode = opcode;
   let Inst{15-8} = Opcode{15-8};
-  let Inst{3-0} = Opcode{3-0};
+  let Inst{7-0} = Opcode{7-0};
 
   // Operands
   bits<4> n;
@@ -193,8 +193,8 @@ class SHInstOP_M4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{3-0} = Opcode{3-0};
   let Inst{15-8} = Opcode{15-8};
+  let Inst{7-0} = Opcode{7-0};
 
   // Operands
   bits<4> m;
