@@ -31,6 +31,7 @@ namespace {
 /// for NSDI emission. Used when iterating DebugInfoFinder.types(); each DI
 /// node is seen once, so no recursion into pointer bases. Other composites and
 /// non-pointer derived kinds are ignored because they are not yet supported.
+/// Only types that are supported (later used) are partitioned.
 static void
 partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
                SmallVector<const DIDerivedType *> &PointerTypes,
