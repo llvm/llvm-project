@@ -477,9 +477,8 @@ def : Pat<(stlxr_4 (and GPR64:$val, 0xffffffff), GPR64sp:$addr),
           (STLXRW (EXTRACT_SUBREG GPR64:$val, sub_32), GPR64sp:$addr)>;
 
 
-// And clear exclusive.
-
-def : Pat<(int_aarch64_clrex), (CLREX 0xf)>;
+// And clear exclusive. The (int_aarch64_clrex imm) pattern is defined on the
+// CLREX instruction in AArch64InstrInfo.td.
 
 //===----------------------------------
 // Atomic cmpxchg for -O0
