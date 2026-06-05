@@ -87,3 +87,11 @@ __device__ void test_readlane(int* out, int a, int b) {
 __device__ void test_readfirstlane(int* out, int a) {
   *out = __builtin_amdgcn_readfirstlane(a);
 }
+
+// CIR-LABEL: @_Z17test_dispatch_ptr
+// CIR: %{{.*}} = cir.call_llvm_intrinsic "amdgcn.dispatch.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// LLVM-LABEL: @_Z17test_dispatch_ptr
+// LLVM: call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+__device__ void test_dispatch_ptr(__attribute__((address_space(4))) void ** out) {
+  *out = (__attribute__((address_space(4))) void *)__builtin_amdgcn_dispatch_ptr();
+}

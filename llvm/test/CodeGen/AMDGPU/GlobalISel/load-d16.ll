@@ -29,22 +29,12 @@ define amdgpu_ps void @load_P0_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(0) %ptra
 }
 
 define amdgpu_ps void @sextload_P0_i8_D16(<2 x i16> %vec, ptr addrspace(0) %ptra, ptr addrspace(0) %out) {
-; GFX12-TRUE16-LABEL: sextload_P0_i8_D16:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    flat_load_d16_i8 v1, v[1:2]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff0000, v0, v1
-; GFX12-TRUE16-NEXT:    flat_store_b32 v[3:4], v0
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P0_i8_D16:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    flat_load_d16_i8 v0, v[1:2]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-FAKE16-NEXT:    flat_store_b32 v[3:4], v0
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P0_i8_D16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    flat_load_d16_i8 v0, v[1:2]
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    flat_store_b32 v[3:4], v0
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(0) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -53,23 +43,12 @@ define amdgpu_ps void @sextload_P0_i8_D16(<2 x i16> %vec, ptr addrspace(0) %ptra
 }
 
 define amdgpu_ps void @sextload_P0_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(0) %ptra, ptr addrspace(0) %out) {
-; GFX12-TRUE16-LABEL: sextload_P0_i8_D16_Hi:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    flat_load_d16_i8 v1, v[1:2]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
-; GFX12-TRUE16-NEXT:    flat_store_b32 v[3:4], v0
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P0_i8_D16_Hi:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    flat_load_d16_hi_i8 v0, v[1:2]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-FAKE16-NEXT:    flat_store_b32 v[3:4], v0
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P0_i8_D16_Hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    flat_load_d16_hi_i8 v0, v[1:2]
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    flat_store_b32 v[3:4], v0
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(0) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -132,22 +111,12 @@ define amdgpu_ps void @load_P1_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(1) %ptra
 }
 
 define amdgpu_ps void @sextload_P1_i8_D16(<2 x i16> %vec, ptr addrspace(1) %ptra, ptr addrspace(1) %out) {
-; GFX12-TRUE16-LABEL: sextload_P1_i8_D16:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    global_load_d16_i8 v1, v[1:2], off
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff0000, v0, v1
-; GFX12-TRUE16-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P1_i8_D16:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    global_load_d16_i8 v0, v[1:2], off
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P1_i8_D16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_i8 v0, v[1:2], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -156,23 +125,12 @@ define amdgpu_ps void @sextload_P1_i8_D16(<2 x i16> %vec, ptr addrspace(1) %ptra
 }
 
 define amdgpu_ps void @sextload_P1_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(1) %ptra, ptr addrspace(1) %out) {
-; GFX12-TRUE16-LABEL: sextload_P1_i8_D16_Hi:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    global_load_d16_i8 v1, v[1:2], off
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
-; GFX12-TRUE16-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P1_i8_D16_Hi:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_i8 v0, v[1:2], off
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P1_i8_D16_Hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_hi_i8 v0, v[1:2], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -235,22 +193,12 @@ define amdgpu_ps void @load_P3_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(3) %ptra
 }
 
 define amdgpu_ps void @sextload_P3_i8_D16(<2 x i16> %vec, ptr addrspace(3) %ptra, ptr addrspace(3) %out) {
-; GFX12-TRUE16-LABEL: sextload_P3_i8_D16:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    ds_load_i8_d16 v1, v1
-; GFX12-TRUE16-NEXT:    s_wait_dscnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff0000, v0, v1
-; GFX12-TRUE16-NEXT:    ds_store_b32 v2, v0
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P3_i8_D16:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    ds_load_i8_d16 v0, v1
-; GFX12-FAKE16-NEXT:    s_wait_dscnt 0x0
-; GFX12-FAKE16-NEXT:    ds_store_b32 v2, v0
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P3_i8_D16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    ds_load_i8_d16 v0, v1
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    ds_store_b32 v2, v0
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(3) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -259,23 +207,12 @@ define amdgpu_ps void @sextload_P3_i8_D16(<2 x i16> %vec, ptr addrspace(3) %ptra
 }
 
 define amdgpu_ps void @sextload_P3_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(3) %ptra, ptr addrspace(3) %out) {
-; GFX12-TRUE16-LABEL: sextload_P3_i8_D16_Hi:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    ds_load_i8_d16 v1, v1
-; GFX12-TRUE16-NEXT:    s_wait_dscnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
-; GFX12-TRUE16-NEXT:    ds_store_b32 v2, v0
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P3_i8_D16_Hi:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    ds_load_i8_d16_hi v0, v1
-; GFX12-FAKE16-NEXT:    s_wait_dscnt 0x0
-; GFX12-FAKE16-NEXT:    ds_store_b32 v2, v0
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P3_i8_D16_Hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    ds_load_i8_d16_hi v0, v1
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    ds_store_b32 v2, v0
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(3) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -338,22 +275,12 @@ define amdgpu_ps void @load_P4_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(4) %ptra
 }
 
 define amdgpu_ps void @sextload_P4_i8_D16(<2 x i16> %vec, ptr addrspace(4) %ptra, ptr addrspace(1) %out) {
-; GFX12-TRUE16-LABEL: sextload_P4_i8_D16:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    global_load_d16_i8 v1, v[1:2], off
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff0000, v0, v1
-; GFX12-TRUE16-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P4_i8_D16:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    global_load_d16_i8 v0, v[1:2], off
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P4_i8_D16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_i8 v0, v[1:2], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -362,23 +289,12 @@ define amdgpu_ps void @sextload_P4_i8_D16(<2 x i16> %vec, ptr addrspace(4) %ptra
 }
 
 define amdgpu_ps void @sextload_P4_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(4) %ptra, ptr addrspace(1) %out) {
-; GFX12-TRUE16-LABEL: sextload_P4_i8_D16_Hi:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    global_load_d16_i8 v1, v[1:2], off
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
-; GFX12-TRUE16-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P4_i8_D16_Hi:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_i8 v0, v[1:2], off
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P4_i8_D16_Hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_d16_hi_i8 v0, v[1:2], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -441,22 +357,12 @@ define amdgpu_ps void @load_P5_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(5) %ptra
 }
 
 define amdgpu_ps void @sextload_P5_i8_D16(<2 x i16> %vec, ptr addrspace(5) %ptra, ptr addrspace(5) %out) {
-; GFX12-TRUE16-LABEL: sextload_P5_i8_D16:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    scratch_load_d16_i8 v1, v1, off
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff0000, v0, v1
-; GFX12-TRUE16-NEXT:    scratch_store_b32 v2, v0, off
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P5_i8_D16:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    scratch_load_d16_i8 v0, v1, off
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    scratch_store_b32 v2, v0, off
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P5_i8_D16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    scratch_load_d16_i8 v0, v1, off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    scratch_store_b32 v2, v0, off
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(5) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -465,23 +371,12 @@ define amdgpu_ps void @sextload_P5_i8_D16(<2 x i16> %vec, ptr addrspace(5) %ptra
 }
 
 define amdgpu_ps void @sextload_P5_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(5) %ptra, ptr addrspace(5) %out) {
-; GFX12-TRUE16-LABEL: sextload_P5_i8_D16_Hi:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    scratch_load_d16_i8 v1, v1, off
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
-; GFX12-TRUE16-NEXT:    scratch_store_b32 v2, v0, off
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: sextload_P5_i8_D16_Hi:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    scratch_load_d16_hi_i8 v0, v1, off
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    scratch_store_b32 v2, v0, off
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: sextload_P5_i8_D16_Hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    scratch_load_d16_hi_i8 v0, v1, off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    scratch_store_b32 v2, v0, off
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(5) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -516,3 +411,6 @@ define amdgpu_ps void @zextload_P5_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(5) %p
   store <2 x i16> %res, ptr addrspace(5) %out
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX12-FAKE16: {{.*}}
+; GFX12-TRUE16: {{.*}}

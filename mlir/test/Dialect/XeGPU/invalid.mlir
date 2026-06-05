@@ -386,37 +386,37 @@ func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
 }
 
 // -----
-func.func @dpas_vc_1(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_vc_1(%a : vector<8x8xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{K-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
 func.func @dpas_vc_2(%a : vector<8x8x2xf16>, %b: vector<8x16x2xf16>) {
-  // expected-error@+1 {{Batch dimension rank mismatch among A, B, and result}}
+  // expected-error@+1 {{'xegpu.dpas' op Rank mismatch among A, B, and result}}
   %1 = xegpu.dpas %a, %b : vector<8x8x2xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_3(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_3(%a : vector<8x8xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{K-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_4(%a : vector<16x16xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_4(%a : vector<16x16xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{M-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<16x16xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<16x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_5(%a : vector<8x16xf16>, %b: vector<8x8x2xf16>) {
+func.func @dpas_5(%a : vector<8x16xf16>, %b: vector<16x8xf16>) {
   // expected-error@+1 {{N-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<8x8x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<16x8xf16> -> vector<8x16xf32>
   return
 }
 

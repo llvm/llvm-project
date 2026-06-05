@@ -320,6 +320,10 @@ FastMathFlags &FPMathOperator::getFastMathFlagsImpl() {
     return Op->FMF;
   if (FastMathFlagsStorage *Op = dyn_cast<CallInst>(I))
     return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<UIToFPInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<SIToFPInst>(I))
+    return Op->FMF;
 
   llvm_unreachable("Unknown FPMathOperator!");
 }
