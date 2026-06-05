@@ -5,7 +5,11 @@ add_entrypoint_object(
   HDRS
     ../ptrace.h
   DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.sys_ptrace_macros
     libc.include.sys_ptrace
     libc.src.__support.OSUtil.linux.syscall_wrappers.ptrace
-    libc.src.errno.errno
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
