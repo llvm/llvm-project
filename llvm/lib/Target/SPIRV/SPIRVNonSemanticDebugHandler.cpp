@@ -434,7 +434,7 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
     Ops.push_back(VoidTypeReg);
   } else {
     for (unsigned I = 0, E = TA.size(); I != E; ++I) {
-      bool IsReturnType = I == 0;
+      bool IsReturnType = (I == 0);
       auto OptReg = mapDISignatureTypeToReg(TA[I], VoidTypeReg, IsReturnType);
       // No emitted DebugType* id for this slot (e.g., pointer that
       // was skipped due missing address space, etc.).
