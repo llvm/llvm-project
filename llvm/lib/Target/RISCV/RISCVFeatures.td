@@ -927,6 +927,23 @@ def HasStdExtZvvfmm : Predicate<"Subtarget->hasStdExtZvvfmm()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvvfmm),
                           "'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)">;
 
+// Integrated Matrix Extension matrix tile load/store
+def FeatureStdExtZvvmtls
+    : RISCVExperimentalExtension<0, 1, "Matrix Tile Load/Store",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvvmtls : Predicate<"Subtarget->hasStdExtZvvmtls()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZvvmtls),
+                           "'Zvvmtls' (Matrix Tile Load/Store)">;
+
+// Integrated Matrix Extension transposing matrix tile load/store
+def FeatureStdExtZvvmttls
+    : RISCVExperimentalExtension<0, 1,
+                                 "Transposing Matrix Tile Load/Store",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvvmttls : Predicate<"Subtarget->hasStdExtZvvmttls()">,
+                        AssemblerPredicate<(all_of FeatureStdExtZvvmttls),
+                            "'Zvvmttls' (Transposing Matrix Tile Load/Store)">;
+
 // Zvbdota family of batched dot-product extensions
 def FeatureStdExtZvqwbdota8i
     : RISCVExperimentalExtension<0, 2,

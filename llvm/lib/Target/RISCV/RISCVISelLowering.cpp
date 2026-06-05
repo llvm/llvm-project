@@ -656,6 +656,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction({ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
                          {MVT::v4i16, MVT::v2i32}, Legal);
+      setOperationAction(ISD::TRUNCATE, {MVT::v4i8, MVT::v2i16}, Legal);
       setOperationAction(ISD::SETCC, P64VecVTs, Legal);
       setCondCodeAction(
           {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE},
@@ -666,6 +667,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v4i16, MVT::v2i32}, Legal);
       setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, {MVT::v4i16, MVT::v2i32},
                          Custom);
+      // LegalizeVectorOps uses result VT, LegalizeDAG uses ExtVT.
+      setOperationAction(ISD::SIGN_EXTEND_INREG,
+                         {MVT::v2i16, MVT::v4i8, MVT::v2i32, MVT::v4i16},
+                         Legal);
     }
   }
 
