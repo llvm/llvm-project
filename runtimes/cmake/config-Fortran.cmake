@@ -158,10 +158,6 @@ if (CMAKE_Fortran_COMPILER_FORCED AND NOT EXISTS "${CMAKE_Fortran_COMPILER}")
   get_filename_component(_compiler_dir "${CMAKE_Fortran_COMPILER}" DIRECTORY)
   file(MAKE_DIRECTORY "${_compiler_dir}")
   file(WRITE "${CMAKE_Fortran_COMPILER}" "stub")
-  file(CHMOD "${CMAKE_Fortran_COMPILER}"
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-                GROUP_READ GROUP_EXECUTE
-                WORLD_READ WORLD_EXECUTE)
   # Ninja uses file mtimes to decide whether build outputs are up-to-date.
   # If this placeholder's mtime is recent it may match what is recorded in
   # .ninja_log, causing ninja to skip building the real compiler binary.
