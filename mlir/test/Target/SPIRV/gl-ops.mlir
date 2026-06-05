@@ -23,6 +23,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %7 = spirv.GL.Asin %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Atan {{%.*}} : f32
     %8 = spirv.GL.Atan %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Atan2 {{%.*}}, {{%.*}} : f32
+    %atan2 = spirv.GL.Atan2 %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spirv.GL.Sinh {{%.*}} : f32
     %9 = spirv.GL.Sinh %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Cosh {{%.*}} : f32
