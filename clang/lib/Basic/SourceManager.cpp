@@ -38,6 +38,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -62,23 +63,11 @@ static SrcMgr::ContentCache *cloneContentCache(llvm::BumpPtrAllocator &Alloc,
   return Clone;
 }
 
-static SmallString<128> normalizeFilePathForComparison(const FileManager &FM,
-                                                       StringRef Name) {
-  SmallString<128> Path(Name);
-  FM.makeAbsolutePath(Path, /*Canonicalize=*/true);
-  llvm::sys::path::native(Path);
-  return Path;
-}
-
-static bool referencesDistinctFilePaths(const FileManager &FM, FileEntryRef LHS,
-                                        FileEntryRef RHS) {
-  SmallString<128> LHSPath = normalizeFilePathForComparison(FM, LHS.getName());
-  SmallString<128> RHSPath = normalizeFilePathForComparison(FM, RHS.getName());
+static bool pathDiffersIgnoringWindowsSlashes(FileEntryRef LHS, FileEntryRef RHS) {
+  std::string LHSPath = llvm::sys::path::convert_to_slash(LHS.getName());
+  std::string RHSPath = llvm::sys::path::convert_to_slash(RHS.getName());
   StringRef LHSRef(LHSPath);
   StringRef RHSRef(RHSPath);
-
-  if (llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
-    return !LHSRef.equals_insensitive(RHSRef);
   return LHSRef != RHSRef;
 }
 
@@ -584,8 +573,7 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   StringRef Filename = SourceFile.getName();
 
   if (IR.OrigEntry && !IR.OrigEntry->isSameRef(SourceFile)) {
-    if (referencesDistinctFilePaths(getFileManager(), *IR.OrigEntry,
-                                    SourceFile)) {
+    if (pathDiffersIgnoringWindowsSlashes(*IR.OrigEntry, SourceFile)) {
       Cache = cloneContentCache(ContentCacheAlloc, IR);
       Cache->OrigEntry = SourceFile;
       FileIDContentCaches.push_back(Cache);
