@@ -190,6 +190,14 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   for (DIGlobalVariableExpression *GVE : DIF.global_variables())
     Res.MDReplace.insert({GVE, GVE->getVariable()});
 
+  for (DIScope *S : DIF.scopes()) {
+    if (auto *CB = dyn_cast<DICommonBlock>(S)) {
+      const Metadata *Scope = CB->getScope();
+      Scope = Res.MDReplace.lookup_or(Scope, Scope);
+      Res.MDReplace.insert({CB, Scope});
+    }
+  }
+
   for (DIType *T : DIF.types()) {
     if (auto *SR = dyn_cast<DISubrangeType>(T)) {
       DIType *BT = SR->getBaseType();
