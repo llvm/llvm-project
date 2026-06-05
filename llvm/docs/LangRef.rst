@@ -4214,9 +4214,10 @@ Fast-Math Flags
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
 :ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`,
-:ref:`fpext <i_fpext>`), and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or
-:ref:`call <i_call>` instructions that return floating-point types may use the
-following flags to enable otherwise unsafe floating-point transformations.
+:ref:`fpext <i_fpext>`), :ref::`uitofp <i_uitofp>`, :ref::`sitofp <i_sitofp>`,
+and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or :ref:`call <i_call>`
+instructions that return floating-point types may use the following flags to
+enable otherwise unsafe floating-point transformations.
 
 ``fast``
    This flag is a shorthand for specifying all fast-math flags at once, and
@@ -4536,6 +4537,12 @@ Otherwise, when known, the specific type should be used. Each bit can be:
 * ``poison``
 
 Any bit width from 1 bit to 2\ :sup:`23`\ (about 8 million) can be specified.
+
+The per-bit semantics described above (poison and conditional pointer
+provenance preservation) are mid-end only. At the IR-to-MIR boundary both
+SelectionDAG and GlobalISel lower ``bN`` as the equi-sized integer scalar
+(``iN``/``sN``); backend passes do not see the byte type and do not preserve
+its bit-level semantics.
 
 :Syntax:
 
@@ -13102,6 +13109,8 @@ Example:
       %Y = fptosi float 1.0E-247 to i1      ; yields undefined:1
       %Z = fptosi float 1.04E+17 to i8      ; yields undefined:1
 
+.. _i_uitofp:
+
 '``uitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -13110,7 +13119,7 @@ Syntax:
 
 ::
 
-      <result> = uitofp <ty> <value> to <ty2>             ; yields ty2
+      <result> = uitofp [fast-math flags]* [nneg] <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -13154,6 +13163,8 @@ Example:
       %a = uitofp nneg i32 256 to float    ; yields float:256.0
       %b = uitofp nneg i32 -256 to float   ; yields float poison
 
+.. _i_sitofp:
+
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -13162,7 +13173,7 @@ Syntax:
 
 ::
 
-      <result> = sitofp <ty> <value> to <ty2>             ; yields ty2
+      <result> = sitofp [fast-math flags]* <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -21721,6 +21732,267 @@ Arguments:
 
 None.
 
+Vector Mask Intrinsics
+----------------------
+
+.. _int_get_active_lane_mask:
+
+'``llvm.get.active.lane.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %base, i32 %n)
+      declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 %base, i64 %n)
+      declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 %base, i64 %n)
+      declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %base, i64 %n)
+
+
+Overview:
+"""""""""
+
+Create a mask representing active and inactive vector lanes.
+
+
+Arguments:
+""""""""""
+
+Both arguments have the same scalar integer type. The result is a vector with
+the i1 element type.
+
+Semantics:
+""""""""""
+
+The '``llvm.get.active.lane.mask.*``' intrinsics are semantically equivalent
+to:
+
+::
+
+      %m[i] = icmp ult (%base + i), %n
+
+where ``%m`` is a vector (mask) of active/inactive lanes with its elements
+indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
+``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
+the unsigned less-than comparison operator.  Overflow cannot occur in
+``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
+numbers and not in machine numbers.  The above is equivalent to:
+
+::
+
+      %m = @llvm.get.active.lane.mask(%base, %n)
+
+This can, for example, be emitted by the loop vectorizer in which case
+``%base`` is the first element of the vector induction variable (VIV) and
+``%n`` is the loop tripcount. Thus, these intrinsics perform an element-wise
+less than comparison of VIV with the loop tripcount, producing a mask of
+true/false values representing active/inactive vector lanes, except if the VIV
+overflows in which case they return false in the lanes where the VIV overflows.
+The arguments are scalar types to accommodate scalable vector types, for which
+it is unknown what the type of the step vector needs to be that enumerate its
+lanes without overflow.
+
+This mask ``%m`` can e.g., be used in masked load/store instructions. These
+intrinsics provide a hint to the backend. I.e., for a vector loop, the
+back-edge taken count of the original scalar loop is explicit as the second
+argument.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
+      %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr align 4 %3, <4 x i1> %active.lane.mask, <4 x i32> poison)
+
+
+.. _int_loop_dependence_war_mask:
+
+'``llvm.loop.dependence.war.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector load from address %addrA followed by a vector store to address
+%addrB, this instruction generates a mask where an active lane indicates that
+the write-after-read sequence can be performed safely for that lane, without the
+danger of a write-after-read hazard occurring.
+
+A write-after-read hazard occurs when a write-after-read sequence for a given
+lane in a vector ends up being executed as a read-after-write sequence due to
+the aliasing of pointers.
+
+Arguments:
+""""""""""
+
+The first two arguments are integers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
+is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
+or ``%addrB + VF * %elementSize`` wrap.
+
+The element of the result mask is active when loading from %addrA then storing to
+%addrB is safe and doesn't result in a write-after-read hazard, meaning that:
+
+* (addrB - addrA) <= 0 (guarantees that all lanes are loaded before any stores), or
+* elementSize * lane < (addrB - addrA) (guarantees that this lane is loaded
+  before the store to the same address)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %addrA = ptrtoaddr ptr %ptrA to i64
+      %addrB = ptrtoaddr ptr %ptrB to i64
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      [...]
+      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
+
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. addrA >= addrB
+      ;
+      ;   load =      <0,1,2,3>     ; uint32_t load = array[i+2];
+      ;  store =  <0,1,2,3>         ; array[i] = store;
+      ;
+      ; This results in an all-true mask, as the load always occurs before the
+      ; store, so it does not depend on any values to be stored.
+      ;
+      ; 2. addrB - addrA = 2 * elementSize:
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =      <0,1,2,3>     ; array[i+2] = store;
+      ;
+      ; This results in a mask with the first two lanes active. This is because
+      ; we can only read two lanes before we would read values that have yet to
+      ; be written.
+      ;
+      ; 3. addrB - addrA = 4 * elementSize
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =          <0,1,2,3> ; array[i+4] = store;
+      ;
+      ; This results in an all-true mask, as the store is a full vector ahead
+      ; of the load, so all values will be written before any lane is read.
+
+.. _int_loop_dependence_raw_mask:
+
+'``llvm.loop.dependence.raw.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector store to address %addrA followed by a vector load from address
+%addrB, this instruction generates a mask where an active lane indicates that the
+read-after-write sequence can be performed safely for that lane, without a
+read-after-write hazard or a store-to-load forwarding hazard being introduced.
+
+A read-after-write hazard occurs when a read-after-write sequence for a given
+lane in a vector ends up being executed as a write-after-read sequence due to
+the aliasing of pointers.
+
+A store-to-load forwarding hazard occurs when a vector store writes to an
+address that partially overlaps with the address of a subsequent vector load,
+meaning that the vector load can't be performed until the vector store is
+complete.
+
+Arguments:
+""""""""""
+
+The first two arguments are integers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
+is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
+or ``%addrB + VF * %elementSize`` wrap.
+
+The element of the result mask is active when storing to %addrA then loading from
+%addrB is safe and doesn't result in aliasing, meaning that:
+
+* elementSize * lane < abs(addrB - addrA) (guarantees that the store of this lane
+  occurs before loading from this address), or
+* addrA == addrB (doesn't introduce any new hazards that weren't in the scalar
+  code)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %addrA = ptrtoaddr ptr %ptrA to i64
+      %addrB = ptrtoaddr ptr %ptrB to i64
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
+      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
+      [...]
+      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. addrA == addrB
+      ;
+      ;  store = <0,1,2,3>       ; array[i] = store;
+      ;   load = <0,1,2,3>       ; uint32_t load = array[i];
+      ;
+      ; This results in a all-true mask. There is no conflict.
+      ;
+      ; 2. addrB - addrA = 2 * elementSize
+      ;
+      ;  store =  <0,1,2,3>      ; array[i] = store;
+      ;   load =      <0,1,2,3>  ; uint32_t load = array[i+2];
+      ;
+      ; This results in a mask with the first two lanes active. In this case,
+      ; only two lanes can be written without overwriting values yet to be read.
+      ;
+      ; 3. addrB - addrA = -2 * elementSize
+      ;
+      ;  store =      <0,1,2,3>  ; array[i+2] = store;
+      ;   load =  <0,1,2,3>      ; uint32_t load = array[i];
+      ;
+      ; This also results in a mask with the first two lanes active. This is
+      ; because if any more lanes were active the load would be dependent on the
+      ; completion of the store.
+
 Experimental Vector Intrinsics
 ------------------------------
 
@@ -25326,265 +25598,6 @@ Examples:
       %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float infinity, float infinity, float infinity, float infinity>
       %reduction = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %masked.a)
       %also.r = call float @llvm.minimum.f32(float %reduction, float %start)
-
-
-.. _int_get_active_lane_mask:
-
-'``llvm.get.active.lane.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %base, i32 %n)
-      declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 %base, i64 %n)
-      declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 %base, i64 %n)
-      declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %base, i64 %n)
-
-
-Overview:
-"""""""""
-
-Create a mask representing active and inactive vector lanes.
-
-
-Arguments:
-""""""""""
-
-Both arguments have the same scalar integer type. The result is a vector with
-the i1 element type.
-
-Semantics:
-""""""""""
-
-The '``llvm.get.active.lane.mask.*``' intrinsics are semantically equivalent
-to:
-
-::
-
-      %m[i] = icmp ult (%base + i), %n
-
-where ``%m`` is a vector (mask) of active/inactive lanes with its elements
-indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
-``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
-the unsigned less-than comparison operator.  Overflow cannot occur in
-``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
-numbers and not in machine numbers.  The above is equivalent to:
-
-::
-
-      %m = @llvm.get.active.lane.mask(%base, %n)
-
-This can, for example, be emitted by the loop vectorizer in which case
-``%base`` is the first element of the vector induction variable (VIV) and
-``%n`` is the loop tripcount. Thus, these intrinsics perform an element-wise
-less than comparison of VIV with the loop tripcount, producing a mask of
-true/false values representing active/inactive vector lanes, except if the VIV
-overflows in which case they return false in the lanes where the VIV overflows.
-The arguments are scalar types to accommodate scalable vector types, for which
-it is unknown what the type of the step vector needs to be that enumerate its
-lanes without overflow.
-
-This mask ``%m`` can e.g., be used in masked load/store instructions. These
-intrinsics provide a hint to the backend. I.e., for a vector loop, the
-back-edge taken count of the original scalar loop is explicit as the second
-argument.
-
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
-      %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr align 4 %3, <4 x i1> %active.lane.mask, <4 x i32> poison)
-
-
-.. _int_loop_dependence_war_mask:
-
-'``llvm.loop.dependence.war.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
-      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-
-
-Overview:
-"""""""""
-
-Given a vector load from address %addrA followed by a vector store to address
-%addrB, this instruction generates a mask where an active lane indicates that
-the write-after-read sequence can be performed safely for that lane, without the
-danger of a write-after-read hazard occurring.
-
-A write-after-read hazard occurs when a write-after-read sequence for a given
-lane in a vector ends up being executed as a read-after-write sequence due to
-the aliasing of pointers.
-
-Arguments:
-""""""""""
-
-The first two arguments are integers and the last argument is an immediate.
-The result is a vector with the i1 element type.
-
-Semantics:
-""""""""""
-
-``%elementSize`` is the size of the accessed elements in bytes.
-The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
-is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
-or ``%addrB + VF * %elementSize`` wrap.
-
-The element of the result mask is active when loading from %addrA then storing to
-%addrB is safe and doesn't result in a write-after-read hazard, meaning that:
-
-* (addrB - addrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* elementSize * lane < (addrB - addrA) (guarantees that this lane is loaded
-  before the store to the same address)
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %addrA = ptrtoaddr ptr %ptrA to i64
-      %addrB = ptrtoaddr ptr %ptrB to i64
-      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
-      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
-      [...]
-      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
-
-      ; For the above example, consider the following cases:
-      ;
-      ; 1. addrA >= addrB
-      ;
-      ;   load =      <0,1,2,3>     ; uint32_t load = array[i+2];
-      ;  store =  <0,1,2,3>         ; array[i] = store;
-      ;
-      ; This results in an all-true mask, as the load always occurs before the
-      ; store, so it does not depend on any values to be stored.
-      ;
-      ; 2. addrB - addrA = 2 * elementSize:
-      ;
-      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
-      ;  store =      <0,1,2,3>     ; array[i+2] = store;
-      ;
-      ; This results in a mask with the first two lanes active. This is because
-      ; we can only read two lanes before we would read values that have yet to
-      ; be written.
-      ;
-      ; 3. addrB - addrA = 4 * elementSize
-      ;
-      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
-      ;  store =          <0,1,2,3> ; array[i+4] = store;
-      ;
-      ; This results in an all-true mask, as the store is a full vector ahead
-      ; of the load, so all values will be written before any lane is read.
-
-.. _int_loop_dependence_raw_mask:
-
-'``llvm.loop.dependence.raw.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
-      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-
-
-Overview:
-"""""""""
-
-Given a vector store to address %addrA followed by a vector load from address
-%addrB, this instruction generates a mask where an active lane indicates that the
-read-after-write sequence can be performed safely for that lane, without a
-read-after-write hazard or a store-to-load forwarding hazard being introduced.
-
-A read-after-write hazard occurs when a read-after-write sequence for a given
-lane in a vector ends up being executed as a write-after-read sequence due to
-the aliasing of pointers.
-
-A store-to-load forwarding hazard occurs when a vector store writes to an
-address that partially overlaps with the address of a subsequent vector load,
-meaning that the vector load can't be performed until the vector store is
-complete.
-
-Arguments:
-""""""""""
-
-The first two arguments are integers and the last argument is an immediate.
-The result is a vector with the i1 element type.
-
-Semantics:
-""""""""""
-
-``%elementSize`` is the size of the accessed elements in bytes.
-The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
-is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
-or ``%addrB + VF * %elementSize`` wrap.
-
-The element of the result mask is active when storing to %addrA then loading from
-%addrB is safe and doesn't result in aliasing, meaning that:
-
-* elementSize * lane < abs(addrB - addrA) (guarantees that the store of this lane
-  occurs before loading from this address), or
-* addrA == addrB (doesn't introduce any new hazards that weren't in the scalar
-  code)
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %addrA = ptrtoaddr ptr %ptrA to i64
-      %addrB = ptrtoaddr ptr %ptrB to i64
-      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
-      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
-      [...]
-      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
-
-      ; For the above example, consider the following cases:
-      ;
-      ; 1. addrA == addrB
-      ;
-      ;  store = <0,1,2,3>       ; array[i] = store;
-      ;   load = <0,1,2,3>       ; uint32_t load = array[i];
-      ;
-      ; This results in a all-true mask. There is no conflict.
-      ;
-      ; 2. addrB - addrA = 2 * elementSize
-      ;
-      ;  store =  <0,1,2,3>      ; array[i] = store;
-      ;   load =      <0,1,2,3>  ; uint32_t load = array[i+2];
-      ;
-      ; This results in a mask with the first two lanes active. In this case,
-      ; only two lanes can be written without overwriting values yet to be read.
-      ;
-      ; 3. addrB - addrA = -2 * elementSize
-      ;
-      ;  store =      <0,1,2,3>  ; array[i+2] = store;
-      ;   load =  <0,1,2,3>      ; uint32_t load = array[i];
-      ;
-      ; This also results in a mask with the first two lanes active. This is
-      ; because if any more lanes were active the load would be dependent on the
-      ; completion of the store.
 
 .. _int_experimental_vp_splice:
 

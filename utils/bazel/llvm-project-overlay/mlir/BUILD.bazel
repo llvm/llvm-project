@@ -4537,6 +4537,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -8420,6 +8421,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":SideEffectInterfaces",
         ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
@@ -10395,6 +10397,7 @@ td_library(
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -10455,6 +10458,7 @@ gentbl_cc_library(
         ":ControlFlowInterfacesTdFiles",
         ":OpenAccOpsTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -10519,6 +10523,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -11984,6 +11989,7 @@ td_library(
     name = "TosaDialectTdFiles",
     srcs = glob(["include/mlir/Dialect/Tosa/IR/*.td"]),
     deps = [
+        ":BuiltinDialectTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",

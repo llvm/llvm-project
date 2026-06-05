@@ -108,6 +108,16 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
+// PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
+// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
+// when they disagree. This flag is an escape hatch to use atom.add anyway,
+// trading correct denormal handling for the speed of the native instruction.
+static cl::opt<bool> AllowFTZAtomics(
+    "nvptx-allow-ftz-atomics", cl::Hidden,
+    cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
+             "FTZ behavior does not match the function's denormal mode."),
+    cl::init(false));
+
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
 static cl::opt<bool> UseApproxLog2F32(
@@ -4724,39 +4734,6 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
-  case Intrinsic::nvvm_atomic_add_gen_f_cta:
-  case Intrinsic::nvvm_atomic_add_gen_f_sys:
-  case Intrinsic::nvvm_atomic_add_gen_i_cta:
-  case Intrinsic::nvvm_atomic_add_gen_i_sys:
-  case Intrinsic::nvvm_atomic_and_gen_i_cta:
-  case Intrinsic::nvvm_atomic_and_gen_i_sys:
-  case Intrinsic::nvvm_atomic_cas_gen_i_cta:
-  case Intrinsic::nvvm_atomic_cas_gen_i_sys:
-  case Intrinsic::nvvm_atomic_dec_gen_i_cta:
-  case Intrinsic::nvvm_atomic_dec_gen_i_sys:
-  case Intrinsic::nvvm_atomic_inc_gen_i_cta:
-  case Intrinsic::nvvm_atomic_inc_gen_i_sys:
-  case Intrinsic::nvvm_atomic_max_gen_i_cta:
-  case Intrinsic::nvvm_atomic_max_gen_i_sys:
-  case Intrinsic::nvvm_atomic_min_gen_i_cta:
-  case Intrinsic::nvvm_atomic_min_gen_i_sys:
-  case Intrinsic::nvvm_atomic_or_gen_i_cta:
-  case Intrinsic::nvvm_atomic_or_gen_i_sys:
-  case Intrinsic::nvvm_atomic_exch_gen_i_cta:
-  case Intrinsic::nvvm_atomic_exch_gen_i_sys:
-  case Intrinsic::nvvm_atomic_xor_gen_i_cta:
-  case Intrinsic::nvvm_atomic_xor_gen_i_sys: {
-    auto &DL = I.getDataLayout();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = getValueType(DL, I.getType());
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
-    Info.align.reset();
-    Infos.push_back(Info);
-    return;
-  }
-
   case Intrinsic::nvvm_prefetch_tensormap: {
     auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_VOID;
@@ -6362,40 +6339,59 @@ static SDValue PerformREMCombine(SDNode *N,
   return SDValue();
 }
 
-// (sign_extend|zero_extend (mul|shl) x, y) -> (mul.wide x, y)
-static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                              CodeGenOptLevel OptLevel) {
+// sext (mul.iN nsw x, y)     => mul.wide.sN x, y
+// zext (mul.iN nuw x, y)     => mul.wide.uN x, y
+// sext (shl.iN nsw x, const) => mul.wide.sN x, (1 << const)
+// zext (shl.iN nuw x, const) => mul.wide.uN x, (1 << const)
+static SDValue combineSZExtToMulWide(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     CodeGenOptLevel OptLevel) {
+  assert(N->getOpcode() == ISD::SIGN_EXTEND ||
+         N->getOpcode() == ISD::ZERO_EXTEND);
+
   if (OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
   SDValue Op = N->getOperand(0);
   if (!Op.hasOneUse())
     return SDValue();
+
   EVT ToVT = N->getValueType(0);
   EVT FromVT = Op.getValueType();
   if (!((ToVT == MVT::i32 && FromVT == MVT::i16) ||
         (ToVT == MVT::i64 && FromVT == MVT::i32)))
     return SDValue();
-  if (!(Op.getOpcode() == ISD::MUL ||
-        (Op.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Op.getOperand(1)))))
+
+  bool IsSigned = N->getOpcode() == ISD::SIGN_EXTEND;
+  if ((IsSigned && !Op->getFlags().hasNoSignedWrap()) ||
+      (!IsSigned && !Op->getFlags().hasNoUnsignedWrap()))
     return SDValue();
 
   SDLoc DL(N);
-  unsigned ExtOpcode = N->getOpcode();
-  unsigned Opcode = 0;
-  if (ExtOpcode == ISD::SIGN_EXTEND && Op->getFlags().hasNoSignedWrap())
-    Opcode = NVPTXISD::MUL_WIDE_SIGNED;
-  else if (ExtOpcode == ISD::ZERO_EXTEND && Op->getFlags().hasNoUnsignedWrap())
-    Opcode = NVPTXISD::MUL_WIDE_UNSIGNED;
-  else
-    return SDValue();
+  SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  if (Op.getOpcode() == ISD::SHL) {
+  unsigned MulWideOpcode =
+      IsSigned ? NVPTXISD::MUL_WIDE_SIGNED : NVPTXISD::MUL_WIDE_UNSIGNED;
+  if (Op.getOpcode() == ISD::MUL) {
+    return DCI.DAG.getNode(MulWideOpcode, DL, ToVT, LHS, RHS);
+  } else if (Op.getOpcode() == ISD::SHL && isa<ConstantSDNode>(RHS)) {
     const auto ShiftAmt = Op.getConstantOperandVal(1);
     const auto MulVal = APInt(FromVT.getSizeInBits(), 1) << ShiftAmt;
+
+    // Note that the sext (shl nsw ...) case doesn't work if 1 << const
+    // overflows to a negative value!  The only valid input values in this
+    // case are 0 and -1 (all other values yield poison because of the nsw),
+    // and mul.wide.sN would give us the wrong sign for -1.  We could use
+    // mul.wide.uN, but since this is a weird case anyway, we might as well not
+    // apply this transformation at all.
+    if (IsSigned && MulVal.isNegative())
+      return SDValue();
+
     RHS = DCI.DAG.getConstant(MulVal, DL, FromVT);
+    return DCI.DAG.getNode(MulWideOpcode, DL, ToVT, LHS, RHS);
   }
-  return DCI.DAG.getNode(Opcode, DL, ToVT, Op.getOperand(0), RHS);
+
+  return SDValue();
 }
 
 enum OperandSignedness {
@@ -6733,13 +6729,12 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 /// Into:
 ///   (NVPTXISD::SRL_CLAMP x, shift_amt) or (NVPTXISD::SHL_CLAMP x, shift_amt)
 ///
-/// These patterns arise from C/C++ code like `shift >= 32 ? 0 : x >> shift`
-/// which guards against undefined behavior. PTX shr/shl instructions clamp
-/// shift amounts >= BitWidth to produce 0 for logical shifts, making the
-/// guard redundant.
+/// These patterns arise from code like `s >= 32 ? 0 : x >> s`. In LLVM,
+/// over-shifting a value results in poison, but PTX shr/shl instructions clamp
+/// the shift amount to BitWidth, making the guard redundant.
 ///
-/// Note: We only handle SRL and SHL, not SRA, because arithmetic right
-/// shifts could produce 0 or -1 when shift >= BitWidth.
+/// Note: We only handle SRL and SHL, not SRA, because arithmetic right shifts
+/// can produce 0 or -1 when shift >= BitWidth.
 /// Note: We don't handle uge or ule. These don't appear because of
 /// canonicalization.
 static SDValue PerformSELECTShiftCombine(SDNode *N,
@@ -6775,11 +6770,21 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
   if (!MatchedUGT && !MatchedULT)
     return SDValue();
 
+  // In LLVM IR, the shift amount and the value-to-be-shifted are the same
+  // type, whereas in PTX the shift amount is always i32.  Therefore when
+  // shifting types larger than i32, we can only do this transformation if we
+  // know that the upper bits of the shift amount are known zero.
+  SDValue ClampAmt = ShiftOp.getOperand(1);
+  unsigned ClampAmtBits = ClampAmt.getValueSizeInBits();
+  if (ShiftAmt.getValueSizeInBits() > ClampAmtBits &&
+      DCI.DAG.computeKnownBits(ShiftAmt).countMaxActiveBits() > ClampAmtBits)
+    return SDValue();
+
   // Return a clamp shift operation, which has the same semantics as PTX shift.
   unsigned ClampOpc = ShiftOp.getOpcode() == ISD::SRL ? NVPTXISD::SRL_CLAMP
                                                       : NVPTXISD::SHL_CLAMP;
   return DCI.DAG.getNode(ClampOpc, SDLoc(N), ShiftOp.getValueType(),
-                         ShiftOp.getOperand(0), ShiftOp.getOperand(1));
+                         ShiftOp.getOperand(0), ClampAmt);
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,
@@ -7110,7 +7115,7 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return combineADDRSPACECAST(N, DCI);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
-    return combineMulWide(N, DCI, OptLevel);
+    return combineSZExtToMulWide(N, DCI, OptLevel);
   case ISD::BUILD_VECTOR:
     return PerformBUILD_VECTORCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
@@ -7480,21 +7485,53 @@ NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
-  if (AI->isFloatingPointOperation()) {
-    if (AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
-      if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
-          STI.getPTXVersion() >= 63)
-        return AtomicExpansionKind::None;
-      if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
-          STI.getPTXVersion() >= 78)
-        return AtomicExpansionKind::None;
-      if (Ty->isFloatTy())
-        return AtomicExpansionKind::None;
-      if (Ty->isDoubleTy() && STI.hasAtomAddF64())
+  // Try to lower LLVM atomicrmw fadd to PTX atomic.add.  This is complicated
+  // by the weird FTZ behavior PTX atom.add has:
+  //   - atom.add.f32 on global memory flushes denormals
+  //   - atom.add.f32 on shared memory does not flush denormals
+  //   - atom.add.f16 and atomic.add.bf16 never flush denormals
+  //
+  // We lower to atom.add only if the function's FTZ behavior matches that of
+  // atom.add; otherwise, we lower to a CAS loop. But we always allow
+  // atomic.add.bf16; even though it never flushes denormals, we never flush
+  // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
+  if (AI->isFloatingPointOperation() &&
+      AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+    const bool FTZ =
+        AI->getFunction()->getDenormalMode(APFloat::IEEEsingle()).Output ==
+        DenormalMode::PreserveSign;
+
+    // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
+    if (Ty->isFloatTy()) {
+      bool UseNative = AllowFTZAtomics;
+      switch (AI->getPointerAddressSpace()) {
+      case llvm::ADDRESS_SPACE_GLOBAL:
+        UseNative |= FTZ;
+        break;
+      case llvm::ADDRESS_SPACE_SHARED:
+      case llvm::ADDRESS_SPACE_SHARED_CLUSTER:
+        UseNative |= !FTZ;
+        break;
+      }
+      if (UseNative)
         return AtomicExpansionKind::None;
     }
-    return AtomicExpansionKind::CmpXChg;
+
+    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
+        STI.getSmVersion() >= 70 && STI.getPTXVersion() >= 63)
+      return AtomicExpansionKind::None;
+
+    if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
+        STI.getPTXVersion() >= 78)
+      return AtomicExpansionKind::None;
+
+    if (Ty->isDoubleTy() && STI.hasAtomAddF64())
+      return AtomicExpansionKind::None;
   }
+
+  // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
+  if (AI->isFloatingPointOperation())
+    return AtomicExpansionKind::CmpXChg;
 
   assert(Ty->isIntegerTy() && "Ty should be integer at this point");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();

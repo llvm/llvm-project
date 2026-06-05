@@ -354,6 +354,14 @@ New Compiler Flags
   that ``bool`` values loaded from memory cannot have a bit pattern other
   than 0 or 1.
 
+- New option ``-fcrash-diagnostics-tar`` added to create an archive of crash
+  reproducer files for easier bug filing.
+
+- There are a new pair of flags for riscv32 called ``-mzilsd-word-align`` and
+  ``-mzilsd-strict-align`` which control whether Zilsd accesses are allowed to
+  be aligned to 4-byte alignment rather than fully unaligned or fully (8-byte)
+  aligned.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -598,6 +606,9 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Diagnostics for the C++11 range-based for statement now report the correct
+  iterator type in notes for invalid iterator types.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -626,6 +637,8 @@ Bug Fixes in This Version
 - Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 - Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
+- Fixed a bug in how Clang re-transforms expressions produced from substititions
+  from type aliases and concept specializations. (#GH191738) (#GH196375)
 - Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
 - Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
 - Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
@@ -667,6 +680,9 @@ Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 - Fixed ``init_priority`` attribute by delaying type checks until after the type is deduced.
+- Fixed a crash when a ``section`` attribute or ``#pragma clang section`` caused a
+  section type conflict with a declaration whose name is not a simple identifier,
+  such as a lambda's call operator. (#GH192264)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -685,6 +701,7 @@ Bug Fixes to C++ Support
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
@@ -820,6 +837,10 @@ CUDA/HIP Language Changes
 CUDA Support
 ^^^^^^^^^^^^
 
+- Fixed a bug where host-device ambiguities in CUDA/HIP when retrieving the
+  address of specializations of templated functions that have overloads for both
+  host and device. (#GH199299)
+
 AIX Support
 ^^^^^^^^^^^
 
@@ -951,9 +972,29 @@ OpenMP Support
 
 SYCL Support
 ------------
+- SYCL compilations now default to ``-std=c++17`` when no explicit language
+  standard is specified. Standards below C++17 are rejected with a diagnostic.
+
 - Clang now assumes default target for SYCL device compilation is 64-bit SPIR-V
   and it now diagnoses if a non-supporting target is specified via command line.
   (#GH167358)
+
+- The SYCL runtime shared library has been renamed from ``libsycl.so`` to
+  ``libLLVMSYCL.so`` to align with LLVM naming conventions.
+
+- SYCL header include paths are now added automatically for both host and
+  device compilations.
+
+- SYCL runtime library linking is now supported on Windows. When ``-fsycl`` is
+  specified, Clang automatically adds ``/MD`` if no explicit CRT flag is
+  present, links the appropriate debug (``LLVMSYCLd.lib``) or release
+  (``LLVMSYCL.lib``) library, and rejects static CRT flags (``/MT``,
+  ``/MTd``) with a diagnostic. Use ``-nolibsycl`` to suppress automatic
+  library linking.
+
+- Fixed ``-nolibsycl`` being silently ignored on Linux: the SYCL runtime
+  library was unconditionally added to the link line even when the flag was
+  passed.
 
 Improvements
 ^^^^^^^^^^^^
