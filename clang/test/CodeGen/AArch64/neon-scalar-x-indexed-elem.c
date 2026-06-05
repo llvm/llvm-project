@@ -170,17 +170,6 @@ float64_t test_vfmad_lane_f64(float64_t a, float64_t b, float64x1_t c) {
   return vfmad_lane_f64(a, b, c, 0);
 }
 
-// CHECK-LABEL: define dso_local double @test_vfmad_laneq_f64(
-// CHECK-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]], <2 x double> noundef [[C:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x double> [[C]], i32 1
-// CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.fma.f64(double [[B]], double [[EXTRACT]], double [[A]])
-// CHECK-NEXT:    ret double [[TMP0]]
-//
-float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
-  return vfmad_laneq_f64(a, b, c, 1);
-}
-
 // CHECK-LABEL: define dso_local float @test_vfmss_lane_f32(
 // CHECK-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]], <2 x float> noundef [[C:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

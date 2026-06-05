@@ -11,10 +11,12 @@
 //
 // This file contains tests that were originally located in:
 //  * clang/test/CodeGen/AArch64/neon-intrinsics.c
+//  * clang/test/CodeGen/AArch64/neon-scalar-x-indexed-elem.c
 // The main difference is the use of RUN lines that enable ClangIR lowering.
 // This file currently covers the f32/f64 wrappers that lower through
 // BI__builtin_neon_vfmaq_v, BI__builtin_neon_vfmaq_lane_v,
-// BI__builtin_neon_vfmaq_laneq_v, and BI__builtin_neon_vfma_laneq_v.
+// BI__builtin_neon_vfmaq_laneq_v, BI__builtin_neon_vfma_laneq_v,
+// and BI__builtin_neon_vfmad_laneq_f64.
 //
 // ACLE section headings based on v2025Q2 of the ACLE specification:
 //  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#fused-multiply-accumulate
@@ -194,6 +196,18 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
 // LLVM:      [[RESULT:%.*]] = bitcast double [[FMA]] to <1 x double>
 // LLVM:      ret <1 x double> [[RESULT]]
   return vfma_laneq_f64(a, b, v, 0);
+}
+
+// ALL-LABEL: @test_vfmad_laneq_f64(
+float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
+// CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<2 x !cir.double>
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
+
+// LLVM-SAME: double {{.*}} [[A:%.*]], double {{.*}} [[B:%.*]], <2 x double> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM:      [[LANE:%.*]] = extractelement <2 x double> [[C]], i{{32|64}} 1
+// LLVM:      [[FMA:%.*]] = call double @llvm.fma.f64(double [[B]], double [[LANE]], double [[A]])
+// LLVM:      ret double [[FMA]]
+  return vfmad_laneq_f64(a, b, c, 1);
 }
 
 // ALL-LABEL: @test_vfmaq_laneq_f32_0(
