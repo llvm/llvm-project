@@ -167,6 +167,7 @@ typedef enum _ze_structure_type_t {
   ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES = 0x1e,
   ZE_STRUCTURE_TYPE_KERNEL_PREFERRED_GROUP_SIZE_PROPERTIES = 0x21,
   ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT = 0x1000f,
+  ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC = 0x00020036,
   ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 0x00020001,
   ZE_STRUCTURE_TYPE_FORCE_UINT32 = 0x7fffffff
 } ze_structure_type_t;
@@ -235,6 +236,7 @@ typedef uint32_t ze_command_queue_flags_t;
 typedef enum _ze_command_queue_flag_t {
   ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY = ZE_BIT(0),
   ZE_COMMAND_QUEUE_FLAG_IN_ORDER = ZE_BIT(1),
+  ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT = ZE_BIT(2),
   ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32 = 0x7fffffff
 } ze_command_queue_flag_t;
 
@@ -489,6 +491,12 @@ typedef struct _ze_group_count_t {
   uint32_t groupCountZ;
 } ze_group_count_t;
 
+typedef struct _ze_group_size_t {
+  uint32_t groupSizeX;
+  uint32_t groupSizeY;
+  uint32_t groupSizeZ;
+} ze_group_size_t;
+
 /* Memory allocation properties */
 typedef struct _ze_memory_allocation_properties_t {
   ze_structure_type_t stype;
@@ -731,6 +739,18 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendLaunchCooperativeKernel(
     ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
     const ze_group_count_t *pLaunchFuncArgs, ze_event_handle_t hSignalEvent,
     uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents);
+typedef struct _ze_command_list_append_launch_kernel_param_cooperative_desc_t {
+  ze_structure_type_t stype;
+  const void *pNext;
+  ze_bool_t isCooperative;
+} ze_command_list_append_launch_kernel_param_cooperative_desc_t;
+
+ZE_APIEXPORT ze_result_t ZE_APICALL
+zeCommandListAppendLaunchKernelWithArguments(
+    ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
+    const ze_group_count_t groupCounts, const ze_group_size_t groupSizes,
+    void **pArguments, const void *pNext, ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendMemoryCopy(
     ze_command_list_handle_t hCommandList, void *dstptr, const void *srcptr,
     size_t size, ze_event_handle_t hSignalEvent, uint32_t numWaitEvents,
@@ -842,6 +862,15 @@ ZE_APIEXPORT ze_result_t ZE_APICALL
 zeEventHostSynchronize(ze_event_handle_t hEvent, uint64_t timeout);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeEventQueryKernelTimestamp(
     ze_event_handle_t hEvent, ze_kernel_timestamp_result_t *dstptr);
+ZE_APIEXPORT ze_result_t ZE_APICALL
+zeEventQueryStatus(ze_event_handle_t hEvent);
+
+/* Event append functions on command lists */
+ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendSignalEvent(
+    ze_command_list_handle_t hCommandList, ze_event_handle_t hEvent);
+ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendWaitOnEvents(
+    ze_command_list_handle_t hCommandList, uint32_t numEvents,
+    ze_event_handle_t *phEvents);
 
 /* Fence functions */
 ZE_APIEXPORT ze_result_t ZE_APICALL

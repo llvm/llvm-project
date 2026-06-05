@@ -6,7 +6,7 @@ struct C {
   void f2(int a, int b);
 };
 
-// CIR: !rec_C = !cir.record<struct "C" padded {!u8i}>
+// CIR: !rec_C = !cir.struct<"C" padded {!u8i}>
 
 void C::f() {}
 

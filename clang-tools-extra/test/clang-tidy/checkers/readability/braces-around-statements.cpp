@@ -415,6 +415,14 @@ int test_macros(bool b) {
   // CHECK-FIXES-NEXT: do_something("for in wrapping macro 3")
   // CHECK-FIXES-NEXT: );
 
+  #define BAD_MACRO(x) \
+    do_something(x);   \
+    do_something(x)
+
+  if (b)
+    BAD_MACRO("macro body");
+  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: statement should be inside braces
+
   // Taken from https://bugs.llvm.org/show_bug.cgi?id=22785
   int i;
   #define MACRO_1 i++

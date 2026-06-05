@@ -107,3 +107,58 @@ opeq1.exit:
 ; The branch is now a direct branch; the other block has been removed.
 ; The phi is updated.
 }
+
+; Comparisons whose width is not a byte multiple (here i17) must NOT be merged
+; into a memcmp: the byte-granular length math (SizeBits/8) would truncate and
+; cover fewer bytes than the original chain, dropping high value bits.
+define zeroext i1 @opeq_i17_no_merge(ptr nocapture readonly %a, ptr nocapture readonly %b) {
+; X86-LABEL: @opeq_i17_no_merge(
+; X86-NEXT:  entry:
+; X86-NEXT:    [[TMP0:%.*]] = load i17, ptr [[A:%.*]], align 4
+; X86-NEXT:    [[TMP1:%.*]] = load i17, ptr [[B:%.*]], align 4
+; X86-NEXT:    [[CMP_I:%.*]] = icmp eq i17 [[TMP0]], [[TMP1]]
+; X86-NEXT:    br i1 [[CMP_I]], label [[LAND_RHS_I:%.*]], label [[OPEQ_EXIT:%.*]]
+; X86:       land.rhs.i:
+; X86-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
+; X86-NEXT:    [[TMP2:%.*]] = load i17, ptr [[PA]], align 1
+; X86-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 2
+; X86-NEXT:    [[TMP3:%.*]] = load i17, ptr [[PB]], align 1
+; X86-NEXT:    [[CMP3_I:%.*]] = icmp eq i17 [[TMP2]], [[TMP3]]
+; X86-NEXT:    br label [[OPEQ_EXIT]]
+; X86:       opeq.exit:
+; X86-NEXT:    [[TMP4:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP3_I]], [[LAND_RHS_I]] ]
+; X86-NEXT:    ret i1 [[TMP4]]
+;
+; X86-NOBUILTIN-LABEL: @opeq_i17_no_merge(
+; X86-NOBUILTIN-NEXT:  entry:
+; X86-NOBUILTIN-NEXT:    [[TMP0:%.*]] = load i17, ptr [[A:%.*]], align 4
+; X86-NOBUILTIN-NEXT:    [[TMP1:%.*]] = load i17, ptr [[B:%.*]], align 4
+; X86-NOBUILTIN-NEXT:    [[CMP_I:%.*]] = icmp eq i17 [[TMP0]], [[TMP1]]
+; X86-NOBUILTIN-NEXT:    br i1 [[CMP_I]], label [[LAND_RHS_I:%.*]], label [[OPEQ_EXIT:%.*]]
+; X86-NOBUILTIN:       land.rhs.i:
+; X86-NOBUILTIN-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
+; X86-NOBUILTIN-NEXT:    [[TMP2:%.*]] = load i17, ptr [[PA]], align 1
+; X86-NOBUILTIN-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 2
+; X86-NOBUILTIN-NEXT:    [[TMP3:%.*]] = load i17, ptr [[PB]], align 1
+; X86-NOBUILTIN-NEXT:    [[CMP3_I:%.*]] = icmp eq i17 [[TMP2]], [[TMP3]]
+; X86-NOBUILTIN-NEXT:    br label [[OPEQ_EXIT]]
+; X86-NOBUILTIN:       opeq.exit:
+; X86-NOBUILTIN-NEXT:    [[TMP4:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP3_I]], [[LAND_RHS_I]] ]
+; X86-NOBUILTIN-NEXT:    ret i1 [[TMP4]]
+;
+entry:
+  %0 = load i17, ptr %a, align 4
+  %1 = load i17, ptr %b, align 4
+  %cmp.i = icmp eq i17 %0, %1
+  br i1 %cmp.i, label %land.rhs.i, label %opeq.exit
+land.rhs.i:
+  %pa = getelementptr inbounds i8, ptr %a, i64 2
+  %2 = load i17, ptr %pa, align 1
+  %pb = getelementptr inbounds i8, ptr %b, i64 2
+  %3 = load i17, ptr %pb, align 1
+  %cmp3.i = icmp eq i17 %2, %3
+  br label %opeq.exit
+opeq.exit:
+  %4 = phi i1 [ false, %entry ], [ %cmp3.i, %land.rhs.i ]
+  ret i1 %4
+}

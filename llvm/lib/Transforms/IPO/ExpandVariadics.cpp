@@ -52,6 +52,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IRBuilder.h"
@@ -61,7 +62,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -233,12 +233,19 @@ public:
   bool expandVAIntrinsicCall(IRBuilder<> &Builder, const DataLayout &DL,
                              VACopyInst *Inst);
 
-  FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
+  bool expandVAArgInst(IRBuilder<> &Builder, const DataLayout &DL,
+                       VAArgInst *Inst);
+
+  FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy,
+                                              Type *ReturnType) {
     // The type of "FTy" with the ... removed and a va_list appended
     SmallVector<Type *> ArgTypes(FTy->params());
     ArgTypes.push_back(ABI->vaListParameterType(M));
-    return FunctionType::get(FTy->getReturnType(), ArgTypes,
-                             /*IsVarArgs=*/false);
+    return FunctionType::get(ReturnType, ArgTypes, /*IsVarArgs=*/false);
+  }
+
+  FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy) {
+    return inlinableVariadicFunctionType(M, FTy, FTy->getReturnType());
   }
 
   bool expansionApplicableToFunction(Module &M, Function *F) {
@@ -396,12 +403,15 @@ bool ExpandVariadics::runOnModule(Module &M) {
     if (F.isDeclaration())
       continue;
 
-    // Now need to track down indirect calls. Can't find those
-    // by walking uses of variadic functions, need to crawl the instruction
-    // stream. Fortunately this is only necessary for the ABI rewrite case.
+    // Now need to track down indirect calls and va_arg instructions. Can't find
+    // those by walking uses of variadic functions, need to crawl the
+    // instruction stream. Fortunately this is only necessary for the ABI
+    // rewrite case.
     for (BasicBlock &BB : F) {
       for (Instruction &I : make_early_inc_range(BB)) {
-        if (CallBase *CB = dyn_cast<CallBase>(&I)) {
+        if (auto *VA = dyn_cast<VAArgInst>(&I)) {
+          Changed |= expandVAArgInst(Builder, DL, VA);
+        } else if (CallBase *CB = dyn_cast<CallBase>(&I)) {
           if (CB->isIndirectCall()) {
             FunctionType *FTy = CB->getFunctionType();
             if (FTy->isVarArg())
@@ -646,12 +656,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // This is tricky. The call instruction's function type might not match
   // the type of the caller. When optimising, can leave it unchanged.
   // Webassembly detects that inconsistency and repairs it.
-  FunctionType *FuncType = CB->getFunctionType();
-  if (FuncType != VarargFunctionType) {
+  if (CB->getFunctionType() != VarargFunctionType)
     if (!rewriteABI())
       return Changed;
-    FuncType = VarargFunctionType;
-  }
 
   auto &Ctx = CB->getContext();
 
@@ -669,7 +676,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
 
   uint64_t CurrentOffset = 0;
 
-  for (unsigned I = FuncType->getNumParams(), E = CB->arg_size(); I < E; ++I) {
+  for (unsigned I : seq(VarargFunctionType->getNumParams(), CB->arg_size())) {
     Value *ArgVal = CB->getArgOperand(I);
     const bool IsByVal = CB->paramHasAttr(I, Attribute::ByVal);
     const bool IsByRef = CB->paramHasAttr(I, Attribute::ByRef);
@@ -774,7 +781,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   Builder.CreateLifetimeStart(Alloced);
   Frame.initializeStructAlloca(DL, Builder, Alloced, VarargsTy);
 
-  const unsigned NumArgs = FuncType->getNumParams();
+  const unsigned NumArgs = VarargFunctionType->getNumParams();
   SmallVector<Value *> Args(CB->arg_begin(), CB->arg_begin() + NumArgs);
 
   // Initialize a va_list pointing to that struct and pass it as the last
@@ -810,7 +817,10 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
 
   if (CallInst *CI = dyn_cast<CallInst>(CB)) {
     Value *Dst = NF ? NF : CI->getCalledOperand();
-    FunctionType *NFTy = inlinableVariadicFunctionType(M, VarargFunctionType);
+    // Use the type of the call site rather than the function type to ensure
+    // RAUW succeeds in the case of a mismatching return type.
+    FunctionType *NFTy =
+        inlinableVariadicFunctionType(M, VarargFunctionType, CB->getType());
 
     NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI->getIterator());
 
@@ -915,6 +925,52 @@ bool ExpandVariadics::expandVAIntrinsicCall(IRBuilder<> &Builder,
   return true;
 }
 
+bool ExpandVariadics::expandVAArgInst(IRBuilder<> &Builder,
+                                      const DataLayout &DL, VAArgInst *Inst) {
+  Builder.SetInsertPoint(Inst);
+
+  auto &Ctx = Builder.getContext();
+  Type *ValTy = Inst->getType();
+  Value *VaListPtr = Inst->getPointerOperand();
+
+  const VariadicABIInfo::VAArgSlotInfo SlotInfo = ABI->slotInfo(DL, ValTy);
+  Type *FrameFieldType = SlotInfo.Indirect ? DL.getAllocaPtrType(Ctx) : ValTy;
+  const uint64_t SlotSize = DL.getTypeAllocSize(FrameFieldType).getFixedValue();
+  const Align SlotAlign = SlotInfo.DataAlign;
+
+  Type *PtrTy = VaListPtr->getType();
+  Type *IdxTy = DL.getIndexType(PtrTy);
+
+  Value *Cur = Builder.CreateLoad(PtrTy, VaListPtr);
+
+  // Round the cursor up to the slot alignment used by the caller.
+  Value *Aligned = Cur;
+  if (SlotAlign > Align(1)) {
+    Value *RoundUp = Builder.CreateInBoundsPtrAdd(
+        Cur, ConstantInt::get(IdxTy, SlotAlign.value() - 1));
+    Aligned = Builder.CreateIntrinsic(
+        Intrinsic::ptrmask, {PtrTy, IdxTy},
+        {RoundUp, ConstantInt::getSigned(IdxTy, -(int64_t)SlotAlign.value())});
+  }
+
+  // Advance past the slot and write the iterator back.
+  Value *Next =
+      Builder.CreateInBoundsPtrAdd(Aligned, ConstantInt::get(IdxTy, SlotSize));
+  Builder.CreateStore(Next, VaListPtr);
+
+  // Load the slot contents: the value itself for direct arguments, or a
+  // pointer to the value for indirect ones.
+  Value *Result = Builder.CreateAlignedLoad(FrameFieldType, Aligned, SlotAlign);
+
+  if (SlotInfo.Indirect)
+    Result = Builder.CreateLoad(ValTy, Result);
+
+  Result->takeName(Inst);
+  Inst->replaceAllUsesWith(Result);
+  Inst->eraseFromParent();
+  return true;
+}
+
 struct Amdgpu final : public VariadicABIInfo {
 
   bool enableForTarget() override { return true; }
@@ -948,11 +1004,11 @@ struct NVPTX final : public VariadicABIInfo {
   bool vaListPassedInSSARegister() override { return true; }
 
   Type *vaListType(LLVMContext &Ctx) override {
-    return PointerType::get(Ctx, NVPTXAS::ADDRESS_SPACE_LOCAL);
+    return PointerType::getUnqual(Ctx);
   }
 
   Type *vaListParameterType(Module &M) override {
-    return PointerType::get(M.getContext(), NVPTXAS::ADDRESS_SPACE_LOCAL);
+    return PointerType::getUnqual(M.getContext());
   }
 
   Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,

@@ -1,3 +1,19 @@
+//===-- JSONGenerator.cpp - JSON Generator ----------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of the JSONGenerator, which serializes
+/// the clang-doc internal representation (Info structures) into JSON format.
+/// It handles the mapping of C++ constructs like namespaces, records,
+/// functions, and enums to their JSON equivalents, enabling downstream tools
+/// to consume the structured documentation data.
+///
+//===----------------------------------------------------------------------===//
 #include "Generators.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -27,7 +43,7 @@ class JSONGenerator : public Generator {
   void serializeCommonChildren(
       const ScopeChildren &Children, json::Object &Obj,
       std::optional<ReferenceFunc> MDReferenceLambda = std::nullopt);
-  void serializeContexts(Info *I, llvm::StringMap<OwnedPtr<Info>> &Infos);
+  void serializeContexts(Info *I, llvm::StringMap<Info *> &Infos);
   void serializeInfo(const ConstraintInfo &I, Object &Obj);
   void serializeInfo(const TemplateInfo &Template, Object &Obj);
   void serializeInfo(const ConceptInfo &I, Object &Obj);
@@ -50,6 +66,8 @@ class JSONGenerator : public Generator {
   void serializeMDReference(const Reference &Ref, Object &ReferenceObj,
                             StringRef BasePath);
 
+  void serializeClassSpecializations(SymbolID ClassUSR, Object &ReferenceObj);
+
   // Convenience lambdas to pass to serializeArray.
   auto serializeInfoLambda() {
     return [this](const auto &Info, Object &Object) {
@@ -63,6 +81,7 @@ class JSONGenerator : public Generator {
   }
 
   llvm::DenseMap<const Info *, SmallVector<Context, 4>> ContextsMap;
+  llvm::StringMap<doc::Info *> *Infos = nullptr;
   const ClangDocContext *CDCtx;
   bool Markdown;
 
@@ -70,7 +89,7 @@ public:
   static const char *Format;
 
   Error generateDocumentation(StringRef RootDir,
-                              llvm::StringMap<OwnedPtr<doc::Info>> Infos,
+                              llvm::StringMap<doc::Info *> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
@@ -442,6 +461,42 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
     generateContext(I, Obj);
 }
 
+static auto SerializeTemplateParam = [](const TemplateParamInfo &Param,
+                                        Object &JsonObj) {
+  JsonObj["Param"] = Param.Contents;
+};
+
+static void serializeTemplateSpecialization(TemplateInfo Template,
+                                            Object &TemplateObj) {
+  json::Value TemplateSpecializationVal = Object();
+  auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
+  TemplateSpecializationObj["SpecializationOf"] =
+      toHex(toStringRef(Template.Specialization->SpecializationOf));
+  if (!Template.Specialization->Params.empty()) {
+    bool VerticalDisplay =
+        Template.Specialization->Params.size() > getMaxParamWrapLimit();
+    serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
+                   "Parameters", SerializeTemplateParam, "SpecParamEnd",
+                   [VerticalDisplay](Object &JsonObj) {
+                     JsonObj["VerticalDisplay"] = VerticalDisplay;
+                   });
+  }
+  TemplateObj["Specialization"] = TemplateSpecializationVal;
+}
+
+void JSONGenerator::serializeClassSpecializations(SymbolID ClassUSR,
+                                                  Object &ReferenceObj) {
+  if (!Infos)
+    return;
+  auto *Class = Infos->lookup(toHex(ClassUSR));
+  if (!Class || Class->IT != InfoType::IT_record)
+    return;
+  RecordInfo *ClassInfo = static_cast<RecordInfo *>(Class);
+  if (!ClassInfo->Template || !ClassInfo->Template->Specialization)
+    return;
+  serializeTemplateSpecialization(ClassInfo->Template.value(), ReferenceObj);
+}
+
 void JSONGenerator::serializeReference(const Reference &Ref,
                                        Object &ReferenceObj) {
   insertNonEmpty("Path", Ref.Path, ReferenceObj);
@@ -485,9 +540,14 @@ void JSONGenerator::serializeCommonChildren(
   }
 
   if (!Children.Records.empty()) {
-    ReferenceFunc SerializeReferenceFunc = MDReferenceLambda
-                                               ? MDReferenceLambda.value()
+    ReferenceFunc BaseFunc = MDReferenceLambda ? MDReferenceLambda.value()
                                                : serializeReferenceLambda();
+
+    ReferenceFunc SerializeReferenceFunc =
+        [this, BaseFunc](const Reference &Ref, Object &Object) {
+          BaseFunc(Ref, Object);
+          serializeClassSpecializations(Ref.USR, Object);
+        };
     serializeArray(Children.Records, Obj, "Records", SerializeReferenceFunc);
     Obj["HasRecords"] = true;
   }
@@ -523,27 +583,9 @@ void JSONGenerator::serializeInfo(const ConstraintInfo &I, Object &Obj) {
 void JSONGenerator::serializeInfo(const TemplateInfo &Template, Object &Obj) {
   json::Value TemplateVal = Object();
   auto &TemplateObj = *TemplateVal.getAsObject();
-  auto SerializeTemplateParam = [](const TemplateParamInfo &Param,
-                                   Object &JsonObj) {
-    JsonObj["Param"] = Param.Contents;
-  };
 
-  if (Template.Specialization) {
-    json::Value TemplateSpecializationVal = Object();
-    auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
-    TemplateSpecializationObj["SpecializationOf"] =
-        toHex(toStringRef(Template.Specialization->SpecializationOf));
-    if (!Template.Specialization->Params.empty()) {
-      bool VerticalDisplay =
-          Template.Specialization->Params.size() > getMaxParamWrapLimit();
-      serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
-                     "Parameters", SerializeTemplateParam, "SpecParamEnd",
-                     [VerticalDisplay](Object &JsonObj) {
-                       JsonObj["VerticalDisplay"] = VerticalDisplay;
-                     });
-    }
-    TemplateObj["Specialization"] = TemplateSpecializationVal;
-  }
+  if (Template.Specialization)
+    serializeTemplateSpecialization(Template, TemplateObj);
 
   if (!Template.Params.empty()) {
     bool VerticalDisplay = Template.Params.size() > getMaxParamWrapLimit();
@@ -916,12 +958,14 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
   raw_fd_ostream RootOS(IndexFilePath, FileErr, sys::fs::OF_Text);
   if (FileErr)
     return createFileError("cannot open file " + IndexFilePath, FileErr);
-  RootOS << llvm::formatv("{0:2}", ObjVal);
+  if (CDCtx->Pretty)
+    RootOS << llvm::formatv("{0:2}", ObjVal);
+  else
+    RootOS << llvm::formatv("{0}", ObjVal);
   return Error::success();
 }
 
-void JSONGenerator::serializeContexts(Info *I,
-                                      StringMap<OwnedPtr<Info>> &Infos) {
+void JSONGenerator::serializeContexts(Info *I, StringMap<Info *> &Infos) {
   if (I->USR == GlobalNamespaceID)
     return;
   auto ParentUSR = I->ParentUSR;
@@ -949,14 +993,16 @@ void JSONGenerator::serializeContexts(Info *I,
   }
 }
 
-Error JSONGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx, std::string DirName) {
+Error JSONGenerator::generateDocumentation(StringRef RootDir,
+                                           llvm::StringMap<doc::Info *> Infos,
+                                           const ClangDocContext &CDCtx,
+                                           std::string DirName) {
   this->CDCtx = &CDCtx;
+  this->Infos = &Infos;
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    Info *Info = getPtr(Group.getValue());
+    Info *Info = Group.getValue();
 
     SmallString<128> Path;
     auto RootDirStr = RootDir.str() + "/json";
@@ -1021,7 +1067,10 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected info type");
   }
-  OS << llvm::formatv("{0:2}", llvm::json::Value(std::move(Obj)));
+  if (CDCtx.Pretty)
+    OS << llvm::formatv("{0:2}", llvm::json::Value(std::move(Obj)));
+  else
+    OS << llvm::formatv("{0}", llvm::json::Value(std::move(Obj)));
   return Error::success();
 }
 

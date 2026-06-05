@@ -6,15 +6,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -O0 -o - \
 // RUN:   -triple=spirv64-amd-amdhsa | FileCheck --check-prefix=AMDGCNSPIRV %s
 
-// CHECK-LABEL: define dso_local void @_Z25test_memory_fence_successv(
-// CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst
-// CHECK-NEXT:    fence syncscope("agent") acquire
-// CHECK-NEXT:    fence seq_cst
-// CHECK-NEXT:    fence syncscope("agent") acq_rel
-// CHECK-NEXT:    fence syncscope("workgroup") release
-// CHECK-NEXT:    ret void
 // GCN-LABEL: define dso_local void @_Z25test_memory_fence_successv(
 // GCN-SAME: ) #[[ATTR0:[0-9]+]] {
 // GCN-NEXT:  entry:
@@ -48,33 +39,24 @@ void test_memory_fence_success() {
   __builtin_amdgcn_fence(3, "workgroup");
 }
 
-// CHECK-LABEL: define dso_local void @_Z10test_localv(
-// CHECK-SAME: ) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3:![0-9]+]]
-// CHECK-NEXT:    fence syncscope("agent") acquire, !mmra [[META3]]
-// CHECK-NEXT:    fence seq_cst, !mmra [[META3]]
-// CHECK-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META3]]
-// CHECK-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
-// CHECK-NEXT:    ret void
 // GCN-LABEL: define dso_local void @_Z10test_localv(
 // GCN-SAME: ) #[[ATTR0]] {
 // GCN-NEXT:  entry:
-// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3:![0-9]+]]
-// GCN-NEXT:    fence syncscope("agent") acquire, !mmra [[META3]]
-// GCN-NEXT:    fence seq_cst, !mmra [[META3]]
-// GCN-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META3]]
-// GCN-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
+// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META2:![0-9]+]]
+// GCN-NEXT:    fence syncscope("agent") acquire, !mmra [[META2]]
+// GCN-NEXT:    fence seq_cst, !mmra [[META2]]
+// GCN-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META2]]
+// GCN-NEXT:    fence syncscope("workgroup") release, !mmra [[META2]]
 // GCN-NEXT:    ret void
 //
 // AMDGCNSPIRV-LABEL: define spir_func void @_Z10test_localv(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3:![0-9]+]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("device") acquire, !mmra [[META3]]
-// AMDGCNSPIRV-NEXT:    fence seq_cst, !mmra [[META3]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("device") acq_rel, !mmra [[META3]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META2:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("device") acquire, !mmra [[META2]]
+// AMDGCNSPIRV-NEXT:    fence seq_cst, !mmra [[META2]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("device") acq_rel, !mmra [[META2]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") release, !mmra [[META2]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
 void test_local() {
@@ -89,34 +71,24 @@ void test_local() {
   __builtin_amdgcn_fence(3, "workgroup", "local");
 }
 
-
-// CHECK-LABEL: define dso_local void @_Z11test_globalv(
-// CHECK-SAME: ) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META4:![0-9]+]]
-// CHECK-NEXT:    fence syncscope("agent") acquire, !mmra [[META4]]
-// CHECK-NEXT:    fence seq_cst, !mmra [[META4]]
-// CHECK-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META4]]
-// CHECK-NEXT:    fence syncscope("workgroup") release, !mmra [[META4]]
-// CHECK-NEXT:    ret void
 // GCN-LABEL: define dso_local void @_Z11test_globalv(
 // GCN-SAME: ) #[[ATTR0]] {
 // GCN-NEXT:  entry:
-// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META4:![0-9]+]]
-// GCN-NEXT:    fence syncscope("agent") acquire, !mmra [[META4]]
-// GCN-NEXT:    fence seq_cst, !mmra [[META4]]
-// GCN-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META4]]
-// GCN-NEXT:    fence syncscope("workgroup") release, !mmra [[META4]]
+// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3:![0-9]+]]
+// GCN-NEXT:    fence syncscope("agent") acquire, !mmra [[META3]]
+// GCN-NEXT:    fence seq_cst, !mmra [[META3]]
+// GCN-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META3]]
+// GCN-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
 // GCN-NEXT:    ret void
 //
 // AMDGCNSPIRV-LABEL: define spir_func void @_Z11test_globalv(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META4:![0-9]+]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("device") acquire, !mmra [[META4]]
-// AMDGCNSPIRV-NEXT:    fence seq_cst, !mmra [[META4]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("device") acq_rel, !mmra [[META4]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") release, !mmra [[META4]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("device") acquire, !mmra [[META3]]
+// AMDGCNSPIRV-NEXT:    fence seq_cst, !mmra [[META3]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("device") acq_rel, !mmra [[META3]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
 void test_global() {
@@ -131,33 +103,24 @@ void test_global() {
   __builtin_amdgcn_fence(3, "workgroup", "global");
 }
 
-// CHECK-LABEL: define dso_local void @_Z10test_imagev(
-// CHECK-SAME: ) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3]]
-// CHECK-NEXT:    fence syncscope("agent") acquire, !mmra [[META3]]
-// CHECK-NEXT:    fence seq_cst, !mmra [[META3]]
-// CHECK-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META3]]
-// CHECK-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
-// CHECK-NEXT:    ret void
 // GCN-LABEL: define dso_local void @_Z10test_imagev(
 // GCN-SAME: ) #[[ATTR0]] {
 // GCN-NEXT:  entry:
-// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3]]
-// GCN-NEXT:    fence syncscope("agent") acquire, !mmra [[META3]]
-// GCN-NEXT:    fence seq_cst, !mmra [[META3]]
-// GCN-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META3]]
-// GCN-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
+// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META2]]
+// GCN-NEXT:    fence syncscope("agent") acquire, !mmra [[META2]]
+// GCN-NEXT:    fence seq_cst, !mmra [[META2]]
+// GCN-NEXT:    fence syncscope("agent") acq_rel, !mmra [[META2]]
+// GCN-NEXT:    fence syncscope("workgroup") release, !mmra [[META2]]
 // GCN-NEXT:    ret void
 //
 // AMDGCNSPIRV-LABEL: define spir_func void @_Z10test_imagev(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META3]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("device") acquire, !mmra [[META3]]
-// AMDGCNSPIRV-NEXT:    fence seq_cst, !mmra [[META3]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("device") acq_rel, !mmra [[META3]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") release, !mmra [[META3]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META2]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("device") acquire, !mmra [[META2]]
+// AMDGCNSPIRV-NEXT:    fence seq_cst, !mmra [[META2]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("device") acq_rel, !mmra [[META2]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") release, !mmra [[META2]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
 void test_image() {
@@ -172,39 +135,30 @@ void test_image() {
   __builtin_amdgcn_fence(3, "workgroup", "local");
 }
 
-// CHECK-LABEL: define dso_local void @_Z10test_mixedv(
-// CHECK-SAME: ) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5:![0-9]+]]
-// CHECK-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5]]
-// CHECK-NEXT:    ret void
 // GCN-LABEL: define dso_local void @_Z10test_mixedv(
 // GCN-SAME: ) #[[ATTR0]] {
 // GCN-NEXT:  entry:
-// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5:![0-9]+]]
-// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5]]
+// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META4:![0-9]+]]
+// GCN-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META4]]
 // GCN-NEXT:    ret void
 //
 // AMDGCNSPIRV-LABEL: define spir_func void @_Z10test_mixedv(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5:![0-9]+]]
-// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META5]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META4:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst, !mmra [[META4]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
 void test_mixed() {
   __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "local", "global");
   __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "local", "local", "global", "local", "local");
 }
-// CHECK: [[META3]] = !{!"amdgpu-synchronize-as", !"local"}
-// CHECK: [[META4]] = !{!"amdgpu-synchronize-as", !"global"}
-// CHECK: [[META5]] = !{[[META4]], [[META3]]}
 //.
-// GCN: [[META3]] = !{!"amdgpu-synchronize-as", !"local"}
-// GCN: [[META4]] = !{!"amdgpu-synchronize-as", !"global"}
-// GCN: [[META5]] = !{[[META4]], [[META3]]}
+// GCN: [[META2]] = !{!"amdgpu-synchronize-as", !"local"}
+// GCN: [[META3]] = !{!"amdgpu-synchronize-as", !"global"}
+// GCN: [[META4]] = !{[[META3]], [[META2]]}
 //.
-// AMDGCNSPIRV: [[META3]] = !{!"amdgpu-synchronize-as", !"local"}
-// AMDGCNSPIRV: [[META4]] = !{!"amdgpu-synchronize-as", !"global"}
-// AMDGCNSPIRV: [[META5]] = !{[[META4]], [[META3]]}
+// AMDGCNSPIRV: [[META2]] = !{!"amdgpu-synchronize-as", !"local"}
+// AMDGCNSPIRV: [[META3]] = !{!"amdgpu-synchronize-as", !"global"}
+// AMDGCNSPIRV: [[META4]] = !{[[META3]], [[META2]]}
 //.

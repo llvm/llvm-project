@@ -1771,38 +1771,14 @@ define <8 x i32> @sext_8i1_8i32(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 
 
 define i16 @trunc_i32_to_i1(i32 %a) {
-; KNL-LABEL: trunc_i32_to_i1:
-; KNL:       # %bb.0:
-; KNL-NEXT:    andl $1, %edi
-; KNL-NEXT:    kmovw %edi, %k0
-; KNL-NEXT:    movw $-4, %ax
-; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    korw %k1, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    # kill: def $ax killed $ax killed $eax
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: trunc_i32_to_i1:
-; SKX:       # %bb.0:
-; SKX-NEXT:    andl $1, %edi
-; SKX-NEXT:    kmovw %edi, %k0
-; SKX-NEXT:    movw $-4, %ax
-; SKX-NEXT:    kmovd %eax, %k1
-; SKX-NEXT:    korw %k1, %k0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
-; SKX-NEXT:    retq
-;
-; AVX512DQNOBW-LABEL: trunc_i32_to_i1:
-; AVX512DQNOBW:       # %bb.0:
-; AVX512DQNOBW-NEXT:    andl $1, %edi
-; AVX512DQNOBW-NEXT:    kmovw %edi, %k0
-; AVX512DQNOBW-NEXT:    movw $-4, %ax
-; AVX512DQNOBW-NEXT:    kmovw %eax, %k1
-; AVX512DQNOBW-NEXT:    korw %k1, %k0, %k0
-; AVX512DQNOBW-NEXT:    kmovw %k0, %eax
-; AVX512DQNOBW-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512DQNOBW-NEXT:    retq
+; ALL-LABEL: trunc_i32_to_i1:
+; ALL:       # %bb.0:
+; ALL-NEXT:    andb $1, %dil
+; ALL-NEXT:    cmpb $1, %dil
+; ALL-NEXT:    movl $65532, %eax # imm = 0xFFFC
+; ALL-NEXT:    sbbl $-1, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; ALL-NEXT:    retq
   %a_i = trunc i32 %a to i1
   %maskv = insertelement <16 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %a_i, i32 0
   %res = bitcast <16 x i1> %maskv to i16

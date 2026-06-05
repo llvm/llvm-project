@@ -107,9 +107,8 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO())
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = TC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
                             options::OPT_t, options::OPT_r});
@@ -167,8 +166,11 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-SanitizerMask Serenity::getSupportedSanitizers() const {
-  return ToolChain::getSupportedSanitizers() | SanitizerKind::KernelAddress;
+SanitizerMask
+Serenity::getSupportedSanitizers(StringRef BoundArch,
+                                 Action::OffloadKind DeviceOffloadKind) const {
+  return ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind) |
+         SanitizerKind::KernelAddress;
 }
 
 Serenity::Serenity(const Driver &D, const llvm::Triple &Triple,
