@@ -4,6 +4,7 @@ Pipe or redirect LLDB command output through shell commands.
 Usage:
     (lldb) pipe <lldb-command> | <shell-pipeline>
     (lldb) pipe <lldb-command> > <file>
+    (lldb) pipe <lldb-command> >> <file>
 Examples:
     (lldb) pipe image list | wc -l
     (lldb) pipe settings list | grep color
@@ -46,12 +47,12 @@ def _tokenize(cmdstr: str) -> shlex.shlex:
 
 
 def _split_cmd(cmdstr: str) -> Tuple[str, Optional[str]]:
-    """Split cmdstr at the first unquoted shell operator (| or >)."""
-    lex = _tokenize(cmdstr)
-    for token in lex:
-        if token in ("|", ">"):
+    """Split cmdstr at the first unquoted shell operator (|, >, or >>)."""
+    tokens = _tokenize(cmdstr)
+    for token in tokens:
+        if token in ("|", ">", ">>"):
             # Search up to where shlex has consumed.
-            split = cmdstr.rindex(token, 0, lex.instream.tell())
+            split = cmdstr.rindex(token, 0, tokens.instream.tell())
             first_cmd = cmdstr[:split].rstrip()
             shell_suffix = cmdstr[split:]
             return first_cmd, shell_suffix
@@ -73,10 +74,10 @@ _PAGERS = _pager_names()
 
 def _ends_with_pager(shell_cmd: str) -> bool:
     """Check if the last command in a shell pipeline is a pager."""
-    lex = _tokenize(shell_cmd)
-    for tok1, tok2 in reversed(list(_pairwise(lex))):
-        if tok1 == "|":
-            return os.path.basename(tok2) in _PAGERS
+    tokens = _tokenize(shell_cmd)
+    for token1, token2 in reversed(list(_pairwise(tokens))):
+        if token1 == "|":
+            return os.path.basename(token2) in _PAGERS
     return False
 
 
@@ -120,7 +121,8 @@ def pipe(
             return
 
         output = cmd_result.GetOutput()
-        # `cat` works with both | and > operators.
+        # Prefixing shell_suffix with `cat` is a single way to make both `| ...`
+        # and `> ...` work as a subprocess command.
         shell_cmd = f"cat {shell_suffix}"
     else:
         # No lldb command to run, only shell.
@@ -141,4 +143,3 @@ def pipe(
                 result.SetError(proc.stderr)
     except OSError as e:
         result.SetError(f"failed to run shell command: {e}")
-        return
