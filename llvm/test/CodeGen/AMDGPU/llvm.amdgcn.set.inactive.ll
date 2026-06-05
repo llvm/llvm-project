@@ -504,6 +504,33 @@ define amdgpu_kernel void @set_inactive_p6(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
+; The result of set_inactive with a constant value operand must not be
+; constant-folded away: SimplifyDemandedBits must intersect the known bits of
+; both operands, so the inactive value (0x55555555) is preserved through the
+; demanded-bits mask.
+define amdgpu_kernel void @set_inactive_const_value_demanded(ptr addrspace(1) %out) {
+; GCN-LABEL: set_inactive_const_value_demanded:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    v_mov_b32_e32 v1, 0xaaaaaaaa
+; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    v_mov_b32_e32 v0, 0x55555555
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; GCN-NEXT:    s_endpgm
+  %tmp.0 = call i32 @llvm.amdgcn.set.inactive.i32(i32 -1431655766, i32 1431655765) #0
+  %and = and i32 %tmp.0, 65535
+  %tmp = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %and)
+  store i32 %tmp, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #0
 declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64) #0
 declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #1
