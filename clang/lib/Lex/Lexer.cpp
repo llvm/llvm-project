@@ -2284,7 +2284,7 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
       C = getAndAdvanceChar(CurPtr, Result);
 
       // lex.header
-      // 
+      //
       // header-name:
       //    ...
       //    " q-char-sequence "
@@ -2292,7 +2292,8 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
       // q-char-sequence:
       //    q-char q-char-sequence[opt]
       // q-char:
-      //    any member of the translation character set except new-line and U+0022 quotation mark
+      //    any member of the translation character set except new-line and
+      //    U+0022 quotation mark
       //
       // The implementation-defined semantics cannot be taken as causing '\' to
       // "escape" the following " because there is no provision for " in a
