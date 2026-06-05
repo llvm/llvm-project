@@ -5,7 +5,7 @@
 int printf(const char *restrict, ...) __attribute__((format(printf, 1, 2)));
 int scanf(const char *restrict, ...) __attribute__((format(scanf, 1, 2)));
 
-void t1(int8_t i8, uint8_t u8, int16_t i16, uint16_t u16, int32_t i32,
+void t1(int i, int8_t i8, uint8_t u8, int16_t i16, uint16_t u16, int32_t i32,
         uint32_t u32, int64_t i64, uint64_t u64, int_fast8_t if8,
         uint_fast8_t uf8, int_fast16_t if16, uint_fast16_t uf16,
         int_fast32_t if32, uint_fast32_t uf32, int_fast64_t if64,
@@ -32,10 +32,10 @@ void t1(int8_t i8, uint8_t u8, int16_t i16, uint16_t u16, int32_t i32,
   printf("%wf64u", uf64);
 
   printf("%w32d", 1);
-  printf("%w32d", i32);
+  printf("%w32d", i);
   printf("%w16d", 1);
   printf("%w16d", 65536);
-  printf("%w16d", i32);
+  printf("%w16d", i);
 
   printf("%w32d", 1.0);  // expected-warning{{format specifies type 'int32_t' (aka 'int') but the argument has type 'double'}}
   printf("%w32u", 1.0);  // expected-warning{{format specifies type 'uint32_t' (aka 'unsigned int') but the argument has type 'double'}}
@@ -59,13 +59,15 @@ void t2(int8_t *i8_ptr, int16_t *i16_ptr, int32_t *i32_ptr,
   printf("%wf32n", d_ptr); // expected-warning{{format specifies type 'int_fast32_t *' (aka 'int *') but the argument has type 'double *'}}
 }
 
-void t3(int8_t *i8_ptr, uint8_t *u8_ptr, int16_t *i16_ptr,
+void t3(int *int_ptr, int8_t *i8_ptr, uint8_t *u8_ptr, int16_t *i16_ptr,
         uint16_t *u16_ptr, int32_t *i32_ptr, uint32_t *u32_ptr,
         int64_t *i64_ptr, uint64_t *u64_ptr, int_fast8_t *if8_ptr,
         uint_fast8_t *uf8_ptr, int_fast16_t *if16_ptr,
         uint_fast16_t *uf16_ptr, int_fast32_t *if32_ptr,
         uint_fast32_t *uf32_ptr, int_fast64_t *if64_ptr,
         uint_fast64_t *uf64_ptr, double *d_ptr) {
+  scanf("%w32d", int_ptr);
+
   scanf("%w8d", i8_ptr);
   scanf("%w8u", u8_ptr);
   scanf("%w16d", i16_ptr);
