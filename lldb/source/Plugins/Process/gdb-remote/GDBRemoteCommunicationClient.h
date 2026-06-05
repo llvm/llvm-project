@@ -129,7 +129,8 @@ public:
   ///
   /// \param[in] interrupt_timeout
   ///     If the inferior is running, how long to wait for a `\x03` BREAK
-  ///     to interrupt it before giving up. Pass zero only when the caller knows the inferior is stopped.
+  ///     to interrupt it before giving up. Pass zero only when the caller knows
+  ///     the inferior is stopped.
   ///
   /// \return
   ///     Zero if the attach was successful, or an error indicating
