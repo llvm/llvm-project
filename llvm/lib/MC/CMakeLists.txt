@@ -88,7 +88,10 @@ if(NOT EJIT_BARE_METAL)
   list(APPEND MCSOURCES ${MCSOURCES_MACHO_COFF})
   list(APPEND MCSOURCES ${MCSOURCES_BLOAT})
 elseif(LLVM_TARGETS_TO_BUILD STREQUAL "AArch64")
-  # AArch64 bare-metal: only need ELF
+  # AArch64 bare-metal: MACHO_COFF needed for MCContext template instantiations;
+  # BLOAT needed for section type vtables (GOFF/Wasm/XCOFF/DXContainer)
+  list(APPEND MCSOURCES ${MCSOURCES_MACHO_COFF})
+  list(APPEND MCSOURCES ${MCSOURCES_BLOAT})
 else()
   # x86 bare-metal: need ELF + MachO + COFF
   list(APPEND MCSOURCES ${MCSOURCES_MACHO_COFF})

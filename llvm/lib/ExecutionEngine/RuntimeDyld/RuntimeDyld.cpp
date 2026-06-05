@@ -11,11 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
+#ifndef EJIT_BARE_METAL
 #include "RuntimeDyldCOFF.h"
+#endif
 #include "RuntimeDyldELF.h"
 #include "RuntimeDyldImpl.h"
+#ifndef EJIT_BARE_METAL
 #include "RuntimeDyldMachO.h"
 #include "llvm/Object/COFF.h"
+#endif
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -472,6 +476,7 @@ static bool isRequiredForExecution(const SectionRef Section) {
   const ObjectFile *Obj = Section.getObject();
   if (isa<object::ELFObjectFileBase>(Obj))
     return ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC;
+#ifndef EJIT_BARE_METAL
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj)) {
     const coff_section *CoffSection = COFFObj->getCOFFSection(Section);
     // Avoid loading zero-sized COFF sections.
@@ -489,6 +494,8 @@ static bool isRequiredForExecution(const SectionRef Section) {
 
   assert(isa<MachOObjectFile>(Obj));
   return true;
+#endif
+  return false;
 }
 
 static bool isReadOnlyData(const SectionRef Section) {
@@ -496,6 +503,7 @@ static bool isReadOnlyData(const SectionRef Section) {
   if (isa<object::ELFObjectFileBase>(Obj))
     return !(ELFSectionRef(Section).getFlags() &
              (ELF::SHF_WRITE | ELF::SHF_EXECINSTR));
+#ifndef EJIT_BARE_METAL
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj))
     return ((COFFObj->getCOFFSection(Section)->Characteristics &
              (COFF::IMAGE_SCN_CNT_INITIALIZED_DATA
@@ -507,12 +515,15 @@ static bool isReadOnlyData(const SectionRef Section) {
 
   assert(isa<MachOObjectFile>(Obj));
   return false;
+#endif
+  return false;
 }
 
 static bool isZeroInit(const SectionRef Section) {
   const ObjectFile *Obj = Section.getObject();
   if (isa<object::ELFObjectFileBase>(Obj))
     return ELFSectionRef(Section).getType() == ELF::SHT_NOBITS;
+#ifndef EJIT_BARE_METAL
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj))
     return COFFObj->getCOFFSection(Section)->Characteristics &
             COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA;
@@ -521,6 +532,8 @@ static bool isZeroInit(const SectionRef Section) {
   unsigned SectionType = MachO->getSectionType(Section);
   return SectionType == MachO::S_ZEROFILL ||
          SectionType == MachO::S_GB_ZEROFILL;
+#endif
+  return false;
 }
 
 static bool isTLS(const SectionRef Section) {
@@ -1321,6 +1334,7 @@ RuntimeDyld::RuntimeDyld(RuntimeDyld::MemoryManager &MemMgr,
 
 RuntimeDyld::~RuntimeDyld() = default;
 
+#ifndef EJIT_BARE_METAL
 static std::unique_ptr<RuntimeDyldCOFF>
 createRuntimeDyldCOFF(
                      Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
@@ -1332,6 +1346,7 @@ createRuntimeDyldCOFF(
   Dyld->setNotifyStubEmitted(std::move(NotifyStubEmitted));
   return Dyld;
 }
+#endif
 
 static std::unique_ptr<RuntimeDyldELF>
 createRuntimeDyldELF(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
@@ -1344,6 +1359,7 @@ createRuntimeDyldELF(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
   return Dyld;
 }
 
+#ifndef EJIT_BARE_METAL
 static std::unique_ptr<RuntimeDyldMachO>
 createRuntimeDyldMachO(
                      Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
@@ -1356,6 +1372,7 @@ createRuntimeDyldMachO(
   Dyld->setNotifyStubEmitted(std::move(NotifyStubEmitted));
   return Dyld;
 }
+#endif
 
 std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyld::loadObject(const ObjectFile &Obj) {
@@ -1365,6 +1382,7 @@ RuntimeDyld::loadObject(const ObjectFile &Obj) {
           createRuntimeDyldELF(static_cast<Triple::ArchType>(Obj.getArch()),
                                MemMgr, Resolver, ProcessAllSections,
                                std::move(NotifyStubEmitted));
+#ifndef EJIT_BARE_METAL
     else if (Obj.isMachO())
       Dyld = createRuntimeDyldMachO(
                static_cast<Triple::ArchType>(Obj.getArch()), MemMgr, Resolver,
@@ -1373,6 +1391,7 @@ RuntimeDyld::loadObject(const ObjectFile &Obj) {
       Dyld = createRuntimeDyldCOFF(
                static_cast<Triple::ArchType>(Obj.getArch()), MemMgr, Resolver,
                ProcessAllSections, std::move(NotifyStubEmitted));
+#endif
     else
       report_fatal_error("Incompatible object format!");
   }

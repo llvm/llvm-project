@@ -747,12 +747,14 @@ namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
-extern MCAsmParserExtension *createDarwinAsmParser();
 extern MCAsmParserExtension *createELFAsmParser();
+#ifndef EJIT_BARE_METAL
+extern MCAsmParserExtension *createDarwinAsmParser();
 extern MCAsmParserExtension *createCOFFAsmParser();
 extern MCAsmParserExtension *createGOFFAsmParser();
 extern MCAsmParserExtension *createXCOFFAsmParser();
 extern MCAsmParserExtension *createWasmAsmParser();
+#endif
 
 } // end namespace llvm
 
@@ -772,6 +774,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 
   // Initialize the platform / file format parser.
   switch (Ctx.getObjectFileType()) {
+#ifndef EJIT_BARE_METAL
   case MCContext::IsCOFF:
     PlatformParser.reset(createCOFFAsmParser());
     break;
@@ -779,9 +782,11 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
     PlatformParser.reset(createDarwinAsmParser());
     IsDarwin = true;
     break;
+#endif
   case MCContext::IsELF:
     PlatformParser.reset(createELFAsmParser());
     break;
+#ifndef EJIT_BARE_METAL
   case MCContext::IsGOFF:
     PlatformParser.reset(createGOFFAsmParser());
     break;
@@ -798,6 +803,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   case MCContext::IsDXContainer:
     report_fatal_error("DXContainer is not supported yet");
     break;
+#endif
   }
 
   PlatformParser->Initialize(*this);

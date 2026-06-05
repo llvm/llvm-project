@@ -1374,6 +1374,7 @@ bool AsmPrinter::usesCFIWithoutEH() const {
 }
 
 void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
+#ifndef EJIT_BARE_METAL
   ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
   if (!usesCFIWithoutEH() &&
       ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
@@ -1397,7 +1398,14 @@ void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
   unsigned CFIIndex = MI.getOperand(0).getCFIIndex();
   const MCCFIInstruction &CFI = Instrs[CFIIndex];
   emitCFIInstruction(CFI);
+#endif
 }
+
+#ifndef EJIT_BARE_METAL
+// emitTTypeReference is defined in AsmPrinterDwarf.cpp (excluded in bare-metal).
+#else
+void AsmPrinter::emitTTypeReference(const GlobalValue *, unsigned) {}
+#endif
 
 void AsmPrinter::emitFrameAlloc(const MachineInstr &MI) {
   // The operands are the MCSymbol and the frame offset of the allocation.

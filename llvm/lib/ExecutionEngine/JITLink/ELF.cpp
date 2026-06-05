@@ -86,6 +86,7 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
   switch (*TargetMachineArch) {
   case ELF::EM_AARCH64:
     return createLinkGraphFromELFObject_aarch64(ObjectBuffer, std::move(SSP));
+#ifndef EJIT_BARE_METAL
   case ELF::EM_ARM:
     return createLinkGraphFromELFObject_aarch32(ObjectBuffer, std::move(SSP));
   case ELF::EM_PPC64: {
@@ -102,6 +103,7 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
     return createLinkGraphFromELFObject_x86_64(ObjectBuffer, std::move(SSP));
   case ELF::EM_386:
     return createLinkGraphFromELFObject_x86(ObjectBuffer, std::move(SSP));
+#endif
   default:
     return make_error<JITLinkError>(
         "Unsupported target machine architecture in ELF object " +
@@ -115,6 +117,7 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::aarch64:
     link_ELF_aarch64(std::move(G), std::move(Ctx));
     return;
+#ifndef EJIT_BARE_METAL
   case Triple::arm:
   case Triple::armeb:
   case Triple::thumb:
@@ -141,6 +144,7 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::x86:
     link_ELF_x86(std::move(G), std::move(Ctx));
     return;
+#endif
   default:
     Ctx->notifyFailed(make_error<JITLinkError>(
         "Unsupported target machine architecture in ELF link graph " +

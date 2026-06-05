@@ -13,7 +13,10 @@
 #include "AArch64MCTargetDesc.h"
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
+#include "AArch64TargetStreamer.h"
+#ifndef EJIT_BARE_METAL
 #include "AArch64WinCOFFStreamer.h"
+#endif
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
 #include "TargetInfo/AArch64TargetInfo.h"
@@ -347,14 +350,19 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TheTriple,
                                          const MCTargetOptions &Options) {
   MCAsmInfo *MAI;
+#ifndef EJIT_BARE_METAL
   if (TheTriple.isOSBinFormatMachO())
     MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32);
-  else if (TheTriple.isOSBinFormatELF())
+  else
+#endif
+  if (TheTriple.isOSBinFormatELF())
     MAI = new AArch64MCAsmInfoELF(TheTriple);
+#ifndef EJIT_BARE_METAL
   else if (TheTriple.isWindowsMSVCEnvironment())
     MAI = new AArch64MCAsmInfoMicrosoftCOFF();
   else if (TheTriple.isOSBinFormatCOFF())
     MAI = new AArch64MCAsmInfoGNUCOFF();
+#endif
   else
     reportFatalUsageError("unsupported object format");
 
@@ -379,6 +387,7 @@ static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
   return nullptr;
 }
 
+#ifndef EJIT_BARE_METAL
 static MCStreamer *
 createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                     std::unique_ptr<MCObjectWriter> &&OW,
@@ -387,6 +396,7 @@ createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                              std::move(Emitter), /*ignore=*/false,
                              /*LabelSections*/ true);
 }
+#endif
 
 namespace {
 
@@ -529,8 +539,10 @@ LLVMInitializeAArch64TargetMC() {
 
     // Register the obj streamers.
     TargetRegistry::RegisterELFStreamer(*T, createAArch64ELFStreamer);
+#ifndef EJIT_BARE_METAL
     TargetRegistry::RegisterMachOStreamer(*T, createMachOStreamer);
     TargetRegistry::RegisterCOFFStreamer(*T, createAArch64WinCOFFStreamer);
+#endif
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(

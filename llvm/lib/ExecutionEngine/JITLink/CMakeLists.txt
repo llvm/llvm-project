@@ -55,7 +55,9 @@ if(NOT EJIT_BARE_METAL)
   list(APPEND JITLINK_SOURCES ${JITLINK_ARCH_X86})
   list(APPEND JITLINK_DEPENDS JITLinkTableGen)
 elseif(LLVM_TARGETS_TO_BUILD STREQUAL "AArch64")
-  # AArch64 bare-metal: ELF only, AArch64 only
+  # AArch64 bare-metal: ELF only, AArch64 only.  Include aarch32 to
+  # satisfy extern declarations transitively included via ELF_aarch32.h.
+  list(APPEND JITLINK_SOURCES aarch32.cpp)
 else()
   # x86 bare-metal: ELF + MachO + COFF, x86 arch support
   list(APPEND JITLINK_SOURCES ${JITLINK_MACHO_COFF})

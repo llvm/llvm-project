@@ -823,7 +823,9 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
   for (const GlobalValue *GV : llvm::reverse(TypeInfos)) {
     if (VerboseAsm)
       Asm->OutStreamer->AddComment("TypeInfo " + Twine(Entry--));
+#ifndef EJIT_BARE_METAL
     Asm->emitTTypeReference(GV, TTypeEncoding);
+#endif
   }
 
   Asm->OutStreamer->emitLabel(TTBaseLabel);

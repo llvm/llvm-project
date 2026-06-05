@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef EJIT_BARE_METAL
+
 #include "RuntimeDyldCOFF.h"
 #include "Targets/RuntimeDyldCOFFAArch64.h"
 #include "Targets/RuntimeDyldCOFFI386.h"
@@ -129,3 +131,5 @@ bool RuntimeDyldCOFF::relocationNeedsDLLImportStub(
 }
 
 } // namespace llvm
+
+#endif // EJIT_BARE_METAL

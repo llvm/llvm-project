@@ -241,20 +241,20 @@ LLVMInitializeAArch64Target() {
   auto &PR = *PassRegistry::getPassRegistry();
 #ifndef EJIT_BARE_METAL
   initializeGlobalISel(PR);
+#endif
   initializeAArch64A53Fix835769Pass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeAArch64PointerAuthPass(PR);
   initializeKCFIPass(PR);
+  initializeAArch64SLSHardeningPass(PR);
   initializeSMEABIPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
-  initializeAArch64SLSHardeningPass(PR);
   initializeAArch64StackTaggingPass(PR);
   initializeAArch64StackTaggingPreRAPass(PR);
-#endif
   initializeAArch64AdvSIMDScalarPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
@@ -275,8 +275,8 @@ LLVMInitializeAArch64Target() {
 #ifndef EJIT_BARE_METAL
   initializeAArch64PostLegalizerCombinerPass(PR);
   initializeAArch64PostLegalizerLoweringPass(PR);
-#endif
   initializeAArch64PostSelectOptimizePass(PR);
+#endif
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
@@ -696,12 +696,14 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createSMEABIPass());
 
   // Add Control Flow Guard checks.
+#ifndef EJIT_BARE_METAL
   if (TM->getTargetTriple().isOSWindows()) {
     if (TM->getTargetTriple().isWindowsArm64EC())
       addPass(createAArch64Arm64ECCallLoweringPass());
     else
       addPass(createCFGuardCheckPass());
   }
+#endif
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());

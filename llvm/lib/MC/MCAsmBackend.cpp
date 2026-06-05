@@ -32,15 +32,18 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   auto TW = createObjectTargetWriter();
   bool IsLE = Endian == llvm::endianness::little;
   switch (TW->getFormat()) {
+#ifndef EJIT_BARE_METAL
   case Triple::MachO:
     return std::make_unique<MachObjectWriter>(
         cast<MCMachObjectTargetWriter>(std::move(TW)), OS, IsLE);
   case Triple::COFF:
     return createWinCOFFObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS);
+#endif
   case Triple::ELF:
     return std::make_unique<ELFObjectWriter>(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, IsLE);
+#ifndef EJIT_BARE_METAL
   case Triple::SPIRV:
     return createSPIRVObjectWriter(
         cast<MCSPIRVObjectTargetWriter>(std::move(TW)), OS);
@@ -56,6 +59,7 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   case Triple::DXContainer:
     return std::make_unique<DXContainerObjectWriter>(
         cast<MCDXContainerTargetWriter>(std::move(TW)), OS);
+#endif
   default:
     llvm_unreachable("unexpected object format");
   }
@@ -66,16 +70,20 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
                                     raw_pwrite_stream &DwoOS) const {
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
+#ifndef EJIT_BARE_METAL
   case Triple::COFF:
     return createWinCOFFDwoObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS, DwoOS);
+#endif
   case Triple::ELF:
     return std::make_unique<ELFObjectWriter>(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, DwoOS,
         Endian == llvm::endianness::little);
+#ifndef EJIT_BARE_METAL
   case Triple::Wasm:
     return createWasmDwoObjectWriter(
         cast<MCWasmObjectTargetWriter>(std::move(TW)), OS, DwoOS);
+#endif
   default:
     report_fatal_error("dwo only supported with COFF, ELF, and Wasm");
   }

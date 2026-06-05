@@ -462,6 +462,19 @@ const LegalizerInfo *AArch64Subtarget::getLegalizerInfo() const {
 const RegisterBankInfo *AArch64Subtarget::getRegBankInfo() const {
   return RegBankInfo.get();
 }
+#else  // EJIT_BARE_METAL — stub: GlobalISel is excluded
+const CallLowering *AArch64Subtarget::getCallLowering() const {
+  return nullptr;
+}
+InstructionSelector *AArch64Subtarget::getInstructionSelector() const {
+  return nullptr;
+}
+const LegalizerInfo *AArch64Subtarget::getLegalizerInfo() const {
+  return nullptr;
+}
+const RegisterBankInfo *AArch64Subtarget::getRegBankInfo() const {
+  return nullptr;
+}
 #endif
 
 /// Find the target operand flags that describe how a global value should be

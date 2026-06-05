@@ -20,22 +20,17 @@ using namespace llvm;
 void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeAssignmentTrackingAnalysisPass(Registry);
   initializeAtomicExpandLegacyPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeBasicBlockPathCloningPass(Registry);
   initializeBasicBlockSectionsPass(Registry);
   initializeBranchFolderLegacyPass(Registry);
-  initializeBreakFalseDepsPass(Registry);
-#endif
   initializeBranchRelaxationLegacyPass(Registry);
+  initializeBreakFalseDepsPass(Registry);
   initializeCallBrPreparePass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeCFGuardLongjmpPass(Registry);
-#endif
   initializeCFIFixupPass(Registry);
   initializeCFIInstrInserterPass(Registry);
   initializeCheckDebugMachineModulePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeDeadMachineInstructionElimPass(Registry);
   initializeDebugifyMachineModulePass(Registry);
   initializeDetectDeadLanesLegacyPass(Registry);
@@ -45,19 +40,13 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeEarlyMachineLICMPass(Registry);
   initializeEarlyTailDuplicateLegacyPass(Registry);
   initializeExpandLargeDivRemLegacyPassPass(Registry);
-#endif
   initializeExpandFpLegacyPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeExpandMemCmpLegacyPassPass(Registry);
-#endif
   initializeExpandPostRALegacyPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeFEntryInserterLegacyPass(Registry);
-#endif
   initializeFinalizeISelPass(Registry);
   initializeFinalizeMachineBundlesPass(Registry);
   initializeFixupStatepointCallerSavedLegacyPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeFuncletLayoutPass(Registry);
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
@@ -65,95 +54,69 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeIfConverterPass(Registry);
   initializeImplicitNullChecksPass(Registry);
   initializeIndirectBrExpandLegacyPassPass(Registry);
-#endif
   initializeInitUndefLegacyPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeJMCInstrumenterPass(Registry);
   initializeLiveDebugValuesLegacyPass(Registry);
   initializeLiveDebugVariablesWrapperLegacyPass(Registry);
-#endif
   initializeLiveIntervalsWrapperPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeLiveRangeShrinkPass(Registry);
   initializeLiveStacksWrapperLegacyPass(Registry);
-#endif
   initializeLiveVariablesWrapperPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeLocalStackSlotPassPass(Registry);
   initializeLowerGlobalDtorsLegacyPassPass(Registry);
-#endif
   initializeLowerIntrinsicsPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeMIRAddFSDiscriminatorsPass(Registry);
   initializeMIRCanonicalizerPass(Registry);
   initializeMIRNamerPass(Registry);
   initializeMIRProfileLoaderPassPass(Registry);
-#endif
   initializeMachineBlockFrequencyInfoWrapperPassPass(Registry);
   initializeMachineBlockPlacementLegacyPass(Registry);
   initializeMachineBlockPlacementStatsLegacyPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeMachineCFGPrinterPass(Registry);
   initializeMachineCSELegacyPass(Registry);
   initializeMachineCombinerPass(Registry);
   initializeMachineCopyPropagationLegacyPass(Registry);
   initializeMachineCycleInfoPrinterLegacyPass(Registry);
-#endif
   initializeMachineCycleInfoWrapperPassPass(Registry);
   initializeMachineDominatorTreeWrapperPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeMachineFunctionPrinterPassPass(Registry);
   initializeMachineFunctionSplitterPass(Registry);
   initializeMachineLateInstrsCleanupLegacyPass(Registry);
-#endif
   initializeMachineLICMPass(Registry);
   initializeMachineLoopInfoWrapperPassPass(Registry);
   initializeMachineModuleInfoWrapperPassPass(Registry);
   initializeMachineOptimizationRemarkEmitterPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeMachineOutlinerPass(Registry);
   initializeMachinePipelinerPass(Registry);
   initializeMachineSanitizerBinaryMetadataLegacyPass(Registry);
   initializeModuloScheduleTestPass(Registry);
   initializeMachinePostDominatorTreeWrapperPassPass(Registry);
   initializeMachineRegionInfoPassPass(Registry);
-#endif
   initializeMachineSchedulerLegacyPass(Registry);
   initializeMachineSinkingLegacyPass(Registry);
   initializeMachineUniformityAnalysisPassPass(Registry);
   initializeMachineUniformityInfoPrinterPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeMachineVerifierLegacyPassPass(Registry);
-#endif
-#ifndef EJIT_BARE_METAL
   initializeObjCARCContractLegacyPassPass(Registry);
-#endif
   initializeOptimizePHIsLegacyPass(Registry);
   initializePEILegacyPass(Registry);
   initializePHIEliminationPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializePatchableFunctionLegacyPass(Registry);
-#endif
   initializePeepholeOptimizerLegacyPass(Registry);
   initializePostMachineSchedulerLegacyPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializePostRAMachineSinkingLegacyPass(Registry);
   initializePostRAHazardRecognizerLegacyPass(Registry);
   initializePostRASchedulerLegacyPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
-#endif
   initializeProcessImplicitDefsPass(Registry);
   initializeRABasicPass(Registry);
   initializeRAGreedyLegacyPass(Registry);
   initializeRegAllocFastPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationLegacyPass(Registry);
-#endif
   initializeRegisterCoalescerLegacyPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeRemoveLoadsIntoFakeUsesLegacyPass(Registry);
   initializeRemoveRedundantDebugValuesLegacyPass(Registry);
   initializeRenameIndependentSubregsLegacyPass(Registry);
@@ -162,9 +125,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeShadowStackGCLoweringPass(Registry);
   initializeShrinkWrapLegacyPass(Registry);
   initializeSjLjEHPreparePass(Registry);
-#endif
   initializeSlotIndexesWrapperPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeStackColoringLegacyPass(Registry);
   initializeStackFrameLayoutAnalysisLegacyPass(Registry);
   initializeStackMapLivenessPass(Registry);
@@ -174,22 +135,15 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeStaticDataAnnotatorPass(Registry);
   initializeStripDebugMachineModulePass(Registry);
   initializeTailDuplicateLegacyPass(Registry);
-#endif
   initializeTargetPassConfigPass(Registry);
   initializeTwoAddressInstructionLegacyPassPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeTypePromotionLegacyPass(Registry);
-#endif
   initializeUnpackMachineBundlesPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeUnreachableMachineBlockElimLegacyPass(Registry);
-#endif
   initializeVirtRegMapWrapperLegacyPass(Registry);
   initializeVirtRegRewriterLegacyPass(Registry);
-#ifndef EJIT_BARE_METAL
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeXRayInstrumentationLegacyPass(Registry);
-#endif
 }

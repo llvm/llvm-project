@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef EJIT_BARE_METAL
+
 #include "RuntimeDyldMachO.h"
 #include "Targets/RuntimeDyldMachOAArch64.h"
 #include "Targets/RuntimeDyldMachOARM.h"
@@ -379,3 +381,5 @@ RuntimeDyldMachO::loadObject(const object::ObjectFile &O) {
 }
 
 } // end namespace llvm
+
+#endif // EJIT_BARE_METAL

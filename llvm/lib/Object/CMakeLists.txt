@@ -54,6 +54,10 @@ set(LLVMOBJECT_LINK
 if(NOT EJIT_BARE_METAL)
   list(APPEND LLVMOBJECT_SOURCES ${LLVMOBJECT_OPT_SOURCES})
   list(APPEND LLVMOBJECT_LINK TextAPI)
+else()
+  # Bare-metal AArch64: COFFObjectFile needed to satisfy extern
+  # declarations referenced via OrcJIT/RuntimeDyld dispatch code.
+  list(APPEND LLVMOBJECT_SOURCES COFFObjectFile.cpp)
 endif()
 
 add_llvm_component_library(LLVMObject

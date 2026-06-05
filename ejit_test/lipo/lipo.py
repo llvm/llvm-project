@@ -183,7 +183,8 @@ def doit_extract(args):
            input=b"int main(){return 0;}", capture_output=True)
 
     libs = all_libs(arch)
-    all_a = " ".join(os.path.join(L, f) for f in libs)
+    all_a = " ".join(os.path.join(L, f) for f in libs
+                     if os.path.exists(os.path.join(L, f)))
     ejit_a = os.path.join(L, "libLLVMEJIT.a")
 
     # ── 1. Build symbol index ────────────────────────────────────────────
@@ -294,9 +295,10 @@ def doit_extract(args):
     sp.run(["ar", "crs", output, *o_files], capture_output=True)
 
     sz_mb = os.path.getsize(output) / (1024 * 1024)
-    orig_mb = sum(os.path.getsize(os.path.join(L, f)) for f in libs) / (1024 * 1024)
+    existing = [f for f in libs if os.path.exists(os.path.join(L, f))]
+    orig_mb = sum(os.path.getsize(os.path.join(L, f)) for f in existing) / (1024 * 1024)
     print(f"       {len(o_files)} .o files, {sz_mb:.0f} MB")
-    print(f"       (from {len(libs)} .a = {orig_mb:.0f} MB)")
+    print(f"       (from {len(existing)} .a = {orig_mb:.0f} MB)")
     print(f"       output: {output}")
 
 

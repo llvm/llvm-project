@@ -144,8 +144,10 @@ llvm::createAArch64ObjectTargetStreamer(MCStreamer &S,
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new AArch64TargetELFStreamer(S);
+#ifndef EJIT_BARE_METAL
   if (TT.isOSBinFormatCOFF())
     return new AArch64TargetWinCOFFStreamer(S);
+#endif
   return nullptr;
 }
 
