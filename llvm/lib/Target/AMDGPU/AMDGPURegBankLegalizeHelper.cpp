@@ -1335,23 +1335,36 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
     Register SPReg = Info->getStackPtrOffsetReg();
 
-    auto WaveSize = B.buildConstant(SgprRB_S32, ST.getWavefrontSizeLog2());
-    auto ScaledSize = B.buildShl({SgprRB, IntPtrTy}, AllocSize, WaveSize);
+    // When using flat-scratch, the stack offset is unscaled.
+    const bool HasFlatScratch = ST.hasFlatScratchEnabled();
+    const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
+
+    Register AdjustedSize = AllocSize;
+    if (!HasFlatScratch) {
+      auto WaveSize = B.buildConstant(SgprRB_S32, WavefrontSizeLog2);
+      AdjustedSize =
+          B.buildShl({SgprRB, IntPtrTy}, AllocSize, WaveSize).getReg(0);
+    }
     auto OldSP = B.buildCopy({SgprRB, PtrTy}, SPReg);
-    
+
     if (Alignment > TFI.getStackAlign()) {
-      auto StackAlignMask =
-          (Alignment.value() << ST.getWavefrontSizeLog2()) - 1;
-      auto Tmp1 = B.buildPtrAdd({SgprRB, PtrTy}, OldSP,
-                                B.buildConstant({SgprRB, IntPtrTy}, StackAlignMask));
+      const uint64_t EffectiveAlignment =
+          HasFlatScratch ? Alignment.value()
+                         : (Alignment.value() << WavefrontSizeLog2);
+      const uint64_t StackAlignMask = EffectiveAlignment - 1;
+      auto Tmp1 =
+          B.buildPtrAdd({SgprRB, PtrTy}, OldSP,
+                        B.buildConstant({SgprRB, IntPtrTy}, StackAlignMask));
       auto MaskReg = B.buildConstant(
-          {SgprRB, IntPtrTy}, maskTrailingZeros<uint64_t>(Log2(Alignment) +
-                                                  ST.getWavefrontSizeLog2()));
+          {SgprRB, IntPtrTy},
+          maskTrailingZeros<uint64_t>(HasFlatScratch ? Log2(Alignment)
+                                                     : Log2(Alignment) +
+                                                           WavefrontSizeLog2));
       B.buildPtrMask(Dst, Tmp1, MaskReg);
     } else {
       B.buildCopy(Dst, OldSP);
     }
-    auto PtrAdd = B.buildPtrAdd({SgprRB, PtrTy}, Dst, ScaledSize);
+    auto PtrAdd = B.buildPtrAdd({SgprRB, PtrTy}, Dst, AdjustedSize);
     B.buildCopy(SPReg, PtrAdd);
     break;
   }
