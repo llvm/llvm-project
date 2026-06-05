@@ -978,8 +978,8 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
           const SCEV *RangeDiff = SE->getMinusSCEV(Range, BaseRange);
           return isa<SCEVCouldNotCompute>(RangeDiff) || !RangeDiff->isZero();
         })) {
-      LLVM_DEBUG(dbgs()
-                 << "LAA:   Member with different or not computable access "
+      LLVM_DEBUG(
+          dbgs() << "LAA:   Member with different or not computable access "
                     "range, skipping DepSet\n");
       continue;
     }
