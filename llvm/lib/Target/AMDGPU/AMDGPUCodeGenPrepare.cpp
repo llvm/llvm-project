@@ -1044,20 +1044,14 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   // All bits are used for unsigned division for Num or Den in range
   // (SignedMax, UnsignedMax].
   KnownBits Known = computeKnownBits(Den, SQ.getWithInstruction(&I));
-  if (Known.isNegative() || !Known.isNonNegative())
-    return SSBits;
-  unsigned RHSSignBits = Known.countMinLeadingZeros();
-  unsigned DivBits = SSBits - RHSSignBits;
-  if (DivBits > MaxDivBits)
+  unsigned RHSBits = Known.countMaxActiveBits();
+  if (RHSBits > MaxDivBits)
     return SSBits;
 
   Known = computeKnownBits(Num, SQ.getWithInstruction(&I));
-  if (Known.isNegative() || !Known.isNonNegative())
-    return SSBits;
-  unsigned LHSSignBits = Known.countMinLeadingZeros();
+  unsigned LHSBits = Known.countMaxActiveBits();
 
-  unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-  DivBits = SSBits - SignBits;
+  unsigned DivBits = std::max(LHSBits, RHSBits);
   return DivBits;
 }
 

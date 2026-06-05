@@ -990,7 +990,8 @@ private:
       Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
   Symbol::Flags privateDataSharingAttributeFlags{Symbol::Flag::OmpPrivate,
-      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate};
+      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
+      Symbol::Flag::OmpLinear};
 
   Symbol::Flags ompFlagsRequireNewSymbol{Symbol::Flag::OmpPrivate,
       Symbol::Flag::OmpLinear, Symbol::Flag::OmpFirstPrivate,
@@ -1405,14 +1406,35 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
   } else {
     PushContext(verbatim.source, llvm::acc::Directive::ACCD_routine);
   }
-  if (const auto &optName{std::get<std::optional<parser::Name>>(x.t)}) {
-    if (Symbol * sym{ResolveFctName(*optName)}) {
-      Symbol &ultimate{sym->GetUltimate()};
-      AddRoutineInfoToSymbol(ultimate, x);
-    } else {
-      context_.Say((*optName).source,
-          "No function or subroutine declared for '%s'"_err_en_US,
-          (*optName).source);
+  const auto &names{std::get<std::list<parser::Name>>(x.t)};
+  if (!names.empty()) {
+    if (names.size() > 1) {
+      if (context_.IsEnabled(
+              common::LanguageFeature::OpenACCMultipleNamesInRoutine)) {
+        context_.Warn(common::LanguageFeature::OpenACCMultipleNamesInRoutine,
+            verbatim.source,
+            "OpenACC ROUTINE directive permits only a single name; multiple names accepted as an extension"_warn_en_US);
+        if (llvm::any_of(std::get<parser::AccClauseList>(x.t).v,
+                [](const parser::AccClause &c) {
+                  return std::holds_alternative<parser::AccClause::Bind>(c.u);
+                })) {
+          context_.Say(verbatim.source,
+              "A BIND clause may only be specified when the ROUTINE directive refers to a single subroutine"_err_en_US);
+        }
+      } else {
+        context_.Say(verbatim.source,
+            "OpenACC ROUTINE directive does not permit multiple names"_err_en_US);
+      }
+    }
+    for (const auto &name : names) {
+      if (Symbol * sym{ResolveFctName(name)}) {
+        Symbol &ultimate{sym->GetUltimate()};
+        AddRoutineInfoToSymbol(ultimate, x);
+      } else {
+        context_.Say(name.source,
+            "No function or subroutine declared for '%s'"_err_en_US,
+            name.source);
+      }
     }
   } else {
     if (currScope().symbol()) {
@@ -1812,11 +1834,14 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
           // TODO: why didn't name resolution set the right name originally?
           name.symbol = found;
         } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
-          // 2.5.14.
-          if (context_.IsEnabled(
-                  common::LanguageFeature::AccDefaultNoneScalars) &&
-              IsAccScalar(symbol)) {
-            context_.Warn(common::UsageWarning::AccImplicitScalar, name.source,
+          // 2.5.14. Pre-OpenACC-3.2 behavior: implicit scalars warn instead of
+          // error unless strict mode is enabled.
+          if (IsAccScalar(symbol) &&
+              !context_.IsEnabled(
+                  common::LanguageFeature::OpenAccDefaultNoneScalarsStrict)) {
+            context_.Warn(
+                common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
+                name.source,
                 "Implicit attribute inferred for DEFAULT(NONE) scalar '%s'"_warn_en_US,
                 symbol.name());
           } else {
@@ -3238,6 +3263,8 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     clauseName = "FIRSTPRIVATE";
   } else if (ompFlag == Symbol::Flag::OmpLastPrivate) {
     clauseName = "LASTPRIVATE";
+  } else if (ompFlag == Symbol::Flag::OmpLinear) {
+    clauseName = "LINEAR";
   }
 
   if (SymbolOrEquivalentIsInNamelist(symbol)) {

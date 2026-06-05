@@ -10036,6 +10036,19 @@ bool PointerExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
 }
 
 bool PointerExprEvaluator::VisitUnaryAddrOf(const UnaryOperator *E) {
+  // [C11 6.5.3.2p3]: if the operand of '&' is the result of a unary '*'
+  // operator, neither operator is evaluated and the result is as if both were
+  // omitted (except that the operators' constraints, already enforced by Sema,
+  // still apply, and the result is not an lvalue). So '&*p' is just the pointer
+  // value 'p' with no dereference, and forming it is therefore not undefined
+  // behavior even when 'p' is null, e.g. '&*(int *)0'. Evaluate the pointer
+  // operand directly so we don't spuriously diagnose a null dereference.
+  if (!Info.getLangOpts().CPlusPlus) {
+    const Expr *Sub = E->getSubExpr()->IgnoreParens();
+    if (const auto *Deref = dyn_cast<UnaryOperator>(Sub);
+        Deref && Deref->getOpcode() == UO_Deref)
+      return evaluatePointer(Deref->getSubExpr(), Result);
+  }
   return evaluateLValue(E->getSubExpr(), Result);
 }
 

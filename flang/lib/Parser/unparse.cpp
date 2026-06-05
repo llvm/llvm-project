@@ -2100,7 +2100,7 @@ public:
   void Unparse(const OpenACCRoutineConstruct &x) {
     BeginOpenACC();
     Word("!$ACC ROUTINE");
-    Walk("(", std::get<std::optional<Name>>(x.t), ")");
+    Walk("(", std::get<std::list<Name>>(x.t), ",", ")");
     Walk(std::get<AccClauseList>(x.t));
     Put("\n");
     EndOpenACC();
@@ -2899,6 +2899,9 @@ public:
     switch (x) {
     case ReductionOperator::Operator::Plus:
       Word("+");
+      break;
+    case ReductionOperator::Operator::Minus:
+      Word("-");
       break;
     case ReductionOperator::Operator::Multiply:
       Word("*");

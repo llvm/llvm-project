@@ -976,6 +976,9 @@ TEST(DenseMapCustomTest, PairPrinting) {
 
 TEST(DenseMapCustomTest, InitSize) {
   constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+  // getMemorySize() counts the bucket array plus the packed used-bit array: one
+  // uint32 word per 32 buckets (a single word covers all counts used here).
+  constexpr unsigned UsedSize = sizeof(uint32_t);
 
   {
     DenseMap<int *, int> Map;
@@ -987,59 +990,62 @@ TEST(DenseMapCustomTest, InitSize) {
   }
   {
     DenseMap<int *, int> Map(1);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     DenseMap<int *, int> Map(2);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     DenseMap<int *, int> Map(3);
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B;
     DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B, C;
     DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
 }
 
 TEST(SmallDenseMapCustomTest, InitSize) {
   constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+  // getMemorySize() counts the bucket array plus the packed used-bit array: one
+  // uint32 word per 32 buckets (a single word covers all counts used here).
+  constexpr unsigned UsedSize = sizeof(uint32_t);
   {
     SmallDenseMap<int *, int> Map;
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(0);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(1);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(2);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(3);
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B;
     SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B, C;
     SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
 }
 
