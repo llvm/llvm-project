@@ -133,7 +133,9 @@ public:
 
   GISelValueTracking *getValueTracking() const { return VT; }
 
-  MachineIRBuilder &getBuilder() const { return Builder; }
+  MachineIRBuilder &getBuilder() const {
+    return Builder;
+  }
 
   const TargetInstrInfo &getTII() const { return *TII; }
 
@@ -550,8 +552,7 @@ public:
   LLVM_ABI bool matchEqualDefs(const MachineOperand &MOP1,
                                const MachineOperand &MOP2) const;
 
-  /// Return true if \p MOP is defined by a G_CONSTANT or splat with a value
-  /// equal to
+  /// Return true if \p MOP is defined by a G_CONSTANT or splat with a value equal to
   /// \p C.
   LLVM_ABI bool matchConstantOp(const MachineOperand &MOP, int64_t C) const;
 

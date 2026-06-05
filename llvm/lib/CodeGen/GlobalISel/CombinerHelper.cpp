@@ -135,7 +135,7 @@ isBigEndian(const SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
   if (Width < 2)
     return std::nullopt;
   bool BigEndian = true, LittleEndian = true;
-  for (unsigned MemOffset = 0; MemOffset < Width; ++MemOffset) {
+  for (unsigned MemOffset = 0; MemOffset < Width; ++ MemOffset) {
     auto MemOffsetAndIdx = MemOffset2Idx.find(MemOffset);
     if (MemOffsetAndIdx == MemOffset2Idx.end())
       return std::nullopt;
@@ -819,9 +819,10 @@ bool CombinerHelper::matchCombineExtendingLoads(
   // and emit a variant of (extend (trunc X)) for the others according to the
   // relative type sizes. At the same time, pick an extend to use based on the
   // extend involved in the chosen type.
-  unsigned PreferredOpcode = isa<GLoad>(&MI)       ? TargetOpcode::G_ANYEXT
-                             : isa<GSExtLoad>(&MI) ? TargetOpcode::G_SEXT
-                                                   : TargetOpcode::G_ZEXT;
+  unsigned PreferredOpcode =
+      isa<GLoad>(&MI)
+          ? TargetOpcode::G_ANYEXT
+          : isa<GSExtLoad>(&MI) ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
   Preferred = {LLT(), PreferredOpcode, nullptr};
   for (auto &UseMI : MRI.use_nodbg_instructions(LoadReg)) {
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
@@ -1656,7 +1657,7 @@ void CombinerHelper::applyCombineDivRem(MachineInstr &MI,
   Builder.buildInstr(IsSigned ? TargetOpcode::G_SDIVREM
                               : TargetOpcode::G_UDIVREM,
                      {DestDivReg, DestRemReg},
-                     {FirstInst->getOperand(1), FirstInst->getOperand(2)});
+                     { FirstInst->getOperand(1), FirstInst->getOperand(2) });
   MI.eraseFromParent();
   OtherMI->eraseFromParent();
 }
@@ -2129,8 +2130,7 @@ bool CombinerHelper::matchCommuteShift(MachineInstr &MI,
 
   auto *SrcDef = MRI.getVRegDef(SrcReg);
   assert((SrcDef->getOpcode() == TargetOpcode::G_ADD ||
-          SrcDef->getOpcode() == TargetOpcode::G_OR) &&
-         "Unexpected op");
+          SrcDef->getOpcode() == TargetOpcode::G_OR) && "Unexpected op");
   LLT SrcTy = MRI.getType(SrcReg);
   MatchInfo = [=](MachineIRBuilder &B) {
     auto S1 = B.buildShl(SrcTy, X, ShiftReg);
@@ -2532,8 +2532,7 @@ bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
                                                 unsigned &ShiftVal) const {
   assert((MI.getOpcode() == TargetOpcode::G_SHL ||
           MI.getOpcode() == TargetOpcode::G_LSHR ||
-          MI.getOpcode() == TargetOpcode::G_ASHR) &&
-         "Expected a shift");
+          MI.getOpcode() == TargetOpcode::G_ASHR) && "Expected a shift");
 
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   if (Ty.isVector()) // TODO:
@@ -2576,10 +2575,8 @@ void CombinerHelper::applyCombineShiftToUnmerge(
     //   dst = G_MERGE_VALUES (G_LSHR hi, C - 32), 0
 
     if (NarrowShiftAmt != 0) {
-      Narrowed = Builder
-                     .buildLShr(HalfTy, Narrowed,
-                                Builder.buildConstant(HalfTy, NarrowShiftAmt))
-                     .getReg(0);
+      Narrowed = Builder.buildLShr(HalfTy, Narrowed,
+        Builder.buildConstant(HalfTy, NarrowShiftAmt)).getReg(0);
     }
 
     auto Zero = Builder.buildConstant(HalfTy, 0);
@@ -2591,18 +2588,17 @@ void CombinerHelper::applyCombineShiftToUnmerge(
     //   lo, hi = G_UNMERGE_VALUES x
     //   dst = G_MERGE_VALUES 0, (G_SHL hi, C - 32)
     if (NarrowShiftAmt != 0) {
-      Narrowed = Builder
-                     .buildShl(HalfTy, Narrowed,
-                               Builder.buildConstant(HalfTy, NarrowShiftAmt))
-                     .getReg(0);
+      Narrowed = Builder.buildShl(HalfTy, Narrowed,
+        Builder.buildConstant(HalfTy, NarrowShiftAmt)).getReg(0);
     }
 
     auto Zero = Builder.buildConstant(HalfTy, 0);
     Builder.buildMergeLikeInstr(DstReg, {Zero, Narrowed});
   } else {
     assert(MI.getOpcode() == TargetOpcode::G_ASHR);
-    auto Hi = Builder.buildAShr(HalfTy, Unmerge.getReg(1),
-                                Builder.buildConstant(HalfTy, HalfSize - 1));
+    auto Hi = Builder.buildAShr(
+      HalfTy, Unmerge.getReg(1),
+      Builder.buildConstant(HalfTy, HalfSize - 1));
 
     if (ShiftVal == HalfSize) {
       // (G_ASHR i64:x, 32) ->
@@ -2615,9 +2611,9 @@ void CombinerHelper::applyCombineShiftToUnmerge(
       //   G_MERGE_VALUES %narrowed, %narrowed
       Builder.buildMergeLikeInstr(DstReg, {Hi, Hi});
     } else {
-      auto Lo =
-          Builder.buildAShr(HalfTy, Unmerge.getReg(1),
-                            Builder.buildConstant(HalfTy, ShiftVal - HalfSize));
+      auto Lo = Builder.buildAShr(
+        HalfTy, Unmerge.getReg(1),
+        Builder.buildConstant(HalfTy, ShiftVal - HalfSize));
 
       // (G_ASHR i64:x, C) ->, for C >= 32
       //   G_MERGE_VALUES (G_ASHR hi_32(x), C - 32), (G_ASHR hi_32(x), 31)
@@ -3491,7 +3487,9 @@ bool CombinerHelper::matchOverlappingAnd(
   Register R;
   int64_t C1;
   int64_t C2;
-  if (!mi_match(Dst, MRI, m_GAnd(m_GAnd(m_Reg(R), m_ICst(C1)), m_ICst(C2))))
+  if (!mi_match(
+          Dst, MRI,
+          m_GAnd(m_GAnd(m_Reg(R), m_ICst(C1)), m_ICst(C2))))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
@@ -4413,9 +4411,10 @@ bool CombinerHelper::matchLoadOrCombine(
   // load x[i+1] -> byte 0 ---> wide_load x[i]
   // load x[i+2] -> byte 1
   const unsigned NumLoadsInTy = WideMemSizeInBits / NarrowMemSizeInBits;
-  const unsigned ZeroByteOffset = *IsBigEndian
-                                      ? bigEndianByteAt(NumLoadsInTy, 0)
-                                      : littleEndianByteAt(NumLoadsInTy, 0);
+  const unsigned ZeroByteOffset =
+      *IsBigEndian
+          ? bigEndianByteAt(NumLoadsInTy, 0)
+          : littleEndianByteAt(NumLoadsInTy, 0);
   auto ZeroOffsetIdx = MemOffset2Idx.find(ZeroByteOffset);
   if (ZeroOffsetIdx == MemOffset2Idx.end() ||
       ZeroOffsetIdx->second != LowestIdx)
@@ -4732,8 +4731,7 @@ bool CombinerHelper::matchFunnelShiftToRotate(MachineInstr &MI) const {
     return false;
   unsigned RotateOpc =
       Opc == TargetOpcode::G_FSHL ? TargetOpcode::G_ROTL : TargetOpcode::G_ROTR;
-  return isLegalOrBeforeLegalizer(
-      {RotateOpc, {MRI.getType(X), MRI.getType(Y)}});
+  return isLegalOrBeforeLegalizer({RotateOpc, {MRI.getType(X), MRI.getType(Y)}});
 }
 
 void CombinerHelper::applyFunnelShiftToRotate(MachineInstr &MI) const {
@@ -5046,7 +5044,9 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
 
   // If the shift subsumes the mask, emit the 0 directly.
   if (0 == (SMask >> ShrAmt)) {
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildConstant(Dst, 0); };
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildConstant(Dst, 0);
+    };
     return true;
   }
 
