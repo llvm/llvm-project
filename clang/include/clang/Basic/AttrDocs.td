@@ -413,7 +413,6 @@ This attribute is available in both C and C++ language modes but is primarily us
      S s; // -Wunused-variable warning
      T t; // No -Wunused-variable warning
    }
-
   }];
 }
 
