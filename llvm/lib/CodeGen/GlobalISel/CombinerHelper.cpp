@@ -4311,8 +4311,8 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
   // pattern.
   assert(Loads.size() == RegsToVisit.size() &&
          "Expected to find a load for each register?");
-  assert(EarliestLoad != LatestLoad && EarliestLoad && LatestLoad &&
-         "Expected at least two loads?");
+  assert(EarliestLoad != LatestLoad && EarliestLoad &&
+         LatestLoad && "Expected at least two loads?");
 
   // Check if there are any stores, calls, etc. between any of the loads. If
   // there are, then we can't safely perform the combine.
