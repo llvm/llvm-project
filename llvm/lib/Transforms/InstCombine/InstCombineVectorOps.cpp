@@ -2283,26 +2283,17 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
 
   Value *X = Op0IsBinop ? Op1 : Op0;
 
-  if (Shuf.getType()->getElementType()->isFloatingPointTy()) {
-    // Prevent folding in the case the non-binop operand might have NaN values.
-    // If X can have NaN elements then we have that the floating point math
-    // operation in the transformed code may not preserve the exact NaN
-    // bit-pattern -- e.g. `fadd sNaN, 0.0 -> qNaN`.
-    // This makes the transformation incorrect since the original program would
-    // have preserved the exact NaN bit-pattern.
-    // Avoid the folding if X can have NaN elements.
-    if (!isKnownNeverNaN(X, SQ))
-      return nullptr;
-
-    // Prevent folding when input can be infinity but noinf fast math flags is
-    // set. If X can have Inf elements and fast math flag noinf is set, the
-    // transformation may generate poison where the original program would
-    // preserve the Inf value.
-    auto Fmf = BO->getFastMathFlags();
-    if (Fmf.noInfs() && !isKnownNeverInfinity(X, SQ)) {
-      return nullptr;
-    }
-  }
+  // Prevent folding in the case the non-binop operand might have NaN values.
+  // If X can have NaN elements then we have that the floating point math
+  // operation in the transformed code may not preserve the exact NaN
+  // bit-pattern -- e.g. `fadd sNaN, 0.0 -> qNaN`.
+  // This makes the transformation incorrect since the original program would
+  // have preserved the exact NaN bit-pattern.
+  // Avoid the folding if X can have NaN elements.
+  bool IsFloatingPointTy =
+      Shuf.getType()->getElementType()->isFloatingPointTy();
+  if (IsFloatingPointTy && !isKnownNeverNaN(X, SQ))
+    return nullptr;
 
   // Shuffle identity constants into the lanes that return the original value.
   // Example: shuf (mul X, {-1,-2,-3,-4}), X, {0,5,6,3} --> mul X, {-1,1,1,-4}
@@ -2320,8 +2311,14 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
 
   // shuf (bop X, C), X, M --> bop X, C'
   // shuf X, (bop X, C), M --> bop X, C'
-  Instruction *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
+  BinaryOperator *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
   NewBO->copyIRFlags(BO);
+
+  // Drop noinf FMF if X can be Inf. If X can have Inf elements and noinf FMF is
+  // set, the transformation may generate poison where the original program
+  // would preserve the Inf value.
+  if (IsFloatingPointTy && !isKnownNeverInfinity(X, SQ))
+    NewBO->setHasNoInfs(false);
 
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.

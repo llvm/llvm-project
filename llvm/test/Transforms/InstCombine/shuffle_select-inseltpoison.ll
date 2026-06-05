@@ -384,8 +384,7 @@ define <4 x float> @fmul(<4 x float> nofpclass(nan) %v) {
 
 define <4 x float> @fmul_fmf_more_restrictive(<4 x float> nofpclass(nan) %v) {
 ; CHECK-LABEL: @fmul_fmf_more_restrictive(
-; CHECK-NEXT:    [[B:%.*]] = fmul nnan ninf <4 x float> [[V:%.*]], <float 4.100000e+01, float poison, float poison, float poison>
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[B]], <4 x float> [[V]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[S:%.*]] = fmul nnan <4 x float> [[V:%.*]], <float 4.100000e+01, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[S]]
 ;
   %b = fmul nnan ninf <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
