@@ -18,34 +18,17 @@ using namespace clang::interp;
 
 State::~State() {}
 
-// In MSVC compatibility mode we relax constexpr evaluation for the
-// FIELD_OFFSET-style pattern:
-//
-//   (LONG_PTR)(&((T*)0)->field)
-//
-// Evaluation of such expressions first produces a ptr-to-int cast
-// diagnostic and may then encounter a null-subobject access while
-// forming the field address. Both diagnostics are considered part of
-// the same accepted pattern and should not prevent constant folding.
-//
-// If a ptr-to-int cast diagnostic was recorded but evaluation later
-// reaches any other failure, discard the recorded diagnostic so the
-// expression is rejected.
-void State::clearDiagIfNeeded(diag::kind DiagId) {
+bool State::shouldRelaxDiag(diag::kind DiagId) {
   if (!Ctx.getLangOpts().MSVCCompat)
-    return;
+    return false;
   switch (DiagId) {
   case diag::note_constexpr_invalid_cast_ptrtoint:
   case diag::note_constexpr_null_subobject:
-    return;
+    EvalStatus.SeenCastOrNull = true;
+    return true;
+  default:
+    return false;
   }
-
-  auto *Diag = EvalStatus.Diag;
-  if (!Diag || Diag->size() != 1 ||
-      (*Diag)[0].second.getDiagID() !=
-          diag::note_constexpr_invalid_cast_ptrtoint)
-    return;
-  Diag->clear();
 }
 
 OptionalDiagnostic State::FFDiag(SourceLocation Loc, diag::kind DiagId,
@@ -74,7 +57,6 @@ OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
 OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
   EvalStatus.DiagEmitted = true;
-  clearDiagIfNeeded(DiagId);
   // Don't override a previous diagnostic. Don't bother collecting
   // diagnostics if we're evaluating for overflow.
   if (!EvalStatus.Diag || !EvalStatus.Diag->empty()) {
@@ -118,7 +100,7 @@ PartialDiagnostic &State::addDiag(SourceLocation Loc, diag::kind DiagId) {
 
 OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
                                unsigned ExtraNotes, bool IsCCEDiag) {
-  if (EvalStatus.Diag) {
+  if (EvalStatus.Diag && !shouldRelaxDiag(DiagId)) {
     if (hasPriorDiagnostic()) {
       return OptionalDiagnostic();
     }

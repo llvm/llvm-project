@@ -92,7 +92,7 @@ public:
   ASTContext &getASTContext() const { return Ctx; }
   const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
-  void clearDiagIfNeeded(diag::kind DiagId);
+  bool shouldRelaxDiag(diag::kind DiagId);
 
   /// Note that we have had a side-effect, and determine whether we should
   /// keep evaluating.

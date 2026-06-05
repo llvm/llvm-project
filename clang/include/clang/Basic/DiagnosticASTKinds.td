@@ -20,6 +20,7 @@ def note_constexpr_invalid_cast_ptrtoint : Note<
   "%select{reinterpret_cast||"
   "%select{this conversion|cast that performs the conversions of a reinterpret_cast}1|"
   "}0 is not allowed in a constant expression">;
+def note_constexpr_has_lvalue : Note<"constant expression contains l-value">;
 def note_constexpr_invalid_void_star_cast : Note<
   "cast from %0 is not allowed in a constant expression "
   "%select{in C++ standards before C++2c|because the pointed object "
@@ -1036,8 +1037,8 @@ def warn_npot_ms_struct : Warning<
   DefaultError, InGroup<IncompatibleMSStruct>;
 def warn_relaxed_constant_fold : Extension<
   "folding constant expression involving "
-  "%select{reinterpret_cast|cast that performs the conversions of a reinterpret_cast}0"
-  " is a Microsoft extension">,
+  "cast that performs the conversions of a reinterpret_cast "
+  "is a Microsoft extension">,
   InGroup<MicrosoftRelaxedConstantFold>;
 
 def err_itanium_layout_unimplemented : Error<

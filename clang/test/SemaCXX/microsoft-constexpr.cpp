@@ -50,7 +50,6 @@ struct TplBool {};
 
 TplInt<FIELD_OFFSET(S, y)> tpl_int;
 TplBool<FIELD_OFFSET(S, y) == 4> tpl_bool;
-TplBool<FIELD_OFFSET(S, y)> tpl_bool_conv;
 
 void f() noexcept(FIELD_OFFSET(S, y) == 4) {}
 

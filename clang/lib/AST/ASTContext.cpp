@@ -15663,23 +15663,3 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
   if (FieldDecl *FD = Comp.getField(); isPFPField(FD))
     PFPFieldsWithEvaluatedOffset.insert(FD);
 }
-
-// MSVC permits certain C-style casts in constant expressions.
-// A common example is FIELD_OFFSET, implemented as
-// (LONG_PTR)(&((type*)0)->field). If MSVC compatibility is enabled
-// and the only constexpr evaluation failure is a ptr-to-int cast,
-// allow folding the expression and optionally emit a warning.
-bool ASTContext::maybeFoldConstexprWithCast(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
-  if (!getLangOpts().MSVCCompat)
-    return false;
-  if (Notes.size() != 1)
-    return false;
-  auto &PD = Notes[0].second;
-  if (PD.getDiagID() != diag::note_constexpr_invalid_cast_ptrtoint)
-    return false;
-  getDiagnostics().Report(Notes[0].first, diag::warn_relaxed_constant_fold)
-      << !!PD.getValueArg(0);
-  Notes.clear();
-  return true;
-}
