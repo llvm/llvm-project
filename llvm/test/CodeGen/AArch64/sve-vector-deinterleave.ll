@@ -79,6 +79,18 @@ define {<vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_nxv2f32
   ret {<vscale x 2 x float>, <vscale x 2 x float>} %retval
 }
 
+define void @vector_deinterleave_even_nxv4f32(<vscale x 4 x float> %vec, ptr %a) {
+; CHECK-LABEL: vector_deinterleave_even_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %res = call {<vscale x 2 x float>, <vscale x 2 x float>} @llvm.vector.deinterleave2.nxv4f32(<vscale x 4 x float> %vec)
+  %res.even = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } %res, 0
+  store <vscale x 2 x float> %res.even, ptr %a
+  ret void
+}
+
 define {<vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_nxv4f32_nxv8f32(<vscale x 8 x float> %vec) {
 ; SVE-LABEL: vector_deinterleave_nxv4f32_nxv8f32:
 ; SVE:       // %bb.0:
@@ -213,6 +225,18 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @vector_deinterleave_nxv4i32_nxv
 ; SME2-NEXT:    ret
   %retval = call {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %vec)
   ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %retval
+}
+
+define void @vector_deinterleave_even_nxv4i32(<vscale x 4 x i32> %vec, ptr %a) {
+; CHECK-LABEL: vector_deinterleave_even_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %res = call {<vscale x 2 x i32>, <vscale x 2 x i32>} @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %vec)
+  %res.even = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %res, 0
+  store <vscale x 2 x i32> %res.even, ptr %a
+  ret void
 }
 
 define {<vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv4i64(<vscale x 4 x i64> %vec) {

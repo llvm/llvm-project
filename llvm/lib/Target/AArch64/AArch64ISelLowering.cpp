@@ -269,6 +269,53 @@ static inline bool isUnpackedType(EVT VT, SelectionDAG &DAG) {
   return Res;
 }
 
+/// Reinterpret \p Op as a packed VT with the same element type.
+/// E.g. nxv8i8  -> nxv16i8 where every odd element is undefined
+///      nxv4f16 -> nxv8f16
+static SDValue getReinterpretAsPackedVT(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT InVT = Op.getValueType();
+  EVT PackedVTForSameElt = getPackedSVEVectorVT(InVT.getVectorElementType());
+  EVT PackedVTForSameLen = getPackedSVEVectorVT(InVT.getVectorElementCount());
+
+  if (DAG.getTargetLoweringInfo().isTypeLegal(InVT)) {
+    if (isPackedVectorType(InVT, DAG))
+      return Op;
+
+    // Legal unpacked types can be immediately reinterpreted as their
+    // packed type.
+    return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PackedVTForSameElt,
+                       Op);
+  }
+
+  // Illegal unpacked types need to be extended first to be made legal.
+  assert(InVT.isInteger() && "Expected integer vector");
+  return DAG.getBitcast(PackedVTForSameElt,
+                        DAG.getAnyExtOrTrunc(Op, DL, PackedVTForSameLen));
+}
+
+/// Reinterpret \p Op as an unpacked VT with the same element type.
+/// E.g. nxv16i8  -> nxv8i8 where every odd element is undefined
+///      nxv8f16 -> nxv4f16
+static SDValue getReinterpretAsUnpackedVT(SDValue Op, EVT UnpackedVT,
+                                          SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT InVT = Op.getValueType();
+  assert(DAG.getTargetLoweringInfo().isTypeLegal(InVT) &&
+         isPackedVectorType(InVT, DAG));
+  assert(!DAG.getTargetLoweringInfo().isTypeLegal(UnpackedVT) ||
+         !isPackedVectorType(UnpackedVT, DAG));
+  assert(InVT.getVectorElementType() == UnpackedVT.getVectorElementType());
+
+  if (DAG.getTargetLoweringInfo().isTypeLegal(UnpackedVT))
+    return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, UnpackedVT, Op);
+
+  EVT PackedVTForDstLen =
+      getPackedSVEVectorVT(UnpackedVT.getVectorElementCount());
+  return DAG.getAnyExtOrTrunc(DAG.getBitcast(PackedVTForDstLen, Op), DL,
+                              UnpackedVT);
+}
+
 // Returns true for ####_MERGE_PASSTHRU opcodes, whose operands have a leading
 // predicate and end with a passthru value matching the result type.
 static bool isMergePassthruOpcode(unsigned Opc) {
@@ -21844,6 +21891,32 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     return DAG.getNode(AArch64ISD::TRN1, DL, VT, Op0MoreElems, Op1MoreElems);
   }
 
+  // Interleave elements of narrow vectors into a packed legal type.
+  // This maps to trn1 after re-interpreting the outputs as packed types where
+  // odd elements are undefined.
+  //
+  // E.g. nxv4i16, nxv4i16 = VECTOR_INTERLEAVE(nxv4i16 V0, nxv4i16 V1)
+  //      nxv8i16 = CONCAT_VECTORS interleaved.0, interleaved.1
+  //  <=> nxv8i16 = trn1(nxv8i16 (packed_reinterpret V0),
+  //                     nxv8i16 (packed_reinterpret V1))
+  if (N->getNumOperands() == 2 && N0Opc == ISD::VECTOR_INTERLEAVE &&
+      N0.getNode() == N1.getNode() && N0->getNumOperands() == 2 &&
+      DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+      isPackedVectorType(VT, DAG)) {
+    assert(VT.isScalableVector() && "VECTOR_INTERLEAVE for a fixed vector?");
+    assert(VT.isSimple() && "VECTOR_INTERLEAVE of extended types?");
+
+    if (N0->getOperand(1).isUndef())
+      return getReinterpretAsPackedVT(N0->getOperand(0), DAG);
+
+    SDValue ReinterpretedV0 = getReinterpretAsPackedVT(N0->getOperand(0), DAG);
+    SDValue ReinterpretedV1 = getReinterpretAsPackedVT(N0->getOperand(1), DAG);
+    SDValue IDVal =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_trn1, DL, MVT::i64);
+    SDValue Ops[] = {IDVal, ReinterpretedV0, ReinterpretedV1};
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, Ops);
+  }
+
   if (VT.isScalableVector())
     return SDValue();
 
@@ -29486,14 +29559,7 @@ static SDValue performVectorDeinterleaveCombine(
     return SDValue();
 
   EVT SubVecTy = N->getValueType(0);
-
-  // At the moment we're unlikely to see a fixed-width vector deinterleave as
-  // we usually generate shuffles instead.
   unsigned MinNumElements = SubVecTy.getVectorMinNumElements();
-  if (!SubVecTy.isScalableVector() ||
-      SubVecTy.getSizeInBits().getKnownMinValue() != 128 ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
-    return SDValue();
 
   // Make sure each input operand is the correct extract_subvector of the same
   // wider vector.
@@ -29506,6 +29572,28 @@ static SDValue performVectorDeinterleaveCombine(
     if (OpI->getConstantOperandVal(1) != (I * MinNumElements))
       return SDValue();
   }
+
+  SDValue WideSrc = Op0->getOperand(0);
+  EVT WideSrcTy = WideSrc.getValueType();
+  SDLoc DL(N);
+
+  // Look for "extract even elements" from legal packed types
+  if (!isa<MaskedLoadSDNode>(WideSrc) && NumParts == 2 &&
+      DAG.getTargetLoweringInfo().isTypeLegal(WideSrcTy) &&
+      isPackedVectorType(WideSrcTy, DAG) && !N->hasAnyUseOfValue(1)) {
+
+    return DAG.getMergeValues(
+        {getReinterpretAsUnpackedVT(WideSrc, SubVecTy, DAG),
+         DAG.getPOISON(SubVecTy)},
+        DL);
+  }
+
+  // At the moment we're unlikely to see a fixed-width vector deinterleave as
+  // we usually generate shuffles instead.
+  if (!SubVecTy.isScalableVector() ||
+      SubVecTy.getSizeInBits().getKnownMinValue() != 128 ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
+    return SDValue();
 
   // Normal loads are currently already handled by the InterleavedAccessPass so
   // we don't expect to see them here. Bail out if the masked load has an
@@ -29522,7 +29610,6 @@ static SDValue performVectorDeinterleaveCombine(
     return SDValue();
 
   // Now prove that the mask is an interleave of identical masks.
-  SDLoc DL(N);
   SDValue NarrowMask =
       getNarrowMaskForInterleavedOps(DAG, DL, MaskedLoad->getMask(), NumParts);
   if (!NarrowMask)

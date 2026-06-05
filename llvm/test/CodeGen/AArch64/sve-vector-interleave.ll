@@ -149,6 +149,27 @@ define <vscale x 16 x i16> @interleave2_nxv16i16(<vscale x 8 x i16> %vec0, <vsca
   ret <vscale x 16 x i16> %retval
 }
 
+define <vscale x 16 x i8> @interleave2_nxv16i8(<vscale x 8 x i16> %vec0, <vscale x 8 x i16> %vec1) {
+; CHECK-LABEL: interleave2_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %leg0 = trunc <vscale x 8 x i16> %vec0 to <vscale x 8 x i8>
+  %leg1 = trunc <vscale x 8 x i16> %vec1 to <vscale x 8 x i8>
+  %retval = call <vscale x 16 x i8> @llvm.vector.interleave2.nxv16i8(<vscale x 8 x i8> %leg0, <vscale x 8 x i8> %leg1)
+  ret <vscale x 16 x i8> %retval
+}
+
+define <vscale x 16 x i8> @interleave2_nxv16i8_with_poison(<vscale x 8 x i16> %vec0, <vscale x 8 x i16> %vec1) {
+; CHECK-LABEL: interleave2_nxv16i8_with_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %leg0 = trunc <vscale x 8 x i16> %vec0 to <vscale x 8 x i8>
+  %leg1 = trunc <vscale x 8 x i16> %vec1 to <vscale x 8 x i8>
+  %retval = call <vscale x 16 x i8> @llvm.vector.interleave2.nxv16i8(<vscale x 8 x i8> %leg0, <vscale x 8 x i8> poison)
+  ret <vscale x 16 x i8> %retval
+}
+
 define <vscale x 8 x i32> @interleave2_nxv8i32(<vscale x 4 x i32> %vec0, <vscale x 4 x i32> %vec1) {
 ; SVE-LABEL: interleave2_nxv8i32:
 ; SVE:       // %bb.0:
@@ -163,6 +184,17 @@ define <vscale x 8 x i32> @interleave2_nxv8i32(<vscale x 4 x i32> %vec0, <vscale
 ; SME2-NEXT:    ret
   %retval = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %vec0, <vscale x 4 x i32> %vec1)
   ret <vscale x 8 x i32> %retval
+}
+
+define <vscale x 8 x i16> @interleave2_nxv8i16(<vscale x 4 x i32> %vec0, <vscale x 4 x i32> %vec1) {
+; CHECK-LABEL: interleave2_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %leg0 = trunc <vscale x 4 x i32> %vec0 to <vscale x 4 x i16>
+  %leg1 = trunc <vscale x 4 x i32> %vec1 to <vscale x 4 x i16>
+  %retval = call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> %leg0, <vscale x 4 x i16> %leg1)
+  ret <vscale x 8 x i16> %retval
 }
 
 define <vscale x 4 x i64> @interleave2_nxv4i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1) {
@@ -710,52 +742,28 @@ define <vscale x 8 x i64> @interleave2_nxv8i64(<vscale x 4 x i64> %vec0, <vscale
 ; Promote illegal type size
 
 define <vscale x 16 x i8> @interleave2_nxv8i8(<vscale x 8 x i8> %vec0, <vscale x 8 x i8> %vec1) {
-; SVE-LABEL: interleave2_nxv8i8:
-; SVE:       // %bb.0:
-; SVE-NEXT:    zip2 z2.h, z0.h, z1.h
-; SVE-NEXT:    zip1 z0.h, z0.h, z1.h
-; SVE-NEXT:    uzp1 z0.b, z0.b, z2.b
-; SVE-NEXT:    ret
-;
-; SME2-LABEL: interleave2_nxv8i8:
-; SME2:       // %bb.0:
-; SME2-NEXT:    zip { z0.h, z1.h }, z0.h, z1.h
-; SME2-NEXT:    uzp1 z0.b, z0.b, z1.b
-; SME2-NEXT:    ret
+; CHECK-LABEL: interleave2_nxv8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    ret
   %retval = call <vscale x 16 x i8> @llvm.vector.interleave2.nxv16i8(<vscale x 8 x i8> %vec0, <vscale x 8 x i8> %vec1)
   ret <vscale x 16 x i8> %retval
 }
 
 define <vscale x 8 x i16> @interleave2_nxv4i16(<vscale x 4 x i16> %vec0, <vscale x 4 x i16> %vec1) {
-; SVE-LABEL: interleave2_nxv4i16:
-; SVE:       // %bb.0:
-; SVE-NEXT:    zip2 z2.s, z0.s, z1.s
-; SVE-NEXT:    zip1 z0.s, z0.s, z1.s
-; SVE-NEXT:    uzp1 z0.h, z0.h, z2.h
-; SVE-NEXT:    ret
-;
-; SME2-LABEL: interleave2_nxv4i16:
-; SME2:       // %bb.0:
-; SME2-NEXT:    zip { z0.s, z1.s }, z0.s, z1.s
-; SME2-NEXT:    uzp1 z0.h, z0.h, z1.h
-; SME2-NEXT:    ret
+; CHECK-LABEL: interleave2_nxv4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    ret
   %retval = call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> %vec0, <vscale x 4 x i16> %vec1)
   ret <vscale x 8 x i16> %retval
 }
 
 define <vscale x 4 x i32> @interleave2_nxv2i32(<vscale x 2 x i32> %vec0, <vscale x 2 x i32> %vec1) {
-; SVE-LABEL: interleave2_nxv2i32:
-; SVE:       // %bb.0:
-; SVE-NEXT:    zip2 z2.d, z0.d, z1.d
-; SVE-NEXT:    zip1 z0.d, z0.d, z1.d
-; SVE-NEXT:    uzp1 z0.s, z0.s, z2.s
-; SVE-NEXT:    ret
-;
-; SME2-LABEL: interleave2_nxv2i32:
-; SME2:       // %bb.0:
-; SME2-NEXT:    zip { z0.d, z1.d }, z0.d, z1.d
-; SME2-NEXT:    uzp1 z0.s, z0.s, z1.s
-; SME2-NEXT:    ret
+; CHECK-LABEL: interleave2_nxv2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
   %retval = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %vec0, <vscale x 2 x i32> %vec1)
   ret <vscale x 4 x i32> %retval
 }
