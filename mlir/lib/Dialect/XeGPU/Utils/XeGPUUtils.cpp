@@ -92,7 +92,8 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
     laneData.erase(laneData.begin());
   }
   auto trimmedLayout = xegpu::LayoutAttr::get(
-      layout.getContext(), SmallVector<int32_t>(laneLayout.begin(), laneLayout.end()),
+      layout.getContext(),
+      SmallVector<int32_t>(laneLayout.begin(), laneLayout.end()),
       SmallVector<int32_t>(laneData.begin(), laneData.end()));
   auto helperTdescTy = xegpu::TensorDescType::get(
       shape, originalType.getElementType(), arrayLength,
