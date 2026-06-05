@@ -2312,18 +2312,10 @@ define <8 x i8> @test_pmulh_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    pncvt.h a3, a2
 ; RV32-NEXT:    pncvt.h a6, a0
 ; RV32-NEXT:    pncvt.h a2, a4
-; RV32-NEXT:    psrli.dh a0, a2, 8
-; RV32-NEXT:    psrli.dh a2, a6, 8
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    srli a5, a2, 16
-; RV32-NEXT:    srli a6, a1, 16
-; RV32-NEXT:    srli a7, a0, 16
-; RV32-NEXT:    ppaire.b a3, a3, a4
-; RV32-NEXT:    ppaire.b a2, a2, a5
-; RV32-NEXT:    ppaire.b a4, a1, a6
-; RV32-NEXT:    ppaire.b a0, a0, a7
-; RV32-NEXT:    pack a1, a2, a3
-; RV32-NEXT:    pack a0, a0, a4
+; RV32-NEXT:    psrli.dh a2, a2, 8
+; RV32-NEXT:    psrli.dh a0, a6, 8
+; RV32-NEXT:    pncvt.b a1, a0
+; RV32-NEXT:    pncvt.b a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulh_b:
@@ -2394,18 +2386,10 @@ define <8 x i8> @test_pmulhu_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    pncvt.h a3, a2
 ; RV32-NEXT:    pncvt.h a6, a0
 ; RV32-NEXT:    pncvt.h a2, a4
-; RV32-NEXT:    psrli.dh a0, a2, 8
-; RV32-NEXT:    psrli.dh a2, a6, 8
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    srli a5, a2, 16
-; RV32-NEXT:    srli a6, a1, 16
-; RV32-NEXT:    srli a7, a0, 16
-; RV32-NEXT:    ppaire.b a3, a3, a4
-; RV32-NEXT:    ppaire.b a2, a2, a5
-; RV32-NEXT:    ppaire.b a4, a1, a6
-; RV32-NEXT:    ppaire.b a0, a0, a7
-; RV32-NEXT:    pack a1, a2, a3
-; RV32-NEXT:    pack a0, a0, a4
+; RV32-NEXT:    psrli.dh a2, a2, 8
+; RV32-NEXT:    psrli.dh a0, a6, 8
+; RV32-NEXT:    pncvt.b a1, a0
+; RV32-NEXT:    pncvt.b a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhu_b:
@@ -2475,18 +2459,10 @@ define <8 x i8> @test_pmulhsu_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    pncvt.h a3, a2
 ; RV32-NEXT:    pncvt.h a6, a0
 ; RV32-NEXT:    pncvt.h a2, a4
-; RV32-NEXT:    psrli.dh a0, a2, 8
-; RV32-NEXT:    psrli.dh a2, a6, 8
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    srli a5, a2, 16
-; RV32-NEXT:    srli a6, a1, 16
-; RV32-NEXT:    srli a7, a0, 16
-; RV32-NEXT:    ppaire.b a3, a3, a4
-; RV32-NEXT:    ppaire.b a2, a2, a5
-; RV32-NEXT:    ppaire.b a4, a1, a6
-; RV32-NEXT:    ppaire.b a0, a0, a7
-; RV32-NEXT:    pack a1, a2, a3
-; RV32-NEXT:    pack a0, a0, a4
+; RV32-NEXT:    psrli.dh a2, a2, 8
+; RV32-NEXT:    psrli.dh a0, a6, 8
+; RV32-NEXT:    pncvt.b a1, a0
+; RV32-NEXT:    pncvt.b a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhsu_b:
@@ -2558,18 +2534,10 @@ define <8 x i8> @test_pmulhsu_b_commuted(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    pncvt.h a3, a2
 ; RV32-NEXT:    pncvt.h a6, a0
 ; RV32-NEXT:    pncvt.h a2, a4
-; RV32-NEXT:    psrli.dh a0, a2, 8
-; RV32-NEXT:    psrli.dh a2, a6, 8
-; RV32-NEXT:    srli a4, a3, 16
-; RV32-NEXT:    srli a5, a2, 16
-; RV32-NEXT:    srli a6, a1, 16
-; RV32-NEXT:    srli a7, a0, 16
-; RV32-NEXT:    ppaire.b a3, a3, a4
-; RV32-NEXT:    ppaire.b a2, a2, a5
-; RV32-NEXT:    ppaire.b a4, a1, a6
-; RV32-NEXT:    ppaire.b a0, a0, a7
-; RV32-NEXT:    pack a1, a2, a3
-; RV32-NEXT:    pack a0, a0, a4
+; RV32-NEXT:    psrli.dh a2, a2, 8
+; RV32-NEXT:    psrli.dh a0, a6, 8
+; RV32-NEXT:    pncvt.b a1, a0
+; RV32-NEXT:    pncvt.b a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhsu_b_commuted:
