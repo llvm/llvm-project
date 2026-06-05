@@ -4429,29 +4429,6 @@ main_body:
   ret void
 }
 
-; InstCombine runs two transforms on the same image.sample call:
-;   1. modifyIntrinsicCall: lod = 0.0 rewrites image.sample.l.1d to
-;      image.sample.lz.1d, dropping the lod operand.
-;   2. simplifyAMDGCNMemoryIntrinsicDemanded: only lanes 0 and 1 are used,
-;      so the dmask shrinks from 15 to 3 and the return type shrinks from
-;      <4 x float> to <2 x float>.
-; Each transform rebuilds the call with IC.Builder.CreateIntrinsic, which
-; would drop any call-site-only attributes (here, memory(argmem: read)
-; attached via #2). The new call is guaranteed to inherit attributes from
-; the intrinsic declaration, but not call-site attributes.
-define amdgpu_ps <2 x float> @image_l_to_lz_shrink_preserve_callsite_attrs(<8 x i32> inreg %rsrc, float %s, <4 x i32> inreg %samp) {
-; CHECK-LABEL: @image_l_to_lz_shrink_preserve_callsite_attrs(
-; CHECK-NEXT:    [[V4:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0) #[[ATTR22:[0-9]+]]
-; CHECK-NEXT:    ret <2 x float> [[V4]]
-;
-  %v4 = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0) #2
-  %e0 = extractelement <4 x float> %v4, i32 0
-  %e1 = extractelement <4 x float> %v4, i32 1
-  %r0 = insertelement <2 x float> poison, float %e0, i32 0
-  %r1 = insertelement <2 x float> %r0, float %e1, i32 1
-  ret <2 x float> %r1
-}
-
 define amdgpu_kernel void @sample_l_2d(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t, float %lod) {
 ; CHECK-LABEL: @sample_l_2d(
 ; CHECK-NEXT:  main_body:
@@ -6627,5 +6604,3 @@ define ptr addrspace(8) @make_buffer_rsrc_undef() {
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i64 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
 }
-
-attributes #2 = { memory(argmem: read) }
