@@ -50,7 +50,7 @@ int main(void) {
   assert(DevMemsetPtr == DevPtr && "Memset returned incorrect pointer.\n");
 
   printf("Submitting a Kernel\n");
-#pragma omp target
+#pragma omp target is_device_ptr(DevPtr)
   *DevPtr = 42;
 
   printf("Freeing Memory on Device\n");
