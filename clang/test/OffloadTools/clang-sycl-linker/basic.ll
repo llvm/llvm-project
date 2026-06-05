@@ -87,9 +87,9 @@
 ;
 ; Test that there is no implicit CWD search: a bare library name without any -L
 ; must fail to resolve, even if a same-named file exists in the CWD.
-; RUN: cd %t && not clang-sycl-linker --dry-run input1.bc -l input1 -o a.spv 2>&1 \
+; RUN: cd %t && not clang-sycl-linker --dry-run input1.bc -l mixed -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NO-CWD-SEARCH
-; NO-CWD-SEARCH: unable to find library -linput1
+; NO-CWD-SEARCH: unable to find library -lmixed
 ;
 ; Test that a directory matching the requested name is not accepted as a library:
 ; %t/libs is a directory created above; resolving -l:libs against -L %t
