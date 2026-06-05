@@ -31,7 +31,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Size, class _Func, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 __for_each_n(_InputIterator __first, _Size __orig_n, _Func&& __f, _Proj& __proj) {
   typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
   _IntegralSize __n = __orig_n;
@@ -61,8 +61,7 @@ __for_each_n(_InputIterator __first, _Size __orig_n, _Func&& __f, _Proj& __proj)
 #if _LIBCPP_STD_VER >= 17
 
 template <class _InputIterator, class _Size, class _Func>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
-for_each_n(_InputIterator __first, _Size __orig_n, _Func __f) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator for_each_n(_InputIterator __first, _Size __orig_n, _Func __f) {
   __identity __proj;
   return std::__for_each_n(__first, __orig_n, __f, __proj);
 }

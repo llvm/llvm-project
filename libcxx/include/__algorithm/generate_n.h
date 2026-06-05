@@ -25,7 +25,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _OutputIterator, class _Size, class _Generator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __generate_n(_OutputIterator __first, _Size __orig_n, _Generator& __gen) {
   using __iter_ref = decltype(*__first);
   __identity __proj;
@@ -37,7 +37,7 @@ __generate_n(_OutputIterator __first, _Size __orig_n, _Generator& __gen) {
 }
 
 template <class _OutputIterator, class _Size, class _Generator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen) {
   return std::__generate_n(std::move(__first), __orig_n, __gen);
 }

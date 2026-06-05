@@ -53,13 +53,13 @@ struct in_value_result {
 
   template <class _I2, class _T2>
     requires convertible_to<const _Ip&, _I2> && convertible_to<const _Tp&, _T2>
-  _LIBCPP_HIDE_FROM_ABI constexpr operator in_value_result<_I2, _T2>() const& {
+  constexpr operator in_value_result<_I2, _T2>() const& {
     return {in, value};
   }
 
   template <class _I2, class _T2>
     requires convertible_to<_Ip, _I2> && convertible_to<_Tp, _T2>
-  _LIBCPP_HIDE_FROM_ABI constexpr operator in_value_result<_I2, _T2>() && {
+  constexpr operator in_value_result<_I2, _T2>() && {
     return {std::move(in), std::move(value)};
   }
 };
@@ -103,7 +103,7 @@ concept __indirectly_binary_right_foldable =
 
 struct __fold_left_with_iter {
   template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, __indirectly_binary_left_foldable<_Tp, _Ip> _Fp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
+  [[nodiscard]] static constexpr auto operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
     using _Up = decay_t<invoke_result_t<_Fp&, _Tp, iter_reference_t<_Ip>>>;
 
     if (__first == __last) {
@@ -125,7 +125,7 @@ struct __fold_left_with_iter {
   }
 
   template <input_range _Rp, class _Tp, __indirectly_binary_left_foldable<_Tp, iterator_t<_Rp>> _Fp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Rp&& __r, _Tp __init, _Fp __f) {
+  [[nodiscard]] static constexpr auto operator()(_Rp&& __r, _Tp __init, _Fp __f) {
     auto __result = operator()(ranges::begin(__r), ranges::end(__r), std::move(__init), std::ref(__f));
 
     using _Up = decay_t<invoke_result_t<_Fp&, _Tp, range_reference_t<_Rp>>>;
@@ -137,12 +137,12 @@ inline constexpr auto fold_left_with_iter = __fold_left_with_iter();
 
 struct __fold_left {
   template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, __indirectly_binary_left_foldable<_Tp, _Ip> _Fp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
+  [[nodiscard]] static constexpr auto operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
     return fold_left_with_iter(std::move(__first), std::move(__last), std::move(__init), std::ref(__f)).value;
   }
 
   template <input_range _Rp, class _Tp, __indirectly_binary_left_foldable<_Tp, iterator_t<_Rp>> _Fp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Rp&& __r, _Tp __init, _Fp __f) {
+  [[nodiscard]] static constexpr auto operator()(_Rp&& __r, _Tp __init, _Fp __f) {
     return fold_left_with_iter(ranges::begin(__r), ranges::end(__r), std::move(__init), std::ref(__f)).value;
   }
 };
@@ -154,7 +154,7 @@ struct __fold_left_first_with_iter {
             sentinel_for<_Iter> _Sent,
             __indirectly_binary_left_foldable<iter_value_t<_Iter>, _Iter> _Func>
     requires constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Iter __first, _Sent __last, _Func __func) {
+  [[nodiscard]] static constexpr auto operator()(_Iter __first, _Sent __last, _Func __func) {
     using _Up = decltype(fold_left(std::move(__first), __last, iter_value_t<_Iter>(*__first), __func));
 
     if (__first == __last)
@@ -176,7 +176,7 @@ struct __fold_left_first_with_iter {
 
   template <input_range _Range, __indirectly_binary_left_foldable<range_value_t<_Range>, iterator_t<_Range>> _Func>
     requires constructible_from<range_value_t<_Range>, range_reference_t<_Range>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Func __func) {
+  [[nodiscard]] static constexpr auto operator()(_Range&& __range, _Func __func) {
     auto __result = operator()(ranges::begin(__range), ranges::end(__range), std::ref(__func));
 
     using _Up = decltype(fold_left(
@@ -193,13 +193,13 @@ struct __fold_left_first {
             sentinel_for<_Iter> _Sent,
             __indirectly_binary_left_foldable<iter_value_t<_Iter>, _Iter> _Func>
     requires constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Iter __first, _Sent __last, _Func __func) {
+  [[nodiscard]] static constexpr auto operator()(_Iter __first, _Sent __last, _Func __func) {
     return fold_left_first_with_iter(std::move(__first), std::move(__last), std::ref(__func)).value;
   }
 
   template <input_range _Range, __indirectly_binary_left_foldable<range_value_t<_Range>, iterator_t<_Range>> _Func>
     requires constructible_from<range_value_t<_Range>, range_reference_t<_Range>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Func __func) {
+  [[nodiscard]] static constexpr auto operator()(_Range&& __range, _Func __func) {
     return fold_left_first_with_iter(ranges::begin(__range), ranges::end(__range), std::ref(__func)).value;
   }
 };
@@ -211,8 +211,7 @@ struct __fold_right {
             sentinel_for<_Iter> _Sp,
             class _Tp,
             __indirectly_binary_right_foldable<_Tp, _Iter> _Func>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Iter __first, _Sp __last, _Tp __init, _Func __func) {
+  [[nodiscard]] static constexpr auto operator()(_Iter __first, _Sp __last, _Tp __init, _Func __func) {
     using _Up = decay_t<invoke_result_t<_Func&, iter_reference_t<_Iter>, _Tp>>;
 
     if (__first == __last)
@@ -229,7 +228,7 @@ struct __fold_right {
   }
 
   template <bidirectional_range _Range, class _Tp, __indirectly_binary_right_foldable<_Tp, iterator_t<_Range>> _Func>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Tp __init, _Func __func) {
+  [[nodiscard]] static constexpr auto operator()(_Range&& __range, _Tp __init, _Func __func) {
     return operator()(ranges::begin(__range), ranges::end(__range), std::move(__init), std::ref(__func));
   }
 };
@@ -240,7 +239,7 @@ struct __fold_right_last {
   template <bidirectional_iterator _Iter,
             sentinel_for<_Iter> _Sp,
             __indirectly_binary_right_foldable<iter_value_t<_Iter>, _Iter> _Func>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Iter __first, _Sp __last, _Func __func) {
+  [[nodiscard]] static constexpr auto operator()(_Iter __first, _Sp __last, _Func __func) {
     using _Up = decltype(fold_right(__first, __last, iter_value_t<_Iter>(*__first), __func));
 
     if (__first == __last)
@@ -253,7 +252,7 @@ struct __fold_right_last {
 
   template <bidirectional_range _Range,
             __indirectly_binary_right_foldable<range_value_t<_Range>, iterator_t<_Range>> _Func>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Func __func) {
+  [[nodiscard]] static constexpr auto operator()(_Range&& __range, _Func __func) {
     return operator()(ranges::begin(__range), ranges::end(__range), std::ref(__func));
   }
 };

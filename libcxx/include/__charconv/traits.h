@@ -44,18 +44,14 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) <= sizeof(uin
   /// The algorithm is based on
   /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
   /// Instead of using IntegerLogBase2 it uses __countl_zero.
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 int __width(_Tp __v) {
     auto __t = (32 - std::__countl_zero(static_cast<type>(__v | 1))) * 1233 >> 12;
     return __t - (__v < __itoa::__pow10_32[__t]) + 1;
   }
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v) {
-    return __itoa::__base_10_u32(__p, __v);
-  }
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 char* __convert(char* __p, _Tp __v) { return __itoa::__base_10_u32(__p, __v); }
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI decltype(__pow10_32)& __pow() {
-    return __itoa::__pow10_32;
-  }
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 decltype(__pow10_32)& __pow() { return __itoa::__pow10_32; }
 };
 
 template <typename _Tp>
@@ -67,21 +63,17 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(uin
   /// The algorithm is based on
   /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
   /// Instead of using IntegerLogBase2 it uses __countl_zero.
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 int __width(_Tp __v) {
     auto __t = (64 - std::__countl_zero(static_cast<type>(__v | 1))) * 1233 >> 12;
     return __t - (__v < __itoa::__pow10_64[__t]) + 1;
   }
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v) {
-    return __itoa::__base_10_u64(__p, __v);
-  }
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 char* __convert(char* __p, _Tp __v) { return __itoa::__base_10_u64(__p, __v); }
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI decltype(__pow10_64)& __pow() {
-    return __itoa::__pow10_64;
-  }
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 decltype(__pow10_64)& __pow() { return __itoa::__pow10_64; }
 };
 
-#  if _LIBCPP_HAS_INT128
+#if _LIBCPP_HAS_INT128
 template <typename _Tp>
 struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__uint128_t)> > {
   using type = __uint128_t;
@@ -91,7 +83,7 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__u
   /// The algorithm is based on
   /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
   /// Instead of using IntegerLogBase2 it uses __countl_zero.
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 int __width(_Tp __v) {
     _LIBCPP_ASSERT_INTERNAL(
         __v > numeric_limits<uint64_t>::max(), "The optimizations for this algorithm fail when this isn't true.");
     // There's always a bit set in the upper 64-bits.
@@ -101,20 +93,16 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__u
     return __t - (__v < __itoa::__pow10_128[__t - __itoa::__pow10_128_offset]) + 1;
   }
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v) {
-    return __itoa::__base_10_u128(__p, __v);
-  }
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 char* __convert(char* __p, _Tp __v) { return __itoa::__base_10_u128(__p, __v); }
 
   // TODO FMT This pow function should get an index.
   // By moving this to its own header it can be reused by the pow function in to_chars_base_10.
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI decltype(__pow10_128)& __pow() {
-    return __itoa::__pow10_128;
-  }
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 decltype(__pow10_128)& __pow() { return __itoa::__pow10_128; }
 };
-#  endif
+#endif
 
 template <typename _Tp, typename _Up>
-_LIBCPP_HIDE_FROM_ABI bool _LIBCPP_CONSTEXPR_SINCE_CXX23 __mul_overflowed(_Tp __a, _Up __b, _Tp& __r) {
+bool _LIBCPP_CONSTEXPR_SINCE_CXX23 __mul_overflowed(_Tp __a, _Up __b, _Tp& __r) {
   static_assert(is_unsigned<_Tp>::value);
   return __builtin_mul_overflow(__a, static_cast<_Tp>(__b), std::addressof(__r));
 }
@@ -126,8 +114,7 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
   using typename __traits_base<_Tp>::type;
 
   // precondition: at least one non-zero character available
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI char const*
-  __read(char const* __p, char const* __ep, type& __a, type& __b) {
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 char const* __read(char const* __p, char const* __ep, type& __a, type& __b) {
     type __cprod[digits];
     int __j = digits - 1;
     int __i = digits;
@@ -144,8 +131,7 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
   }
 
   template <typename _It1, typename _It2, class _Up>
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _Up
-  __inner_product(_It1 __first1, _It1 __last1, _It2 __first2, _Up __init) {
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _Up __inner_product(_It1 __first1, _It1 __last1, _It2 __first2, _Up __init) {
     for (; __first1 < __last1; ++__first1, ++__first2)
       __init = __init + *__first1 * *__first2;
     return __init;
@@ -155,7 +141,7 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
 } // namespace __itoa
 
 template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _Tp __complement(_Tp __x) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _Tp __complement(_Tp __x) {
   static_assert(is_unsigned<_Tp>::value, "cast to unsigned first");
   return _Tp(~__x + 1);
 }

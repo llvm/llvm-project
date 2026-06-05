@@ -36,7 +36,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 from_chars_result from_chars(const char*, const char*, bool, int = 10) = delete;
 
 template <typename _It, typename _Tp, typename _Fn, typename... _Ts>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 from_chars_result
 __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args) {
   using __tl = numeric_limits<_Tp>;
   decltype(std::__to_unsigned_like(__value)) __x;
@@ -68,7 +68,7 @@ __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
 }
 
 template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool __in_pattern(_Tp __c) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool __in_pattern(_Tp __c) {
   return '0' <= __c && __c <= '9';
 }
 
@@ -76,11 +76,11 @@ struct _LIBCPP_HIDDEN __in_pattern_result {
   bool __ok;
   int __val;
 
-  explicit _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI operator bool() const { return __ok; }
+  explicit _LIBCPP_CONSTEXPR_SINCE_CXX23 operator bool() const { return __ok; }
 };
 
 template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __in_pattern_result __in_pattern(_Tp __c, int __base) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 __in_pattern_result __in_pattern(_Tp __c, int __base) {
   if (__base <= 10)
     return {'0' <= __c && __c < '0' + __base, __c - '0'};
   else if (std::__in_pattern(__c))
@@ -92,7 +92,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __in_pattern_result _
 }
 
 template <typename _It, typename _Tp, typename _Fn, typename... _Ts>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 from_chars_result
 __subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args) {
   auto __find_non_zero = [](_It __firstit, _It __lastit) {
     for (; __firstit != __lastit; ++__firstit)
@@ -123,7 +123,7 @@ __subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... 
 }
 
 template <typename _Tp, __enable_if_t<is_unsigned<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 from_chars_result
 __from_chars_atoi(const char* __first, const char* __last, _Tp& __value) {
   using __tx          = __itoa::__traits<_Tp>;
   using __output_type = typename __tx::type;
@@ -144,7 +144,7 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value) {
 }
 
 template <typename _Tp, __enable_if_t<is_signed<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 from_chars_result
 __from_chars_atoi(const char* __first, const char* __last, _Tp& __value) {
   using __t = decltype(std::__to_unsigned_like(__value));
   return std::__sign_combinator(__first, __last, __value, __from_chars_atoi<__t>);
@@ -169,7 +169,7 @@ inline constexpr float __from_chars_log2f_lut[35] = {
     4.857981,  4.9068904, 4.9541965, 5,        5.044394,  5.087463, 5.129283, 5.169925};
 
 template <typename _Tp, __enable_if_t<is_unsigned<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 from_chars_result
 __from_chars_integral(const char* __first, const char* __last, _Tp& __value, int __base) {
   if (__base == 10)
     return std::__from_chars_atoi(__first, __last, __value);
@@ -210,20 +210,20 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value, int
 }
 
 template <typename _Tp, __enable_if_t<is_signed<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 from_chars_result
 __from_chars_integral(const char* __first, const char* __last, _Tp& __value, int __base) {
   using __t = decltype(std::__to_unsigned_like(__value));
   return std::__sign_combinator(__first, __last, __value, __from_chars_integral<__t>, __base);
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value) {
   return std::__from_chars_atoi(__first, __last, __value);
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value, int __base) {
   _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");
   return std::__from_chars_integral(__first, __last, __value, __base);

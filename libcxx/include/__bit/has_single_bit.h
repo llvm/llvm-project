@@ -24,7 +24,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_single_bit(_Tp __t) noexcept {
+[[nodiscard]] constexpr bool has_single_bit(_Tp __t) noexcept {
   return __builtin_popcountg(__t) == 1;
 }
 

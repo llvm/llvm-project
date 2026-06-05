@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Fast path for random access iterators which computes the number of loop iterations up-front and
 // then skips the iterator comparisons inside the loop.
 template <class _InputIterator1, class _InputIterator2, class _Cmp>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_fast_path(
+constexpr auto __lexicographical_compare_three_way_fast_path(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2, _Cmp& __comp)
     -> decltype(__comp(*__first1, *__first2)) {
   static_assert(signed_integral<__iterator_difference_type<_InputIterator1>>,
@@ -64,7 +64,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_fast_pa
 
 // Unoptimized implementation which compares the iterators against the end in every loop iteration
 template <class _InputIterator1, class _InputIterator2, class _Cmp>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_slow_path(
+constexpr auto __lexicographical_compare_three_way_slow_path(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2, _Cmp& __comp)
     -> decltype(__comp(*__first1, *__first2)) {
   while (true) {
@@ -90,7 +90,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_slow_pa
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Cmp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
+[[nodiscard]] constexpr auto lexicographical_compare_three_way(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2, _Cmp __comp)
     -> decltype(__comp(*__first1, *__first2)) {
   static_assert(__comparison_category<decltype(__comp(*__first1, *__first2))>,
@@ -110,7 +110,7 @@ template <class _InputIterator1, class _InputIterator2, class _Cmp>
 }
 
 template <class _InputIterator1, class _InputIterator2>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
+[[nodiscard]] constexpr auto lexicographical_compare_three_way(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
   return std::lexicographical_compare_three_way(
       std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::compare_three_way());

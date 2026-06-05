@@ -22,10 +22,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class, class, class>
-struct _LIBCPP_HIDE_FROM_ABI __compare_three_way_result {};
+struct __compare_three_way_result {};
 
 template <class _Tp, class _Up>
-struct _LIBCPP_HIDE_FROM_ABI __compare_three_way_result<
+struct __compare_three_way_result<
     _Tp,
     _Up,
     decltype(std::declval<__make_const_lvalue_ref<_Tp>>() <=> std::declval<__make_const_lvalue_ref<_Up>>(), void())> {

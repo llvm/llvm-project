@@ -32,7 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 struct __fill {
   template <class _Type, output_iterator<const _Type&> _Iter, sentinel_for<_Iter> _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter operator()(_Iter __first, _Sent __last, const _Type& __value) const {
+  constexpr _Iter operator()(_Iter __first, _Sent __last, const _Type& __value) const {
     if constexpr (sized_sentinel_for<_Sent, _Iter>) {
       auto __n = __last - __first;
       return std::__fill_n(std::move(__first), __n, __value);
@@ -42,7 +42,7 @@ struct __fill {
   }
 
   template <class _Type, output_range<const _Type&> _Range>
-  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range> operator()(_Range&& __range, const _Type& __value) const {
+  constexpr borrowed_iterator_t<_Range> operator()(_Range&& __range, const _Type& __value) const {
     return (*this)(ranges::begin(__range), ranges::end(__range), __value);
   }
 };

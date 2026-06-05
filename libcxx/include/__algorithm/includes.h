@@ -27,7 +27,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Comp, class _Proj1, class _Proj2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __includes(
+_LIBCPP_CONSTEXPR_SINCE_CXX20 bool __includes(
     _Iter1 __first1,
     _Sent1 __last1,
     _Iter2 __first2,
@@ -46,7 +46,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __includes(
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Compare>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 includes(_InputIterator1 __first1,
          _InputIterator1 __last1,
          _InputIterator2 __first2,
@@ -66,7 +66,7 @@ includes(_InputIterator1 __first1,
 }
 
 template <class _InputIterator1, class _InputIterator2>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 includes(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
   return std::includes(std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), __less<>());
 }

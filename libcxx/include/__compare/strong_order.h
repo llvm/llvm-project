@@ -42,7 +42,7 @@ struct __fn {
   // NOLINTBEGIN(libcpp-robust-against-adl) strong_order should use ADL, but only here
   template <class _Tp, class _Up>
     requires is_same_v<decay_t<_Tp>, decay_t<_Up>>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __go(_Tp&& __t, _Up&& __u, __priority_tag<2>) noexcept(
+  static constexpr auto __go(_Tp&& __t, _Up&& __u, __priority_tag<2>) noexcept(
       noexcept(strong_ordering(strong_order(std::forward<_Tp>(__t), std::forward<_Up>(__u)))))
       -> decltype(strong_ordering(strong_order(std::forward<_Tp>(__t), std::forward<_Up>(__u)))) {
     return strong_ordering(strong_order(std::forward<_Tp>(__t), std::forward<_Up>(__u)));
@@ -51,7 +51,7 @@ struct __fn {
 
   template <class _Tp, class _Up, class _Dp = decay_t<_Tp>>
     requires is_same_v<_Dp, decay_t<_Up>> && is_floating_point_v<_Dp>
-  _LIBCPP_HIDE_FROM_ABI static constexpr strong_ordering __go(_Tp&& __t, _Up&& __u, __priority_tag<1>) noexcept {
+  static constexpr strong_ordering __go(_Tp&& __t, _Up&& __u, __priority_tag<1>) noexcept {
     if constexpr (numeric_limits<_Dp>::is_iec559 &&
                   (sizeof(_Dp) == sizeof(int32_t) || sizeof(_Dp) == sizeof(int64_t))) {
       using _IntT = conditional_t<sizeof(_Dp) == sizeof(int32_t), int32_t, int64_t>;
@@ -97,14 +97,14 @@ struct __fn {
 
   template <class _Tp, class _Up>
     requires is_same_v<decay_t<_Tp>, decay_t<_Up>>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __go(_Tp&& __t, _Up&& __u, __priority_tag<0>) noexcept(
+  static constexpr auto __go(_Tp&& __t, _Up&& __u, __priority_tag<0>) noexcept(
       noexcept(strong_ordering(compare_three_way()(std::forward<_Tp>(__t), std::forward<_Up>(__u)))))
       -> decltype(strong_ordering(compare_three_way()(std::forward<_Tp>(__t), std::forward<_Up>(__u)))) {
     return strong_ordering(compare_three_way()(std::forward<_Tp>(__t), std::forward<_Up>(__u)));
   }
 
   template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t, _Up&& __u) const
+  constexpr auto operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(__go(std::forward<_Tp>(__t), std::forward<_Up>(__u), __priority_tag<2>())))
           -> decltype(__go(std::forward<_Tp>(__t), std::forward<_Up>(__u), __priority_tag<2>())) {
     return __go(std::forward<_Tp>(__t), std::forward<_Up>(__u), __priority_tag<2>());

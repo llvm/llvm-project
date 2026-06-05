@@ -22,13 +22,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr bool __is_fp80_long_double() {
+constexpr bool __is_fp80_long_double() {
   // Only x87-fp80 long double has 64-bit mantissa
   return __LDBL_MANT_DIG__ == 64 && std::is_same_v<_Tp, long double>;
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr bool __has_rmw_builtin() {
+constexpr bool __has_rmw_builtin() {
   static_assert(std::is_floating_point_v<_Tp>);
 #  ifndef _LIBCPP_COMPILER_CLANG_BASED
   return false;

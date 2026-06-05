@@ -47,7 +47,7 @@ struct __replace_copy {
             class _Proj = identity>
     requires indirectly_copyable<_InIter, _OutIter> &&
              indirect_binary_predicate<ranges::equal_to, projected<_InIter, _Proj>, const _OldType*>
-  _LIBCPP_HIDE_FROM_ABI constexpr replace_copy_result<_InIter, _OutIter>
+  constexpr replace_copy_result<_InIter, _OutIter>
   operator()(_InIter __first,
              _Sent __last,
              _OutIter __result,
@@ -66,7 +66,7 @@ struct __replace_copy {
             class _Proj = identity>
     requires indirectly_copyable<iterator_t<_Range>, _OutIter> &&
              indirect_binary_predicate<ranges::equal_to, projected<iterator_t<_Range>, _Proj>, const _OldType*>
-  _LIBCPP_HIDE_FROM_ABI constexpr replace_copy_result<borrowed_iterator_t<_Range>, _OutIter> operator()(
+  constexpr replace_copy_result<borrowed_iterator_t<_Range>, _OutIter> operator()(
       _Range&& __range, _OutIter __result, const _OldType& __old_value, const _NewType& __new_value, _Proj __proj = {})
       const {
     auto __pred = [&](const auto& __value) -> bool { return __value == __old_value; };

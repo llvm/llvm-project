@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <__unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp rotl(_Tp __t, int __cnt) noexcept {
+[[nodiscard]] constexpr _Tp rotl(_Tp __t, int __cnt) noexcept {
   const int __n = numeric_limits<_Tp>::digits;
   int __r       = __cnt % __n;
 
@@ -40,7 +40,7 @@ template <__unsigned_integer _Tp>
 }
 
 template <__unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp rotr(_Tp __t, int __cnt) noexcept {
+[[nodiscard]] constexpr _Tp rotr(_Tp __t, int __cnt) noexcept {
   const int __n = numeric_limits<_Tp>::digits;
   int __r       = __cnt % __n;
 

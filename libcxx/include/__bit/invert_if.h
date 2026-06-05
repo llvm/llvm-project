@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <bool _Invert, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __invert_if(_Tp __v) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __invert_if(_Tp __v) {
   if (_Invert)
     return ~__v;
   return __v;

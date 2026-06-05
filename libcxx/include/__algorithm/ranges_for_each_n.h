@@ -38,7 +38,7 @@ using for_each_n_result = in_fun_result<_Iter, _Func>;
 
 struct __for_each_n {
   template <input_iterator _Iter, class _Proj = identity, indirectly_unary_invocable<projected<_Iter, _Proj>> _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr for_each_n_result<_Iter, _Func>
+  constexpr for_each_n_result<_Iter, _Func>
   operator()(_Iter __first, iter_difference_t<_Iter> __count, _Func __func, _Proj __proj = {}) const {
     auto __last = std::__for_each_n(std::move(__first), __count, __func, __proj);
     return {std::move(__last), std::move(__func)};
