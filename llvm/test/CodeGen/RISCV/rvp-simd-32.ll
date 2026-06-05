@@ -218,6 +218,37 @@ define <2 x i16> @test_pssubu_h(<2 x i16> %a, <2 x i16> %b) {
   ret <2 x i16> %res
 }
 
+; Test shift-add operations for v2i16
+define <2 x i16> @test_psh1add_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_psh1add_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psh1add.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = shl <2 x i16> %a, splat (i16 1)
+  %res = add <2 x i16> %shl, %b
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pssh1sadd_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pssh1sadd_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssh1sadd.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = call <2 x i16> @llvm.sshl.sat.v2i16(<2 x i16> %a, <2 x i16> splat (i16 1))
+  %res = call <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16> %shl, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pssh1sadd_h_addself(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pssh1sadd_h_addself:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssh1sadd.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = call <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16> %a, <2 x i16> %a)
+  %res = call <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16> %shl, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
 ; Test saturating add operations for v4i8
 define <4 x i8> @test_psadd_b(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: test_psadd_b:
@@ -2179,10 +2210,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB150_2
+; CHECK-NEXT:    bnez a3, .LBB153_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB150_2:
+; CHECK-NEXT:  .LBB153_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2193,10 +2224,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB151_2
+; CHECK-NEXT:    bnez a3, .LBB154_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB151_2:
+; CHECK-NEXT:  .LBB154_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
