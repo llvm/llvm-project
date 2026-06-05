@@ -75,7 +75,7 @@ public:
 
   /// If `E` is a "clean" array subscript expression, return the type of the
   /// accessed element; otherwise return 'Bytes' because that's the best (or
-  /// least bad) option for the diagnostic generation that relies on this.
+  /// least bad) option for the assumption messages that use this.
   static SizeUnit forExpr(const Expr *E, const CheckerContext &C) {
     const auto *ASE = getAsCleanArraySubscriptExpr(E, C);
     if (!ASE)
@@ -84,12 +84,28 @@ public:
     return SizeUnit(ASE->getType(), C.getASTContext());
   }
 
+  /// Return the element type that is "natural" for reporting out-of-bounds
+  /// memory access to 'Location'.
+  /// FIXME: It is unfortunate that this heuristic differs from the heuristic
+  /// used for reporting assumption (`SizeUnit::forExpr`).
+  static SizeUnit forSVal(SVal Location, const ASTContext &ACtx) {
+    const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
+    assert(EReg && "this checker only handles element access");
+    return SizeUnit(EReg->getElementType(), ACtx);
+  }
+
   int64_t asCharUnits() const { return AsCharUnits; }
 
   std::string asExtentDesc(bool ForceBytes) const {
     if (ForceBytes || isBytes())
       return "the extent of";
     return formatv("the number of '{0}' elements in", AsType.getAsString());
+  }
+
+  std::string asElementName(bool ForceBytes) const {
+    if (ForceBytes || isBytes())
+      return "byte";
+    return formatv("'{0}' element", AsType.getAsString());
   }
 };
 
@@ -473,13 +489,9 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
   return true;
 }
 
-static Messages getNonTaintMsgs(const ASTContext &ACtx,
-                                std::string RegName, NonLoc Offset,
-                                std::optional<NonLoc> Extent, SVal Location,
+static Messages getNonTaintMsgs(std::string RegName, SizeUnit SU, NonLoc Offset,
+                                std::optional<NonLoc> Extent,
                                 BadOffsetKind Problem) {
-  const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
-  assert(EReg && "this checker only handles element access");
-  QualType ElemType = EReg->getElementType();
 
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
   std::optional<int64_t> ExtentN = getConcreteValue(Extent);
@@ -487,9 +499,7 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx,
   if (Problem == BadOffsetKind::Negative)
     ExtentN = std::nullopt;
 
-  int64_t ElemSize = ACtx.getTypeSizeInChars(ElemType).getQuantity();
-
-  bool UseByteOffsets = !tryDividePair(OffsetN, ExtentN, ElemSize);
+  bool UseByteOffsets = !tryDividePair(OffsetN, ExtentN, SU.asCharUnits());
   const char *OffsetOrIndex = UseByteOffsets ? "byte offset" : "index";
 
   SmallString<256> Buf;
@@ -501,7 +511,7 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx,
     // natural to mention the element type later where the extent is described,
     // but if the extent is unknown/irrelevant, then the element type can be
     // inserted into the message at this point.
-    Out << "'" << ElemType.getAsString() << "' element in ";
+    Out << SU.asElementName(/*ForceBytes=*/false) << " in ";
   }
   Out << RegName << " at ";
   if (OffsetN) {
@@ -517,10 +527,8 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx,
       Out << *ExtentN;
     else
       Out << "a single";
-    if (UseByteOffsets)
-      Out << " byte";
-    else
-      Out << " '" << ElemType.getAsString() << "' element";
+
+    Out << ' ' << SU.asElementName(/*ForceBytes=*/UseByteOffsets);
 
     if (*ExtentN > 1)
       Out << "s";
@@ -694,8 +702,9 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     return;
   }
   default: {
-    Messages Msgs = getNonTaintMsgs(C.getASTContext(), RN, ByteOffset,
-                                    Extent, Location, *Res.getBadOffsetKind());
+    SizeUnit SU = SizeUnit::forSVal(Location, C.getASTContext());
+    Messages Msgs =
+        getNonTaintMsgs(RN, SU, ByteOffset, Extent, *Res.getBadOffsetKind());
     reportOOB(C, Res.getState(), Msgs, ByteOffset, Extent);
     return;
   }
