@@ -119,6 +119,15 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   listener.StartListeningForEventClass(
       debugger, lldb::SBThread::GetBroadcasterClassName(),
       lldb::SBThread::eBroadcastBitStackChanged);
+  // Listen for target events.
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBTarget::GetBroadcasterClassName(),
+      lldb::SBTarget::eBroadcastBitBreakpointChanged |
+          lldb::SBTarget::eBroadcastBitModulesLoaded |
+          lldb::SBTarget::eBroadcastBitModulesUnloaded |
+          lldb::SBTarget::eBroadcastBitSymbolsLoaded |
+          lldb::SBTarget::eBroadcastBitSymbolsChanged |
+          lldb::SBTarget::eBroadcastBitNewTargetCreated);
 
   // Create a new event thread and store it.
   auto new_thread_sp = std::make_shared<ManagedEventThread>(
@@ -137,7 +146,18 @@ DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
     if (dap && dap->target.IsValid() && dap->target == target)
       return dap;
 
-  return nullptr;
+  // Fallback for events that fire before SetTarget binds the target.
+  // Route to the unique DAP for this target's debugger if there is one.
+  const lldb::user_id_t debugger_id = target.GetDebugger().GetID();
+  DAP *unique_dap = nullptr;
+  for (const auto &[loop, dap] : m_active_sessions) {
+    if (!dap || dap->debugger.GetID() != debugger_id)
+      continue;
+    if (unique_dap)
+      return nullptr;
+    unique_dap = dap;
+  }
+  return unique_dap;
 }
 
 void DAPSessionManager::ReleaseExpiredEventThreads() {
