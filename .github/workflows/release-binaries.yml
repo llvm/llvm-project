@@ -312,8 +312,9 @@ jobs:
       if: runner.os == 'Windows' && failure()
       env:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
+        BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
       run: |
-        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:RUNNER_ARCH.ToLower())/_CPack_Packages/win64/NSIS/NSISOutput.log
+        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/NSIS/NSISOutput.log
 
     - name: Generate sha256 digest for binaries
       id: digest
