@@ -699,13 +699,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
 
-  addRulesForGOpcs({G_BUILD_VECTOR})
+  addRulesForGOpcs({G_BUILD_VECTOR, G_MERGE_VALUES})
       .Any({{UniBRC, S16}, {{}, {}, VerifyAllSgpr}})
       .Any({{UniBRC, BRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC, S16}, {{}, {}, ApplyAllVgpr}})
       .Any({{DivBRC, BRC}, {{}, {}, ApplyAllVgpr}});
 
-  addRulesForGOpcs({G_MERGE_VALUES, G_CONCAT_VECTORS})
+  addRulesForGOpcs({G_CONCAT_VECTORS})
       .Any({{UniBRC, BRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC, BRC}, {{}, {}, ApplyAllVgpr}});
 
@@ -1645,7 +1645,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_global_prefetch}).Any({{}, {{}, {IntrId, VgprP1}}});
 
-  addRulesForIOpcs({amdgcn_s_prefetch_data})
+  addRulesForIOpcs({amdgcn_s_prefetch_data, amdgcn_s_prefetch_inst})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
 
   addRulesForIOpcs({amdgcn_class})
@@ -2124,6 +2124,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                    Standard)
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_frexp_exp})
+      .Any({{UniS16}, {{UniInVgprS16}, {IntrId, Vgpr16}}})
+      .Any({{DivS16}, {{Vgpr16}, {IntrId, Vgpr16}}})
+      .Any({{UniS32, _, S32}, {{UniInVgprS32}, {IntrId, Vgpr32}}})
+      .Any({{DivS32, _, S32}, {{Vgpr32}, {IntrId, Vgpr32}}})
+      .Any({{UniS32, _, S64}, {{UniInVgprS32}, {IntrId, Vgpr64}}})
+      .Any({{DivS32, _, S64}, {{Vgpr32}, {IntrId, Vgpr64}}});
 
   addRulesForIOpcs({amdgcn_div_fmas}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}})
