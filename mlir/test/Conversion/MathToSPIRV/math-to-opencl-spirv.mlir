@@ -44,6 +44,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %15 = math.floor %arg0 : f32
   // CHECK: spirv.CL.erf %{{.*}}: f32
   %16 = math.erf %arg0 : f32
+  // CHECK: spirv.CL.erfc %{{.*}}: f32
+  %erfc = math.erfc %arg0 : f32
   // CHECK: spirv.CL.round %{{.*}}: f32
   %17 = math.round %arg0 : f32
   // CHECK: spirv.CL.tan %{{.*}}: f32
