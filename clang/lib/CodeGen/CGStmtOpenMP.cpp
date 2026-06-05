@@ -1159,17 +1159,20 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
 
       if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
-        Address PrivateAddr = CreateMemTemp(VD->getType(), VD->getName());
+        const auto *VDInit =
+            cast<VarDecl>(cast<DeclRefExpr>(*InitsRef)->getDecl());
         DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(BD),
                         /*RefersToEnclosingVariableOrCapture=*/true,
                         BD->getType(), VK_LValue, (*IRef)->getExprLoc());
         LValue OriginalLVal = EmitLValue(&DRE);
-        RValue OrigValue =
-            EmitLoadOfLValue(OriginalLVal, (*IRef)->getExprLoc());
-        EmitStoreThroughLValue(OrigValue,
-                               MakeAddrLValue(PrivateAddr, VD->getType()));
-        LocalDeclMap.try_emplace(VD, PrivateAddr);
-        bool IsRegistered = PrivateScope.addPrivate(BD, PrivateAddr);
+        Address OriginalAddr = OriginalLVal.getAddress();
+        // Emit private VarDecl with copy init. Remap VDInit to point to the
+        // original binding so EmitDecl properly initializes VD.
+        setAddrOfLocalVar(VDInit, OriginalAddr);
+        EmitDecl(*VD);
+        LocalDeclMap.erase(VDInit);
+        Address VDAddr = GetAddrOfLocalVar(VD);
+        bool IsRegistered = PrivateScope.addPrivate(BD, VDAddr);
         assert(IsRegistered &&
                "firstprivate var already registered as firstprivate");
         (void)IsRegistered;

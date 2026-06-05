@@ -5444,8 +5444,7 @@ getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
   RefExpr = RefExpr->IgnoreParenImpCasts();
   auto *DE = dyn_cast_or_null<DeclRefExpr>(RefExpr);
   auto *ME = dyn_cast_or_null<MemberExpr>(RefExpr);
-  if ((!DE ||
-       (!isa<VarDecl>(DE->getDecl()) && !isa<BindingDecl>(DE->getDecl()))) &&
+  if ((!DE || (!isa<VarDecl, BindingDecl>(DE->getDecl()))) &&
       (S.getCurrentThisType().isNull() || !ME ||
        !isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()) ||
        !isa<FieldDecl>(ME->getMemberDecl()))) {

@@ -19510,6 +19510,10 @@ static bool captureInCapturedRegion(
     if (VarDecl *VD = S.OpenMP().isOpenMPCapturedDecl(Var)) {
       Var = VD; // Capture the DecompositionDecl.
       bool HasConst = DeclRefType.isConstQualified();
+      // Note: DeclRefType should remain the BindingDecl's type (e.g., int),
+      // not the DecompositionDecl's type (e.g., Point). The variable being
+      // captured is the DecompositionDecl, but expressions still reference
+      // the individual binding's type.
       DeclRefType = DeclRefType.getUnqualifiedType();
       // Don't lose diagnostics about assignments to const.
       if (HasConst)

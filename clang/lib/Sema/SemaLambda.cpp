@@ -1974,6 +1974,13 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
     // binding.
     auto *BD = dyn_cast<BindingDecl>(Var);
     if (IsOpenMPMapping && BD)
+      // When capturing a BindingDecl in an OpenMP mapping context, we need to
+      // capture the DecompositionDecl instead. BindingDecls are references to
+      // storage owned by the DecompositionDecl.
+      // Example:
+      //   auto [a, b] = p;
+      //   auto lambda = [a]() { return a; };  // In OpenMP context.
+      // This is reached during lambda capture for OpenMP mappings.
       Var = cast<BindingDecl>(Var)->getDecomposedDecl();
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(

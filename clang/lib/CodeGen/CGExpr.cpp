@@ -3618,7 +3618,9 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
       Addr = Addr.withElementType(ExpectedTy);
 
     Expr::EvalResult Result;
-    ASE->getIdx()->EvaluateAsInt(Result, getContext());
+    [[maybe_unused]] bool Success =
+        ASE->getIdx()->EvaluateAsInt(Result, getContext());
+    assert(Success && "Expected constant integer index for array subscript");
     uint64_t Idx = Result.Val.getInt().getZExtValue();
     Address EltAddr = Builder.CreateConstArrayGEP(Addr, Idx);
     return MakeAddrLValue(EltAddr, BD->getType(), BaseLVal.getBaseInfo(),
@@ -3832,7 +3834,9 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
           CGM.getLangOpts().OpenMP) {
         auto NameIt = OMPPrivatizedBindingsByName.find(BD->getName());
         if (NameIt != OMPPrivatizedBindingsByName.end()) {
-          return MakeAddrLValue(NameIt->second, E->getType(),
+          assert(NameIt->second.has_value() &&
+                 "Expected valid binding address");
+          return MakeAddrLValue(*NameIt->second, E->getType(),
                                 AlignmentSource::Decl);
         }
         return EmitOMPCapturedBindingLValue(BD);
