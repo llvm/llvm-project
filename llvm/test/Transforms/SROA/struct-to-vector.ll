@@ -387,3 +387,19 @@ cond.end.ptr:
   call void @llvm.lifetime.end.p0(ptr %temp)
   ret void
 }
+
+%struct.i5x2 = type { i5, i5 }
+define void @struct_i5x2_memcpy_into_alloca(ptr %c) {
+entry:
+  %e = alloca %struct.i5x2, align 1
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %e, ptr align 1 %c, i32 2, i1 true)
+  ret void
+}
+
+%struct.i32x3 = type { i32, i32, i32 }
+define void @struct_i32x3_memcpy_into_alloca(ptr %c) {
+entry:
+  %e = alloca %struct.i32x3, align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %e, ptr align 4 %c, i32 12, i1 true)
+  ret void
+}

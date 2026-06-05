@@ -5090,9 +5090,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
 /// Try to canonicalize a homogeneous struct partition to a vector type.
 ///
-/// We can do this if all the elements of the struct are the same and tightly
-/// packed. This can sometimes eliminate allocas because structs cannot get
-/// promoted to LLVM values, but vectors can.
+/// We can do this if all the elements of the struct are the same and the
+/// corresponding vector has the same byte-level layout. This can sometimes
+/// eliminate allocas because structs cannot get promoted to LLVM values, but
+/// vectors can.
 ///
 /// We only apply this transformation when all users of the alloca are memory
 /// intrinsics. Otherwise, if there is a load or store of some other type to the
@@ -5125,9 +5126,19 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
       !IsIntegralPointerTy)
     return nullptr;
 
+  // Ensure the struct is tightly packed so that the bit-layout is the same as
+  // the corresponding vector. For example, this prevents a miscompile for
+  // { i5, i5 }, which has padding after each i5 field, whereas <i5, i5> has
+  // tightly packed elements and trailing padding. So if you loaded an { i5, i5 }
+  // memory layout as <i5, i5> you wouldn't correctly load each element.
+  if (DL.getTypeSizeInBits(EltTy) != DL.getTypeAllocSizeInBits(EltTy))
+    return nullptr;
+
   auto *VTy = FixedVectorType::get(EltTy, NumElts);
   TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
-  TypeSize VectorSize = DL.getTypeAllocSize(VTy);
+  TypeSize VectorSize = DL.getTypeStoreSize(VTy);
+  // After ruling out per-element padding, make sure a vector load/store
+  // covers the same number of bytes as the struct layout.
   if (StructSize != VectorSize)
     return nullptr;
 
