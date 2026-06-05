@@ -1442,13 +1442,14 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
   return m_qHostInfo_is_valid == eLazyBoolYes;
 }
 
-int GDBRemoteCommunicationClient::SendStdinNotification(const char *data,
-                                                        size_t data_len) {
+int GDBRemoteCommunicationClient::SendStdinNotification(
+    const char *data, size_t data_len, std::chrono::seconds interrupt_timeout) {
   StreamString packet;
   packet.PutCString("I");
   packet.PutBytesAsRawHex8(data, data_len);
   StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(packet.GetString(), response) ==
+  if (SendPacketAndWaitForResponse(packet.GetString(), response,
+                                   interrupt_timeout) ==
       PacketResult::Success) {
     return 0;
   }

@@ -3338,7 +3338,7 @@ size_t ProcessGDBRemote::PutSTDIN(const char *src, size_t src_len,
     ConnectionStatus status;
     m_stdio_communication.WriteAll(src, src_len, status, nullptr);
   } else if (m_stdin_forward) {
-    m_gdb_comm.SendStdinNotification(src, src_len);
+    m_gdb_comm.SendStdinNotification(src, src_len, GetInterruptTimeout());
   }
   return 0;
 }
