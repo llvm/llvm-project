@@ -823,6 +823,28 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
   if (CheckingGroups.size() < 2)
     return;
 
+  // We try to merge groups produced by groupChecks when their pointers follow
+  // a stencil access pattern. groupChecks intentionally only merges pointers
+  // whose min/max bounds differ by constants, because that keeps each runtime
+  // check precise. Stencil kernels often read the same underlying object at
+  // several loop-invariant stride offsets, so those groups remain separate and
+  // can produce too many checks. Here we trade some precision for fewer
+  // checks by replacing a set of same-dependence, same-alias read groups with
+  // one conservative bounding group.
+  //
+  // We use the following algorithm to construct a merged stencil group:
+  //   - collect checking groups that share both DependencySetId and AliasSetId;
+  //   - reject groups with writes, predicated accesses, different access
+  //     ranges, or different recurrence steps;
+  //   - use one member as the base and decompose each other member's offset
+  //     from that base as C + sum(Coeff[Stride] * Stride), where Stride is
+  //     loop-invariant;
+  //   - build one bounding range by taking the min/max constant offset and the
+  //     min/max coefficient for each stride, adding predicates for strides
+  //     that are not already known positive;
+  //   - commit the merge only if the local cost model reduces the number of
+  //     checks after accounting for any new predicates.
+
   // Stencil merging runs when either:
   //   - the flag is set to 'force' (-stencil-runtime-check-merge=force), or
   //   - the flag is set to 'auto' (-stencil-runtime-check-merge=auto) AND the
