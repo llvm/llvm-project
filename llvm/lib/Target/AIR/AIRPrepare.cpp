@@ -1623,11 +1623,22 @@ static bool feedsThreadgroupGEPIndex(Value *Val) {
   return false;
 }
 
+static constexpr uint64_t kMaxAggregateFoldWork = 4096;
+
 static bool foldConditionalConstants(Module &M) {
   bool Changed = false;
   TargetLibraryInfoImpl TLIImpl(Triple(M.getTargetTriple()));
   for (Function &F : M) {
     if (F.isDeclaration())
+      continue;
+
+    uint64_t AggregateWork = 0;
+    for (BasicBlock &BB : F)
+      for (Instruction &I : BB)
+        if (auto *IVI = dyn_cast<InsertValueInst>(&I))
+          if (auto *STy = dyn_cast<StructType>(IVI->getType()))
+            AggregateWork += STy->getNumElements();
+    if (AggregateWork > kMaxAggregateFoldWork)
       continue;
 
     SCCPSolver Solver(
