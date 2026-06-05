@@ -193,9 +193,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
     setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
 
+    // Integer <-> Float conversions are keyed on the integer type. Make these
+    // custom so that we can handle the f16 case. Other float types use their
+    // default expansion.
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
     if (Subtarget.isGP64bit())
       setOperationAction(ISD::SINT_TO_FP, MVT::i64, Custom);
+
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i128, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i128, Custom);
 
     setTargetDAGCombine({ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR});
   }
@@ -525,12 +535,39 @@ SDValue MipsSETargetLowering::lowerINT_TO_FP(SDValue Op,
   if (Op.getValueType() != MVT::f16)
     return Op;
 
-  // The f16 type is storage-only, and hence needs special handling. An
-  // f16 cannot be produced directly, so convert the integer to f32 and round
-  // the result down to f16.
+  // For f16, first convert the integer to f32, then convert to f16.
   SDLoc DL(Op);
   SDValue FP = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Op.getOperand(0));
   return DAG.getFPExtendOrRound(FP, DL, MVT::f16);
+}
+
+SDValue MipsSETargetLowering::lowerFP_TO_INT(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDValue InOp = Op.getOperand(0);
+
+  // For f16, first convert to f32 and go from there.
+  if (InOp.getValueType() == MVT::f16) {
+    EVT VT = Op.getValueType();
+
+    assert((VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128) &&
+           "Unexpected result type for f16 -> integer conversion");
+
+    SDLoc DL(Op);
+    SDValue FP = DAG.getFPExtendOrRound(InOp, DL, MVT::f32);
+
+    // Use a trick from TargetLowering::expandFP_TO_UINT: we know that every
+    // integer value that can be represented by f16 is representable by i32, so
+    // fptoui and fptosi are equivalent.
+    //
+    // NOTE: the result of fptoui is poison when the value does not fit in the
+    // destination type (e.g. because it is negative).
+    return DAG.getNode(ISD::FP_TO_SINT, DL, VT, FP);
+  }
+
+  // Use the default lowering for f32/f64.
+  if (!isTypeLegal(Op.getValueType()))
+    return SDValue();
+  return MipsTargetLowering::LowerOperation(Op, DAG);
 }
 
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
@@ -582,6 +619,9 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::SINT_TO_FP:
     return lowerINT_TO_FP(Op, DAG);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return lowerFP_TO_INT(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   case ISD::FADD:
     return lowerR5900FPOp(Op, DAG, RTLIB::ADD_F32);
