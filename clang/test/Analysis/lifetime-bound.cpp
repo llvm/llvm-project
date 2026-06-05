@@ -108,4 +108,20 @@ void caller_six() {
 
 
 // Function returns a reference and has an annotated parameter
+int& func(int& some_number [[clang::lifetimebound]]);
+
+void clang_analyzer_lifetime_bound(int&);
+
+void caller_seven() {
+  int f = 15;
+  auto& bind = func(f);
+
+  clang_analyzer_lifetime_bound(bind);
+                                       // expected-warning@-1 {{Origin bound to some_number}}
+                                      // expected-warning@-1 {{Origin contains loan some_number}}
+  clang_analyzer_dump(bind);
+
+// The FIXME about the full warning applies to this text case as well.
+}
+
 

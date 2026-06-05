@@ -145,7 +145,7 @@ void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const Cal
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
-
+  llvm::errs() << "ArgSValSym: " << (ArgSValSym ? "non-null" : "null") << "\n";
   if (ArgSValSym) {
     if (const auto *ArgValLookFor = State->get<LifetimeBoundMap>(ArgSValSym)) {
       OS << " Origin " << ArgSValSym << " contains loan " << *ArgValLookFor;
@@ -154,7 +154,13 @@ void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const Cal
       Str.clear();
     }
   }
+
+  llvm::errs() << "ArgValRegion: " << (ArgValRegion ? "non-null" : "null") << "\n";
   if (ArgValRegion) {
+    llvm::errs() << "\n";
+    llvm::errs() << "ArgValRegion: ";
+    ArgValRegion->dump();
+    llvm::errs() << "\n";
     if (const auto *AttrValLookFor = State->get<LifetimeBoundMapVal>(ArgValRegion)) {
       OS << " Origin " << ArgValRegion << " bound to " << *AttrValLookFor;
       auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
@@ -163,6 +169,7 @@ void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const Cal
     }
   }
 }
+
 
 void ento::registerLifetimeAnnotations(CheckerManager &mgr) {
   mgr.registerChecker<LifetimeAnnotations>();
