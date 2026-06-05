@@ -236,6 +236,7 @@ typedef uint32_t ze_command_queue_flags_t;
 typedef enum _ze_command_queue_flag_t {
   ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY = ZE_BIT(0),
   ZE_COMMAND_QUEUE_FLAG_IN_ORDER = ZE_BIT(1),
+  ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT = ZE_BIT(2),
   ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32 = 0x7fffffff
 } ze_command_queue_flag_t;
 
@@ -861,6 +862,15 @@ ZE_APIEXPORT ze_result_t ZE_APICALL
 zeEventHostSynchronize(ze_event_handle_t hEvent, uint64_t timeout);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeEventQueryKernelTimestamp(
     ze_event_handle_t hEvent, ze_kernel_timestamp_result_t *dstptr);
+ZE_APIEXPORT ze_result_t ZE_APICALL
+zeEventQueryStatus(ze_event_handle_t hEvent);
+
+/* Event append functions on command lists */
+ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendSignalEvent(
+    ze_command_list_handle_t hCommandList, ze_event_handle_t hEvent);
+ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendWaitOnEvents(
+    ze_command_list_handle_t hCommandList, uint32_t numEvents,
+    ze_event_handle_t *phEvents);
 
 /* Fence functions */
 ZE_APIEXPORT ze_result_t ZE_APICALL

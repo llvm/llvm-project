@@ -2382,7 +2382,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
                                                        : Intrinsic::arm_strexd);
     llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty);
 
-    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
+    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     Value *Val = EmitScalarExpr(E->getArg(0));
     Builder.CreateStore(Val, Tmp);
 
@@ -3939,11 +3939,13 @@ CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
   if (TypeFlags.isOverloadWhileRW())
     return {getSVEPredType(TypeFlags), Ops[0]->getType()};
 
+  if (TypeFlags.isOverloadDefaultAndOp0())
+    return {DefaultType, Ops[0]->getType()};
+
   if (TypeFlags.isOverloadFirstandLast())
     return {Ops[0]->getType(), Ops.back()->getType()};
 
-  if (TypeFlags.isReductionQV() && !ResultType->isScalableTy() &&
-      ResultType->isVectorTy())
+  if (TypeFlags.isReductionQV())
     return {ResultType, Ops[1]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
@@ -4768,7 +4770,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                              : Intrinsic::aarch64_stxp);
     llvm::Type *STy = llvm::StructType::get(Int64Ty, Int64Ty);
 
-    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
+    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     EmitAnyExprToMem(E->getArg(0), Tmp, Qualifiers(), /*init*/ true);
 
     Tmp = Tmp.withElementType(STy);
@@ -7115,6 +7117,34 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vdotq_laneq_f32_mf8_fpm:
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot4_lane,
                                ExtendLaneArg, FloatTy, Ops, E, "fdot4_lane");
+
+  case NEON::BI__builtin_neon_vdot_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_f32_f16: {
+    llvm::Type *InputTy =
+        llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = {Ty, InputTy};
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_fdot, Tys),
+                        Ops, "vdot");
+  }
+
+  case NEON::BI__builtin_neon_vdot_lane_f32_f16:
+  case NEON::BI__builtin_neon_vdot_laneq_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_lane_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_laneq_f32_f16: {
+    llvm::FixedVectorType *InputTy =
+        llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::FixedVectorType *LaneTy = llvm::FixedVectorType::get(
+        HalfTy, Ops[2]->getType()->getPrimitiveSizeInBits() / 16);
+    // Treat the lane argument as a splat and use non-lane version of the
+    // intrinsic.
+    Ops[2] = Builder.CreateBitCast(Ops[2], LaneTy);
+    Ops[2] = EmitNeonSplat(Ops[2], cast<ConstantInt>(Ops[3]),
+                           InputTy->getElementCount());
+    llvm::Type *Tys[2] = {Ty, InputTy};
+    Ops.pop_back();
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_fdot, Tys),
+                        Ops, "vdot");
+  }
 
   case NEON::BI__builtin_neon_vmlalbq_f16_mf8_fpm:
     return EmitFP8NeonCall(Intrinsic::aarch64_neon_fp8_fmlalb,

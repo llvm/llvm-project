@@ -2144,6 +2144,21 @@ Verifier::visitModuleFlag(const MDNode *Op,
           "SemanticInterposition metadata requires constant integer argument");
   }
 
+  if (ID->getString() == "amdgpu.buffer.oob.mode" ||
+      ID->getString() == "amdgpu.tbuffer.oob.mode") {
+    Check(MFB == Module::Max,
+          "'" + ID->getString() +
+              "' module flag must use 'max' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    if (Value) {
+      Check(Value->getZExtValue() <= 2,
+            "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+    }
+  }
+
   if (ID->getString() == "CG Profile") {
     for (const MDOperand &MDO : cast<MDNode>(Op->getOperand(2))->operands())
       visitModuleFlagCGProfileEntry(MDO);
@@ -4020,7 +4035,8 @@ void Verifier::visitCallBase(CallBase &Call) {
 
     if (Call.paramHasAttr(i, Attribute::ImmArg)) {
       Value *ArgVal = Call.getArgOperand(i);
-      Check(isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal),
+      Check((isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal)) &&
+                !isa<VectorType>(ArgVal->getType()),
             "immarg operand has non-immediate parameter", ArgVal, Call);
 
       // If the imm-arg is an integer and also has a range attached,
@@ -7221,6 +7237,26 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         AMDGPU::isFlatGlobalAddrSpace(
             Call.getArgOperand(0)->getType()->getPointerAddressSpace()),
         "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
+    break;
+  }
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
+    // The data byte size immarg is operand 2 for every load-to-LDS intrinsic.
+    uint64_t Size = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
+    Check(Size == 1 || Size == 2 || Size == 4 || Size == 12 || Size == 16,
+          "invalid data size for load-to-LDS intrinsic; must be 1, 2, 4, 12, "
+          "or 16",
+          &Call);
     break;
   }
   case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:

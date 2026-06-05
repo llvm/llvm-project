@@ -8059,10 +8059,6 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
   static const EqualBBWrapper *getEmptyKey() {
     return static_cast<EqualBBWrapper *>(DenseMapInfo<void *>::getEmptyKey());
   }
-  static const EqualBBWrapper *getTombstoneKey() {
-    return static_cast<EqualBBWrapper *>(
-        DenseMapInfo<void *>::getTombstoneKey());
-  }
   static unsigned getHashValue(const EqualBBWrapper *EBW) {
     BasicBlock *BB = EBW->BB;
     UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
@@ -8083,8 +8079,7 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
   }
   static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
     auto *EKey = DenseMapInfo<EqualBBWrapper *>::getEmptyKey();
-    auto *TKey = DenseMapInfo<EqualBBWrapper *>::getTombstoneKey();
-    if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
+    if (LHS == EKey || RHS == EKey)
       return LHS == RHS;
 
     BasicBlock *A = LHS->BB;
@@ -8761,10 +8756,14 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use we can handle, avoid hurting compile time with
-    // long uselists
-    auto FindUse = llvm::find_if(I->uses(), [](auto &U) {
+    // Find the first same-block use with a UB-triggering opcode, skipping
+    // cross-block or before-I uses.
+    auto FindUse = llvm::find_if(I->uses(), [I](auto &U) {
       auto *Use = cast<Instruction>(U.getUser());
+      // Only same-block uses after I can witness UB at I's program point.
+      // Self-uses and before-I uses can occur when I is a PHI node.
+      if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
+        return false;
       // Change this list when we want to add new instructions.
       switch (Use->getOpcode()) {
       default:
@@ -8791,12 +8790,6 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       return false;
     auto &Use = *FindUse;
     auto *User = cast<Instruction>(Use.getUser());
-    // Bail out if User is not in the same BB as I or User == I or User comes
-    // before I in the block. The latter two can be the case if User is a
-    // PHI node.
-    if (User->getParent() != I->getParent() || User == I ||
-        User->comesBefore(I))
-      return false;
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)

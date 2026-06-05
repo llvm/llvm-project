@@ -58,6 +58,13 @@ config_setting(
     flag_values = {":mpfr": "system"},
 )
 
+cc_library(
+    name = "libmpfr_system",
+    linkopts = ["-lmpfr"],
+    tags = ["manual"],
+    visibility = ["//libc:__subpackages__"],
+)
+
 # A flag to pick which `mpc` to use for math tests.
 # Usage: `--@llvm-project//libc:mpc=<disable|external|system>`.
 # Flag documentation: https://bazel.build/extending/config
@@ -84,6 +91,13 @@ config_setting(
 config_setting(
     name = "mpc_system",
     flag_values = {":mpc": "system"},
+)
+
+cc_library(
+    name = "libmpc_system",
+    linkopts = ["-lmpc"],
+    tags = ["manual"],
+    visibility = ["//libc:__subpackages__"],
 )
 
 # A flag to enable modular format for printf.
@@ -1516,6 +1530,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_fcntl",
         ":__support_osutil_linux_syscall_wrappers_lseek",
+        ":__support_osutil_linux_syscall_wrappers_open",
         ":__support_osutil_syscall",
         ":hdr_fcntl_macros",
         ":hdr_stdint_proxy",
@@ -2338,14 +2353,14 @@ libc_support_library(
     name = "__support_osutil_syscall",
     hdrs = ["src/__support/OSUtil/syscall.h"],
     textual_hdrs = select({
-        "@platforms//os:macos": [
-            "src/__support/OSUtil/darwin/syscall.h",
-            "src/__support/OSUtil/darwin/arm/syscall.h",
-        ],
         "@platforms//os:linux": [
             "src/__support/OSUtil/linux/syscall.h",
             "src/__support/OSUtil/linux/aarch64/syscall.h",
             "src/__support/OSUtil/linux/x86_64/syscall.h",
+        ],
+        "@platforms//os:macos": [
+            "src/__support/OSUtil/darwin/syscall.h",
+            "src/__support/OSUtil/darwin/arm/syscall.h",
         ],
         "@platforms//os:windows": [],
     }),
@@ -2595,6 +2610,7 @@ libc_support_library(
         ":__support_common",
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_munmap",
+        ":__support_osutil_linux_syscall_wrappers_open",
         ":__support_osutil_syscall",
         ":__support_threads_callonce",
         ":hdr_fcntl_macros",
@@ -2668,8 +2684,8 @@ libc_support_library(
     name = "__support_osutil_io",
     hdrs = ["src/__support/OSUtil/io.h"],
     textual_hdrs = select({
-        "@platforms//os:macos": ["src/__support/OSUtil/darwin/io.h"],
         "@platforms//os:linux": ["src/__support/OSUtil/linux/io.h"],
+        "@platforms//os:macos": ["src/__support/OSUtil/darwin/io.h"],
         "@platforms//os:windows": ["src/__support/OSUtil/windows/io.h"],
     }),
     deps = [
@@ -6775,6 +6791,7 @@ libc_support_library(
         ":__support_math_exp10_float16_constants",
         ":__support_math_expf16_utils",
         ":hdr_stdint_proxy",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -14018,6 +14035,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_open",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
