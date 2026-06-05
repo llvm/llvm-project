@@ -264,6 +264,24 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
       .has_value();
 }
 
+/// Check whether \p SU has a load dependency that is currently scheduled after
+/// \p Base (according to node number).
+static bool hasIntermediateLoadDependency(const SUnit &SU, const SUnit &Base) {
+  for (const SDep &Dep : SU.Preds) {
+    if (Dep.getKind() != SDep::Data)
+      continue;
+    const SUnit *Pred = Dep.getSUnit();
+    if (Pred->NodeNum < Base.NodeNum)
+      continue;
+    if (!Pred->isInstr())
+      continue;
+    const MachineInstr *MI = Pred->getInstr();
+    if (MI->mayLoad())
+      return true;
+  }
+  return false;
+}
+
 namespace {
 /// Adapts design from MacroFusion
 /// Puts valid candidate instructions back-to-back so they can easily
@@ -294,6 +312,8 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
 
       for (JSUI = ISUI + 1; JSUI != DAG->SUnits.end(); ++JSUI) {
         if (JSUI->isBoundaryNode())
+          continue;
+        if (hasIntermediateLoadDependency(*JSUI, *ISUI))
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
