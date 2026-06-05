@@ -126,9 +126,12 @@ public:
   /// (not poison) elements.
   LLVM_ABI bool containsUndefElement() const;
 
+  /// Return true if this is a fixed width vector constant that includes
+  /// any constant expressions.
+  LLVM_ABI bool containsConstantExpression() const;
+
   /// Return true if this is a vector constant where at least one element
-  /// satisfies the given predicate. For scalable vectors, the predicate is
-  /// only tested on the splat value.
+  /// satisfies the given predicate. Scalable vectors are not checked.
   LLVM_ABI bool
   containsMatchingVectorElement(function_ref<bool(Constant *)> PredFn) const;
 

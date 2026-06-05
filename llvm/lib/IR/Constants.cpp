@@ -347,15 +347,15 @@ bool Constant::containsUndefElement() const {
   });
 }
 
-bool Constant::containsMatchingVectorElement(
-    function_ref<bool(Constant *)> PredFn) const {
-  if (!getType()->isVectorTy())
+bool Constant::containsConstantExpression() const {
+  if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  if (Constant *SplatVal = getSplatValue())
-    if (PredFn(SplatVal))
-      return true;
+  return match(this, m_ContainsMatchingVectorElement(m_Isa<ConstantExpr>()));
+}
 
+bool Constant::containsMatchingVectorElement(
+    function_ref<bool(Constant *)> PredFn) const {
   if (auto *FVTy = dyn_cast<FixedVectorType>(getType())) {
     unsigned NumElts = FVTy->getNumElements();
     for (unsigned I = 0; I != NumElts; ++I) {

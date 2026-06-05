@@ -193,7 +193,8 @@ template <typename SPTy> struct ContainsMatchingVectorElement_match {
 };
 
 /// Match a vector constant where at least one of its elements matches the
-/// subpattern. Any bindings in the subpattern will be bound to the first match.
+/// subpattern. Scalable vector constants are not matched. Any bindings in the
+/// subpattern will be bound to the first match.
 template <typename SPTy>
 inline ContainsMatchingVectorElement_match<SPTy>
 m_ContainsMatchingVectorElement(const SPTy &SubPattern) {

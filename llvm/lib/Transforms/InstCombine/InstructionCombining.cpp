@@ -5503,10 +5503,8 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   };
 
   Constant *C;
-  if (match(Op0, m_CombineAnd(m_Constant(C),
-                              m_Unless(m_ContainsMatchingVectorElement(
-                                  m_Isa<ConstantExpr>())))) &&
-      C->containsUndefOrPoisonElement()) {
+  if (match(Op0, m_Constant(C)) && C->containsUndefOrPoisonElement() &&
+      !C->containsConstantExpression()) {
     if (Constant *Repl = getFreezeVectorReplacement(C))
       return replaceInstUsesWith(I, Repl);
   }

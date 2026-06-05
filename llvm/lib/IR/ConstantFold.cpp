@@ -359,8 +359,7 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
       return true;
 
     if (C->getType()->isVectorTy())
-      return !C->containsPoisonElement() &&
-             !match(C, m_ContainsMatchingVectorElement(m_Isa<ConstantExpr>()));
+      return !C->containsPoisonElement() && !C->containsConstantExpression();
 
     // TODO: Recursively analyze aggregates or other constants.
     return false;
