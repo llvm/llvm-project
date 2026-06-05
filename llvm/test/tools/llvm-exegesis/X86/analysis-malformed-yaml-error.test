@@ -1,0 +1,25 @@
+# Verify that in analysis mode genuinely ill-formed YAML (here an unknown key,
+# as opposed to an unknown opcode) is reported as a parse error rather than
+# being silently skipped the way a bitrotted/unknown-opcode entry is.
+
+# RUN: not llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering=naive -analysis-numpoints=1 2> %t.err
+# RUN: FileCheck %s < %t.err
+
+# CHECK-NOT: skipping benchmark entry
+# CHECK: error: unknown key 'bar'
+
+---
+mode:            uops
+key:
+  instructions:
+    - 'CMOV16rm AX AX RDI i_0x1 %noreg i_0x0 %noreg i_0x0'
+  config:          ''
+  register_initial_values: []
+  foo:          ''
+  bar: []
+cpu_name:        znver3
+llvm_triple:     x86_64-pc-linux-gnu
+num_repetitions: 10000
+measurements: []
+error:           ''
+...
