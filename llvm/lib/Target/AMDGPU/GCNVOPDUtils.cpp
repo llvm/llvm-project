@@ -286,6 +286,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
 
     BitVector VOPDCapable(DAG->SUnits.size());
     unsigned IIdx = 0;
+    // Pre-compute whether each individual instruction can be VOPD
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
       const MachineInstr *IMI = ISUI->getInstr();
