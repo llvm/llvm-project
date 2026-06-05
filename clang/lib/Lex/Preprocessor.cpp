@@ -826,7 +826,7 @@ bool Preprocessor::HandleDollarIdentifier(Token &Identifier) {
   if (Identifier.isAnnotation() || !getLangOpts().DollarMacros)
     return true;
 
-    // skip validation in macros
+  // skip validation in macros
   if (InMacroArgs || (CurLexer && (CurLexer->ParsingPreprocessorDirective ||
                                    CurLexer->isLexingRawMode())))
     return true;
