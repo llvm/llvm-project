@@ -747,10 +747,8 @@ private:
         // the first loop has a larger trip count. In this case it is possible
         // that the first loop is peeled to expose the fusion opportunity.
         // Peeling the second loop is not currently supported.
-        bool WillPeel = false;
-        if (FC0.AbleToPeel && TCDifference && *TCDifference > 0 &&
-            *TCDifference <= static_cast<int64_t>(FusionPeelMaxCount))
-          WillPeel = true;
+        bool WillPeel = FC0.AbleToPeel && TCDifference && *TCDifference > 0 &&
+            *TCDifference <= static_cast<int64_t>(FusionPeelMaxCount);
 
         if (!WillPeel && (!TCDifference || *TCDifference != 0)) {
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "
