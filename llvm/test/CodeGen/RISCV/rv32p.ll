@@ -733,6 +733,26 @@ define i32 @sadd_i32(i32 %x, i32 %y) {
   ret i32 %a
 }
 
+define i32 @ssh1sadd_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: ssh1sadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssh1sadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = call i32 @llvm.sshl.sat.i32(i32 %x, i32 1)
+  %a = call i32 @llvm.sadd.sat.i32(i32 %shl, i32 %y)
+  ret i32 %a
+}
+
+define i32 @ssh1sadd_i32_addself(i32 %x, i32 %y) {
+; CHECK-LABEL: ssh1sadd_i32_addself:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssh1sadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %x)
+  %a = call i32 @llvm.sadd.sat.i32(i32 %shl, i32 %y)
+  ret i32 %a
+}
+
 define i8 @ssub_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: ssub_i8:
 ; CHECK:       # %bb.0:
@@ -880,6 +900,88 @@ define i32 @aaddu2_i32(i32 %a, i32 %b) {
   %xor = xor i32 %a, %b
   %shift = lshr i32 %xor, 1
   %res = add i32 %and, %shift
+  ret i32 %res
+}
+
+define i32 @asub_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: asub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asub a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %sub = sub i64 %ext.a, %ext.b
+  %shift = ashr i64 %sub, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @asubu_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: asubu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %sub = sub i64 %ext.a, %ext.b
+  %shift = lshr i64 %sub, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhr_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhr a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhru_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhru_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhru a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhrsu_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhrsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhrsu_i32_commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhrsu_i32_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a1, a0
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
   ret i32 %res
 }
 

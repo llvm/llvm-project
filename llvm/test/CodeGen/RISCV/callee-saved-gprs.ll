@@ -37,7 +37,7 @@
 ; RUN:   | FileCheck %s -check-prefix=RV32I-ZILSD-WITH-FP
 ; RUN: llc -mtriple=riscv32 -mattr=+zilsd -target-abi ilp32e -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I-ZILSD-ILP32E
-; RUN: llc -mtriple=riscv32 -mattr=+zilsd,+zilsd-4byte-align -target-abi ilp32e -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+zilsd,+zilsd-word-align -target-abi ilp32e -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I-ZILSD-ILP32E-4BYTE
 
 @var = global [32 x i32] zeroinitializer
