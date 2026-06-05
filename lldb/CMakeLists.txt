@@ -100,8 +100,13 @@ if (LLDB_ENABLE_PYTHON)
   if(WIN32)
     # On Windows, FindPython3 doesn't reliably expose the runtime DLL path,
     # only the import library. CPython's DLL naming is standard.
-    set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-        "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}.dll")
+    if(MINGW)
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+          "libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.dll")
+    else()
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+          "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}.dll")
+    endif()
     message(STATUS "LLDB Python runtime DLL: ${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME} "
                    "(Python3_VERSION=${Python3_VERSION}, "
                    "limited_api=${LLDB_ENABLE_PYTHON_LIMITED_API})")
