@@ -7181,11 +7181,10 @@ static void emitLoadScalarOpsFromVGPRLoop(
           .addReg(VScalarOp);
 
       if (UseNewExecInstructions) {
-        auto CmpxMI =
-            BuildMI(LoopBB, LoopBB.end(), DL,
-                    TII.get(AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term))
-                .addReg(CurReg)
-                .addReg(VScalarOp);
+        auto CmpxMI = BuildMI(LoopBB, LoopBB.end(), DL,
+                              TII.get(AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term))
+                          .addReg(CurReg)
+                          .addReg(VScalarOp);
         if (I == LoopBB.end())
           I = CmpxMI.getInstr()->getIterator();
       } else {
@@ -7254,11 +7253,10 @@ static void emitLoadScalarOpsFromVGPRLoop(
             NumSubRegs <= 2 ? 0 : TRI->getSubRegFromChannel(Idx, 2);
 
         if (UseNewExecInstructions) {
-          auto CmpxMI =
-              BuildMI(LoopBB, LoopBB.end(), DL,
-                      TII.get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term))
-                  .addReg(CurReg)
-                  .addReg(VScalarOp, VScalarOpUndef, SubReg);
+          auto CmpxMI = BuildMI(LoopBB, LoopBB.end(), DL,
+                                TII.get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term))
+                            .addReg(CurReg)
+                            .addReg(VScalarOp, VScalarOpUndef, SubReg);
           if (I == LoopBB.end())
             I = CmpxMI.getInstr()->getIterator();
         } else {
