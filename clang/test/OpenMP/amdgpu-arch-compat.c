@@ -9,4 +9,3 @@ void is_amdgcn();
 void is_amdgpu();
 #pragma omp end declare variant
 
-
