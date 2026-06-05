@@ -54,14 +54,12 @@ endforeach()
 set(EJIT_SOURCES
   EJit.cpp
   EJitRuntime.cpp
-  EJitRegistration.cpp
   EJitRegistryTable.c
   EJitOrcEngine.cpp
   EJitCompileDriver.cpp
   EJitCache.cpp
   EJitRuntimeState.cpp
   EJitModuleLoader.cpp
-  EJitLogger.cpp
   EJitRegistrationStore.cpp
   EJitStructFieldPass.cpp
   EJitOptimizer.cpp
@@ -71,6 +69,7 @@ set(EJIT_SOURCES
 # Async/sync compiler — excluded in freestanding mode (single-threaded, no std::thread)
 if(NOT EJIT_FREESTANDING)
   list(APPEND EJIT_SOURCES
+    EJitLogger.cpp
     EJitSyncCompiler.cpp
     EJitAsyncCompiler.cpp
   )
