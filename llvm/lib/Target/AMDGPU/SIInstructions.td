@@ -496,29 +496,23 @@ def S_AND_B32_term : WrapTerminatorInst<S_AND_B32>;
 def S_AND_SAVEEXEC_B32_term : WrapTerminatorInst<S_AND_SAVEEXEC_B32>;
 }
 
-class WrapTerminatorVALU<InstSI base_inst> : VPseudoInstSI<
+class WrapTerminatorVOPC<VOPC_Pseudo base_inst> : VPseudoInstSI<
       base_inst.OutOperandList,
       base_inst.InOperandList> {
   let Uses = base_inst.Uses;
   let Defs = base_inst.Defs;
-  let isTerminator = 1;
-  let isConvergent = base_inst.isConvergent;
-  let isCompare = base_inst.isCompare;
-  let hasSideEffects = base_inst.hasSideEffects;
-  let UseNamedOperandTable = base_inst.UseNamedOperandTable;
   let SchedRW = base_inst.SchedRW;
-  let VOPC = base_inst.VOPC;
+  let isTerminator = 1;
+  let isConvergent = 1;
+  let isCompare = 1;
+  let VOPC = 1;
 }
 
 let SubtargetPredicate = HasNoSdstCMPX in {
 def V_CMPX_EQ_U32_nosdst_e32_term
-  : WrapTerminatorVALU<V_CMPX_EQ_U32_nosdst_e32>;
-def V_CMPX_EQ_U32_nosdst_e64_term
-  : WrapTerminatorVALU<V_CMPX_EQ_U32_nosdst_e64>;
+  : WrapTerminatorVOPC<V_CMPX_EQ_U32_nosdst_e32>;
 def V_CMPX_EQ_U64_nosdst_e32_term
-  : WrapTerminatorVALU<V_CMPX_EQ_U64_nosdst_e32>;
-def V_CMPX_EQ_U64_nosdst_e64_term
-  : WrapTerminatorVALU<V_CMPX_EQ_U64_nosdst_e64>;
+  : WrapTerminatorVOPC<V_CMPX_EQ_U64_nosdst_e32>;
 }
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
