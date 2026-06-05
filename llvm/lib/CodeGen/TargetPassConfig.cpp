@@ -505,7 +505,8 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 
   SET_OPTION(EnableFastISelOption)
   SET_OPTION(EnableGlobalISelAbort)
-  SET_OPTION(EnableGlobalISelOption)
+  if (EnableGlobalISelOption.getNumOccurrences())
+    Opt.EnableGlobalISelOption = (EnableGlobalISelOption == cl::BOU_TRUE);
   SET_OPTION(EnableIPRA)
   SET_OPTION(OptimizeRegAlloc)
   SET_OPTION(VerifyMachineCode)

@@ -24,6 +24,7 @@ add_llvm_unittest(CodeGenTests
   AMDGPUMetadataTest.cpp
   AsmPrinterDwarfTest.cpp
   CCStateTest.cpp
+  CGPassBuilderOptionTest.cpp
   DIEHashTest.cpp
   DIETest.cpp
   DroppedVariableStatsMIRTest.cpp
