@@ -194,8 +194,8 @@ def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
 
-def FeatureZilsd4ByteAlign
-    : SubtargetFeature<"zilsd-4byte-align", "AllowZilsd4ByteAlign", "true",
+def FeatureZilsdWordAlign
+    : SubtargetFeature<"zilsd-word-align", "AllowZilsdWordAlign", "true",
                        "Allow 4-byte alignment for Zilsd LD/SD instructions">;
 
 // Multiply Extensions

@@ -358,6 +358,11 @@ New Compiler Flags
 - New option ``-fcrash-diagnostics-tar`` added to create an archive of crash
   reproducer files for easier bug filing.
 
+- There are a new pair of flags for riscv32 called ``-mzilsd-word-align`` and
+  ``-mzilsd-strict-align`` which control whether Zilsd accesses are allowed to
+  be aligned to 4-byte alignment rather than fully unaligned or fully (8-byte)
+  aligned.
+
 Deprecated Compiler Flags
 -------------------------
 

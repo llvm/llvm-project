@@ -2213,8 +2213,10 @@ bool LowerTypeTestsModule::lower() {
                 ->getUniqueInteger()
                 .getZExtValue());
         const GlobalValue::GUID GUID =
-            GlobalValue::getGUIDAssumingExternalLinkage(
-                GlobalValue::dropLLVMManglingEscape(FunctionName));
+            cast<ConstantAsMetadata>(FuncMD->getOperand(2))
+                ->getValue()
+                ->getUniqueInteger()
+                .getZExtValue();
         // Do not emit jumptable entries for functions that are not-live and
         // have no live references (and are not exported with cross-DSO CFI.)
         if (!ExportSummary->isGUIDLive(GUID))
@@ -2285,7 +2287,7 @@ bool LowerTypeTestsModule::lower() {
             F->setLinkage(GlobalValue::ExternalWeakLinkage);
 
           F->eraseMetadata(LLVMContext::MD_type);
-          for (unsigned I = 2; I < FuncMD->getNumOperands(); ++I)
+          for (unsigned I = 3; I < FuncMD->getNumOperands(); ++I)
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
         }
