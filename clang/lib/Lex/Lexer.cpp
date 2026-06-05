@@ -2022,7 +2022,7 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr,
     }
     if (C == '$') {
       // If we hit a $ and they are not supported in macros, we are done.
-      if (!LangOpts.DollarMacros)
+      if (!LangOpts.DollarMacros && !LangOpts.DollarIdents)
         break;
       // Otherwise, emit a diagnostic and continue.
       if (!isLexingRawMode())
@@ -4090,7 +4090,7 @@ LexStart:
     MIOpt.ReadToken();
     return LexIdentifierContinue(Result, CurPtr);
   case '$':   // $ in identifiers.
-    if (!LangOpts.DollarMacros) {
+    if (!LangOpts.DollarMacros && !LangOpts.DollarIdents) {
       Kind = tok::unknown;
       break;
     }
