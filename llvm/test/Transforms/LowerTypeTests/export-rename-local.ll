@@ -11,5 +11,5 @@ define internal void @external_addrtaken() !type !1 {
 
 !cfi.functions = !{!0}
 
-!0 = !{!"external_addrtaken", i8 0, !1}
+!0 = !{!"external_addrtaken", i8 0, i64 16594175687743574550, !1}
 !1 = !{i64 0, !"typeid1"}

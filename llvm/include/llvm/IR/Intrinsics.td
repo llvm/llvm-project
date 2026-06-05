@@ -783,7 +783,7 @@ class PureIntrinsic<list<LLVMType> ret_types,
                     string name = "",
                     list<SDNodeProperty> sd_properties = []>
   : DefaultAttrsIntrinsic<ret_types, param_types,
-      intr_properties 
+      intr_properties
         # [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison],
       name, sd_properties>;
 
@@ -907,14 +907,14 @@ def int_swift_async_context_addr : Intrinsic<[llvm_ptr_ty], [], []>;
 //
 def int_returnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
                                   [IntrNoMem, ImmArg<ArgIndex<0>>]>;
-def int_addressofreturnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], 
+def int_addressofreturnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [],
                                                        [IntrNoMem]>;
 def int_frameaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 def int_sponentry  : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
 def int_stackaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], []>;
-def int_read_register  : DefaultAttrsIntrinsic<[llvm_anyint_ty], 
-                             [llvm_metadata_ty], [IntrReadMem], 
+def int_read_register  : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                             [llvm_metadata_ty], [IntrReadMem],
                              "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
                                    [IntrNoCallback], "llvm.write_register">;
@@ -972,7 +972,7 @@ def int_thread_pointer : DefaultAttrsIntrinsic<
 // from being reordered overly much with respect to nearby access to the same
 // memory while not impeding optimization.
 def int_prefetch
-    : DefaultAttrsIntrinsic<[], 
+    : DefaultAttrsIntrinsic<[],
                 [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                 [IntrInaccessibleMemOrArgMemOnly,
                  ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
@@ -1970,7 +1970,7 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
 //
 // TODO: We should introduce a new memory kind fo traps (and other side effects
 //       we only model to keep things alive).
-def int_trap : Intrinsic<[], [], 
+def int_trap : Intrinsic<[], [],
                   [IntrNoReturn, IntrCold, IntrInaccessibleMemOnly,
                    IntrWriteMem]>,
                ClangBuiltin<"__builtin_trap">;
@@ -2030,7 +2030,7 @@ def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 // Like the sideeffect intrinsic defined above, this intrinsic is treated by the
 // optimizer as having opaque side effects so that it won't be get rid of or moved
 // out of the block it probes.
-def int_pseudoprobe : DefaultAttrsIntrinsic<[], 
+def int_pseudoprobe : DefaultAttrsIntrinsic<[],
                         [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
                         [IntrInaccessibleMemOnly]>;
 
@@ -2669,13 +2669,13 @@ def int_masked_scatter:
 
 def int_masked_expandload:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+            [llvm_anyptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
              LLVMMatchType<0>],
             [IntrReadMem, NoCapture<ArgIndex<0>>]>;
 
 def int_masked_compressstore:
   DefaultAttrsIntrinsic<[],
-            [llvm_anyvector_ty, llvm_ptr_ty,
+            [llvm_anyvector_ty, llvm_anyptr_ty,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrWriteMem, IntrArgMemOnly,
              NoCapture<ArgIndex<1>>]>;
@@ -2753,7 +2753,7 @@ def int_asan_check_memaccess :
 
 // Spin in an infinite loop (using instructions specified by the target) iff the
 // argument is true. Used to implement efficient conditional traps.
-def int_cond_loop : Intrinsic<[], [llvm_i1_ty], 
+def int_cond_loop : Intrinsic<[], [llvm_i1_ty],
                               [IntrNoMem, IntrHasSideEffects]>;
 
 // HWASan intrinsics to test whether a pointer is addressable.
