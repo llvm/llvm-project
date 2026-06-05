@@ -1381,9 +1381,10 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   return ReductionOperations;
 }
 
-InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
-                                         const SCEV *Step, BinaryOperator *BOp,
-                                         SmallVectorImpl<Instruction *> *Casts)
+InductionDescriptor::InductionDescriptor(
+    Value *Start, InductionKind K, const SCEV *Step, BinaryOperator *BOp,
+    SmallVectorImpl<Instruction *> *Casts,
+    ArrayRef<const SCEVPredicate *> NoWrapPreds)
     : StartValue(Start), IK(K), Step(Step), InductionBinOp(BOp) {
   assert(IK != IK_NoInduction && "Not an induction");
 
@@ -1412,6 +1413,7 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
 
   if (Casts)
     llvm::append_range(RedundantCasts, *Casts);
+  llvm::append_range(NoWrapPredicates, NoWrapPreds);
 }
 
 InductionDescriptor
@@ -1511,15 +1513,22 @@ bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
 /// If we are able to find such sequence, we return the instructions
 /// we found, namely %casted_phi and the instructions on its use-def chain up
 /// to the phi (not including the phi).
-static bool getCastsForInductionPHI(PredicatedScalarEvolution &PSE,
-                                    const SCEVUnknown *PhiScev,
-                                    const SCEVAddRecExpr *AR,
-                                    SmallVectorImpl<Instruction *> &CastInsts) {
+static bool
+getCastsForInductionPHI(PredicatedScalarEvolution &PSE,
+                        const SCEVUnknown *PhiScev, const SCEVAddRecExpr *AR,
+                        SmallVectorImpl<Instruction *> &CastInsts,
+                        ArrayRef<const SCEVPredicate *> NoWrapPreds) {
 
   assert(CastInsts.empty() && "CastInsts is expected to be empty.");
   auto *PN = cast<PHINode>(PhiScev->getValue());
-  assert(PSE.getSCEV(PN) == AR && "Unexpected phi node SCEV expression");
+
+  // Build a predicate to rewrite SCEVs of values in the cast chain using the
+  // predicates needed for this induction.
+  ScalarEvolution &SE = *PSE.getSE();
+  SCEVUnionPredicate NoWrapUnionPred(NoWrapPreds, SE);
   const Loop *L = AR->getLoop();
+  assert(SE.rewriteUsingPredicate(SE.getSCEV(PN), L, NoWrapUnionPred) == AR &&
+         "Unexpected phi node SCEV expression");
 
   // Find any cast instructions that participate in the def-use chain of
   // PhiScev in the loop.
@@ -1564,8 +1573,10 @@ static bool getCastsForInductionPHI(PredicatedScalarEvolution &PSE,
     if (!Inst || !L->contains(Inst)) {
       return false;
     }
-    auto *AddRec = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(Val));
-    if (AddRec && PSE.areAddRecsEqualWithPreds(AddRec, AR))
+    // Create AddRec with NoWrapPredicates applied.
+    auto *AddRec = dyn_cast<SCEVAddRecExpr>(
+        SE.rewriteUsingPredicate(SE.getSCEV(Val), L, NoWrapUnionPred));
+    if (AddRec && PSE.areAddRecsEqualWithPreds(AddRec, AR, NoWrapPreds))
       InCastSequence = true;
     if (InCastSequence) {
       // Only the last instruction in the cast sequence is expected to have
@@ -1603,9 +1614,12 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
   const SCEV *PhiScev = PSE.getSCEV(Phi);
   const auto *AR = dyn_cast<SCEVAddRecExpr>(PhiScev);
 
+  // Collect predicates needed to force the SCEV into an AddRecExpr.
+  SmallVector<const SCEVPredicate *, 2> Preds;
+
   // We need this expression to be an AddRecExpr.
   if (Assume && !AR)
-    AR = PSE.getAsAddRec(Phi);
+    AR = PSE.getAsAddRec(Phi, &Preds);
 
   if (!AR) {
     LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
@@ -1621,17 +1635,17 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
   // induction.
   if (PhiScev != AR && SymbolicPhi) {
     SmallVector<Instruction *, 2> Casts;
-    if (getCastsForInductionPHI(PSE, SymbolicPhi, AR, Casts))
-      return isInductionPHI(Phi, TheLoop, PSE.getSE(), D, AR, &Casts);
+    if (getCastsForInductionPHI(PSE, SymbolicPhi, AR, Casts, Preds))
+      return isInductionPHI(Phi, TheLoop, PSE.getSE(), D, Preds, AR, &Casts);
   }
 
-  return isInductionPHI(Phi, TheLoop, PSE.getSE(), D, AR);
+  return isInductionPHI(Phi, TheLoop, PSE.getSE(), D, Preds, AR);
 }
 
 bool InductionDescriptor::isInductionPHI(
     PHINode *Phi, const Loop *TheLoop, ScalarEvolution *SE,
-    InductionDescriptor &D, const SCEV *Expr,
-    SmallVectorImpl<Instruction *> *CastsToIgnore) {
+    InductionDescriptor &D, ArrayRef<const SCEVPredicate *> Preds,
+    const SCEV *Expr, SmallVectorImpl<Instruction *> *CastsToIgnore) {
   Type *PhiTy = Phi->getType();
   // isSCEVable returns true for integer and pointer types.
   if (!SE->isSCEVable(PhiTy))
@@ -1671,13 +1685,14 @@ bool InductionDescriptor::isInductionPHI(
     BinaryOperator *BOp =
         dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Latch));
     D = InductionDescriptor(StartValue, IK_IntInduction, Step, BOp,
-                            CastsToIgnore);
+                            CastsToIgnore, Preds);
     return true;
   }
 
   assert(PhiTy->isPointerTy() && "The PHI must be a pointer");
 
   // This allows induction variables w/non-constant steps.
-  D = InductionDescriptor(StartValue, IK_PtrInduction, Step);
+  D = InductionDescriptor(StartValue, IK_PtrInduction, Step,
+                          /*InductionBinOp=*/nullptr, /*Casts=*/nullptr, Preds);
   return true;
 }

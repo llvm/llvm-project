@@ -6782,6 +6782,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_begin_declare_variant:
   case OMPD_end_declare_variant:
     llvm_unreachable("OpenMP Directive is not allowed");
+  case OMPD_taskgraph:
+    Diag(StartLoc, diag::err_omp_unexpected_directive)
+        << 1 << getOpenMPDirectiveName(OMPD_taskgraph);
+    return StmtError();
   case OMPD_unknown:
   default:
     llvm_unreachable("Unknown OpenMP directive");

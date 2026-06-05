@@ -163,7 +163,6 @@ class DenseMapPrinter:
             n = self.key_info_t.name
             is_equal = gdb.parse_and_eval(n + "::isEqual")
             empty = gdb.parse_and_eval(n + "::getEmptyKey()")
-            tombstone = gdb.parse_and_eval(n + "::getTombstoneKey()")
             # the following is invalid, GDB fails with:
             #   Python Exception <class 'gdb.error'> Attempt to take address of value
             #   not located in memory.
@@ -173,9 +172,8 @@ class DenseMapPrinter:
             # member function, not the 'first' member variable, but I've yet to figure
             # out how to find/call member functions (especially (const) overloaded
             # ones) on a gdb.Value.
-            while self.cur != self.end and (
-                is_equal(self.cur.dereference()["first"], empty)
-                or is_equal(self.cur.dereference()["first"], tombstone)
+            while self.cur != self.end and is_equal(
+                self.cur.dereference()["first"], empty
             ):
                 self.cur = self.cur + 1
 

@@ -37,7 +37,7 @@ define void @test() {
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX512:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 8 at %v0, ir<%in0>
+; AVX512:  Cost of 22 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
@@ -46,15 +46,14 @@ define void @test() {
 ; AVX512:    ir<%v5> = load from index 5
 ; AVX512:    ir<%v6> = load from index 6
 ; AVX512:    ir<%v7> = load from index 7
-; AVX512:  Cost of 40 for VF 4: INTERLEAVE-GROUP with factor 8 at %v0, ir<%in0>
-; AVX512:    ir<%v0> = load from index 0
-; AVX512:    ir<%v1> = load from index 1
-; AVX512:    ir<%v2> = load from index 2
-; AVX512:    ir<%v3> = load from index 3
-; AVX512:    ir<%v4> = load from index 4
-; AVX512:    ir<%v5> = load from index 5
-; AVX512:    ir<%v6> = load from index 6
-; AVX512:    ir<%v7> = load from index 7
+; AVX512:  Cost of 6 for VF 4: WIDEN ir<%v0> = load ir<%in0>
+; AVX512:  Cost of 6 for VF 4: WIDEN ir<%v1> = load ir<%in1>
+; AVX512:  Cost of 6 for VF 4: WIDEN ir<%v2> = load ir<%in2>
+; AVX512:  Cost of 6 for VF 4: WIDEN ir<%v3> = load ir<%in3>
+; AVX512:  Cost of 6 for VF 4: WIDEN ir<%v4> = load ir<%in4>
+; AVX512:  Cost of 6 for VF 4: WIDEN ir<%v5> = load ir<%in5>
+; AVX512:  Cost of 6 for VF 4: WIDEN ir<%v6> = load ir<%in6>
+; AVX512:  Cost of 6 for VF 4: WIDEN ir<%v7> = load ir<%in7>
 ; AVX512:  Cost of 10 for VF 8: WIDEN ir<%v0> = load ir<%in0>
 ; AVX512:  Cost of 10 for VF 8: WIDEN ir<%v1> = load ir<%in1>
 ; AVX512:  Cost of 10 for VF 8: WIDEN ir<%v2> = load ir<%in2>

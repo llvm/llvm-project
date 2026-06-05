@@ -185,6 +185,7 @@ bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
       return isa<ClassTemplateSpecializationDecl>(D);
     case TSK_ExplicitSpecialization:
       return false;
+    case TSK_FriendDeclaration:
     case TSK_ImplicitInstantiation:
     case TSK_ExplicitInstantiationDeclaration:
     case TSK_ExplicitInstantiationDefinition:

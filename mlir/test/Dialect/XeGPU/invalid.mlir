@@ -109,14 +109,6 @@ func.func @load_nd_vc_4(%src: memref<24x32xf32>) {
 }
 
 // -----
-func.func @subgroup_load_nd_9(%src: memref<4x8x16xf16>) {
-  %1 = xegpu.create_nd_tdesc %src : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
-  // expected-error@+1 {{Expects a 1D or 2D TensorDesc}}
-  %2 = xegpu.load_nd %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
-  return
-}
-
-// -----
 func.func @subgroup_load_nd_offset_1(%src: memref<4x8x16xf16>, %x : index) {
   %1 = xegpu.create_nd_tdesc %src: memref<4x8x16xf16> -> !xegpu.tensor_desc<16xf16>
 // expected-error@+1 {{Mismatched ranks between offsets and tensor descriptor}}
@@ -173,15 +165,6 @@ func.func @store_nd_vc_3(%dst: memref<24x32xf16>) {
   %2 = xegpu.create_nd_tdesc %dst : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16, #xegpu.block_tdesc_attr<array_length = 2>>
   // expected-error@+1 {{array length is not supported by store_nd}}
   xegpu.store_nd %1, %2[0, 0]: vector<2x24x32xf16>, !xegpu.tensor_desc<24x32xf16, #xegpu.block_tdesc_attr<array_length = 2>>
-  return
-}
-
-// -----
-func.func @store_nd_vc_4(%dst: memref<8x24x32xf16>) {
-  %1 = arith.constant dense<1.0>: vector<8x24x32xf16>
-  %2 = xegpu.create_nd_tdesc %dst : memref<8x24x32xf16> -> !xegpu.tensor_desc<8x24x32xf16>
-  // expected-error@+1 {{Expects a 1D or 2D TensorDesc}}
-  xegpu.store_nd %1, %2[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<8x24x32xf16>, !xegpu.tensor_desc<8x24x32xf16>
   return
 }
 
@@ -386,37 +369,37 @@ func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
 }
 
 // -----
-func.func @dpas_vc_1(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_vc_1(%a : vector<8x8xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{K-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
 func.func @dpas_vc_2(%a : vector<8x8x2xf16>, %b: vector<8x16x2xf16>) {
-  // expected-error@+1 {{op A operand must be a 2D vector}}
+  // expected-error@+1 {{'xegpu.dpas' op Rank mismatch among A, B, and result}}
   %1 = xegpu.dpas %a, %b : vector<8x8x2xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_3(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_3(%a : vector<8x8xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{K-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_4(%a : vector<16x16xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_4(%a : vector<16x16xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{M-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<16x16xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<16x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_5(%a : vector<8x16xf16>, %b: vector<8x8x2xf16>) {
+func.func @dpas_5(%a : vector<8x16xf16>, %b: vector<16x8xf16>) {
   // expected-error@+1 {{N-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<8x8x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<16x8xf16> -> vector<8x16xf32>
   return
 }
 
@@ -635,9 +618,9 @@ func.func @load_mem_desc_invalid_result_size(%arg0: !xegpu.mem_desc<16x64xf16>) 
 }
 
 // -----
-func.func @load_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>) {
-  // expected-error@+1 {{mem_desc must be 2D or greater}}
-  %data = xegpu.load_matrix %arg0[16]: !xegpu.mem_desc<64xf16> -> vector<16xf16>
+func.func @load_mem_desc_1d_exceeds_shape(%arg0: !xegpu.mem_desc<16xf16>) {
+  // expected-error@+1 {{data shape must not exceed mem_desc shape}}
+  %data = xegpu.load_matrix %arg0[0]: !xegpu.mem_desc<16xf16> -> vector<32xf16>
   return
 }
 
@@ -656,9 +639,9 @@ func.func @store_mem_desc_invalid_data_size(%arg0: !xegpu.mem_desc<16x64xf16>, %
 }
 
 // -----
-func.func @store_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>, %arg1: vector<32xf16>) {
-  // expected-error@+1 {{mem_desc must be 2D or greater}}
-  xegpu.store_matrix %arg1, %arg0[32] : vector<32xf16>, !xegpu.mem_desc<64xf16>
+func.func @store_mem_desc_1d_exceeds_shape(%arg0: !xegpu.mem_desc<16xf16>, %arg1: vector<32xf16>) {
+  // expected-error@+1 {{data shape must not exceed mem_desc shape}}
+  xegpu.store_matrix %arg1, %arg0[0] : vector<32xf16>, !xegpu.mem_desc<16xf16>
   return
 }
 
@@ -702,21 +685,21 @@ func.func @dpas_mx_acc_result_type_mismatch(%a : vector<8x16xf8E5M2>, %b: vector
 
 // -----
 func.func @dpas_mx_a_not_2d(%a : vector<128xf8E5M2>, %b: vector<16x16xf8E5M2>) {
-  // expected-error@+1 {{A operand must be a 2D vector.}}
+  // expected-error@+1 {{A operand must be at least a 2D vector.}}
   %1 = xegpu.dpas_mx %a, %b : (vector<128xf8E5M2>, vector<16x16xf8E5M2>) -> vector<8x16xf32>
   return
 }
 
 // -----
 func.func @dpas_mx_b_not_2d(%a : vector<8x16xf8E5M2>, %b: vector<256xf8E5M2>) {
-  // expected-error@+1 {{B operand must be a 2D or 3D vector.}}
+  // expected-error@+1 {{B operand must be at least a 2D vector.}}
   %1 = xegpu.dpas_mx %a, %b : (vector<8x16xf8E5M2>, vector<256xf8E5M2>) -> vector<8x16xf32>
   return
 }
 
 // -----
 func.func @dpas_mx_result_not_2d(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>) {
-  // expected-error@+1 {{Result must be a 2D vector.}}
+  // expected-error@+1 {{Result must be at least a 2D vector.}}
   %1 = xegpu.dpas_mx %a, %b : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>) -> vector<128xf32>
   return
 }

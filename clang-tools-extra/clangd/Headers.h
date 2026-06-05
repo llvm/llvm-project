@@ -277,10 +277,6 @@ template <> struct DenseMapInfo<clang::clangd::IncludeStructure::HeaderID> {
     return static_cast<clang::clangd::IncludeStructure::HeaderID>(-1);
   }
 
-  static inline clang::clangd::IncludeStructure::HeaderID getTombstoneKey() {
-    return static_cast<clang::clangd::IncludeStructure::HeaderID>(-2);
-  }
-
   static unsigned
   getHashValue(const clang::clangd::IncludeStructure::HeaderID &Tag) {
     return hash_value(static_cast<unsigned>(Tag));

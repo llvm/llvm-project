@@ -107,14 +107,6 @@ macro(append_passthrough_options out type names)
             list(APPEND ${out} -C ${cache})
           endforeach()
         else()
-          # Type is important for cache variables.
-          # For example PATH variables will be made relative to CMAKE_BINARY_DIR
-          # at the point of set(CACHE) if the type isn't passed along.
-          get_property(type CACHE ${variable_name} PROPERTY TYPE)
-          if(NOT type STREQUAL "UNINITIALIZED")
-            string(APPEND new_name ":${type}")
-          endif()
-
           string(REPLACE ";" "|" new_value "${${variable_name}}")
           list(APPEND ${out} "-D${new_name}=${new_value}")
         endif()
@@ -241,8 +233,13 @@ foreach(entry ${runtimes})
   string(REPLACE "-" "_" canon_name ${name})
   string(TOUPPER ${canon_name} canon_name)
   list(APPEND prefixes ${canon_name})
-  if (${canon_name} STREQUAL "OPENMP")
+  if(canon_name STREQUAL "OPENMP")
     list(APPEND prefixes "LIBOMP" "LIBOMPTARGET")
+  endif()
+  # Add LIBOMPTARGET for offload so LIBOMPTARGET_* options are forwarded.
+  # Note that the LIBOMPTARGET_* prefix was inherited from OpenMP's CMake setup.
+  if(canon_name STREQUAL "OFFLOAD")
+    list(APPEND prefixes "LIBOMPTARGET")
   endif()
   # Many compiler-rt options start with SANITIZER_ and DARWIN_ rather than
   # COMPILER_RT_, so when compiler-rt is enabled, consider both.
@@ -294,6 +291,10 @@ function(runtime_default_target)
         add_dependencies(doxygen doxygen-openmp)
       endif ()
     endif ()
+  endif ()
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    # The target flang-rt-mod is a dependee of check-flang.
+    list(APPEND extra_targets "flang-rt-mod")
   endif ()
 
   if(LLVM_INCLUDE_TESTS)
@@ -589,22 +590,7 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-  # Allow openmp to see the Fortran compiler
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
-    list(APPEND extra_args ENABLE_FORTRAN)
-  endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
-    if (${LLVM_TOOL_FLANG_BUILD})
-      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
-      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang")
-      set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
-      # TODO: This is a workaround until flang becomes a first-class project
-      # in llvm/CMakeList.txt.  Until then, this line ensures that flang is
-      # built before "openmp" is built as a runtime project.  Besides "flang"
-      # to build the compiler, we also need to add "module_files" to make sure
-      # that all .mod files are also properly build.
-      list(APPEND extra_deps "flang" "module_files")
-    endif()
     foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
@@ -629,9 +615,18 @@ if(build_runtimes)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
-  if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    list(APPEND extra_args ENABLE_FORTRAN)
-  endif ()
+  if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    # Allow runtimes that can use it to access the Flang compiler
+    if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+      list(APPEND extra_args ENABLE_FORTRAN)
+    endif()
+    # Ensure REAL(16) support in runtimes to be consistent with compiler
+    if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=1")
+    else()
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=0")
+    endif()
+  endif()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
@@ -811,6 +806,16 @@ ${_flag_values}\
 
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
   endif()
+
+  # Flang tests depend on module files built by the runtimes.
+  if (TARGET flang-rt-test-deps)
+    if (TARGET flang-rt-mod)
+      add_dependencies(flang-rt-test-deps flang-rt-mod)
+    endif ()
+    if (TARGET libomp-mod)
+      add_dependencies(flang-rt-test-deps libomp-mod)
+    endif ()
+  endif ()
 endif()
 
 if(LIBOMP_ENABLE_ARM64X)

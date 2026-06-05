@@ -66,6 +66,7 @@ def read_pipe_message(pipe):
 
 
 @skipIfBuildType(["debug"])
+@skipIfWindows  # https://github.com/llvm/llvm-project/issues/198763
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 

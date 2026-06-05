@@ -15,7 +15,7 @@ define void @sr() !dbg !7 {
 ; CHECK-DAG: [[TS]] = !{[[T:![0-9]+]]}
 ; CHECK-DAG: [[T]] = !DIBasicType(name: "sr__Tint_rangeB", size: 32, encoding: DW_ATE_signed)
 ; CHECK-DAG: [[SPS]] = !{[[SP:![0-9]+]]}
-; CHECK-DAG: [[SP]] = distinct !DISubprogram(name: "sr", scope: !1, file: !1, line: 1, type: [[ST:![0-9]+]], isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, function: void ()* @sr, variables: [[VS:![0-9]+]])
+; CHECK-DAG: [[SP]] = !DISubprogram(name: "sr", scope: !1, file: !1, line: 1, type: [[ST:![0-9]+]], isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, function: void ()* @sr, variables: [[VS:![0-9]+]])
 ; CHECK-DAG: [[ST]] = !DISubroutineType
 ; CHECK-DAG: [[VS]] = !{[[V:![0-9]+]]}
 ; CHECK-DAG: [[V]] = !DILocalVariable(tag: DW_TAG_auto_variable, name: "x", scope: [[SP]], file: [[F]], line: 3, type: [[T]])

@@ -3649,10 +3649,15 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
       return V;
 
   if (isPositionIndependent()) {
-    SDValue G = DAG.getTargetGlobalAddress(
-        GV, dl, PtrVT, 0, GV->isDSOLocal() ? 0 : ARMII::MO_GOT);
+    // Weak symbols need GOT indirection even when hidden/DSO-local.
+    // The assembler eagerly resolves PC-relative expressions when the
+    // symbol and reference are in the same section, which prevents the
+    // linker from overriding a weak definition with a non-weak one.
+    bool UseGOT = !GV->isDSOLocal() || GV->isWeakForLinker();
+    SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                           UseGOT ? ARMII::MO_GOT : 0);
     SDValue Result = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVT, G);
-    if (!GV->isDSOLocal())
+    if (UseGOT)
       Result =
           DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Result,
                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
@@ -7791,7 +7796,8 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   // Loads are better lowered with insert_vector_elt/ARMISD::BUILD_VECTOR.
   // Keep going if we are hitting this case.
-  if (isOnlyLowElement && !ISD::isNormalLoad(Value.getNode()))
+  if (isOnlyLowElement && !ISD::isNormalLoad(Value.getNode()) &&
+      (VT != MVT::v8f16 || ST->hasFullFP16()))
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Value);
 
   unsigned EltSize = VT.getScalarSizeInBits();
@@ -7921,7 +7927,8 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // scalar_to_vector for the elements followed by a shuffle (provided the
   // shuffle is valid for the target) and materialization element by element
   // on the stack followed by a load for everything else.
-  if (!isConstant && !usesOnlyOneValue) {
+  if ((!isConstant && !usesOnlyOneValue) ||
+      (VT == MVT::v8f16 && !ST->hasFullFP16())) {
     SDValue Vec = DAG.getUNDEF(VT);
     for (unsigned i = 0 ; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
@@ -8701,7 +8708,8 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  if (ST->hasMVEIntegerOps() && EltSize <= 32) {
+  if (ST->hasMVEIntegerOps() && EltSize <= 32 &&
+      (ST->hasFullFP16() || VT != MVT::v8f16)) {
     if (SDValue V = LowerVECTOR_SHUFFLEUsingOneOff(Op, ShuffleMask, DAG))
       return V;
 
@@ -8789,6 +8797,16 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (ST->hasMVEIntegerOps())
     if (SDValue NewOp = LowerVECTOR_SHUFFLEUsingMovs(Op, ShuffleMask, DAG))
       return NewOp;
+
+  // Lower v8f16 via v8i16 to avoid invalid f16 nodes.
+  if (VT == MVT::v8f16 && !ST->hasFullFP16()) {
+    SDValue BC0 =
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v8i16, Op.getOperand(0));
+    SDValue BC1 =
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v8i16, Op.getOperand(1));
+    SDValue Shuf = DAG.getVectorShuffle(MVT::v8i16, dl, BC0, BC1, ShuffleMask);
+    return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Shuf);
+  }
 
   return SDValue();
 }
