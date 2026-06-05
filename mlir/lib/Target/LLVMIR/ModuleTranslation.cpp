@@ -981,11 +981,16 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   SmallVector<llvm::Value *> args(immArgPositions.size() + operands.size());
   for (auto [immArgPos, immArgName] :
        llvm::zip(immArgPositions, immArgAttrNames)) {
-    auto attr = llvm::cast<TypedAttr>(intrOp->getAttr(immArgName));
-    assert(attr.getType().isIntOrFloat() && "expected int or float immarg");
-    auto *type = moduleTranslation.convertType(attr.getType());
+    Attribute attr = intrOp->getAttr(immArgName);
+    if (auto intrinsicIntegerAttr =
+            dyn_cast<LLVM::IntrinsicIntegerAttrInterface>(attr))
+      attr = intrinsicIntegerAttr.getIntegerAttr();
+    auto typedAttr = llvm::cast<TypedAttr>(attr);
+    assert(typedAttr.getType().isIntOrFloat() &&
+           "expected int or float immarg");
+    auto *type = moduleTranslation.convertType(typedAttr.getType());
     args[immArgPos] = LLVM::detail::getLLVMConstant(
-        type, attr, intrOp->getLoc(), moduleTranslation);
+        type, typedAttr, intrOp->getLoc(), moduleTranslation);
   }
   unsigned opArg = 0;
   for (auto &arg : args) {

@@ -220,9 +220,8 @@ define <16 x float> @shuffle_f32_v16f32_00_08_00_08_00_08_00_08_00_08_00_08_00_0
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; FAST-NEXT:    vmovaps {{.*#+}} ymm2 = [0,16,0,16,0,16,0,16]
+; FAST-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [0,16,0,16,0,16,0,16,0,16,0,16,0,16,0,16]
 ; FAST-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
-; FAST-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; FAST-NEXT:    retq
   %v0 = insertelement <8 x float> poison, float %a0, i64 0
   %v1 = insertelement <8 x float> poison, float %a1, i64 0

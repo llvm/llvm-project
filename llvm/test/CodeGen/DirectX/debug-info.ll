@@ -1,4 +1,4 @@
-; RUN: llc --filetype=asm %s -o  - | FileCheck %s
+; RUN: llc %s -o  - | FileCheck %s
 ;
 ; Verify that we are able to print LLVM IR containing downgraded debug
 ; intrinsics, #194884.

@@ -14,16 +14,21 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @C = common global [100 x [100 x i64]] zeroinitializer
 
 ;;--------------------------------------Test case 01------------------------------------
-;; This loop can be interchanged with -da-disable-delinearization-checks, otherwise it cannot
-;; be interchanged due to dependence.
+;; Without -da-disable-delinearization-checks this is not interchanged due to
+;; dependence. Even with that flag it must not be interchanged: it is a guarded,
+;; imperfect nest (see below).
 ;;  for(int i=0;i<N-1;i++)
-;;    for(int j=1;j<N-1;j++)
-;;      A[j+1][i+1] = A[j+1][i+1] + k;
+;;    if(N-1>1)                       // guard: inner loop skipped when N<=2
+;;      for(int j=1;j<N-1;j++)
+;;        A[j+1][i+1] = A[j+1][i+1] + k;
 
 ; CHECK:      Name:            Dependence
 ; CHECK-NEXT: Function:        interchange_01
 
-; DELIN:      Name:            Interchanged
+; Guarded nest: %for.cond1.preheader runs the inner loop only when
+; %cmp324 = (N-1 > 1). The inner exit (inner IV == N-2) only terminates under
+; that guard, so interchanging it loops forever for N == 2. 
+; DELIN:      Name:            NotTightlyNested
 ; DELIN-NEXT: Function:        interchange_01
 define void @interchange_01(i32 %k, i32 %N) {
  entry:

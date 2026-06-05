@@ -168,6 +168,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   void setResult(Instruction &I, AnyValue V) {
     if (!hasProgramExited() && !Handler.onInstructionExecuted(I, V))
       setFailed();
+    if (hasProgramExited())
+      return;
     assert(V.isCompatibleWith(I.getType()) && "Unexpected value storage kind.");
     if (!V.isNone())
       CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));

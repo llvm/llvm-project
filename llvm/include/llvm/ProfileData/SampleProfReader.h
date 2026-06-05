@@ -343,6 +343,30 @@ private:
 /// The reader supports two file formats: text and binary. The text format
 /// is useful for debugging and testing, while the binary format is more
 /// compact and I/O efficient. They can both be used interchangeably.
+
+/// NameTableIterator is a lightweight, self-contained input iterator designed
+/// to stream FunctionId symbols from an eagerly populated contiguous buffer
+/// of FunctionId objects.
+class NameTableIterator
+    : public llvm::iterator_facade_base<
+          NameTableIterator, std::input_iterator_tag, FunctionId,
+          std::ptrdiff_t, const FunctionId *, FunctionId> {
+  const FunctionId *Ptr = nullptr;
+
+public:
+  NameTableIterator() = default;
+  NameTableIterator(const FunctionId *P) : Ptr(P) {}
+
+  bool operator==(const NameTableIterator &RHS) const { return Ptr == RHS.Ptr; }
+
+  NameTableIterator &operator++() {
+    ++Ptr;
+    return *this;
+  }
+
+  FunctionId operator*() const { return *Ptr; }
+};
+
 class SampleProfileReader {
 public:
   SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
@@ -496,7 +520,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  virtual std::vector<FunctionId> *getNameTable() { return nullptr; }
+  virtual llvm::iterator_range<NameTableIterator> getNameTable() const {
+    return {NameTableIterator(), NameTableIterator()};
+  }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
   /// Return whether names in the profile are all MD5 numbers.
@@ -650,8 +676,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  std::vector<FunctionId> *getNameTable() override {
-    return &NameTable;
+  llvm::iterator_range<NameTableIterator> getNameTable() const override {
+    return {NameTableIterator(NameTable.data()),
+            NameTableIterator(NameTable.data() + NameTable.size())};
   }
 
 protected:

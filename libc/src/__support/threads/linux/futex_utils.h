@@ -22,6 +22,15 @@
 #include <linux/futex.h>
 
 namespace LIBC_NAMESPACE_DECL {
+
+#if !defined(SYS_futex_time64) && defined(SYS_futex)
+static_assert(
+    sizeof(timespec::tv_nsec) == sizeof(long),
+    "This legacy syscall fallback is only safe on platforms where tv_nsec "
+    "matches the register size (long). It is unsafe on 32-bit platforms "
+    "with 64-bit tv_nsec.");
+#endif
+
 class Futex : public cpp::Atomic<FutexWordType> {
 public:
   using Timeout = internal::AbsTimeout;

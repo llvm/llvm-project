@@ -21,13 +21,14 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegister.h"
+#include <optional>
 
 namespace llvm {
 
@@ -40,9 +41,10 @@ class SPIRVSubtarget;
 /// Call sequence:
 ///   beginModule()                    -- collect compile-unit metadata.
 ///   prepareModuleOutput()            -- add extension + ext inst set to MAI.
+///   emitNonSemanticDebugStrings()    -- OpString for NSDI strings (sec. 7).
 ///   emitNonSemanticGlobalDebugInfo() -- emit DebugSource,
 ///                                       DebugCompilationUnit, DebugTypeBasic,
-///                                       DebugTypePointer.
+///                                       DebugTypePointer, DebugTypeFunction.
 ///   beginFunctionImpl()              -- no-op (no per-function DI yet).
 ///   endFunctionImpl()                -- no-op.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
@@ -58,21 +60,40 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   SmallVector<CompileUnitInfo> CompileUnits;
   int64_t DwarfVersion = 0;
 
-  // Types referenced by debug variable records, collected in beginModule().
-  SetVector<const DIBasicType *> BasicTypes;
-  SetVector<const DIDerivedType *> PointerTypes;
+  // DI types partitioned from DebugInfoFinder.types() in beginModule()
+  // (basics, pointers, subroutine types NSDI v1 may emit).
+  SmallVector<const DIBasicType *> BasicTypes;
+  SmallVector<const DIDerivedType *> PointerTypes;
+  SmallVector<const DISubroutineType *> SubroutineTypes;
+
+  // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
+  // registers.
+  DenseMap<const DIType *, MCRegister> DebugTypeRegs;
+
+  // Maps OpString contents to result id. Populated only by emitOpStringIfNew()
+  // during section 7; section 10 uses getCachedOpStringReg() (lookup only).
+  StringMap<MCRegister> OpStringContentCache;
+
+#ifndef NDEBUG // Only declare the variable for debugging purposes.
+  // True after emitNonSemanticDebugStrings() emitted the NSDI OpStrings for
+  // this module. SPIRVAsmPrinter calls that before
+  // emitNonSemanticGlobalDebugInfo().
+  bool NonSemanticOpStringsSectionEmitted = false;
+#endif
+
+  MCRegister CachedDebugInfoNoneReg;
+
+  MCRegister CachedOpTypeVoidReg;
+
+  MCRegister CachedOpTypeInt32Reg;
 
   // Cache of already-emitted i32 constants, keyed by value. Prevents
   // duplicate OpConstant instructions for the same integer value.
   DenseMap<uint32_t, MCRegister> I32ConstantCache;
 
-  // OpString registers for NSDI instructions, populated by
-  // emitNonSemanticDebugStrings() (section 7) and consumed by
-  // emitNonSemanticGlobalDebugInfo() (section 10). OpString must appear in
-  // section 7 per the SPIR-V module layout; it cannot be emitted alongside the
-  // OpExtInst instructions in section 10.
-  SmallVector<MCRegister> FileStringRegs;    // one per CompileUnits entry
-  SmallVector<MCRegister> BasicTypeNameRegs; // one per BasicTypes entry
+  // Cache of already-emitted DebugTypeFunction instructions, keyed by operand
+  // ids (flags, return type, parameters).
+  DenseMap<SmallVector<MCRegister, 8>, MCRegister> DebugTypeFunctionCache;
 
   // True once emitNonSemanticGlobalDebugInfo() has run. Both
   // SPIRVAsmPrinter::emitFunctionHeader() and emitEndOfAsmFile() may call
@@ -91,9 +112,9 @@ public:
   /// Emit OpString instructions for all NSDI file paths and basic type names
   /// into the debug section (section 7 of the SPIR-V module layout). Must be
   /// called from SPIRVAsmPrinter::outputDebugSourceAndStrings(), after
-  /// prepareModuleOutput() has registered the ext inst set. The resulting
-  /// registers are cached in FileStringRegs and BasicTypeNameRegs for use by
-  /// emitNonSemanticGlobalDebugInfo().
+  /// prepareModuleOutput() has registered the ext inst set. Registers are
+  /// stored in OpStringContentCache; emitNonSemanticGlobalDebugInfo() resolves
+  /// them via getCachedOpStringReg().
   void emitNonSemanticDebugStrings(SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Add SPV_KHR_non_semantic_info extension and
@@ -104,9 +125,10 @@ public:
                            SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit module-scope NSDI instructions (DebugSource, DebugCompilationUnit,
-  /// DebugTypeBasic, DebugTypePointer). Called by SPIRVAsmPrinter::
-  /// outputModuleSections() at section 10 in place of
-  /// outputModuleSection(MB_NonSemanticGlobalDI).
+  /// DebugTypeBasic, DebugTypePointer, DebugTypeFunction). Called by
+  /// SPIRVAsmPrinter::outputModuleSections() at section 10 in place of
+  /// outputModuleSection(MB_NonSemanticGlobalDI). Requires
+  /// emitNonSemanticDebugStrings() to have run first when NSDI strings apply.
   void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
 
 protected:
@@ -137,12 +159,33 @@ protected:
 private:
   void emitMCInst(MCInst &Inst);
   MCRegister emitOpString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Section 7 only: emit OpString and cache it if not already present. Must
+  /// not be called after NonSemanticOpStringsSectionEmitted is set.
+  void emitOpStringIfNew(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Section 10 only: lookup OpString id from cache; asserts if missing or if
+  /// section 7 did not complete.
+  MCRegister getCachedOpStringReg(StringRef S);
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister emitExtInst(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
                          MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
                          ArrayRef<MCRegister> Operands,
                          SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Return a cached DebugTypeFunction id when \p Ops matches a prior emission,
+  /// otherwise emit and cache a new instruction.
+  MCRegister getOrEmitDebugTypeFunction(ArrayRef<MCRegister> Ops,
+                                        MCRegister VoidTypeReg,
+                                        MCRegister ExtInstSetReg,
+                                        SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Return OpTypeVoid id for this module (lazy lookup / emit, then cache).
+  MCRegister getOrEmitOpTypeVoidReg(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Return OpTypeInt 32 0 id for this module (lazy lookup / emit, then cache).
+  MCRegister getOrEmitOpTypeInt32Reg(SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Find OpTypeVoid in the already-emitted TypeConstVars section, or emit one
   /// if the module does not contain it (e.g. no void-returning functions).
@@ -152,16 +195,41 @@ private:
   /// one if the module does not contain it.
   MCRegister findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit a DebugTypePointer instruction for PT. Skips pointer types that do
-  /// not carry a DWARF address space. For pointers whose base type is a
-  /// DIBasicType, looks up the base type's DebugTypeBasic register in
-  /// BasicTypeRegs. All other pointers (void pointers and pointers whose base
-  /// type is not a DIBasicType) use DebugInfoNone as the base type operand.
-  void emitDebugTypePointer(
-      const DIDerivedType *PT, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-      MCRegister ExtInstSetReg, MCRegister I32ZeroReg,
-      const DenseMap<const DIBasicType *, MCRegister> &BasicTypeRegs,
-      SPIRV::ModuleAnalysisInfo &MAI);
+  /// Emit \c DebugTypePointer for pointer metadata \p PT.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p PT has no DWARF address space (needed to pick the
+  /// SPIR-V storage class), or if \p PT has a non-null base DI type that is not
+  /// yet in \c DebugTypeRegs (the pointee was not emitted as a debug type).
+  ///
+  /// Base Type operand: the register from \c DebugTypeRegs for \p PT's base
+  /// type when it is set and mapped; \c DebugInfoNone when there is no base
+  /// type (e.g. \c void * in IR), consistent with SPIRV-LLVM-Translator.
+  std::optional<MCRegister>
+  emitDebugTypePointer(const DIDerivedType *PT, MCRegister ExtInstSetReg,
+                       SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit one DebugTypeFunction for ST when every DI operand maps to a debug
+  /// type id; otherwise emit nothing and return std::nullopt.
+  std::optional<MCRegister>
+  emitDebugTypeFunctionForSubroutineType(const DISubroutineType *ST,
+                                         MCRegister ExtInstSetReg,
+                                         SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Map a \c DISubroutineType::getTypeArray() element to an operand register
+  /// for
+  /// \c DebugTypeFunction. Non-null \p Ty resolves via \c DebugTypeRegs; if the
+  /// type was never emitted, returns \c std::nullopt.
+  ///
+  /// LLVM encodes a void return as a null first element (and may use null in
+  /// later slots). NonSemantic \c DebugTypeFunction
+  /// requires a concrete return-type operand, so when \p ReturnType is true and
+  /// \p Ty is null, this returns \p VoidTypeReg (\c OpTypeVoid). When
+  /// \p ReturnType is false and \p Ty is null, this returns
+  /// \c CachedDebugInfoNoneReg (\c DebugInfoNone).
+  std::optional<MCRegister> mapDISignatureTypeToReg(const DIType *Ty,
+                                                    MCRegister VoidTypeReg,
+                                                    bool ReturnType);
 
   /// Map a DWARF source language code to a NonSemantic.Shader.DebugInfo.100
   /// source language code.

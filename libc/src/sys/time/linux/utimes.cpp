@@ -22,16 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, utimes,
                    (const char *path, const struct timeval times[2])) {
-#ifdef SYS_utimes
-  // No need to define a timespec struct, use the syscall directly.
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
-
-  if (ret < 0) {
-    libc_errno = -ret;
-    return -1;
-  }
-  return 0;
-#elif defined(SYS_utimensat) || defined(SYS_utimensat_time64)
+#if defined(SYS_utimensat) || defined(SYS_utimensat_time64)
 
   // the utimensat syscall requires a timespec struct, not timeval.
   struct timespec ts[2];
@@ -73,9 +64,8 @@ LLVM_LIBC_FUNCTION(int, utimes,
   }
 
   return 0;
-
 #else
-#error "utimes, utimensat, utimensat_time64,  syscalls not available."
-#endif // SYS_utimensat
+#error "utimensat or utimensat_time64 syscalls not available."
+#endif // SYS_utimensat || SYS_utimensat_time64
 }
 } // namespace LIBC_NAMESPACE_DECL

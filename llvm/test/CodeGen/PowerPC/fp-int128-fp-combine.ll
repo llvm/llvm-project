@@ -26,16 +26,14 @@ entry:
 
 ; NSZ, so it's safe to friz.
 
-define float @f_i128_fi_nsz(float %v) #0 {
+define float @f_i128_fi_nsz(float %v) {
 ; CHECK-LABEL: f_i128_fi_nsz:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xsrdpiz 1, 1
 ; CHECK-NEXT:    blr
 entry:
   %a = fptosi float %v to i128
-  %b = sitofp i128 %a to float
+  %b = sitofp nsz i128 %a to float
   ret float %b
 }
-
-attributes #0 = { "no-signed-zeros-fp-math"="true" }
 

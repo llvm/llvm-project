@@ -306,9 +306,6 @@ private:
   LegalizeResult lowerMemset(MachineInstr &MI, Register Dst, Register Val,
                              uint64_t KnownLen, Align Alignment,
                              bool IsVolatile);
-  LegalizeResult lowerMemcpyInline(MachineInstr &MI, Register Dst, Register Src,
-                                   uint64_t KnownLen, Align DstAlign,
-                                   Align SrcAlign, bool IsVolatile);
   LegalizeResult lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
                              uint64_t KnownLen, uint64_t Limit, Align DstAlign,
                              Align SrcAlign, bool IsVolatile);
@@ -573,7 +570,6 @@ public:
   LLVM_ABI LegalizeResult lowerAbsDiffToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFAbs(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerVectorReduction(MachineInstr &MI);
-  LLVM_ABI LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI,
                                             unsigned MaxLen = 0);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);

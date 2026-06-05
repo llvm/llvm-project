@@ -1,0 +1,58 @@
+# Test that compile command edits from .clangd config are used during
+# the required modules check.
+
+# FIXME: Excepted to fail on Windows like module_dependencies.test.
+# UNSUPPORTED: system-windows
+
+# RUN: rm -fr %t
+# RUN: mkdir -p %t
+# RUN: split-file %s %t
+
+# RUN: sed -e "s|DIR|%/t|g" %t/compile_commands.json.tmpl > %t/compile_commands.json.tmp
+# RUN: sed -e "s|CLANG_CC|%clang|g" %t/compile_commands.json.tmp > %t/compile_commands.json
+# RUN: sed -e "s|DIR|%/t|g" %t/didOpen.jsonrpc.tmpl > %t/didOpen.jsonrpc
+
+# RUN: clangd -experimental-modules-support -enable-config -lit-test < %t/didOpen.jsonrpc 2>&1 \
+# RUN:      | FileCheck -strict-whitespace --check-prefix=CHECK %t/didOpen.jsonrpc
+
+#--- .clangd
+CompileFlags:
+  Remove: [-fmodule-mapper=*]
+
+#--- A.cppm
+export module A;
+export void printA() {}
+
+#--- Use.cpp
+import A;
+void foo() {
+    print
+}
+
+#--- compile_commands.json.tmpl
+[
+    {
+      "directory": "DIR",
+      "command": "CLANG_CC -fprebuilt-module-path=DIR -std=c++20 -fmodule-mapper=test.modmap -o DIR/Use.cpp.o -c DIR/Use.cpp",
+      "file": "DIR/Use.cpp"
+    },
+    {
+      "directory": "DIR",
+      "command": "CLANG_CC -std=c++20 DIR/A.cppm --precompile -o DIR/A.pcm",
+      "file": "DIR/A.cppm"
+    }
+]
+
+#--- didOpen.jsonrpc.tmpl
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://DIR/Use.cpp","languageId":"cpp","version":1,"text":"import A;\nvoid foo() {\n    print\n}\n"}}}
+
+# Verify no log errors from module scanning (stderr captured via 2>&1).
+# CHECK-NOT: unknown argument
+# CHECK: "message"{{.*}}printA{{.*}}(fix available)
+
+---
+{"jsonrpc":"2.0","id":1,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

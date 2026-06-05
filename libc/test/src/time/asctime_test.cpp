@@ -185,8 +185,6 @@ TEST_F(LlvmLibcAsctime, EndOf32BitEpochYear) {
 }
 
 TEST_F(LlvmLibcAsctime, Max64BitYear) {
-  if (sizeof(time_t) == 4)
-    return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),
   struct tm tm_data;
   char *result;

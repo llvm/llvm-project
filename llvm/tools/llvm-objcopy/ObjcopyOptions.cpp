@@ -1482,7 +1482,8 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         errc::invalid_argument,
         "llvm-install-name-tool expects a single input file");
   Config.InputFilename = Positional[0];
-  Config.OutputFilename = Positional[0];
+  Config.OutputFilename =
+      InputArgs.getLastArgValue(INSTALL_NAME_TOOL_output, Positional[0]);
 
   Expected<OwningBinary<Binary>> BinaryOrErr =
       createBinary(Config.InputFilename);

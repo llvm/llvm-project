@@ -1229,6 +1229,12 @@ private:
     NewBB->moveAfter(BB);
     NumCloned++;
 
+    // Give the clone fresh noalias scopes; otherwise it shares BB's scopes and
+    // AA can treat aliasing accesses on different threaded paths as noalias.
+    SmallVector<MDNode *> NoAliasScopes;
+    identifyNoAliasScopesToClone({NewBB}, NoAliasScopes);
+    cloneAndAdaptNoAliasScopes(NoAliasScopes, {NewBB}, BB->getContext(), "dfa");
+
     for (Instruction &I : *NewBB) {
       // Do not remap operands of PHINode in case a definition in BB is an
       // incoming value to a phi in the same block. This incoming value will

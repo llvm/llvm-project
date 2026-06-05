@@ -4538,6 +4538,12 @@ Otherwise, when known, the specific type should be used. Each bit can be:
 
 Any bit width from 1 bit to 2\ :sup:`23`\ (about 8 million) can be specified.
 
+The per-bit semantics described above (poison and conditional pointer
+provenance preservation) are mid-end only. At the IR-to-MIR boundary both
+SelectionDAG and GlobalISel lower ``bN`` as the equi-sized integer scalar
+(``iN``/``sN``); backend passes do not see the byte type and do not preserve
+its bit-level semantics.
+
 :Syntax:
 
 ::

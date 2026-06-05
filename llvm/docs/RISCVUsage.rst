@@ -258,6 +258,10 @@ on support follow.
      ``Zvksg``         Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvksh``         Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvkt``          Supported
+     ``Zvvfmm``        Assembly Support
+     ``Zvvmm``         Assembly Support
+     ``Zvvmtls``       Assembly Support
+     ``Zvvmttls``      Assembly Support
      ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``        Supported
      ``Zvl128b``       Supported
@@ -367,10 +371,16 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements the `0.1 draft specification <https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc>`__.
 
 ``experimental-zvvfmm``
-  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-fa55752-2026-05-04>`__.
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
 
 ``experimental-zvvmm``
-  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-fa55752-2026-05-04>`__.
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+
+``experimental-zvvmtls``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+
+``experimental-zvvmttls``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
 
 ``experimental-zvqwbdota8i``, ``experimental-zvqwbdota16i``, ``experimental-zvfqwbdota8f``, ``experimental-zvfwbdota16bf``, ``experimental-zvfbdota32f``
   LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.

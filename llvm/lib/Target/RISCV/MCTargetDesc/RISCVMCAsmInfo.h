@@ -49,6 +49,7 @@ enum {
   // Vendor-specific relocation types might conflict across vendors.
   // Refer to them using Specifier constants.
   S_QC_ABS20,
+  S_QC_ACCESS,
 };
 
 Specifier parseSpecifierName(StringRef name);

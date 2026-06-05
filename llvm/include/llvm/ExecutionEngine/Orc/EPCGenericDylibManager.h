@@ -21,12 +21,14 @@
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
+class JITDylib;
 class SymbolLookupSet;
 
 class EPCGenericDylibManager : public DylibManager {
@@ -38,13 +40,26 @@ public:
     ExecutorAddr Resolve;
   };
 
-  /// Create an EPCGenericMemoryAccess instance from a given set of
-  /// function addrs.
+  /// Create an EPCGenericDylibManager instance by looking up the LLVM-style
+  /// SimpleExecutorDylibManager symbol names in the EPC's bootstrap table.
   LLVM_ABI static Expected<EPCGenericDylibManager>
   CreateWithDefaultBootstrapSymbols(ExecutorProcessControl &EPC);
 
-  /// Create an EPCGenericMemoryAccess instance from a given set of
-  /// function addrs.
+  /// Create an EPCGenericDylibManager using the given implementation symbol
+  /// names. These will be looked up in the given JITDylib.
+  LLVM_ABI static Expected<EPCGenericDylibManager>
+  Create(JITDylib &JD, rt::SimpleExecutorDylibManagerSymbolNames SNs =
+                           rt::orc_rt_NativeDylibManagerSPSSymbols);
+
+  /// Create an EPCGenericDylibManager using the given implementation symbol
+  /// names. These will be looked up in the given ExecutionSession's bootstrap
+  /// JITDylib.
+  LLVM_ABI static Expected<EPCGenericDylibManager>
+  Create(ExecutionSession &ES, rt::SimpleExecutorDylibManagerSymbolNames SNs =
+                                   rt::orc_rt_NativeDylibManagerSPSSymbols);
+
+  /// Create an EPCGenericDylibManager instance from a given set of function
+  /// addrs.
   EPCGenericDylibManager(ExecutorProcessControl &EPC, SymbolAddrs SAs)
       : EPC(EPC), SAs(SAs) {}
 

@@ -715,6 +715,15 @@ add_header_macro(
     .llvm_libc_common_h
 )
 
+add_header_macro(
+  sys_ptrace
+  ../libc/include/sys/ptrace.yaml
+  sys/ptrace.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ptrace_macros
+)
+
 add_header(
   sys_queue
   HDR

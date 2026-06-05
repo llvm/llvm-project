@@ -80,6 +80,19 @@ struct SimpleExecutorMemoryManagerSymbolNames {
 extern const SimpleExecutorMemoryManagerSymbolNames
     orc_rt_SimpleNativeMemoryMapSPSSymbols;
 
+/// Symbol names for dylib management implementation.
+/// FIXME: We should find a better home for this struct.
+struct SimpleExecutorDylibManagerSymbolNames {
+  StringRef InstanceName;
+  StringRef OpenName;
+  StringRef ResolveName;
+};
+
+/// Default symbol names for the ORC runtime's NativeDylibManager SPS
+/// interface.
+extern const SimpleExecutorDylibManagerSymbolNames
+    orc_rt_NativeDylibManagerSPSSymbols;
+
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
                                                  shared::SPSString, uint64_t);

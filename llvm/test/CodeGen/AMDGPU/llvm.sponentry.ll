@@ -346,12 +346,11 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dyn_alloc(i32 %val) #0 {
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; DAGISEL-NEXT:    s_mov_b32 s0, s32
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; DAGISEL-NEXT:    v_add_nc_u32_e64 v3, s0, s1
+; DAGISEL-NEXT:    s_add_co_i32 s32, s0, s1
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, s33
-; DAGISEL-NEXT:    v_readfirstlane_b32 s32, v3
 ; DAGISEL-NEXT:    s_mov_b32 s32, s33
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
 ; DAGISEL-NEXT:    s_clause 0x1 ; 8-byte Folded Reload
@@ -550,16 +549,15 @@ define amdgpu_cs_chain void @sponentry_cs_chain_dyn_alloc(i32 %val) #0 {
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_readlane_b32 s1, v0, 31
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL-NEXT:    v_mov_b32_e32 v2, s33
 ; DAGISEL-NEXT:    s_mov_b32 s0, s32
-; DAGISEL-NEXT:    v_mov_b32_e32 v3, s33
-; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; DAGISEL-NEXT:    v_add_nc_u32_e64 v2, s0, s1
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    scratch_store_b32 off, v8, s0 scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
-; DAGISEL-NEXT:    scratch_store_b32 off, v3, s0 scope:SCOPE_SYS
+; DAGISEL-NEXT:    scratch_store_b32 off, v2, s0 scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
-; DAGISEL-NEXT:    v_readfirstlane_b32 s32, v2
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-NEXT:    s_add_co_i32 s32, s0, s1
 ; DAGISEL-NEXT:    s_alloc_vgpr 0
 ; DAGISEL-NEXT:    s_endpgm
 ;

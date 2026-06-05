@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck -check-prefixes=CHECK,SLOW %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zilsd,+unaligned-scalar-mem -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECK,FAST %s
-; RUN: llc -mtriple=riscv32 -mattr=+zilsd,+zilsd-4byte-align -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+zilsd,+zilsd-word-align -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECK,4BYTEALIGN %s
 
 define i64 @load(ptr %a) nounwind {

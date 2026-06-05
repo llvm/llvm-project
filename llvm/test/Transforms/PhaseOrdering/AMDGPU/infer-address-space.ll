@@ -28,7 +28,7 @@ define internal void @callee(ptr %ptr_as0, i32 %val) {
 
 define void @caller(ptr addrspace(1) %ptr_as1, i32 %value) {
 ; INFER-LABEL: define void @caller(
-; INFER-SAME: ptr addrspace(1) captures(none) [[PTR_AS1:%.*]], i32 [[VALUE:%.*]]) local_unnamed_addr {
+; INFER-SAME: ptr addrspace(1) nofree captures(none) [[PTR_AS1:%.*]], i32 [[VALUE:%.*]]) local_unnamed_addr {
 ; INFER-NEXT:    [[LOADED_I:%.*]] = load i32, ptr addrspace(1) [[PTR_AS1]], align 4
 ; INFER-NEXT:    [[COMPUTED_I:%.*]] = add i32 [[LOADED_I]], [[VALUE]]
 ; INFER-NEXT:    store i32 [[COMPUTED_I]], ptr addrspace(1) [[PTR_AS1]], align 4

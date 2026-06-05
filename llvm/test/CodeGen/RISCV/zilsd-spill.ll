@@ -5,7 +5,7 @@
 ; RUN: | FileCheck %s -check-prefix=RV32I-ZILSD
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+zilsd,+unaligned-scalar-mem  -verify-machineinstrs -stop-after=prologepilog \
 ; RUN: | FileCheck %s -check-prefix=RV32I-ZILSD-UNALIGNED
-; RUN: llc < %s -mtriple=riscv32 -mattr=+zilsd,+zilsd-4byte-align -verify-machineinstrs -stop-after=prologepilog \
+; RUN: llc < %s -mtriple=riscv32 -mattr=+zilsd,+zilsd-word-align -verify-machineinstrs -stop-after=prologepilog \
 ; RUN: | FileCheck %s -check-prefix=RV32I-ZILSD-4BYTEALIGN
 
 define i64 @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwind {

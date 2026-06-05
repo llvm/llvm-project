@@ -174,9 +174,11 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::from_bytes(const char*
   return __wide_err_string_;
 }
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 typename wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::byte_string
 wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* __frm, const _Elem* __frm_end) {
+  _LIBCPP_SUPPRESS_DEPRECATED_POP
   __cvtcount_ = 0;
   if (__cvtptr_ != nullptr) {
     byte_string __bs(2 * (__frm_end - __frm), char());

@@ -726,14 +726,14 @@ public:
   TraverseClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *C) {
     if (!RecursiveASTVisitor::TraverseClassTemplateSpecializationDecl(C))
       return false;
-    const auto *Info = C->getExplicitInstantiationInfo();
-    if (!Info)
+    if (C->isExplicitSpecialization())
       return true; // we are only interested in explicit instantiations.
     auto *Declaration =
         cast<syntax::SimpleDeclaration>(handleFreeStandingTagDecl(C));
     foldExplicitTemplateInstantiation(
-        Builder.getTemplateRange(C), Builder.findToken(Info->ExternKeywordLoc),
-        Builder.findToken(Info->TemplateKeywordLoc), Declaration, C);
+        Builder.getTemplateRange(C),
+        Builder.findToken(C->getExternKeywordLoc()),
+        Builder.findToken(C->getTemplateKeywordLoc()), Declaration, C);
     return true;
   }
 
@@ -778,9 +778,8 @@ public:
           foldTemplateDeclaration(R, TemplateKW, DeclarationRange, nullptr);
       DeclarationRange = R;
     };
-    if (auto *S = dyn_cast<ClassTemplateSpecializationDecl>(C))
-      if (const auto *Info = S->getExplicitSpecializationInfo())
-        ConsumeTemplateParameters(*Info->TemplateParams);
+    if (auto *S = dyn_cast<ClassTemplatePartialSpecializationDecl>(C))
+      ConsumeTemplateParameters(*S->getTemplateParameters());
     for (TemplateParameterList *TPL : C->getTemplateParameterLists())
       ConsumeTemplateParameters(*TPL);
     return Result;

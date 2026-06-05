@@ -81,6 +81,11 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
   }
 
   if (resume_state == eStateStepping || resume_state == eStateRunning) {
+    // Clear any stop info left over from a previous stop.
+    m_stop_info = ThreadStopInfo();
+    m_stop_info.reason = lldb::eStopReasonNone;
+    m_stop_description.clear();
+
     DWORD previous_suspend_count = 0;
     HANDLE thread_handle = m_host_thread.GetNativeThread().GetSystemHandle();
     do {

@@ -13,6 +13,7 @@
 
 #include "RISCVBaseInfo.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"

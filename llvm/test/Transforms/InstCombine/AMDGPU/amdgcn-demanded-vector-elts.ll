@@ -4375,6 +4375,33 @@ define amdgpu_ps float @extract_elt1_dmask_0110_image_sample_l_1d_v2f32_f32(floa
 
 declare <2 x float> @llvm.amdgcn.image.sample.l.1d.v2f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
+; Preserve call-site attributes on intrinsic calls during InstCombine.
+; InstCombine runs two transforms on the same image.sample call:
+;   1. modifyIntrinsicCall: lod = 0.0 rewrites image.sample.l.1d to
+;      image.sample.lz.1d, dropping the lod operand.
+;   2. simplifyAMDGCNMemoryIntrinsicDemanded: only lanes 0 and 1 are used,
+;      so the dmask shrinks from 15 to 3 and the return type shrinks from
+;      <4 x float> to <2 x float>.
+; Each transform rebuilds the call with IC.Builder.CreateIntrinsic, which
+; would drop any call-site-only attributes (here, an arbitrary string
+; attribute attached via #3).
+; This test checks that the call-site attributes are preserved
+; after both transforms have run.
+define amdgpu_ps <2 x float> @image_l_to_lz_shrink_preserve_callsite_attrs(<8 x i32> inreg %rsrc, float %s, <4 x i32> inreg %samp) {
+; CHECK-LABEL: @image_l_to_lz_shrink_preserve_callsite_attrs(
+; CHECK-NEXT:    [[V4:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret <2 x float> [[V4]]
+;
+  %v4 = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0) #3
+  %e0 = extractelement <4 x float> %v4, i32 0
+  %e1 = extractelement <4 x float> %v4, i32 1
+  %r0 = insertelement <2 x float> poison, float %e0, i32 0
+  %r1 = insertelement <2 x float> %r0, float %e1, i32 1
+  ret <2 x float> %r1
+}
+
+declare <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.b
 ; --------------------------------------------------------------------
@@ -5403,5 +5430,6 @@ declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32.v8i32(i32 immarg, i32, 
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
+attributes #3 = { "amdgpu-test-callsite-attr" }
 
 !0 = !{float 2.500000e+00}

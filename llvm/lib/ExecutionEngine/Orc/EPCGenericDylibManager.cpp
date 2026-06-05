@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 
@@ -51,6 +52,28 @@ EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(
            {SAs.Resolve, rt::SimpleExecutorDylibManagerResolveWrapperName}}))
     return std::move(Err);
   return EPCGenericDylibManager(EPC, std::move(SAs));
+}
+
+Expected<EPCGenericDylibManager>
+EPCGenericDylibManager::Create(JITDylib &JD,
+                               rt::SimpleExecutorDylibManagerSymbolNames SNs) {
+  auto &ES = JD.getExecutionSession();
+  SymbolAddrs SAs;
+  if (auto Err = lookupAndRecordAddrs(
+          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
+          {
+              {ES.intern(SNs.InstanceName), &SAs.Instance},
+              {ES.intern(SNs.OpenName), &SAs.Open},
+              {ES.intern(SNs.ResolveName), &SAs.Resolve},
+          }))
+    return std::move(Err);
+  return EPCGenericDylibManager(ES.getExecutorProcessControl(), std::move(SAs));
+}
+
+Expected<EPCGenericDylibManager>
+EPCGenericDylibManager::Create(ExecutionSession &ES,
+                               rt::SimpleExecutorDylibManagerSymbolNames SNs) {
+  return Create(ES.getBootstrapJITDylib(), std::move(SNs));
 }
 
 Expected<tpctypes::DylibHandle> EPCGenericDylibManager::open(StringRef Path,

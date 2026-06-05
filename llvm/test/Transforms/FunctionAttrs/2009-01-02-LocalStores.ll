@@ -3,7 +3,7 @@
 
 define ptr @a(ptr %p) {
 ; CHECK-LABEL: define ptr @a(
-; CHECK-SAME: ptr readonly captures(none) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    ret ptr [[TMP]]
 ;
@@ -28,7 +28,7 @@ define ptr @b(ptr %q) {
 @g = global i32 0
 define ptr @c(ptr %r) {
 ; CHECK-LABEL: define ptr @c(
-; CHECK-SAME: ptr readnone returned captures(address_is_null, ret: address, provenance) [[R:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr nofree readnone returned captures(address_is_null, ret: address, provenance) [[R:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq ptr [[R]], null
 ; CHECK-NEXT:    store i32 1, ptr @g, align 4
 ; CHECK-NEXT:    ret ptr [[R]]

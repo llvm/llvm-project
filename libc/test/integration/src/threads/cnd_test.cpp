@@ -116,7 +116,9 @@ enum class WaitMode {
   Timed,
 };
 
-int waiter_thread_func([[maybe_unused]] void *unused) {
+int waiter_thread_func(void *arg) {
+  auto *waiter_unblocked =
+      static_cast<LIBC_NAMESPACE::cpp::Atomic<bool> *>(arg);
   LIBC_NAMESPACE::mtx_lock(&waiter_mtx);
 
   LIBC_NAMESPACE::mtx_lock(&main_thread_mtx);
@@ -124,6 +126,7 @@ int waiter_thread_func([[maybe_unused]] void *unused) {
   LIBC_NAMESPACE::mtx_unlock(&main_thread_mtx);
 
   LIBC_NAMESPACE::cnd_wait(&waiter_cnd, &waiter_mtx);
+  waiter_unblocked->store(true);
   LIBC_NAMESPACE::mtx_unlock(&waiter_mtx);
 
   return 0x600D;
@@ -140,7 +143,9 @@ void single_waiter_test(WaitMode wait_mode) {
   ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&main_thread_mtx), int(thrd_success));
 
   thrd_t waiter_thread;
-  LIBC_NAMESPACE::thrd_create(&waiter_thread, waiter_thread_func, nullptr);
+  LIBC_NAMESPACE::cpp::Atomic<bool> waiter_unblocked(false);
+  LIBC_NAMESPACE::thrd_create(&waiter_thread, waiter_thread_func,
+                              &waiter_unblocked);
 
   if (wait_mode == WaitMode::Default) {
     ASSERT_EQ(LIBC_NAMESPACE::cnd_wait(&main_thread_cnd, &main_thread_mtx),
@@ -156,9 +161,11 @@ void single_waiter_test(WaitMode wait_mode) {
   }
   ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&main_thread_mtx), int(thrd_success));
 
-  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&waiter_mtx), int(thrd_success));
-  ASSERT_EQ(LIBC_NAMESPACE::cnd_signal(&waiter_cnd), int(thrd_success));
-  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&waiter_mtx), int(thrd_success));
+  while (!waiter_unblocked.load()) {
+    ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&waiter_mtx), int(thrd_success));
+    ASSERT_EQ(LIBC_NAMESPACE::cnd_signal(&waiter_cnd), int(thrd_success));
+    ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&waiter_mtx), int(thrd_success));
+  }
 
   int retval;
   LIBC_NAMESPACE::thrd_join(waiter_thread, &retval);
