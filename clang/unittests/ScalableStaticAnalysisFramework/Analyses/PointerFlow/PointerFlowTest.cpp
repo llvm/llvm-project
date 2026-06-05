@@ -967,6 +967,21 @@ TEST_F(PointerFlowTest, ArrayOfStructInitList) {
                                       }));
 }
 
+TEST_F(PointerFlowTest, ScalarPointerBraceInit) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    int *q;
+    void foo() {
+      int *p{q};
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"p", 1U}, {"q", 1U}}}));
+}
+
 TEST_F(PointerFlowTest, EmptyInitsScalarInt) {
   ASSERT_EQ(setUpTest(R"cpp(
     void foo() {
