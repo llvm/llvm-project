@@ -346,6 +346,23 @@ struct LLVMPointerPointerLikeModel
   }
 };
 
+struct PrivateTypePointerLikeModel
+    : public PointerLikeType::ExternalModel<PrivateTypePointerLikeModel,
+                                            PrivateType> {
+  Type getElementType(Type type) const {
+    return cast<PrivateType>(type).getBaseTy();
+  }
+
+  Value genCast(Type, OpBuilder &builder, Location loc, Value value,
+                Type resultType) const {
+    if (value.getType() == resultType)
+      return value;
+    if (!isa<PointerLikeType>(resultType))
+      return {};
+    return UnwrapPrivateOp::create(builder, loc, resultType, value).getResult();
+  }
+};
+
 struct MemrefAddressOfGlobalModel
     : public AddressOfGlobalOpInterface::ExternalModel<
           MemrefAddressOfGlobalModel, memref::GetGlobalOp> {
@@ -474,6 +491,7 @@ void OpenACCDialect::initialize() {
       MemRefPointerLikeModel<UnrankedMemRefType>>(*getContext());
   LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
       *getContext());
+  PrivateType::attachInterface<PrivateTypePointerLikeModel>(*getContext());
 
   // Attach operation interfaces
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
