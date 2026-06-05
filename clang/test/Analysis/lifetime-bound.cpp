@@ -81,6 +81,8 @@ void caller_five() {
   clang_analyzer_dump(s);
 }
 
+
+
 // These are the cases when the result of function calls are SymbolRefs.
 
 // Function returns ptr and has an annotated parameter
@@ -91,11 +93,11 @@ void clang_analyzer_lifetime_bound(int*);
 void caller_six() {
   int y = 15;
   int* y_ptr = &y;
-  auto bind = foo(y_ptr);
+  auto* bind = foo(y_ptr);
 
   clang_analyzer_lifetime_bound(bind);
-                                       // expected-warning@-1 {{Origin bound to n}}
-                                      // expected-warning@-1 {{Origin contains loan n}}
+                                       // expected-warning@-1 {{Origin bound to y}}
+                                       // expected-warning@-1 {{Origin contains loan y}}
   clang_analyzer_dump(bind);
 
 // FIXME: The full warning does look like this:
@@ -118,10 +120,24 @@ void caller_seven() {
 
   clang_analyzer_lifetime_bound(bind);
                                        // expected-warning@-1 {{Origin bound to some_number}}
-                                      // expected-warning@-1 {{Origin contains loan some_number}}
+                                       // expected-warning@-1 {{Origin contains loan some_number}}
   clang_analyzer_dump(bind);
 
 // The FIXME about the full warning applies to this text case as well.
 }
 
+// Function returns a reference and has two annotated parameters.
+int& f(int& a [[clang::lifetimebound]], int& b [[clang::lifetimebound]]);
 
+void clang_analyzer_lifetime_bound(int&);
+
+void caller_eight() {
+  int first_num = 1;
+  int second_num = 2;
+  auto numbers = f(first_num, second_num);
+
+  clang_analyzer_lifetime_bound(numbers);
+                                          // expected-warning@-1 {{Origin bound to first_num}}
+                                          // expected-warning@-1 {{Origin contains loan first_num}}
+  clang_analyzer_dump(numbers);
+}

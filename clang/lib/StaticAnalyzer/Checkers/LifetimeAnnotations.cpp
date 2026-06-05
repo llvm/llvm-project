@@ -67,24 +67,15 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
     SVal ArgVal = Call.getArgSVal(LBParamIdx);
     if (const MemRegion *ArgValRegion = ArgVal.getAsRegion()) {
       if (RetValSym)
-        llvm::errs() << "RetValSym: ";
-        RetValSym->dump();
-        llvm::errs() << "\n";
         State = State->set<LifetimeBoundMap>(RetValSym, ArgValRegion);
-        llvm::errs() << "State got set with RetValSym" << "\n";
-        C.getState()->dump();
-        llvm::errs() << "\n";
       if (const MemRegion *RetValRegion = RetVal.getAsRegion())
         State = State->set<LifetimeBoundMapVal>(RetValRegion, ArgValRegion);
     }
   }
 
   if (const auto *IC = dyn_cast<CXXInstanceCall>(&Call)) {
-    llvm::errs() << "isCXXThisVal true" << "\n";
     if (implicitObjectParamIsLifetimeBound(FD)) {
-      llvm::errs() << "isLifetimeBound true" << "\n";
       if (const MemRegion *AttrRegion = IC->getCXXThisVal().getAsRegion()) {
-        llvm::errs() << "is AttrRegion non null" << "\n";
         if (RetValSym)
           State = State->set<LifetimeBoundMap>(RetValSym, AttrRegion);
         if (const MemRegion *RetValRegion = RetVal.getAsRegion())
@@ -128,8 +119,7 @@ bool LifetimeAnnotations::evalCall(const CallEvent &Call, CheckerContext &C) con
 }
 
 void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const CallExpr *CE, CheckerContext &C) const {
-  llvm::errs() << "\n";
-  llvm::errs() << "lifetime_bound called" << "\n";
+
   ProgramStateRef State = C.getState();
   unsigned int ArgExpr = CE->getNumArgs();
   if (ArgExpr != 1)
@@ -145,7 +135,7 @@ void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const Cal
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
-  llvm::errs() << "ArgSValSym: " << (ArgSValSym ? "non-null" : "null") << "\n";
+
   if (ArgSValSym) {
     if (const auto *ArgValLookFor = State->get<LifetimeBoundMap>(ArgSValSym)) {
       OS << " Origin " << ArgSValSym << " contains loan " << *ArgValLookFor;
@@ -155,12 +145,7 @@ void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const Cal
     }
   }
 
-  llvm::errs() << "ArgValRegion: " << (ArgValRegion ? "non-null" : "null") << "\n";
   if (ArgValRegion) {
-    llvm::errs() << "\n";
-    llvm::errs() << "ArgValRegion: ";
-    ArgValRegion->dump();
-    llvm::errs() << "\n";
     if (const auto *AttrValLookFor = State->get<LifetimeBoundMapVal>(ArgValRegion)) {
       OS << " Origin " << ArgValRegion << " bound to " << *AttrValLookFor;
       auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
@@ -169,7 +154,6 @@ void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const Cal
     }
   }
 }
-
 
 void ento::registerLifetimeAnnotations(CheckerManager &mgr) {
   mgr.registerChecker<LifetimeAnnotations>();
