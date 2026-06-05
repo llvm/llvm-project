@@ -344,27 +344,107 @@ private:
 /// is useful for debugging and testing, while the binary format is more
 /// compact and I/O efficient. They can both be used interchangeably.
 
-/// NameTableIterator is a lightweight, self-contained input iterator designed
-/// to stream FunctionId symbols from an eagerly populated contiguous buffer
-/// of FunctionId objects.
-class NameTableIterator
-    : public llvm::iterator_facade_base<
-          NameTableIterator, std::input_iterator_tag, FunctionId,
-          std::ptrdiff_t, const FunctionId *, FunctionId> {
-  const FunctionId *Ptr = nullptr;
+/// Manages the sample profile name table, supporting both an eagerly loaded
+/// std::vector of FunctionId objects and lazy-loaded MD5 hashes read directly
+/// from the memory-mapped buffer. It enforces the exclusivity of these
+/// two formats and provides a unified read-only container interface.
+class SampleProfileNameTable {
+  const uint8_t *Start = nullptr;
+  size_t Size = 0;
+  std::vector<FunctionId> Vec;
 
-public:
-  NameTableIterator() = default;
-  NameTableIterator(const FunctionId *P) : Ptr(P) {}
-
-  bool operator==(const NameTableIterator &RHS) const { return Ptr == RHS.Ptr; }
-
-  NameTableIterator &operator++() {
-    ++Ptr;
-    return *this;
+  /// Helper function to read a FunctionId (MD5 hash) from a raw buffer.
+  static FunctionId readFunctionIdFromMD5(const uint8_t *Ptr) {
+    using namespace support;
+    return FunctionId(
+        endian::read<uint64_t, unaligned>(Ptr, endianness::little));
   }
 
-  FunctionId operator*() const { return *Ptr; }
+public:
+  /// iterator is a lightweight, self-contained input iterator designed
+  /// to stream FunctionId symbols from either the memory-mapped
+  /// file buffer (lazy loading from the FixedMD5 layout) or from an eagerly
+  /// loaded vector of FunctionId objects (fallback).
+  class iterator
+      : public llvm::iterator_facade_base<iterator, std::input_iterator_tag,
+                                          FunctionId, std::ptrdiff_t,
+                                          const FunctionId *, FunctionId> {
+  public:
+    // Tag type to indicate the lazy name table layout.
+    struct UseLazy_t {};
+    static constexpr UseLazy_t UseLazy{};
+    iterator() = default;
+
+    // Constructor for lazy loading.
+    iterator(const uint8_t *P, UseLazy_t) : Ptr(P), IsLazy(true) {}
+
+    // Constructor for eagerly loaded name table.
+    iterator(const FunctionId *P)
+        : Ptr(reinterpret_cast<const uint8_t *>(P)), IsLazy(false) {}
+
+    bool operator==(const iterator &RHS) const { return Ptr == RHS.Ptr; }
+
+    iterator &operator++() {
+      Ptr += IsLazy ? sizeof(uint64_t) : sizeof(FunctionId);
+      return *this;
+    }
+
+    FunctionId operator*() const {
+      return IsLazy ? readFunctionIdFromMD5(Ptr)
+                    : *reinterpret_cast<const FunctionId *>(Ptr);
+    }
+
+  private:
+    const uint8_t *Ptr = nullptr;
+    bool IsLazy = false;
+  };
+
+  using const_iterator = iterator;
+
+  SampleProfileNameTable() = default;
+
+  void clear() {
+    Start = nullptr;
+    Size = 0;
+    Vec.clear();
+  }
+
+  /// Transitions the table to lazy-loading mode, pointing directly to a
+  /// contiguous buffer of little-endian 64-bit MD5 hashes.
+  void setLazy(const uint8_t *S, size_t Sz) {
+    clear();
+    Start = S;
+    Size = Sz;
+  }
+
+  /// Transitions the table to eager-loading mode by clearing previous state and
+  /// returning a mutable reference to the underlying vector for population.
+  std::vector<FunctionId> &resetToEager() {
+    clear();
+    return Vec;
+  }
+
+  size_t size() const { return Start ? Size : Vec.size(); }
+  bool empty() const { return size() == 0; }
+
+  FunctionId operator[](size_t Idx) const {
+    assert(Idx < size());
+    if (Start)
+      return readFunctionIdFromMD5(Start + Idx * sizeof(uint64_t));
+    return Vec[Idx];
+  }
+
+  iterator begin() const {
+    if (Start)
+      return {Start, iterator::UseLazy};
+    return {Vec.data()};
+  }
+
+  iterator end() const {
+    if (Start)
+      return {Start + Size * sizeof(uint64_t), iterator::UseLazy};
+    return {Vec.data() + Vec.size()};
+  }
 };
 
 class SampleProfileReader {
@@ -520,8 +600,10 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  virtual llvm::iterator_range<NameTableIterator> getNameTable() const {
-    return {NameTableIterator(), NameTableIterator()};
+  virtual llvm::iterator_range<SampleProfileNameTable::iterator>
+  getNameTable() const {
+    return {SampleProfileNameTable::iterator(),
+            SampleProfileNameTable::iterator()};
   }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
@@ -676,9 +758,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  llvm::iterator_range<NameTableIterator> getNameTable() const override {
-    return {NameTableIterator(NameTable.data()),
-            NameTableIterator(NameTable.data() + NameTable.size())};
+  llvm::iterator_range<SampleProfileNameTable::iterator>
+  getNameTable() const override {
+    return {NameTable.begin(), NameTable.end()};
   }
 
 protected:
@@ -748,7 +830,7 @@ protected:
   const uint8_t *End = nullptr;
 
   /// Function name table.
-  std::vector<FunctionId> NameTable;
+  SampleProfileNameTable NameTable;
 
   /// CSNameTable is used to save full context vectors. It is the backing buffer
   /// for SampleContextFrames.
