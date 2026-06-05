@@ -13,6 +13,7 @@
 // text_encoding text_encoding::literal() noexcept;
 
 #include <cassert>
+#include <concepts>
 #include <text_encoding>
 
 constexpr bool test() {
