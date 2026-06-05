@@ -66,11 +66,6 @@ set(LLDB_PLUGIN_PROCESS_UTILITY_SOURCES
   ThreadMemory.cpp
 )
 
-if(WIN32)
-  list(APPEND LLDB_PLUGIN_PROCESS_UTILITY_SOURCES
-    IOHandlerProcessSTDIOWindows.cpp
-  )
-endif()
 
 add_lldb_library(lldbPluginProcessUtility
     ${LLDB_PLUGIN_PROCESS_UTILITY_SOURCES}
