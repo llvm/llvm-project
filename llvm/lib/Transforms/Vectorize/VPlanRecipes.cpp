@@ -1390,20 +1390,41 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
                                                     VecTy, Ctx.CostKind, 0);
   }
-  case Instruction::FCmp:
-  case Instruction::ICmp: {
-    // FIXME: We don't handle scalar compares inside the loop here yet, as loop
-    // exit conditions are handled by the legacy cost model and avoiding all
-    // scalar compares is the simplest way to avoid double-counting compares
-    // that compute the loop exit condition.
-    bool IsScalar = vputils::onlyFirstLaneUsed(this);
-    const VPRegionBlock *Region = getRegion();
-    if (IsScalar && Region &&
-        Region == Region->getPlan()->getVectorLoopRegion())
-      return 0;
-    return getCostForRecipeWithOpcode(
-        getOpcode(), IsScalar ? ElementCount::getFixed(1) : VF, Ctx);
+  case VPInstruction::Not: {
+    Type *ValTy = this->getScalarType();
+    // InstCombine will fold `xor` to the conditional branch.
+    if (auto *U = const_cast<VPUser *>(getSingleUser()))
+      if (match(U, m_BranchOnCond(m_VPValue())))
+        return 0;
+    if (!vputils::onlyFirstLaneUsed(this))
+      ValTy = toVectorTy(ValTy, VF);
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
+                                          Ctx.CostKind);
   }
+  case VPInstruction::BranchOnCount: {
+    // If TC <= VF then this is just a branch.
+    // FIXME: Removing the branch happens in simplifyBranchConditionForVFAndUF
+    // where it checks TC <= VF * UF, but we don't know UF yet. This means in
+    // some cases we get a cost that's too high due to counting a cmp that
+    // later gets removed.
+    // FIXME: The compare could also be removed if TC = M * vscale,
+    // VF = N * vscale, and M <= N. Detecting that would require having the
+    // trip count as a SCEV though.
+    Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
+    ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
+    if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
+      return 0;
+    // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
+    Type *ValTy = getOperand(0)->getScalarType();
+    return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy,
+                                      CmpInst::makeCmpResultType(ValTy),
+                                      CmpInst::ICMP_EQ, Ctx.CostKind);
+  }
+  case Instruction::FCmp:
+  case Instruction::ICmp:
+    return getCostForRecipeWithOpcode(
+        getOpcode(),
+        vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
@@ -2375,7 +2396,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
            Opcode == Instruction::FNeg || Opcode == Instruction::FDiv ||
            Opcode == Instruction::FRem || Opcode == Instruction::FPExt ||
            Opcode == Instruction::FPTrunc || Opcode == Instruction::PHI ||
-           Opcode == Instruction::Select ||
+           Opcode == Instruction::Select || Opcode == Instruction::SIToFP ||
+           Opcode == Instruction::UIToFP ||
            Opcode == VPInstruction::WideIVStep ||
            Opcode == VPInstruction::ReductionStartVector;
   case OperationType::FCmp:
@@ -2773,6 +2795,86 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   return match(getStartValue(), m_ZeroInt()) &&
          match(getStepValue(), m_One()) &&
          getScalarType() == getRegion()->getCanonicalIVType();
+}
+
+InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  // The cost model for this is modelled on expandVPDerivedIV in
+  // VPlanTransforms.cpp. In order to avoid overly pessimistic costs that can
+  // negatively affect vectorization it takes into account any expected
+  // simplifications that happen in simplifyRecipe.
+  switch (getInductionKind()) {
+  default:
+    // TODO: Compute cost for remaining kinds.
+    break;
+  case InductionDescriptor::IK_IntInduction: {
+    // There are currently no tests that expose a path where all lanes are
+    // used, so it's better to bail out for now.
+    if (!vputils::onlyFirstLaneUsed(this))
+      break;
+
+    // Start off by assuming we need both mul and add, then refine this.
+    bool NeedsMul = true, NeedsAdd = true, NeedsShl = false;
+
+    // If the start value is zero the add gets folded away.
+    if (auto *VPV = dyn_cast<VPIRValue>(getStartValue()))
+      if (auto *StartC = dyn_cast<ConstantInt>(VPV->getValue()))
+        NeedsAdd = !StartC->isZero();
+
+    // For some values of step the arithmetic changes:
+    //  1. A step of 1 requires no operation.
+    //  2. A step of -1 requires a negate.
+    //  3. A power-of-2 step will use a shl, instead of a mul.
+    Type *StepTy = getStepValue()->getScalarType();
+    InstructionCost Cost(0);
+    if (auto *VPV = dyn_cast<VPIRValue>(getStepValue())) {
+      if (auto *StepC = dyn_cast<ConstantInt>(VPV->getValue())) {
+        if (StepC->isOne())
+          NeedsMul = false;
+        else if (StepC->isMinusOne()) {
+          // This will most likely end up as a negate in simplifyRecipe, and
+          // the negate will be combined with the add to make a sub.
+          // NOTE: This is perhaps an invalid assumption that the cost of an
+          // 'add' is the same as a 'sub'.
+          NeedsMul = false;
+          NeedsAdd = true;
+        } else if (StepC->getValue().isPowerOf2()) {
+          // This will most likely end up as a shift-left in simplifyRecipe
+          NeedsMul = false;
+          NeedsShl = true;
+        }
+      }
+    }
+
+    // Add the cost of the conversion from index to step type if the index
+    // will be used.
+    Type *IndexTy = getIndex()->getScalarType();
+    unsigned StepTySize = StepTy->getScalarSizeInBits();
+    unsigned IndexTySize = IndexTy->getScalarSizeInBits();
+    if ((NeedsAdd || NeedsMul || NeedsShl) && StepTySize != IndexTySize) {
+      unsigned CastOpc =
+          StepTySize < IndexTySize ? Instruction::Trunc : Instruction::SExt;
+      Cost += Ctx.TTI.getCastInstrCost(
+          CastOpc, StepTy, IndexTy, TTI::CastContextHint::None, Ctx.CostKind);
+    }
+
+    if (NeedsMul)
+      Cost += Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, StepTy,
+                                             Ctx.CostKind);
+    if (NeedsShl)
+      Cost += Ctx.TTI.getArithmeticInstrCost(
+          Instruction::Shl, StepTy, Ctx.CostKind,
+          {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+          {TargetTransformInfo::OK_UniformConstantValue,
+           TargetTransformInfo::OP_None});
+    if (NeedsAdd)
+      Cost += Ctx.TTI.getArithmeticInstrCost(Instruction::Add, StepTy,
+                                             Ctx.CostKind);
+    return Cost;
+  }
+  }
+
+  return 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -609,9 +609,7 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
       [&](const auto &details) {
         if constexpr (std::is_convertible_v<decltype(details),
                           const WithOmpDeclarative &>) {
-          if (auto *reqs{details.ompRequires()}) {
-            return reqs->test(req);
-          }
+          return details.ompRequires().test(req);
         }
         return false;
       },
@@ -2486,6 +2484,7 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
                   std::is_same_v<TypeC, parser::OmpClause::To>) {
                 auto &objList{*GetOmpObjectList(c)};
                 CheckSymbolNames(dirName.source, objList);
+                CheckTypeParamInquiry(dirName.source, objList);
                 CheckVarIsNotPartOfAnotherVar(dirName.source, objList);
                 CheckThreadprivateOrDeclareTargetVar(objList);
               }
@@ -4228,6 +4227,7 @@ void OmpStructureChecker::CheckSharedBindingInOuterContext(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_shared);
+  CheckTypeParamInquiry(GetContext().clauseSource, x.v);
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
   CheckCrayPointee(x.v, "SHARED");
 }
@@ -4236,6 +4236,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(x.v, symbols);
   CheckAllowedClause(llvm::omp::Clause::OMPC_private);
+  CheckTypeParamInquiry(GetContext().clauseSource, x.v);
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_private);
   CheckCrayPointee(x.v, "PRIVATE");
@@ -4300,6 +4301,7 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
 void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_firstprivate);
 
+  CheckTypeParamInquiry(GetContext().clauseSource, x.v);
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckCrayPointee(x.v, "FIRSTPRIVATE");
 
@@ -4968,6 +4970,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_lastprivate);
 
   const auto &objectList{*GetOmpObjectList(x)};
+  CheckTypeParamInquiry(GetContext().clauseSource, objectList);
   CheckVarIsNotPartOfAnotherVar(
       GetContext().clauseSource, objectList, "LASTPRIVATE");
   CheckCrayPointee(objectList, "LASTPRIVATE");

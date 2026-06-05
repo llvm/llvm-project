@@ -135,18 +135,20 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
 
 }
 
-multiclass SIRegWithSubRegs<string n, bits<10> regIdx,
-                           bit isVGPR, bit isAGPR,
-                           list<int> DwarfEncodings,
-                           list<Register> subRegs,
-                           list<SubRegIndex> subRegIndices,
-                           bit coveredBySubRegs> {
+multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
+                        bit isVGPR = 0, bit isAGPR = 0,
+                        list<int> DwarfEncodings = [-1, -1]> {
   def _LO16 : SIReg<n#".l", regIdx, isVGPR, isAGPR>;
-  def "" : RegisterWithSubRegs<n, subRegs>,
+  def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isVGPR, isAGPR,
+                    /* isHi16 */ 1> {
+    let isArtificial = ArtificialHigh;
+  }
+  def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
+                                   !cast<Register>(NAME#"_HI16")]>,
            DwarfRegNum<DwarfEncodings> {
     let Namespace = "AMDGPU";
-    let SubRegIndices = subRegIndices;
-    let CoveredBySubRegs = coveredBySubRegs;
+    let SubRegIndices = [lo16, hi16];
+    let CoveredBySubRegs = !not(ArtificialHigh);
 
     let HWEncoding{9-0} = regIdx;
     let HWEncoding{10} = isVGPR;
@@ -156,27 +158,9 @@ multiclass SIRegWithSubRegs<string n, bits<10> regIdx,
   }
 }
 
-multiclass SIRegLoHi16 <string n, bits<10> regIdx,
-                        bit isVGPR = 0, bit isAGPR = 0,
-                        list<int> DwarfEncodings = [-1, -1]> {
-  def _HI16 : SIReg<n#".h", regIdx, isVGPR, isAGPR, isHi16 = true>;
-  defm "" : SIRegWithSubRegs<n, regIdx, isVGPR, isAGPR, DwarfEncodings,
-                             [!cast<Register>(NAME#"_LO16"),
-                             !cast<Register>(NAME#"_HI16")],
-                             [lo16, hi16], coveredBySubRegs = true>;
-}
-
-multiclass SIRegLo16 <string n, bits<10> regIdx,
-                      bit isVGPR = 0, bit isAGPR = 0,
-                      list<int> DwarfEncodings = [-1, -1]> {
-  defm "" : SIRegWithSubRegs<n, regIdx, isVGPR, isAGPR, DwarfEncodings,
-                             [!cast<Register>(NAME#"_LO16")],
-                             [lo16], coveredBySubRegs = false>;
-}
-
 // Special Registers
-defm VCC_LO : SIRegLo16<"vcc_lo", 106>;
-defm VCC_HI : SIRegLo16<"vcc_hi", 107>;
+defm VCC_LO : SIRegLoHi16<"vcc_lo", 106>;
+defm VCC_HI : SIRegLoHi16<"vcc_hi", 107>;
 
 // Pseudo-registers: Used as placeholders during isel and immediately
 // replaced, never seeing the verifier.
@@ -200,8 +184,9 @@ def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
   let CoveredBySubRegs = 1;
 }
 
-defm EXEC_LO : SIRegLo16<"exec_lo", 126, isVGPR= false, isAGPR = false, DwarfEncodings = [1, 1]>;
-defm EXEC_HI : SIRegLo16<"exec_hi", 127>;
+defm EXEC_LO : SIRegLoHi16<"exec_lo", 126, /*ArtificialHigh=*/1, /*isVGPR=*/0,
+                           /*isAGPR=*/0, /*DwarfEncodings=*/[1, 1]>;
+defm EXEC_HI : SIRegLoHi16<"exec_hi", 127>;
 
 def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]> {
   let Namespace = "AMDGPU";
@@ -211,9 +196,9 @@ def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]>
 
 // 32-bit real registers, for MC only.
 // May be used with both 32-bit and 64-bit operands.
-defm SRC_VCCZ : SIRegLo16<"src_vccz", 251>;
-defm SRC_EXECZ : SIRegLo16<"src_execz", 252>;
-defm SRC_SCC : SIRegLo16<"src_scc", 253>;
+defm SRC_VCCZ : SIRegLoHi16<"src_vccz", 251>;
+defm SRC_EXECZ : SIRegLoHi16<"src_execz", 252>;
+defm SRC_SCC : SIRegLoHi16<"src_scc", 253>;
 
 // 1-bit pseudo register, for codegen only.
 // Should never be emitted.
@@ -221,15 +206,15 @@ def SCC : SIReg<"scc">;
 
 // Encoding changes between subtarget generations.
 // See also Utils/AMDGPUBaseInfo.cpp MAP_REG2REG.
-defm M0_gfxpre11 : SIRegLo16 <"m0", 124>;
-defm M0_gfx11plus : SIRegLo16 <"m0", 125>;
-defm M0 : SIRegLo16 <"m0", 0>;
+defm M0_gfxpre11 : SIRegLoHi16 <"m0", 124>;
+defm M0_gfx11plus : SIRegLoHi16 <"m0", 125>;
+defm M0 : SIRegLoHi16 <"m0", 0>;
 
-defm SGPR_NULL_gfxpre11 : SIRegLo16 <"null", 125>;
-defm SGPR_NULL_gfx11plus : SIRegLo16 <"null", 124>;
+defm SGPR_NULL_gfxpre11 : SIRegLoHi16 <"null", 125>;
+defm SGPR_NULL_gfx11plus : SIRegLoHi16 <"null", 124>;
 let isConstant = true in {
-defm SGPR_NULL : SIRegLo16 <"null", 0>;
-defm SGPR_NULL_HI : SIRegLo16 <"", 0>;
+defm SGPR_NULL : SIRegLoHi16 <"null", 0>;
+defm SGPR_NULL_HI : SIRegLoHi16 <"", 0>;
 } // isConstant = true
 
 def SGPR_NULL64 :
@@ -251,7 +236,7 @@ def SGPR_NULL64 :
 // need them, we need to do a 64 bit load and extract the bits manually.
 multiclass ApertureRegister<string name, bits<10> regIdx> {
   let isConstant = true in {
-    defm _LO : SIRegLo16 <name, regIdx>;
+    defm _LO : SIRegLoHi16 <name, regIdx>;
     def "" : RegisterWithSubRegs<name, [!cast<Register>(NAME#_LO)]> {
       let Namespace = "AMDGPU";
       let SubRegIndices = [sub0];
@@ -267,8 +252,8 @@ defm SRC_PRIVATE_BASE  : ApertureRegister<"src_private_base",  237>;
 defm SRC_PRIVATE_LIMIT : ApertureRegister<"src_private_limit", 238>;
 
 let isConstant = true in {
-  defm SRC_FLAT_SCRATCH_BASE_LO : SIRegLo16<"src_flat_scratch_base_lo", 230>;
-  defm SRC_FLAT_SCRATCH_BASE_HI : SIRegLo16<"src_flat_scratch_base_hi", 231>;
+  defm SRC_FLAT_SCRATCH_BASE_LO : SIRegLoHi16<"src_flat_scratch_base_lo", 230>;
+  defm SRC_FLAT_SCRATCH_BASE_HI : SIRegLoHi16<"src_flat_scratch_base_hi", 231>;
 
   // Using src_flat_scratch_base_lo in a 64-bit context gets the full 64-bit
   // hi:lo value.
@@ -282,7 +267,7 @@ let isConstant = true in {
   }
 }
 
-defm SRC_POPS_EXITING_WAVE_ID : SIRegLo16<"src_pops_exiting_wave_id", 239>;
+defm SRC_POPS_EXITING_WAVE_ID : SIRegLoHi16<"src_pops_exiting_wave_id", 239>;
 
 // Not addressable
 def MODE : SIReg <"mode", 0>;
@@ -298,8 +283,8 @@ def LDS_DIRECT : SIReg <"src_lds_direct", 254> {
   let isArtificial = 1;
 }
 
-defm XNACK_MASK_LO : SIRegLo16<"xnack_mask_lo", 104>;
-defm XNACK_MASK_HI : SIRegLo16<"xnack_mask_hi", 105>;
+defm XNACK_MASK_LO : SIRegLoHi16<"xnack_mask_lo", 104>;
+defm XNACK_MASK_HI : SIRegLoHi16<"xnack_mask_hi", 105>;
 
 def XNACK_MASK :
     RegisterWithSubRegs<"xnack_mask", [XNACK_MASK_LO, XNACK_MASK_HI]> {
@@ -309,8 +294,8 @@ def XNACK_MASK :
 }
 
 // Trap handler registers
-defm TBA_LO : SIRegLo16<"tba_lo", 108>;
-defm TBA_HI : SIRegLo16<"tba_hi", 109>;
+defm TBA_LO : SIRegLoHi16<"tba_lo", 108>;
+defm TBA_HI : SIRegLoHi16<"tba_hi", 109>;
 
 def TBA : RegisterWithSubRegs<"tba", [TBA_LO, TBA_HI]> {
   let Namespace = "AMDGPU";
@@ -318,8 +303,8 @@ def TBA : RegisterWithSubRegs<"tba", [TBA_LO, TBA_HI]> {
   let HWEncoding = TBA_LO.HWEncoding;
 }
 
-defm TMA_LO : SIRegLo16<"tma_lo", 110>;
-defm TMA_HI : SIRegLo16<"tma_hi", 111>;
+defm TMA_LO : SIRegLoHi16<"tma_lo", 110>;
+defm TMA_HI : SIRegLoHi16<"tma_hi", 111>;
 
 def TMA : RegisterWithSubRegs<"tma", [TMA_LO, TMA_HI]> {
   let Namespace = "AMDGPU";
@@ -328,15 +313,15 @@ def TMA : RegisterWithSubRegs<"tma", [TMA_LO, TMA_HI]> {
 }
 
 foreach Index = 0...15 in {
-  defm TTMP#Index#_vi       : SIRegLo16<"ttmp"#Index, !add(112, Index)>;
-  defm TTMP#Index#_gfx9plus : SIRegLo16<"ttmp"#Index, !add(108, Index)>;
-  defm TTMP#Index           : SIRegLo16<"ttmp"#Index, 0>;
+  defm TTMP#Index#_vi       : SIRegLoHi16<"ttmp"#Index, !add(112, Index)>;
+  defm TTMP#Index#_gfx9plus : SIRegLoHi16<"ttmp"#Index, !add(108, Index)>;
+  defm TTMP#Index           : SIRegLoHi16<"ttmp"#Index, 0>;
 }
 
 multiclass FLAT_SCR_LOHI_m <string n, bits<10> ci_e, bits<10> vi_e> {
-  defm _ci : SIRegLo16<n, ci_e>;
-  defm _vi : SIRegLo16<n, vi_e>;
-  defm "" : SIRegLo16<n, 0>;
+  defm _ci : SIRegLoHi16<n, ci_e>;
+  defm _vi : SIRegLoHi16<n, vi_e>;
+  defm "" : SIRegLoHi16<n, 0>;
 }
 
 class FlatReg <Register lo, Register hi, bits<16> encoding> :
@@ -356,24 +341,27 @@ def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 // SGPR registers
 foreach Index = 0...105 in {
   defm SGPR#Index :
-     SIRegLo16 <"s"#Index, Index, isVGPR = false, isAGPR = false, DwarfEncodings =
-                [!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
-                !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
+     SIRegLoHi16 <"s"#Index, Index, /*ArtificialHigh=*/1,
+                  /*isVGPR=*/0, /*isAGPR=*/0, /*DwarfEncodings=*/
+                  [!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
+                   !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
 }
 
 // VGPR registers
 foreach Index = 0...1023 in {
   defm VGPR#Index :
-    SIRegLoHi16 <"v"#Index, Index,  isVGPR = true, isAGPR = false, DwarfEncodings =
-                 [!if(!le(Index, 511), !add(Index, 2560), -1),
-                  !if(!le(Index, 511), !add(Index, 1536), !add(Index, !sub(3584, 512)))]>;
+    SIRegLoHi16 <"v"#Index, Index, /*ArtificialHigh=*/ 0,
+                 /*isVGPR=*/ 1, /*isAGPR=*/ 0, /*DwarfEncodings=*/
+                [!if(!le(Index, 511), !add(Index, 2560), -1),
+                 !if(!le(Index, 511), !add(Index, 1536), !add(Index, !sub(3584, 512)))]>;
 }
 
 // AccVGPR registers
 foreach Index = 0...255 in {
   defm AGPR#Index :
-      SIRegLo16 <"a"#Index, Index, isVGPR = false, isAGPR = true, DwarfEncodings =
-                 [!add(Index, 3072), !add(Index, 2048)]>;
+      SIRegLoHi16 <"a"#Index, Index, /*ArtificialHigh=*/ 1,
+                   /*isVGPR=*/ 0, /*isAGPR=*/ 1, /*DwarfEncodings=*/
+                   [!add(Index, 3072), !add(Index, 2048)]>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,0 +1,19 @@
+header: sys/ptrace.h
+standards:
+  - linux
+macros:
+  - macro_name: PTRACE_TRACEME
+    macro_header: sys-ptrace-macros.h
+  - macro_name: PT_TRACE_ME
+    macro_header: sys-ptrace-macros.h
+types: []
+enums: []
+objects: []
+functions:
+  - name: ptrace
+    standards:
+      - linux
+    return_type: long
+    arguments:
+      - type: int
+      - type: '...'

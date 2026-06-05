@@ -824,12 +824,26 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
                     << "' and '" << InnerLoop->getName()
                     << "' are tightly nested\n");
 
-  // A perfectly nested loop will not have any branch in between the outer and
-  // inner block i.e. outer header will branch to either inner preheader and
-  // outerloop latch.
+  // In a perfectly nested loop the outer header branches only into the inner
+  // loop. If it can also reach the outer latch, it conditionally guards the
+  // inner loop (an imperfect nest), so the inner loop runs on only a subset of
+  // the outer iterations. Interchanging such a nest would run the inner loop on
+  // every outer iteration, including the guarded-off ones, which is illegal
+  // when the inner loop relies on the guard to terminate (e.g. an eq/ne exit
+  // whose trip count is degenerate once the guard is false). Reject by allowing
+  // the outer header to branch only into the inner loop.
+  //
+  // TODO: This is conservative. A guarded nest is still safe to interchange
+  // when the inner loop has a computable trip count that is empty exactly when
+  // the guard is false, e.g.:
+  //   for (i = 0; i < N; i++)
+  //     if (M > 0)                  // loop-invariant guard
+  //       for (j = 0; j < M; j++)   // empty when M <= 0
+  //         A[j][i] = ...;
+  // Interchanging is legal here because the inner loop runs zero times on the
+  // guarded-off iterations.
   for (BasicBlock *Succ : successors(OuterLoopHeader))
-    if (Succ != InnerLoopPreHeader && Succ != InnerLoop->getHeader() &&
-        Succ != OuterLoopLatch)
+    if (Succ != InnerLoopPreHeader && Succ != InnerLoop->getHeader())
       return false;
 
   LLVM_DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
@@ -1371,8 +1385,10 @@ areInnerLoopExitPHIsSupported(Loop *OuterL, Loop *InnerL,
     // from the loop latch.
     if (PHI.getNumIncomingValues() > 1)
       return false;
+    // The reduction LCSSA PHI's store user is rewritten by reduction2Memory();
+    // skip its user-check but keep validating the remaining LCSSA PHIs.
     if (&PHI == LcssaReduction)
-      return true;
+      continue;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
           if (!PN)
@@ -1472,23 +1488,28 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   }
   // Check if outer and inner loop contain legal instructions only.
   for (auto *BB : OuterLoop->blocks())
-    for (Instruction &I : *BB)
-      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // Functions which don't access memory do not prevent interchanging.
-        if (CI->doesNotAccessMemory() || isa<PseudoProbeInst>(CI))
-          continue;
-        LLVM_DEBUG(
-            dbgs() << "Loops with call instructions cannot be interchanged "
-                   << "safely.");
-        ORE->emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "CallInst",
-                                          CI->getDebugLoc(),
-                                          CI->getParent())
-                 << "Cannot interchange loops due to call instruction.";
-        });
+    for (Instruction &I : *BB) {
+      // Loads and stores are checked separately, so we can skip them here.
+      if (isa<LoadInst, StoreInst, PseudoProbeInst>(&I))
+        continue;
 
-        return false;
-      }
+      // We cannot ignore potential memory reads, e.g., loads inside the called
+      // function.
+      if (!I.mayHaveSideEffects() && !I.mayReadFromMemory())
+        continue;
+
+      LLVM_DEBUG(
+          dbgs()
+          << "Loops contain instructions that cannot be safely interchanged\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsafeInst",
+                                        I.getDebugLoc(), I.getParent())
+               << "Cannot interchange loops due to instruction that is "
+                  "potentially unsafe to interchange.";
+      });
+
+      return false;
+    }
 
   if (!findInductions(InnerLoop, InnerLoopInductions)) {
     LLVM_DEBUG(dbgs() << "Could not find inner loop induction variables.\n");
@@ -2224,12 +2245,14 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
 
     assert(all_of(P.users(),
                   [OuterHeader, OuterExit, IncI, InnerHeader](User *U) {
+                    if (!isa<PHINode>(U))
+                      return true;
                     return (cast<PHINode>(U)->getParent() == OuterHeader &&
                             IncI->getParent() == InnerHeader) ||
                            cast<PHINode>(U)->getParent() == OuterExit;
                   }) &&
-           "Can only replace phis iff the uses are in the loop nest exit or "
-           "the incoming value is defined in the inner header (it will "
+           "Can only replace phis iff the phi-uses are in the loop nest exit "
+           "or the incoming value is defined in the inner header (it will "
            "dominate all loop blocks after interchanging)");
     P.replaceAllUsesWith(IncI);
     P.eraseFromParent();
