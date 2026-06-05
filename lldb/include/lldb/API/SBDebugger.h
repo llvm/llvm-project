@@ -525,6 +525,10 @@ public:
   /// Set the terminal height.
   void SetTerminalHeight(uint32_t term_height);
 
+  /// Set the terminal width and height together. Prefer this over the
+  /// single-axis setters when both are known, e.g. when handling a resize.
+  void SetTerminalDimensions(uint32_t term_width, uint32_t term_height);
+
   /// Get the unique ID of this debugger.
   lldb::user_id_t GetID();
 
