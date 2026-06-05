@@ -1696,6 +1696,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_readlane}, StandardB)
       .Uni(B32, {{SgprB32}, {IntrId, VgprB32, SgprB32_ReadFirstLane}});
 
+  addRulesForIOpcs({amdgcn_s_quadmask}, StandardB)
+      .Uni(B32, {{SgprB32}, {IntrId, SgprB32_ReadFirstLane}})
+      .Uni(B64, {{SgprB64}, {IntrId, SgprB64_ReadFirstLane}});
+
   addRulesForIOpcs({amdgcn_writelane}, StandardB)
       .Div(B32,
            {{VgprB32},
