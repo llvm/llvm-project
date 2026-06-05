@@ -75,6 +75,7 @@ STATISTIC(InvalidLoopStructure, "Loop has invalid structure");
 STATISTIC(AddressTakenBB, "Basic block has address taken");
 STATISTIC(MayThrowException, "Loop may throw an exception");
 STATISTIC(ContainsVolatileAccess, "Loop contains a volatile access");
+STATISTIC(ContainsAtomicAccess, "Loop contains an atomic access");
 STATISTIC(NotSimplifiedForm, "Loop is not in simplified form");
 STATISTIC(InvalidDependencies, "Dependencies prevent fusion");
 STATISTIC(UnknownTripCount, "Loop has unknown trip count");
@@ -93,7 +94,7 @@ STATISTIC(NotRotated, "Candidate is not rotated");
 STATISTIC(OnlySecondCandidateIsGuarded,
           "The second candidate is guarded while the first one is not");
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
-STATISTIC(NumSunkInsts, "Number of hoisted preheader instructions.");
+STATISTIC(NumSunkInsts, "Number of sunk preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
 
 static cl::opt<unsigned> FusionPeelMaxCount(
@@ -181,19 +182,18 @@ struct FusionCandidate {
           reportInvalidCandidate(MayThrowException);
           return;
         }
-        if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-          if (SI->isVolatile()) {
-            invalidate();
-            reportInvalidCandidate(ContainsVolatileAccess);
-            return;
-          }
+        if (I.isVolatile()) {
+          invalidate();
+          reportInvalidCandidate(ContainsVolatileAccess);
+          return;
         }
-        if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-          if (LI->isVolatile()) {
-            invalidate();
-            reportInvalidCandidate(ContainsVolatileAccess);
-            return;
-          }
+        // Atomic accesses impose ordering/synchronization constraints that the
+        // dependence analysis used for fusion does not model, so reordering
+        // them across the fused body could be unsafe.
+        if (I.isAtomic()) {
+          invalidate();
+          reportInvalidCandidate(ContainsAtomicAccess);
+          return;
         }
         if (I.mayWriteToMemory())
           MemWrites.push_back(&I);
