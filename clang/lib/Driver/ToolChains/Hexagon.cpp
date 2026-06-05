@@ -358,9 +358,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
-    if (D.isUsingLTO())
-      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
-                    D.getLTOMode() == LTOK_Thin);
+    if (auto LTO = HTC.getLTOMode(Args); LTO != LTOK_None)
+      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
     ToolChain::UnwindLibType UNW = HTC.GetUnwindLibType(Args);
 
@@ -456,9 +455,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO())
-    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = HTC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   //----------------------------------------------------------------------------
   // Libraries

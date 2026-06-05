@@ -154,6 +154,7 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
 
   if (const auto *VarD = dyn_cast<VarDecl>(VD);
       VarD && VarD->getType().isConstQualified() &&
+      (VarD->isConstexpr() || !VarD->getType()->isArrayType()) &&
       !VarD->getAnyInitializer()) {
     diagnoseMissingInitializer(S, OpPC, VD);
     return;
@@ -1725,7 +1726,9 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
-  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
+  const FunctionDecl *Definition;
+  if (!Func->getDecl()->getBody(Definition))
+    return;
   if (!Definition)
     return;
 
@@ -1747,7 +1750,8 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     if (!(S.Current->getFunction() &&
           S.Current->getFunction()->isLambdaStaticInvoker() &&
           Func->isLambdaCallOperator())) {
-      if (!CheckInvoke(S, OpPC, ThisPtr))
+      if (!CheckInvoke(S, OpPC, ThisPtr,
+                       Func->isConstructor() || Func->isDestructor()))
         return false;
     }
 
@@ -2000,6 +2004,12 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
         Overrider->getReturnType()->getPointeeType();
     QualType InitialPointeeType =
         InitialFunction->getReturnType()->getPointeeType();
+
+    // Nothing to do if the types already match.
+    if (S.getASTContext().hasSimilarType(InitialPointeeType,
+                                         OverriderPointeeType))
+      return true;
+
     // We've called Overrider above, but calling code expects us to return what
     // InitialFunction returned. According to the rules for covariant return
     // types, what InitialFunction returns needs to be a base class of what

@@ -75,6 +75,7 @@ STATISTIC(InvalidLoopStructure, "Loop has invalid structure");
 STATISTIC(AddressTakenBB, "Basic block has address taken");
 STATISTIC(MayThrowException, "Loop may throw an exception");
 STATISTIC(ContainsVolatileAccess, "Loop contains a volatile access");
+STATISTIC(ContainsAtomicAccess, "Loop contains an atomic access");
 STATISTIC(NotSimplifiedForm, "Loop is not in simplified form");
 STATISTIC(InvalidDependencies, "Dependencies prevent fusion");
 STATISTIC(UnknownTripCount, "Loop has unknown trip count");
@@ -181,19 +182,18 @@ struct FusionCandidate {
           reportInvalidCandidate(MayThrowException);
           return;
         }
-        if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-          if (SI->isVolatile()) {
-            invalidate();
-            reportInvalidCandidate(ContainsVolatileAccess);
-            return;
-          }
+        if (I.isVolatile()) {
+          invalidate();
+          reportInvalidCandidate(ContainsVolatileAccess);
+          return;
         }
-        if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-          if (LI->isVolatile()) {
-            invalidate();
-            reportInvalidCandidate(ContainsVolatileAccess);
-            return;
-          }
+        // Atomic accesses impose ordering/synchronization constraints that the
+        // dependence analysis used for fusion does not model, so reordering
+        // them across the fused body could be unsafe.
+        if (I.isAtomic()) {
+          invalidate();
+          reportInvalidCandidate(ContainsAtomicAccess);
+          return;
         }
         if (I.mayWriteToMemory())
           MemWrites.push_back(&I);
@@ -665,7 +665,11 @@ private:
                       << " iterations of the first loop. \n");
 
     ValueToValueMapTy VMap;
-    peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
+    // LoopFusion is a function pass that neither requires nor preserves
+    // LCSSA, so peelLoop need not preserve it across its internal
+    // simplifyLoop call.
+    peelLoop(FC0.L, PeelCount, /*PeelLast=*/false, &LI, &SE, DT, &AC,
+             /*PreserveLCSSA=*/false, VMap);
     FC0.Peeled = true;
     LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
