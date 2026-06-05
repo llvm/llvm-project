@@ -117,6 +117,23 @@ public:
   /// Returns 0 for versions of the module prior to the introduction
   /// of versioning.
   static std::optional<uint32_t> FindConcurrencyDebugVersion(Process &process);
+
+  /// Inclusive range of `_swift_concurrency_debug_internal_layout_version`
+  /// values that LLDB knows how to decode.
+  ///
+  ///   1 - the original layout
+  ///   2 - AsyncTask gained optional tail-allocated `NameFragment` ahead of its
+  ///       other fragments when the task has an initial name (ahead of the ChildFragment).
+  static constexpr uint32_t ConcurrencyDebugVersionBaseline = 1;
+  static constexpr uint32_t ConcurrencyDebugVersionLatest = 2;
+
+  /// True iff `version` is a concurrency runtime layout version this build
+  /// of LLDB supports. A missing version (`std::nullopt`) is never supported.
+  static constexpr bool
+  IsSupportedConcurrencyDebugVersion(std::optional<uint32_t> version) {
+    return version && *version >= ConcurrencyDebugVersionBaseline &&
+           *version <= ConcurrencyDebugVersionLatest;
+  }
   /// \}
 
   /// PluginInterface protocol.

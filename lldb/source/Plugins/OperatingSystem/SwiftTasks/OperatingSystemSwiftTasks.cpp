@@ -113,7 +113,8 @@ OperatingSystem *OperatingSystemSwiftTasks::CreateInstance(Process *process,
   LLDB_LOGF(log,
             "OperatingSystemSwiftTasks: got a concurrency version symbol of %u",
             *concurrency_version);
-  if (*concurrency_version > 1) {
+  if (!SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(
+          concurrency_version)) {
     auto warning =
         llvm::formatv("Unexpected Swift concurrency version {0}. Stepping on "
                       "concurrent code may behave incorrectly.",

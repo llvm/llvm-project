@@ -1131,7 +1131,9 @@ public:
       concurrency_version =
           SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
 
-    bool is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
+    bool is_supported_target =
+        is_64bit && SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(
+                        concurrency_version);
     if (!is_supported_target)
       return;
 
@@ -1222,7 +1224,9 @@ public:
       concurrency_version =
           SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
 
-    m_is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
+    // See note on layout versions in CheckedContinuationSyntheticFrontEnd.
+    m_is_supported_target = is_64bit &&
+      SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(concurrency_version);
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
@@ -1424,7 +1428,10 @@ public:
       concurrency_version =
           SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
 
-    m_is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
+    // See note on layout versions in CheckedContinuationSyntheticFrontEnd.
+    m_is_supported_target =
+        is_64bit && SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(
+                        concurrency_version);
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
