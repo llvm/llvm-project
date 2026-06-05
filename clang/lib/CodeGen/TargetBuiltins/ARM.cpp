@@ -4884,6 +4884,14 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Builder.getInt32(15)});
   }
 
+  if (BuiltinID == clang::AArch64::BI__clrex) {
+    // MSVC __clrex(crm) clears the exclusive monitor with the given CRm (a
+    // constant in [0, 15], enforced by Sema). Emit "clrex #crm".
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_clrex);
+    Value *CRm = Builder.CreateZExt(EmitScalarExpr(E->getArg(0)), Int32Ty);
+    return Builder.CreateCall(F, {CRm});
+  }
+
   if (BuiltinID == clang::AArch64::BI_ReadWriteBarrier)
     return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
                                llvm::SyncScope::SingleThread);
