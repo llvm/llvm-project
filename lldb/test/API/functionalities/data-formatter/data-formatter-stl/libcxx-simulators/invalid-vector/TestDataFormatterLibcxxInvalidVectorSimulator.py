@@ -39,3 +39,35 @@ class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
             "frame variable v5",
             substrs=["size=error: size not multiple of element size"],
         )
+        self.expect(
+            "frame variable v6",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )
+        self.expect(
+            "frame variable v7",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )
+        self.expect(
+            "frame variable v8",
+            substrs=["size=error: invalid value for end of vector"],
+        )
+        self.expect(
+            "frame variable v9",
+            substrs=["size=error: invalid value for end of vector"],
+        )
+        self.expect(
+            "frame variable v10",
+            substrs=["size=error: invalid value for start of vector"],
+        )
+        self.expect(
+            "frame variable v11",
+            substrs=["size=error: invalid value for start of vector"],
+        )
+        self.expect(
+            "frame variable v12",
+            substrs=["size=error: start of vector data begins after end pointer"],
+        )
+        self.expect(
+            "frame variable v13",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )

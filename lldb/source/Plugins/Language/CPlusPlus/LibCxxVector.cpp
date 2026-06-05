@@ -37,6 +37,8 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
+  lldb::ChildCacheState UpdateVectorWithLayoutSubobject(ValueObject *layout);
+
   ValueObject *m_start = nullptr;
   ValueObject *m_finish = nullptr;
   lldb::ValueObjectSP m_finish_sp;
@@ -128,19 +130,29 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
 }
 
 static ValueObjectSP GetDataPointer(ValueObject &root) {
-  ValueObjectSP layout_sp = root.GetChildMemberWithName("__layout_");
-  ValueObject &parent = layout_sp ? *layout_sp : root;
-  if (auto begin_sp = parent.GetChildMemberWithName("__begin_"))
-    return begin_sp;
-  auto [cap_sp, is_compressed_pair] =
-      GetValueOrOldCompressedPair(parent, "__cap_", "__end_cap_");
-  if (!cap_sp)
-    return nullptr;
+  ValueObject *layout = root.GetChildMemberWithName("__layout_").get();
+  ValueObject *target = layout ? layout : &root;
+  return target->GetChildMemberWithName("__begin_");
+}
 
-  if (is_compressed_pair)
-    return GetFirstValueOfLibCXXCompressedPair(*cap_sp);
+lldb::ChildCacheState
+lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::UpdateVectorWithLayoutSubobject(
+    ValueObject *layout) {
+  m_start = layout->GetChildAtIndex(0).get();
+  ValueObject *end_or_size = layout->GetChildAtIndex(1).get();
 
-  return cap_sp;
+  if (!end_or_size->GetCompilerType().IsInteger()) {
+    m_finish = end_or_size;
+    return lldb::ChildCacheState::eRefetch;
+  }
+
+  uint64_t begin_addr = m_start->GetValueAsUnsigned(0);
+  uint64_t size = end_or_size->GetValueAsUnsigned(0);
+  uint64_t end_addr = begin_addr + size * m_element_size;
+  m_finish = CreateChildValueObjectFromAddress(
+      "__end_", end_addr, m_backend.GetExecutionContextRef(),
+      m_start->GetCompilerType(), false).get();
+  return lldb::ChildCacheState::eRefetch;
 }
 
 lldb::ChildCacheState
@@ -161,6 +173,10 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
     m_element_size = *size_or_err;
 
     if (m_element_size > 0) {
+      if (ValueObjectSP layout = m_backend.GetChildMemberWithName("__layout_")) {
+        return UpdateVectorWithLayoutSubobject(layout.get());
+      }
+
       // store raw pointers or end up with a circular dependency
       ValueObjectSP layout_sp = m_backend.GetChildMemberWithName("__layout_");
       ValueObject &parent = layout_sp ? *layout_sp : m_backend;
