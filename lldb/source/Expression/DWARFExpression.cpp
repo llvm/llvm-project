@@ -1293,26 +1293,40 @@ static llvm::Error Evaluate_DW_OP_call_frame_cfa(EvalContext &eval_ctx) {
 
 static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
                                                    const Scalar &rhs,
-                                                   LocationAtom opcode) {
+                                                   LocationAtom opcode,
+                                                   size_t address_size) {
   // Scalar does not preserve the original DWARF DIE, but it does carry the
   // pieces of base-type information used by the evaluator: kind, size, and
   // integer signedness.
   if (lhs.GetType() != rhs.GetType())
-    return llvm::createStringError(
-        "%s requires operands to have the same type",
-        DW_OP_value_to_name(opcode));
+    return llvm::createStringError("%s requires operands to have the same type",
+                                   DW_OP_value_to_name(opcode));
 
   if (lhs.GetByteSize() != rhs.GetByteSize())
-    return llvm::createStringError(
-        "%s requires operands to have the same type",
-        DW_OP_value_to_name(opcode));
+    return llvm::createStringError("%s requires operands to have the same type",
+                                   DW_OP_value_to_name(opcode));
 
-  // Floating scalars do not have integer signedness, so only compare
-  // signedness after establishing that both operands are integers.
-  if (lhs.GetType() == Scalar::e_int && lhs.IsSigned() != rhs.IsSigned())
-    return llvm::createStringError(
-        "%s requires operands to have the same type",
-        DW_OP_value_to_name(opcode));
+  // Only integer scalars have signedness, so non-integer operands have no
+  // further scalar type information to compare after kind and size match.
+  if (lhs.GetType() != Scalar::e_int)
+    return llvm::Error::success();
+
+  // DWARF generic values are address-sized integers with unspecified
+  // signedness. LLDB does not explicitly preserve genericness on the expression
+  // stack, so treat integers at least as wide as the generic type as
+  // potentially generic to keep existing expressions compatible. For example,
+  // DW_OP_constu and DW_OP_consts currently do not always use to_generic due to
+  // https://github.com/llvm/llvm-project/issues/47431. A precise fix would
+  // require tracking genericness directly, which is a larger type-system
+  // change, so do not use signedness to reject these operands here.
+  if (address_size != 0 && lhs.GetByteSize() >= address_size)
+    return llvm::Error::success();
+
+  // For non-generic integer operands, signedness is part of the base-type
+  // information preserved by Scalar, so require it to match.
+  if (lhs.IsSigned() != rhs.IsSigned())
+    return llvm::createStringError("%s requires operands to have the same type",
+                                   DW_OP_value_to_name(opcode));
 
   return llvm::Error::success();
 }
@@ -1498,7 +1512,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_and:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1508,7 +1522,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_div: {
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       if (tmp.GetScalar().IsZero())
@@ -1529,7 +1543,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_minus:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1539,7 +1553,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_mod:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1565,7 +1579,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_or:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1575,7 +1589,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_plus:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1593,7 +1607,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shl:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1603,7 +1617,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shr:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1614,7 +1628,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shra:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1624,7 +1638,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_xor:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1669,7 +1683,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_eq:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1679,7 +1693,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_ge:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1689,7 +1703,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_gt:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1699,7 +1713,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_le:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1709,7 +1723,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_lt:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
@@ -1719,7 +1733,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_ne:
       if (llvm::Error err = CheckScalarOperandsHaveSameType(
               stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
-              opcode))
+              opcode, address_size))
         return err;
       tmp = stack.back();
       stack.pop_back();
