@@ -264,8 +264,8 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
       .has_value();
 }
 
-/// Check whether \p SU has a load dependency that is currently scheduled after
-/// \p Base (according to node number).
+/// Check whether \p SU has a load dependency whose node number comes after that
+/// of \p Base in the node vector.
 static bool hasIntermediateLoadDependency(const SUnit &SU, const SUnit &Base) {
   for (const SDep &Dep : SU.Preds) {
     if (Dep.getKind() != SDep::Data)
