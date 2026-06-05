@@ -976,3 +976,25 @@ entry:
   %res = zext nneg i2 %x to i32
   ret i32 %res
 }
+
+define i32 @zext_bitcast_half_to_i16(half %x) {
+; CHECK-LABEL: @zext_bitcast_half_to_i16(
+; CHECK-NEXT:    [[BC:%.*]] = bitcast half [[X:%.*]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[BC]] to i32
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %bc = bitcast half %x to i16
+  %z = zext i16 %bc to i32
+  ret i32 %z
+}
+
+define <4 x i32> @zext_bitcast_v4half_to_v4i16(<4 x half> %x) {
+; CHECK-LABEL: @zext_bitcast_v4half_to_v4i16(
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x half> [[X:%.*]] to <4 x i16>
+; CHECK-NEXT:    [[Z:%.*]] = zext <4 x i16> [[BC]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[Z]]
+;
+  %bc = bitcast <4 x half> %x to <4 x i16>
+  %z = zext <4 x i16> %bc to <4 x i32>
+  ret <4 x i32> %z
+}

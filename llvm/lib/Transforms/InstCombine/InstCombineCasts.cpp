@@ -1572,6 +1572,13 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (SrcTy->isIntOrIntVectorTy(1) && Zext.hasNonNeg())
     return replaceInstUsesWith(Zext, Constant::getNullValue(Zext.getType()));
 
+  // zext(bitcast half to i16) matches no folds below; bail out early.
+  Value *BitcastSrc;
+  if (SrcTy->isIntOrIntVectorTy(16) &&
+      match(Src, m_BitCast(m_Value(BitcastSrc))) &&
+      BitcastSrc->getType()->getScalarType()->isHalfTy())
+    return nullptr;
+
   // Try to extend the entire expression tree to the wide destination type.
   unsigned BitsToClear;
   if (shouldChangeType(SrcTy, DestTy) &&
