@@ -12,30 +12,31 @@ define void @big_agpr_user() #1 {
     ret void
 }
 
+: CHECK: .set .Lkernel_direct_only.has_indirect_call, or(0, .Lsmall_callee.has_indirect_call)
 define internal void @small_callee() {
     ret void
 }
 
+; CHECK: .set .Lkernel_indirect_attributed.num_vgpr, min(40, max(32, amdgpu.max_num_vgpr))
+; CHECK: .set .Lkernel_indirect_attributed.has_indirect_call, 1
 define amdgpu_kernel void @kernel_indirect_attributed() #0 {
     call void @extern_fn()
     ret void
 }
 
-; CHECK: .set .Lkernel_indirect_attributed.num_agpr, min(40, max(0, amdgpu.max_num_agpr))
-
+; CHECK: .set .Lkernel_indirect_unattributed.num_vgpr, min(64, max(32, amdgpu.max_num_vgpr))
+; CHECK: .set .Lkernel_indirect_unattributed.has_indirect_call, 1
 define amdgpu_kernel void @kernel_indirect_unattributed() { 
     call void @extern_fn()
     ret void
 }
 
-; CHECK: .set .Lkernel_indirect_unattributed.num_agpr, min(64, max(0, amdgpu.max_num_agpr))
-
+; CHECK: .set .Lkernel_direct_only.num_vgpr, max(32, .Lsmall_callee.num_vgpr)
+; CHECK: .set .Lkernel_direct_only.has_indirect_call, or(0, .Lsmall_callee.has_indirect_call)
 define amdgpu_kernel void @kernel_direct_only() {
     call void @small_callee()
     ret void
 }
-
-; CHECK: .set .Lkernel_direct_only.num_vgpr, max(32, .Lsmall_callee.num_vgpr)
 
 
 attributes #0 = {"amdgpu-num-vgpr"="40"}
