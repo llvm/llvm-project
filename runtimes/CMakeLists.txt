@@ -63,8 +63,12 @@ function(runtime_register_component name)
   set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
 endfunction()
 
-find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+find_package(LLVM PATHS "${LLVM_BINARY_DIR}"
+  "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm"
+  NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+find_package(Clang PATHS "${LLVM_BINARY_DIR}"
+  "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang"
+  NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
 set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
 
