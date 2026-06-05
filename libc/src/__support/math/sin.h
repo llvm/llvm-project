@@ -82,7 +82,7 @@ LIBC_INLINE double sin(double x) {
 
   // |x| < 2^16
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
-    // |x| < 2^-7
+    // |x| < 2^-4
     if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 4)) {
       // |x| < 2^-26, |sin(x) - x| < ulp(x)/2.
       if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 26)) {
