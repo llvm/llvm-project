@@ -4880,7 +4880,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_clrex) {
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_clrex);
-    return Builder.CreateCall(F);
+    // The ACLE __clrex clears the exclusive monitor with CRm == 15.
+    return Builder.CreateCall(F, {Builder.getInt32(15)});
   }
 
   if (BuiltinID == clang::AArch64::BI_ReadWriteBarrier)

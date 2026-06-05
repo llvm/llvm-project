@@ -31359,7 +31359,8 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 
 void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
-  Builder.CreateIntrinsic(Intrinsic::aarch64_clrex, {});
+  // Clear the exclusive monitor with CRm == 15.
+  Builder.CreateIntrinsic(Intrinsic::aarch64_clrex, {}, {Builder.getInt32(15)});
 }
 
 Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
