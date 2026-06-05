@@ -1583,7 +1583,8 @@ def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in
-def CLREX : CRmSystemI<imm0_15, 0b010, "clrex">;
+def CLREX : CRmSystemI<imm32_0_15, 0b010, "clrex",
+                       [(int_aarch64_clrex (i32 imm32_0_15:$CRm))]>;
 
 // NOTE: ideally, this would have mayStore = 0, mayLoad = 0, but we cannot
 // model patterns with sufficiently fine granularity.

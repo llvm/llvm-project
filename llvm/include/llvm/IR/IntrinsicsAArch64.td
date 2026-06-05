@@ -32,7 +32,7 @@ def int_aarch64_stlxp : Intrinsic<[llvm_i32_ty],
                                   [llvm_i64_ty, llvm_i64_ty, llvm_ptr_ty],
                                   [IntrNoFree, IntrWillReturn]>;
 
-def int_aarch64_clrex : Intrinsic<[]>;
+def int_aarch64_clrex : Intrinsic<[], [llvm_i32_ty]>;
 
 def int_aarch64_sdiv : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
                                 LLVMMatchType<0>], [IntrNoMem]>;
