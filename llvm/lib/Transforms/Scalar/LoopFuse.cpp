@@ -94,7 +94,7 @@ STATISTIC(NotRotated, "Candidate is not rotated");
 STATISTIC(OnlySecondCandidateIsGuarded,
           "The second candidate is guarded while the first one is not");
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
-STATISTIC(NumSunkInsts, "Number of hoisted preheader instructions.");
+STATISTIC(NumSunkInsts, "Number of sunk preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
 
 static cl::opt<unsigned> FusionPeelMaxCount(
