@@ -154,6 +154,26 @@ static Expected<bool> getSymbolsFromObject(ObjectFile &ObjFile,
   return Extracted;
 }
 
+/// Identify "fat binary" inputs that should be passed through to the linker
+/// without symbol-driven extraction. An input is a fat binary if \p DeviceArchs
+/// is non-empty and the input is an ELF object whose architecture is not one of
+/// the device architectures (or which fails to parse as an object file).
+static bool isFatBinary(MemoryBufferRef Buffer,
+                        ArrayRef<Triple::ArchType> DeviceArchs) {
+  if (DeviceArchs.empty())
+    return false;
+  if (identify_magic(Buffer.getBuffer()) != file_magic::elf_relocatable)
+    return false;
+  Expected<std::unique_ptr<ObjectFile>> ObjFile =
+      ObjectFile::createObjectFile(Buffer);
+  if (!ObjFile) {
+    // Assume fat binary if the object creation fails.
+    consumeError(ObjFile.takeError());
+    return true;
+  }
+  return !llvm::is_contained(DeviceArchs, (*ObjFile)->getArch());
+}
+
 static Expected<bool> getSymbols(MemoryBufferRef Buffer,
                                  StringMap<Symbol> &SymTab, bool IsLazy) {
   switch (identify_magic(Buffer.getBuffer())) {
@@ -177,7 +197,7 @@ Expected<ResolvedInputs>
 resolveArchiveMembers(ArrayRef<InputDesc> Order,
                       ArrayRef<StringRef> SearchPaths,
                       ArrayRef<StringRef> ForcedUndefs, StringRef Root,
-                      function_ref<bool(MemoryBufferRef)> IsFatBinary) {
+                      ArrayRef<Triple::ArchType> DeviceArchs) {
   ResolvedInputs Result;
   SmallVector<std::pair<std::unique_ptr<MemoryBuffer>, bool>> InputFiles;
 
@@ -255,7 +275,7 @@ resolveArchiveMembers(ArrayRef<InputDesc> Order,
         continue;
 
       // Check if this is a fat binary that should be passed through.
-      if (IsFatBinary && IsFatBinary(*Input)) {
+      if (isFatBinary(*Input, DeviceArchs)) {
         Result.Buffers.emplace_back(std::move(Input));
         continue;
       }

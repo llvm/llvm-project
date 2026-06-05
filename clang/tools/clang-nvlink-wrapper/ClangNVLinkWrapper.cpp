@@ -360,15 +360,18 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   SmallVector<StringRef> ForcedUndefs(ForcedUndefStorage.begin(),
                                       ForcedUndefStorage.end());
 
-  // Create the fat binary predicate.
-  auto IsFatBinary = [&Args](MemoryBufferRef B) -> bool {
-    return hasFatBinary(Args, B);
-  };
+  // The device code we are linking targets NVPTX. Any other ELF object is a
+  // host "fat binary" that should be forwarded without symbol scanning. The
+  // --assume-device-object flag (under --dry-run) overrides this and treats
+  // every input as device code, so disable detection by passing no archs.
+  SmallVector<Triple::ArchType> DeviceArchs;
+  if (!(Args.hasArg(OPT_dry_run) && Args.hasArg(OPT_assume_device_object)))
+    DeviceArchs = {Triple::nvptx, Triple::nvptx64};
 
   // Resolve archive members.
   Expected<offloading::ResolvedInputs> ResolvedOrErr =
       offloading::resolveArchiveMembers(InputDescs, LibraryPaths, ForcedUndefs,
-                                        "", IsFatBinary);
+                                        "", DeviceArchs);
   if (!ResolvedOrErr)
     return ResolvedOrErr.takeError();
 

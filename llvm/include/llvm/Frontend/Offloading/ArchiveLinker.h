@@ -17,7 +17,6 @@
 #define LLVM_FRONTEND_OFFLOADING_ARCHIVELINKER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,6 +24,7 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <memory>
 
@@ -100,13 +100,15 @@ struct ResolvedInputs {
 /// \param SearchPaths -L paths for library search.
 /// \param ForcedUndefs -u symbols (may be empty).
 /// \param Root Sysroot for "=" prefixed paths ("" if none).
-/// \param IsFatBinary Optional predicate to identify "fat binary" inputs that
-///        should be passed through without symbol scanning (e.g., nvlink's
-///        cubin detection). If null, all inputs are scanned normally.
+/// \param DeviceArchs Architectures of the device code being linked. When
+///        non-empty, any ELF input whose architecture is not in this list (or
+///        which cannot be parsed as an object) is treated as a "fat binary"
+///        and passed through without symbol scanning (e.g., nvlink's cubin
+///        detection). When empty, all inputs are scanned normally.
 Expected<ResolvedInputs> resolveArchiveMembers(
     ArrayRef<InputDesc> Order, ArrayRef<StringRef> SearchPaths,
     ArrayRef<StringRef> ForcedUndefs = {}, StringRef Root = "",
-    function_ref<bool(MemoryBufferRef)> IsFatBinary = nullptr);
+    ArrayRef<Triple::ArchType> DeviceArchs = {});
 
 } // namespace offloading
 } // namespace llvm
