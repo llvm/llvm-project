@@ -397,7 +397,7 @@ Declaring the type with the ``warn_unused`` attribute strengthens the "use" requ
 
 This attribute is available in both C and C++ language modes but is primarily useful in C++ for classes which have a non-trivial constructor or destructor but act as a value type rather than an RAII type.
 
-..code-block:: c++
+.. code-block:: c++
 
   struct [[gnu::warn_unused]] S {
     S();
