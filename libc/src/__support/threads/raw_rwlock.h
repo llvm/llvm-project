@@ -75,11 +75,11 @@ public:
       else
         return queue.pending_writers;
     }
-    template <Role role> LIBC_INLINE FutexWordType &serialization() {
+    template <Role role> LIBC_INLINE Futex &serialization() {
       if constexpr (role == Role::Reader)
-        return queue.reader_serialization.val;
+        return queue.reader_serialization;
       else
-        return queue.writer_serialization.val;
+        return queue.writer_serialization;
     }
     friend WaitingQueue;
   };
@@ -391,8 +391,9 @@ private:
         // sleep on the futex, we can avoid such waiting.
         old = RwState::fetch_set_pending_bit<role>(state,
                                                    cpp::MemoryOrder::RELAXED);
-        // no need to use atomic since it is already protected by the mutex.
-        serial_number = guard.serialization<role>();
+        // relaxed atomic since it is already protected by the mutex.
+        serial_number =
+            guard.serialization<role>().load(cpp::MemoryOrder::RELAXED);
       }
 
       // Phase 6: do futex wait until the lock is available or timeout is
@@ -437,10 +438,12 @@ private:
     {
       WaitingQueue::Guard guard = queue.acquire(is_pshared);
       if (guard.pending_count<Role::Writer>() != 0) {
-        guard.serialization<Role::Writer>()++;
+        guard.serialization<Role::Writer>().fetch_add(
+            1, cpp::MemoryOrder::RELEASE);
         status = WakeTarget::Writers;
       } else if (guard.pending_count<Role::Reader>() != 0) {
-        guard.serialization<Role::Reader>()++;
+        guard.serialization<Role::Reader>().fetch_add(
+            1, cpp::MemoryOrder::RELEASE);
         status = WakeTarget::Readers;
       } else {
         status = WakeTarget::None;

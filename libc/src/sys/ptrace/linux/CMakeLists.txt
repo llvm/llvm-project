@@ -1,0 +1,11 @@
+add_entrypoint_object(
+  ptrace
+  SRCS
+    ptrace.cpp
+  HDRS
+    ../ptrace.h
+  DEPENDS
+    libc.include.sys_ptrace
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ptrace
+    libc.src.errno.errno
+)

@@ -6943,11 +6943,6 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
 QualType ASTContext::getDeducedTemplateSpecializationType(
     DeducedKind DK, QualType DeducedAsType, ElaboratedTypeKeyword Keyword,
     TemplateName Template) const {
-  // DeducedAsPack only ever occurs for lambda init-capture pack, which always
-  // use AutoType.
-  assert(DK != DeducedKind::DeducedAsPack &&
-         "unexpected DeducedAsPack for DeducedTemplateSpecializationType");
-
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
