@@ -605,10 +605,15 @@ static void emitDWOBuilder(const std::string &DWOName,
 
 static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
   SmallVector<DWARFUnit *, 0> AllCUs;
+  AllCUs.reserve(std::distance(DwCtx.compile_units().begin(),
+                               DwCtx.compile_units().end()));
   for (auto &CU : DwCtx.compile_units())
     AllCUs.push_back(CU.get());
   if (AllCUs.empty())
     return {};
+  llvm::sort(AllCUs, [](const DWARFUnit *A, const DWARFUnit *B) {
+    return A->getOffset() < B->getOffset();
+  });
   auto FindCuForOffset = [&](uint64_t Offset) -> DWARFUnit * {
     auto *It =
         llvm::upper_bound(AllCUs, Offset, [](uint64_t Off, DWARFUnit *U) {
@@ -699,9 +704,8 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
   for (DWARFUnit *Leader : Leaders)
     Vec.push_back(std::move(MembersByLeader[Leader]));
   for (DWARFUnit *CU : AllCUs) {
-    if (!CrossRefSet.count(CU)) {
+    if (!CrossRefSet.count(CU))
       Vec.push_back({CU});
-    }
   }
 
   return Vec;

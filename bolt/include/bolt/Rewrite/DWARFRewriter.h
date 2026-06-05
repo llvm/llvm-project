@@ -52,10 +52,8 @@ public:
 
     /// Release whichever writer was initialized.
     void clear() {
-      if (RngListsWriter)
-        RngListsWriter.reset();
-      if (LegacyRangesWriter)
-        LegacyRangesWriter.reset();
+      RngListsWriter.reset();
+      LegacyRangesWriter.reset();
     }
   };
 
