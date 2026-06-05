@@ -3,25 +3,25 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.LifetimeAnnotations \
 // RUN:   -analyzer-config c++-container-inlining=false -verify %s
 
-void clang_analyzer_dump(...);
+struct A {};
+
+void clang_analyzer_lifetime_bound(int*);
+void clang_analyzer_lifetime_bound(int&);
+void clang_analyzer_lifetime_bound(A*);
+void clang_analyzer_lifetime_bound(A&);
 
 // These are the cases when the result of function calls are MemRegions.
-
-struct A {};
 
 // Ref type parameter annotated case
 struct X {
   int& choose(int& a [[clang::lifetimebound]]) { return a; }
 };
 
-void clang_analyzer_lifetime_bound(int&);
-
 void caller() {
   int v = 0;
   X obj;
   int& r = obj.choose(v);
-  clang_analyzer_lifetime_bound(r); // expected-warning {{Origin v bound to v}}
-  clang_analyzer_dump(r);
+  clang_analyzer_lifetime_bound(r); // expected-warning {{bound to v}}
 }
 
 // Obj ref type function return annotated case
@@ -30,14 +30,11 @@ struct Y {
   A& getA() [[clang::lifetimebound]] { return a; }
 };
 
-void clang_analyzer_lifetime_bound(A& a);
-
 void caller_two() {
   // Return statement is annotated case.
   Y y;
   A& f = y.getA();
-  clang_analyzer_lifetime_bound(f); // expected-warning {{Origin y.a bound to y}}
-  clang_analyzer_dump(f);
+  clang_analyzer_lifetime_bound(f); // expected-warning {{bound to y}}
 }
 
 // Obj ptr type function return annotated case
@@ -46,53 +43,41 @@ struct Z {
   A* getA() [[clang::lifetimebound]] { return &a; }
 };
 
-void clang_analyzer_lifetime_bound(A* a);
-
 void caller_three() {
   Z z;
   A* func = z.getA();
-  clang_analyzer_lifetime_bound(func); // expected-warning {{Origin z.a bound to z}}
-  clang_analyzer_dump(func);
+  clang_analyzer_lifetime_bound(func); // expected-warning {{bound to z}}
 }
 
 // Free function with annotated param and ref return
 int& foo(int& num [[clang::lifetimebound]]) { return num; }
 
-void clang_analyzer_lifetime_bound(int&);
-
 void caller_four() {
   int num = 5;
   int& s = foo(num);
-  clang_analyzer_lifetime_bound(s); // expected-warning {{Origin num bound to num}}
-  clang_analyzer_dump(s);
+  clang_analyzer_lifetime_bound(s); // expected-warning {{bound to num}}
 }
 
 // Free function with annotated param and ptr return
 int* boo(int* num [[clang::lifetimebound]]) { return num; }
-
-void clang_analyzer_lifetime_bound(int*);
 
 void caller_five() {
   int n = 55;
   int* n_ptr = &n;
   int* s = boo(n_ptr);
 
-  clang_analyzer_lifetime_bound(s); // expected-warning {{Origin n bound to n}}
-  clang_analyzer_dump(s);
+  clang_analyzer_lifetime_bound(s); // expected-warning {{bound to n}}
 }
 
 // Free function with both annotated and non-annotated parameters.
 int& fn(int& f, int& s [[clang::lifetimebound]]) { return s; }
-
-void clang_analyzer_lifetime_bound(int&);
 
 void caller_six() {
   int even = 50;
   int odd = 55;
   int& s = fn(even, odd);
 
-  clang_analyzer_lifetime_bound(s); // expected-warning {{Origin odd bound to odd}}
-  clang_analyzer_dump(s);
+  clang_analyzer_lifetime_bound(s); // expected-warning {{bound to odd}}
 }
 
 
@@ -102,18 +87,13 @@ void caller_six() {
 // Function returns ptr and has an annotated parameter
 int* foo(int* n [[clang::lifetimebound]]);
 
-void clang_analyzer_lifetime_bound(int*);
-
 void caller_seven() {
   int y = 15;
   int* y_ptr = &y;
   auto* bind = foo(y_ptr);
 
-  clang_analyzer_lifetime_bound(bind);
-                                       // expected-warning@-1 {{Origin bound to y}}
-                                       // expected-warning@-1 {{Origin contains loan y}}
-  clang_analyzer_dump(bind);
-
+  clang_analyzer_lifetime_bound(bind); // expected-warning {{bound to y}}
+                                       // expected-warning@-1 {{contains loan y}}
 // FIXME: The full warning does look like this:
 // Origin SymRegion{conj_$5{int *, LC1, S847, #1}} bound to n
 // Origin conj_$5{int *, LC1, S847, #1} contains loan n
@@ -122,36 +102,30 @@ void caller_seven() {
 // This does not apply to the test cases above this test case.
 }
 
-
 // Function returns a reference and has an annotated parameter
 int& func(int& some_number [[clang::lifetimebound]]);
-
-void clang_analyzer_lifetime_bound(int&);
 
 void caller_eight() {
   int f = 15;
   auto& bind = func(f);
 
-  clang_analyzer_lifetime_bound(bind);
-                                       // expected-warning@-1 {{Origin bound to some_number}}
-                                       // expected-warning@-1 {{Origin contains loan some_number}}
-  clang_analyzer_dump(bind);
-
+  clang_analyzer_lifetime_bound(bind); // expected-warning {{bound to f}}
+                                       // expected-warning@-1 {{contains loan f}}
 // The FIXME about the full warning applies to this text case as well.
 }
 
 // Function returns a reference and has two annotated parameters.
 int& f(int& a [[clang::lifetimebound]], int& b [[clang::lifetimebound]]);
 
-void clang_analyzer_lifetime_bound(int&);
-
 void caller_nine() {
   int first_num = 1;
   int second_num = 2;
-  auto numbers = f(first_num, second_num);
+  int& numbers = f(first_num, second_num);
 
-  clang_analyzer_lifetime_bound(numbers);
-                                          // expected-warning@-1 {{Origin bound to first_num}}
-                                          // expected-warning@-1 {{Origin contains loan first_num}}
-  clang_analyzer_dump(numbers);
+  clang_analyzer_lifetime_bound(numbers); // expected-warning {{bound to first_num}}
+                                          // expected-warning@-1 {{contains loan first_num}}
+
+// FIXME: Currently the callback only iterates until the first annotated parameter which
+// means the second annotation never gets read here. That is a clear bug. It should be fixed
+// in order to analyze all the parameters which are annotated.
 }

@@ -37,7 +37,6 @@ CallDescriptionMap<FnCheck> Callbacks = {
 
 void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
-  llvm::errs() << "checkPostCall fired" << "\n";
   ProgramStateRef State = C.getState();
 
   const auto *FC = dyn_cast_if_present<AnyFunctionCall>(&Call);
