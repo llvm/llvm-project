@@ -2051,7 +2051,8 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(Ptr);
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
-  if (!PointeeType.isTypeIntOrFloat() && !PointeeType.isTypePtr())
+  if (!(PointeeType.isTypeIntOrFloat() ||
+        (STI.isPhysicalSPIRV() && PointeeType.isTypePtr())))
     return diagnoseUnsupported(
         I, "Lowering to SPIR-V of atomic store is only "
            "allowed for integer, floating point or pointer types");
@@ -2076,9 +2077,10 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
   if (PointeeType.isTypePtr()) {
     // If data to store is a pointer type we cast it to an integer type of the
-    // same size as the pointer size using OpConvertPtrToU and then generate
-    // OpAtomicStore with casted values as required by spec.
-    auto PtrSize = GR.getPointerSize();
+    // same size as the pointer size using OpConvertPtrToU, bitcast Ptr
+    // parameter to pointer to integer type and then generate OpAtomicStore with
+    // casted values as required by spec.
+    unsigned PtrSize = GR.getPointerSize();
     SPIRVTypeInst PtrAsIntSpirvType =
         GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
 
