@@ -35,6 +35,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -4034,12 +4035,10 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   } else // If we don't have a function/method context, bail.
     return StmtError();
 
-  if (RetValExp) {
-    const auto *ATy = dyn_cast<ArrayType>(RetValExp->getType());
-    if (ATy && ATy->getElementType().isWebAssemblyReferenceType()) {
-      Diag(ReturnLoc, diag::err_wasm_table_art) << 1;
-      return StmtError();
-    }
+  if (RetValExp &&
+      isWebAssemblyTableOrRefArrayType(Context, RetValExp->getType())) {
+    Diag(ReturnLoc, diag::err_wasm_table_art) << 1;
+    return StmtError();
   }
 
   // C++1z: discarded return statements are not considered when deducing a

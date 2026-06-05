@@ -8885,6 +8885,14 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   if (!RHSResult.isUsable()) return QualType();
   RHS = RHSResult;
 
+  // A WebAssembly table cannot be used as the condition of a conditional
+  // expression.
+  if (Cond.get()->getType()->isWebAssemblyTableType()) {
+    Diag(QuestionLoc, diag::err_wasm_table_conditional_expression)
+        << Cond.get()->getSourceRange();
+    return QualType();
+  }
+
   // C++ is sufficiently different to merit its own checker.
   if (getLangOpts().CPlusPlus)
     return CXXCheckConditionalOperands(Cond, LHS, RHS, VK, OK, QuestionLoc);
@@ -13929,10 +13937,7 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   // WebAssembly tables can't be used with logical operators.
   QualType LHSTy = LHS.get()->getType();
   QualType RHSTy = RHS.get()->getType();
-  const auto *LHSATy = dyn_cast<ArrayType>(LHSTy);
-  const auto *RHSATy = dyn_cast<ArrayType>(RHSTy);
-  if ((LHSATy && LHSATy->getElementType().isWebAssemblyReferenceType()) ||
-      (RHSATy && RHSATy->getElementType().isWebAssemblyReferenceType())) {
+  if (LHSTy->isWebAssemblyTableType() || RHSTy->isWebAssemblyTableType()) {
     return InvalidOperands(Loc, LHS, RHS);
   }
 

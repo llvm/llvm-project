@@ -74,7 +74,7 @@ __externref_t func(__externref_t ref) {
   _Alignof(ref);                 // expected-error {{invalid application of 'alignof' to sizeless type '__externref_t'}}
   _Alignof(__externref_t);       // expected-error {{invalid application of 'alignof' to sizeless type '__externref_t'}}
   _Alignof(__externref_t[]);     // expected-error {{invalid application of 'alignof' to sizeless type '__externref_t'}}
-  _Alignof(__externref_t[0]);    // expected-error {{invalid application of 'alignof' to sizeless type '__externref_t'}}
+  _Alignof(__externref_t[0]);    // expected-error {{invalid application of 'alignof' to WebAssembly table}}
   _Alignof(table);               // expected-warning {{'_Alignof' applied to an expression is a GNU extension}} expected-error {{invalid application of 'alignof' to WebAssembly table}}
   _Alignof(__externref_t[0][0]); // expected-error {{multi-dimensional arrays of WebAssembly references are not allowed}}
   _Alignof(__externref_t *);     // expected-error {{pointer to WebAssembly reference type is not allowed}}
@@ -92,8 +92,8 @@ __externref_t func(__externref_t ref) {
   table == 1;                     // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and 'int')}}
   1 >= table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
   table == other_table;           // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and '__attribute__((address_space(1))) __externref_t[0]')}}
-  table !=- table;                // expected-error {{invalid argument type '__attribute__((address_space(1))) __externref_t *' to unary expression}}
-  !table;                         // expected-error {{invalid argument type '__attribute__((address_space(1))) __externref_t *' to unary expression}}
+  table !=- table;                // expected-error {{invalid argument type '__externref_t[0]' to unary expression}}
+  !table;                         // expected-error {{invalid argument type '__externref_t[0]' to unary expression}}
   1 && table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
   table || 1;                     // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and 'int')}}
   1 ? table : table;              // expected-error {{cannot use a WebAssembly table within a branch of a conditional expression}}
