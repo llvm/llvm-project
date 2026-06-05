@@ -237,10 +237,26 @@ COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
 
   f = fdopen(fd, "r+b");
 #elif defined(_WIN32)
-  // FIXME: Use the wide variants to handle Unicode filenames.
-  HANDLE h = CreateFileA(ProfileName, GENERIC_READ | GENERIC_WRITE,
+  int WideLength = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+                                       ProfileName, -1, NULL, 0);
+  if (WideLength == 0)
+    return NULL;
+
+  WCHAR *WideProfileName =
+      (WCHAR *)malloc((size_t)WideLength * sizeof(*WideProfileName));
+  if (!WideProfileName)
+    return NULL;
+
+  if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, ProfileName, -1,
+                          WideProfileName, WideLength) == 0) {
+    free(WideProfileName);
+    return NULL;
+  }
+
+  HANDLE h = CreateFileW(WideProfileName, GENERIC_READ | GENERIC_WRITE,
                          FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_ALWAYS,
                          FILE_ATTRIBUTE_NORMAL, 0);
+  free(WideProfileName);
   if (h == INVALID_HANDLE_VALUE)
     return NULL;
 
