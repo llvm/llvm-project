@@ -3283,6 +3283,7 @@ static void genTileOp(Fortran::lower::AbstractConverter &converter,
   mlir::omp::SizesClauseOps sizesClause;
   ClauseProcessor cp(converter, semaCtx, item->clauses);
   cp.processSizes(stmtCtx, sizesClause);
+  cp.processTODO<clause::Apply>(loc, llvm::omp::Directive::OMPD_tile);
 
   size_t numLoops = sizesClause.sizes.size();
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 3> canonLoops;
@@ -3334,6 +3335,7 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, item->clauses);
   bool looprange = cp.processLooprange(stmtCtx, looprangeClause, count);
   cp.processTODO<clause::Depth>(loc, llvm::omp::Directive::OMPD_fuse);
+  cp.processTODO<clause::Apply>(loc, llvm::omp::Directive::OMPD_fuse);
 
   llvm::SmallVector<mlir::Value> applyees;
   for (auto &child : eval.getNestedEvaluations()) {
@@ -3388,6 +3390,8 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   ClauseProcessor cp(converter, semaCtx, item->clauses);
+
+  cp.processTODO<clause::Apply>(loc, llvm::omp::Directive::OMPD_unroll);
 
   // Process the `full` clause, which requests complete unrolling.
   bool hasFull = cp.processFull();
