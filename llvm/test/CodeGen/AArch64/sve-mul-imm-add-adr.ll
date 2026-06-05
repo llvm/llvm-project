@@ -14,7 +14,7 @@ define <vscale x 4 x i32> @mul_i32_by_2(<vscale x 4 x i32> %x) {
 define <vscale x 4 x i32> @mul_i32_by_3(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: mul_i32_by_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #3
+; CHECK-NEXT:    adr z0.s, [z0.s, z0.s, lsl #1]
 ; CHECK-NEXT:    ret
   %out = mul <vscale x 4 x i32> %x, splat(i32 3)
   ret <vscale x 4 x i32> %out
@@ -23,7 +23,7 @@ define <vscale x 4 x i32> @mul_i32_by_3(<vscale x 4 x i32> %x) {
 define <vscale x 4 x i32> @mul_i32_by_5(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: mul_i32_by_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #5
+; CHECK-NEXT:    adr z0.s, [z0.s, z0.s, lsl #2]
 ; CHECK-NEXT:    ret
   %out = mul <vscale x 4 x i32> %x, splat(i32 5)
   ret <vscale x 4 x i32> %out
@@ -32,7 +32,7 @@ define <vscale x 4 x i32> @mul_i32_by_5(<vscale x 4 x i32> %x) {
 define <vscale x 4 x i32> @mul_i32_by_9(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: mul_i32_by_9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #9
+; CHECK-NEXT:    adr z0.s, [z0.s, z0.s, lsl #3]
 ; CHECK-NEXT:    ret
   %out = mul <vscale x 4 x i32> %x, splat(i32 9)
   ret <vscale x 4 x i32> %out
@@ -51,7 +51,7 @@ define <vscale x 2 x i64> @mul_i64_by_2_commuted(<vscale x 2 x i64> %x) {
 define <vscale x 2 x i64> @mul_i64_by_3_commuted(<vscale x 2 x i64> %x) {
 ; CHECK-LABEL: mul_i64_by_3_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.d, z0.d, #3
+; CHECK-NEXT:    adr z0.d, [z0.d, z0.d, lsl #1]
 ; CHECK-NEXT:    ret
   %out = mul <vscale x 2 x i64> splat(i64 3), %x
   ret <vscale x 2 x i64> %out
@@ -60,7 +60,7 @@ define <vscale x 2 x i64> @mul_i64_by_3_commuted(<vscale x 2 x i64> %x) {
 define <vscale x 2 x i64> @mul_i64_by_5_commuted(<vscale x 2 x i64> %x) {
 ; CHECK-LABEL: mul_i64_by_5_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.d, z0.d, #5
+; CHECK-NEXT:    adr z0.d, [z0.d, z0.d, lsl #2]
 ; CHECK-NEXT:    ret
   %out = mul <vscale x 2 x i64> splat(i64 5), %x
   ret <vscale x 2 x i64> %out
@@ -69,7 +69,7 @@ define <vscale x 2 x i64> @mul_i64_by_5_commuted(<vscale x 2 x i64> %x) {
 define <vscale x 2 x i64> @mul_i64_by_9_commuted(<vscale x 2 x i64> %x) {
 ; CHECK-LABEL: mul_i64_by_9_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.d, z0.d, #9
+; CHECK-NEXT:    adr z0.d, [z0.d, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %out = mul <vscale x 2 x i64> splat(i64 9), %x
   ret <vscale x 2 x i64> %out
@@ -141,7 +141,7 @@ define <vscale x 2 x i64> @mla_i64_by_8_commuted(<vscale x 2 x i64> %a, <vscale 
 define <vscale x 4 x i32> @svmul_u_i32_by_2(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmul_u_i32_by_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #2
+; CHECK-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat(i32 2))
   ret <vscale x 4 x i32> %out
@@ -150,7 +150,7 @@ define <vscale x 4 x i32> @svmul_u_i32_by_2(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 4 x i32> @svmul_u_i32_by_3(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmul_u_i32_by_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #3
+; CHECK-NEXT:    adr z0.s, [z0.s, z0.s, lsl #1]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat(i32 3))
   ret <vscale x 4 x i32> %out
@@ -159,7 +159,7 @@ define <vscale x 4 x i32> @svmul_u_i32_by_3(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 4 x i32> @svmul_u_i32_by_5(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmul_u_i32_by_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #5
+; CHECK-NEXT:    adr z0.s, [z0.s, z0.s, lsl #2]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat(i32 5))
   ret <vscale x 4 x i32> %out
@@ -168,7 +168,7 @@ define <vscale x 4 x i32> @svmul_u_i32_by_5(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 4 x i32> @svmul_u_i32_by_9(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmul_u_i32_by_9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #9
+; CHECK-NEXT:    adr z0.s, [z0.s, z0.s, lsl #3]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat(i32 9))
   ret <vscale x 4 x i32> %out
@@ -260,8 +260,7 @@ define <vscale x 4 x i32> @svmul_u_i32_by_9_commuted(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 4 x i32> @svmla_u_i32_by_2(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmla_u_i32_by_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #2 // =0x2
-; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    adr z0.s, [z0.s, z1.s, lsl #1]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat(i32 2))
   ret <vscale x 4 x i32> %out
@@ -270,8 +269,7 @@ define <vscale x 4 x i32> @svmla_u_i32_by_2(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 4 x i32> @svmla_u_i32_by_4(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmla_u_i32_by_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #4 // =0x4
-; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    adr z0.s, [z0.s, z1.s, lsl #2]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat(i32 4))
   ret <vscale x 4 x i32> %out
@@ -280,8 +278,7 @@ define <vscale x 4 x i32> @svmla_u_i32_by_4(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 4 x i32> @svmla_u_i32_by_8(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmla_u_i32_by_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #8 // =0x8
-; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    adr z0.s, [z0.s, z1.s, lsl #3]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat(i32 8))
   ret <vscale x 4 x i32> %out
@@ -291,8 +288,7 @@ define <vscale x 4 x i32> @svmla_u_i32_by_8(<vscale x 4 x i1> %pg, <vscale x 4 x
 define <vscale x 4 x i32> @svmla_u_i32_by_2_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmla_u_i32_by_2_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #2 // =0x2
-; CHECK-NEXT:    mla z0.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    adr z0.s, [z0.s, z1.s, lsl #1]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat(i32 2), <vscale x 4 x i32> %x)
   ret <vscale x 4 x i32> %out
@@ -301,8 +297,7 @@ define <vscale x 4 x i32> @svmla_u_i32_by_2_commuted(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 4 x i32> @svmla_u_i32_by_4_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmla_u_i32_by_4_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #4 // =0x4
-; CHECK-NEXT:    mla z0.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    adr z0.s, [z0.s, z1.s, lsl #2]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat(i32 4), <vscale x 4 x i32> %x)
   ret <vscale x 4 x i32> %out
@@ -311,8 +306,7 @@ define <vscale x 4 x i32> @svmla_u_i32_by_4_commuted(<vscale x 4 x i1> %pg, <vsc
 define <vscale x 4 x i32> @svmla_u_i32_by_8_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: svmla_u_i32_by_8_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #8 // =0x8
-; CHECK-NEXT:    mla z0.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    adr z0.s, [z0.s, z1.s, lsl #3]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat(i32 8), <vscale x 4 x i32> %x)
   ret <vscale x 4 x i32> %out
@@ -353,8 +347,7 @@ define <vscale x 4 x i32> @svmla_m_partial_i32_by_8(<vscale x 4 x i1> %pg, <vsca
 define <vscale x 2 x i64> @svmla_u_i64_by_2(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %x) {
 ; CHECK-LABEL: svmla_u_i64_by_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #2 // =0x2
-; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    adr z0.d, [z0.d, z1.d, lsl #1]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.mla.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %x, <vscale x 2 x i64> splat(i64 2))
   ret <vscale x 2 x i64> %out
@@ -363,8 +356,7 @@ define <vscale x 2 x i64> @svmla_u_i64_by_2(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 2 x i64> @svmla_u_i64_by_4(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %x) {
 ; CHECK-LABEL: svmla_u_i64_by_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #4 // =0x4
-; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    adr z0.d, [z0.d, z1.d, lsl #2]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.mla.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %x, <vscale x 2 x i64> splat(i64 4))
   ret <vscale x 2 x i64> %out
@@ -373,8 +365,7 @@ define <vscale x 2 x i64> @svmla_u_i64_by_4(<vscale x 2 x i1> %pg, <vscale x 2 x
 define <vscale x 2 x i64> @svmla_u_i64_by_8(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %x) {
 ; CHECK-LABEL: svmla_u_i64_by_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #8 // =0x8
-; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    adr z0.d, [z0.d, z1.d, lsl #3]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.mla.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %x, <vscale x 2 x i64> splat(i64 8))
   ret <vscale x 2 x i64> %out
