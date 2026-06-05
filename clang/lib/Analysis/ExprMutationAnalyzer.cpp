@@ -422,7 +422,12 @@ ExprMutationAnalyzer::Analyzer::findDirectMutation(const Expr *Exp) {
   const auto NonConstMethod = cxxMethodDecl(unless(isConst()));
 
   const auto AsNonConstThis = expr(anyOf(
-      cxxMemberCallExpr(on(canResolveToExpr(Exp)), unless(isConstCallee())),
+      // For member calls through a pointer, the pointer variable
+      // itself is not mutated but only the pointee is mutated.
+      cxxMemberCallExpr(
+          on(canResolveToExpr(Exp)),
+          unless(anyOf(isConstCallee(), thisPointerType(pointerType())))),
+
       cxxOperatorCallExpr(callee(NonConstMethod),
                           hasArgument(0, canResolveToExpr(Exp))),
       // In case of a templated type, calling overloaded operators is not
@@ -697,7 +702,7 @@ ExprMutationAnalyzer::Analyzer::findFunctionArgMutation(const Expr *Exp) {
       canResolveToExpr(Exp),
       parmVarDecl(hasType(nonConstReferenceType())).bind("parm"));
   const auto IsInstantiated = hasDeclaration(isInstantiated());
-  const auto FuncDecl = hasDeclaration(functionDecl().bind("func"));
+  const auto FuncDecl = hasDeclaration(functionDecl());
   const auto Matches = match(
       traverse(
           TK_AsIs,
@@ -711,13 +716,16 @@ ExprMutationAnalyzer::Analyzer::findFunctionArgMutation(const Expr *Exp) {
       Stm, Context);
   for (const auto &Nodes : Matches) {
     const auto *Exp = Nodes.getNodeAs<Expr>(NodeID<Expr>::value);
-    const auto *Func = Nodes.getNodeAs<FunctionDecl>("func");
-    if (!Func->getBody() || !Func->getPrimaryTemplate())
-      return Exp;
-
     const auto *Parm = Nodes.getNodeAs<ParmVarDecl>("parm");
+    const auto *Func =
+        cast<FunctionDecl>(Parm->getDeclContext())->getDefinition();
+    if (!Func || !Func->doesThisDeclarationHaveABody())
+      return Exp;
+    Parm = Func->getParamDecl(Parm->getFunctionScopeIndex());
+
     const ArrayRef<ParmVarDecl *> AllParams =
-        Func->getPrimaryTemplate()->getTemplatedDecl()->parameters();
+        Func->getTemplateInstantiationPattern(/*ForDefinition=*/true)
+            ->parameters();
     QualType ParmType =
         AllParams[std::min<size_t>(Parm->getFunctionScopeIndex(),
                                    AllParams.size() - 1)]

@@ -4750,10 +4750,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   adjustDeclContextForDeclaratorDecl(New, Old);
 
   // Ensure the template parameters are compatible.
-  if (NewTemplate &&
-      !TemplateParameterListsAreEqual(NewTemplate->getTemplateParameters(),
-                                      OldTemplate->getTemplateParameters(),
-                                      /*Complain=*/true, TPL_TemplateMatch))
+  if (NewTemplate && !TemplateParameterListsAreEqual(
+                         NewTemplate, NewTemplate->getTemplateParameters(),
+                         OldTemplate, OldTemplate->getTemplateParameters(),
+                         /*Complain=*/true, TPL_TemplateMatch))
     return New->setInvalidDecl();
 
   // C++ [class.mem]p1:
@@ -8023,6 +8023,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
 
     if (IsVariableTemplateSpecialization) {
+      // FIXME: This should be the template keyword location for the last
+      // template parameter list.
       SourceLocation TemplateKWLoc =
           TemplateParamLists.size() > 0
               ? TemplateParamLists[0]->getTemplateLoc()
@@ -8065,10 +8067,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     // If we have any template parameter lists that don't directly belong to
     // the variable (matching the scope specifier), store them.
-    // An explicit variable template specialization does not own any template
-    // parameter lists.
     unsigned VDTemplateParamLists =
-        (TemplateParams && !IsExplicitSpecialization) ? 1 : 0;
+        IsVariableTemplate || IsVariableTemplateSpecialization ? 1 : 0;
     if (TemplateParamLists.size() > VDTemplateParamLists)
       NewVD->setTemplateParameterListsInfo(
           Context, TemplateParamLists.drop_back(VDTemplateParamLists));
@@ -8397,12 +8397,15 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                   ? TPC_ClassTemplateMember
                   : TPC_Other))
         NewVD->setInvalidDecl();
+    }
+  }
 
-      // If we are providing an explicit specialization of a static variable
-      // template, make a note of that.
-      if (PrevVarTemplate &&
-          PrevVarTemplate->getInstantiatedFromMemberTemplate())
-        PrevVarTemplate->setMemberSpecialization();
+  if (IsMemberSpecialization) {
+    if (NewTemplate && NewVD->getPreviousDecl()) {
+      NewTemplate->setMemberSpecialization();
+    } else if (IsPartialSpecialization) {
+      cast<VarTemplatePartialSpecializationDecl>(NewVD)
+          ->setMemberSpecialization();
     }
   }
 
@@ -9265,12 +9268,9 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
         continue;
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
-        bool Invalid = false;
-        Invalid |= CheckOverridingFunctionReturnType(MD, BaseMD);
-        Invalid |= CheckOverridingFunctionAttributes(MD, BaseMD);
-        Invalid |= CheckOverridingFunctionExceptionSpec(MD, BaseMD);
-        if (Invalid)
-          MD->setInvalidDecl();
+        CheckOverridingFunctionReturnType(MD, BaseMD);
+        CheckOverridingFunctionAttributes(MD, BaseMD);
+        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
       }
 
@@ -10119,6 +10119,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   bool isMemberSpecialization = false;
   bool isFunctionTemplateSpecialization = false;
 
+  TemplateParameterList *TemplateParams = nullptr;
   bool HasExplicitTemplateArgs = false;
   TemplateArgumentListInfo TemplateArgs;
 
@@ -10203,11 +10204,14 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
             ? D.getName().TemplateId
             : nullptr;
-    TemplateParameterList *TemplateParams =
-        MatchTemplateParametersToScopeSpecifier(
-            D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
-            D.getCXXScopeSpec(), TemplateId, TemplateParamLists, isFriend,
-            isMemberSpecialization, Invalid);
+    TemplateParamListsRef = TemplateParamLists;
+    TemplateParams = MatchTemplateParametersToScopeSpecifier(
+        D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
+        D.getCXXScopeSpec(), TemplateId, TemplateParamListsRef, isFriend,
+        isMemberSpecialization, Invalid);
+    // Some template parameter lists may have been dropped because they were
+    // extraneous.
+    TemplateParamLists.resize(TemplateParamListsRef.size());
     if (TemplateParams) {
       // Check that we can declare a template here.
       if (CheckTemplateDeclScope(S, TemplateParams))
@@ -10242,19 +10246,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                                         NewFD);
         FunctionTemplate->setLexicalDeclContext(CurContext);
         NewFD->setDescribedFunctionTemplate(FunctionTemplate);
-
-        // For source fidelity, store the other template param lists.
-        if (TemplateParamLists.size() > 1) {
-          NewFD->setTemplateParameterListsInfo(Context,
-              ArrayRef<TemplateParameterList *>(TemplateParamLists)
-                  .drop_back(1));
-        }
       } else {
         // This is a function template specialization.
         isFunctionTemplateSpecialization = true;
-        // For source fidelity, store all the template param lists.
-        if (TemplateParamLists.size() > 0)
-          NewFD->setTemplateParameterListsInfo(Context, TemplateParamLists);
+        NewFD->setInnerLocStart(TemplateParams->getTemplateLoc());
 
         // C++0x [temp.expl.spec]p20 forbids "template<> friend void foo(int);".
         if (isFriend) {
@@ -10283,6 +10278,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           TemplateArgs.setLAngleLoc(InsertLoc);
           TemplateArgs.setRAngleLoc(InsertLoc);
         }
+      }
+      // For source fidelity, store the other template param lists.
+      if (TemplateParamLists.size() > 1) {
+        NewFD->setTemplateParameterListsInfo(
+            Context,
+            ArrayRef<TemplateParameterList *>(TemplateParamLists).drop_back(1));
       }
     } else {
       // Check that we can declare a template here.
@@ -10885,11 +10886,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         // template is instantiated. In such cases, we store the declarations
         // found by name lookup and defer resolution until instantiation.
         if (CheckDependentFunctionTemplateSpecialization(
-                NewFD, ExplicitTemplateArgs, Previous))
+                NewFD, TemplateParams, ExplicitTemplateArgs, Previous))
           NewFD->setInvalidDecl();
       } else if (!NewFD->isInvalidDecl()) {
-        if (CheckFunctionTemplateSpecialization(NewFD, ExplicitTemplateArgs,
-                                                Previous))
+        if (CheckFunctionTemplateSpecialization(NewFD, TemplateParams,
+                                                ExplicitTemplateArgs, Previous))
           NewFD->setInvalidDecl();
       }
     } else if (isMemberSpecialization && !FunctionTemplate) {
@@ -11193,7 +11194,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Precalculate whether this is a friend function template with a constraint
     // that depends on an enclosing template, per [temp.friend]p9.
     if (isFriend && FunctionTemplate &&
-        FriendConstraintsDependOnEnclosingTemplate(NewFD)) {
+        FriendConstraintsDependOnEnclosingTemplate(FunctionTemplate)) {
       NewFD->setFriendConstraintRefersToEnclosingTemplate(true);
 
       // C++ [temp.friend]p9:
@@ -18019,7 +18020,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             S, TagSpec, TUK, KWLoc, SS, Name, NameLoc, Attrs, TemplateParams,
             AS, ModulePrivateLoc,
             /*FriendLoc*/ SourceLocation(), TemplateParameterLists.size() - 1,
-            TemplateParameterLists.data(), SkipBody);
+            TemplateParameterLists.data(), isMemberSpecialization, SkipBody);
         return Result.get();
       } else {
         // The "template<>" header is extraneous.
@@ -21297,21 +21298,6 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
     if (IsEmittedForExternalSymbol())
       return FunctionEmissionStatus::Emitted;
-
-    // If FD is a virtual destructor of an explicit instantiation
-    // of a template class, return Emitted.
-    if (auto *Destructor = dyn_cast<CXXDestructorDecl>(FD)) {
-      if (Destructor->isVirtual()) {
-        if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(
-                Destructor->getParent())) {
-          TemplateSpecializationKind TSK =
-              Spec->getTemplateSpecializationKind();
-          if (TSK == TSK_ExplicitInstantiationDeclaration ||
-              TSK == TSK_ExplicitInstantiationDefinition)
-            return FunctionEmissionStatus::Emitted;
-        }
-      }
-    }
   }
 
   // Otherwise, the function is known-emitted if it's in our set of

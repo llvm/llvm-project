@@ -1156,6 +1156,25 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
                      ~ScopeModifierMask, {"-isystemSystemSDK/"});
 }
 
+TEST(SemanticHighlighting, NoCrash) {
+  // Testcases where we are just testing that computation of the
+  // semantic tokens does not trigger a crash.
+  const char *TestCases[] = {
+      R"cpp(
+      template < template <> class a > using b = a<>;  // error-ok
+      template <class c>
+      using e = b<c::template d>
+    )cpp"};
+  for (const auto &TestCase : TestCases) {
+    TestTU TU;
+    TU.Code = TestCase;
+    TU.ExtraArgs.push_back("-std=c++20");
+    TU.ExtraArgs.push_back("-xobjective-c++");
+    auto AST = TU.build();
+    getSemanticHighlightings(AST, /*IncludeInactiveRegionTokens=*/true);
+  }
+}
+
 TEST(SemanticHighlighting, ScopeModifiers) {
   const char *TestCases[] = {
       R"cpp(

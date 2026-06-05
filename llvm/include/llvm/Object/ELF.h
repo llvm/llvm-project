@@ -220,7 +220,7 @@ static Error decodeCrel(
     function_ref<void(uint64_t /*relocation count*/, bool /*explicit addends*/)>
         HdrHandler,
     function_ref<void(Elf_Crel_Impl<Is64>)> EntryHandler) {
-  DataExtractor Data(Content, true, 8); // endian and address size are unused
+  DataExtractor Data(Content, true); // endian is unused
   DataExtractor::Cursor Cur(0);
   const uint64_t Hdr = Data.getULEB128(Cur);
   size_t Count = Hdr / 8;
