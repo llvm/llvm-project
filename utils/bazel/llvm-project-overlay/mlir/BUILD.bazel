@@ -11989,6 +11989,7 @@ td_library(
     name = "TosaDialectTdFiles",
     srcs = glob(["include/mlir/Dialect/Tosa/IR/*.td"]),
     deps = [
+        ":BuiltinDialectTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
