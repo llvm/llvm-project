@@ -120,11 +120,16 @@ enum class AffineMapBytecodeKind : unsigned {
 /// Convert a binary AffineExprKind to its bytecode wire encoding.
 static AffineExprBytecodeKind toBytecodeKind(AffineExprKind k) {
   switch (k) {
-  case AffineExprKind::Add:      return AffineExprBytecodeKind::Add;
-  case AffineExprKind::Mul:      return AffineExprBytecodeKind::Mul;
-  case AffineExprKind::Mod:      return AffineExprBytecodeKind::Mod;
-  case AffineExprKind::FloorDiv: return AffineExprBytecodeKind::FloorDiv;
-  case AffineExprKind::CeilDiv:  return AffineExprBytecodeKind::CeilDiv;
+  case AffineExprKind::Add:
+    return AffineExprBytecodeKind::Add;
+  case AffineExprKind::Mul:
+    return AffineExprBytecodeKind::Mul;
+  case AffineExprKind::Mod:
+    return AffineExprBytecodeKind::Mod;
+  case AffineExprKind::FloorDiv:
+    return AffineExprBytecodeKind::FloorDiv;
+  case AffineExprKind::CeilDiv:
+    return AffineExprBytecodeKind::CeilDiv;
   default:
     llvm_unreachable("not a binary AffineExprKind");
   }
@@ -134,11 +139,16 @@ static AffineExprBytecodeKind toBytecodeKind(AffineExprKind k) {
 /// Caller must guarantee `kind` is one of the binary operator values.
 static AffineExprKind fromBytecodeKind(uint64_t kind) {
   switch (kind) {
-  case static_cast<uint64_t>(AffineExprBytecodeKind::Add):      return AffineExprKind::Add;
-  case static_cast<uint64_t>(AffineExprBytecodeKind::Mul):      return AffineExprKind::Mul;
-  case static_cast<uint64_t>(AffineExprBytecodeKind::Mod):      return AffineExprKind::Mod;
-  case static_cast<uint64_t>(AffineExprBytecodeKind::FloorDiv): return AffineExprKind::FloorDiv;
-  case static_cast<uint64_t>(AffineExprBytecodeKind::CeilDiv):  return AffineExprKind::CeilDiv;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::Add):
+    return AffineExprKind::Add;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::Mul):
+    return AffineExprKind::Mul;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::Mod):
+    return AffineExprKind::Mod;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::FloorDiv):
+    return AffineExprKind::FloorDiv;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::CeilDiv):
+    return AffineExprKind::CeilDiv;
   }
   llvm_unreachable("not a binary AffineExprBytecodeKind");
 }
