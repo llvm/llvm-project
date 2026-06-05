@@ -1,7 +1,6 @@
 // RUN: %clang_cl -E /pathmap:%p=x:/path-to/ %s | FileCheck %s --check-prefix CHECK-REPRODUCABLE
 // CHECK-REPRODUCABLE: filename: "x:\\path-to\\cl-pathmap.c"
 // CHECK-REPRODUCABLE-NOT: filename:
-// CHECK-REPRODUCABLE-NOT: filename: "x:/path-to/cl-pathmap.c"
 
 //NOTE: currently . and .\ just gets eliminated after mapping 
 // RUN: %clang_cl -E /pathmap:%p=. %s | FileCheck %s --check-prefix CHECK-SIMPLE
