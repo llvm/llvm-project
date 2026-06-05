@@ -70,6 +70,11 @@ unsigned __int8 __stxr16(volatile unsigned __int16 *, unsigned __int16);
 unsigned __int8 __stxr32(volatile unsigned __int32 *, unsigned __int32);
 unsigned __int8 __stxr64(volatile unsigned __int64 *, unsigned __int64);
 
+unsigned __int8 __stlxr8(volatile unsigned __int8 *, unsigned __int8);
+unsigned __int8 __stlxr16(volatile unsigned __int16 *, unsigned __int16);
+unsigned __int8 __stlxr32(volatile unsigned __int32 *, unsigned __int32);
+unsigned __int8 __stlxr64(volatile unsigned __int64 *, unsigned __int64);
+
 #ifdef __cplusplus
 }
 #endif

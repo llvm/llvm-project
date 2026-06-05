@@ -794,6 +794,38 @@ unsigned char check__stxr64(unsigned long long int volatile *p, unsigned long lo
 // CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
 // CHECK-LINUX: error: call to undeclared function '__stxr64'
 
+unsigned char check__stlxr8(unsigned char volatile *p, unsigned char v) {
+  return __stlxr8(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__stlxr8(ptr{{.*}}%p, i8{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[ST:.*]] = call i32 @llvm.aarch64.stlxr.p0(i64 %{{.*}}, ptr elementtype(i8) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
+// CHECK-LINUX: error: call to undeclared function '__stlxr8'
+
+unsigned char check__stlxr16(unsigned short volatile *p, unsigned short v) {
+  return __stlxr16(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__stlxr16(ptr{{.*}}%p, i16{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[ST:.*]] = call i32 @llvm.aarch64.stlxr.p0(i64 %{{.*}}, ptr elementtype(i16) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
+// CHECK-LINUX: error: call to undeclared function '__stlxr16'
+
+unsigned char check__stlxr32(unsigned int volatile *p, unsigned int v) {
+  return __stlxr32(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__stlxr32(ptr{{.*}}%p, i32{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[ST:.*]] = call i32 @llvm.aarch64.stlxr.p0(i64 %{{.*}}, ptr elementtype(i32) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
+// CHECK-LINUX: error: call to undeclared function '__stlxr32'
+
+unsigned char check__stlxr64(unsigned long long int volatile *p, unsigned long long int v) {
+  return __stlxr64(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__stlxr64(ptr{{.*}}%p, i64{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[ST:.*]] = call i32 @llvm.aarch64.stlxr.p0(i64 %{{.*}}, ptr elementtype(i64) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
+// CHECK-LINUX: error: call to undeclared function '__stlxr64'
+
 void test__stlr8(unsigned __int8 volatile *p, unsigned __int8 v)
 {
   __stlr8 (p, v);

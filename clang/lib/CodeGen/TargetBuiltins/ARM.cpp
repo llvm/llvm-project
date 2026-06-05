@@ -5389,10 +5389,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == AArch64::BI__stxr8 || BuiltinID == AArch64::BI__stxr16 ||
-      BuiltinID == AArch64::BI__stxr32 || BuiltinID == AArch64::BI__stxr64) {
-    // Store-exclusive (STXR*). Reuse the llvm.aarch64.stxr lowering of the ACLE
-    // __builtin_arm_strex builtin. MSVC takes (ptr, value) (the reverse of the
-    // ACLE builtin) and returns the store status as unsigned char.
+      BuiltinID == AArch64::BI__stxr32 || BuiltinID == AArch64::BI__stxr64 ||
+      BuiltinID == AArch64::BI__stlxr8 || BuiltinID == AArch64::BI__stlxr16 ||
+      BuiltinID == AArch64::BI__stlxr32 || BuiltinID == AArch64::BI__stlxr64) {
+    // Store-(release-)exclusive (STXR*/STLXR*). Reuse the llvm.aarch64.stxr /
+    // stlxr lowering of the ACLE __builtin_arm_strex / stlex builtins. MSVC
+    // takes (ptr, value) (the reverse of the ACLE builtins) and returns the
+    // store status as unsigned char.
+    bool IsRelease =
+        BuiltinID == AArch64::BI__stlxr8 || BuiltinID == AArch64::BI__stlxr16 ||
+        BuiltinID == AArch64::BI__stlxr32 || BuiltinID == AArch64::BI__stlxr64;
     Value *StoreAddr = EmitScalarExpr(E->getArg(0));
     Value *StoreVal = EmitScalarExpr(E->getArg(1));
 
@@ -5401,8 +5407,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         llvm::IntegerType::get(getLLVMContext(), getContext().getTypeSize(Ty));
     StoreVal = Builder.CreateZExtOrBitCast(StoreVal, Int64Ty);
 
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::aarch64_stxr, StoreAddr->getType());
+    Function *F = CGM.getIntrinsic(IsRelease ? Intrinsic::aarch64_stlxr
+                                             : Intrinsic::aarch64_stxr,
+                                   StoreAddr->getType());
     CallInst *CI = Builder.CreateCall(F, {StoreVal, StoreAddr}, "stxr");
     CI->addParamAttr(
         1, Attribute::get(getLLVMContext(), Attribute::ElementType, StoreTy));
