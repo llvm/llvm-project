@@ -6,6 +6,8 @@ load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//llvm:driver.bzl", "llvm_driver_cc_binary")
+load("//mlir:tblgen.bzl", "gentbl_cc_library")
 load("defs.bzl", "clang_tidy_library")
 
 package(
@@ -385,22 +387,36 @@ CHECKS = [
     "//conditions:default": [],
 })
 
+gentbl_cc_library(
+    name = "ClangTidyOptsTableGen",
+    strip_include_prefix = "tool",
+    tbl_outs = {"tool/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tool/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_library(
     name = "tool",
-    srcs = ["tool/ClangTidyMain.cpp"],
+    srcs = [
+        "tool/ClangTidyMain.cpp",
+        "tool/ClangTidyToolMain.cpp",
+    ],
     hdrs = ["tool/ClangTidyMain.h"],
     deps = CHECKS + [
+        ":ClangTidyOptsTableGen",
         ":lib",
         ":utils",
+        "//clang:basic",
         "//clang:tooling",
+        "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )
 
-cc_binary(
+llvm_driver_cc_binary(
     name = "clang-tidy",
-    srcs = ["tool/ClangTidyToolMain.cpp"],
     stamp = 0,
     deps = [":tool"],
 )

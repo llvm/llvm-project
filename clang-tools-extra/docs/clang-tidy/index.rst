@@ -80,6 +80,7 @@ Name prefix            Description
 ``darwin-``            Checks related to Darwin coding conventions.
 ``fuchsia-``           Checks related to Fuchsia coding conventions.
 ``google-``            Checks related to Google coding conventions.
+``hicpp-``             Checks related to High Integrity C++ Coding Standard.
 ``linuxkernel-``       Checks related to the Linux Kernel coding conventions.
 ``llvm-``              Checks related to the LLVM coding conventions.
 ``llvmlibc-``          Checks related to the LLVM-libc coding standards.
@@ -126,156 +127,161 @@ An overview of all the command-line options:
 .. code-block:: console
 
   $ clang-tidy --help
-  USAGE: clang-tidy [options] <source0> [... <sourceN>]
+  OVERVIEW: clang-tidy
 
-  OPTIONS:
+  USAGE: clang-tidy [options] <source0> [... <sourceN>] [-- <compiler arguments>]
 
   Generic Options:
-
-    --help                           - Display available options (--help-hidden for more)
-    --help-list                      - Display list of available options (--help-list-hidden for more)
-    --version                        - Display the version of this program
+    --help-list Display list of available options (--help-list-hidden for more)
+    --help      Display available options (--help-hidden for more)
+    --version   Display the version of this program
 
   clang-tidy options:
-
-    --allow-no-checks                - Allow empty enabled checks. This suppresses
-                                       the "no checks enabled" error when disabling
-                                       all of the checks.
-    --checks=<string>                - Comma-separated list of globs with optional '-'
-                                       prefix. Globs are processed in order of
-                                       appearance in the list. Globs without '-'
-                                       prefix add checks with matching names to the
-                                       set, globs with the '-' prefix remove checks
-                                       with matching names from the set of enabled
-                                       checks. This option's value is appended to the
-                                       value of the 'Checks' option in .clang-tidy
-                                       file, if any.
-    --config=<string>                - Specifies a configuration in YAML/JSON format:
-                                         -config="{Checks: '*',
-                                                   CheckOptions: {x: y}}"
-                                       When the value is empty, clang-tidy will
-                                       attempt to find a file named .clang-tidy for
-                                       each source file in its parent directories.
-    --config-file=<string>           - Specify the path of .clang-tidy or custom config file:
-                                        e.g. --config-file=/some/path/myTidyConfigFile
-                                       This option internally works exactly the same way as
-                                        --config option after reading specified config file.
-                                       Use either --config-file or --config, not both.
-    --dump-config                    - Dumps configuration in the YAML format to
-                                       stdout. This option can be used along with a
-                                       file name (and '--' if the file is outside of a
-                                       project with configured compilation database).
-                                       The configuration used for this file will be
-                                       printed.
-                                       Use along with -checks=* to include
-                                       configuration of all checks.
-    --enable-check-profile           - Enable per-check timing profiles, and print a
-                                       report to stderr.
-    --enable-module-headers-parsing  - Enables preprocessor-level module header parsing
-                                       for C++20 and above, empowering specific checks
-                                       to detect macro definitions within modules. This
-                                       feature may cause performance and parsing issues
-                                       and is therefore considered experimental.
-    --exclude-header-filter=<string> - Regular expression matching the names of the
-                                       headers to exclude diagnostics from. Diagnostics
-                                       from the main file of each translation unit are
-                                       always displayed.
-                                       Must be used together with --header-filter.
-                                       Can be used together with -line-filter.
-                                       This option overrides the 'ExcludeHeaderFilterRegex'
-                                       option in .clang-tidy file, if any.
-    --experimental-custom-checks     - Enable experimental clang-query based
-                                       custom checks.
-                                       see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
-    --explain-config                 - For each enabled check explains, where it is
-                                       enabled, i.e. in clang-tidy binary, command
-                                       line or a specific configuration file.
-    --export-fixes=<filename>        - YAML file to store suggested fixes in. The
-                                       stored fixes can be applied to the input source
-                                       code with clang-apply-replacements.
-    --extra-arg=<string>             - Additional argument to append to the compiler command line
-    --extra-arg-before=<string>      - Additional argument to prepend to the compiler command line
-    --fix                            - Apply suggested fixes. Without -fix-errors
-                                       clang-tidy will bail out if any compilation
-                                       errors were found.
-    --fix-errors                     - Apply suggested fixes even if compilation
-                                       errors were found. If compiler errors have
-                                       attached fix-its, clang-tidy will apply them as
-                                       well.
-    --fix-notes                      - If a warning has no fix, but a single fix can
-                                       be found through an associated diagnostic note,
-                                       apply the fix.
-                                       Specifying this flag will implicitly enable the
-                                       '--fix' flag.
-    --format-style=<string>          - Style for formatting code around applied fixes:
-                                         - 'none' (default) turns off formatting
-                                         - 'file' (literally 'file', not a placeholder)
-                                           uses .clang-format file in the closest parent
-                                           directory
-                                         - '{ <json> }' specifies options inline, e.g.
-                                           -format-style='{BasedOnStyle: llvm, IndentWidth: 8}'
-                                         - 'llvm', 'google', 'webkit', 'mozilla'
-                                       See clang-format documentation for the up-to-date
-                                       information about formatting styles and options.
-                                       This option overrides the 'FormatStyle` option in
-                                       .clang-tidy file, if any.
-    --header-filter=<string>         - Regular expression matching the names of the
-                                       headers to output diagnostics from. The default
-                                       value is '.*', i.e. diagnostics from all non-system
-                                       headers are displayed by default. Diagnostics
-                                       from the main file of each translation unit are
-                                       always displayed.
-                                       Can be used together with -line-filter.
-                                       This option overrides the 'HeaderFilterRegex'
-                                       option in .clang-tidy file, if any.
-    --line-filter=<string>           - List of files and line ranges to output diagnostics from.
-                                       The range is inclusive on both ends. Can be used together
-                                       with -header-filter. The format of the list is a JSON
-                                       array of objects. For example:
-
-                                         [
-                                           {"name":"file1.cpp","lines":[[1,3],[5,7]]},
-                                           {"name":"file2.h"}
-                                         ]
-
-                                       This will output diagnostics from 'file1.cpp' only for
-                                       the line ranges [1,3] and [5,7], as well as all from the
-                                       entire 'file2.h'.
-    --list-checks                    - List all enabled checks and exit. Use with
-                                       -checks=* to list all available checks.
-    --load=<pluginfilename>          - Load the specified plugin
-    -p <string>                      - Build path
-    --quiet                          - Run clang-tidy in quiet mode. This suppresses
-                                       printing statistics about ignored warnings and
-                                       warnings treated as errors if the respective
-                                       options are specified.
-    --removed-arg=<string>           - List of arguments to remove from the command
-                                       line sent to the compiler. Please note that
-                                       removing arguments might change the semantic
-                                       of the analyzed code, possibly leading to
-                                       compiler errors, false positives or
-                                       false negatives. This option is applied
-                                       before --extra-arg and --extra-arg-before
-    --store-check-profile=<prefix>   - By default reports are printed in tabulated
-                                       format to stderr. When this option is passed,
-                                       these per-TU profiles are instead stored as JSON.
-    --system-headers                 - Display the errors from system headers.
-                                       This option overrides the 'SystemHeaders' option
-                                       in .clang-tidy file, if any.
-    --use-color                      - Use colors in diagnostics. If not set, colors
-                                       will be used if the terminal connected to
-                                       standard output supports colors.
-                                       This option overrides the 'UseColor' option in
-                                       .clang-tidy file, if any.
-    --verify-config                  - Check the config files to ensure each check and
-                                       option is recognized without running any checks.
-    --vfsoverlay=<filename>          - Overlay the virtual filesystem described by file
-                                       over the real file system.
-    --warnings-as-errors=<string>    - Upgrades warnings to errors. Same format as
-                                       '-checks'.
-                                       This option's value is appended to the value of
-                                       the 'WarningsAsErrors' option in .clang-tidy
-                                       file, if any.
+    --allow-no-checks       Allow empty enabled checks. This suppresses
+                            the "no checks enabled" error when disabling
+                            all of the checks.
+    --checks=<string>       Comma-separated list of globs with optional '-'
+                            prefix. Globs are processed in order of
+                            appearance in the list. Globs without '-'
+                            prefix add checks with matching names to the
+                            set, globs with the '-' prefix remove checks
+                            with matching names from the set of enabled
+                            checks. This option's value is appended to the
+                            value of the 'Checks' option in .clang-tidy
+                            file, if any.
+    --config-file=<filename>
+                            Specify the path of .clang-tidy or custom config file:
+                             e.g. --config-file=/some/path/myTidyConfigFile
+                            This option internally works exactly the same way as
+                             --config option after reading specified config file.
+                            Use either --config-file or --config, not both.
+    --config=<string>       Specifies a configuration in YAML/JSON format:
+                              -config="{Checks: '*',
+                                        CheckOptions: {x: y}}"
+                            When the value is empty, clang-tidy will
+                            attempt to find a file named .clang-tidy for
+                            each source file in its parent directories.
+    --dump-config           Dumps configuration in the YAML format to
+                            stdout. This option can be used along with a
+                            file name (and '--' if the file is outside of a
+                            project with configured compilation database).
+                            The configuration used for this file will be
+                            printed.
+                            Use along with -checks=* to include
+                            configuration of all checks.
+    --enable-check-profile  Enable per-check timing profiles, and print a
+                            report to stderr.
+    --enable-module-headers-parsing
+                            Enables preprocessor-level module header parsing
+                            for C++20 and above, empowering specific checks
+                            to detect macro definitions within modules. This
+                            feature may cause performance and parsing issues
+                            and is therefore considered experimental.
+    --exclude-header-filter=<string>
+                            Regular expression matching the names of the
+                            headers to exclude diagnostics from. Diagnostics
+                            from the main file of each translation unit are
+                            always displayed.
+                            Must be used together with --header-filter.
+                            Can be used together with -line-filter.
+                            This option overrides the 'ExcludeHeaderFilterRegex'
+                            option in .clang-tidy file, if any.
+    --experimental-custom-checks
+                            Enable experimental clang-query based
+                            custom checks.
+                            see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
+    --explain-config        For each enabled check explains, where it is
+                            enabled, i.e. in clang-tidy binary, command
+                            line or a specific configuration file.
+    --export-fixes=<filename>
+                            YAML file to store suggested fixes in. The
+                            stored fixes can be applied to the input source
+                            code with clang-apply-replacements.
+    --extra-arg-before=<arg>
+                            Additional argument to prepend to the compiler command line
+    --extra-arg=<arg>       Additional argument to append to the compiler command line
+    --fix-errors            Apply suggested fixes even if compilation
+                            errors were found. If compiler errors have
+                            attached fix-its, clang-tidy will apply them as
+                            well.
+    --fix-notes             If a warning has no fix, but a single fix can
+                            be found through an associated diagnostic note,
+                            apply the fix.
+                            Specifying this flag will implicitly enable the
+                            '--fix' flag.
+    --fix                   Apply suggested fixes. Without -fix-errors
+                            clang-tidy will bail out if any compilation
+                            errors were found.
+    --format-style=<string> Style for formatting code around applied fixes:
+                              - 'none' (default) turns off formatting
+                              - 'file' (literally 'file', not a placeholder)
+                                uses .clang-format file in the closest parent
+                                directory
+                              - '{ <json> }' specifies options inline, e.g.
+                                -format-style='{BasedOnStyle: llvm, IndentWidth: 8}'
+                              - 'llvm', 'google', 'webkit', 'mozilla'
+                            See clang-format documentation for the up-to-date
+                            information about formatting styles and options.
+                            This option overrides the 'FormatStyle` option in
+                            .clang-tidy file, if any.
+    --header-filter=<string>
+                            Regular expression matching the names of the
+                            headers to output diagnostics from. The default
+                            value is '.*', i.e. diagnostics from all non-system
+                            headers are displayed by default. Diagnostics
+                            from the main file of each translation unit are
+                            always displayed.
+                            Can be used together with -line-filter.
+                            This option overrides the 'HeaderFilterRegex'
+                            option in .clang-tidy file, if any.
+    --line-filter=<string>  List of files and line ranges to output diagnostics from.
+                            The range is inclusive on both ends. Can be used together
+                            with -header-filter. The format of the list is a JSON
+                            array of objects. For example:
+                              [
+                                {"name":"file1.cpp","lines":[[1,3],[5,7]]},
+                                {"name":"file2.h"}
+                              ]
+                            This will output diagnostics from 'file1.cpp' only for
+                            the line ranges [1,3] and [5,7], as well as all from the
+                            entire 'file2.h'.
+    --list-checks           List all enabled checks and exit. Use with
+                            -checks=* to list all available checks.
+    --load=<pluginfilename> Load the specified plugin
+    -p <build-path>         Build path
+    --quiet                 Run clang-tidy in quiet mode. This suppresses
+                            printing statistics about ignored warnings and
+                            warnings treated as errors if the respective
+                            options are specified.
+    --removed-arg=<arg>     List of arguments to remove from the command
+                            line sent to the compiler. Please note that
+                            removing arguments might change the semantic
+                            of the analyzed code, possibly leading to
+                            compiler errors, false positives or
+                            false negatives. This option is applied
+                            before --extra-arg and --extra-arg-before
+    --store-check-profile=<prefix>
+                            By default reports are printed in tabulated
+                            format to stderr. When this option is passed,
+                            these per-TU profiles are instead stored as JSON.
+    --system-headers        Display the errors from system headers.
+                            This option overrides the 'SystemHeaders' option
+                            in .clang-tidy file, if any.
+    --use-color             Use colors in diagnostics. If not set, colors
+                            will be used if the terminal connected to
+                            standard output supports colors.
+                            This option overrides the 'UseColor' option in
+                            .clang-tidy file, if any.
+    --verify-config         Check the config files to ensure each check and
+                            option is recognized without running any checks.
+    --vfsoverlay=<filename> Overlay the virtual filesystem described by file
+                            over the real file system.
+    --warnings-as-errors=<string>
+                            Upgrades warnings to errors. Same format as
+                            '-checks'.
+                            This option's value is appended to the value of
+                            the 'WarningsAsErrors' option in .clang-tidy
+                            file, if any.
 
   -p <build-path> is used to read a compile command database.
 
@@ -283,7 +289,7 @@ An overview of all the command-line options:
     compile_commands.json exists (use -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     CMake option to get this output). When no build path is specified,
     a search for compile_commands.json will be attempted through all
-    parent paths of the first input file . See:
+    parent paths of the first input file. See:
     https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html for an
     example of setting up Clang Tooling on a source tree.
 
@@ -357,39 +363,6 @@ An overview of all the command-line options:
       CheckOptions:
         some-check.SomeOption: 'some value'
       ...
-
-Running Clang-Tidy on CUDA Files
---------------------------------
-
-:program:`clang-tidy` supports analyzing CUDA source files. To ensure correct
-header resolution, it is important to specify the CUDA toolkit path using
-``--cuda-path``. For more details on how Clang handles CUDA, see
-`Compiling CUDA with Clang <https://llvm.org/docs/CompileCudaWithLLVM.html>`_.
-
-If you are using a GCC + NVCC build setup, the compiler command database will
-contain NVCC-specific flags that :program:`clang-tidy` does not understand.
-
-In this case, you should use the ``RemovedArgs`` configuration option (or
-``--removed-arg`` command-line option) to remove these flags, and
-``ExtraArgs`` (or ``--extra-arg``) to provide the ``--cuda-path``.
-
-For example, to remove the NVCC-specific ``-gencode`` flag and provide the
-CUDA path:
-
-.. code-block:: console
-
-  $ clang-tidy source.cu --removed-arg="-gencode" --removed-arg="arch=.." --extra-arg="--cuda-path=/path/to/cuda"
-
-By default, :program:`clang-tidy` will analyze both host and device code.
-To restrict the analysis to a specific side and specifically choose device
-compilation flags, use the ``--extra-arg`` flag to pass the arguments.
-
-For example, to perform device analysis only, use
-the ``--cuda-device-only`` flag:
-
-.. code-block:: console
-
-  $ clang-tidy source.cu --extra-arg="--cuda-device-only" --extra-arg="--cuda-path=/path/to/cuda"
 
 Clang-Tidy Automation
 =====================

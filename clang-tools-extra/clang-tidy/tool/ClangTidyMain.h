@@ -19,7 +19,7 @@
 
 namespace clang::tidy {
 
-int clangTidyMain(int argc, const char **argv);
+int clangTidyMain(int argc, char **argv);
 
 } // namespace clang::tidy
 
