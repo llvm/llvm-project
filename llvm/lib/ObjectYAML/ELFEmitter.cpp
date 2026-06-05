@@ -1481,7 +1481,7 @@ void ELFState<ELFT>::writeSectionContent(
     }
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
     if (!FeatureOrErr) {
-      // Invalid feature: warn and skip the entry; the payload is unparseable.
+      // Invalid feature: warn and skip the entry.
       WithColor::warning() << toString(FeatureOrErr.takeError());
       continue;
     }
