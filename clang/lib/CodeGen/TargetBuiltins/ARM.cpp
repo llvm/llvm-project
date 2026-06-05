@@ -5344,6 +5344,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Load;
   }
 
+  if (BuiltinID == AArch64::BI__ldxr8 || BuiltinID == AArch64::BI__ldxr16 ||
+      BuiltinID == AArch64::BI__ldxr32 || BuiltinID == AArch64::BI__ldxr64) {
+    // Load-exclusive (LDXR*). Reuse the llvm.aarch64.ldxr lowering of the ACLE
+    // __builtin_arm_ldrex builtin.
+    Value *LoadAddr = EmitScalarExpr(E->getArg(0));
+    QualType Ty = E->getType();
+    llvm::Type *RealResTy = ConvertType(Ty);
+    llvm::Type *IntTy =
+        llvm::IntegerType::get(getLLVMContext(), getContext().getTypeSize(Ty));
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_ldxr, DefaultPtrTy);
+    CallInst *Val = Builder.CreateCall(F, LoadAddr, "ldxr");
+    Val->addParamAttr(
+        0, Attribute::get(getLLVMContext(), Attribute::ElementType, IntTy));
+    return Builder.CreateTruncOrBitCast(Val, RealResTy);
+  }
+
   if (BuiltinID == AArch64::BI__stlr8 || BuiltinID == AArch64::BI__stlr16 ||
       BuiltinID == AArch64::BI__stlr32 || BuiltinID == AArch64::BI__stlr64) {
     Value *Ptr = EmitScalarExpr(E->getArg(0));
