@@ -39,6 +39,8 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %10 = spirv.CL.erf %arg0 : f32
     // CHECK: {{%.*}} = spirv.CL.trunc {{%.*}} : f32
     %11 = spirv.CL.trunc %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.cbrt {{%.*}} : f32
+    %12 = spirv.CL.cbrt %arg0 : f32
     spirv.Return
   }
 

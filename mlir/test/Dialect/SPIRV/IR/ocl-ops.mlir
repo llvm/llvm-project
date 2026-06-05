@@ -696,6 +696,22 @@ func.func @acosh(%arg0 : vector<4xf16>) -> () {
 
 // -----
 
+func.func @cbrt(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.cbrt {{%.*}} : f32
+  %2 = spirv.CL.cbrt %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @cbrt(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.cbrt {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.cbrt %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
 func.func @atan2(%arg0 : f32, %arg1 : f32) -> () {
   // CHECK: spirv.CL.atan2 {{%.*}}, {{%.*}} : f32
   %2 = spirv.CL.atan2 %arg0, %arg1 : f32
