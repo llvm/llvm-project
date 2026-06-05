@@ -823,12 +823,12 @@ void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
 }
 
 bool Preprocessor::HandleDollarIdentifier(Token &Identifier) {
-  // skip validation in macros
-  if (InMacroArgs || (CurLexer && (CurLexer->ParsingPreprocessorDirective ||
-                                   CurLexer->isLexingRawMode())))
+  if (Identifier.isAnnotation() || !getLangOpts().DollarMacros)
     return true;
 
-  if (Identifier.isAnnotation())
+    // skip validation in macros
+  if (InMacroArgs || (CurLexer && (CurLexer->ParsingPreprocessorDirective ||
+                                   CurLexer->isLexingRawMode())))
     return true;
 
   IdentifierInfo *II = Identifier.getIdentifierInfo();
