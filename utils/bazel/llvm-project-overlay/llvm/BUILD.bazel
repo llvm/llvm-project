@@ -5622,7 +5622,7 @@ cc_binary(
     ]),
     copts = llvm_copts,
     defines = [
-        "LLVM_BUILD_STATIC", # Provided by add_llvm_tool
+        "LLVM_BUILD_STATIC",  # Provided by add_llvm_tool
     ],
     stamp = 0,
     deps = [
