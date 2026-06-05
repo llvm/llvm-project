@@ -7,7 +7,7 @@
 
 define ptr @phi_prot_ptr(i1 %sel, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: define ptr @phi_prot_ptr(
-; CHECK-SAME: i1 [[SEL:%.*]], ptr readonly captures(none) [[P1:%.*]], ptr readonly captures(none) [[P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i1 [[SEL:%.*]], ptr nofree readonly captures(none) [[P1:%.*]], ptr nofree readonly captures(none) [[P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    br i1 [[SEL]], label %[[T:.*]], label %[[F:.*]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P1]], align 8
