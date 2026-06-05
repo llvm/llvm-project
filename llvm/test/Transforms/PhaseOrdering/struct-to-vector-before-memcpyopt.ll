@@ -28,7 +28,7 @@ declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immar
 ; is no longer needed and the IR collapses to a single load/memmove/store.
 define void @move_then_swap(ptr %dst, ptr %src, ptr %other) {
 ; CHECK-LABEL: define void @move_then_swap(
-; CHECK-SAME: ptr writeonly captures(none) initializes((0, 16)) [[DST:%.*]], ptr readonly captures(none) [[SRC:%.*]], ptr captures(none) [[OTHER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) initializes((0, 16)) [[DST:%.*]], ptr nofree readonly captures(none) [[SRC:%.*]], ptr nofree captures(none) [[OTHER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load <2 x i64>, ptr [[OTHER]], align 8
 ; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[OTHER]], ptr noundef nonnull align 8 dereferenceable(16) [[SRC]], i64 16, i1 false)

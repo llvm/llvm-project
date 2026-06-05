@@ -180,7 +180,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
                     Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
-    const char *Exec = Driver.getClangProgramPath();
+    const char *Exec = Driver.getDriverProgramPath();
     C.addCommand(std::make_unique<Command>(
         JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, LinkedBCFile,
         Output, Driver.getPrependArg()));

@@ -229,9 +229,9 @@ void *Value::getPtr() const {
   return Data.m_Ptr;
 }
 
-void Value::setRawBits(void *Ptr, unsigned NBits /*= sizeof(Storage)*/) {
-  assert(NBits <= sizeof(Storage) && "Greater than the total size");
-  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBits / 8);
+void Value::setRawBits(void *Ptr, unsigned NBytes /*= sizeof(Storage)*/) {
+  assert(NBytes <= sizeof(Storage) && "Greater than the total size");
+  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBytes);
 }
 
 QualType Value::getType() const {

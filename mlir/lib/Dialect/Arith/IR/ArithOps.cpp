@@ -2724,7 +2724,13 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RedundantSelectFalse, RedundantSelectTrue, SelectNotCond,
-              SelectI1ToNot, SelectToExtUI>(context);
+              SelectI1ToNot, SelectCmpISgeToMaxSI, SelectCmpISgeToMinSI,
+              SelectCmpISgtToMaxSI, SelectCmpISgtToMinSI, SelectCmpISleToMaxSI,
+              SelectCmpISleToMinSI, SelectCmpISltToMaxSI, SelectCmpISltToMinSI,
+              SelectCmpIUgeToMaxUI, SelectCmpIUgeToMinUI, SelectCmpIUgtToMaxUI,
+              SelectCmpIUgtToMinUI, SelectCmpIUleToMaxUI, SelectCmpIUleToMinUI,
+              SelectCmpIUltToMaxUI, SelectCmpIUltToMinUI, SelectToExtUI>(
+      context);
 }
 
 OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {

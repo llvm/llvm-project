@@ -3,7 +3,7 @@
 
 define void @growTables(ptr %p) {
 ; CHECK-LABEL: define void @growTables(
-; CHECK-SAME: ptr captures(address) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree captures(address) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CALL:%.*]] = load volatile i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[CMP71:%.*]] = icmp sgt i32 [[CALL]], 0

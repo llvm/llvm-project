@@ -543,6 +543,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
 
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check by fixing a crash when
+  evaluating bitwise comparisons against integer constants wider than 64 bits.
+
 - Improved :doc:`misc-throw-by-value-catch-by-reference
   <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
 

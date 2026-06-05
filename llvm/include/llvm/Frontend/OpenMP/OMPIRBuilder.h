@@ -4025,16 +4025,16 @@ public:
     return Old;
   }
 
-  LLVM_ABI InsertPointTy
-  createAtomicCompare(const LocationDescription &Loc, AtomicOpValue &X,
-                      AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,
-                      AtomicOrdering AO, omp::OMPAtomicCompareOp Op,
-                      bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly);
   LLVM_ABI InsertPointTy createAtomicCompare(
       const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
       AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
       omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, AtomicOrdering Failure);
+      bool IsFailOnly, bool IsWeak = false);
+  LLVM_ABI InsertPointTy createAtomicCompare(
+      const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
+      AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+      omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
+      bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///

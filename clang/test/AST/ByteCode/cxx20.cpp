@@ -1262,6 +1262,23 @@ namespace ConditionalTemporaries {
   }
   static_assert(foo(false)== 13);
   static_assert(foo(true)== 12);
+
+  struct S {
+    int *p;
+    constexpr S() { p = new int(); }
+    constexpr ~S() { delete p; }
+  };
+
+  constexpr bool func(S &s1, S s2) {
+    return true;
+  }
+
+  constexpr bool test() {
+    S s1;
+    func(s1, {}) ? void() : void();
+    return true;
+  }
+  static_assert(test());
 }
 
 namespace PointerCmp {

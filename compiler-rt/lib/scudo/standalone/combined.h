@@ -153,9 +153,13 @@ public:
     if (&computeHardwareCRC32 && hasHardwareCRC32())
       HashAlgorithm = Checksum::HardwareCRC32;
 
-    if (UNLIKELY(!getRandom(&Cookie, sizeof(Cookie))))
+    if (UNLIKELY(!getRandom(&Cookie, sizeof(Cookie)))) {
+      ScopedString Str;
+      Str.append("Randomness degraded.\n");
+      Str.output();
       Cookie = static_cast<u32>(getMonotonicTime() ^
                                 (reinterpret_cast<uptr>(this) >> 4));
+    }
 
     initFlags();
     reportUnrecognizedFlags();

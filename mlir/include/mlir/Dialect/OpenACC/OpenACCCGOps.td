@@ -17,6 +17,7 @@
 #define OPENACC_CG_OPS
 
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 // This file is intended to be included from OpenACCOps.td, which provides
 // the necessary includes and definitions. The operations defined here use
@@ -251,6 +252,28 @@ def OpenACC_PrivatizeOp : OpenACC_Op<"privatize", []> {
       $_state.addOperands(dynamicSizes);
     }]>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// acc.unwrap_private
+//===----------------------------------------------------------------------===//
+
+def OpenACC_UnwrapPrivateOp
+    : OpenACC_Op<"unwrap_private",
+                 [NoMemoryEffect, AlwaysSpeculatable, ViewLikeOpInterface]> {
+  let summary = "Unwrap acc.private_type handle to pointer-like storage";
+  let description = [{
+    Converts a privatization handle (`acc.private_type<T>`) to a pointer-like
+    view of the underlying private storage.
+  }];
+  let arguments = (ins OpenACC_PrivateType:$handle);
+  let results = (outs OpenACC_PointerLikeType:$result);
+  let assemblyFormat = [{
+    $handle attr-dict `:` qualified(type($handle)) `to` type($result)
+  }];
+  let extraClassDeclaration = [{
+    ::mlir::Value getViewSource() { return getHandle(); }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

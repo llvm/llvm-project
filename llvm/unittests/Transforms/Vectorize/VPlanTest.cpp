@@ -1272,7 +1272,7 @@ TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPRecipeBase) {
   auto *Load =
       new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, {}, {});
 
   checkVPRecipeCastImpl<VPWidenLoadRecipe, VPUser, VPIRMetadata>(&Recipe);
@@ -1303,7 +1303,7 @@ TEST_F(VPRecipeTest, CastVPWidenLoadEVLRecipeToVPUser) {
   auto *Load =
       new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
   VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, {}, {});
   VPWidenLoadEVLRecipe Recipe(BaseLoad, Addr, *EVL, Mask);
@@ -1321,7 +1321,7 @@ TEST_F(VPRecipeTest, CastVPWidenStoreRecipeToVPUser) {
                               PoisonValue::get(Int32Ptr), false, Align(1));
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *StoredVal = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 42));
-  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   VPWidenStoreRecipe Recipe(*Store, Addr, StoredVal, Mask, true, {}, {});
 
   checkVPRecipeCastImpl<VPWidenStoreRecipe, VPUser, VPIRMetadata>(&Recipe);
@@ -1338,7 +1338,7 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *StoredVal = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 42));
   VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
-  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true, {}, {});
   VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, StoredVal, *EVL, Mask);
 
@@ -1423,7 +1423,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     auto *Load =
         new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
-    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
     VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, {}, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
@@ -1436,7 +1436,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     auto *Store = new StoreInst(PoisonValue::get(Int32),
                                 PoisonValue::get(Int32Ptr), false, Align(1));
-    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
     VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *StoredV = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
     VPWidenStoreRecipe Recipe(*Store, Addr, StoredV, Mask, false, {}, {});
@@ -1845,11 +1845,10 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
 
   // Create a recipe that uses VF.
   VPValue *VF = &Plan.getVF();
-  VPInstruction *I = new VPInstructionWithType(VPInstruction::StepVector, {},
-                                               IntegerType::get(C, 32));
+  VPInstruction *I =
+      new VPInstruction(VPInstruction::ExplicitVectorLength, {VF});
   VPBasicBlock &VPBB = *Plan.createVPBasicBlock("");
   VPBB.appendRecipe(I);
-  I->addOperand(VF);
 
   // Replace VF with a constant.
   VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
@@ -1899,7 +1898,7 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
-TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
+TEST_F(VPInstructionTest, VPSymbolicValueConstructUserAfterMaterialization) {
   VPlan &Plan = getPlan();
 
   // Materialize VF by replacing all uses.
@@ -1908,11 +1907,25 @@ TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
   EXPECT_TRUE(Plan.getVF().isMaterialized());
 
   // Adding a new user to a materialized value should crash.
-  VPInstruction *I = new VPInstructionWithType(VPInstruction::StepVector, {},
-                                               IntegerType::get(C, 32));
-  VPBasicBlock &VPBB = *Plan.createVPBasicBlock("");
-  VPBB.appendRecipe(I);
-  EXPECT_DEATH(I->addOperand(VF), "accessing materialized symbolic value");
+  EXPECT_DEATH(new VPInstruction(VPInstruction::ExplicitVectorLength, {VF}),
+               "accessing materialized symbolic value");
+}
+
+TEST_F(VPInstructionTest, VPSymbolicValueAddOperandAfterMaterialization) {
+  VPlan &Plan = getPlan();
+
+  IntegerType *I64 = IntegerType::get(C, 64);
+  VPValue *Seed = Plan.getOrAddLiveIn(ConstantInt::get(I64, 0));
+  std::unique_ptr<VPInstruction> BV(
+      new VPInstruction(VPInstruction::BuildVector, {Seed}));
+
+  // Materialize VF by replacing all uses.
+  VPValue *VF = &Plan.getVF();
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
+  EXPECT_TRUE(Plan.getVF().isMaterialized());
+
+  // Appending a new operand referencing the materialized VF should crash.
+  EXPECT_DEATH(BV->addOperand(VF), "accessing materialized symbolic value");
 }
 #endif
 

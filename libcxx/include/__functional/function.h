@@ -17,6 +17,7 @@
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
 #include <__memory/addressof.h>
+#include <__new/placement_new_delete.h>
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/invoke.h>

@@ -342,13 +342,6 @@ def CIR_AnyFloatOrVecOfFloatType
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
 
-// Types valid for arithmetic ops (add/sub/mul/div/rem):
-// scalar or vector of integer or floating-point. 
-def CIR_AnyArithType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType,
-                 CIR_VectorOfIntType, CIR_VectorOfFloatType],
-                "integer, floating-point, or vector of integer/float">;
-
 // Types valid for bitwise ops (and/or/xor):
 // integer, boolean, or vector of integer (no floating-point).
 def CIR_AnyBitwiseType

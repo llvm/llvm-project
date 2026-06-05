@@ -230,16 +230,6 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
-/// Map a parsed OpenMP context trait-set selector to its OMPContext kind.
-llvm::omp::TraitSet
-mapTraitSet(parser::OmpTraitSetSelectorName::Value flangSet);
-
-/// Map a parsed OpenMP context trait selector within \p set to its OMPContext
-/// kind.
-llvm::omp::TraitSelector
-mapTraitSelector(const parser::OmpTraitSelectorName &name,
-                 llvm::omp::TraitSet set);
-
 /// Non-constant user condition expression and source for runtime lowering.
 struct DynamicUserCondition {
   const parser::ScalarExpr *expr;

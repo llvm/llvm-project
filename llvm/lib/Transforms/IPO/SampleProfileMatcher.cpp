@@ -713,10 +713,8 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   if (FunctionSamples::UseMD5)
     return;
   StringSet<> NamesInProfile;
-  if (auto NameTable = Reader.getNameTable()) {
-    for (auto Name : *NameTable)
-      NamesInProfile.insert(Name.stringRef());
-  }
+  for (FunctionId Name : Reader.getNameTable())
+    NamesInProfile.insert(Name.stringRef());
 
   for (auto &F : M) {
     // Skip declarations, as even if the function can be matched, we have
@@ -772,8 +770,8 @@ static std::string getDemangledBaseName(ItaniumPartialDemangler &Demangler,
 void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   if (FunctionsWithoutProfile.empty() || !LoadFuncProfileforCGMatching)
     return;
-  auto *NameTable = Reader.getNameTable();
-  if (!NameTable)
+  auto NameTable = Reader.getNameTable();
+  if (NameTable.empty())
     return;
 
   ItaniumPartialDemangler Demangler;
@@ -800,7 +798,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   // Scan the profile NameTable for candidates whose demangled basename matches
   // a unique orphan. Use a map to track exactly one candidate per basename.
   StringMap<FunctionId> CandidateByBaseName;
-  for (auto &ProfileFuncId : *NameTable) {
+  for (FunctionId ProfileFuncId : NameTable) {
     StringRef ProfName = ProfileFuncId.stringRef();
     if (ProfName.empty())
       continue;

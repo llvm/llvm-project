@@ -52,8 +52,7 @@
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
 
-; CHECK-ASM-NEXT: DXIL Metadata Pretty Printer
-; CHECK-ASM-NEXT: Print Module IR
+; CHECK-ASM-NEXT: DXIL Pretty Printer
 
 ; CHECK-OBJ-NEXT: DXIL Embedder
 ; CHECK-OBJ-NEXT: DXContainer Global Emitter

@@ -4704,6 +4704,16 @@ config_setting(
 )
 
 cc_library(
+    name = "libpfm_system",
+    linkopts = ["-lpfm"],
+    tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
     name = "maybe_pfm",
     # We want dependencies of this library to have -DHAVE_LIBPFM conditionally
     # defined, so we set `defines` instead of `copts`.
@@ -4713,8 +4723,8 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = select({
-        ":pfm_external": ["@pfm//:pfm_external"],
-        ":pfm_system": ["@pfm//:pfm_system"],
+        ":pfm_external": ["@pfm"],
+        ":pfm_system": [":libpfm_system"],
         "//conditions:default": [],
     }),
 )
@@ -5611,6 +5621,9 @@ cc_binary(
         "tools/llvm-lto2/*.cpp",
     ]),
     copts = llvm_copts,
+    defines = [
+        "LLVM_BUILD_STATIC",  # Provided by add_llvm_tool
+    ],
     stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",

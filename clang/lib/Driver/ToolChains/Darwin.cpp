@@ -1385,7 +1385,7 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
       runtime.hasSubscripting())
     return;
 
-  SmallString<128> P(getDriver().ClangExecutable);
+  SmallString<128> P(getDriver().DriverExecutable);
   llvm::sys::path::remove_filename(P); // 'clang'
   llvm::sys::path::remove_filename(P); // 'bin'
   llvm::sys::path::append(P, "lib", "arc");

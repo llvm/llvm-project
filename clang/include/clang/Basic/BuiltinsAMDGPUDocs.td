@@ -615,3 +615,35 @@ scale variant.
   matrix A or B data can be reused from a previous WMMA instruction.
 }];
 }
+
+//===----------------------------------------------------------------------===//
+// Tensor DMA Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatTensorDMA : DocumentationCategory<"Tensor DMA Builtins"> {
+  let Content = [{
+Asynchronous tensor DMA transfers between global memory and LDS. Track
+completion using ``TENSOR_CNT`` or *asyncmarks* (see the ``AMDGPU
+Asynchronous Operations`` document).
+
+``D0``..``D4`` are the five chunks of the hardware tensor descriptor. The
+``_d2`` machine instruction is selected when ``D2`` and ``D3`` are zero-
+initialized; otherwise ``_d4`` is used. ``D4`` is reserved and silently
+ignored on gfx1250. ``cpol`` is a compile-time cache-policy bitfield
+(``th`` in bits [0:2], scope in bits [3:4]).
+}];
+}
+
+def DocTensorLoadToLDS_GFX1250 : Documentation {
+  let Category = DocCatTensorDMA;
+  let Content = [{
+Asynchronously copies a tensor from global memory into LDS.
+}];
+}
+
+def DocTensorStoreFromLDS_GFX1250 : Documentation {
+  let Category = DocCatTensorDMA;
+  let Content = [{
+Asynchronously copies a tensor from LDS into global memory.
+}];
+}

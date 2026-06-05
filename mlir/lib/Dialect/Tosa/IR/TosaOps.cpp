@@ -712,6 +712,29 @@ LogicalResult verifyConvOutputSize(
 }
 
 //===----------------------------------------------------------------------===//
+// mxint8Type DenseElementTypeInterface implementation.
+//===----------------------------------------------------------------------===//
+size_t mlir::tosa::mxint8Type::getDenseElementBitSize() const { return 8; }
+
+Attribute
+mlir::tosa::mxint8Type::convertToAttribute(ArrayRef<char> rawData) const {
+  assert(rawData.size() == 1 && "expected 1 byte for tosa.mxint8 element");
+  const auto intType = IntegerType::get(getContext(), 8);
+  return intType.convertToAttribute(rawData);
+}
+
+LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
+    Attribute attr, SmallVectorImpl<char> &result) const {
+  const auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr)
+    return failure();
+  const Type attrType = intAttr.getType();
+  if (!attrType.isSignlessInteger(8))
+    return failure();
+  return cast<IntegerType>(attrType).convertFromAttribute(attr, result);
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 

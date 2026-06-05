@@ -2303,6 +2303,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginDynamicLoaderStatic",
         ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",

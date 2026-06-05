@@ -826,7 +826,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base7unitbufE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base8internalE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base8showbaseE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base9__xindex_E', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base9basefieldE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base9boolalphaE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__18ios_base9showpointE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}

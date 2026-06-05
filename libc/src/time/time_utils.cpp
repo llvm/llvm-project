@@ -22,29 +22,6 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   // TODO(rtenneti); Handle leap seconds.
   int64_t tm_year_from_base = tm_out->tm_year + time_constants::TIME_YEAR_BASE;
 
-  // 32-bit end-of-the-world is 03:14:07 UTC on 19 January 2038.
-  if (sizeof(time_t) == 4 &&
-      tm_year_from_base >= time_constants::END_OF32_BIT_EPOCH_YEAR) {
-    if (tm_year_from_base > time_constants::END_OF32_BIT_EPOCH_YEAR)
-      return cpp::nullopt;
-    if (tm_out->tm_mon > 0)
-      return cpp::nullopt;
-    if (tm_out->tm_mday > 19)
-      return cpp::nullopt;
-    else if (tm_out->tm_mday == 19) {
-      if (tm_out->tm_hour > 3)
-        return cpp::nullopt;
-      else if (tm_out->tm_hour == 3) {
-        if (tm_out->tm_min > 14)
-          return cpp::nullopt;
-        else if (tm_out->tm_min == 14) {
-          if (tm_out->tm_sec > 7)
-            return cpp::nullopt;
-        }
-      }
-    }
-  }
-
   // Years are ints.  A 32-bit year will fit into a 64-bit time_t.
   // A 64-bit year will not.
   static_assert(
@@ -141,15 +118,11 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
                                      30,           31, 30, 31, 31, 29};
 
   constexpr time_t time_min =
-      (sizeof(time_t) == 4)
-          ? INT_MIN
-          : INT_MIN * static_cast<int64_t>(
-                          time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
+      INT_MIN *
+      static_cast<int64_t>(time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
   constexpr time_t time_max =
-      (sizeof(time_t) == 4)
-          ? INT_MAX
-          : INT_MAX * static_cast<int64_t>(
-                          time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
+      INT_MAX *
+      static_cast<int64_t>(time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
 
   if (total_seconds < time_min || total_seconds > time_max)
     return time_utils::out_of_range();

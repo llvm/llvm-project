@@ -2057,3 +2057,19 @@ func.func @test_maxpool2d_adaptive_unexpected_output_width(%arg0: tensor<1x32x32
          (tensor<1x32x32x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
   return %0 : tensor<1x32x2x8xf32>
 }
+
+// -----
+
+func.func @test_const_mxint8_uint8(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+  // expected-error@+1 {{incompatible attribute for element type}}
+  %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127: ui8, 245: ui8]>} : () -> tensor<2x!tosa.mxint8>
+  return %0 : tensor<2x!tosa.mxint8>
+}
+
+// -----
+
+func.func @test_const_mxint8_int64(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+  // expected-error@+1 {{incompatible attribute for element type}}
+  %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127, 245]>} : () -> tensor<2x!tosa.mxint8>
+  return %0 : tensor<2x!tosa.mxint8>
+}

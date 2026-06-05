@@ -14,6 +14,7 @@
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
 #include "L0Defs.h"
+#include "L0Event.h"
 #include "L0Trace.h"
 #include "PluginInterface.h"
 
@@ -83,12 +84,38 @@ public:
 
   Error dataFence() { return dataFenceImpl(); }
 
+  Error appendSignalEvent(L0EventTy *Event) {
+    return appendSignalEventImpl(Event->getZeEvent());
+  }
+  Error appendWaitOnEvent(L0EventTy *Event) {
+    if (Event->getQueue() == this)
+      return Plugin::success();
+    return appendWaitOnEventImpl(Event->getZeEvent());
+  }
+  Error synchronizeEvent(L0EventTy *Event) {
+    if (hasPendingMemoryCopies())
+      if (auto Err = synchronize())
+        return Err;
+    return Event->synchronize();
+  }
+  Expected<bool> isEventComplete(L0EventTy *Event) {
+    if (hasPendingMemoryCopies()) {
+      auto PendingWorkOrErr = hasPendingWork();
+      if (!PendingWorkOrErr)
+        return PendingWorkOrErr.takeError();
+      if (*PendingWorkOrErr)
+        return false;
+    }
+    return Event->isComplete();
+  }
+
   virtual Error initImpl() { return Plugin::success(); }
   virtual Error deinitImpl() { return Plugin::success(); }
   virtual void resetImpl() {}
 
   virtual Error synchronizeImpl() = 0;
   virtual Expected<bool> hasPendingWorkImpl() = 0;
+  virtual bool hasPendingMemoryCopies() { return false; }
   virtual Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) = 0;
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                                  int64_t Size) {
@@ -105,6 +132,13 @@ public:
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
   virtual Error dataFenceImpl() = 0;
+
+  virtual Error appendSignalEventImpl(ze_event_handle_t Event) {
+    return CmdList->appendSignalEvent(Event);
+  }
+  virtual Error appendWaitOnEventImpl(ze_event_handle_t Event) {
+    return CmdList->appendWaitOnEvent(Event);
+  }
 };
 
 class L0AsyncQueueTy : public L0QueueTy {
@@ -143,6 +177,9 @@ public:
   void resetImpl() override;
   Error synchronizeImpl() override;
   Expected<bool> hasPendingWorkImpl() override;
+  bool hasPendingMemoryCopies() override {
+    return !H2MList.empty() || !USM2MList.empty();
+  }
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                          int64_t Size) override;

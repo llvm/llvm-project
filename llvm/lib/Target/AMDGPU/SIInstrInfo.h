@@ -1078,6 +1078,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::ASYNC_CNT;
   }
 
+  static bool usesTENSOR_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT;
+  }
+
+  bool usesTENSOR_CNT(uint32_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT;
+  }
+
   // Most sopk treat the immediate as a signed 16-bit, however some
   // use it as unsigned.
   static bool sopkIsZext(unsigned Opcode) {

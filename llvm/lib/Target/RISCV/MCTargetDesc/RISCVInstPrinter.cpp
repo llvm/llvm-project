@@ -12,6 +12,7 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -358,6 +359,20 @@ void RISCVInstPrinter::printVScaleReg(const MCInst *MI, unsigned OpNo,
   O << ", ";
   printRegName(O, MO.getReg());
   O << ".scale";
+}
+
+void RISCVInstPrinter::printTileLambda(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isImm() && "printTileLambda can only print immediate operands");
+  unsigned Lambda = MO.getImm();
+  if (Lambda == 0)
+    return;
+
+  assert(Lambda <= 7 && "Unexpected tile lambda encoding");
+  O << ", L" << (1U << (Lambda - 1));
 }
 
 void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,

@@ -1659,7 +1659,7 @@ void DXILBitcodeWriter::writeDIGlobalVariable(const DIGlobalVariable *N,
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
   Record.push_back(N->isLocalToUnit());
   Record.push_back(N->isDefinition());
-  Record.push_back(/* N->getRawVariable() */ 0);
+  Record.push_back(VE.getMetadataOrNullID(DebugInfo.MDExtra.lookup(N)));
   Record.push_back(VE.getMetadataOrNullID(N->getStaticDataMemberDeclaration()));
 
   Stream.EmitRecord(bitc::METADATA_GLOBAL_VAR, Record, Abbrev);

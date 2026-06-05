@@ -224,6 +224,10 @@ public:
     return cir::ComplexImagOp::create(*this, loc, resultType, operand);
   }
 
+  mlir::Value createComplexConj(mlir::Location loc, mlir::Value operand) {
+    return cir::ComplexConjOp::create(*this, loc, operand.getType(), operand);
+  }
+
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
                          bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
@@ -700,6 +704,50 @@ public:
 
   mlir::Value createRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return cir::RemOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FAddOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FSubOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FMulOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FDivOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FRemOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFNeg(mlir::Location loc, mlir::Value operand) {
+    assert(cir::isFPOrVectorOfFPType(operand.getType()) &&
+           "expected floating-point or vector-of-float type");
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FNegOp::create(*this, loc, operand);
   }
 
   mlir::Value createXor(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {

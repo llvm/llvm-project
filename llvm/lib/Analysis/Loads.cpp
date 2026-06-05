@@ -154,7 +154,7 @@ static bool isDereferenceableAndAlignedPointer(
         DefI = &cast<Argument>(V)->getParent()->getEntryBlock().front();
       }
 
-      if (!willNotFreeBetween(DefI, CtxI))
+      if (!CtxI || !willNotFreeBetween(DefI, CtxI))
         return false;
     }
 

@@ -60,6 +60,67 @@ function(_lldb_propagate_links_liblldb name libs)
   set_target_properties(${name} PROPERTIES LLDB_LINKS_LIBLLDB ${_links_liblldb})
 endfunction()
 
+# Records a target's undefined LLDB symbols for re-export by liblldb.
+# The output path is appended to the LLDB_DYNAMIC_SCRIPTINTERPRETER_SYMBOL_FILES
+# global property.
+function(lldb_record_dynamic_script_interpreter_exports target)
+  set(symbol_file
+    "${CMAKE_CURRENT_BINARY_DIR}/${target}.undefined.symbols")
+
+  # llvm-nm is registered as a CMake target after the LLDB subdirectory is
+  # processed, so a forward target reference is required. LLVM_NM, when set,
+  # points to a prebuilt host tool for cross-compiled builds.
+  if(LLVM_NM)
+    set(nm_exe "${LLVM_NM}")
+    set(nm_dep)
+  else()
+    set(nm_exe "$<TARGET_FILE:llvm-nm>")
+    set(nm_dep llvm-nm)
+  endif()
+
+  set(extra_args)
+  if(APPLE)
+    list(APPEND extra_args --mach-o)
+  endif()
+
+  add_custom_command(
+    OUTPUT ${symbol_file}
+    COMMAND "${Python3_EXECUTABLE}"
+      ${LLDB_SOURCE_DIR}/scripts/extract-dynamic-script-interpreter-exports.py
+      --nm ${nm_exe}
+      ${extra_args}
+      -o ${symbol_file}
+      $<TARGET_OBJECTS:${target}>
+    DEPENDS
+      ${LLDB_SOURCE_DIR}/scripts/extract-dynamic-script-interpreter-exports.py
+      $<TARGET_OBJECTS:${target}>
+      ${nm_dep}
+    COMMAND_EXPAND_LISTS
+    VERBATIM
+    COMMENT "Extracting LLDB symbols required by ${target}"
+  )
+
+  add_custom_target(${target}-exports DEPENDS ${symbol_file})
+  set_target_properties(${target}-exports PROPERTIES FOLDER "LLDB/API")
+
+  set_property(GLOBAL APPEND PROPERTY
+    LLDB_DYNAMIC_SCRIPTINTERPRETER_SYMBOL_FILES ${symbol_file})
+endfunction()
+
+# Applies an exports file to a target's link without inserting the
+# order-only edge that add_llvm_symbol_exports normally adds. That edge
+# propagates through CMake's compile-order graph and forms a cycle when
+# the exports list is itself derived from a target that links the same
+# library. LINK_DEPENDS still triggers a relink when the file's content
+# changes (Ninja and Makefile generators only).
+function(lldb_apply_exports_file target export_file)
+  add_llvm_symbol_exports(${target} ${export_file}
+    NO_TARGET_DEPENDENCY
+    OUTPUT_FILE_VAR native_export_file)
+  set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS
+    ${native_export_file})
+endfunction()
+
 # Configure-time scan: every #include "lldb/<Module>/..." in <SOURCES> and in
 # PUBLIC_HEADER_DIR (recursive) must reference OWN_MODULE or a name in
 # ALLOWED_MODULES, otherwise FATAL_ERROR. Catches accidental cross-module

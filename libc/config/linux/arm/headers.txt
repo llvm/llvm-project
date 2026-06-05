@@ -28,5 +28,8 @@ set(TARGET_PUBLIC_HEADERS
 )
 
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  list(APPEND TARGET_PUBLIC_HEADERS libc.include.regex)
+  list(APPEND TARGET_PUBLIC_HEADERS
+    libc.include.regex
+    libc.include.sys_ptrace
+  )
 endif()

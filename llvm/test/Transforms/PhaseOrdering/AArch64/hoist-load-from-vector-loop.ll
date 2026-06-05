@@ -7,7 +7,7 @@ target triple = "arm64-apple-macosx"
 
 define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %array) {
 ; CHECK-LABEL: define void @hoist_invariant_load(
-; CHECK-SAME: ptr readonly captures(none) [[INVARIANT_PTR:%.*]], i64 [[NUM_ELEMENTS:%.*]], ptr captures(none) [[ARRAY:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[INVARIANT_PTR:%.*]], i64 [[NUM_ELEMENTS:%.*]], ptr nofree captures(none) [[ARRAY:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[NUM_ELEMENTS]], 0
 ; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[EXIT:.*]], label %[[LOOP_LATCH_PREHEADER:.*]]

@@ -5,6 +5,8 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r31
+; CHECK-NEXT:    pushq %r30
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %r13
@@ -12,36 +14,36 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    pushq %rsi
 ; CHECK-NEXT:    pushq %rdi
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    movq %rsp, %rbx
-; CHECK-NEXT:    movq 312(%rbp), %rax
+; CHECK-NEXT:    movq 328(%rbp), %rax
 ; CHECK-NEXT:    vpmovsxwd (%rax), %ymm0
 ; CHECK-NEXT:    vpslld $31, %ymm0, %ymm0
 ; CHECK-NEXT:    vptestmd %ymm0, %ymm0, %k2
-; CHECK-NEXT:    movq 304(%rbp), %r29
-; CHECK-NEXT:    movzbl 296(%rbp), %r26d
-; CHECK-NEXT:    movzbl 288(%rbp), %r30d
-; CHECK-NEXT:    movq 280(%rbp), %r31
-; CHECK-NEXT:    movq 272(%rbp), %r20
-; CHECK-NEXT:    movq 264(%rbp), %r21
-; CHECK-NEXT:    movq 240(%rbp), %r9
-; CHECK-NEXT:    movq 232(%rbp), %r10
-; CHECK-NEXT:    movq 224(%rbp), %r11
-; CHECK-NEXT:    movq 216(%rbp), %r16
-; CHECK-NEXT:    movq 208(%rbp), %r17
-; CHECK-NEXT:    movq 192(%rbp), %r18
-; CHECK-NEXT:    movq 184(%rbp), %r19
-; CHECK-NEXT:    movq 176(%rbp), %r22
-; CHECK-NEXT:    movq 168(%rbp), %r23
-; CHECK-NEXT:    movq 160(%rbp), %r24
-; CHECK-NEXT:    movq 152(%rbp), %r25
-; CHECK-NEXT:    movq 144(%rbp), %r14
-; CHECK-NEXT:    movq 136(%rbp), %r15
-; CHECK-NEXT:    movq 128(%rbp), %r12
-; CHECK-NEXT:    movq 120(%rbp), %r13
-; CHECK-NEXT:    movq 112(%rbp), %rsi
+; CHECK-NEXT:    movq 320(%rbp), %r29
+; CHECK-NEXT:    movzbl 312(%rbp), %r24d
+; CHECK-NEXT:    movzbl 304(%rbp), %r26d
+; CHECK-NEXT:    movq 296(%rbp), %r27
+; CHECK-NEXT:    movq 288(%rbp), %r20
+; CHECK-NEXT:    movq 280(%rbp), %r21
+; CHECK-NEXT:    movq 256(%rbp), %r9
+; CHECK-NEXT:    movq 248(%rbp), %r10
+; CHECK-NEXT:    movq 240(%rbp), %r11
+; CHECK-NEXT:    movq 232(%rbp), %r16
+; CHECK-NEXT:    movq 224(%rbp), %r17
+; CHECK-NEXT:    movq 208(%rbp), %r18
+; CHECK-NEXT:    movq 200(%rbp), %r19
+; CHECK-NEXT:    movq 192(%rbp), %r22
+; CHECK-NEXT:    movq 184(%rbp), %r23
+; CHECK-NEXT:    movq 176(%rbp), %r12
+; CHECK-NEXT:    movq 168(%rbp), %r13
+; CHECK-NEXT:    movq 160(%rbp), %r30
+; CHECK-NEXT:    movq 152(%rbp), %r31
+; CHECK-NEXT:    movq 144(%rbp), %rsi
+; CHECK-NEXT:    movq 136(%rbp), %rdi
+; CHECK-NEXT:    movq 128(%rbp), %r14
 ; CHECK-NEXT:    leaq 15(,%r21,4), %rdx
 ; CHECK-NEXT:    andq $-16, %rdx
 ; CHECK-NEXT:    movq %rdx, %rax
@@ -53,7 +55,7 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    subq %rax, %rsp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    movl %ecx, %r8d
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    kmovw %k2, 14(%rbx) # 2-byte Spill
 ; CHECK-NEXT:    movq %r8, 24(%rbx) # 8-byte Spill
@@ -61,16 +63,16 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_6: # %loop_outer.backedge
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    subq %r21, %rdi
+; CHECK-NEXT:    subq %r21, %r15
 ; CHECK-NEXT:  .LBB0_1: # %loop_outer
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_8 Depth 2
-; CHECK-NEXT:    testq %r31, %r31
+; CHECK-NEXT:    testq %r27, %r27
 ; CHECK-NEXT:    ctestgq {dfv=} %r20, %r20
 ; CHECK-NEXT:    jns .LBB0_10
 ; CHECK-NEXT:  # %bb.2: # %then_branch
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    testb $1, %r30b
+; CHECK-NEXT:    testb $1, %r26b
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.5: # %early_exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
@@ -79,9 +81,9 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_10: # %else_branch
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    leaq -1(%rax), %r27
-; CHECK-NEXT:    testb $1, %r26b
-; CHECK-NEXT:    movq %r27, 16(%rbx) # 8-byte Spill
+; CHECK-NEXT:    leaq -1(%rax), %r25
+; CHECK-NEXT:    testb $1, %r24b
+; CHECK-NEXT:    movq %r25, 16(%rbx) # 8-byte Spill
 ; CHECK-NEXT:    je .LBB0_11
 ; CHECK-NEXT:  # %bb.7: # %memset_path
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
@@ -90,59 +92,57 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq memset
-; CHECK-NEXT:    movzbl 288(%rbp), %r30d
+; CHECK-NEXT:    movzbl 304(%rbp), %r26d
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_8: # %inner_loop
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    testb $1, %r30b
+; CHECK-NEXT:    testb $1, %r26b
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:  # %bb.9: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    kmovw 14(%rbx), %k2 # 2-byte Reload
-; CHECK-NEXT:    movq 304(%rbp), %r29
-; CHECK-NEXT:    movq 240(%rbp), %r9
-; CHECK-NEXT:    movq 232(%rbp), %r10
-; CHECK-NEXT:    movq 224(%rbp), %r11
-; CHECK-NEXT:    movq 216(%rbp), %r16
-; CHECK-NEXT:    movq 208(%rbp), %r17
-; CHECK-NEXT:    movq 192(%rbp), %r18
-; CHECK-NEXT:    movq 184(%rbp), %r19
-; CHECK-NEXT:    movq 176(%rbp), %r22
-; CHECK-NEXT:    movq 168(%rbp), %r23
-; CHECK-NEXT:    movq 160(%rbp), %r24
-; CHECK-NEXT:    movq 152(%rbp), %r25
-; CHECK-NEXT:    movzbl 296(%rbp), %r26d
-; CHECK-NEXT:    movq 280(%rbp), %r31
-; CHECK-NEXT:    movq 272(%rbp), %r20
-; CHECK-NEXT:    movq 264(%rbp), %r21
+; CHECK-NEXT:    movq 320(%rbp), %r29
+; CHECK-NEXT:    movq 256(%rbp), %r9
+; CHECK-NEXT:    movq 248(%rbp), %r10
+; CHECK-NEXT:    movq 240(%rbp), %r11
+; CHECK-NEXT:    movq 232(%rbp), %r16
+; CHECK-NEXT:    movq 224(%rbp), %r17
+; CHECK-NEXT:    movq 208(%rbp), %r18
+; CHECK-NEXT:    movq 200(%rbp), %r19
+; CHECK-NEXT:    movq 192(%rbp), %r22
+; CHECK-NEXT:    movq 184(%rbp), %r23
+; CHECK-NEXT:    movzbl 312(%rbp), %r24d
+; CHECK-NEXT:    movq 296(%rbp), %r27
+; CHECK-NEXT:    movq 288(%rbp), %r20
+; CHECK-NEXT:    movq 280(%rbp), %r21
 ; CHECK-NEXT:    movq 24(%rbx), %r8 # 8-byte Reload
 ; CHECK-NEXT:    movq 16(%rbx), %rax # 8-byte Reload
-; CHECK-NEXT:    subq %r21, %rdi
+; CHECK-NEXT:    subq %r21, %r15
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_11: # %compute_path
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    testb $1, %r30b
+; CHECK-NEXT:    testb $1, %r26b
 ; CHECK-NEXT:    jne .LBB0_12
 ; CHECK-NEXT:  # %bb.14: # %loop_exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movq 256(%rbp), %rcx
+; CHECK-NEXT:    movq 272(%rbp), %rcx
 ; CHECK-NEXT:    addq %rax, %rcx
-; CHECK-NEXT:    andl $1, %r21d, %r27d
+; CHECK-NEXT:    andl $1, %r21d, %r25d
 ; CHECK-NEXT:    andl $1, %r8d, %edx
 ; CHECK-NEXT:    movq %r20, %rax
-; CHECK-NEXT:    movq %r31, %r20
-; CHECK-NEXT:    movl %r26d, %r31d
-; CHECK-NEXT:    movq 320(%rbp), %r26
-; CHECK-NEXT:    movq 200(%rbp), %r28
+; CHECK-NEXT:    movq %r27, %r20
+; CHECK-NEXT:    movl %r24d, %r27d
+; CHECK-NEXT:    movq 336(%rbp), %r24
+; CHECK-NEXT:    movq 216(%rbp), %r28
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqu32 %ymm0, (%r28,%r26) {%k2}
-; CHECK-NEXT:    movl %r31d, %r26d
-; CHECK-NEXT:    movq %r20, %r31
+; CHECK-NEXT:    vmovdqu32 %ymm0, (%r28,%r24) {%k2}
+; CHECK-NEXT:    movl %r27d, %r24d
+; CHECK-NEXT:    movq %r20, %r27
 ; CHECK-NEXT:    movq %rax, %r20
 ; CHECK-NEXT:    vmovups %ymm0, (%rcx) {%k2}
-; CHECK-NEXT:    cmpl %edx, %r27d
+; CHECK-NEXT:    cmpl %edx, %r25d
 ; CHECK-NEXT:    movq 16(%rbx), %rax # 8-byte Reload
 ; CHECK-NEXT:    je .LBB0_6
 ; CHECK-NEXT:  # %bb.15:
@@ -157,22 +157,22 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    vmovdqu (%r9), %ymm1
 ; CHECK-NEXT:    vpord (%r18), %ymm1, %ymm1
 ; CHECK-NEXT:    vmovups %ymm0, (%r23) {%k2}
-; CHECK-NEXT:    vmovups %ymm0, (%r24) {%k2}
-; CHECK-NEXT:    vmovups (%r25,%rdi), %ymm2
-; CHECK-NEXT:    vcmpltps (%r14,%rdi), %ymm2, %k1
+; CHECK-NEXT:    vmovups %ymm0, (%r12) {%k2}
+; CHECK-NEXT:    vmovups (%r13,%r15), %ymm2
+; CHECK-NEXT:    vcmpltps (%r30,%r15), %ymm2, %k1
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1 {%k1}
 ; CHECK-NEXT:    vmovups (%r10), %ymm1 {%k1} {z}
 ; CHECK-NEXT:    vmovups %ymm1, (%r22) {%k2}
-; CHECK-NEXT:    vmovdqu32 %ymm0, (%r13) {%k2}
+; CHECK-NEXT:    vmovdqu32 %ymm0, (%rdi) {%k2}
 ; CHECK-NEXT:    vmovdqu32 %ymm0, (%r16) {%k2}
 ; CHECK-NEXT:    vmovups %ymm0, (%r19) {%k2}
-; CHECK-NEXT:    vmovups (%r15), %ymm1 {%k2} {z}
+; CHECK-NEXT:    vmovups (%r31), %ymm1 {%k2} {z}
 ; CHECK-NEXT:    vmovups %ymm1, (%r17,%r29,4) {%k2}
 ; CHECK-NEXT:    vmovups %ymm0, (%r11) {%k2}
-; CHECK-NEXT:    vmovups %ymm0, (%r12) {%k2}
 ; CHECK-NEXT:    vmovups %ymm0, (%rsi) {%k2}
+; CHECK-NEXT:    vmovups %ymm0, (%r14) {%k2}
 ; CHECK-NEXT:    incq %rax
-; CHECK-NEXT:    addq $4, %rdi
+; CHECK-NEXT:    addq $4, %r15
 ; CHECK-NEXT:    jmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_12:
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -185,6 +185,8 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %r30
+; CHECK-NEXT:    popq %r31
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

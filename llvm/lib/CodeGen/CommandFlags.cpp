@@ -75,7 +75,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoSignedZerosFPMath)
 CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
@@ -231,13 +230,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableNoSignedZerosFPMath(
-      "enable-no-signed-zeros-fp-math",
-      cl::desc("Enable FP math optimizations that assume "
-               "the sign of 0 is insignificant"),
-      cl::init(false));
-  CGBINDOPT(EnableNoSignedZerosFPMath);
 
   static cl::opt<bool> EnableNoTrappingFPMath(
       "enable-no-trapping-fp-math",
@@ -592,7 +584,6 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
   Options.HonorSignDependentRoundingFPMathOption =
@@ -754,8 +745,6 @@ void codegen::setFunctionAttributes(Function &F, StringRef CPU,
                           toStringRef(getDisableTailCalls()));
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
-
-  HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
 
   if ((DenormalFPMathView->getNumOccurrences() > 0 ||
        DenormalFP32MathView->getNumOccurrences() > 0) &&

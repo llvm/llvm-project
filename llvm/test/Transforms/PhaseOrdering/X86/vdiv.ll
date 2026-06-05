@@ -13,7 +13,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 
 define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-LABEL: define void @vdiv(
-; CHECK-SAME: ptr writeonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]], double [[A:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) [[X:%.*]], ptr nofree readonly captures(none) [[Y:%.*]], double [[A:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]

@@ -172,8 +172,9 @@ class DenseMapPrinter:
             # member function, not the 'first' member variable, but I've yet to figure
             # out how to find/call member functions (especially (const) overloaded
             # ones) on a gdb.Value.
-            while self.cur != self.end and
-                is_equal(self.cur.dereference()["first"], empty):
+            while self.cur != self.end and is_equal(
+                self.cur.dereference()["first"], empty
+            ):
                 self.cur = self.cur + 1
 
         def __next__(self):
