@@ -32,18 +32,18 @@ define i128 @f1(i128 %val1, i128 %val2) {
 define i128 @f2(i128 %val1, i128 %val2) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r4), 3
 ; CHECK-NEXT:    vl %v1, 0(%r3), 3
-; CHECK-NEXT:    vecg %v0, %v1
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vecg %v1, %v0
 ; CHECK-NEXT:    je .LBB1_3
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    jl .LBB1_4
+; CHECK-NEXT:    jnl .LBB1_4
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
 ; CHECK-NEXT:  .LBB1_3:
-; CHECK-NEXT:    vchlgs %v2, %v1, %v0
-; CHECK-NEXT:    jnl .LBB1_2
+; CHECK-NEXT:    vchlgs %v2, %v0, %v1
+; CHECK-NEXT:    jl .LBB1_2
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    vlr %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
@@ -82,18 +82,18 @@ define i128 @f3(i128 %val1, i128 %val2) {
 define i128 @f4(i128 %val1, i128 %val2) {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 0(%r4), 3
-; CHECK-NEXT:    vecg %v0, %v1
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vecg %v1, %v0
 ; CHECK-NEXT:    je .LBB3_3
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    jl .LBB3_4
+; CHECK-NEXT:    jnl .LBB3_4
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
 ; CHECK-NEXT:  .LBB3_3:
-; CHECK-NEXT:    vchlgs %v2, %v1, %v0
-; CHECK-NEXT:    jnl .LBB3_2
+; CHECK-NEXT:    vchlgs %v2, %v0, %v1
+; CHECK-NEXT:    jl .LBB3_2
 ; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    vlr %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
@@ -132,18 +132,18 @@ define i128 @f5(i128 %val1, i128 %val2) {
 define i128 @f6(i128 %val1, i128 %val2) {
 ; CHECK-LABEL: f6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r4), 3
 ; CHECK-NEXT:    vl %v1, 0(%r3), 3
-; CHECK-NEXT:    veclg %v0, %v1
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    veclg %v1, %v0
 ; CHECK-NEXT:    je .LBB5_3
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    jl .LBB5_4
+; CHECK-NEXT:    jnl .LBB5_4
 ; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
 ; CHECK-NEXT:  .LBB5_3:
-; CHECK-NEXT:    vchlgs %v2, %v1, %v0
-; CHECK-NEXT:    jnl .LBB5_2
+; CHECK-NEXT:    vchlgs %v2, %v0, %v1
+; CHECK-NEXT:    jl .LBB5_2
 ; CHECK-NEXT:  .LBB5_4:
 ; CHECK-NEXT:    vlr %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
@@ -182,18 +182,18 @@ define i128 @f7(i128 %val1, i128 %val2) {
 define i128 @f8(i128 %val1, i128 %val2) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 0(%r4), 3
-; CHECK-NEXT:    veclg %v0, %v1
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    veclg %v1, %v0
 ; CHECK-NEXT:    je .LBB7_3
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    jl .LBB7_4
+; CHECK-NEXT:    jnl .LBB7_4
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
 ; CHECK-NEXT:  .LBB7_3:
-; CHECK-NEXT:    vchlgs %v2, %v1, %v0
-; CHECK-NEXT:    jnl .LBB7_2
+; CHECK-NEXT:    vchlgs %v2, %v0, %v1
+; CHECK-NEXT:    jl .LBB7_2
 ; CHECK-NEXT:  .LBB7_4:
 ; CHECK-NEXT:    vlr %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3

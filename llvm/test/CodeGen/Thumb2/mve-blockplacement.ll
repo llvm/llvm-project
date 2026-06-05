@@ -362,25 +362,25 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    csel r7, r2, r0, lt
-; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    mov r1, r7
-; CHECK-NEXT:    cmp r7, #3
-; CHECK-NEXT:    it ls
-; CHECK-NEXT:    movls r1, #3
 ; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    subs r1, r1, r7
+; CHECK-NEXT:    mov r12, r1
+; CHECK-NEXT:    movs r3, #3
+; CHECK-NEXT:    rsb.w r1, r7, #3
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    cmp r3, r7
+; CHECK-NEXT:    ldr r5, [sp, #128]
+; CHECK-NEXT:    csel r1, r1, r2, hs
 ; CHECK-NEXT:    movw r2, #43691
 ; CHECK-NEXT:    adds r1, #2
 ; CHECK-NEXT:    movt r2, #43690
-; CHECK-NEXT:    ldr r6, [sp, #128]
 ; CHECK-NEXT:    movw r8, :lower16:c
+; CHECK-NEXT:    mov.w r9, #12
 ; CHECK-NEXT:    umull r1, r2, r1, r2
 ; CHECK-NEXT:    movt r8, :upper16:c
 ; CHECK-NEXT:    movs r1, #4
 ; CHECK-NEXT:    @ implicit-def: $r10
-; CHECK-NEXT:    @ implicit-def: $r5
+; CHECK-NEXT:    @ implicit-def: $r6
 ; CHECK-NEXT:    @ implicit-def: $r11
-; CHECK-NEXT:    mov.w r9, #12
 ; CHECK-NEXT:    str r4, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    add.w r1, r1, r2, lsr #1
 ; CHECK-NEXT:    add.w r0, r0, r2, lsr #1
@@ -422,9 +422,9 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    mov.w r10, #0
 ; CHECK-NEXT:  .LBB1_5: @ %for.cond.cleanup5
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
-; CHECK-NEXT:    adds r5, #2
-; CHECK-NEXT:    subs.w r1, r5, lr
-; CHECK-NEXT:    asr.w r0, r5, #31
+; CHECK-NEXT:    adds r6, #2
+; CHECK-NEXT:    subs.w r1, r6, lr
+; CHECK-NEXT:    asr.w r0, r6, #31
 ; CHECK-NEXT:    sbcs.w r0, r0, r12
 ; CHECK-NEXT:    bge.w .LBB1_28
 ; CHECK-NEXT:  .LBB1_6: @ %for.cond2.preheader
@@ -444,12 +444,12 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    ldrd r2, r3, [sp, #120]
 ; CHECK-NEXT:    movs r0, #32
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    mov r4, r6
+; CHECK-NEXT:    mov r4, r5
 ; CHECK-NEXT:    mov r7, r12
-; CHECK-NEXT:    mov r6, lr
+; CHECK-NEXT:    mov r5, lr
 ; CHECK-NEXT:    bl __aeabi_ldivmod
-; CHECK-NEXT:    mov lr, r6
-; CHECK-NEXT:    mov r6, r4
+; CHECK-NEXT:    mov lr, r5
+; CHECK-NEXT:    mov r5, r4
 ; CHECK-NEXT:    mov r12, r7
 ; CHECK-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
@@ -516,7 +516,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    bne .LBB1_14
 ; CHECK-NEXT:  .LBB1_15: @ %for.cond9.for.cond15.preheader_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB1_10 Depth=2
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    beq .LBB1_9
 ; CHECK-NEXT:  @ %bb.16: @ %for.cond9.for.cond15.preheader_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB1_10 Depth=2
@@ -526,7 +526,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    b .LBB1_26
 ; CHECK-NEXT:  .LBB1_17: @ %for.body6.lr.ph.split
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    beq.w .LBB1_2
 ; CHECK-NEXT:  @ %bb.18: @ in Loop: Header=BB1_6 Depth=1
 ; CHECK-NEXT:    mov r0, r11

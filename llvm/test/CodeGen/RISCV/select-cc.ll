@@ -27,7 +27,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_6:
 ; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bgeu a0, a2, .LBB0_8
+; RV32I-NEXT:    bltu a2, a0, .LBB0_8
 ; RV32I-NEXT:  # %bb.7:
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_8:
@@ -37,7 +37,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_10:
 ; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bgeu a2, a0, .LBB0_12
+; RV32I-NEXT:    bltu a0, a2, .LBB0_12
 ; RV32I-NEXT:  # %bb.11:
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_12:
@@ -47,7 +47,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_14:
 ; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bge a0, a2, .LBB0_16
+; RV32I-NEXT:    blt a2, a0, .LBB0_16
 ; RV32I-NEXT:  # %bb.15:
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_16:
@@ -57,7 +57,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_18:
 ; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bge a2, a0, .LBB0_20
+; RV32I-NEXT:    blt a0, a2, .LBB0_20
 ; RV32I-NEXT:  # %bb.19:
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_20:
@@ -96,19 +96,19 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV32IXQCI-NEXT:    lw a2, 0(a1)
 ; RV32IXQCI-NEXT:    qc.mvgeu a0, a4, a0, a4
 ; RV32IXQCI-NEXT:    lw a3, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvltu a0, a0, a5, a5
+; RV32IXQCI-NEXT:    qc.mvgeu a0, a5, a0, a5
 ; RV32IXQCI-NEXT:    lw a4, 0(a1)
 ; RV32IXQCI-NEXT:    qc.mvgeu a0, a0, a2, a2
 ; RV32IXQCI-NEXT:    lw a2, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvltu a0, a3, a0, a3
+; RV32IXQCI-NEXT:    qc.mvgeu a0, a0, a3, a3
 ; RV32IXQCI-NEXT:    lw a3, 0(a1)
 ; RV32IXQCI-NEXT:    qc.mvge a0, a4, a0, a4
 ; RV32IXQCI-NEXT:    lw a4, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvlt a0, a0, a2, a2
+; RV32IXQCI-NEXT:    qc.mvge a0, a2, a0, a2
 ; RV32IXQCI-NEXT:    lw a2, 0(a1)
 ; RV32IXQCI-NEXT:    qc.mvge a0, a0, a3, a3
 ; RV32IXQCI-NEXT:    lw a3, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvlt a0, a4, a0, a4
+; RV32IXQCI-NEXT:    qc.mvge a0, a0, a4, a4
 ; RV32IXQCI-NEXT:    lw a4, 0(a1)
 ; RV32IXQCI-NEXT:    lw a1, 0(a1)
 ; RV32IXQCI-NEXT:    blez a2, .LBB0_2
@@ -140,7 +140,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_6:
 ; RV64I-NEXT:    lw a2, 0(a1)
-; RV64I-NEXT:    bgeu a0, a2, .LBB0_8
+; RV64I-NEXT:    bltu a2, a0, .LBB0_8
 ; RV64I-NEXT:  # %bb.7:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_8:
@@ -150,7 +150,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_10:
 ; RV64I-NEXT:    lw a2, 0(a1)
-; RV64I-NEXT:    bgeu a2, a0, .LBB0_12
+; RV64I-NEXT:    bltu a0, a2, .LBB0_12
 ; RV64I-NEXT:  # %bb.11:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_12:
@@ -160,7 +160,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_14:
 ; RV64I-NEXT:    lw a2, 0(a1)
-; RV64I-NEXT:    bge a0, a2, .LBB0_16
+; RV64I-NEXT:    blt a2, a0, .LBB0_16
 ; RV64I-NEXT:  # %bb.15:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_16:
@@ -170,7 +170,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_18:
 ; RV64I-NEXT:    lw a2, 0(a1)
-; RV64I-NEXT:    bge a2, a0, .LBB0_20
+; RV64I-NEXT:    blt a0, a2, .LBB0_20
 ; RV64I-NEXT:  # %bb.19:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_20:
@@ -212,30 +212,26 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-CCMOV-NEXT:    sltu a3, a4, a0
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a0, a4
 ; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
-; RV64I-CCMOV-NEXT:    sltu a4, a0, a5
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a4, a5, a0
+; RV64I-CCMOV-NEXT:    sltu a4, a5, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a4, a0, a5
 ; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
 ; RV64I-CCMOV-NEXT:    sltu a5, a0, a2
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a2
 ; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
-; RV64I-CCMOV-NEXT:    sltu a5, a3, a0
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a3, a0
-; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a5, a0
-; RV64I-CCMOV-NEXT:    slt a5, a4, a5
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a4
-; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a5, a0
-; RV64I-CCMOV-NEXT:    slt a5, a5, a2
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a2, a0
-; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a5, a0
-; RV64I-CCMOV-NEXT:    slt a5, a5, a3
+; RV64I-CCMOV-NEXT:    sltu a5, a0, a3
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a3
 ; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a5, a0
-; RV64I-CCMOV-NEXT:    slt a5, a4, a5
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a4, a0
+; RV64I-CCMOV-NEXT:    slt a5, a4, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a4
+; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
+; RV64I-CCMOV-NEXT:    slt a5, a2, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a2
+; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
+; RV64I-CCMOV-NEXT:    slt a5, a0, a3
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a3
+; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
+; RV64I-CCMOV-NEXT:    slt a5, a0, a4
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a4
 ; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
 ; RV64I-CCMOV-NEXT:    slti a5, a2, 1
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a2
@@ -246,7 +242,6 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a4, a0
 ; RV64I-CCMOV-NEXT:    sltiu a2, a2, 2047
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a1, a0
-; RV64I-CCMOV-NEXT:    sext.w a0, a0
 ; RV64I-CCMOV-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp eq i32 %a, %val1

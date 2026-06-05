@@ -4,8 +4,11 @@
 define arm_aapcs_vfpcc zeroext i8 @uminv16i8(<16 x i8> %vec, i8 zeroext %min) {
 ; CHECK-LABEL: uminv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u8 r0, q0
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    movs r1, #255
+; CHECK-NEXT:    vminv.u8 r1, q0
+; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, lo
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> %vec)
   %cmp = icmp ult i8 %x, %min
@@ -16,8 +19,11 @@ define arm_aapcs_vfpcc zeroext i8 @uminv16i8(<16 x i8> %vec, i8 zeroext %min) {
 define arm_aapcs_vfpcc zeroext i16 @uminv8i16(<8 x i16> %vec, i16 zeroext %min) {
 ; CHECK-LABEL: uminv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u16 r0, q0
-; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    movw r1, #65535
+; CHECK-NEXT:    vminv.u16 r1, q0
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, lo
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> %vec)
   %cmp = icmp ult i16 %x, %min
@@ -28,7 +34,10 @@ define arm_aapcs_vfpcc zeroext i16 @uminv8i16(<8 x i16> %vec, i16 zeroext %min) 
 define arm_aapcs_vfpcc i32 @uminv4i32(<4 x i32> %vec, i32 %min) {
 ; CHECK-LABEL: uminv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u32 r0, q0
+; CHECK-NEXT:    mov.w r1, #-1
+; CHECK-NEXT:    vminv.u32 r1, q0
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, lo
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vec)
   %cmp = icmp ult i32 %x, %min
@@ -39,8 +48,11 @@ define arm_aapcs_vfpcc i32 @uminv4i32(<4 x i32> %vec, i32 %min) {
 define arm_aapcs_vfpcc signext i8 @sminv16i8(<16 x i8> %vec, i8 signext %min) {
 ; CHECK-LABEL: sminv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s8 r0, q0
-; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    movs r1, #127
+; CHECK-NEXT:    vminv.s8 r1, q0
+; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.smin.v16i8(<16 x i8> %vec)
   %cmp = icmp slt i8 %x, %min
@@ -51,8 +63,11 @@ define arm_aapcs_vfpcc signext i8 @sminv16i8(<16 x i8> %vec, i8 signext %min) {
 define arm_aapcs_vfpcc signext i16 @sminv8i16(<8 x i16> %vec, i16 signext %min) {
 ; CHECK-LABEL: sminv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s16 r0, q0
-; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    movw r1, #32767
+; CHECK-NEXT:    vminv.s16 r1, q0
+; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> %vec)
   %cmp = icmp slt i16 %x, %min
@@ -63,7 +78,10 @@ define arm_aapcs_vfpcc signext i16 @sminv8i16(<8 x i16> %vec, i16 signext %min) 
 define arm_aapcs_vfpcc i32 @sminv4i32(<4 x i32> %vec, i32 %min) {
 ; CHECK-LABEL: sminv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s32 r0, q0
+; CHECK-NEXT:    mvn r1, #-2147483648
+; CHECK-NEXT:    vminv.s32 r1, q0
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %vec)
   %cmp = icmp slt i32 %x, %min
@@ -74,8 +92,11 @@ define arm_aapcs_vfpcc i32 @sminv4i32(<4 x i32> %vec, i32 %min) {
 define arm_aapcs_vfpcc zeroext i8 @umaxv16i8(<16 x i8> %vec, i8 zeroext %max) {
 ; CHECK-LABEL: umaxv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u8 r0, q0
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u8 r1, q0
+; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, hi
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> %vec)
   %cmp = icmp ugt i8 %x, %max
@@ -86,8 +107,11 @@ define arm_aapcs_vfpcc zeroext i8 @umaxv16i8(<16 x i8> %vec, i8 zeroext %max) {
 define arm_aapcs_vfpcc zeroext i16 @umaxv8i16(<8 x i16> %vec, i16 zeroext %max) {
 ; CHECK-LABEL: umaxv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u16 r0, q0
-; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u16 r1, q0
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, hi
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> %vec)
   %cmp = icmp ugt i16 %x, %max
@@ -98,7 +122,10 @@ define arm_aapcs_vfpcc zeroext i16 @umaxv8i16(<8 x i16> %vec, i16 zeroext %max) 
 define arm_aapcs_vfpcc i32 @umaxv4i32(<4 x i32> %vec, i32 %max) {
 ; CHECK-LABEL: umaxv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u32 r0, q0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u32 r1, q0
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, hi
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %vec)
   %cmp = icmp ugt i32 %x, %max
@@ -109,8 +136,11 @@ define arm_aapcs_vfpcc i32 @umaxv4i32(<4 x i32> %vec, i32 %max) {
 define arm_aapcs_vfpcc signext i8 @smaxv16i8(<16 x i8> %vec, i8 signext %max) {
 ; CHECK-LABEL: smaxv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s8 r0, q0
-; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    mvn r1, #127
+; CHECK-NEXT:    vmaxv.s8 r1, q0
+; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, gt
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> %vec)
   %cmp = icmp sgt i8 %x, %max
@@ -121,8 +151,12 @@ define arm_aapcs_vfpcc signext i8 @smaxv16i8(<16 x i8> %vec, i8 signext %max) {
 define arm_aapcs_vfpcc signext i16 @smaxv8i16(<8 x i16> %vec, i16 signext %max) {
 ; CHECK-LABEL: smaxv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s16 r0, q0
-; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    movw r1, #32768
+; CHECK-NEXT:    movt r1, #65535
+; CHECK-NEXT:    vmaxv.s16 r1, q0
+; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, gt
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %vec)
   %cmp = icmp sgt i16 %x, %max
@@ -133,7 +167,10 @@ define arm_aapcs_vfpcc signext i16 @smaxv8i16(<8 x i16> %vec, i16 signext %max) 
 define arm_aapcs_vfpcc i32 @smaxv4i32(<4 x i32> %vec, i32 %max) {
 ; CHECK-LABEL: smaxv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s32 r0, q0
+; CHECK-NEXT:    mov.w r1, #-2147483648
+; CHECK-NEXT:    vmaxv.s32 r1, q0
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, gt
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %vec)
   %cmp = icmp sgt i32 %x, %max
@@ -144,8 +181,11 @@ define arm_aapcs_vfpcc i32 @smaxv4i32(<4 x i32> %vec, i32 %max) {
 define arm_aapcs_vfpcc zeroext i8 @commute_uminv16i8(<16 x i8> %vec, i8 zeroext %min) {
 ; CHECK-LABEL: commute_uminv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u8 r0, q0
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    movs r1, #255
+; CHECK-NEXT:    vminv.u8 r1, q0
+; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> %vec)
   %cmp = icmp ult i8 %min, %x
@@ -156,8 +196,11 @@ define arm_aapcs_vfpcc zeroext i8 @commute_uminv16i8(<16 x i8> %vec, i8 zeroext 
 define arm_aapcs_vfpcc zeroext i16 @commute_uminv8i16(<8 x i16> %vec, i16 zeroext %min) {
 ; CHECK-LABEL: commute_uminv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u16 r0, q0
-; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    movw r1, #65535
+; CHECK-NEXT:    vminv.u16 r1, q0
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> %vec)
   %cmp = icmp ult i16 %min, %x
@@ -168,7 +211,10 @@ define arm_aapcs_vfpcc zeroext i16 @commute_uminv8i16(<8 x i16> %vec, i16 zeroex
 define arm_aapcs_vfpcc i32 @commute_uminv4i32(<4 x i32> %vec, i32 %min) {
 ; CHECK-LABEL: commute_uminv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u32 r0, q0
+; CHECK-NEXT:    mov.w r1, #-1
+; CHECK-NEXT:    vminv.u32 r1, q0
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vec)
   %cmp = icmp ult i32 %min, %x
@@ -179,8 +225,11 @@ define arm_aapcs_vfpcc i32 @commute_uminv4i32(<4 x i32> %vec, i32 %min) {
 define arm_aapcs_vfpcc signext i8 @commute_sminv16i8(<16 x i8> %vec, i8 signext %min) {
 ; CHECK-LABEL: commute_sminv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s8 r0, q0
-; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    movs r1, #127
+; CHECK-NEXT:    vminv.s8 r1, q0
+; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.smin.v16i8(<16 x i8> %vec)
   %cmp = icmp slt i8 %min, %x
@@ -191,8 +240,11 @@ define arm_aapcs_vfpcc signext i8 @commute_sminv16i8(<16 x i8> %vec, i8 signext 
 define arm_aapcs_vfpcc signext i16 @commute_sminv8i16(<8 x i16> %vec, i16 signext %min) {
 ; CHECK-LABEL: commute_sminv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s16 r0, q0
-; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    movw r1, #32767
+; CHECK-NEXT:    vminv.s16 r1, q0
+; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> %vec)
   %cmp = icmp slt i16 %min, %x
@@ -203,7 +255,10 @@ define arm_aapcs_vfpcc signext i16 @commute_sminv8i16(<8 x i16> %vec, i16 signex
 define arm_aapcs_vfpcc i32 @commute_sminv4i32(<4 x i32> %vec, i32 %min) {
 ; CHECK-LABEL: commute_sminv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s32 r0, q0
+; CHECK-NEXT:    mvn r1, #-2147483648
+; CHECK-NEXT:    vminv.s32 r1, q0
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %vec)
   %cmp = icmp slt i32 %min, %x
@@ -214,8 +269,11 @@ define arm_aapcs_vfpcc i32 @commute_sminv4i32(<4 x i32> %vec, i32 %min) {
 define arm_aapcs_vfpcc zeroext i8 @commute_umaxv16i8(<16 x i8> %vec, i8 zeroext %max) {
 ; CHECK-LABEL: commute_umaxv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u8 r0, q0
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u8 r1, q0
+; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> %vec)
   %cmp = icmp ugt i8 %max, %x
@@ -226,8 +284,11 @@ define arm_aapcs_vfpcc zeroext i8 @commute_umaxv16i8(<16 x i8> %vec, i8 zeroext 
 define arm_aapcs_vfpcc zeroext i16 @commute_umaxv8i16(<8 x i16> %vec, i16 zeroext %max) {
 ; CHECK-LABEL: commute_umaxv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u16 r0, q0
-; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u16 r1, q0
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> %vec)
   %cmp = icmp ugt i16 %max, %x
@@ -238,7 +299,10 @@ define arm_aapcs_vfpcc zeroext i16 @commute_umaxv8i16(<8 x i16> %vec, i16 zeroex
 define arm_aapcs_vfpcc i32 @commute_umaxv4i32(<4 x i32> %vec, i32 %max) {
 ; CHECK-LABEL: commute_umaxv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u32 r0, q0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u32 r1, q0
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %vec)
   %cmp = icmp ugt i32 %max, %x
@@ -249,8 +313,11 @@ define arm_aapcs_vfpcc i32 @commute_umaxv4i32(<4 x i32> %vec, i32 %max) {
 define arm_aapcs_vfpcc signext i8 @commute_smaxv16i8(<16 x i8> %vec, i8 signext %max) {
 ; CHECK-LABEL: commute_smaxv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s8 r0, q0
-; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    mvn r1, #127
+; CHECK-NEXT:    vmaxv.s8 r1, q0
+; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> %vec)
   %cmp = icmp sgt i8 %max, %x
@@ -261,8 +328,12 @@ define arm_aapcs_vfpcc signext i8 @commute_smaxv16i8(<16 x i8> %vec, i8 signext 
 define arm_aapcs_vfpcc signext i16 @commute_smaxv8i16(<8 x i16> %vec, i16 signext %max) {
 ; CHECK-LABEL: commute_smaxv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s16 r0, q0
-; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    movw r1, #32768
+; CHECK-NEXT:    movt r1, #65535
+; CHECK-NEXT:    vmaxv.s16 r1, q0
+; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %vec)
   %cmp = icmp sgt i16 %max, %x
@@ -273,7 +344,10 @@ define arm_aapcs_vfpcc signext i16 @commute_smaxv8i16(<8 x i16> %vec, i16 signex
 define arm_aapcs_vfpcc i32 @commute_smaxv4i32(<4 x i32> %vec, i32 %max) {
 ; CHECK-LABEL: commute_smaxv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s32 r0, q0
+; CHECK-NEXT:    mov.w r1, #-2147483648
+; CHECK-NEXT:    vmaxv.s32 r1, q0
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %vec)
   %cmp = icmp sgt i32 %max, %x
@@ -286,10 +360,9 @@ define arm_aapcs_vfpcc signext i8 @mismatch_smaxv16i8(<16 x i8> %vec, i8 signext
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mvn r1, #127
 ; CHECK-NEXT:    vmaxv.s8 r1, q0
-; CHECK-NEXT:    sxtb r2, r1
-; CHECK-NEXT:    cmp r2, r0
-; CHECK-NEXT:    csel r0, r0, r1, gt
-; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> %vec)
   %cmp = icmp sgt i8 %x, %max
@@ -302,10 +375,9 @@ define arm_aapcs_vfpcc signext i8 @mismatch2_smaxv16i8(<16 x i8> %vec, i8 signex
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mvn r1, #127
 ; CHECK-NEXT:    vmaxv.s8 r1, q0
-; CHECK-NEXT:    sxtb r2, r1
-; CHECK-NEXT:    cmp r0, r2
-; CHECK-NEXT:    csel r0, r1, r0, gt
-; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    cmp r1, r0
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> %vec)
   %cmp = icmp sgt i8 %max, %x
@@ -316,8 +388,11 @@ define arm_aapcs_vfpcc signext i8 @mismatch2_smaxv16i8(<16 x i8> %vec, i8 signex
 define arm_aapcs_vfpcc zeroext i8 @inverted_uminv16i8(<16 x i8> %vec, i8 zeroext %min) {
 ; CHECK-LABEL: inverted_uminv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u8 r0, q0
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    movs r1, #255
+; CHECK-NEXT:    vminv.u8 r1, q0
+; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> %vec)
   %cmp = icmp ugt i8 %x, %min
@@ -328,8 +403,11 @@ define arm_aapcs_vfpcc zeroext i8 @inverted_uminv16i8(<16 x i8> %vec, i8 zeroext
 define arm_aapcs_vfpcc zeroext i16 @inverted_uminv8i16(<8 x i16> %vec, i16 zeroext %min) {
 ; CHECK-LABEL: inverted_uminv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u16 r0, q0
-; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    movw r1, #65535
+; CHECK-NEXT:    vminv.u16 r1, q0
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> %vec)
   %cmp = icmp ugt i16 %x, %min
@@ -340,7 +418,10 @@ define arm_aapcs_vfpcc zeroext i16 @inverted_uminv8i16(<8 x i16> %vec, i16 zeroe
 define arm_aapcs_vfpcc i32 @inverted_uminv4i32(<4 x i32> %vec, i32 %min) {
 ; CHECK-LABEL: inverted_uminv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.u32 r0, q0
+; CHECK-NEXT:    mov.w r1, #-1
+; CHECK-NEXT:    vminv.u32 r1, q0
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lo
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vec)
   %cmp = icmp ugt i32 %x, %min
@@ -351,8 +432,11 @@ define arm_aapcs_vfpcc i32 @inverted_uminv4i32(<4 x i32> %vec, i32 %min) {
 define arm_aapcs_vfpcc signext i8 @inverted_sminv16i8(<16 x i8> %vec, i8 signext %min) {
 ; CHECK-LABEL: inverted_sminv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s8 r0, q0
-; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    movs r1, #127
+; CHECK-NEXT:    vminv.s8 r1, q0
+; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.smin.v16i8(<16 x i8> %vec)
   %cmp = icmp sgt i8 %x, %min
@@ -363,8 +447,11 @@ define arm_aapcs_vfpcc signext i8 @inverted_sminv16i8(<16 x i8> %vec, i8 signext
 define arm_aapcs_vfpcc signext i16 @inverted_sminv8i16(<8 x i16> %vec, i16 signext %min) {
 ; CHECK-LABEL: inverted_sminv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s16 r0, q0
-; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    movw r1, #32767
+; CHECK-NEXT:    vminv.s16 r1, q0
+; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> %vec)
   %cmp = icmp sgt i16 %x, %min
@@ -375,7 +462,10 @@ define arm_aapcs_vfpcc signext i16 @inverted_sminv8i16(<8 x i16> %vec, i16 signe
 define arm_aapcs_vfpcc i32 @inverted_sminv4i32(<4 x i32> %vec, i32 %min) {
 ; CHECK-LABEL: inverted_sminv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminv.s32 r0, q0
+; CHECK-NEXT:    mvn r1, #-2147483648
+; CHECK-NEXT:    vminv.s32 r1, q0
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %vec)
   %cmp = icmp sgt i32 %x, %min
@@ -386,8 +476,11 @@ define arm_aapcs_vfpcc i32 @inverted_sminv4i32(<4 x i32> %vec, i32 %min) {
 define arm_aapcs_vfpcc zeroext i8 @inverted_umaxv16i8(<16 x i8> %vec, i8 zeroext %max) {
 ; CHECK-LABEL: inverted_umaxv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u8 r0, q0
-; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u8 r1, q0
+; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> %vec)
   %cmp = icmp ult i8 %x, %max
@@ -398,8 +491,11 @@ define arm_aapcs_vfpcc zeroext i8 @inverted_umaxv16i8(<16 x i8> %vec, i8 zeroext
 define arm_aapcs_vfpcc zeroext i16 @inverted_umaxv8i16(<8 x i16> %vec, i16 zeroext %max) {
 ; CHECK-LABEL: inverted_umaxv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u16 r0, q0
-; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u16 r1, q0
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> %vec)
   %cmp = icmp ult i16 %x, %max
@@ -410,7 +506,10 @@ define arm_aapcs_vfpcc zeroext i16 @inverted_umaxv8i16(<8 x i16> %vec, i16 zeroe
 define arm_aapcs_vfpcc i32 @inverted_umaxv4i32(<4 x i32> %vec, i32 %max) {
 ; CHECK-LABEL: inverted_umaxv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.u32 r0, q0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxv.u32 r1, q0
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %vec)
   %cmp = icmp ult i32 %x, %max
@@ -421,8 +520,11 @@ define arm_aapcs_vfpcc i32 @inverted_umaxv4i32(<4 x i32> %vec, i32 %max) {
 define arm_aapcs_vfpcc signext i8 @inverted_smaxv16i8(<16 x i8> %vec, i8 signext %max) {
 ; CHECK-LABEL: inverted_smaxv16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s8 r0, q0
-; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    mvn r1, #127
+; CHECK-NEXT:    vmaxv.s8 r1, q0
+; CHECK-NEXT:    sxtb r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
   %x = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> %vec)
   %cmp = icmp slt i8 %x, %max
@@ -433,8 +535,12 @@ define arm_aapcs_vfpcc signext i8 @inverted_smaxv16i8(<16 x i8> %vec, i8 signext
 define arm_aapcs_vfpcc signext i16 @inverted_smaxv8i16(<8 x i16> %vec, i16 signext %max) {
 ; CHECK-LABEL: inverted_smaxv8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s16 r0, q0
-; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    movw r1, #32768
+; CHECK-NEXT:    movt r1, #65535
+; CHECK-NEXT:    vmaxv.s16 r1, q0
+; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
   %x = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %vec)
   %cmp = icmp slt i16 %x, %max
@@ -445,7 +551,10 @@ define arm_aapcs_vfpcc signext i16 @inverted_smaxv8i16(<8 x i16> %vec, i16 signe
 define arm_aapcs_vfpcc i32 @inverted_smaxv4i32(<4 x i32> %vec, i32 %max) {
 ; CHECK-LABEL: inverted_smaxv4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxv.s32 r0, q0
+; CHECK-NEXT:    mov.w r1, #-2147483648
+; CHECK-NEXT:    vmaxv.s32 r1, q0
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    bx lr
   %x = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %vec)
   %cmp = icmp slt i32 %x, %max

@@ -1295,7 +1295,7 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 ; GENERIC:       ## %bb.0:
 ; GENERIC-NEXT:    cmpl $127, %edi
 ; GENERIC-NEXT:    movl $127, %eax
-; GENERIC-NEXT:    cmovlel %edi, %eax
+; GENERIC-NEXT:    cmovll %edi, %eax
 ; GENERIC-NEXT:    cmpl $-128, %eax
 ; GENERIC-NEXT:    movl $128, %ecx
 ; GENERIC-NEXT:    cmovgel %eax, %ecx
@@ -1307,7 +1307,7 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 ; ATOM-NEXT:    cmpl $127, %edi
 ; ATOM-NEXT:    movl $127, %eax
 ; ATOM-NEXT:    movl $128, %ecx
-; ATOM-NEXT:    cmovlel %edi, %eax
+; ATOM-NEXT:    cmovll %edi, %eax
 ; ATOM-NEXT:    cmpl $-128, %eax
 ; ATOM-NEXT:    cmovgel %eax, %ecx
 ; ATOM-NEXT:    movb %cl, (%rsi)
@@ -1319,7 +1319,7 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; ATHLON-NEXT:    cmpl $127, %ecx
 ; ATHLON-NEXT:    movl $127, %edx
-; ATHLON-NEXT:    cmovlel %ecx, %edx
+; ATHLON-NEXT:    cmovll %ecx, %edx
 ; ATHLON-NEXT:    cmpl $-128, %edx
 ; ATHLON-NEXT:    movl $128, %ecx
 ; ATHLON-NEXT:    cmovgel %edx, %ecx
@@ -1329,18 +1329,17 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 ; MCU-LABEL: clamp_i8:
 ; MCU:       # %bb.0:
 ; MCU-NEXT:    cmpl $127, %eax
-; MCU-NEXT:    movl $127, %ecx
-; MCU-NEXT:    jg .LBB26_2
+; MCU-NEXT:    jl .LBB26_2
 ; MCU-NEXT:  # %bb.1:
-; MCU-NEXT:    movl %eax, %ecx
+; MCU-NEXT:    movl $127, %eax
 ; MCU-NEXT:  .LBB26_2:
-; MCU-NEXT:    cmpl $-128, %ecx
-; MCU-NEXT:    movb $-128, %al
+; MCU-NEXT:    cmpl $-128, %eax
+; MCU-NEXT:    movb $-128, %cl
 ; MCU-NEXT:    jl .LBB26_4
 ; MCU-NEXT:  # %bb.3:
-; MCU-NEXT:    movl %ecx, %eax
+; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:  .LBB26_4:
-; MCU-NEXT:    movb %al, (%edx)
+; MCU-NEXT:    movb %cl, (%edx)
 ; MCU-NEXT:    retl
   %cmp = icmp sgt i32 %src, 127
   %sel1 = select i1 %cmp, i32 127, i32 %src
@@ -1355,7 +1354,7 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 define void @clamp(i32 %src, ptr %dst) {
 ; GENERIC-LABEL: clamp:
 ; GENERIC:       ## %bb.0:
-; GENERIC-NEXT:    cmpl $32768, %edi ## imm = 0x8000
+; GENERIC-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
 ; GENERIC-NEXT:    movl $32767, %eax ## imm = 0x7FFF
 ; GENERIC-NEXT:    cmovll %edi, %eax
 ; GENERIC-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
@@ -1366,7 +1365,7 @@ define void @clamp(i32 %src, ptr %dst) {
 ;
 ; ATOM-LABEL: clamp:
 ; ATOM:       ## %bb.0:
-; ATOM-NEXT:    cmpl $32768, %edi ## imm = 0x8000
+; ATOM-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
 ; ATOM-NEXT:    movl $32767, %eax ## imm = 0x7FFF
 ; ATOM-NEXT:    movl $32768, %ecx ## imm = 0x8000
 ; ATOM-NEXT:    cmovll %edi, %eax
@@ -1379,7 +1378,7 @@ define void @clamp(i32 %src, ptr %dst) {
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    cmpl $32768, %ecx ## imm = 0x8000
+; ATHLON-NEXT:    cmpl $32767, %ecx ## imm = 0x7FFF
 ; ATHLON-NEXT:    movl $32767, %edx ## imm = 0x7FFF
 ; ATHLON-NEXT:    cmovll %ecx, %edx
 ; ATHLON-NEXT:    cmpl $-32768, %edx ## imm = 0x8000
@@ -1390,19 +1389,18 @@ define void @clamp(i32 %src, ptr %dst) {
 ;
 ; MCU-LABEL: clamp:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    cmpl $32768, %eax # imm = 0x8000
-; MCU-NEXT:    movl $32767, %ecx # imm = 0x7FFF
-; MCU-NEXT:    jge .LBB27_2
+; MCU-NEXT:    cmpl $32767, %eax # imm = 0x7FFF
+; MCU-NEXT:    jl .LBB27_2
 ; MCU-NEXT:  # %bb.1:
-; MCU-NEXT:    movl %eax, %ecx
+; MCU-NEXT:    movl $32767, %eax # imm = 0x7FFF
 ; MCU-NEXT:  .LBB27_2:
-; MCU-NEXT:    cmpl $-32768, %ecx # imm = 0x8000
-; MCU-NEXT:    movl $32768, %eax # imm = 0x8000
+; MCU-NEXT:    cmpl $-32768, %eax # imm = 0x8000
+; MCU-NEXT:    movl $32768, %ecx # imm = 0x8000
 ; MCU-NEXT:    jl .LBB27_4
 ; MCU-NEXT:  # %bb.3:
-; MCU-NEXT:    movl %ecx, %eax
+; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:  .LBB27_4:
-; MCU-NEXT:    movw %ax, (%edx)
+; MCU-NEXT:    movw %cx, (%edx)
 ; MCU-NEXT:    retl
   %cmp = icmp sgt i32 %src, 32767
   %sel1 = select i1 %cmp, i32 32767, i32 %src

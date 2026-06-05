@@ -19,7 +19,7 @@ define i64 @f1(i64 %dummy, ptr %src, i64 %b) {
 ; CHECK-NEXT:  .LBB0_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    cgrjle %r2, %r4, .LBB0_1
+; CHECK-NEXT:    cgrjl %r2, %r4, .LBB0_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    lgr %r0, %r4
@@ -67,7 +67,7 @@ define i64 @f3(i64 %dummy, ptr %src, i64 %b) {
 ; CHECK-NEXT:  .LBB2_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    clgrjle %r2, %r4, .LBB2_1
+; CHECK-NEXT:    clgrjl %r2, %r4, .LBB2_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    lgr %r0, %r4
@@ -115,7 +115,7 @@ define i64 @f5(i64 %dummy, ptr %src, i64 %b) {
 ; CHECK-NEXT:  .LBB4_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    cgrjle %r2, %r4, .LBB4_1
+; CHECK-NEXT:    cgrjl %r2, %r4, .LBB4_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; CHECK-NEXT:    lgr %r0, %r4
@@ -141,7 +141,7 @@ define i64 @f6(i64 %dummy, ptr %src, i64 %b) {
 ; CHECK-NEXT:  .LBB5_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    cgrjle %r2, %r4, .LBB5_1
+; CHECK-NEXT:    cgrjl %r2, %r4, .LBB5_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    lgr %r0, %r4
@@ -166,7 +166,7 @@ define i64 @f7(i64 %dummy, ptr %src, i64 %b) {
 ; CHECK-NEXT:  .LBB6_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    cgrjle %r2, %r4, .LBB6_1
+; CHECK-NEXT:    cgrjl %r2, %r4, .LBB6_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB6_2 Depth=1
 ; CHECK-NEXT:    lgr %r0, %r4
@@ -192,7 +192,7 @@ define i64 @f8(i64 %dummy, ptr %src, i64 %b) {
 ; CHECK-NEXT:  .LBB7_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    cgrjle %r2, %r4, .LBB7_1
+; CHECK-NEXT:    cgrjl %r2, %r4, .LBB7_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; CHECK-NEXT:    lgr %r0, %r4
@@ -218,7 +218,7 @@ define i64 @f9(i64 %dummy, i64 %base, i64 %index, i64 %b) {
 ; CHECK-NEXT:  .LBB8_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    cgrjle %r2, %r5, .LBB8_1
+; CHECK-NEXT:    cgrjl %r2, %r5, .LBB8_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB8_2 Depth=1
 ; CHECK-NEXT:    lgr %r0, %r5
@@ -244,7 +244,7 @@ define i64 @f10(i64 %dummy, ptr %ptr) {
 ; CHECK-NEXT:  .LBB9_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    cgijl %r2, 43, .LBB9_1
+; CHECK-NEXT:    cgijl %r2, 42, .LBB9_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB9_2 Depth=1
 ; CHECK-NEXT:    lghi %r0, 42

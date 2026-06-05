@@ -98,12 +98,12 @@ define i8 @neg_only_one_truncation(i32 %a1_wide_orig, i8 %a2_orig, i32 %inc) nou
 ;
 ; I386-CMOV-LABEL: neg_only_one_truncation:
 ; I386-CMOV:       # %bb.0:
-; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-CMOV-NEXT:    addl %eax, %ecx
-; I386-CMOV-NEXT:    addb {{[0-9]+}}(%esp), %al
-; I386-CMOV-NEXT:    cmpb %al, %cl
-; I386-CMOV-NEXT:    movzbl %al, %eax
+; I386-CMOV-NEXT:    addl %edx, %ecx
+; I386-CMOV-NEXT:    addb {{[0-9]+}}(%esp), %dl
+; I386-CMOV-NEXT:    movzbl %dl, %eax
+; I386-CMOV-NEXT:    cmpb %dl, %cl
 ; I386-CMOV-NEXT:    cmovgl %ecx, %eax
 ; I386-CMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; I386-CMOV-NEXT:    retl
@@ -124,12 +124,12 @@ define i8 @neg_only_one_truncation(i32 %a1_wide_orig, i8 %a2_orig, i32 %inc) nou
 ;
 ; I686-CMOV-LABEL: neg_only_one_truncation:
 ; I686-CMOV:       # %bb.0:
-; I686-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I686-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; I686-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I686-CMOV-NEXT:    addl %eax, %ecx
-; I686-CMOV-NEXT:    addb {{[0-9]+}}(%esp), %al
-; I686-CMOV-NEXT:    cmpb %al, %cl
-; I686-CMOV-NEXT:    movzbl %al, %eax
+; I686-CMOV-NEXT:    addl %edx, %ecx
+; I686-CMOV-NEXT:    addb {{[0-9]+}}(%esp), %dl
+; I686-CMOV-NEXT:    movzbl %dl, %eax
+; I686-CMOV-NEXT:    cmpb %dl, %cl
 ; I686-CMOV-NEXT:    cmovgl %ecx, %eax
 ; I686-CMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; I686-CMOV-NEXT:    retl
@@ -140,8 +140,8 @@ define i8 @neg_only_one_truncation(i32 %a1_wide_orig, i8 %a2_orig, i32 %inc) nou
 ; X86_64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X86_64-NEXT:    leal (%rdi,%rdx), %ecx
 ; X86_64-NEXT:    addb %sil, %dl
-; X86_64-NEXT:    cmpb %dl, %cl
 ; X86_64-NEXT:    movzbl %dl, %eax
+; X86_64-NEXT:    cmpb %al, %cl
 ; X86_64-NEXT:    cmovgl %ecx, %eax
 ; X86_64-NEXT:    # kill: def $al killed $al killed $eax
 ; X86_64-NEXT:    retq

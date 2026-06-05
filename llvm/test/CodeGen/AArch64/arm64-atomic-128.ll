@@ -447,10 +447,10 @@ define void @fetch_and_min(ptr %p, i128 %bits) {
 ; NOOUTLINE-NEXT:  .LBB8_1: // %atomicrmw.start
 ; NOOUTLINE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOOUTLINE-NEXT:    ldaxp x9, x8, [x0]
-; NOOUTLINE-NEXT:    cmp x2, x9
-; NOOUTLINE-NEXT:    sbcs xzr, x3, x8
-; NOOUTLINE-NEXT:    csel x10, x8, x3, ge
-; NOOUTLINE-NEXT:    csel x11, x9, x2, ge
+; NOOUTLINE-NEXT:    cmp x9, x2
+; NOOUTLINE-NEXT:    sbcs xzr, x8, x3
+; NOOUTLINE-NEXT:    csel x10, x8, x3, lt
+; NOOUTLINE-NEXT:    csel x11, x9, x2, lt
 ; NOOUTLINE-NEXT:    stlxp w12, x11, x10, [x0]
 ; NOOUTLINE-NEXT:    cbnz w12, .LBB8_1
 ; NOOUTLINE-NEXT:  // %bb.2: // %atomicrmw.end
@@ -464,10 +464,10 @@ define void @fetch_and_min(ptr %p, i128 %bits) {
 ; OUTLINE-NEXT:  .LBB8_1: // %atomicrmw.start
 ; OUTLINE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-NEXT:    ldaxp x9, x8, [x0]
-; OUTLINE-NEXT:    cmp x2, x9
-; OUTLINE-NEXT:    sbcs xzr, x3, x8
-; OUTLINE-NEXT:    csel x10, x8, x3, ge
-; OUTLINE-NEXT:    csel x11, x9, x2, ge
+; OUTLINE-NEXT:    cmp x9, x2
+; OUTLINE-NEXT:    sbcs xzr, x8, x3
+; OUTLINE-NEXT:    csel x10, x8, x3, lt
+; OUTLINE-NEXT:    csel x11, x9, x2, lt
 ; OUTLINE-NEXT:    stlxp w12, x11, x10, [x0]
 ; OUTLINE-NEXT:    cbnz w12, .LBB8_1
 ; OUTLINE-NEXT:  // %bb.2: // %atomicrmw.end
@@ -483,10 +483,10 @@ define void @fetch_and_min(ptr %p, i128 %bits) {
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; LSE-NEXT:    mov x7, x5
 ; LSE-NEXT:    mov x6, x4
-; LSE-NEXT:    cmp x2, x4
-; LSE-NEXT:    sbcs xzr, x3, x7
-; LSE-NEXT:    csel x9, x7, x3, ge
-; LSE-NEXT:    csel x8, x4, x2, ge
+; LSE-NEXT:    cmp x4, x2
+; LSE-NEXT:    sbcs xzr, x7, x3
+; LSE-NEXT:    csel x9, x7, x3, lt
+; LSE-NEXT:    csel x8, x4, x2, lt
 ; LSE-NEXT:    mov x4, x6
 ; LSE-NEXT:    mov x5, x7
 ; LSE-NEXT:    caspal x4, x5, x8, x9, [x0]
@@ -571,10 +571,10 @@ define void @fetch_and_umin(ptr %p, i128 %bits) {
 ; NOOUTLINE-NEXT:  .LBB10_1: // %atomicrmw.start
 ; NOOUTLINE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOOUTLINE-NEXT:    ldaxp x9, x8, [x0]
-; NOOUTLINE-NEXT:    cmp x2, x9
-; NOOUTLINE-NEXT:    sbcs xzr, x3, x8
-; NOOUTLINE-NEXT:    csel x10, x8, x3, hs
-; NOOUTLINE-NEXT:    csel x11, x9, x2, hs
+; NOOUTLINE-NEXT:    cmp x9, x2
+; NOOUTLINE-NEXT:    sbcs xzr, x8, x3
+; NOOUTLINE-NEXT:    csel x10, x8, x3, lo
+; NOOUTLINE-NEXT:    csel x11, x9, x2, lo
 ; NOOUTLINE-NEXT:    stlxp w12, x11, x10, [x0]
 ; NOOUTLINE-NEXT:    cbnz w12, .LBB10_1
 ; NOOUTLINE-NEXT:  // %bb.2: // %atomicrmw.end
@@ -588,10 +588,10 @@ define void @fetch_and_umin(ptr %p, i128 %bits) {
 ; OUTLINE-NEXT:  .LBB10_1: // %atomicrmw.start
 ; OUTLINE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-NEXT:    ldaxp x9, x8, [x0]
-; OUTLINE-NEXT:    cmp x2, x9
-; OUTLINE-NEXT:    sbcs xzr, x3, x8
-; OUTLINE-NEXT:    csel x10, x8, x3, hs
-; OUTLINE-NEXT:    csel x11, x9, x2, hs
+; OUTLINE-NEXT:    cmp x9, x2
+; OUTLINE-NEXT:    sbcs xzr, x8, x3
+; OUTLINE-NEXT:    csel x10, x8, x3, lo
+; OUTLINE-NEXT:    csel x11, x9, x2, lo
 ; OUTLINE-NEXT:    stlxp w12, x11, x10, [x0]
 ; OUTLINE-NEXT:    cbnz w12, .LBB10_1
 ; OUTLINE-NEXT:  // %bb.2: // %atomicrmw.end
@@ -607,10 +607,10 @@ define void @fetch_and_umin(ptr %p, i128 %bits) {
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; LSE-NEXT:    mov x7, x5
 ; LSE-NEXT:    mov x6, x4
-; LSE-NEXT:    cmp x2, x4
-; LSE-NEXT:    sbcs xzr, x3, x7
-; LSE-NEXT:    csel x9, x7, x3, hs
-; LSE-NEXT:    csel x8, x4, x2, hs
+; LSE-NEXT:    cmp x4, x2
+; LSE-NEXT:    sbcs xzr, x7, x3
+; LSE-NEXT:    csel x9, x7, x3, lo
+; LSE-NEXT:    csel x8, x4, x2, lo
 ; LSE-NEXT:    mov x4, x6
 ; LSE-NEXT:    mov x5, x7
 ; LSE-NEXT:    caspal x4, x5, x8, x9, [x0]
@@ -714,8 +714,8 @@ define i128 @atomic_load_seq_cst(ptr %p) {
 ;
 ; LSE-LABEL: atomic_load_seq_cst:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    mov x2, #0
-; LSE-NEXT:    mov x3, #0
+; LSE-NEXT:    mov x2, #0 // =0x0
+; LSE-NEXT:    mov x3, #0 // =0x0
 ; LSE-NEXT:    caspal x2, x3, x2, x3, [x0]
 ; LSE-NEXT:    mov x0, x2
 ; LSE-NEXT:    mov x1, x3
@@ -747,8 +747,8 @@ define i128 @atomic_load_relaxed(i64, i64, ptr %p) {
 ;
 ; LSE-LABEL: atomic_load_relaxed:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    mov x0, #0
-; LSE-NEXT:    mov x1, #0
+; LSE-NEXT:    mov x0, #0 // =0x0
+; LSE-NEXT:    mov x1, #0 // =0x0
 ; LSE-NEXT:    casp x0, x1, x0, x1, [x2]
 ; LSE-NEXT:    ret
     %r = load atomic i128, ptr %p monotonic, align 16

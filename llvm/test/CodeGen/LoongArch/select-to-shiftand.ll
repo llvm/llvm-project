@@ -77,13 +77,14 @@ define i64 @pos_sel_variable_and_zero_i64(i64 signext %a, i64 signext %b) {
 define i8 @not_neg_not_zero_sel_same_variable_i8(i8 signext %a) {
 ; LA32-LABEL: not_neg_not_zero_sel_same_variable_i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srai.w $a1, $a0, 7
-; LA32-NEXT:    andn $a0, $a0, $a1
+; LA32-NEXT:    slt $a1, $zero, $a0
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    and $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: not_neg_not_zero_sel_same_variable_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srai.d $a1, $a0, 7
+; LA64-NEXT:    srai.d $a1, $a0, 63
 ; LA64-NEXT:    andn $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cmp = icmp sgt i8 %a, 0
@@ -94,13 +95,14 @@ define i8 @not_neg_not_zero_sel_same_variable_i8(i8 signext %a) {
 define i16 @not_neg_not_zero_sel_same_variable_i16(i16 signext %a) {
 ; LA32-LABEL: not_neg_not_zero_sel_same_variable_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srai.w $a1, $a0, 15
-; LA32-NEXT:    andn $a0, $a0, $a1
+; LA32-NEXT:    slt $a1, $zero, $a0
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    and $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: not_neg_not_zero_sel_same_variable_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srai.d $a1, $a0, 15
+; LA64-NEXT:    srai.d $a1, $a0, 63
 ; LA64-NEXT:    andn $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cmp = icmp sgt i16 %a, 0
@@ -111,13 +113,14 @@ define i16 @not_neg_not_zero_sel_same_variable_i16(i16 signext %a) {
 define i32 @not_neg_not_zero_sel_same_variable_i32(i32 signext %a) {
 ; LA32-LABEL: not_neg_not_zero_sel_same_variable_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srai.w $a1, $a0, 31
-; LA32-NEXT:    andn $a0, $a0, $a1
+; LA32-NEXT:    slt $a1, $zero, $a0
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    and $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: not_neg_not_zero_sel_same_variable_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srai.d $a1, $a0, 31
+; LA64-NEXT:    srai.d $a1, $a0, 63
 ; LA64-NEXT:    andn $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cmp = icmp sgt i32 %a, 0
@@ -128,9 +131,12 @@ define i32 @not_neg_not_zero_sel_same_variable_i32(i32 signext %a) {
 define i64 @not_neg_not_zero_sel_same_variable_i64(i64 signext %a) {
 ; LA32-LABEL: not_neg_not_zero_sel_same_variable_i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srai.w $a2, $a1, 31
-; LA32-NEXT:    andn $a0, $a0, $a2
-; LA32-NEXT:    andn $a1, $a1, $a2
+; LA32-NEXT:    slti $a2, $a1, 0
+; LA32-NEXT:    addi.w $a2, $a2, -1
+; LA32-NEXT:    and $a0, $a2, $a0
+; LA32-NEXT:    slt $a2, $zero, $a1
+; LA32-NEXT:    sub.w $a2, $zero, $a2
+; LA32-NEXT:    and $a1, $a2, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: not_neg_not_zero_sel_same_variable_i64:
@@ -148,16 +154,18 @@ define i8 @sub_clamp_zero_i8(i8 signext %x, i8 signext %y) {
 ; LA32-LABEL: sub_clamp_zero_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a0, $a0, $a1
-; LA32-NEXT:    slli.w $a1, $a0, 24
-; LA32-NEXT:    srai.w $a1, $a1, 31
-; LA32-NEXT:    andn $a0, $a0, $a1
+; LA32-NEXT:    slli.w $a0, $a0, 24
+; LA32-NEXT:    srai.w $a0, $a0, 24
+; LA32-NEXT:    slt $a1, $zero, $a0
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    and $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_clamp_zero_i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
-; LA64-NEXT:    ext.w.b $a1, $a0
-; LA64-NEXT:    srai.d $a1, $a1, 7
+; LA64-NEXT:    ext.w.b $a0, $a0
+; LA64-NEXT:    srai.d $a1, $a0, 63
 ; LA64-NEXT:    andn $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %sub = sub nsw i8 %x, %y
@@ -170,16 +178,18 @@ define i16 @sub_clamp_zero_i16(i16 signext %x, i16 signext %y) {
 ; LA32-LABEL: sub_clamp_zero_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a0, $a0, $a1
-; LA32-NEXT:    slli.w $a1, $a0, 16
-; LA32-NEXT:    srai.w $a1, $a1, 31
-; LA32-NEXT:    andn $a0, $a0, $a1
+; LA32-NEXT:    slli.w $a0, $a0, 16
+; LA32-NEXT:    srai.w $a0, $a0, 16
+; LA32-NEXT:    slt $a1, $zero, $a0
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    and $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_clamp_zero_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
-; LA64-NEXT:    ext.w.h $a1, $a0
-; LA64-NEXT:    srai.d $a1, $a1, 15
+; LA64-NEXT:    ext.w.h $a0, $a0
+; LA64-NEXT:    srai.d $a1, $a0, 63
 ; LA64-NEXT:    andn $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %sub = sub nsw i16 %x, %y
@@ -192,14 +202,15 @@ define i32 @sub_clamp_zero_i32(i32 signext %x, i32 signext %y) {
 ; LA32-LABEL: sub_clamp_zero_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a0, $a0, $a1
-; LA32-NEXT:    srai.w $a1, $a0, 31
-; LA32-NEXT:    andn $a0, $a0, $a1
+; LA32-NEXT:    slt $a1, $zero, $a0
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    and $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_clamp_zero_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.w $a0, $a0, $a1
-; LA64-NEXT:    srai.d $a1, $a0, 31
+; LA64-NEXT:    srai.d $a1, $a0, 63
 ; LA64-NEXT:    andn $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %sub = sub nsw i32 %x, %y
@@ -213,11 +224,14 @@ define i64 @sub_clamp_zero_i64(i64 signext %x, i64 signext %y) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sltu $a4, $a0, $a2
 ; LA32-NEXT:    sub.w $a1, $a1, $a3
-; LA32-NEXT:    sub.w $a1, $a1, $a4
+; LA32-NEXT:    sub.w $a3, $a1, $a4
 ; LA32-NEXT:    sub.w $a0, $a0, $a2
-; LA32-NEXT:    srai.w $a2, $a1, 31
-; LA32-NEXT:    andn $a1, $a1, $a2
-; LA32-NEXT:    andn $a0, $a0, $a2
+; LA32-NEXT:    slt $a1, $zero, $a3
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    and $a1, $a1, $a3
+; LA32-NEXT:    slti $a2, $a3, 0
+; LA32-NEXT:    addi.w $a2, $a2, -1
+; LA32-NEXT:    and $a0, $a2, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_clamp_zero_i64:

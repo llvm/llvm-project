@@ -10,9 +10,9 @@ define i8 @unsigned_sat_constant_i8_using_min(i8 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i8_using_min:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w9, w0, #0xff
-; CHECK-NEXT:    mov w8, #-43 // =0xffffffd5
+; CHECK-NEXT:    mov w8, #213 // =0xd5
 ; CHECK-NEXT:    cmp w9, #213
-; CHECK-NEXT:    csel w8, w0, w8, lo
+; CHECK-NEXT:    csel w8, w9, w8, lo
 ; CHECK-NEXT:    add w0, w8, #42
 ; CHECK-NEXT:    ret
   %c = icmp ult i8 %x, -43
@@ -53,9 +53,9 @@ define i16 @unsigned_sat_constant_i16_using_min(i16 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i16_using_min:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #65493 // =0xffd5
-; CHECK-NEXT:    cmp w8, w0, uxth
-; CHECK-NEXT:    mov w8, #-43 // =0xffffffd5
-; CHECK-NEXT:    csel w8, w0, w8, hi
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    csel w8, w9, w8, lo
 ; CHECK-NEXT:    add w0, w8, #42
 ; CHECK-NEXT:    ret
   %c = icmp ult i16 %x, -43
@@ -171,10 +171,11 @@ define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 define i8 @unsigned_sat_variable_i8_using_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i8_using_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    mvn w9, w1
-; CHECK-NEXT:    cmp w8, w9, uxtb
-; CHECK-NEXT:    csinv w8, w0, w1, lo
+; CHECK-NEXT:    mov w8, #255 // =0xff
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    bic w8, w8, w1
+; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    csel w8, w9, w8, lo
 ; CHECK-NEXT:    add w0, w8, w1
 ; CHECK-NEXT:    ret
   %noty = xor i8 %y, -1
@@ -217,10 +218,11 @@ define i8 @unsigned_sat_variable_i8_using_cmp_notval(i8 %x, i8 %y) {
 define i16 @unsigned_sat_variable_i16_using_min(i16 %x, i16 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i16_using_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    mvn w9, w1
-; CHECK-NEXT:    cmp w8, w9, uxth
-; CHECK-NEXT:    csinv w8, w0, w1, lo
+; CHECK-NEXT:    mov w8, #65535 // =0xffff
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    bic w8, w8, w1
+; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    csel w8, w9, w8, lo
 ; CHECK-NEXT:    add w0, w8, w1
 ; CHECK-NEXT:    ret
   %noty = xor i16 %y, -1

@@ -19,7 +19,7 @@ define i32 @f1(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB0_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r4, .LBB0_1
+; CHECK-NEXT:    crjl %r2, %r4, .LBB0_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -67,7 +67,7 @@ define i32 @f3(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB2_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    clrjle %r2, %r4, .LBB2_1
+; CHECK-NEXT:    clrjl %r2, %r4, .LBB2_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -115,7 +115,7 @@ define i32 @f5(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB4_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r4, .LBB4_1
+; CHECK-NEXT:    crjl %r2, %r4, .LBB4_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -140,7 +140,7 @@ define i32 @f6(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB5_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r4, .LBB5_1
+; CHECK-NEXT:    crjl %r2, %r4, .LBB5_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -165,7 +165,7 @@ define i32 @f7(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB6_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r4, .LBB6_1
+; CHECK-NEXT:    crjl %r2, %r4, .LBB6_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB6_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -191,7 +191,7 @@ define i32 @f8(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB7_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r4, .LBB7_1
+; CHECK-NEXT:    crjl %r2, %r4, .LBB7_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -216,7 +216,7 @@ define i32 @f9(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB8_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r4, .LBB8_1
+; CHECK-NEXT:    crjl %r2, %r4, .LBB8_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB8_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -241,7 +241,7 @@ define i32 @f10(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB9_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r4, .LBB9_1
+; CHECK-NEXT:    crjl %r2, %r4, .LBB9_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB9_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -267,7 +267,7 @@ define i32 @f11(i32 %dummy, ptr %src, i32 %b) {
 ; CHECK-NEXT:  .LBB10_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r4, .LBB10_1
+; CHECK-NEXT:    crjl %r2, %r4, .LBB10_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB10_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r4
@@ -293,7 +293,7 @@ define i32 @f12(i32 %dummy, i64 %base, i64 %index, i32 %b) {
 ; CHECK-NEXT:  .LBB11_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    crjle %r2, %r5, .LBB11_1
+; CHECK-NEXT:    crjl %r2, %r5, .LBB11_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB11_2 Depth=1
 ; CHECK-NEXT:    lr %r0, %r5
@@ -319,7 +319,7 @@ define i32 @f13(i32 %dummy, ptr %ptr) {
 ; CHECK-NEXT:  .LBB12_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lr %r0, %r2
-; CHECK-NEXT:    cijl %r2, 43, .LBB12_1
+; CHECK-NEXT:    cijl %r2, 42, .LBB12_1
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
 ; CHECK-NEXT:    lhi %r0, 42

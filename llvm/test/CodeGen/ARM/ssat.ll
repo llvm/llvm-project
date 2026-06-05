@@ -19,13 +19,13 @@
 define i32 @sat_base_32bit(i32 %x) #0 {
 ; V4T-LABEL: sat_base_32bit:
 ; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    ldr r1, .LCPI0_0
 ; V4T-NEXT:    cmp r0, r1
 ; V4T-NEXT:    movge r0, r1
-; V4T-NEXT:    mov r1, #1065353216
-; V4T-NEXT:    orr r1, r1, #-1073741824
-; V4T-NEXT:    cmn r0, #8388608
-; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:
@@ -49,17 +49,15 @@ entry:
 define i16 @sat_base_16bit(i16 %x) #0 {
 ; V4T-LABEL: sat_base_16bit:
 ; V4T:       @ %bb.0: @ %entry
-; V4T-NEXT:    mov r2, #255
 ; V4T-NEXT:    lsl r1, r0, #16
-; V4T-NEXT:    orr r2, r2, #1792
-; V4T-NEXT:    asr r1, r1, #16
-; V4T-NEXT:    cmp r1, r2
-; V4T-NEXT:    movge r0, r2
-; V4T-NEXT:    ldr r2, .LCPI1_0
-; V4T-NEXT:    lsl r1, r0, #16
-; V4T-NEXT:    asr r1, r1, #16
-; V4T-NEXT:    cmn r1, #2048
-; V4T-NEXT:    movle r0, r2
+; V4T-NEXT:    ldr r0, .LCPI1_0
+; V4T-NEXT:    asr r2, r1, #16
+; V4T-NEXT:    cmn r2, #2048
+; V4T-NEXT:    asrgt r0, r1, #16
+; V4T-NEXT:    mov r1, #255
+; V4T-NEXT:    orr r1, r1, #1792
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:
@@ -68,15 +66,8 @@ define i16 @sat_base_16bit(i16 %x) #0 {
 ;
 ; V6T2-LABEL: sat_base_16bit:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    sxth r1, r0
-; V6T2-NEXT:    movw r2, #2047
-; V6T2-NEXT:    cmp r1, r2
-; V6T2-NEXT:    movge r0, r2
-; V6T2-NEXT:    movw r2, #63488
-; V6T2-NEXT:    sxth r1, r0
-; V6T2-NEXT:    movt r2, #65535
-; V6T2-NEXT:    cmn r1, #2048
-; V6T2-NEXT:    movle r0, r2
+; V6T2-NEXT:    sxth r0, r0
+; V6T2-NEXT:    ssat r0, #12, r0
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = icmp slt i16 %x, 2047
@@ -92,23 +83,18 @@ define i8 @sat_base_8bit(i8 %x) #0 {
 ; V4T-LABEL: sat_base_8bit:
 ; V4T:       @ %bb.0: @ %entry
 ; V4T-NEXT:    lsl r1, r0, #24
-; V4T-NEXT:    asr r1, r1, #24
-; V4T-NEXT:    cmp r1, #31
+; V4T-NEXT:    mvn r0, #31
+; V4T-NEXT:    asr r2, r1, #24
+; V4T-NEXT:    cmn r2, #32
+; V4T-NEXT:    asrgt r0, r1, #24
+; V4T-NEXT:    cmp r0, #31
 ; V4T-NEXT:    movge r0, #31
-; V4T-NEXT:    lsl r1, r0, #24
-; V4T-NEXT:    asr r1, r1, #24
-; V4T-NEXT:    cmn r1, #32
-; V4T-NEXT:    mvnle r0, #31
 ; V4T-NEXT:    bx lr
 ;
 ; V6T2-LABEL: sat_base_8bit:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    sxtb r1, r0
-; V6T2-NEXT:    cmp r1, #31
-; V6T2-NEXT:    movge r0, #31
-; V6T2-NEXT:    sxtb r1, r0
-; V6T2-NEXT:    cmn r1, #32
-; V6T2-NEXT:    mvnle r0, #31
+; V6T2-NEXT:    sxtb r0, r0
+; V6T2-NEXT:    ssat r0, #6, r0
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = icmp slt i8 %x, 31
@@ -128,13 +114,13 @@ entry:
 define i32 @sat_lower_upper_1(i32 %x) #0 {
 ; V4T-LABEL: sat_lower_upper_1:
 ; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    ldr r1, .LCPI3_0
 ; V4T-NEXT:    cmp r0, r1
 ; V4T-NEXT:    movge r0, r1
-; V4T-NEXT:    mov r1, #1065353216
-; V4T-NEXT:    orr r1, r1, #-1073741824
-; V4T-NEXT:    cmn r0, #8388608
-; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:
@@ -157,13 +143,13 @@ entry:
 define i32 @sat_lower_upper_2(i32 %x) #0 {
 ; V4T-LABEL: sat_lower_upper_2:
 ; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    ldr r1, .LCPI4_0
 ; V4T-NEXT:    cmp r0, r1
 ; V4T-NEXT:    movge r0, r1
-; V4T-NEXT:    mov r1, #1065353216
-; V4T-NEXT:    orr r1, r1, #-1073741824
-; V4T-NEXT:    cmn r0, #8388608
-; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:
@@ -540,26 +526,21 @@ define void @extended(i32 %xx, i16 signext %y, ptr nocapture %z) {
 ; V4T-LABEL: extended:
 ; V4T:       @ %bb.0: @ %entry
 ; V4T-NEXT:    add r0, r1, r0, lsr #16
-; V4T-NEXT:    lsl r1, r0, #16
-; V4T-NEXT:    asr r1, r1, #16
-; V4T-NEXT:    cmp r1, #127
-; V4T-NEXT:    movge r0, #127
-; V4T-NEXT:    lsl r1, r0, #16
-; V4T-NEXT:    asr r1, r1, #16
+; V4T-NEXT:    mvn r3, #127
+; V4T-NEXT:    lsl r0, r0, #16
+; V4T-NEXT:    asr r1, r0, #16
 ; V4T-NEXT:    cmn r1, #128
-; V4T-NEXT:    mvnle r0, #127
-; V4T-NEXT:    strb r0, [r2]
+; V4T-NEXT:    asrgt r3, r0, #16
+; V4T-NEXT:    cmp r3, #127
+; V4T-NEXT:    movge r3, #127
+; V4T-NEXT:    strb r3, [r2]
 ; V4T-NEXT:    bx lr
 ;
 ; V6T2-LABEL: extended:
 ; V6T2:       @ %bb.0: @ %entry
 ; V6T2-NEXT:    add r0, r1, r0, lsr #16
-; V6T2-NEXT:    sxth r1, r0
-; V6T2-NEXT:    cmp r1, #127
-; V6T2-NEXT:    movge r0, #127
-; V6T2-NEXT:    sxth r1, r0
-; V6T2-NEXT:    cmn r1, #128
-; V6T2-NEXT:    mvnle r0, #127
+; V6T2-NEXT:    sxth r0, r0
+; V6T2-NEXT:    ssat r0, #8, r0
 ; V6T2-NEXT:    strb r0, [r2]
 ; V6T2-NEXT:    bx lr
 entry:
@@ -654,13 +635,13 @@ define i32 @formulated_invalid(i32 %a) {
 define i32 @mm_sat_base_32bit(i32 %x) {
 ; V4T-LABEL: mm_sat_base_32bit:
 ; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    ldr r1, .LCPI18_0
 ; V4T-NEXT:    cmp r0, r1
 ; V4T-NEXT:    movge r0, r1
-; V4T-NEXT:    mov r1, #1065353216
-; V4T-NEXT:    orr r1, r1, #-1073741824
-; V4T-NEXT:    cmn r0, #8388608
-; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:
@@ -680,15 +661,15 @@ entry:
 define i16 @mm_sat_base_16bit(i16 %x) {
 ; V4T-LABEL: mm_sat_base_16bit:
 ; V4T:       @ %bb.0: @ %entry
-; V4T-NEXT:    mov r2, #255
-; V4T-NEXT:    lsl r0, r0, #16
-; V4T-NEXT:    orr r2, r2, #1792
-; V4T-NEXT:    asr r1, r0, #16
-; V4T-NEXT:    cmp r1, r2
-; V4T-NEXT:    asrlt r2, r0, #16
+; V4T-NEXT:    lsl r1, r0, #16
 ; V4T-NEXT:    ldr r0, .LCPI19_0
+; V4T-NEXT:    asr r2, r1, #16
 ; V4T-NEXT:    cmn r2, #2048
-; V4T-NEXT:    movgt r0, r2
+; V4T-NEXT:    asrgt r0, r1, #16
+; V4T-NEXT:    mov r1, #255
+; V4T-NEXT:    orr r1, r1, #1792
+; V4T-NEXT:    cmp r0, r1
+; V4T-NEXT:    movge r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:
@@ -710,12 +691,12 @@ define i8 @mm_sat_base_8bit(i8 %x) {
 ; V4T-LABEL: mm_sat_base_8bit:
 ; V4T:       @ %bb.0: @ %entry
 ; V4T-NEXT:    lsl r1, r0, #24
-; V4T-NEXT:    mov r0, #31
+; V4T-NEXT:    mvn r0, #31
 ; V4T-NEXT:    asr r2, r1, #24
-; V4T-NEXT:    cmp r2, #31
-; V4T-NEXT:    asrlt r0, r1, #24
-; V4T-NEXT:    cmn r0, #32
-; V4T-NEXT:    mvnle r0, #31
+; V4T-NEXT:    cmn r2, #32
+; V4T-NEXT:    asrgt r0, r1, #24
+; V4T-NEXT:    cmp r0, #31
+; V4T-NEXT:    movge r0, #31
 ; V4T-NEXT:    bx lr
 ;
 ; V6T2-LABEL: mm_sat_base_8bit:
@@ -732,13 +713,13 @@ entry:
 define i32 @mm_sat_lower_upper_1(i32 %x) {
 ; V4T-LABEL: mm_sat_lower_upper_1:
 ; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    ldr r1, .LCPI21_0
 ; V4T-NEXT:    cmp r0, r1
 ; V4T-NEXT:    movge r0, r1
-; V4T-NEXT:    mov r1, #1065353216
-; V4T-NEXT:    orr r1, r1, #-1073741824
-; V4T-NEXT:    cmn r0, #8388608
-; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:
@@ -758,13 +739,13 @@ entry:
 define i32 @mm_sat_lower_upper_2(i32 %x) {
 ; V4T-LABEL: mm_sat_lower_upper_2:
 ; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    cmn r0, #8388608
+; V4T-NEXT:    orr r1, r1, #-1073741824
+; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    ldr r1, .LCPI22_0
 ; V4T-NEXT:    cmp r0, r1
 ; V4T-NEXT:    movge r0, r1
-; V4T-NEXT:    mov r1, #1065353216
-; V4T-NEXT:    orr r1, r1, #-1073741824
-; V4T-NEXT:    cmn r0, #8388608
-; V4T-NEXT:    movle r0, r1
 ; V4T-NEXT:    bx lr
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:

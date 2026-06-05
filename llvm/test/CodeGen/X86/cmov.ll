@@ -213,10 +213,10 @@ define i64 @test8(i64 %0, i64 %1, i64 %2) {
 define i32 @smin(i32 %x) {
 ; CHECK-LABEL: smin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    cmpl $-1, %edi
 ; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovnsl %edi, %eax
+; CHECK-NEXT:    cmovll %edi, %eax
 ; CHECK-NEXT:    retq
   %not_x = xor i32 %x, -1
   %1 = icmp slt i32 %not_x, -1
@@ -251,9 +251,9 @@ define i32 @pr47049_2(i32 %0) {
 define i32 @pr47049_3(i32 %0) {
 ; CHECK-LABEL: pr47049_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmpl $2, %edi
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    cmovgl %edi, %eax
+; CHECK-NEXT:    cmovgel %edi, %eax
 ; CHECK-NEXT:    retq
   %2 = icmp sgt i32 %0, 1
   %3 = select i1 %2, i32 %0, i32 1
@@ -263,9 +263,9 @@ define i32 @pr47049_3(i32 %0) {
 define i32 @pr47049_4(i32 %0) {
 ; CHECK-LABEL: pr47049_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    cmovnel %edi, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    adcl $0, %eax
 ; CHECK-NEXT:    retq
   %2 = icmp ugt i32 %0, 1
   %3 = select i1 %2, i32 %0, i32 1

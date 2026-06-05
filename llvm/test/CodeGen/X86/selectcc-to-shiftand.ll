@@ -117,7 +117,7 @@ define i32 @not_neg_sel_same_variable(i32 %a) {
 ; CHECK-NOBMI:       # %bb.0:
 ; CHECK-NOBMI-NEXT:    xorl %eax, %eax
 ; CHECK-NOBMI-NEXT:    testl %edi, %edi
-; CHECK-NOBMI-NEXT:    cmovnsl %edi, %eax
+; CHECK-NOBMI-NEXT:    cmovgl %edi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: not_neg_sel_same_variable:
@@ -137,9 +137,10 @@ define i32 @not_neg_sel_same_variable(i32 %a) {
 define i32 @PR31175(i32 %x, i32 %y) {
 ; CHECK-NOBMI-LABEL: PR31175:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %eax, %eax
 ; CHECK-NOBMI-NEXT:    subl %esi, %edi
-; CHECK-NOBMI-NEXT:    cmovnsl %edi, %eax
+; CHECK-NOBMI-NEXT:    xorl %eax, %eax
+; CHECK-NOBMI-NEXT:    testl %edi, %edi
+; CHECK-NOBMI-NEXT:    cmovgl %edi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: PR31175:

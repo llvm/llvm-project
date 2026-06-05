@@ -23,10 +23,10 @@ define weak arm_aapcs_vfpcc i32 @_ZNKSs7compareERKSs(ptr %this, ptr %__str) {
 ; P01-NEXT:    mov r0, r8
 ; P01-NEXT:    bl _ZNKSs4sizeEv
 ; P01-NEXT:    mov r6, r4
-; P01-NEXT:    cmp r4, r0
+; P01-NEXT:    cmp r0, r4
 ; P01-NEXT:    mov r7, r0
-; P01-NEXT:    it hi
-; P01-NEXT:    movhi r6, r0
+; P01-NEXT:    it lo
+; P01-NEXT:    movlo r6, r0
 ; P01-NEXT:    mov r0, r5
 ; P01-NEXT:    bl _ZNKSs7_M_dataEv
 ; P01-NEXT:    mov r5, r0
@@ -53,10 +53,10 @@ define weak arm_aapcs_vfpcc i32 @_ZNKSs7compareERKSs(ptr %this, ptr %__str) {
 ; P23-NEXT:    mov r0, r8
 ; P23-NEXT:    bl _ZNKSs4sizeEv
 ; P23-NEXT:    mov r4, r6
-; P23-NEXT:    cmp r6, r0
+; P23-NEXT:    cmp r0, r6
 ; P23-NEXT:    mov r5, r0
-; P23-NEXT:    it hi
-; P23-NEXT:    movhi r4, r0
+; P23-NEXT:    it lo
+; P23-NEXT:    movlo r4, r0
 ; P23-NEXT:    mov r0, r7
 ; P23-NEXT:    bl _ZNKSs7_M_dataEv
 ; P23-NEXT:    mov r7, r0
