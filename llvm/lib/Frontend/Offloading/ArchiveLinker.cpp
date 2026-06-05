@@ -174,25 +174,29 @@ static Expected<bool> getSymbols(MemoryBufferRef Buffer,
 }
 
 Expected<ResolvedInputs>
-resolveArchiveMembers(const Inputs &In,
+resolveArchiveMembers(ArrayRef<InputDesc> Order,
+                      ArrayRef<StringRef> SearchPaths,
+                      ArrayRef<StringRef> ForcedUndefs, StringRef Root,
                       function_ref<bool(MemoryBufferRef)> IsFatBinary) {
   ResolvedInputs Result;
   SmallVector<std::pair<std::unique_ptr<MemoryBuffer>, bool>> InputFiles;
 
-  // Process each input descriptor
-  for (const InputDesc &Desc : In.Order) {
+  // Process each input descriptor.
+  for (const InputDesc &Desc : Order) {
     std::optional<std::string> Filename;
 
     if (Desc.InputKind == InputDesc::Kind::Library) {
-      Filename = searchLibrary(Desc.Value, In.Root, In.SearchPaths);
+      Filename = searchLibrary(Desc.Value, Root, SearchPaths);
       if (!Filename)
         return createStringError("unable to find library -l%s",
                                  Desc.Value.str().c_str());
       if (sys::fs::is_directory(*Filename))
         return createStringError("'%s': Is a directory", Filename->c_str());
     } else {
-      if (!sys::fs::exists(Desc.Value) || sys::fs::is_directory(Desc.Value))
-        continue;
+      if (!sys::fs::exists(Desc.Value))
+        return createStringError("input file not found: '" + Desc.Value + "'");
+      if (sys::fs::is_directory(Desc.Value))
+        return createStringError("'" + Desc.Value + "': Is a directory");
       Filename = Desc.Value.str();
     }
 
@@ -220,7 +224,7 @@ resolveArchiveMembers(const Inputs &In,
         auto ChildBufferOrErr = Child.getMemoryBufferRef();
         if (!ChildBufferOrErr)
           return ChildBufferOrErr.takeError();
-        // Include archive name in buffer identifier for better diagnostics
+        // Include archive name in buffer identifier for better diagnostics.
         std::string BufferIdentifier =
             (*Filename + "(" + ChildBufferOrErr->getBufferIdentifier() + ")")
                 .str();
@@ -238,11 +242,11 @@ resolveArchiveMembers(const Inputs &In,
     }
   }
 
-  // Seed symbol table with forced undefined symbols
-  for (StringRef Sym : In.ForcedUndefs)
+  // Seed symbol table with forced undefined symbols.
+  for (StringRef Sym : ForcedUndefs)
     Result.SymTab[Sym] = Symbol(Symbol::Undefined);
 
-  // Fixed-point loop to extract archive members
+  // Fixed-point loop to extract archive members.
   bool Extracted = true;
   while (Extracted) {
     Extracted = false;
@@ -250,13 +254,13 @@ resolveArchiveMembers(const Inputs &In,
       if (!Input)
         continue;
 
-      // Check if this is a fat binary that should be passed through
+      // Check if this is a fat binary that should be passed through.
       if (IsFatBinary && IsFatBinary(*Input)) {
         Result.Buffers.emplace_back(std::move(Input));
         continue;
       }
 
-      // Archive members only extract if they define needed symbols
+      // Archive members only extract if they define needed symbols.
       Expected<bool> ExtractOrErr = getSymbols(*Input, Result.SymTab, IsLazy);
       if (!ExtractOrErr)
         return ExtractOrErr.takeError();

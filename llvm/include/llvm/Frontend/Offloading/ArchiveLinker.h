@@ -74,24 +74,16 @@ struct Symbol {
 struct InputDesc {
   enum class Kind { File, Library };
 
-  StringRef Value; // file path, or library name for -l (the value after -l)
+  StringRef Value;       // File path, or library name for -l (the value after -l).
   Kind InputKind;
-  bool WholeArchive; // --whole-archive state in effect at this input
-};
-
-/// All inputs and search paths for archive member resolution.
-struct Inputs {
-  ArrayRef<InputDesc> Order;        // positional inputs + -l libraries in order
-  ArrayRef<StringRef> SearchPaths;  // -L paths
-  ArrayRef<StringRef> ForcedUndefs; // -u symbols (may be empty)
-  StringRef Root; // sysroot for "=" prefixed paths ("" if none)
+  bool WholeArchive;     // --whole-archive state in effect at this input.
 };
 
 /// Result of archive member resolution.
 struct ResolvedInputs {
   SmallVector<std::unique_ptr<MemoryBuffer>>
-      Buffers;              // members to link, in order
-  StringMap<Symbol> SymTab; // symbol table (for LTO resolution)
+      Buffers;              // Members to link, in order.
+  StringMap<Symbol> SymTab; // Symbol table (for LTO resolution).
 };
 
 /// Resolve archive members from the given inputs using a symbol-driven
@@ -104,13 +96,17 @@ struct ResolvedInputs {
 ///
 /// Returns the buffers to link and the symbol table for LTO resolution.
 ///
-/// \param In The inputs to resolve
+/// \param Order Positional inputs + -l libraries in order.
+/// \param SearchPaths -L paths for library search.
+/// \param ForcedUndefs -u symbols (may be empty).
+/// \param Root Sysroot for "=" prefixed paths ("" if none).
 /// \param IsFatBinary Optional predicate to identify "fat binary" inputs that
 ///        should be passed through without symbol scanning (e.g., nvlink's
 ///        cubin detection). If null, all inputs are scanned normally.
-Expected<ResolvedInputs> resolveArchiveMembers(
-    const Inputs &In,
-    function_ref<bool(MemoryBufferRef)> IsFatBinary = nullptr);
+Expected<ResolvedInputs>
+resolveArchiveMembers(ArrayRef<InputDesc> Order, ArrayRef<StringRef> SearchPaths,
+                      ArrayRef<StringRef> ForcedUndefs = {}, StringRef Root = "",
+                      function_ref<bool(MemoryBufferRef)> IsFatBinary = nullptr);
 
 } // namespace offloading
 } // namespace llvm

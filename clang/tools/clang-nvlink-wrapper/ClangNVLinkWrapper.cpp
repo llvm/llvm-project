@@ -360,21 +360,15 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   SmallVector<StringRef> ForcedUndefs(ForcedUndefStorage.begin(),
                                       ForcedUndefStorage.end());
 
-  // Build the Inputs structure
-  offloading::Inputs Inputs;
-  Inputs.Order = InputDescs;
-  Inputs.SearchPaths = LibraryPaths;
-  Inputs.ForcedUndefs = ForcedUndefs;
-  Inputs.Root = "";
-
-  // Create the fat binary predicate
+  // Create the fat binary predicate.
   auto IsFatBinary = [&Args](MemoryBufferRef B) -> bool {
     return hasFatBinary(Args, B);
   };
 
-  // Resolve archive members
+  // Resolve archive members.
   Expected<offloading::ResolvedInputs> ResolvedOrErr =
-      offloading::resolveArchiveMembers(Inputs, IsFatBinary);
+      offloading::resolveArchiveMembers(InputDescs, LibraryPaths, ForcedUndefs,
+                                        "", IsFatBinary);
   if (!ResolvedOrErr)
     return ResolvedOrErr.takeError();
 
