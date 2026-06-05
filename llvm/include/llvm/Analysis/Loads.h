@@ -65,7 +65,7 @@ LLVM_ABI bool isDereferenceableAndAlignedPointer(
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If ScanFrom are specified this method performs context-sensitive analysis
+/// If ScanFrom is specified this method performs context-sensitive analysis
 /// and returns true if it is safe to load immediately before ScanFrom.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
