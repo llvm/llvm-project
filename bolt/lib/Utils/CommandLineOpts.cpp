@@ -243,15 +243,14 @@ OutputFilename("o",
   cl::Optional,
   cl::cat(BoltOutputCategory));
 
-cl::opt<std::string> PerfData("perfdata", cl::desc("<data file>"), cl::Optional,
-                              cl::cat(AggregatorCategory),
-                              cl::sub(cl::SubCommand::getAll()));
+cl::list<std::string> PerfData("perfdata", cl::CommaSeparated,
+                               cl::desc("<data file>"),
+                               cl::cat(AggregatorCategory),
+                               cl::sub(cl::SubCommand::getAll()));
 
-static cl::alias
-PerfDataA("p",
-  cl::desc("alias for -perfdata"),
-  cl::aliasopt(PerfData),
-  cl::cat(AggregatorCategory));
+static cl::alias PerfDataA("p", cl::CommaSeparated,
+                           cl::desc("alias for -perfdata"),
+                           cl::aliasopt(PerfData), cl::cat(AggregatorCategory));
 
 cl::opt<bool> PrintCacheMetrics(
     "print-cache-metrics",
@@ -278,7 +277,10 @@ cl::opt<ProfileFormatKind> ProfileFormat(
         "format to dump profile output in aggregation mode, default is fdata"),
     cl::init(PF_Fdata),
     cl::values(clEnumValN(PF_Fdata, "fdata", "offset-based plaintext format"),
-               clEnumValN(PF_YAML, "yaml", "dense YAML representation")),
+               clEnumValN(PF_YAML, "yaml", "dense YAML representation"),
+               clEnumValN(PF_PreAgg, "preagg", "pre-aggregated profile format"),
+               clEnumValN(PF_PerfScript, "perfscript",
+                          "perfscript profile format")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<std::string> SaveProfile("w",
@@ -320,6 +322,12 @@ cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
+
+cl::opt<bool> LivenessAnalysis(
+    "liveness-analysis",
+    cl::desc("use liveness analysis in FixupBranches and LongJmpPass"
+             "(needed for branch inversion on AArch64)"),
+    cl::init(false), cl::cat(BoltCategory));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

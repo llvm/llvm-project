@@ -7,7 +7,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    $s0 = LDURSi $x0, 0
+    $s0 = LDURSi $x0, 0 :: (load (s32))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -18,7 +18,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    $d0 = LDURDi $x0, 0
+    $d0 = LDURDi $x0, 0 :: (load (s64))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -29,7 +29,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    $q0 = LDURQi  $x0, 0
+    $q0 = LDURQi  $x0, 0 :: (load (s128))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -40,7 +40,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    $w1 = LDURWi $x0, 0
+    $w1 = LDURWi $x0, 0 :: (load (s32))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -51,7 +51,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    $x1 = LDURXi $x0, 0
+    $x1 = LDURXi $x0, 0 :: (load (s64))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -63,7 +63,7 @@ body: |
     liveins: $x0
 
     $s0 = FMOVS0
-    STURSi $s0, $x0, 0
+    STURSi $s0, $x0, 0 :: (store (s32))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -75,7 +75,7 @@ body: |
     liveins: $x0
 
     $d0 = FMOVD0
-    STURDi $d0, $x0, 0
+    STURDi $d0, $x0, 0 :: (store (s64))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -87,7 +87,7 @@ body: |
     liveins: $x0
 
     $q0 = MOVIv4i32 0, 0
-    STURQi $q0, $x0, 0
+    STURQi $q0, $x0, 0 :: (store (s128))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -98,7 +98,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STURWi $wzr, $x0, 0
+    STURWi $wzr, $x0, 0 :: (store (s32))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...
@@ -109,7 +109,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STURXi $xzr, $x0, 0
+    STURXi $xzr, $x0, 0 :: (store (s64))
     $x0 = SUBXri $x0, 4, 0
     RET_ReallyLR implicit $x0
 ...

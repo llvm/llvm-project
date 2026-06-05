@@ -705,12 +705,6 @@ public:
     std::swap(Size, RHS.Size);
   }
 
-  void invalid() {
-    assert(!Size && Bits.empty());
-    Size = (unsigned)-1;
-  }
-  bool isInvalid() const { return Size == (unsigned)-1; }
-
   ArrayRef<BitWord> getData() const { return {Bits.data(), Bits.size()}; }
 
   //===--------------------------------------------------------------------===//
@@ -854,18 +848,11 @@ inline BitVector::size_type capacity_in_bytes(const BitVector &X) {
 
 template <> struct DenseMapInfo<BitVector> {
   static inline BitVector getEmptyKey() { return {}; }
-  static inline BitVector getTombstoneKey() {
-    BitVector V;
-    V.invalid();
-    return V;
-  }
   static unsigned getHashValue(const BitVector &V) {
     return DenseMapInfo<std::pair<BitVector::size_type, ArrayRef<uintptr_t>>>::
         getHashValue(std::make_pair(V.size(), V.getData()));
   }
   static bool isEqual(const BitVector &LHS, const BitVector &RHS) {
-    if (LHS.isInvalid() || RHS.isInvalid())
-      return LHS.isInvalid() == RHS.isInvalid();
     return LHS == RHS;
   }
 };

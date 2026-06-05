@@ -19,23 +19,23 @@ typedef int64_t IterationCount;
 
 class TestReporter : public benchmark::ConsoleReporter {
  public:
-  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
+  bool ReportContext(const Context& context) override {
     return ConsoleReporter::ReportContext(context);
   };
 
-  virtual void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
+  void ReportRuns(const std::vector<Run>& report) override {
     assert(report.size() == 1);
     ConsoleReporter::ReportRuns(report);
   };
 
-  virtual void ReportRunsConfig(double min_time, bool /* has_explicit_iters */,
-                                IterationCount /* iters */) BENCHMARK_OVERRIDE {
+  void ReportRunsConfig(double min_time, bool /* has_explicit_iters */,
+                        IterationCount /* iters */) override {
     min_times_.push_back(min_time);
   }
 
   TestReporter() {}
 
-  virtual ~TestReporter() {}
+  ~TestReporter() override {}
 
   const std::vector<double>& GetMinTimes() const { return min_times_; }
 
@@ -60,31 +60,34 @@ void DoTestHelper(int* argc, const char** argv, double expected) {
   assert(!min_times.empty() && AlmostEqual(min_times[0], expected));
 }
 
-}  // end namespace
-
-static void BM_MyBench(benchmark::State& state) {
+void BM_MyBench(benchmark::State& state) {
   for (auto s : state) {
   }
 }
 BENCHMARK(BM_MyBench);
 
+}  // end namespace
+
 int main(int argc, char** argv) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
+
   // Make a fake argv and append the new --benchmark_min_time=<foo> to it.
   int fake_argc = argc + 1;
-  const char** fake_argv = new const char*[static_cast<size_t>(fake_argc)];
+  std::vector<const char*> fake_argv(static_cast<size_t>(fake_argc));
 
-  for (int i = 0; i < argc; ++i) fake_argv[i] = argv[i];
+  for (size_t i = 0; i < static_cast<size_t>(argc); ++i) {
+    fake_argv[i] = argv[i];
+  }
 
   const char* no_suffix = "--benchmark_min_time=4";
   const char* with_suffix = "--benchmark_min_time=4.0s";
   double expected = 4.0;
 
-  fake_argv[argc] = no_suffix;
-  DoTestHelper(&fake_argc, fake_argv, expected);
+  fake_argv[static_cast<size_t>(argc)] = no_suffix;
+  DoTestHelper(&fake_argc, fake_argv.data(), expected);
 
-  fake_argv[argc] = with_suffix;
-  DoTestHelper(&fake_argc, fake_argv, expected);
+  fake_argv[static_cast<size_t>(argc)] = with_suffix;
+  DoTestHelper(&fake_argc, fake_argv.data(), expected);
 
-  delete[] fake_argv;
   return 0;
 }
