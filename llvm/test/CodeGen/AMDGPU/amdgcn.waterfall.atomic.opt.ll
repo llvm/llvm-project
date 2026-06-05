@@ -15,7 +15,7 @@ define dllexport amdgpu_cs void @atomic_add_in_wf(ptr addrspace(1) %arg, i32 inr
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
-; GFX10-NEXT:    v_cmpx_eq_u32_e64 s0, v0
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s0, v0
 ; GFX10-NEXT:    s_ashr_i32 s3, s0, 31
 ; GFX10-NEXT:    s_add_u32 s6, s1, s0
 ; GFX10-NEXT:    s_addc_u32 s7, s2, s3
@@ -42,7 +42,7 @@ define dllexport amdgpu_cs void @atomic_add_in_wf(ptr addrspace(1) %arg, i32 inr
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cmpx_eq_u32_e64 s0, v0
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s0, v0
 ; GFX11-NEXT:    s_ashr_i32 s3, s0, 31
 ; GFX11-NEXT:    s_add_u32 s6, s1, s0
 ; GFX11-NEXT:    s_addc_u32 s7, s2, s3
@@ -103,7 +103,7 @@ define dllexport amdgpu_cs void @atomic_add_before(ptr addrspace(1) %arg, i32 in
 ; GFX10-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
-; GFX10-NEXT:    v_cmpx_eq_u32_e64 s0, v1
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s0, v1
 ; GFX10-NEXT:    s_ashr_i32 s3, s0, 31
 ; GFX10-NEXT:    s_add_u32 s6, s1, s0
 ; GFX10-NEXT:    s_addc_u32 s7, s2, s3
@@ -151,7 +151,7 @@ define dllexport amdgpu_cs void @atomic_add_before(ptr addrspace(1) %arg, i32 in
 ; GFX11-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cmpx_eq_u32_e64 s0, v1
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s0, v1
 ; GFX11-NEXT:    s_ashr_i32 s3, s0, 31
 ; GFX11-NEXT:    s_add_u32 s6, s1, s0
 ; GFX11-NEXT:    s_addc_u32 s7, s2, s3
@@ -198,7 +198,7 @@ define dllexport amdgpu_cs void @atomic_add_after(ptr addrspace(1) %arg, i32 inr
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
-; GFX10-NEXT:    v_cmpx_eq_u32_e64 s0, v1
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s0, v1
 ; GFX10-NEXT:    s_ashr_i32 s8, s0, 31
 ; GFX10-NEXT:    s_add_u32 s12, s1, s0
 ; GFX10-NEXT:    s_addc_u32 s13, s2, s8
@@ -244,7 +244,7 @@ define dllexport amdgpu_cs void @atomic_add_after(ptr addrspace(1) %arg, i32 inr
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cmpx_eq_u32_e64 s0, v1
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s0, v1
 ; GFX11-NEXT:    s_ashr_i32 s9, s0, 31
 ; GFX11-NEXT:    s_add_u32 s8, s1, s0
 ; GFX11-NEXT:    s_addc_u32 s9, s2, s9
@@ -320,8 +320,8 @@ define dllexport amdgpu_cs void @atomic_add_in_wf_partial(ptr addrspace(1) %arg,
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
-; GFX10-NEXT:    v_cmpx_eq_u32_e64 s0, v0
-; GFX10-NEXT:    v_cmpx_eq_u32_e64 s3, v1
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s0, v0
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s3, v1
 ; GFX10-NEXT:    s_ashr_i32 s3, s0, 31
 ; GFX10-NEXT:    s_add_u32 s6, s1, s0
 ; GFX10-NEXT:    s_addc_u32 s7, s2, s3
@@ -357,8 +357,8 @@ define dllexport amdgpu_cs void @atomic_add_in_wf_partial(ptr addrspace(1) %arg,
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmpx_eq_u32_e64 s0, v0
-; GFX11-NEXT:    v_cmpx_eq_u32_e64 s3, v1
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s0, v0
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s3, v1
 ; GFX11-NEXT:    s_ashr_i32 s3, s0, 31
 ; GFX11-NEXT:    s_add_u32 s6, s1, s0
 ; GFX11-NEXT:    s_addc_u32 s7, s2, s3
@@ -410,9 +410,9 @@ define dllexport amdgpu_cs void @atomic_add_after_triple_begin(ptr addrspace(1) 
 ; GFX10-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX10-NEXT:    v_readfirstlane_b32 s9, v2
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
-; GFX10-NEXT:    v_cmpx_eq_u32_e64 s0, v0
-; GFX10-NEXT:    v_cmpx_eq_u32_e64 s8, v1
-; GFX10-NEXT:    v_cmpx_eq_u32_e64 s9, v2
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s0, v0
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s8, v1
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s9, v2
 ; GFX10-NEXT:    s_ashr_i32 s8, s0, 31
 ; GFX10-NEXT:    s_add_u32 s12, s1, s0
 ; GFX10-NEXT:    s_addc_u32 s13, s2, s8
@@ -469,10 +469,10 @@ define dllexport amdgpu_cs void @atomic_add_after_triple_begin(ptr addrspace(1) 
 ; GFX11-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX11-NEXT:    v_readfirstlane_b32 s9, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cmpx_eq_u32_e64 s0, v0
-; GFX11-NEXT:    v_cmpx_eq_u32_e64 s8, v1
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s0, v0
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s8, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-NEXT:    v_cmpx_eq_u32_e64 s9, v2
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s9, v2
 ; GFX11-NEXT:    s_ashr_i32 s9, s0, 31
 ; GFX11-NEXT:    s_add_u32 s8, s1, s0
 ; GFX11-NEXT:    s_addc_u32 s9, s2, s9

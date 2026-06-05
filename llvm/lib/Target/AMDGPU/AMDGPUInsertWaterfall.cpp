@@ -139,8 +139,7 @@ static void compareIdxUsingCmpx(
     const SIInstrInfo *TII, MachineBasicBlock::iterator &I, const DebugLoc &DL,
     Register CurrentIdxReg, const MachineOperand &IndexOp, bool IsWave32) {
 
-  unsigned CmpxEqU32Opc = (IsWave32 ? AMDGPU::V_CMPX_EQ_U32_nosdst_e32
-                                    : AMDGPU::V_CMPX_EQ_U32_nosdst_e64);
+  unsigned CmpxEqU32Opc = AMDGPU::V_CMPX_EQ_U32_nosdst_e32;
 
   Register IndexReg = IndexOp.getReg();
   const TargetRegisterClass *IndexRC =
