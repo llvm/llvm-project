@@ -762,6 +762,38 @@ unsigned long long int check__ldaxr64(unsigned long long int volatile *p) {
 // CHECK-MSCOMPAT:       %[[RET:.*]] = call i64 @llvm.aarch64.ldaxr.p0(ptr elementtype(i64) %{{.*}})
 // CHECK-LINUX: error: call to undeclared function '__ldaxr64'
 
+unsigned char check__stxr8(unsigned char volatile *p, unsigned char v) {
+  return __stxr8(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__stxr8(ptr{{.*}}%p, i8{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[ST:.*]] = call i32 @llvm.aarch64.stxr.p0(i64 %{{.*}}, ptr elementtype(i8) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
+// CHECK-LINUX: error: call to undeclared function '__stxr8'
+
+unsigned char check__stxr16(unsigned short volatile *p, unsigned short v) {
+  return __stxr16(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__stxr16(ptr{{.*}}%p, i16{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[ST:.*]] = call i32 @llvm.aarch64.stxr.p0(i64 %{{.*}}, ptr elementtype(i16) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
+// CHECK-LINUX: error: call to undeclared function '__stxr16'
+
+unsigned char check__stxr32(unsigned int volatile *p, unsigned int v) {
+  return __stxr32(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__stxr32(ptr{{.*}}%p, i32{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[ST:.*]] = call i32 @llvm.aarch64.stxr.p0(i64 %{{.*}}, ptr elementtype(i32) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
+// CHECK-LINUX: error: call to undeclared function '__stxr32'
+
+unsigned char check__stxr64(unsigned long long int volatile *p, unsigned long long int v) {
+  return __stxr64(p, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__stxr64(ptr{{.*}}%p, i64{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       %[[ST:.*]] = call i32 @llvm.aarch64.stxr.p0(i64 %{{.*}}, ptr elementtype(i64) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i32 %[[ST]] to i8
+// CHECK-LINUX: error: call to undeclared function '__stxr64'
+
 void test__stlr8(unsigned __int8 volatile *p, unsigned __int8 v)
 {
   __stlr8 (p, v);
