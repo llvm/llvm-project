@@ -840,6 +840,23 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
   return success();
 }
 
+FailureOr<Value> BufferizationOptions::createCast(OpBuilder &b, Location loc,
+                                                  Type dest,
+                                                  Value value) const {
+  // If the value already has the correct type, no cast is needed.
+  if (value.getType() == dest)
+    return value;
+
+  if (castFn)
+    return (*castFn)(b, loc, dest, value);
+
+  assert(isa<BaseMemRefType>(dest) && "expected BaseMemRefType");
+  assert(isa<BaseMemRefType>(value.getType()) && "expected BaseMemRefType");
+  assert(memref::CastOp::areCastCompatible(value.getType(), dest) &&
+         "cast incompatible");
+  return memref::CastOp::create(b, loc, dest, value).getResult();
+}
+
 //===----------------------------------------------------------------------===//
 // Bufferization-specific IRMapping support with debugging.
 //===----------------------------------------------------------------------===//

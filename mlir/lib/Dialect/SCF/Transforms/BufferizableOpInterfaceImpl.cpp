@@ -29,25 +29,6 @@ namespace mlir {
 namespace scf {
 namespace {
 
-/// Helper function for loop bufferization. Cast the given buffer to the given
-/// memref type.
-static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
-  // If the buffer already has the correct type, no cast is needed.
-  if (buffer.getType() == type)
-    return buffer;
-
-  // TODO: Properly support with options, for now it is hardcoded MemRef type
-  // based approach
-  assert(isa<BaseMemRefType>(type) && "expected BaseMemRefType");
-  assert(isa<BaseMemRefType>(buffer.getType()) && "expected BaseMemRefType");
-  // TODO: In case `type` has a layout map that is not the fully dynamic
-  // one, we may not be able to cast the buffer. In that case, the loop
-  // iter_arg's layout map must be changed (see uses of `castBuffer`).
-  assert(memref::CastOp::areCastCompatible(buffer.getType(), type) &&
-         "scf.while op bufferization: cast incompatible");
-  return memref::CastOp::create(b, buffer.getLoc(), type, buffer).getResult();
-}
-
 /// Helper function for loop bufferization. Return "true" if the given value
 /// is guaranteed to not alias with an external tensor apart from values in
 /// `exceptions`. A value is external if it is defined outside of the given
@@ -114,7 +95,8 @@ struct ConditionOpInterface
             whileOp.getAfterArguments()[it.index()], options, state);
         if (failed(resultType))
           return failure();
-        Value buffer = castBuffer(rewriter, *maybeBuffer, *resultType);
+        Value buffer = *options.createCast(rewriter, maybeBuffer->getLoc(),
+                                           *resultType, *maybeBuffer);
         newArgs.push_back(buffer);
       } else {
         newArgs.push_back(value);
@@ -206,7 +188,7 @@ struct ExecuteRegionOpInterface
     rewriter.setInsertionPointAfter(newOp);
     SmallVector<Value> newResults;
     for (const auto &it : llvm::enumerate(executeRegionOp->getResultTypes())) {
-      if (isa<TensorType>(it.value())) {
+      if (isa<TensorLikeType>(it.value())) {
         newResults.push_back(bufferization::ToTensorOp::create(
             rewriter, executeRegionOp.getLoc(), it.value(),
             newOp->getResult(it.index())));
@@ -361,7 +343,7 @@ struct IndexSwitchOpInterface
     // Compute bufferized result types.
     SmallVector<Type> newTypes;
     for (Value result : switchOp.getResults()) {
-      if (!isa<TensorType>(result.getType())) {
+      if (!isa<TensorLikeType>(result.getType())) {
         newTypes.push_back(result.getType());
         continue;
       }
@@ -762,7 +744,8 @@ struct ForOpInterface
       auto targetType = bufferization::getBufferType(result, options, state);
       if (failed(targetType))
         return failure();
-      castedInitArgs.push_back(castBuffer(rewriter, initArg, *targetType));
+      castedInitArgs.push_back(*options.createCast(rewriter, initArg.getLoc(),
+                                                   *targetType, initArg));
     }
 
     // Construct a new scf.for op with memref instead of tensor values.
@@ -986,7 +969,8 @@ struct WhileOpInterface
       auto targetType = bufferization::getBufferType(beforeArg, options, state);
       if (failed(targetType))
         return failure();
-      castedInitArgs.push_back(castBuffer(rewriter, initArg, *targetType));
+      castedInitArgs.push_back(*options.createCast(rewriter, initArg.getLoc(),
+                                                   *targetType, initArg));
     }
 
     // The result types of a WhileOp are the same as the "after" bbArg types.
@@ -1186,14 +1170,16 @@ struct YieldOpInterface
               yieldOp->getParentOp()->getResult(it.index()), options, state);
           if (failed(resultType))
             return failure();
-          buffer = castBuffer(rewriter, buffer, *resultType);
+          buffer = *options.createCast(rewriter, buffer.getLoc(), *resultType,
+                                       buffer);
         } else if (auto whileOp =
                        dyn_cast<scf::WhileOp>(yieldOp->getParentOp())) {
           FailureOr<BufferLikeType> resultType = bufferization::getBufferType(
               whileOp.getBeforeArguments()[it.index()], options, state);
           if (failed(resultType))
             return failure();
-          buffer = castBuffer(rewriter, buffer, *resultType);
+          buffer = *options.createCast(rewriter, buffer.getLoc(), *resultType,
+                                       buffer);
         }
         newResults.push_back(buffer);
       } else {
