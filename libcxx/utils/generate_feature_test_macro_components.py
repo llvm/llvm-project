@@ -721,7 +721,9 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_generator",
-            "values": {"c++23": 202207}, # P2502R2: std::generator: Synchronous Coroutine Generator for Ranges
+            "values": {
+                "c++23": 202207
+            },  # P2502R2: std::generator: Synchronous Coroutine Generator for Ranges
             "headers": ["generator"],
         },
         {
