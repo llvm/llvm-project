@@ -31,6 +31,20 @@ set(LLDB_TEST_TRIPLE
   ${default_lldb_test_triple}
   CACHE STRING "The target triple used to build test inferiors.")
 
+# Some cases may require an explicit architcture selection, so
+# LLDB_TEST_ARCH is allowed to override the default architecture only when
+# LLDB_TEST_TRIPLE is also set.
+if(DEFINED LLDB_TEST_ARCH AND NOT "${LLDB_TEST_ARCH}" STREQUAL "")
+  if(NOT DEFINED LLDB_TEST_TRIPLE)
+    message(FATAL_ERROR
+      "LLDB_TEST_ARCH may only be set when LLDB_TEST_TRIPLE is also explicitly set.")
+  endif()
+endif()
+
+set(LLDB_TEST_ARCH
+  ""
+  CACHE STRING "Specify the architecture to run LLDB tests as (x86|x64).  Determines whether tests are compiled with -m32 or -m64")
+
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   ""
