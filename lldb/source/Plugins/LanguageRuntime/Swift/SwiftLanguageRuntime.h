@@ -119,12 +119,18 @@ public:
   /// of versioning.
   static std::optional<uint32_t> FindConcurrencyDebugVersion(Process &process);
 
+  /// Returns the byte offset of `AsyncTask::NameFragment` from the start of an
+  /// async task.
+  static llvm::Expected<lldb::offset_t>
+  FindAsyncTaskNameOffset(Process &process);
+
   /// Inclusive range of `_swift_concurrency_debug_internal_layout_version`
   /// values that LLDB knows how to decode.
   ///
   ///   1 - the original layout
   ///   2 - AsyncTask gained optional tail-allocated `NameFragment` ahead of its
-  ///       other fragments when the task has an initial name (ahead of the ChildFragment).
+  ///       other fragments when the task has an initial name (ahead of the
+  ///       ChildFragment).
   static constexpr uint32_t ConcurrencyDebugVersionBaseline = 1;
   static constexpr uint32_t ConcurrencyDebugVersionLatest = 2;
 
@@ -1024,7 +1030,8 @@ private:
   llvm::DenseMap<uint64_t, lldb::addr_t> m_tid_to_task_addr_location;
 };
 
-/// Represents `swift::JobFlags` as defined in `include/swift/ABI/MetadataValues.h`.
+/// Represents `swift::JobFlags` as defined in
+/// `include/swift/ABI/MetadataValues.h`.
 struct JobFlags {
   uint32_t bits;
 
@@ -1040,32 +1047,29 @@ struct JobFlags {
 };
 
 /// The offset of ChildFragment, which is the first fragment of an AsyncTask.
-inline constexpr lldb::offset_t AsyncTaskSize = sizeof(::swift::AsyncTask);
+inline constexpr size_t AsyncTaskSize = sizeof(::swift::AsyncTask);
 
-/// Size of `AsyncTask::NameFragment` — `const char *Name` + `size_t Length`,
+/// Size of `AsyncTask::NameFragment` = `const char *Name` + `size_t Length`,
 /// i.e. two pointer-sized words. Tail-allocated immediately after the
 /// AsyncTask iff `JobFlags::hasInitialTaskName()` is set.
-inline lldb::offset_t NameFragmentSize(Process &process) {
+inline size_t NameFragmentSize(Process &process) {
   return 2 * process.GetAddressByteSize();
 }
 
-/// Read the `JobFlags` of an async task from the inferior process.
-/// Returns `std::nullopt` if reading the 4-byte flag word fails.
-std::optional<JobFlags> GetAsyncJobFlags(Process &process,
-                                         lldb::addr_t task_addr);
+/// Read the `JobFlags` of an async task.
+llvm::Expected<JobFlags> GetAsyncJobFlags(Process &process,
+                                          lldb::addr_t task_addr);
 
 /// Returns the offset (in bytes) of `ChildFragment` from the start of an
-/// async task. Reads `JobFlags` from the inferior; `std::nullopt` if that
-/// read fails.
-std::optional<lldb::offset_t>
-GetChildFragmentOffset(Process &process, lldb::addr_t task_addr);
+/// async task.
+llvm::Expected<lldb::offset_t> GetChildFragmentOffset(Process &process,
+                                                      lldb::addr_t task_addr);
 
-/// Returns the offset (in bytes) of `ChildFragment` from the start of an
-/// async task whose `JobFlags` are already known. Infallible.
+/// Returns the offset of `ChildFragment` from the start of an
+/// async task.
 ///
 /// `flags` must come from the same task whose offset is being computed —
-/// they encode which fragments are tail-allocated, which determines the
-/// offset.
+/// they encode which fragments are available, which impacts the offset.
 lldb::offset_t GetChildFragmentOffset(Process &process, JobFlags flags);
 
 /// Get the name of a task.

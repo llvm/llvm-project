@@ -889,13 +889,17 @@ public:
         addr_t parent_addr = 0;
         if (m_task_info.isChildTask) {
           // Read ChildFragment::Parent, the first field of the ChildFragment.
-          if (auto child_offset = lldb_private::GetChildFragmentOffset(
-                  *process_sp, m_task_ptr)) {
+          auto child_offset =
+              lldb_private::GetChildFragmentOffset(*process_sp, m_task_ptr);
+          if (child_offset) {
             Status status;
             parent_addr = process_sp->ReadPointerFromMemory(
                 m_task_ptr + *child_offset, status);
             if (status.Fail() || parent_addr == LLDB_INVALID_ADDRESS)
               parent_addr = 0;
+          } else {
+            LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+                           child_offset.takeError(), "{0}");
           }
         }
 
@@ -1222,8 +1226,9 @@ public:
       concurrency_version =
           SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
 
-    m_is_supported_target = is_64bit &&
-      SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(concurrency_version);
+    m_is_supported_target =
+        is_64bit && SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(
+                        concurrency_version);
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
@@ -1348,14 +1353,17 @@ private:
     Task getNextChild(Status &status) {
       addr_t next_task = LLDB_INVALID_ADDRESS;
       if (status.Success()) {
-        if (auto child_offset =
-                lldb_private::GetChildFragmentOffset(*process_sp, addr)) {
+        auto child_offset =
+            lldb_private::GetChildFragmentOffset(*process_sp, addr);
+        if (child_offset) {
           // NextChild is the second pointer-sized field in ChildFragment
           // (after `Parent`).
           offset_t next_child_offset =
               *child_offset + process_sp->GetAddressByteSize();
           next_task = process_sp->ReadPointerFromMemory(
               addr + next_child_offset, status);
+        } else {
+          status = Status::FromError(child_offset.takeError());
         }
       }
       return {process_sp, next_task};
