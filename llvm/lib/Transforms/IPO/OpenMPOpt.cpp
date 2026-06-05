@@ -447,9 +447,6 @@ struct OMPInformationCache : public InformationCache {
                   InternalControlVar::ICV___last>
       ICVs;
 
-  /// Functions for which OpenMP-specific AAs have already been registered.
-  DenseSet<const Function *> RegisteredFunctionAAs;
-
   /// Helper to initialize all internal control variable information for those
   /// defined in OMPKinds.def.
   void initializeInternalControlVars() {
@@ -5593,8 +5590,6 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
 
 void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
   auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
-  if (!OMPInfoCache.RegisteredFunctionAAs.insert(&F).second)
-    return;
 
   IRPosition FPos = IRPosition::function(F);
   A.getOrCreateAAFor<AAExecutionDomain>(FPos);
