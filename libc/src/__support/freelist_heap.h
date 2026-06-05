@@ -1,9 +1,14 @@
-//===-- Interface for freelist_heap ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Interface for freelist_heap.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H
@@ -53,11 +58,11 @@ private:
 
   void *allocate_impl(size_t alignment, size_t size);
 
-  bool shrink_in_place(Block *block, size_t size);
-
-  span<cpp::byte> block_to_span(Block *block) {
-    return span<cpp::byte>(block->usable_space(), block->inner_size());
+  span<cpp::byte> block_to_span(BlockRef block) {
+    return span<cpp::byte>(block.usable_space(), block.inner_size());
   }
+
+  bool shrink_in_place(BlockRef block, size_t size);
 
   bool is_valid_ptr(void *ptr) { return ptr >= begin && ptr < end; }
 
@@ -77,9 +82,9 @@ private:
 
 LIBC_INLINE void FreeListHeap::init() {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
-  auto result = Block::init(region());
-  Block *block = *result;
-  free_store.set_range({0, cpp::bit_ceil(block->inner_size())});
+  auto result = BlockRef::init(region());
+  BlockRef block = *result;
+  free_store.set_range({0, cpp::bit_ceil(block.inner_size())});
   free_store.insert(block);
   is_initialized = true;
 }
@@ -91,26 +96,26 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (!is_initialized)
     init();
 
-  size_t request_size = Block::min_size_for_allocation(alignment, size);
+  size_t request_size = BlockRef::min_size_for_allocation(alignment, size);
   if (!request_size)
     return nullptr;
 
-  Block *block = free_store.remove_best_fit(request_size);
+  BlockRef block = free_store.remove_best_fit(request_size);
   if (!block)
     return nullptr;
 
-  auto block_info = Block::allocate(block, alignment, size);
+  auto block_info = BlockRef::allocate(block, alignment, size);
   if (block_info.next)
     free_store.insert(block_info.next);
   if (block_info.prev)
     free_store.insert(block_info.prev);
 
-  block_info.block->mark_used();
-  return block_info.block->usable_space();
+  block_info.block.mark_used();
+  return block_info.block.usable_space();
 }
 
 LIBC_INLINE void *FreeListHeap::allocate(size_t size) {
-  return allocate_impl(Block::MIN_ALIGN, size);
+  return allocate_impl(BlockRef::MIN_ALIGN, size);
 }
 
 LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
@@ -123,8 +128,8 @@ LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
   if (size % alignment != 0)
     return nullptr;
 
-  // The minimum alignment supported by Block is MIN_ALIGN.
-  alignment = cpp::max(alignment, Block::MIN_ALIGN);
+  // The minimum alignment supported by BlockRef is MIN_ALIGN.
+  alignment = cpp::max(alignment, BlockRef::MIN_ALIGN);
 
   return allocate_impl(alignment, size);
 }
@@ -137,53 +142,43 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
 
   LIBC_ASSERT(is_valid_ptr(bytes) && "Invalid pointer");
 
-  Block *block = Block::from_usable_space(bytes);
-  LIBC_ASSERT(block->next() && "sentinel last block cannot be freed");
-  LIBC_ASSERT(block->used() && "double free");
-  block->mark_free();
+  BlockRef block = BlockRef::from_usable_space(bytes);
+  LIBC_ASSERT(block.next() && "sentinel last block cannot be freed");
+  LIBC_ASSERT(block.used() && "double free");
+  block.mark_free();
 
   // Can we combine with the left or right blocks?
-  Block *prev_free = block->prev_free();
-  Block *next = block->next();
+  BlockRef prev_free = block.prev_free();
+  BlockRef next = block.next();
 
-  if (prev_free != nullptr) {
+  if (prev_free) {
     // Remove from free store and merge.
     free_store.remove(prev_free);
     block = prev_free;
-    block->merge_next();
+    block.merge_next();
   }
-  if (!next->used()) {
+  if (!next.used()) {
     free_store.remove(next);
-    block->merge_next();
+    block.merge_next();
   }
   // Add back to the freelist
   free_store.insert(block);
 }
 
-LIBC_INLINE bool FreeListHeap::shrink_in_place(Block *block, size_t size) {
-  size_t min_outer_size = Block::outer_size(cpp::max(size, sizeof(size_t)));
-  uintptr_t next_block_start = Block::next_possible_block_start(
-      reinterpret_cast<uintptr_t>(block) + min_outer_size, Block::MIN_ALIGN);
-  size_t new_outer_size = next_block_start - reinterpret_cast<uintptr_t>(block);
-  if (block->outer_size() >= new_outer_size) {
-    // TODO: this is a temporary workaround due to Block's setting prev_
-    // in its constructor. This code should be deleted once we finishing
-    // refactoring.
-    cpp::byte *overlap_ptr =
-        reinterpret_cast<cpp::byte *>(block) + new_outer_size;
-    size_t backup;
-    LIBC_NAMESPACE::inline_memcpy(&backup, overlap_ptr, sizeof(size_t));
-    optional<Block *> next = block->split(size);
-
-    LIBC_NAMESPACE::inline_memcpy(overlap_ptr, &backup, sizeof(size_t));
-
+LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {
+  size_t min_outer_size = BlockRef::outer_size(cpp::max(size, sizeof(size_t)));
+  uintptr_t next_block_start = BlockRef::next_possible_block_start(
+      block.addr() + min_outer_size, BlockRef::MIN_ALIGN);
+  size_t new_outer_size = next_block_start - block.addr();
+  if (block.outer_size() >= new_outer_size) {
+    optional<BlockRef> next = block.split(size);
     // register the new block on successful split
     if (next.has_value()) {
-      Block *next_block = *next;
-      Block *right = next_block->next();
-      if (right != nullptr && !right->used()) {
+      BlockRef next_block = *next;
+      BlockRef right = next_block.next();
+      if (!right.used()) {
         free_store.remove(right);
-        next_block->merge_next();
+        next_block.merge_next();
       }
       free_store.insert(next_block);
     }
@@ -209,10 +204,10 @@ LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
   if (!is_valid_ptr(bytes))
     return nullptr;
 
-  Block *block = Block::from_usable_space(bytes);
-  if (!block->used())
+  BlockRef block = BlockRef::from_usable_space(bytes);
+  if (!block.used())
     return nullptr;
-  size_t old_size = block->inner_size();
+  size_t old_size = block.inner_size();
 
   if (old_size >= size) {
     shrink_in_place(block, size);
