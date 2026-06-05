@@ -5360,6 +5360,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateTruncOrBitCast(Val, RealResTy);
   }
 
+  if (BuiltinID == AArch64::BI__ldaxr8 || BuiltinID == AArch64::BI__ldaxr16 ||
+      BuiltinID == AArch64::BI__ldaxr32 || BuiltinID == AArch64::BI__ldaxr64) {
+    // Load-acquire-exclusive (LDAXR*). Reuse the llvm.aarch64.ldaxr lowering of
+    // the ACLE __builtin_arm_ldaex builtin.
+    Value *LoadAddr = EmitScalarExpr(E->getArg(0));
+    QualType Ty = E->getType();
+    llvm::Type *RealResTy = ConvertType(Ty);
+    llvm::Type *IntTy =
+        llvm::IntegerType::get(getLLVMContext(), getContext().getTypeSize(Ty));
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_ldaxr, DefaultPtrTy);
+    CallInst *Val = Builder.CreateCall(F, LoadAddr, "ldaxr");
+    Val->addParamAttr(
+        0, Attribute::get(getLLVMContext(), Attribute::ElementType, IntTy));
+    return Builder.CreateTruncOrBitCast(Val, RealResTy);
+  }
+
   if (BuiltinID == AArch64::BI__stlr8 || BuiltinID == AArch64::BI__stlr16 ||
       BuiltinID == AArch64::BI__stlr32 || BuiltinID == AArch64::BI__stlr64) {
     Value *Ptr = EmitScalarExpr(E->getArg(0));

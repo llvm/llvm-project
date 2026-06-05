@@ -731,6 +731,37 @@ unsigned long long int check__ldxr64(unsigned long long int volatile *p) {
 // CHECK-MSCOMPAT:       %[[RET:.*]] = call i64 @llvm.aarch64.ldxr.p0(ptr elementtype(i64) %{{.*}})
 // CHECK-LINUX: error: call to undeclared function '__ldxr64'
 
+unsigned char check__ldaxr8(unsigned char volatile *p) {
+  return __ldaxr8(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i8 @check__ldaxr8(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[RET:.*]] = call i64 @llvm.aarch64.ldaxr.p0(ptr elementtype(i8) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i64 %[[RET]] to i8
+// CHECK-LINUX: error: call to undeclared function '__ldaxr8'
+
+unsigned short check__ldaxr16(unsigned short volatile *p) {
+  return __ldaxr16(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i16 @check__ldaxr16(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[RET:.*]] = call i64 @llvm.aarch64.ldaxr.p0(ptr elementtype(i16) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i64 %[[RET]] to i16
+// CHECK-LINUX: error: call to undeclared function '__ldaxr16'
+
+unsigned int check__ldaxr32(unsigned int volatile *p) {
+  return __ldaxr32(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i32 @check__ldaxr32(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[RET:.*]] = call i64 @llvm.aarch64.ldaxr.p0(ptr elementtype(i32) %{{.*}})
+// CHECK-MSCOMPAT:       trunc i64 %[[RET]] to i32
+// CHECK-LINUX: error: call to undeclared function '__ldaxr32'
+
+unsigned long long int check__ldaxr64(unsigned long long int volatile *p) {
+  return __ldaxr64(p);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}i64 @check__ldaxr64(ptr{{.*}}%p){{.*}}{
+// CHECK-MSCOMPAT:       %[[RET:.*]] = call i64 @llvm.aarch64.ldaxr.p0(ptr elementtype(i64) %{{.*}})
+// CHECK-LINUX: error: call to undeclared function '__ldaxr64'
+
 void test__stlr8(unsigned __int8 volatile *p, unsigned __int8 v)
 {
   __stlr8 (p, v);

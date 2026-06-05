@@ -60,6 +60,11 @@ unsigned __int16 __ldxr16(const volatile unsigned __int16 *);
 unsigned __int32 __ldxr32(const volatile unsigned __int32 *);
 unsigned __int64 __ldxr64(const volatile unsigned __int64 *);
 
+unsigned __int8 __ldaxr8(const volatile unsigned __int8 *);
+unsigned __int16 __ldaxr16(const volatile unsigned __int16 *);
+unsigned __int32 __ldaxr32(const volatile unsigned __int32 *);
+unsigned __int64 __ldaxr64(const volatile unsigned __int64 *);
+
 #ifdef __cplusplus
 }
 #endif
