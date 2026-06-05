@@ -41,7 +41,7 @@ jobs:
           persist-credentials: false
           python-version: ${{ matrix.python-version }}
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
         with:
           max-size: 2G
           key: spirv-ubuntu-24.04
