@@ -30,6 +30,13 @@ namespace std {
 #else
 #  include <__config>
 
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+_LIBCPP_PUSH_MACROS
+#  include <__undef_macros>
+
 #  if _LIBCPP_STD_VER >= 23
 
 #    include <__algorithm/max.h>
@@ -68,13 +75,6 @@ namespace std {
 #    include <__utility/swap.h>
 #    include <cstdint>
 #    include <new>
-
-#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#      pragma GCC system_header
-#    endif
-
-_LIBCPP_PUSH_MACROS
-#    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -469,10 +469,10 @@ public:
     void* const __ptr = ::operator new(__size + sizeof(__dealloc_fn));
     __dealloc_fn __dealloc =
         [](void* const __dealloc_ptr, [[maybe_unused]] const size_t __dealloc_size) static noexcept -> void {
-#    ifdef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
-      ::operator delete(__dealloc_ptr);
-#    else
+#    if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
       ::operator delete(__dealloc_ptr, __dealloc_size + sizeof(__dealloc_fn));
+#    else
+      ::operator delete(__dealloc_ptr);
 #    endif
     };
 
