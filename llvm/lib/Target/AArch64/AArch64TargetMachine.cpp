@@ -938,8 +938,10 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
+#ifndef EJIT_BARE_METAL
   addPass(createAArch64SLSHardeningPass());
   addPass(createAArch64PointerAuthPass());
+#endif
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());
   // Relax conditional branch instructions if they're otherwise out of

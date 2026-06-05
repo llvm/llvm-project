@@ -116,7 +116,14 @@ do_configure() {
   fi
 
   # release
+  # extra_flags: flags without spaces in values (safe for unquoted expansion).
+  # Flags with spaces (CFLAGS, CXXFLAGS, LINKER_FLAGS) go directly in the
+  # cmake command line below with proper shell quoting.
+  #
+  # We use two separate cmake invocations (minimal / normal) because the
+  # minimal variant has extra linker flags whose values contain spaces.
   local extra_flags=""
+
   if [ "$variant" = "minimal" ]; then
     log "Configuring: release ${arch} minimal → ${build_dir}"
     extra_flags="
@@ -129,12 +136,28 @@ do_configure() {
       -DLLVM_ENABLE_ZSTD=OFF
       -DLLVM_ENABLE_LIBXML2=OFF
       -DLLVM_ENABLE_TERMINFO=OFF
-      -DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections
-      -DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections
-      -DCMAKE_C_FLAGS_RELEASE=-Os -DNDEBUG
-      -DCMAKE_CXX_FLAGS_RELEASE=-Os -DNDEBUG
-      -DCMAKE_EXE_LINKER_FLAGS=-Wl,--gc-sections -Wl,--strip-all
-      -DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gc-sections -Wl,--strip-all
+    "
+    # shellcheck disable=SC2086
+    cmake -S "${LLVM_SRC}" -B "${build_dir}" \
+      -G "Ninja" \
+      -DCMAKE_BUILD_TYPE=Release \
+      "-DLLVM_TARGETS_TO_BUILD=${target}" \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DLLVM_OPTIMIZED_TABLEGEN=ON \
+      -DLLVM_ENABLE_PROJECTS="clang;lld" \
+      "-DCMAKE_C_COMPILER=${cc}" \
+      "-DCMAKE_CXX_COMPILER=${cxx}" \
+      -DEJIT_BARE_METAL=${EJIT_BARE_METAL} \
+      -DEJIT_FREESTANDING=${EJIT_FREESTANDING} \
+      ${EJIT_TARGET_TRIPLE:+-DEJIT_DEFAULT_TARGET_TRIPLE="${EJIT_TARGET_TRIPLE}"} \
+      ${ccache_opts} \
+      ${extra_flags} \
+      "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" \
+      "-DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections" \
+      "-DCMAKE_C_FLAGS_RELEASE=-Os -DNDEBUG" \
+      "-DCMAKE_CXX_FLAGS_RELEASE=-Os -DNDEBUG" \
+      "-DCMAKE_EXE_LINKER_FLAGS=-Wl,--gc-sections -Wl,--strip-all" \
+      "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gc-sections -Wl,--strip-all"
   else
     log "Configuring: release ${arch} → ${build_dir}"
     extra_flags+="
@@ -144,27 +167,27 @@ do_configure() {
       -DLLVM_ENABLE_LIBXML2=OFF
       -DLLVM_ENABLE_PIC=OFF
       -DLLVM_ENABLE_THREADS=OFF
-      -DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections
-      -DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections
-      -DCMAKE_C_FLAGS_RELEASE=-Os -DNDEBUG
-      -DCMAKE_CXX_FLAGS_RELEASE=-Os -DNDEBUG
+    "
+    # shellcheck disable=SC2086
+    cmake -S "${LLVM_SRC}" -B "${build_dir}" \
+      -G "Ninja" \
+      -DCMAKE_BUILD_TYPE=Release \
+      "-DLLVM_TARGETS_TO_BUILD=${target}" \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DLLVM_OPTIMIZED_TABLEGEN=ON \
+      -DLLVM_ENABLE_PROJECTS="clang;lld" \
+      "-DCMAKE_C_COMPILER=${cc}" \
+      "-DCMAKE_CXX_COMPILER=${cxx}" \
+      -DEJIT_BARE_METAL=${EJIT_BARE_METAL} \
+      -DEJIT_FREESTANDING=${EJIT_FREESTANDING} \
+      ${EJIT_TARGET_TRIPLE:+-DEJIT_DEFAULT_TARGET_TRIPLE="${EJIT_TARGET_TRIPLE}"} \
+      ${ccache_opts} \
+      ${extra_flags} \
+      "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" \
+      "-DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections" \
+      "-DCMAKE_C_FLAGS_RELEASE=-Os -DNDEBUG" \
+      "-DCMAKE_CXX_FLAGS_RELEASE=-Os -DNDEBUG"
   fi
-
-  # shellcheck disable=SC2086
-  cmake -S "${LLVM_SRC}" -B "${build_dir}" \
-    -G "Ninja" \
-    -DCMAKE_BUILD_TYPE=Release \
-    "-DLLVM_TARGETS_TO_BUILD=${target}" \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DLLVM_OPTIMIZED_TABLEGEN=ON \
-    -DLLVM_ENABLE_PROJECTS="clang;lld" \
-    "-DCMAKE_C_COMPILER=${cc}" \
-    "-DCMAKE_CXX_COMPILER=${cxx}" \
-    -DEJIT_BARE_METAL=${EJIT_BARE_METAL} \
-    -DEJIT_FREESTANDING=${EJIT_FREESTANDING} \
-    ${EJIT_TARGET_TRIPLE:+-DEJIT_DEFAULT_TARGET_TRIPLE="${EJIT_TARGET_TRIPLE}"} \
-    ${ccache_opts} \
-    ${extra_flags}
 }
 
 #===-- Build ---------------------------------------------------------------===#

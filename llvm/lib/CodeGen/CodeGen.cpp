@@ -24,9 +24,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBasicBlockPathCloningPass(Registry);
   initializeBasicBlockSectionsPass(Registry);
   initializeBranchFolderLegacyPass(Registry);
-  initializeBranchRelaxationLegacyPass(Registry);
   initializeBreakFalseDepsPass(Registry);
 #endif
+  initializeBranchRelaxationLegacyPass(Registry);
   initializeCallBrPreparePass(Registry);
 #ifndef EJIT_BARE_METAL
   initializeCFGuardLongjmpPass(Registry);
@@ -90,9 +90,11 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMIRCanonicalizerPass(Registry);
   initializeMIRNamerPass(Registry);
   initializeMIRProfileLoaderPassPass(Registry);
+#endif
   initializeMachineBlockFrequencyInfoWrapperPassPass(Registry);
   initializeMachineBlockPlacementLegacyPass(Registry);
   initializeMachineBlockPlacementStatsLegacyPass(Registry);
+#ifndef EJIT_BARE_METAL
   initializeMachineCFGPrinterPass(Registry);
   initializeMachineCSELegacyPass(Registry);
   initializeMachineCombinerPass(Registry);
