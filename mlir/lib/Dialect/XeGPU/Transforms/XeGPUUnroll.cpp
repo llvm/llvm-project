@@ -395,9 +395,9 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
                                                 rewriter.getIndexAttr(0));
           fullOffsets.append(offsets.begin(), offsets.end());
           return xegpu::LoadNdOp::create(
-              rewriter, loc, newValueTy, tdesc, fullOffsets,
-              op.getPackedAttr(), op.getTransposeAttr(), op.getL1HintAttr(),
-              op.getL2HintAttr(), op.getL3HintAttr(), layout);
+              rewriter, loc, newValueTy, tdesc, fullOffsets, op.getPackedAttr(),
+              op.getTransposeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
+              op.getL3HintAttr(), layout);
         };
         auto batchLoads = computeUnrolledOffsets(
             innerOffsets, innerTdescTy, innerTarget, createLoad, loc, rewriter);
