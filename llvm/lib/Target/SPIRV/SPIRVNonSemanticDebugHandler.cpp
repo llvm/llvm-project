@@ -474,11 +474,13 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   if (!MAI.getExtInstSetReg(NSSet).isValid())
     return;
 
-  for (const CompileUnitInfo &Info : CompileUnits)
-    (void)emitOpStringIfNew(Info.FilePath, MAI);
+  for (const CompileUnitInfo &Info : CompileUnits) {
+    [[maybe_unused]] MCRegister Reg = emitOpStringIfNew(Info.FilePath, MAI);
+  }
 
-  for (const DIBasicType *BT : BasicTypes)
-    (void)emitOpStringIfNew(BT->getName(), MAI);
+  for (const DIBasicType *BT : BasicTypes) {
+    [[maybe_unused]] MCRegister Reg = emitOpStringIfNew(BT->getName(), MAI);
+  }
 
 #ifndef NDEBUG
   NonSemanticOpStringsSectionEmitted = true;
