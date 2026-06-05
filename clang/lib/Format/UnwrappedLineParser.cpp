@@ -1517,12 +1517,14 @@ void UnwrappedLineParser::parseStructuralElement(
            FormatTok->isOneOf(tok::kw_volatile, tok::kw_inline, tok::kw_goto)) {
       nextToken();
     }
-    if (FormatTok && FormatTok->is(tok::l_brace)) {
+    if (!FormatTok)
+      break;
+    if (FormatTok->is(tok::l_brace)) {
       FormatTok->setFinalizedType(TT_InlineASMBrace);
       OpenType = tok::l_brace;
       CloseType = tok::r_brace;
       DoNotFormat = true;
-    } else if (FormatTok && FormatTok->is(tok::l_paren)) {
+    } else if (FormatTok->is(tok::l_paren)) {
       OpenType = tok::l_paren;
       CloseType = tok::r_paren;
       FormatTok->setFinalizedType(TT_InlineASMParen);
