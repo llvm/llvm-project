@@ -289,14 +289,15 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
       const MachineInstr *IMI = ISUI->getInstr();
-      if (shouldScheduleAdjacent(TII, ST, nullptr, *IMI))
+      if (shouldScheduleAdjacent(TII, ST, nullptr, *IMI) &&
+          hasLessThanNumFused(*ISUI, 2))
         VOPDCapable[IIdx] = true;
     }
 
     IIdx = 0;
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
-      if (!VOPDCapable[IIdx] || !hasLessThanNumFused(*ISUI, 2))
+      if (!VOPDCapable[IIdx])
         continue;
       const MachineInstr *IMI = ISUI->getInstr();
       unsigned JIdx = IIdx + 1;
