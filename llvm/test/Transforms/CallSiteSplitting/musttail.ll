@@ -1,5 +1,29 @@
 ; RUN: opt < %s -passes=callsite-splitting -verify-dom-info -S | FileCheck %s
 
+;CHECK-LABEL: @caller
+;CHECK-LABEL: Top.split:
+;CHECK: %ca1 = musttail call ptr @callee(ptr null, ptr %b)
+;CHECK: %cb2 = bitcast ptr %ca1 to ptr
+;CHECK: ret ptr %cb2
+;CHECK-LABEL: TBB.split
+;CHECK: %ca3 = musttail call ptr @callee(ptr nonnull %a, ptr null)
+;CHECK: %cb4 = bitcast ptr %ca3 to ptr
+;CHECK: ret ptr %cb4
+define ptr @caller(ptr %a, ptr %b) {
+Top:
+  %c = icmp eq ptr %a, null
+  br i1 %c, label %Tail, label %TBB
+TBB:
+  %c2 = icmp eq ptr %b, null
+  br i1 %c2, label %Tail, label %End
+Tail:
+  %ca = musttail call ptr @callee(ptr %a, ptr %b)
+  %cb = bitcast ptr %ca to ptr
+  ret ptr %cb
+End:
+  ret ptr null
+}
+
 define ptr @callee(ptr %a, ptr %b) noinline {
   ret ptr %a
 }

@@ -1169,6 +1169,25 @@ TEST(ParseArchString, RVYZcaImpliesC) {
   }
 }
 
+TEST(ParseArchString, RVYFeatureImplicationC) {
+  // rv32y + c + f should not imply zcf
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseFeatures(32, {"+experimental-y", "+c", "+f"});
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  EXPECT_FALSE((*MaybeISAInfo)->hasExtension("zcf"));
+  // rv32y + c + f + d should imply zcd, but not zcf
+  MaybeISAInfo =
+      RISCVISAInfo::parseFeatures(32, {"+experimental-y", "+c", "+f", "+d"});
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  EXPECT_FALSE((*MaybeISAInfo)->hasExtension("zcf"));
+  EXPECT_TRUE((*MaybeISAInfo)->hasExtension("zcd"));
+  // rv64y + c + d should not imply zcd
+  MaybeISAInfo =
+      RISCVISAInfo::parseFeatures(64, {"+experimental-y", "+c", "+d"});
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  EXPECT_FALSE((*MaybeISAInfo)->hasExtension("zcd"));
+}
+
 TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   // Test Zca+Zcb+Zcmp+Zcmt implies Zce behavior.
 
@@ -1567,12 +1586,18 @@ Experimental extensions
     zvfbfa               0.1
     zvfofp8min           0.2
     zvfqwbdota8f         0.2
+    zvfqwdota8f          0.2
     zvfwbdota16bf        0.2
+    zvfwdota16bf         0.2
     zvkgs                0.7
     zvqwbdota16i         0.2
     zvqwbdota8i          0.2
+    zvqwdota16i          0.2
+    zvqwdota8i           0.2
     zvvfmm               0.1
     zvvmm                0.1
+    zvvmtls              0.1
+    zvvmttls             0.1
     zvzip                0.1
     smpmpmt              0.6
     svukte               0.3
