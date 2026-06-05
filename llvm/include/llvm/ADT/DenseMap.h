@@ -489,9 +489,11 @@ protected:
 
     assert((getNumBuckets() & (getNumBuckets() - 1)) == 0 &&
            "# initial buckets must be a power of two!");
-    std::memset(getUsed(), 0,
-                llvm::densemap::detail::usedWords(getNumBuckets()) *
-                    sizeof(UsedT));
+    if (getNumBuckets()) {
+      std::memset(getUsed(), 0,
+                  llvm::densemap::detail::usedWords(getNumBuckets()) *
+                      sizeof(UsedT));
+    }
   }
 
   /// Returns the number of buckets to allocate to ensure that the DenseMap can
