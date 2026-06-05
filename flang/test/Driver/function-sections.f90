@@ -5,8 +5,11 @@
 ! CHECK-DS: "-fdata-sections"
 ! CHECK-NODS-NOT: "-fdata-sections"
 
-! RUN: %flang -### %s 2>&1 \
+! RUN: %flang -### -target x86_64-none-linux-gnu %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=CHECK-NOFS --check-prefix=CHECK-NODS
+
+! RUN: %flang -### -target powerpc64-ibm-aix-xcoff %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=CHECK-NOFS
 
 ! RUN: %flang -### %s -ffunction-sections 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=CHECK-FS
