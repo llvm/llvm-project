@@ -767,18 +767,10 @@ define void @freeze_buildvector_not_simple_type(ptr %dst) nounwind {
 }
 
 define <4 x i32> @freeze_lshr_extract_concat_high_demanded(<4 x i32> %a, <4 x i32> %b) {
-; X86-LABEL: freeze_lshr_extract_concat_high_demanded:
-; X86:       # %bb.0:
-; X86-NEXT:    vpsrld $1, %xmm1, %xmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: freeze_lshr_extract_concat_high_demanded:
-; X64:       # %bb.0:
-; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; X64-NEXT:    vpsrld $1, %ymm0, %ymm0
-; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X64-NEXT:    vzeroupper
-; X64-NEXT:    retq
+; CHECK-LABEL: freeze_lshr_extract_concat_high_demanded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $1, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
   %poisonable = add nsw <4 x i32> %a, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %wide = shufflevector <4 x i32> %poisonable, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %shifted = lshr <8 x i32> %wide, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -804,17 +796,6 @@ define i32 @freeze_select_scalar_demanded(i1 %c, <2 x i32> %a, <2 x i32> %b, <2 
 ;
 ; X64-LABEL: freeze_select_scalar_demanded:
 ; X64:       # %bb.0:
-; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    jne .LBB27_1
-; X64-NEXT:  # %bb.2:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; X64-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
-; X64-NEXT:    jmp .LBB27_3
-; X64-NEXT:  .LBB27_1:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
-; X64-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; X64-NEXT:  .LBB27_3:
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    retq
   %poisonable.b = add nsw <2 x i32> %b, <i32 2147483647, i32 2147483647>
