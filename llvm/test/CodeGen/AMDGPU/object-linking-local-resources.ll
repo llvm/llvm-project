@@ -30,7 +30,7 @@ define amdgpu_kernel void @my_kernel(ptr %fptr) {
 ; COM: (IsIndirect covers calls to declarations).
 ; DEFAULT:       .set .Lcalls_extern.num_vgpr, min(64, max({{[0-9]+}}, amdgpu.max_num_vgpr))
 ; DEFAULT:       .set .Lcalls_extern.num_agpr, min(0, max({{[0-9]+}}, amdgpu.max_num_agpr))
-; DEFAULT:       .set .Lcalls_extern.numbered_sgpr, max({{[0-9]+}}, amdgpu.max_num_sgpr)
+; DEFAULT:       .set .Lcalls_extern.numbered_sgpr, min({{[0-9]+}}{{[0-9]+}}, max({{[0-9]+}}, amdgpu.max_num_sgpr))
 ; DEFAULT:       .set .Lcalls_extern.num_named_barrier, max({{[0-9]+}}, amdgpu.max_num_named_barrier)
 ; DEFAULT:       .set .Lcalls_extern.uses_vcc, 1
 ; DEFAULT:       .set .Lcalls_extern.uses_flat_scratch, 1

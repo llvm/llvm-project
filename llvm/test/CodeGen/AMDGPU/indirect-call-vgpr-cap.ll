@@ -12,7 +12,6 @@ define void @big_vgpr_user() #1 {
     ret void
 }
 
-: CHECK: .set .Lkernel_direct_only.has_indirect_call, or(0, .Lsmall_callee.has_indirect_call)
 define internal void @small_callee() {
     ret void
 }

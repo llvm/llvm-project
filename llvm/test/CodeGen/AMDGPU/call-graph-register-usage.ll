@@ -1,13 +1,13 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG,FIJI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG,ICELAND %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG,FIJI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG,ICELAND %s
 
 ; Make sure to run a GPU with the SGPR allocation bug.
 
@@ -240,7 +240,9 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; GCN-LABEL: {{^}}count_use_sgpr96_external_call
 ; GCN: ; sgpr96 s[{{[0-9]+}}:{{[0-9]+}}]
 ; GCN: .set .Lcount_use_sgpr96_external_call.num_vgpr, min(64, max(0, amdgpu.max_num_vgpr))
-; GCN: .set .Lcount_use_sgpr96_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
+; FIJI: .set .Lcount_use_sgpr96_external_call.numbered_sgpr, min(102, max(33, amdgpu.max_num_sgpr))
+; ICELAND: .set .Lcount_use_sgpr96_external_call.numbered_sgpr, min(90, max(33, amdgpu.max_num_sgpr))
+; CI: .set .Lcount_use_sgpr96_external_call.numbered_sgpr, min(100, max(33, amdgpu.max_num_sgpr))
 ; CI: TotalNumSgprs: .Lcount_use_sgpr96_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
 ; GCN: NumVgprs: .Lcount_use_sgpr96_external_call.num_vgpr
@@ -255,7 +257,9 @@ entry:
 ; GCN-LABEL: {{^}}count_use_sgpr160_external_call
 ; GCN: ; sgpr160 s[{{[0-9]+}}:{{[0-9]+}}]
 ; GCN: .set .Lcount_use_sgpr160_external_call.num_vgpr, min(64, max(0, amdgpu.max_num_vgpr))
-; GCN: .set .Lcount_use_sgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
+; FIJI: .set .Lcount_use_sgpr160_external_call.numbered_sgpr, min(102, max(33, amdgpu.max_num_sgpr))
+; ICELAND: .set .Lcount_use_sgpr160_external_call.numbered_sgpr, min(90, max(33, amdgpu.max_num_sgpr))
+; CI: .set .Lcount_use_sgpr160_external_call.numbered_sgpr, min(100, max(33, amdgpu.max_num_sgpr))
 ; CI: TotalNumSgprs: .Lcount_use_sgpr160_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
 ; GCN: NumVgprs: .Lcount_use_sgpr160_external_call.num_vgpr
@@ -270,7 +274,9 @@ entry:
 ; GCN-LABEL: {{^}}count_use_vgpr160_external_call
 ; GCN: ; vgpr160 v[{{[0-9]+}}:{{[0-9]+}}]
 ; GCN: .set .Lcount_use_vgpr160_external_call.num_vgpr, min(64, max(5, amdgpu.max_num_vgpr))
-; GCN: .set .Lcount_use_vgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
+; FIJI: .set .Lcount_use_vgpr160_external_call.numbered_sgpr, min(102, max(33, amdgpu.max_num_sgpr))
+; ICELAND: .set .Lcount_use_vgpr160_external_call.numbered_sgpr, min(90, max(33, amdgpu.max_num_sgpr))
+; CI: .set .Lcount_use_vgpr160_external_call.numbered_sgpr, min(100, max(33, amdgpu.max_num_sgpr))
 ; CI: TotalNumSgprs: .Lcount_use_vgpr160_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
 ; GCN: NumVgprs: .Lcount_use_vgpr160_external_call.num_vgpr
