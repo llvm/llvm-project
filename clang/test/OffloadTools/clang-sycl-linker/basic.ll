@@ -57,18 +57,6 @@
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-FALLTHROUGH
 ; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc output: {{.*}}.bc
 ;
-; Test that -L paths are searched in order: when the same name exists in multiple -L dirs, the first one wins.
-; RUN: mkdir -p %t/libs2
-; RUN: llvm-as %t/lib1.ll -o %t/libs/shadow.bc
-; RUN: llvm-as %t/lib2.ll -o %t/libs2/shadow.bc
-; RUN: rm -f %t/libs/libshadow.a %t/libs2/libshadow.a
-; RUN: llvm-ar rc %t/libs/libshadow.a %t/libs/shadow.bc
-; RUN: llvm-ar rc %t/libs2/libshadow.a %t/libs2/shadow.bc
-; RUN: clang-sycl-linker --dry-run --module-split-mode=none %t/input1.bc -L %t/libs2 -L %t/libs --whole-archive -l shadow -o a.spv --print-linked-module 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=DEVLIBS-ORDER
-; DEVLIBS-ORDER: define {{.*}}lib2_func
-; DEVLIBS-ORDER-NOT: define {{.*}}lib1_func
-;
 ; Test a simple case with a random file (not bitcode) as input.
 ; RUN: touch %t/dummy.o
 ; RUN: not clang-sycl-linker %t/dummy.o -o a.spv 2>&1 \

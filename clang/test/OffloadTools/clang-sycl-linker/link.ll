@@ -58,6 +58,16 @@
 ; CHECK-DEVICE-LIB-POS: define {{.*}}bar_func1{{.*}}
 ; CHECK-DEVICE-LIB-POS: define {{.*}}addFive{{.*}}
 ; CHECK-DEVICE-LIB-POS-NOT: define {{.*}}unusedFunc{{.*}}
+;
+; Test that -L paths are searched in order: when the same name exists in multiple -L dirs, the first one wins.
+; RUN: mkdir -p %t/libs1 %t/libs2
+; RUN: rm -f %t/libs1/libshadow.a %t/libs2/libshadow.a
+; RUN: llvm-ar rc %t/libs1/libshadow.a %t/addFive.bc
+; RUN: llvm-ar rc %t/libs2/libshadow.a %t/unusedFunc.bc
+; RUN: clang-sycl-linker %t/foo.bc -L %t/libs2 -L %t/libs1 --whole-archive -l shadow --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-LIB-ORDER
+; CHECK-LIB-ORDER: define {{.*}}unusedFunc
+; CHECK-LIB-ORDER-NOT: define {{.*}}addFive
 
 ;--- foo.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
