@@ -139,8 +139,10 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
 
   // Keep track of where in VPBB we are inserting the masks into.
-  scope_exit UpdateInsertPoint(
-      [this, &VPBB]() { InsertPoints[VPBB] = Builder.getInsertPoint(); });
+  scope_exit UpdateInsertPoint([this, &VPBB]() {
+    assert(!InsertPoints.contains(VPBB) && "InsertPoint clobbered?");
+    InsertPoints[VPBB] = Builder.getInsertPoint();
+  });
 
   // Reuse the mask of the immediate dominator if the VPBB post-dominates the
   // immediate dominator.
