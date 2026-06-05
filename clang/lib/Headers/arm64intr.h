@@ -55,6 +55,11 @@ void __stlr16(unsigned __int16 volatile *, unsigned __int16);
 void __stlr32(unsigned __int32 volatile *, unsigned __int32);
 void __stlr64(unsigned __int64 volatile *, unsigned __int64);
 
+unsigned __int8 __ldxr8(const volatile unsigned __int8 *);
+unsigned __int16 __ldxr16(const volatile unsigned __int16 *);
+unsigned __int32 __ldxr32(const volatile unsigned __int32 *);
+unsigned __int64 __ldxr64(const volatile unsigned __int64 *);
+
 #ifdef __cplusplus
 }
 #endif
