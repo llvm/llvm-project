@@ -10,6 +10,7 @@ load("@rules_cc//cc:defs.bzl", "CcInfo", "cc_binary")
 
 # Mapping from every tool to the cc_library that implements the tool's entrypoint.
 _TOOLS = {
+    "clang-format": "//clang:clang-format-lib",
     "clang-scan-deps": "//clang:clang-scan-deps-lib",
     "clang": "//clang:clang-driver",
     "dsymutil": "//llvm:dsymutil-lib",

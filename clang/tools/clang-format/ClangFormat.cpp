@@ -21,198 +21,80 @@
 #include "clang/Format/Format.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Process.h"
+#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/StringSaver.h"
 #include <fstream>
+#include <optional>
+#include <string>
+#include <vector>
 
 using namespace llvm;
 using clang::tooling::Replacements;
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
-// Mark all our options with this category, everything else (except for -version
-// and -help) will be hidden.
-static cl::OptionCategory ClangFormatCategory("Clang-format options");
-
-static cl::list<unsigned>
-    Offsets("offset",
-            cl::desc("Format a range starting at this byte offset.\n"
-                     "Multiple ranges can be formatted by specifying\n"
-                     "several -offset and -length pairs.\n"
-                     "Can only be used with one input file."),
-            cl::cat(ClangFormatCategory));
-static cl::list<unsigned>
-    Lengths("length",
-            cl::desc("Format a range of this length (in bytes).\n"
-                     "Multiple ranges can be formatted by specifying\n"
-                     "several -offset and -length pairs.\n"
-                     "When only a single -offset is specified without\n"
-                     "-length, clang-format will format up to the end\n"
-                     "of the file.\n"
-                     "Can only be used with one input file."),
-            cl::cat(ClangFormatCategory));
-static cl::list<std::string>
-    LineRanges("lines",
-               cl::desc("<start line>:<end line> - format a range of\n"
-                        "lines (both 1-based).\n"
-                        "Multiple ranges can be formatted by specifying\n"
-                        "several -lines arguments.\n"
-                        "Can't be used with -offset and -length.\n"
-                        "Can only be used with one input file."),
-               cl::cat(ClangFormatCategory));
-static cl::opt<std::string>
-    Style("style", cl::desc(clang::format::StyleOptionHelpDescription),
-          cl::init(clang::format::DefaultFormatStyle),
-          cl::cat(ClangFormatCategory));
-static cl::opt<std::string>
-    FallbackStyle("fallback-style",
-                  cl::desc("The name of the predefined style used as a\n"
-                           "fallback in case clang-format is invoked with\n"
-                           "-style=file, but can not find the .clang-format\n"
-                           "file to use. Defaults to 'LLVM'.\n"
-                           "Use -fallback-style=none to skip formatting."),
-                  cl::init(clang::format::DefaultFallbackStyle),
-                  cl::cat(ClangFormatCategory));
-
-static cl::opt<std::string> AssumeFileName(
-    "assume-filename",
-    cl::desc("Set filename used to determine the language and to find\n"
-             ".clang-format file.\n"
-             "Only used when reading from stdin.\n"
-             "If this is not passed, the .clang-format file is searched\n"
-             "relative to the current working directory when reading stdin.\n"
-             "Unrecognized filenames are treated as C++.\n"
-             "supported:\n"
-             "  CSharp: .cs\n"
-             "  Java: .java\n"
-             "  JavaScript: .js .mjs .cjs .ts\n"
-             "  JSON: .json .ipynb\n"
-             "  Objective-C: .m .mm\n"
-             "  Proto: .proto .protodevel\n"
-             "  TableGen: .td\n"
-             "  TextProto: .txtpb .textpb .pb.txt .textproto .asciipb\n"
-             "  Verilog: .sv .svh .v .vh"),
-    cl::init("<stdin>"), cl::cat(ClangFormatCategory));
-
-static cl::opt<bool> Inplace("i",
-                             cl::desc("Inplace edit <file>s, if specified."),
-                             cl::cat(ClangFormatCategory));
-
-static cl::opt<bool> OutputXML("output-replacements-xml",
-                               cl::desc("Output replacements as XML."),
-                               cl::cat(ClangFormatCategory));
-static cl::opt<bool>
-    DumpConfig("dump-config",
-               cl::desc("Dump configuration options to stdout and exit.\n"
-                        "Can be used with -style option."),
-               cl::cat(ClangFormatCategory));
-static cl::opt<unsigned>
-    Cursor("cursor",
-           cl::desc("The position of the cursor when invoking\n"
-                    "clang-format from an editor integration"),
-           cl::init(0), cl::cat(ClangFormatCategory));
-
-static cl::opt<bool>
-    SortIncludes("sort-includes",
-                 cl::desc("If set, overrides the include sorting behavior\n"
-                          "determined by the SortIncludes style flag"),
-                 cl::cat(ClangFormatCategory));
-
-static cl::opt<std::string> QualifierAlignment(
-    "qualifier-alignment",
-    cl::desc("If set, overrides the qualifier alignment style\n"
-             "determined by the QualifierAlignment style flag"),
-    cl::init(""), cl::cat(ClangFormatCategory));
-
-static cl::opt<std::string> Files(
-    "files",
-    cl::desc("A file containing a list of files to process, one per line."),
-    cl::value_desc("filename"), cl::init(""), cl::cat(ClangFormatCategory));
-
-static cl::opt<bool>
-    Verbose("verbose", cl::desc("If set, shows the list of processed files"),
-            cl::cat(ClangFormatCategory));
-
-// Use --dry-run to match other LLVM tools when you mean do it but don't
-// actually do it
-static cl::opt<bool>
-    DryRun("dry-run",
-           cl::desc("If set, do not actually make the formatting changes"),
-           cl::cat(ClangFormatCategory));
-
-// Use -n as a common command as an alias for --dry-run. (git and make use -n)
-static cl::alias DryRunShort("n", cl::desc("Alias for --dry-run"),
-                             cl::cat(ClangFormatCategory), cl::aliasopt(DryRun),
-                             cl::NotHidden);
-
-// Emulate being able to turn on/off the warning.
-static cl::opt<bool>
-    WarnFormat("Wclang-format-violations",
-               cl::desc("Warnings about individual formatting changes needed. "
-                        "Used only with --dry-run or -n"),
-               cl::init(true), cl::cat(ClangFormatCategory), cl::Hidden);
-
-static cl::opt<bool>
-    NoWarnFormat("Wno-clang-format-violations",
-                 cl::desc("Do not warn about individual formatting changes "
-                          "needed. Used only with --dry-run or -n"),
-                 cl::init(false), cl::cat(ClangFormatCategory), cl::Hidden);
-
-static cl::opt<unsigned> ErrorLimit(
-    "ferror-limit",
-    cl::desc("Set the maximum number of clang-format errors to emit\n"
-             "before stopping (0 = no limit).\n"
-             "Used only with --dry-run or -n"),
-    cl::init(0), cl::cat(ClangFormatCategory));
-
-static cl::opt<bool>
-    WarningsAsErrors("Werror",
-                     cl::desc("If set, changes formatting warnings to errors"),
-                     cl::cat(ClangFormatCategory));
-
 namespace {
-enum class WNoError { Unknown };
-}
+enum ID {
+  OPT_INVALID = 0,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::bits<WNoError> WNoErrorList(
-    "Wno-error",
-    cl::desc("If set, don't error out on the specified warning type."),
-    cl::values(
-        clEnumValN(WNoError::Unknown, "unknown",
-                   "If set, unknown format options are only warned about.\n"
-                   "This can be used to enable formatting, even if the\n"
-                   "configuration contains unknown (newer) options.\n"
-                   "Use with caution, as this might lead to dramatically\n"
-                   "differing format depending on an option being\n"
-                   "supported or not.")),
-    cl::cat(ClangFormatCategory));
+#define OPTTABLE_STR_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_STR_TABLE_CODE
 
-static cl::opt<bool>
-    ShowColors("fcolor-diagnostics",
-               cl::desc("If set, and on a color-capable terminal controls "
-                        "whether or not to print diagnostics in color"),
-               cl::init(true), cl::cat(ClangFormatCategory), cl::Hidden);
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
-static cl::opt<bool>
-    NoShowColors("fno-color-diagnostics",
-                 cl::desc("If set, and on a color-capable terminal controls "
-                          "whether or not to print diagnostics in color"),
-                 cl::init(false), cl::cat(ClangFormatCategory), cl::Hidden);
+using namespace llvm::opt;
+static constexpr opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::list<std::string> FileNames(cl::Positional,
-                                       cl::desc("[@<file>] [<file> ...]"),
-                                       cl::cat(ClangFormatCategory));
+class ClangFormatOptTable : public opt::GenericOptTable {
+public:
+  ClangFormatOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
+    setDashDashParsing(true);
+  }
+};
 
-static cl::opt<bool> FailOnIncompleteFormat(
-    "fail-on-incomplete-format",
-    cl::desc("If set, fail with exit code 1 on incomplete format."),
-    cl::init(false), cl::cat(ClangFormatCategory));
-
-static cl::opt<bool> ListIgnored("list-ignored",
-                                 cl::desc("List ignored files."),
-                                 cl::cat(ClangFormatCategory), cl::Hidden);
+static std::vector<unsigned> Offsets;
+static std::vector<unsigned> Lengths;
+static std::vector<std::string> LineRanges;
+static std::string Style;
+static std::string FallbackStyle;
+static std::string AssumeFileName;
+static bool Inplace;
+static bool OutputXML;
+static bool DumpConfig;
+static unsigned Cursor;
+static bool CursorSpecified;
+static bool SortIncludes;
+static bool SortIncludesSpecified;
+static std::string QualifierAlignment;
+static std::string Files;
+static bool Verbose;
+static bool DryRun;
+static bool WarnFormat;
+static bool NoWarnFormat;
+static unsigned ErrorLimit;
+static bool WarningsAsErrors;
+static bool WNoErrorUnknown;
+static bool ShowColors;
+static bool NoShowColors;
+static std::vector<std::string> FileNames;
+static bool FailOnIncompleteFormat;
+static bool ListIgnored;
+} // namespace
 
 namespace clang {
 namespace format {
@@ -370,7 +252,6 @@ static bool emitReplacementWarnings(const Replacements &Replaces,
 static void outputXML(const Replacements &Replaces,
                       const Replacements &FormatChanges,
                       const FormattingAttemptStatus &Status,
-                      const cl::opt<unsigned> &Cursor,
                       unsigned CursorPosition) {
   outs() << "<?xml version='1.0'?>\n<replacements "
             "xml:space='preserve' incomplete_format='"
@@ -378,7 +259,7 @@ static void outputXML(const Replacements &Replaces,
   if (!Status.FormatComplete)
     outs() << " line='" << Status.Line << "'";
   outs() << ">\n";
-  if (Cursor.getNumOccurrences() != 0) {
+  if (CursorSpecified) {
     outs() << "<cursor>" << FormatChanges.getShiftedCodePosition(CursorPosition)
            << "</cursor>\n";
   }
@@ -444,7 +325,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 
   Expected<FormatStyle> FormatStyle =
       getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer(),
-               nullptr, WNoErrorList.isSet(WNoError::Unknown));
+               nullptr, WNoErrorUnknown);
   if (!FormatStyle) {
     llvm::errs() << toString(FormatStyle.takeError()) << "\n";
     return true;
@@ -471,7 +352,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
     FormatStyle->QualifierOrder = {Qualifiers.begin(), Qualifiers.end()};
   }
 
-  if (SortIncludes.getNumOccurrences() != 0) {
+  if (SortIncludesSpecified) {
     FormatStyle->SortIncludes = {};
     if (SortIncludes)
       FormatStyle->SortIncludes.Enabled = true;
@@ -507,7 +388,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
            emitReplacementWarnings(Replaces, AssumedFileName, std::move(Code));
   }
   if (OutputXML) {
-    outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
+    outputXML(Replaces, FormatChanges, Status, CursorPosition);
   } else {
     auto InMemoryFileSystem =
         makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
@@ -526,7 +407,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
       if (Rewrite.overwriteChangedFiles())
         return true;
     } else {
-      if (Cursor.getNumOccurrences() != 0) {
+      if (CursorSpecified) {
         outs() << "{ \"Cursor\": "
                << FormatChanges.getShiftedCodePosition(CursorPosition)
                << ", \"IncompleteFormat\": "
@@ -546,6 +427,138 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 
 static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-format") << '\n';
+}
+
+static bool parseUnsignedArgs(const opt::InputArgList &Args, OptSpecifier ID,
+                              std::vector<unsigned> &Values) {
+  for (const opt::Arg *A : Args.filtered(ID)) {
+    unsigned Value;
+    if (!StringRef(A->getValue()).getAsInteger(0, Value)) {
+      Values.push_back(Value);
+      continue;
+    }
+    errs() << "clang-format: invalid value '" << A->getValue()
+           << "' for option '" << A->getSpelling() << "'\n";
+    return false;
+  }
+  return true;
+}
+
+static bool parseBoolArg(const opt::Arg *A, unsigned ValueID, bool &Value) {
+  if (!A->getOption().matches(ValueID)) {
+    Value = true;
+    return true;
+  }
+  std::optional<bool> Parsed = StringSwitch<std::optional<bool>>(A->getValue())
+                                   .CaseLower("true", true)
+                                   .Case("1", true)
+                                   .CaseLower("false", false)
+                                   .Case("0", false)
+                                   .Default(std::nullopt);
+  if (Parsed) {
+    Value = *Parsed;
+    return true;
+  }
+  errs() << "clang-format: invalid value '" << A->getValue() << "' for option '"
+         << A->getSpelling() << "'\n";
+  return false;
+}
+
+static bool parseBoolArg(const opt::InputArgList &Args, unsigned FlagID,
+                         unsigned ValueID, bool Default, bool &Value,
+                         bool *Specified = nullptr) {
+  const opt::Arg *A = Args.getLastArg(FlagID, ValueID);
+  if (Specified)
+    *Specified = A != nullptr;
+  if (!A) {
+    Value = Default;
+    return true;
+  }
+  return parseBoolArg(A, ValueID, Value);
+}
+
+static bool parseArgs(int argc, char **argv, StringSaver &Saver,
+                      ClangFormatOptTable &Tbl, opt::InputArgList &Args) {
+  bool HasError = false;
+  Args = Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+    errs() << "clang-format: " << Msg << '\n';
+    HasError = true;
+  });
+  if (HasError)
+    return false;
+
+  Offsets.clear();
+  Lengths.clear();
+  LineRanges = Args.getAllArgValues(OPT_lines_EQ);
+  Style = Args.getLastArgValue(OPT_style_EQ, clang::format::DefaultFormatStyle);
+  FallbackStyle = Args.getLastArgValue(OPT_fallback_style_EQ,
+                                       clang::format::DefaultFallbackStyle);
+  AssumeFileName = Args.getLastArgValue(OPT_assume_filename_EQ, "<stdin>");
+  Cursor = 0;
+  CursorSpecified = Args.hasArg(OPT_cursor_EQ);
+  QualifierAlignment = Args.getLastArgValue(OPT_qualifier_alignment_EQ);
+  Files = Args.getLastArgValue(OPT_files_EQ);
+  ErrorLimit = 0;
+  WNoErrorUnknown = false;
+  FileNames = Args.getAllArgValues(OPT_INPUT);
+
+  if (!parseBoolArg(Args, OPT_i, OPT_i_EQ, false, Inplace) ||
+      !parseBoolArg(Args, OPT_output_replacements_xml,
+                    OPT_output_replacements_xml_EQ, false, OutputXML) ||
+      !parseBoolArg(Args, OPT_dump_config, OPT_dump_config_EQ, false,
+                    DumpConfig) ||
+      !parseBoolArg(Args, OPT_sort_includes, OPT_sort_includes_EQ, false,
+                    SortIncludes, &SortIncludesSpecified) ||
+      !parseBoolArg(Args, OPT_verbose, OPT_verbose_EQ, false, Verbose) ||
+      !parseBoolArg(Args, OPT_dry_run, OPT_dry_run_EQ, false, DryRun) ||
+      !parseBoolArg(Args, OPT_Wclang_format_violations,
+                    OPT_Wclang_format_violations_EQ, true, WarnFormat) ||
+      !parseBoolArg(Args, OPT_Wno_clang_format_violations,
+                    OPT_Wno_clang_format_violations_EQ, false, NoWarnFormat) ||
+      !parseBoolArg(Args, OPT_Werror, OPT_Werror_EQ, false, WarningsAsErrors) ||
+      !parseBoolArg(Args, OPT_fcolor_diagnostics, OPT_fcolor_diagnostics_EQ,
+                    true, ShowColors) ||
+      !parseBoolArg(Args, OPT_fno_color_diagnostics,
+                    OPT_fno_color_diagnostics_EQ, false, NoShowColors) ||
+      !parseBoolArg(Args, OPT_fail_on_incomplete_format,
+                    OPT_fail_on_incomplete_format_EQ, false,
+                    FailOnIncompleteFormat) ||
+      !parseBoolArg(Args, OPT_list_ignored, OPT_list_ignored_EQ, false,
+                    ListIgnored)) {
+    return false;
+  }
+
+  if (!parseUnsignedArgs(Args, OPT_offset_EQ, Offsets) ||
+      !parseUnsignedArgs(Args, OPT_length_EQ, Lengths)) {
+    return false;
+  }
+
+  if (const opt::Arg *A = Args.getLastArg(OPT_cursor_EQ)) {
+    if (StringRef(A->getValue()).getAsInteger(0, Cursor)) {
+      errs() << "clang-format: invalid value '" << A->getValue()
+             << "' for option '" << A->getSpelling() << "'\n";
+      return false;
+    }
+  }
+
+  if (const opt::Arg *A = Args.getLastArg(OPT_ferror_limit_EQ)) {
+    if (StringRef(A->getValue()).getAsInteger(0, ErrorLimit)) {
+      errs() << "clang-format: invalid value '" << A->getValue()
+             << "' for option '" << A->getSpelling() << "'\n";
+      return false;
+    }
+  }
+
+  for (StringRef Warning : Args.getAllArgValues(OPT_Wno_error_EQ)) {
+    if (Warning == "unknown") {
+      WNoErrorUnknown = true;
+      continue;
+    }
+    errs() << "clang-format: invalid value '" << Warning
+           << "' for option '-Wno-error'\n";
+    return false;
+  }
+  return true;
 }
 
 // Dump the configuration.
@@ -664,24 +677,31 @@ static bool isIgnored(StringRef FilePath) {
   return false;
 }
 
-int main(int argc, const char **argv) {
-  InitLLVM X(argc, argv);
+int clang_format_main(int argc, char **argv, const llvm::ToolContext &) {
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+  ClangFormatOptTable Tbl;
+  opt::InputArgList Args;
+  if (!parseArgs(argc, argv, Saver, Tbl, Args))
+    return 1;
 
-  cl::HideUnrelatedOptions(ClangFormatCategory);
+  if (Args.hasArg(OPT_help, OPT_help_hidden)) {
+    Tbl.printHelp(
+        outs(), "clang-format [options] [@<file>] [<file> ...]",
+        "A tool to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# "
+        "code.\n\n"
+        "If no arguments are specified, it formats the code from standard "
+        "input\n"
+        "and writes the result to the standard output.\n"
+        "If <file>s are given, it reformats the files. If -i is specified\n"
+        "together with <file>s, the files are edited in-place. Otherwise, the\n"
+        "result is written to the standard output.",
+        Args.hasArg(OPT_help_hidden));
+    return 0;
+  }
 
-  cl::SetVersionPrinter(PrintVersion);
-  cl::ParseCommandLineOptions(
-      argc, argv,
-      "A tool to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# "
-      "code.\n\n"
-      "If no arguments are specified, it formats the code from standard input\n"
-      "and writes the result to the standard output.\n"
-      "If <file>s are given, it reformats the files. If -i is specified\n"
-      "together with <file>s, the files are edited in-place. Otherwise, the\n"
-      "result is written to the standard output.\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
+  if (Args.hasArg(OPT_version)) {
+    PrintVersion(outs());
     return 0;
   }
 

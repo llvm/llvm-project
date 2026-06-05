@@ -2402,20 +2402,36 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "clang-format",
+gentbl_cc_library(
+    name = "ClangFormatOptsTableGen",
+    strip_include_prefix = "tools/clang-format",
+    tbl_outs = {"tools/clang-format/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/clang-format/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_library(
+    name = "clang-format-lib",
     srcs = [
         "lib/Format/MatchFilePath.h",
         "tools/clang-format/ClangFormat.cpp",
     ],
-    stamp = 0,
     deps = [
+        ":ClangFormatOptsTableGen",
         ":basic",
         ":format",
         ":frontend",
         ":rewrite",
+        "//llvm:Option",
         "//llvm:Support",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "clang-format",
+    stamp = 0,
+    deps = [":clang-format-lib"],
 )
 
 cc_binary(
