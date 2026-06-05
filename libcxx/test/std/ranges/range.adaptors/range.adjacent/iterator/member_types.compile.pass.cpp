@@ -110,7 +110,7 @@ void test() {
 
     static_assert(std::is_same_v<typename Iter::iterator_concept, std::forward_iterator_tag>);
     static_assert(std::is_same_v<typename Iter::iterator_category, std::input_iterator_tag>);
-    static_assert(std::is_same_v<typename Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<typename Iter::difference_type, std::intptr_t>);
     static_assert(std::is_same_v<typename Iter::value_type, expected_value_type>);
   }
 
