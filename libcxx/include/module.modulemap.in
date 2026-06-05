@@ -2490,7 +2490,7 @@ module std_wctype_h [system] {
 
 // This header is used by other C compatibility headers so it needs to be in its own module.
 module std_private_mbstate_t [system] {
-  // marked as textual to avoid circular depandancy between this module and std_wctype_h.
+  // marked as textual to avoid circular dependency between this module and std_wctype_h.
   textual header "__mbstate_t.h"
   export *
 }
