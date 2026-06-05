@@ -55,6 +55,26 @@ uint64_t compute_cell(
     }
   }
   return sum;
+}
+
+// 与 compute_cell 完全相同的逻辑，但不加 EJIT attribute，
+// 用于对比纯 AOT（无 wrapper 开销、无 JIT 编译）
+uint64_t compute_cell_nojit(uint8_t ci)
+{
+  uint64_t sum = 0;
+  struct CellCfg *p = &g_cfg[ci];
+
+  for (uint64_t i = 0; i < LOOP_ITERS; i++) {
+    if (p->cellType == 0xFD) {
+      if (p->priority > 10) {
+        sum += p->maxPower * p->bandWidth / (p->timeSlot + 1);
+      } else {
+        sum += p->minPower * p->bandWidth / (p->timeSlot + 1);
+      }
+    } else if (p->cellType == 0xEC) {
+      sum += (p->maxPower + p->minPower) * p->bandWidth / (p->timeSlot + 1);
+    }
+  }
   return sum;
 }
 
@@ -107,7 +127,23 @@ int main(int argc, char **argv) {
 
   ejit_init(0);
 
-  printf("--- AOT Fallback (不激活时间窗) ---\n");
+  printf("--- Pure AOT (无 attribute, 无 wrapper 开销) ---\n");
+
+  uint64_t pure_sum = 0;
+  double pure_time = 0;
+  for (int w = 0; w < n_warmup; w++) {
+    double t0 = now_ms();
+    uint64_t r = compute_cell_nojit(ci);
+    double t1 = now_ms();
+    pure_time = t1 - t0;
+    pure_sum = r;
+    if (w == n_warmup - 1) {
+      printf("  result=%llu  time=%.1f ms\n",
+             (unsigned long long)r, pure_time);
+    }
+  }
+
+  printf("\n--- AOT Fallback (不激活时间窗) ---\n");
 
   // 不激活 → ejit_compile_or_get 发现 time window not active → fallback
   uint64_t aot_sum = 0;
@@ -149,17 +185,24 @@ int main(int argc, char **argv) {
   ejit_shutdown();
 
   // 验证
-  if (jit_sum == aot_sum) {
-    printf("  Result MATCH: JIT=%llu == AOT=%llu\n",
-           (unsigned long long)jit_sum, (unsigned long long)aot_sum);
+  if (jit_sum == aot_sum && aot_sum == pure_sum) {
+    printf("  Result MATCH: Pure=%llu AOT=%llu JIT=%llu\n",
+           (unsigned long long)pure_sum, (unsigned long long)aot_sum,
+           (unsigned long long)jit_sum);
   } else {
-    printf("  Result MISMATCH: JIT=%llu != AOT=%llu\n",
-           (unsigned long long)jit_sum, (unsigned long long)aot_sum);
+    printf("  Result MISMATCH: Pure=%llu AOT=%llu JIT=%llu\n",
+           (unsigned long long)pure_sum, (unsigned long long)aot_sum,
+           (unsigned long long)jit_sum);
   }
 
-  if (aot_time > 0) {
-    printf("  Speedup: %.1fx (AOT %.1f ms -> JIT %.1f ms)\n",
-           aot_time / jit_time, aot_time, jit_time);
+  printf("\n  --- 性能对比 ---\n");
+  printf("  Pure AOT    (无 wrapper):  %.1f ms\n", pure_time);
+  printf("  AOT Fallback (有 wrapper):  %.1f ms\n", aot_time);
+  printf("  JIT 优化    (特化编译):    %.1f ms\n", jit_time);
+
+  if (pure_time > 0) {
+    printf("  JIT vs Pure AOT 加速: %.1fx\n", pure_time / jit_time);
+    printf("  AOT Fallback vs Pure overhead: %.1fx\n", aot_time / pure_time);
   }
 
   printf("\n=== Benchmark Complete ===\n");

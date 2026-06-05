@@ -9,6 +9,14 @@
 
 SECTIONS
 {
+  /* ── DISCARD ──────────────────────────────────────────────────────── */
+  /DISCARD/ : {
+    *(.group .group.*)        /*  COMDAT dedup records              */
+    *(.rela.debug*)           /*  debug relocations (not needed)     */
+    *(.rela.llvm_addrsig*)    /*  address-significance relocs        */
+    *(*.llvm_addrsig*)        /*  any leftover addrsig sections      */
+  }
+
   /* ── code ─────────────────────────────────────────────────────────── */
   .text           : { *(.text .text.* .gnu.linkonce.t.*) }
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
@@ -54,11 +62,4 @@ SECTIONS
   .rela.init_array : { *(.rela.init_array .rela.init_array.*) }
   .rela.plt       : { *(.rela.plt) }
 
-  /* ── DISCARD ──────────────────────────────────────────────────────── */
-  /DISCARD/ : {
-    *(.group .group.*)        /*  COMDAT dedup records              */
-    *(.rela.debug*)           /*  debug relocations (not needed)     */
-    *(.rela.llvm_addrsig*)    /*  address-significance relocs        */
-    *(*.llvm_addrsig*)        /*  any leftover addrsig sections      */
-  }
 }

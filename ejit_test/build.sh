@@ -195,9 +195,9 @@ fi
 build_one() {
   local name="$1"
   local src="${SCRIPT_DIR}/${name}.c"
-  local obj="${TMPDIR:-/tmp}/ejit_${name}.o"
+  local obj; obj=$(mktemp "${TMPDIR:-/tmp}/ejit_${name}_XXXXXX.o")
   local bin="${OUTDIR}/${name}"
-  local map_file="${TMPDIR:-/tmp}/ejit_${name}.map"
+  local map_file; map_file=$(mktemp "${TMPDIR:-/tmp}/ejit_${name}_XXXXXX.map")
 
   if [[ ! -f "${src}" ]]; then
     echo -e "${RED}  SKIP: ${src} not found${NC}"
@@ -257,7 +257,7 @@ run_one() {
   fi
 
   echo "  Running ${name} ${args} ..."
-  local log="${TMPDIR:-/tmp}/ejit_${name}.log"
+  local log; log=$(mktemp "${TMPDIR:-/tmp}/ejit_${name}_XXXXXX.log")
   if ${bin} ${args} > "${log}" 2>&1; then
     local nfails
     nfails=$(grep -c "FAIL" "${log}" 2>/dev/null || true)
