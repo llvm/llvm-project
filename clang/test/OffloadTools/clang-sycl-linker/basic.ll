@@ -28,7 +28,7 @@
 ; Test that IMG_SPIRV image kind is set for non-AOT compilation.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
-; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc  output: [[LLVMLINKOUT:.*]].bc
+; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
 ; SIMPLE-FO-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; SIMPLE-FO-NOT:  {{.+}}
@@ -41,7 +41,7 @@
 ; RUN: llvm-ar rc %t/libs/libdevice.a %t/libs/lib1.bc %t/libs/lib2.bc
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
-; DEVLIBS:      link: inputs: {{.*}}.bc, {{.*}}.bc, lib1.bc, lib2.bc  output: [[LLVMLINKOUT:.*]].bc
+; DEVLIBS:      link: inputs: {{.*}}.bc, {{.*}}.bc, lib1.bc, lib2.bc output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
 ; DEVLIBS-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; DEVLIBS-NOT:  {{.+}}
@@ -49,13 +49,13 @@
 ; Test -L short form (joined) and -l with archive using --whole-archive.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-SHORT
-; DEVLIBS-SHORT: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc  output: {{.*}}.bc
+; DEVLIBS-SHORT: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc output: {{.*}}.bc
 ;
 ; Test that search continues past the first -L when the library is not found there. libdevice.a exists only in %t/libs (the second -L).
 ; RUN: mkdir -p %t/empty
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/empty -L %t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-FALLTHROUGH
-; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc  output: {{.*}}.bc
+; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc output: {{.*}}.bc
 ;
 ; Test that -L paths are searched in order: when the same name exists in multiple -L dirs, the first one wins.
 ; RUN: mkdir -p %t/libs2
@@ -74,6 +74,23 @@
 ; RUN: not clang-sycl-linker %t/dummy.o -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=FILETYPEERROR
 ; FILETYPEERROR: Unsupported file type: '{{.*}}dummy.o'
+;
+; Test that unsupported file type error includes buffer identifier when found inside an archive.
+; Create an archive containing an unsupported file (text file instead of bitcode).
+; RUN: echo "not bitcode" > %t/invalid.txt
+; RUN: rm -f %t/libinvalid.a
+; RUN: llvm-ar rc %t/libinvalid.a %t/invalid.txt
+; RUN: not clang-sycl-linker --dry-run %t/input1.bc -L %t --whole-archive -l invalid -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=ARCHIVE-INVALID-MEMBER
+; ARCHIVE-INVALID-MEMBER: Unsupported file type: '{{.*}}invalid.txt'
+;
+; Test mixed archive: valid bitcode member + invalid member.
+; The error should clearly identify which member is invalid.
+; RUN: rm -f %t/libmixed.a
+; RUN: llvm-ar rc %t/libmixed.a %t/libs/lib1.bc %t/invalid.txt
+; RUN: not clang-sycl-linker --dry-run %t/input1.bc -L %t --whole-archive -l mixed -o a.spv 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=ARCHIVE-MIXED-INVALID
+; ARCHIVE-MIXED-INVALID: Unsupported file type: '{{.*}}invalid.txt'
 ;
 ; Test to see if device library related errors are emitted.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs -l device -l nonexistent -o a.spv 2>&1 \
@@ -112,7 +129,7 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
-; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc  output: [[LLVMLINKOUT:.*]].bc
+; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPIRVTRANSLATIONOUT]]_0.out -file [[SPIRVTRANSLATIONOUT]]_0.spv
 ; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: bmg_g21
@@ -123,7 +140,7 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \
 ; RUN:     --opencl-aot-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
-; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc  output: [[LLVMLINKOUT:.*]].bc
+; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-CPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o [[SPIRVTRANSLATIONOUT]]_0.out [[SPIRVTRANSLATIONOUT]]_0.spv
 ; AOT-INTEL-CPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: graniterapids
