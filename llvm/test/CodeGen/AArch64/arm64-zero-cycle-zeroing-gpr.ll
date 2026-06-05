@@ -10,35 +10,35 @@
 
 define i8 @ti8() {
 entry:
-; ALL-LABEL: {{_?}}ti8:{{ *}}{{(;|//)}}{{ *}}@ti8
+; ALL-LABEL: {{_?}}ti8:{{ *(;|//) *}}@ti8
 ; NOZCZ-GPR32-NOZCZ-GPR64: mov w0, wzr
-; ZCZ-GPR32: mov w0, #0{{ *}}{{(;|//)}}{{ *}}=0x0
-; NOZCZ-GPR32-ZCZ-GPR64: mov x0, #0{{ *}}{{(;|//)}}{{ *}}=0x0
+; ZCZ-GPR32: mov w0, #0{{ *(;|//) *}}=0x0
+; NOZCZ-GPR32-ZCZ-GPR64: mov x0, #0{{ *(;|//) *}}=0x0
   ret i8 0
 }
 
 define i16 @ti16() {
 entry:
-; ALL-LABEL: {{_?}}ti16:{{ *}}{{(;|//)}}{{ *}}@ti16
+; ALL-LABEL: {{_?}}ti16:{{ *(;|//) *}}@ti16
 ; NOZCZ-GPR32-NOZCZ-GPR64: mov w0, wzr
-; ZCZ-GPR32: mov w0, #0{{ *}}{{(;|//)}}{{ *}}=0x0
-; NOZCZ-GPR32-ZCZ-GPR64: mov x0, #0{{ *}}{{(;|//)}}{{ *}}=0x0
+; ZCZ-GPR32: mov w0, #0{{ *(;|//) *}}=0x0
+; NOZCZ-GPR32-ZCZ-GPR64: mov x0, #0{{ *(;|//) *}}=0x0
   ret i16 0
 }
 
 define i32 @ti32() {
 entry:
-; ALL-LABEL: {{_?}}ti32:{{ *}}{{(;|//)}}{{ *}}@ti32
+; ALL-LABEL: {{_?}}ti32:{{ *(;|//) *}}@ti32
 ; NOZCZ-GPR32-NOZCZ-GPR64: mov w0, wzr
-; ZCZ-GPR32: mov w0, #0{{ *}}{{(;|//)}}{{ *}}=0x0
-; NOZCZ-GPR32-ZCZ-GPR64: mov x0, #0{{ *}}{{(;|//)}}{{ *}}=0x0
+; ZCZ-GPR32: mov w0, #0{{ *(;|//) *}}=0x0
+; NOZCZ-GPR32-ZCZ-GPR64: mov x0, #0{{ *(;|//) *}}=0x0
   ret i32 0
 }
 
 define i64 @ti64() {
 entry:
-; ALL-LABEL: {{_?}}ti64:{{ *}}{{(;|//)}}{{ *}}@ti64
+; ALL-LABEL: {{_?}}ti64:{{ *(;|//) *}}@ti64
 ; NOZCZ-GPR32-NOZCZ-GPR64: mov x0, xzr
-; ZCZ-GPR64: mov x0, #0{{ *}}{{(;|//)}}{{ *}}=0x0
+; ZCZ-GPR64: mov x0, #0{{ *(;|//) *}}=0x0
   ret i64 0
 }

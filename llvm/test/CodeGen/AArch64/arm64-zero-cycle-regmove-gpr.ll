@@ -6,7 +6,7 @@
 
 define void @zero_cycle_regmove_GPR32(i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
-; ALL-LABEL: {{_?zero_cycle_regmove_GPR32}}:{{ *}}{{(;|//)}}{{ *}}@zero_cycle_regmove_GPR32
+; ALL-LABEL: {{_?zero_cycle_regmove_GPR32}}:{{ *(;|//) *}}@zero_cycle_regmove_GPR32
 
 ; NOTCPU-LINUX: mov w0, w2
 ; NOTCPU-LINUX: mov w1, w3
