@@ -335,12 +335,15 @@ void MCResourceInfo::gatherResourceInfo(
             OutContext);
       } else if (RIK == RIK_NumSGPR) {
         RegExpr = AMDGPUMCExpr::createMin(
-          {MCConstantExpr::create(MaxAllowedSGPRs, OutContext), RegExpr},
-          OutContext);
+            {MCConstantExpr::create(MaxAllowedSGPRs, OutContext), RegExpr},
+            OutContext);
       }
       LocalNumSym->setVariableValue(RegExpr);
-      LLVM_DEBUG(dbgs() << "MCResUse:   " << LocalNumSym->getName()
-                        << ": Indirect callee within, using module maximum unless it exceeds the functions budget for VGPRs, AGPRs, or SGPRs \n");
+      LLVM_DEBUG(
+          dbgs()
+          << "MCResUse:   " << LocalNumSym->getName()
+          << ": Indirect callee within, using module maximum unless it exceeds "
+             "the functions budget for VGPRs, AGPRs, or SGPRs \n");
     }
   };
 
