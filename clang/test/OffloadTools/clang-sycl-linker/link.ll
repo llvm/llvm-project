@@ -68,6 +68,60 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-LIB-ORDER
 ; CHECK-LIB-ORDER: define {{.*}}unusedFunc
 ; CHECK-LIB-ORDER-NOT: define {{.*}}addFive
+;
+; Test that -u forces extraction of an otherwise-unreferenced archive member.
+; Without -u, unusedFunc is not extracted. With -u unusedFunc, it is pulled in.
+; RUN: clang-sycl-linker %t/bar.bc %t/libdevice.a --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-NO-FORCE-UNDEF
+; CHECK-NO-FORCE-UNDEF: define {{.*}}bar_func1{{.*}}
+; CHECK-NO-FORCE-UNDEF-NOT: define {{.*}}unusedFunc{{.*}}
+; CHECK-NO-FORCE-UNDEF-NOT: define {{.*}}addFive{{.*}}
+;
+; RUN: clang-sycl-linker %t/bar.bc %t/libdevice.a -u unusedFunc --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-FORCE-UNDEF
+; CHECK-FORCE-UNDEF: define {{.*}}bar_func1{{.*}}
+; CHECK-FORCE-UNDEF: define {{.*}}unusedFunc{{.*}}
+; CHECK-FORCE-UNDEF-NOT: define {{.*}}addFive{{.*}}
+;
+; Test that multiple -u flags work correctly and extract all specified members.
+; RUN: clang-sycl-linker %t/bar.bc %t/libdevice.a -u unusedFunc -u addFive --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-MULTI-UNDEF
+; CHECK-MULTI-UNDEF: define {{.*}}bar_func1{{.*}}
+; CHECK-MULTI-UNDEF: define {{.*}}addFive{{.*}}
+; CHECK-MULTI-UNDEF: define {{.*}}unusedFunc{{.*}}
+;
+; Test that -u works correctly with -l library syntax (not just positional archives).
+; RUN: clang-sycl-linker %t/bar.bc -l device -L %t -u unusedFunc --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-UNDEF-WITH-L
+; CHECK-UNDEF-WITH-L: define {{.*}}bar_func1{{.*}}
+; CHECK-UNDEF-WITH-L: define {{.*}}unusedFunc{{.*}}
+; CHECK-UNDEF-WITH-L-NOT: define {{.*}}addFive{{.*}}
+;
+; Test that -u combined with actual references works correctly (both should be extracted).
+; foo.bc references addFive, and -u forces unusedFunc.
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc %t/libdevice.a -u unusedFunc --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-UNDEF-PLUS-REF
+; CHECK-UNDEF-PLUS-REF: define {{.*}}foo_func1{{.*}}
+; CHECK-UNDEF-PLUS-REF: define {{.*}}bar_func1{{.*}}
+; CHECK-UNDEF-PLUS-REF: define {{.*}}addFive{{.*}}
+; CHECK-UNDEF-PLUS-REF: define {{.*}}unusedFunc{{.*}}
+;
+; Regression test: -u symbol should remain undefined until resolved by archive member.
+; This test verifies the fix for the bug where forced-undefined entries were overwritten
+; before ResolvesReference was computed, making -u ineffective.
+; RUN: clang-sycl-linker %t/bar.bc -u addFive %t/libdevice.a --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-UNDEF-REMAINS
+; CHECK-UNDEF-REMAINS: define {{.*}}bar_func1{{.*}}
+; CHECK-UNDEF-REMAINS: define {{.*}}addFive{{.*}}
+; CHECK-UNDEF-REMAINS-NOT: define {{.*}}unusedFunc{{.*}}
+;
+; Test -u with archive processed BEFORE the symbol table has been populated by regular inputs.
+; This specifically tests that the forced-undefined placeholder survives initial processing.
+; RUN: clang-sycl-linker -u addFive %t/libdevice.a %t/bar.bc --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-UNDEF-FIRST
+; CHECK-UNDEF-FIRST: define {{.*}}addFive{{.*}}
+; CHECK-UNDEF-FIRST: define {{.*}}bar_func1{{.*}}
+; CHECK-UNDEF-FIRST-NOT: define {{.*}}unusedFunc{{.*}}
 
 ;--- foo.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"

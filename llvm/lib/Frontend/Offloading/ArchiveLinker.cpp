@@ -97,7 +97,7 @@ static Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer,
           (IsLazy && !SymTab.count(IRSym.getName())) ? PendingSymbols : SymTab;
       Symbol &OldSym = Target[IRSym.getName()];
       Symbol Sym = Symbol(Buffer, IRSym);
-      if (OldSym.File.getBuffer().empty())
+      if (OldSym.SymFlags == Symbol::None)
         OldSym = Sym;
 
       bool ResolvesReference =
@@ -137,7 +137,7 @@ static Expected<bool> getSymbolsFromObject(ObjectFile &ObjFile,
       return SymOrErr.takeError();
     Symbol Sym = *SymOrErr;
 
-    if (OldSym.File.getBuffer().empty())
+    if (OldSym.SymFlags == Symbol::None)
       OldSym = Sym;
 
     bool ResolvesReference = OldSym.isUndefined() && !Sym.isUndefined() &&
