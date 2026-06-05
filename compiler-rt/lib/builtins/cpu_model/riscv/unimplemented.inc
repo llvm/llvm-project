@@ -2,8 +2,6 @@
 // that does not claim support for any features by leaving
 // __riscv_feature_bits.feature_bits initialized to 0.
 
-static int FeaturesBitCached = 0;
-
 static void __init_riscv_feature_bits_ctor(void) CONSTRUCTOR_ATTRIBUTE;
 
 // A constructor function that sets __riscv_feature_bits
@@ -18,10 +16,4 @@ static void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits_ctor(void) {
 
 // PlatformArgs allows the platform to provide pre-computed data and access it
 // without extra effort.
-void __init_riscv_feature_bits(void *PlatformArgs) {
-
-  if (FeaturesBitCached)
-    return;
-
-  FeaturesBitCached = 1;
-}
+void __init_riscv_feature_bits(void *PlatformArgs) {}
