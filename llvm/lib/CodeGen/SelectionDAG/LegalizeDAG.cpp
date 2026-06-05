@@ -5635,8 +5635,17 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp1 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(1));
     Tmp1 = DAG.getNode(Node->getOpcode(), dl, ResVT, Tmp1, Tmp2);
-    // Result is -1/0/1; truncate to the original result type.
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    if (NVT == OVT) {
+      // Operand promotion only (e.g. i64 result with narrow operands).
+      // Targets that promote to the same type must lower the widened node.
+      if (SDValue Lowered = TLI.LowerOperation(Tmp1, DAG))
+        Results.push_back(Lowered);
+      else
+        llvm_unreachable("Promoted UCMP/SCMP node was not custom lowered");
+    } else {
+      // Result is -1/0/1; truncate to the original result type.
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    }
     break;
   }
   case ISD::MUL:

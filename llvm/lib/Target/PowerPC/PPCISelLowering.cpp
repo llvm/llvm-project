@@ -599,7 +599,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   if (isPPC64) {
     // UCMP involves using carries, which only works in 64-bit
     setOperationAction(ISD::UCMP, MVT::i32, Promote);
-    setOperationAction(ISD::UCMP, MVT::i64, Custom);
+    setOperationAction(ISD::UCMP, MVT::i64, Promote);
+    AddPromotedToType(ISD::UCMP, MVT::i32, MVT::i64);
+    AddPromotedToType(ISD::UCMP, MVT::i64, MVT::i64);
   } else {
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
     setOperationAction(ISD::UCMP, MVT::i64, Expand);
