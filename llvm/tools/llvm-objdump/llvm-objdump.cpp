@@ -3908,7 +3908,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   parseIntArg(InputArgs, OBJDUMP_prefix_strip, PrefixStrip);
   for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_substitute_path)) {
     StringRef From = A->getValue(0);
-    StringRef To = A->getValue(1);
     if (From.empty())
       reportCmdLineError(A->getSpelling() +
                          ": <from> must not be empty");
