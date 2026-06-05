@@ -1150,6 +1150,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Also, try to fold ADD into CSINC/CSINV..
   setTargetDAGCombine({ISD::ADD, ISD::ABS, ISD::SUB, ISD::XOR, ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP});
+  setTargetDAGCombine(ISD::CLMUL);
 
   setTargetDAGCombine({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
                        ISD::FP_TO_UINT_SAT, ISD::FADD});
@@ -27803,6 +27804,69 @@ performVecReduceBitwiseCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+static SDValue performCLMULCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   SelectionDAG &DAG,
+                                   const AArch64Subtarget *Subtarget) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i128 ||
+      VT.getVectorElementCount().getKnownMinValue() != 1)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Op0 = DAG.getNode(ISD::BITCAST, DL, MVT::nxv2i64, N->getOperand(0));
+  SDValue Op1 = DAG.getNode(ISD::BITCAST, DL, MVT::nxv2i64, N->getOperand(1));
+
+  bool HasSVEAES = Subtarget->hasSVEAES() &&
+                   (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES());
+
+  SDValue LoProduct;
+  if (HasSVEAES)
+    LoProduct = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv2i64,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64),
+        Op0, Op1);
+  else {
+    SDValue Lo = DAG.getNode(ISD::CLMUL, DL, MVT::nxv2i64, Op0, Op1);
+    SDValue Hi = DAG.getNode(ISD::CLMULH, DL, MVT::nxv2i64, Op0, Op1);
+    LoProduct = DAG.getNode(AArch64ISD::TRN1, DL, MVT::nxv2i64, Lo, Hi);
+  }
+
+  SDValue LoWords = DAG.getNode(AArch64ISD::TRN1, DL, MVT::nxv2i64, Op1, Op0);
+  SDValue HiWords = DAG.getNode(AArch64ISD::TRN2, DL, MVT::nxv2i64, Op0, Op1);
+  SDValue CrossProducts;
+  if (HasSVEAES) {
+    SDValue CrossLo = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv2i64,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64),
+        HiWords, LoWords);
+    SDValue CrossHi = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv2i64,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullt_pair, DL, MVT::i64),
+        HiWords, LoWords);
+    CrossProducts =
+        DAG.getNode(AArch64ISD::TRN1, DL, MVT::nxv2i64, CrossLo, CrossHi);
+  } else
+    CrossProducts = DAG.getNode(ISD::CLMUL, DL, MVT::nxv2i64, HiWords, LoWords);
+
+  SDValue CrossLo = DAG.getNode(AArch64ISD::TRN1, DL, MVT::nxv2i64,
+                                CrossProducts, CrossProducts);
+  SDValue CrossHi = DAG.getNode(AArch64ISD::TRN2, DL, MVT::nxv2i64,
+                                CrossProducts, CrossProducts);
+  SDValue Cross = DAG.getNode(ISD::XOR, DL, MVT::nxv2i64, CrossLo, CrossHi);
+
+  SDValue Zero =
+      DAG.getSplatVector(MVT::nxv2i64, DL, DAG.getConstant(0, DL, MVT::i64));
+  SDValue CrossShifted =
+      DAG.getNode(AArch64ISD::TRN1, DL, MVT::nxv2i64, Zero, Cross);
+  SDValue Result =
+      DAG.getNode(ISD::XOR, DL, MVT::nxv2i64, LoProduct, CrossShifted);
+  return DAG.getNode(ISD::BITCAST, DL, VT, Result);
+}
+
 static SDValue performSETCCCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG) {
@@ -29713,6 +29777,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ADD:
   case ISD::SUB:
     return performAddSubCombine(N, DCI);
+  case ISD::CLMUL:
+    return performCLMULCombine(N, DCI, DAG, Subtarget);
   case ISD::BUILD_VECTOR:
     return performBuildVectorCombine(N, DCI, DAG);
   case ISD::UMAX:
@@ -33990,6 +34056,10 @@ unsigned AArch64TargetLowering::getMinimumJumpTableEntries() const {
 MVT AArch64TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                          CallingConv::ID CC,
                                                          EVT VT) const {
+  if (VT.isScalableVector() && VT.getVectorElementType() == MVT::i128 &&
+      VT.getVectorElementCount().getKnownMinValue() == 1)
+    return MVT::nxv2i64;
+
   bool NonUnitFixedLengthVector =
       VT.isFixedLengthVector() && !VT.getVectorElementCount().isScalar();
   if (!NonUnitFixedLengthVector || !Subtarget->useSVEForFixedLengthVectors())
@@ -34005,6 +34075,10 @@ MVT AArch64TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 
 unsigned AArch64TargetLowering::getNumRegistersForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
+  if (VT.isScalableVector() && VT.getVectorElementType() == MVT::i128 &&
+      VT.getVectorElementCount().getKnownMinValue() == 1)
+    return 1;
+
   bool NonUnitFixedLengthVector =
       VT.isFixedLengthVector() && !VT.getVectorElementCount().isScalar();
   if (!NonUnitFixedLengthVector || !Subtarget->useSVEForFixedLengthVectors())
