@@ -231,12 +231,11 @@ define amdgpu_ps double @struct_ptr_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cm
   ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
   ; CHECK-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE]], %subreg.sub0_sub1, [[REG_SEQUENCE1]], %subreg.sub2_sub3
   ; CHECK-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN:%[0-9]+]]:vreg_128 = BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[REG_SEQUENCE2]], [[COPY10]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64) on %ir.rsrc, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub0_sub1
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]].sub0
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY11]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub0
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub1
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   %ret = call i64 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -325,7 +324,6 @@ define amdgpu_ps double @struct_ptr_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cm
   ; CHECK-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY14]], %subreg.sub1
   ; CHECK-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY11]], %subreg.sub0_sub1, [[COPY12]], %subreg.sub2_sub3
   ; CHECK-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN:%[0-9]+]]:vreg_128 = BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN [[REG_SEQUENCE5]], [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64) on %ir.rsrc, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub0_sub1
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -335,11 +333,11 @@ define amdgpu_ps double @struct_ptr_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cm
   ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:vgpr_32 = COPY [[COPY19]].sub0
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:vgpr_32 = COPY [[COPY19]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY20]], implicit $exec
+  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub0
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub1
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY19]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_5]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY21]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY20]], implicit $exec
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_6]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   %ret = call i64 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -436,12 +434,11 @@ define amdgpu_ps double @struct_ptr_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cm
   ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
   ; CHECK-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[REG_SEQUENCE]], %subreg.sub0_sub1, [[REG_SEQUENCE1]], %subreg.sub2_sub3
   ; CHECK-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN:%[0-9]+]]:vreg_128 = BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[REG_SEQUENCE2]], [[COPY10]], 4095, 1, implicit $exec :: (volatile dereferenceable load store (s64) on %ir.rsrc, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub0_sub1
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]].sub0
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY11]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub0
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_BOTHEN_RTN]].sub1
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   %voffset = add i32 %voffset.base, 4095

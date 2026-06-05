@@ -32,8 +32,7 @@ body:             |
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   [[MOVaddrBA:%[0-9]+]]:gpr64common = MOVaddrBA target-flags(aarch64-page) blockaddress(@test_blockaddress, %ir-block.block), target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block)
   ; CHECK-NEXT:   [[MOVaddr:%[0-9]+]]:gpr64common = MOVaddr target-flags(aarch64-page) @addr, target-flags(aarch64-pageoff, aarch64-nc) @addr
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY [[MOVaddrBA]]
-  ; CHECK-NEXT:   STRXui [[COPY]], [[MOVaddr]], 0 :: (store (p0) into @addr)
+  ; CHECK-NEXT:   STRXui [[MOVaddrBA]], [[MOVaddr]], 0 :: (store (p0) into @addr)
   ; CHECK-NEXT:   BR [[MOVaddrBA]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.block (ir-block-address-taken %ir-block.block):
@@ -57,8 +56,7 @@ body:             |
   ; LARGE-PIC: bb.0 (%ir-block.0):
   ; LARGE-PIC-NEXT:   [[MOVaddrBA:%[0-9]+]]:gpr64common = MOVaddrBA target-flags(aarch64-page) blockaddress(@test_blockaddress, %ir-block.block), target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block)
   ; LARGE-PIC-NEXT:   [[MOVaddr:%[0-9]+]]:gpr64common = MOVaddr target-flags(aarch64-page) @addr, target-flags(aarch64-pageoff, aarch64-nc) @addr
-  ; LARGE-PIC-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY [[MOVaddrBA]]
-  ; LARGE-PIC-NEXT:   STRXui [[COPY]], [[MOVaddr]], 0 :: (store (p0) into @addr)
+  ; LARGE-PIC-NEXT:   STRXui [[MOVaddrBA]], [[MOVaddr]], 0 :: (store (p0) into @addr)
   ; LARGE-PIC-NEXT:   BR [[MOVaddrBA]]
   ; LARGE-PIC-NEXT: {{  $}}
   ; LARGE-PIC-NEXT: bb.1.block (ir-block-address-taken %ir-block.block):

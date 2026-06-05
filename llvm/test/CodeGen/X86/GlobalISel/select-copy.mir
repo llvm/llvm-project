@@ -95,10 +95,9 @@ body:             |
     ; X86-LABEL: name: test_copy3
     ; X86: liveins: $eax
     ; X86-NEXT: {{  $}}
-    ; X86-NEXT: [[COPY:%[0-9]+]]:gr16 = COPY $ax
-    ; X86-NEXT: [[COPY1:%[0-9]+]]:gr16_abcd = COPY [[COPY]]
-    ; X86-NEXT: [[COPY2:%[0-9]+]]:gr8_abcd_l = COPY [[COPY1]].sub_8bit
-    ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY2]]
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr16_abcd = COPY $ax
+    ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8_abcd_l = COPY [[COPY]].sub_8bit
+    ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
     ; X86-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; X86-NEXT: RET 0, implicit $eax
     ;
@@ -161,10 +160,9 @@ body:             |
     ; X86-LABEL: name: test_copy5
     ; X86: liveins: $eax, $edx
     ; X86-NEXT: {{  $}}
-    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edx
-    ; X86-NEXT: [[COPY1:%[0-9]+]]:gr32_abcd = COPY [[COPY]]
-    ; X86-NEXT: [[COPY2:%[0-9]+]]:gr8_abcd_l = COPY [[COPY1]].sub_8bit
-    ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY2]]
+    ; X86-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edx
+    ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8_abcd_l = COPY [[COPY]].sub_8bit
+    ; X86-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]]
     ; X86-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; X86-NEXT: RET 0, implicit $eax
     ;

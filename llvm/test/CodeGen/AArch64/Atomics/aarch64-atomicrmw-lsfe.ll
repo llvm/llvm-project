@@ -572,7 +572,7 @@ define dso_local float @atomicrmw_fsub_float_aligned_monotonic(ptr %ptr, float %
 ; -O0:    ldaxr w8, [x10]
 ; -O0:    cmp w8, w11
 ; -O0:    stlxr w9, w12, [x10]
-; -O0:    subs w8, w8, w9
+; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_fsub_float_aligned_monotonic:
 ; -O1:    ldxr w8, [x0]
@@ -586,7 +586,7 @@ define dso_local float @atomicrmw_fsub_float_aligned_acquire(ptr %ptr, float %va
 ; -O0:    ldaxr w8, [x10]
 ; -O0:    cmp w8, w11
 ; -O0:    stlxr w9, w12, [x10]
-; -O0:    subs w8, w8, w9
+; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_fsub_float_aligned_acquire:
 ; -O1:    ldaxr w8, [x0]
@@ -600,7 +600,7 @@ define dso_local float @atomicrmw_fsub_float_aligned_release(ptr %ptr, float %va
 ; -O0:    ldaxr w8, [x10]
 ; -O0:    cmp w8, w11
 ; -O0:    stlxr w9, w12, [x10]
-; -O0:    subs w8, w8, w9
+; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_fsub_float_aligned_release:
 ; -O1:    ldxr w8, [x0]
@@ -614,7 +614,7 @@ define dso_local float @atomicrmw_fsub_float_aligned_acq_rel(ptr %ptr, float %va
 ; -O0:    ldaxr w8, [x10]
 ; -O0:    cmp w8, w11
 ; -O0:    stlxr w9, w12, [x10]
-; -O0:    subs w8, w8, w9
+; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_fsub_float_aligned_acq_rel:
 ; -O1:    ldaxr w8, [x0]
@@ -628,7 +628,7 @@ define dso_local float @atomicrmw_fsub_float_aligned_seq_cst(ptr %ptr, float %va
 ; -O0:    ldaxr w8, [x10]
 ; -O0:    cmp w8, w11
 ; -O0:    stlxr w9, w12, [x10]
-; -O0:    subs w8, w8, w9
+; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_fsub_float_aligned_seq_cst:
 ; -O1:    ldaxr w8, [x0]
@@ -642,7 +642,7 @@ define dso_local double @atomicrmw_fsub_double_aligned_monotonic(ptr %ptr, doubl
 ; -O0:    ldaxr x8, [x10]
 ; -O0:    cmp x8, x11
 ; -O0:    stlxr w9, x12, [x10]
-; -O0:    subs x8, x8, x9
+; -O0:    subs x9, x8, x9
 ;
 ; -O1-LABEL: atomicrmw_fsub_double_aligned_monotonic:
 ; -O1:    ldxr x8, [x0]
@@ -656,7 +656,7 @@ define dso_local double @atomicrmw_fsub_double_aligned_acquire(ptr %ptr, double 
 ; -O0:    ldaxr x8, [x10]
 ; -O0:    cmp x8, x11
 ; -O0:    stlxr w9, x12, [x10]
-; -O0:    subs x8, x8, x9
+; -O0:    subs x9, x8, x9
 ;
 ; -O1-LABEL: atomicrmw_fsub_double_aligned_acquire:
 ; -O1:    ldaxr x8, [x0]
@@ -670,7 +670,7 @@ define dso_local double @atomicrmw_fsub_double_aligned_release(ptr %ptr, double 
 ; -O0:    ldaxr x8, [x10]
 ; -O0:    cmp x8, x11
 ; -O0:    stlxr w9, x12, [x10]
-; -O0:    subs x8, x8, x9
+; -O0:    subs x9, x8, x9
 ;
 ; -O1-LABEL: atomicrmw_fsub_double_aligned_release:
 ; -O1:    ldxr x8, [x0]
@@ -684,7 +684,7 @@ define dso_local double @atomicrmw_fsub_double_aligned_acq_rel(ptr %ptr, double 
 ; -O0:    ldaxr x8, [x10]
 ; -O0:    cmp x8, x11
 ; -O0:    stlxr w9, x12, [x10]
-; -O0:    subs x8, x8, x9
+; -O0:    subs x9, x8, x9
 ;
 ; -O1-LABEL: atomicrmw_fsub_double_aligned_acq_rel:
 ; -O1:    ldaxr x8, [x0]
@@ -698,7 +698,7 @@ define dso_local double @atomicrmw_fsub_double_aligned_seq_cst(ptr %ptr, double 
 ; -O0:    ldaxr x8, [x10]
 ; -O0:    cmp x8, x11
 ; -O0:    stlxr w9, x12, [x10]
-; -O0:    subs x8, x8, x9
+; -O0:    subs x9, x8, x9
 ;
 ; -O1-LABEL: atomicrmw_fsub_double_aligned_seq_cst:
 ; -O1:    ldaxr x8, [x0]

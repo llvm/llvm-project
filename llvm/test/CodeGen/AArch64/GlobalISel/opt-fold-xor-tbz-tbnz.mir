@@ -13,9 +13,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-  ; CHECK-NEXT:   TBNZW [[COPY1]], 3, %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy.sub_32
+  ; CHECK-NEXT:   TBNZW [[COPY]], 3, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -55,9 +54,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-  ; CHECK-NEXT:   TBZW [[COPY1]], 3, %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy.sub_32
+  ; CHECK-NEXT:   TBZW [[COPY]], 3, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -92,9 +90,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-  ; CHECK-NEXT:   TBZW [[COPY1]], 3, %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy.sub_32
+  ; CHECK-NEXT:   TBZW [[COPY]], 3, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -168,9 +165,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-  ; CHECK-NEXT:   TBNZW [[COPY1]], 3, %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy.sub_32
+  ; CHECK-NEXT:   TBNZW [[COPY]], 3, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -205,9 +201,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-  ; CHECK-NEXT:   TBZW [[COPY1]], 3, %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy.sub_32
+  ; CHECK-NEXT:   TBZW [[COPY]], 3, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

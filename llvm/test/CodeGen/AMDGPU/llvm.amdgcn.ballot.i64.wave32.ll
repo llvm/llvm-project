@@ -12,11 +12,17 @@ declare i64 @llvm.ctpop.i64(i64)
 ; Test ballot(0)
 
 define amdgpu_cs i64 @constant_false() {
-; CHECK-LABEL: constant_false:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    ; return to shader part epilog
+; DAGISEL-LABEL: constant_false:
+; DAGISEL:       ; %bb.0:
+; DAGISEL-NEXT:    s_mov_b32 s0, 0
+; DAGISEL-NEXT:    s_mov_b32 s1, 0
+; DAGISEL-NEXT:    ; return to shader part epilog
+;
+; GISEL-LABEL: constant_false:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_mov_b32 s0, 0
+; GISEL-NEXT:    s_mov_b32 s1, s0
+; GISEL-NEXT:    ; return to shader part epilog
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 0)
   ret i64 %ballot
 }

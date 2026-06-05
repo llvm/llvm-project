@@ -35,8 +35,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_S_EXP_F16_e64_:%[0-9]+]]:sreg_32_xexec = nofpexcept V_S_EXP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_EXP_F16_e64_]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_S_EXP_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), %1
@@ -78,8 +77,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_S_LOG_F16_e64_:%[0-9]+]]:sreg_32_xexec = nofpexcept V_S_LOG_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_LOG_F16_e64_]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_S_LOG_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.log), %1
@@ -121,8 +119,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_S_RCP_F16_e64_:%[0-9]+]]:sreg_32_xexec = nnan ninf nsz arcp contract afn reassoc nofpexcept V_S_RCP_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_RCP_F16_e64_]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_S_RCP_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s16) = nnan ninf nsz arcp contract afn reassoc G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %1(s16)
@@ -164,8 +161,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_S_RSQ_F16_e64_:%[0-9]+]]:sreg_32_xexec = nofpexcept V_S_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_RSQ_F16_e64_]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_S_RSQ_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %1(s16)
@@ -207,8 +203,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_S_SQRT_F16_e64_:%[0-9]+]]:sreg_32_xexec = nofpexcept V_S_SQRT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_SQRT_F16_e64_]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_S_SQRT_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s16) = G_FSQRT %1
@@ -250,8 +245,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_S_SQRT_F16_e64_:%[0-9]+]]:sreg_32_xexec = nofpexcept V_S_SQRT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[V_S_SQRT_F16_e64_]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_S_SQRT_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0(s32)
     %2:sgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.sqrt), %1(s16)

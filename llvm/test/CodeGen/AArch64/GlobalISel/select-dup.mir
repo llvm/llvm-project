@@ -383,9 +383,8 @@ body:             |
     ; CHECK-LABEL: name: dup_v2p0
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
-    ; CHECK-NEXT: [[DUPv2i64gpr:%[0-9]+]]:fpr128 = DUPv2i64gpr [[COPY1]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[DUPv2i64gpr:%[0-9]+]]:fpr128 = DUPv2i64gpr [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[DUPv2i64gpr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:gpr(p0) = COPY $x0
@@ -445,8 +444,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 3
-    ; CHECK-NEXT: %cst:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY %cst
+    ; CHECK-NEXT: %cst:gpr64 = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
     ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
     ; CHECK-NEXT: $q0 = COPY [[LDRQui]]
