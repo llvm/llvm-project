@@ -242,8 +242,18 @@ namespace {
 // NewGV with element type ElemTy.
 static bool rewriteByteGEPs(GlobalVariable *OldGV, GlobalVariable *NewGV,
                             ArrayType *OldAT, ArrayType *NewAT, Type *ElemTy,
-                            unsigned ElemSize, LLVMContext &Ctx) {
+                            unsigned ElemSize, LLVMContext &Ctx,
+                            uint64_t ExtraElemOffset = 0) {
   bool Changed = false;
+  auto addOff = [&](IRBuilder<> &B, Value *Idx) -> Value * {
+    if (ExtraElemOffset == 0)
+      return Idx;
+    Value *Off = ConstantInt::get(Idx->getType(), ExtraElemOffset);
+    if (auto *CI = dyn_cast<ConstantInt>(Idx))
+      return ConstantInt::get(Idx->getType(),
+                              CI->getZExtValue() + ExtraElemOffset);
+    return B.CreateAdd(Idx, Off);
+  };
   SmallVector<GetElementPtrInst *, 16> Users;
   for (auto *U : OldGV->users())
     if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
@@ -266,6 +276,7 @@ static bool rewriteByteGEPs(GlobalVariable *OldGV, GlobalVariable *NewGV,
       else
         ElemIdx = B.CreateUDiv(ByteIdx,
                                ConstantInt::get(ByteIdx->getType(), ElemSize));
+      ElemIdx = addOff(B, ElemIdx);
       auto *NewGEP = GetElementPtrInst::CreateInBounds(
           NewAT, NewGV, {ConstantInt::get(Type::getInt64Ty(Ctx), 0), ElemIdx},
           GEP->getName());
@@ -281,13 +292,24 @@ static bool rewriteByteGEPs(GlobalVariable *OldGV, GlobalVariable *NewGV,
       else
         ElemIdx = B.CreateUDiv(ByteIdx,
                                ConstantInt::get(ByteIdx->getType(), ElemSize));
-      auto *NewGEP = GetElementPtrInst::CreateInBounds(ElemTy, NewGV, ElemIdx,
-                                                       GEP->getName());
+      ElemIdx = addOff(B, ElemIdx);
+      auto *NewGEP = GetElementPtrInst::CreateInBounds(NewAT, NewGV,
+          {ConstantInt::get(Type::getInt64Ty(Ctx), 0), ElemIdx},
+          GEP->getName());
       NewGEP->insertBefore(B.GetInsertPoint());
       GEP->replaceAllUsesWith(NewGEP);
       GEP->eraseFromParent();
     } else {
-      GEP->setOperand(0, NewGV);
+      if (ExtraElemOffset == 0) {
+        GEP->setOperand(0, NewGV);
+      } else {
+        IRBuilder<> B2(GEP);
+        Value *Base = B2.CreateInBoundsGEP(
+            NewAT, NewGV,
+            {ConstantInt::get(Type::getInt64Ty(Ctx), 0),
+             ConstantInt::get(Type::getInt64Ty(Ctx), ExtraElemOffset)});
+        GEP->setOperand(0, Base);
+      }
     }
     Changed = true;
   }
@@ -301,9 +323,17 @@ static bool rewriteByteGEPs(GlobalVariable *OldGV, GlobalVariable *NewGV,
     DirectUsers.push_back(I);
   }
   for (auto *I : DirectUsers) {
+    Value *Base = NewGV;
+    if (ExtraElemOffset != 0) {
+      IRBuilder<> B2(I);
+      Base = B2.CreateInBoundsGEP(
+          NewAT, NewGV,
+          {ConstantInt::get(Type::getInt64Ty(Ctx), 0),
+           ConstantInt::get(Type::getInt64Ty(Ctx), ExtraElemOffset)});
+    }
     for (unsigned Op = 0; Op < I->getNumOperands(); Op++)
       if (I->getOperand(Op) == OldGV)
-        I->setOperand(Op, NewGV);
+        I->setOperand(Op, Base);
     Changed = true;
   }
   return Changed;
@@ -422,17 +452,23 @@ splitMixedByteGlobals(Module &M,
   return Changed;
 }
 
-static bool hasMMAMatrixUser(Value *V, SmallPtrSetImpl<Value *> &Seen) {
+static bool concurrentWithMMAScratch(Value *V, SmallPtrSetImpl<Value *> &Seen) {
   if (!Seen.insert(V).second)
     return false;
   for (User *U : V->users()) {
     if (auto *CI = dyn_cast<CallInst>(U)) {
-      if (auto *Callee = CI->getCalledFunction())
-        if (Callee->getName().starts_with("air.simdgroup_matrix_8x8_load") ||
-            Callee->getName().starts_with("air.simdgroup_matrix_8x8_store"))
+      if (auto *Callee = CI->getCalledFunction()) {
+        StringRef N = Callee->getName();
+        if (N.starts_with("air.simdgroup_matrix_8x8_load") ||
+            N.starts_with("air.simdgroup_matrix_8x8_store"))
           return true;
+        if (N.starts_with("air.simdgroup_async_copy")) {
+          if (CI->arg_size() > 2 && CI->getArgOperand(2) == V)
+            return true;
+        }
+      }
     } else if (isa<GetElementPtrInst>(U) || isa<BitCastInst>(U)) {
-      if (hasMMAMatrixUser(U, Seen))
+      if (concurrentWithMMAScratch(U, Seen))
         return true;
     }
   }
@@ -520,12 +556,12 @@ static bool mergeByteMMA(Module &M,
     MergeElemSize = 4;
   }
   SmallPtrSet<Value *, 16> SeenMMA;
-  bool ByteIsMMA = hasMMAMatrixUser(ByteGV, SeenMMA);
+  bool ByteIsMMA = concurrentWithMMAScratch(ByteGV, SeenMMA);
   uint64_t ByteElemCount =
       (ByteBytes + MergeElemSize - 1) / MergeElemSize;
   uint64_t MMAElemCount =
       (MMABytes + MergeElemSize - 1) / MergeElemSize;
-  uint64_t MMAOffset = ByteIsMMA ? ByteElemCount : 0;
+  uint64_t ByteOffset = ByteIsMMA ? MMAElemCount : 0;
   uint64_t MergedElemCount =
       ByteIsMMA ? (ByteElemCount + MMAElemCount)
                 : (std::max(ByteBytes, MMABytes) + MergeElemSize - 1) /
@@ -541,19 +577,11 @@ static bool mergeByteMMA(Module &M,
   MergedGV->setAlignment(ByteGV->getAlign());
 
   Changed |= rewriteByteGEPs(ByteGV, MergedGV, ByteAT, MergedAT, MergeElemTy,
-                             MergeElemSize, Ctx);
+                             MergeElemSize, Ctx, ByteOffset);
 
   if (ByteGV->use_empty())
     ByteGV->eraseFromParent();
-  if (MMAOffset == 0) {
-    MMAGV->replaceAllUsesWith(MergedGV);
-  } else {
-    Constant *Idx0 = ConstantInt::get(Type::getInt64Ty(Ctx), 0);
-    Constant *IdxOff = ConstantInt::get(Type::getInt64Ty(Ctx), MMAOffset);
-    Constant *MMABase = ConstantExpr::getInBoundsGetElementPtr(
-        MergedAT, MergedGV, ArrayRef<Constant *>{Idx0, IdxOff});
-    MMAGV->replaceAllUsesWith(MMABase);
-  }
+  MMAGV->replaceAllUsesWith(MergedGV);
   MMAGV->eraseFromParent();
 
   if (BestIdx >= 0)
