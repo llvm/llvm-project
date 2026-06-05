@@ -314,6 +314,7 @@ void MCResourceInfo::gatherResourceInfo(
       ST.getMaxNumVectorRegs(MF.getFunction());
   unsigned MaxAllowedVGPRs = MaxNumVectorRegs.first;
   unsigned MaxAllowedAGPRs = MaxNumVectorRegs.second;
+  unsigned MaxAllowedSGPRs = ST.getMaxNumSGPRs(MF.getFunction());
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
@@ -332,11 +333,14 @@ void MCResourceInfo::gatherResourceInfo(
         RegExpr = AMDGPUMCExpr::createMin(
             {MCConstantExpr::create(MaxAllowedAGPRs, OutContext), RegExpr},
             OutContext);
+      } else if (RIK == RIK_NumSGPR) {
+        RegExpr = AMDGPUMCExpr::createMin(
+          {MCConstantExpr::create(MaxAllowedSGPRs, OutContext), RegExpr},
+          OutContext);
       }
       LocalNumSym->setVariableValue(RegExpr);
       LLVM_DEBUG(dbgs() << "MCResUse:   " << LocalNumSym->getName()
-                        << ": Indirect callee within, using minimum of module "
-                           "maximum and function maximum\n");
+                        << ": Indirect callee within, using module maximum unless it exceeds the functions budget for VGPRs, AGPRs, or SGPRs \n");
     }
   };
 
