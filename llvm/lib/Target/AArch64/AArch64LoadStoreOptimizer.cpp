@@ -2017,7 +2017,6 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
                                       bool FindNarrowMerge) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator MBBI = I;
-  MachineBasicBlock::iterator MBBIWithRenameReg;
   MachineInstr &FirstMI = *I;
   MBBI = next_nodbg(MBBI, E);
 
@@ -2217,8 +2216,6 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           }
 
           Flags.setMergeForward(false);
-          if (!SameLoadReg)
-            Flags.clearRenameReg();
           return MBBI;
         }
 
@@ -2237,7 +2234,6 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         if (RtNotModified && !mayAlias(FirstMI, MemInsns, AA)) {
           if (ModifiedRegUnits.available(getLdStRegOp(FirstMI).getReg())) {
             Flags.setMergeForward(true);
-            Flags.clearRenameReg();
             return MBBI;
           }
 
@@ -2247,16 +2243,13 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           if (RenameReg) {
             Flags.setMergeForward(true);
             Flags.setRenameReg(*RenameReg);
-            MBBIWithRenameReg = MBBI;
+            return MBBI;
           }
         }
         LLVM_DEBUG(dbgs() << "Unable to combine these instructions due to "
                           << "interference in between, keep looking.\n");
       }
     }
-
-    if (Flags.getRenameReg())
-      return MBBIWithRenameReg;
 
     // If the instruction wasn't a matching load or store.  Stop searching if we
     // encounter a call instruction that might modify memory.
