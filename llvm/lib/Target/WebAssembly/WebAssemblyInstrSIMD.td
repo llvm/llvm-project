@@ -1504,12 +1504,26 @@ multiclass SignedSaturatingTruncate<ValueType input, ValueType output,
 defm : SignedSaturatingTruncate<v8i16, v16i8, NARROW_S_I8x16, -128, 127, 0xFF>;
 defm : SignedSaturatingTruncate<v4i32, v8i16, NARROW_S_I16x8, -32768, 32767, 0xFFFF>;
 
+// NOTE: the saturating is actually signed, the truncation is unsigned, see
+// https://www.w3.org/TR/wasm-core-2/#-hrefop-narrowmathrmnarrowmathsfu_m-n-i
 multiclass UnsignedSaturatingTruncate<ValueType input, ValueType output,
-                                    Instruction narrow, int maxval> {
+                                      Instruction narrow, int maxval> {
   def : Pat<
     (output (wasm_narrow_u
-      (umin (input V128:$a), (splat_vector (i32 maxval))),
-      (umin (input V128:$b), (splat_vector (i32 maxval)))
+      (smin (smax (input V128:$a), (splat_vector (i32 0))),
+            (splat_vector (i32 maxval))),
+      (smin (smax (input V128:$b), (splat_vector (i32 0))),
+            (splat_vector (i32 maxval)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_u
+      (smax (smin (input V128:$a), (splat_vector (i32 maxval))),
+            (splat_vector (i32 0))),
+      (smax (smin (input V128:$b), (splat_vector (i32 maxval))),
+            (splat_vector (i32 0)))
     )),
     (narrow V128:$a, V128:$b)
   >;
