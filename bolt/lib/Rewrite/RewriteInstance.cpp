@@ -5069,6 +5069,23 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     addSection(NewSection, Section);
   }
 
+  // Some consumers, including elfutils/libdw, stop scanning section headers
+  // once they find .eh_frame and only use .eh_frame_hdr if it appeared first.
+  // Keep layout-driven ordering for size calculations above, but preserve the
+  // conventional section-header order before assigning final indices.
+  auto HasOutputName = [](StringRef Name) {
+    return [Name](const auto &SectionKV) {
+      return SectionKV.first && SectionKV.first->getOutputName() == Name;
+    };
+  };
+  auto EHFrameHdrIt = llvm::find_if(
+      OutputSections, HasOutputName(getEHFrameHdrSectionName()));
+  auto EHFrameIt = llvm::find_if(OutputSections, HasOutputName(".eh_frame"));
+  if (EHFrameHdrIt != OutputSections.end() &&
+      EHFrameIt != OutputSections.end() &&
+      EHFrameIt < EHFrameHdrIt)
+    std::rotate(EHFrameIt, EHFrameHdrIt, std::next(EHFrameHdrIt));
+
   // Assign indices to sections.
   for (uint32_t Index = 1; Index < OutputSections.size(); ++Index)
     OutputSections[Index].first->setIndex(Index);
