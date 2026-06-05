@@ -1190,13 +1190,17 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
 //
 // We don't use OverflowSafeSignedAPInt here because it's known that this
 // algorithm doesn't overflow.
-static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
-                    const APInt &Delta, APInt &G, APInt &X, APInt &Y) {
+static std::optional<bool> findGCD(unsigned Bits, const APInt &AM,
+                                   const APInt &BM, const APInt &Delta,
+                                   APInt &G, APInt &X, APInt &Y) {
   LLVM_DEBUG(dbgs() << "\t    AM = " << AM << "\n");
   LLVM_DEBUG(dbgs() << "\t    BM = " << BM << "\n");
   LLVM_DEBUG(dbgs() << "\t    Delta = " << Delta << "\n");
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
   APInt B0(Bits, 0, true), B1(Bits, 1, true);
+  if (AM.isMinSignedValue() || BM.isMinSignedValue())
+    // APInt::abs will overflow.
+    return std::nullopt;
   APInt G0 = AM.abs();
   APInt G1 = BM.abs();
   APInt Q = G0; // these need to be initialized
@@ -1568,7 +1572,11 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   APInt BM = ConstDstCoeff->getAPInt();
   APInt CM = ConstDelta->getAPInt();
   unsigned Bits = AM.getBitWidth();
-  if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
+  std::optional<bool> GCDRes = findGCD(Bits, AM, BM, CM, G, X, Y);
+  if (!GCDRes)
+    // GCD calculation failed so we cannot proceed with this test.
+    return false;
+  if (*GCDRes) {
     // gcd doesn't divide Delta, no dependence
     return true;
   }
