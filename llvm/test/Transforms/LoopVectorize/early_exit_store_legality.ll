@@ -1049,10 +1049,9 @@ invalid.block:
   unreachable
 }
 
-define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) !dbg !76 {
-; CHECK-DEBUG-LABEL: LV: Checking a loop in 'combined_exit_conditions'
-; CHECK-DEBUG:       LV:  Not vectorizing: Cannot vectorize uncountable loop.
-; CHECK-REMARK:      foo.c:340:3: loop not vectorized: Cannot vectorize uncountable loop
+define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'combined_exit_conditions'
+; CHECK:       LV: We can vectorize this loop!
 entry:
   br label %for.body, !dbg !77
 

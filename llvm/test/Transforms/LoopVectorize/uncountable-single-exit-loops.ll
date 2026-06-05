@@ -4,12 +4,14 @@
 
 ; CHECK-LABEL: LV: Checking a loop in 'latch_exit_cannot_compute_btc_due_to_step'
 ; CHECK: 	   LV: Did not find one integer induction var.
+; CHECK-NEXT:  LV: Not vectorizing: Cannot determine exact exit count for latch block.
 ; CHECK-NEXT:  LV: Not vectorizing: Cannot vectorize uncountable loop.
 ; CHECK-NEXT:  LV: Not vectorizing: Cannot prove legality.
 
 ; CHECK-LABEL: LV: Checking a loop in 'header_exit_cannot_compute_btc_due_to_step'
 ; CHECK:       LV: Found an induction variable.
 ; CHECK-NEXT:  LV: Did not find one integer induction var.
+; CHECK-NEXT:  LV: Not vectorizing: Cannot determine exact exit count for latch block.
 ; CHECK-NEXT:  LV: Not vectorizing: Cannot vectorize uncountable loop.
 ; CHECK-NEXT:  LV: Not vectorizing: Cannot prove legality.
 
