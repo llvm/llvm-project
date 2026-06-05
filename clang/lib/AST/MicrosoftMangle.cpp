@@ -3101,7 +3101,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   if (Proto) {
     unsigned SMEAttrs = Proto->getAArch64SMEAttributes();
     if (SMEAttrs)
-      Out << "$$SME" << SMEAttrs;
+      Out << "__clang_sme_attr" << SMEAttrs;
   }
 
   // <return-type> ::= <type>
