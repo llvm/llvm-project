@@ -160,9 +160,9 @@ private:
   void emitMCInst(MCInst &Inst);
   MCRegister emitOpString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Section 7 only: return cached id or emit OpString and cache it. Must not
-  /// be called after NonSemanticOpStringsSectionEmitted is set.
-  MCRegister emitOpStringIfNew(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
+  /// Section 7 only: emit OpString and cache it if not already present. Must
+  /// not be called after NonSemanticOpStringsSectionEmitted is set.
+  void emitOpStringIfNew(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Section 10 only: lookup OpString id from cache; asserts if missing or if
   /// section 7 did not complete.

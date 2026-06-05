@@ -257,7 +257,7 @@ SPIRVNonSemanticDebugHandler::emitOpString(StringRef S,
   return Reg;
 }
 
-MCRegister SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
+void SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
     StringRef S, SPIRV::ModuleAnalysisInfo &MAI) {
 #ifndef NDEBUG
   assert(!NonSemanticOpStringsSectionEmitted &&
@@ -265,11 +265,9 @@ MCRegister SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
 #endif
   auto [It, Inserted] = OpStringContentCache.try_emplace(S, MCRegister());
   if (!Inserted)
-    return It->second;
+    return;
 
-  MCRegister Reg = emitOpString(S, MAI);
-  It->second = Reg;
-  return Reg;
+  It->second = emitOpString(S, MAI);
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
@@ -474,13 +472,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   if (!MAI.getExtInstSetReg(NSSet).isValid())
     return;
 
-  for (const CompileUnitInfo &Info : CompileUnits) {
-    [[maybe_unused]] MCRegister Reg = emitOpStringIfNew(Info.FilePath, MAI);
-  }
+  for (const CompileUnitInfo &Info : CompileUnits)
+    emitOpStringIfNew(Info.FilePath, MAI);
 
-  for (const DIBasicType *BT : BasicTypes) {
-    [[maybe_unused]] MCRegister Reg = emitOpStringIfNew(BT->getName(), MAI);
-  }
+  for (const DIBasicType *BT : BasicTypes)
+    emitOpStringIfNew(BT->getName(), MAI);
 
 #ifndef NDEBUG
   NonSemanticOpStringsSectionEmitted = true;
