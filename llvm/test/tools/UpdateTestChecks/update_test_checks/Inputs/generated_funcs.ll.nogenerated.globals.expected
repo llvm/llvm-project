@@ -63,3 +63,5 @@ declare void @_Z10sideeffectv()
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { cold minsize noreturn }
 ; CHECK: attributes #[[ATTR2]] = { noinline }
 ;.
+; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 0}
+;.

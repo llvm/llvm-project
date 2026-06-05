@@ -9,7 +9,7 @@
 #
 # This is independent of LLVM's own "maintainer" concept.
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
-# Maintainers.* files in the the respective subproject directories.
+# Maintainers.md files in the the respective subproject directories.
 
 /libc/ @llvm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx
@@ -80,9 +80,9 @@
 /mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
 /mlir/include/mlir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
 /mlir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
-/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
-/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
-/mlir/lib/Conversion/*XeVM* @silee2
+/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2 @akroviakov
+/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2 @akroviakov
+/mlir/lib/Conversion/*XeVM* @silee2 @akroviakov
 
 # Bufferization Dialect in MLIR.
 /mlir/include/mlir/Dialect/Bufferization @matthias-springer
@@ -197,12 +197,16 @@
 /clang/bindings/python @DeinAlptraum
 
 # AMDGPU assembler and disassembler
-/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86 
-/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86 
- 
+/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86
+/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86
+
 # Clang Driver
 /clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j
 /clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
 
 # GlobalIsel
 /llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95
+
+# AMDGPU Memory Model
+/llvm/lib/Target/AMDGPU/SIMemoryLegalizer* @Pierre-vh @ritter-x2a
+/llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a

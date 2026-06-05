@@ -632,9 +632,7 @@ bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y) {
   const auto *empty =
       llvm::DenseMapInfo<const Fortran::lower::SomeExpr *>::getEmptyKey();
-  const auto *tombstone =
-      llvm::DenseMapInfo<const Fortran::lower::SomeExpr *>::getTombstoneKey();
-  if (x == empty || y == empty || x == tombstone || y == tombstone)
+  if (x == empty || y == empty)
     return x == y;
   return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
 }
@@ -663,9 +661,7 @@ bool isEqual(const Fortran::evaluate::Component *x,
              const Fortran::evaluate::Component *y) {
   const auto *empty =
       llvm::DenseMapInfo<const Fortran::evaluate::Component *>::getEmptyKey();
-  const auto *tombstone = llvm::DenseMapInfo<
-      const Fortran::evaluate::Component *>::getTombstoneKey();
-  if (x == empty || y == empty || x == tombstone || y == tombstone)
+  if (x == empty || y == empty)
     return x == y;
   return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
 }
@@ -726,7 +722,10 @@ void privatizeSymbol(
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
-  if (!mlir::isa<fir::PointerType>(privVal.getType()))
+  // Only preserve fir.ptr wrapping for true Fortran POINTERs; EQUIVALENCE
+  // aliases also use fir.ptr but need the underlying type for allocation.
+  if (!mlir::isa<fir::PointerType>(privVal.getType()) ||
+      !semantics::IsPointer(ultimate))
     allocType = fir::unwrapRefType(privVal.getType());
 
   if (auto poly = mlir::dyn_cast<fir::ClassType>(allocType)) {

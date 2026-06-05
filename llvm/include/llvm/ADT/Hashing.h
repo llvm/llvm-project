@@ -392,7 +392,6 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg) {
 
 template <> struct DenseMapInfo<hash_code, void> {
   static constexpr hash_code getEmptyKey() { return hash_code(-1); }
-  static constexpr hash_code getTombstoneKey() { return hash_code(-2); }
   static constexpr unsigned getHashValue(hash_code val) {
     return static_cast<unsigned>(size_t(val));
   }

@@ -14,6 +14,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
+#include "ProcessWindowsLog.h"
 #include "RegisterContextWindows_arm.h"
 #include "TargetThreadWindows.h"
 
@@ -30,12 +31,10 @@ using namespace lldb_private;
 #define DBG_OFFSET_NAME(reg) 0
 
 #define DEFINE_DBG(reg, i)                                                     \
-  #reg, NULL,                                                                  \
-      0, DBG_OFFSET_NAME(reg[i]), eEncodingUint, eFormatHex,                   \
-                              {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
-                               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
-                               LLDB_INVALID_REGNUM },                          \
-                               NULL, NULL, NULL
+  #reg, nullptr, 0, DBG_OFFSET_NAME(reg[i]), eEncodingUint, eFormatHex,        \
+      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
+       LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},                              \
+      nullptr, nullptr, nullptr
 
 // Include RegisterInfos_arm to declare our g_register_infos_arm structure.
 #define DECLARE_REGISTER_INFOS_ARM_STRUCT
@@ -80,7 +79,7 @@ RegisterContextWindows_arm::RegisterContextWindows_arm(
     Thread &thread, uint32_t concrete_frame_idx)
     : RegisterContextWindows(thread, concrete_frame_idx) {}
 
-RegisterContextWindows_arm::~RegisterContextWindows_arm() {}
+RegisterContextWindows_arm::~RegisterContextWindows_arm() = default;
 
 size_t RegisterContextWindows_arm::GetRegisterCount() {
   return std::size(g_register_infos_arm);
@@ -90,7 +89,7 @@ const RegisterInfo *
 RegisterContextWindows_arm::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < k_num_register_infos)
     return &g_register_infos_arm[reg];
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextWindows_arm::GetRegisterSetCount() {
@@ -276,6 +275,7 @@ bool RegisterContextWindows_arm::WriteRegister(const RegisterInfo *reg_info,
 
   const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
 
+  Log *log = GetLog(WindowsLog::Registers);
   switch (reg) {
   case gpr_r0:
     m_context.R0 = reg_value.GetAsUInt32();
@@ -423,6 +423,8 @@ bool RegisterContextWindows_arm::WriteRegister(const RegisterInfo *reg_info,
     break;
 
   default:
+    LLDB_LOG(log, "Write value {0:x} to unknown register {1}",
+             reg_value.GetAsUInt32(), reg);
     return false;
   }
 
