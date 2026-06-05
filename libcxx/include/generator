@@ -25,52 +25,56 @@ namespace std {
 
 */
 
-#include <__algorithm/max.h>
-#include <__assert>
-#include <__concepts/common_reference_with.h>
-#include <__concepts/constructible.h>
-#include <__concepts/convertible_to.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__coroutine/coroutine_handle.h>
-#include <__coroutine/coroutine_traits.h>
-#include <__coroutine/noop_coroutine_handle.h>
-#include <__coroutine/trivial_awaitables.h>
-#include <__exception/exception_ptr.h>
-#include <__iterator/default_sentinel.h>
-#include <__memory/addressof.h>
-#include <__memory/allocator_arg_t.h>
-#include <__memory/allocator_traits.h>
-#include <__memory/construct_at.h>
-#include <__memory_resource/polymorphic_allocator.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__ranges/elements_of.h>
-#include <__ranges/view_interface.h>
-#include <__type_traits/add_pointer.h>
-#include <__type_traits/common_reference.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_object.h>
-#include <__type_traits/is_pointer.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/remove_cvref.h>
-#include <__type_traits/remove_reference.h>
-#include <__utility/exchange.h>
-#include <__utility/move.h>
-#include <__utility/swap.h>
-#include <cstdint>
-#include <new>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if _LIBCPP_STD_VER >= 23
+
+#    include <__algorithm/max.h>
+#    include <__assert>
+#    include <__concepts/common_reference_with.h>
+#    include <__concepts/constructible.h>
+#    include <__concepts/convertible_to.h>
+#    include <__concepts/same_as.h>
+#    include <__coroutine/coroutine_handle.h>
+#    include <__coroutine/coroutine_traits.h>
+#    include <__coroutine/noop_coroutine_handle.h>
+#    include <__coroutine/trivial_awaitables.h>
+#    include <__exception/exception_ptr.h>
+#    include <__iterator/default_sentinel.h>
+#    include <__memory/addressof.h>
+#    include <__memory/allocator_arg_t.h>
+#    include <__memory/allocator_traits.h>
+#    include <__memory/construct_at.h>
+#    include <__memory_resource/polymorphic_allocator.h>
+#    include <__ranges/access.h>
+#    include <__ranges/concepts.h>
+#    include <__ranges/elements_of.h>
+#    include <__ranges/view_interface.h>
+#    include <__type_traits/add_pointer.h>
+#    include <__type_traits/common_reference.h>
+#    include <__type_traits/conditional.h>
+#    include <__type_traits/is_nothrow_constructible.h>
+#    include <__type_traits/is_object.h>
+#    include <__type_traits/is_pointer.h>
+#    include <__type_traits/is_reference.h>
+#    include <__type_traits/is_void.h>
+#    include <__type_traits/remove_cvref.h>
+#    include <__type_traits/remove_reference.h>
+#    include <__utility/exchange.h>
+#    include <__utility/move.h>
+#    include <__utility/swap.h>
+#    include <cstdint>
+#    include <new>
+
+#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#      pragma GCC system_header
+#    endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
-#if _LIBCPP_STD_VER >= 23
+#    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -309,13 +313,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI void return_void() const noexcept {}
 
   _LIBCPP_HIDE_FROM_ABI void unhandled_exception() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     if (__is_root()) {
       throw;
     } else {
       __get_recursive_data().__exception = std::current_exception();
     }
-#  endif
+#    endif
   }
 };
 
@@ -462,9 +466,14 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI void* operator new(size_t __size) {
-    void* const __ptr      = ::operator new(__size + sizeof(__dealloc_fn));
-    __dealloc_fn __dealloc = [](void* const __dealloc_ptr, const size_t __dealloc_size) static noexcept -> void {
+    void* const __ptr = ::operator new(__size + sizeof(__dealloc_fn));
+    __dealloc_fn __dealloc =
+        [](void* const __dealloc_ptr, [[maybe_unused]] const size_t __dealloc_size) static noexcept -> void {
+#    ifdef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+      ::operator delete(__dealloc_ptr);
+#    else
       ::operator delete(__dealloc_ptr, __dealloc_size + sizeof(__dealloc_fn));
+#    endif
     };
 
     __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
@@ -596,8 +605,10 @@ using generator = std::generator<_Ref, _Val, polymorphic_allocator<>>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 23
+#  endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_GENERATOR
