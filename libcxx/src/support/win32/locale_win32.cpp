@@ -269,7 +269,7 @@ const char* __get_locale_encoding(__locale_t loc) {
         return __codepage_name(__cpage);
       }
     } else { // POSIX-style name
-      return locale_name;
+      return locale_name + dot + 1;
     }
   }
 
