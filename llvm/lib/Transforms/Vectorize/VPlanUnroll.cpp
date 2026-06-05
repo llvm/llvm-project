@@ -236,8 +236,7 @@ void UnrollState::unrollWidenInductionByUF(
     addRecipeForPart(IV, Add, Part);
     Prev = Add;
   }
-  IV->addOperand(VectorStep);
-  IV->addOperand(Prev);
+  IV->addUnrolledPartOperands(VectorStep, Prev);
 }
 
 void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
@@ -349,7 +348,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
-      Copy->addOperand(VFxPart);
+      if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(Copy))
+        VecPtr->addPerPartOffset(VFxPart);
+      else
+        cast<VPWidenCanonicalIVRecipe>(Copy)->addPerPartStep(VFxPart);
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
@@ -391,7 +393,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   }
   if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
     // Set Part0 step for WidenCanonicalIV.
-    WideCanIV->addOperand(getConstantInt(0));
+    WideCanIV->addPerPartStep(getConstantInt(0));
   }
 }
 
@@ -425,26 +427,29 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
         match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
         match(&R, m_ComputeReductionResult(m_VPValue(Op1)))) {
-      addUniformForAllParts(cast<VPInstruction>(&R));
+      auto *VPI = cast<VPInstruction>(&R);
+      addUniformForAllParts(VPI);
       for (unsigned Part = 1; Part != UF; ++Part)
-        R.addOperand(getValueForPart(Op1, Part));
+        VPI->addOperand(getValueForPart(Op1, Part));
       continue;
     }
     VPValue *Op0;
     if (match(&R, m_ExtractLane(m_VPValue(Op0), m_VPValue(Op1)))) {
-      addUniformForAllParts(cast<VPInstruction>(&R));
+      auto *VPI = cast<VPInstruction>(&R);
+      addUniformForAllParts(VPI);
       for (unsigned Part = 1; Part != UF; ++Part)
-        R.addOperand(getValueForPart(Op1, Part));
+        VPI->addOperand(getValueForPart(Op1, Part));
       continue;
     }
 
     VPValue *Op2;
     if (match(&R, m_ExtractLastActive(m_VPValue(), m_VPValue(Op1),
                                       m_VPValue(Op2)))) {
-      addUniformForAllParts(cast<VPInstruction>(&R));
+      auto *VPI = cast<VPInstruction>(&R);
+      addUniformForAllParts(VPI);
       for (unsigned Part = 1; Part != UF; ++Part) {
-        R.addOperand(getValueForPart(Op1, Part));
-        R.addOperand(getValueForPart(Op2, Part));
+        VPI->addOperand(getValueForPart(Op1, Part));
+        VPI->addOperand(getValueForPart(Op2, Part));
       }
       continue;
     }
