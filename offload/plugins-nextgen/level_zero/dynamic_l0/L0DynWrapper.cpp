@@ -91,6 +91,9 @@ DLWRAP(zeModuleGetFunctionPointer, 3)
 DLWRAP(zesDeviceEnumMemoryModules, 3)
 DLWRAP(zesMemoryGetState, 2)
 DLWRAP(zeCommandListHostSynchronize, 2)
+DLWRAP(zeCommandListAppendSignalEvent, 2)
+DLWRAP(zeCommandListAppendWaitOnEvents, 3)
+DLWRAP(zeEventQueryStatus, 1)
 
 DLWRAP_FINALIZE()
 
