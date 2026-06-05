@@ -128,7 +128,7 @@ void use_F() {
 // CIR-DAG: cir.global "private" external @_ZTV1D = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1D> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1D1fEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !{{.*}}{alignment = 8 : i64}
 // CIR-DAG: cir.global external @_ZTS1D = #cir.const_array<"1D" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3> {alignment = 1 : i64}
 // CIR-DAG: cir.global constant external @_ZTI1D = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1D> : !cir.ptr<!u8i>}> : !{{.*}}{alignment = 8 : i64}
-// LLVM-DAG: @_ZTV1D = {{(constant|global)}} { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1D, ptr @_ZN1D1fEv] }, align 8
+// LLVM-DAG: @_ZTV1D = {{(unnamed_addr constant|global)}} { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1D, ptr @_ZN1D1fEv] }, align 8
 // LLVM-DAG: @_ZTS1D = {{(constant|global)}} [{{[0-9]}} x i8] c"1D\00", align 1
 // LLVM-DAG: @_ZTI1D = constant { ptr, ptr } { ptr getelementptr {{.*}}({{.*}}, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 {{[0-9]+}}), ptr @_ZTS1D }, align 8
 
@@ -138,7 +138,7 @@ void use_F() {
 // CIR-DAG: cir.global "private" external @_ZTV1EIcE = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1EIcE> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1EIcE6anchorEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !{{.*}}{alignment = 8 : i64}
 // CIR-DAG: cir.global external @_ZTS1EIcE = #cir.const_array<"1EIcE" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> {alignment = 1 : i64}
 // CIR-DAG: cir.global constant external @_ZTI1EIcE = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1EIcE> : !cir.ptr<!u8i>}> : !{{.*}}{alignment = 8 : i64}
-// LLVM-DAG: @_ZTV1EIcE = {{(constant|global)}} { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1EIcE, ptr @_ZN1EIcE6anchorEv] }, align 8
+// LLVM-DAG: @_ZTV1EIcE = {{(unnamed_addr constant|global)}} { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1EIcE, ptr @_ZN1EIcE6anchorEv] }, align 8
 // LLVM-DAG: @_ZTS1EIcE = {{(constant|global)}} [6 x i8] c"1EIcE\00", align 1
 // LLVM-DAG: @_ZTI1EIcE = constant { ptr, ptr } { ptr getelementptr {{.*}}({{.*}}, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 {{.*}}), ptr @_ZTS1EIcE }, align 8
 
