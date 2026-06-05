@@ -13401,7 +13401,7 @@ def warn_mismatched_import : Warning<
   "previous declaration">,
   InGroup<IgnoredAttributes>;
 def warn_import_on_definition : Warning<
-  "import %select{module|name}0 cannot be applied to a function with a definition">,
+  "import %select{module|name}0 cannot be applied to a %select{function|variable}1 with a definition">,
   InGroup<IgnoredAttributes>;
 
 def err_preserve_field_info_not_field : Error<

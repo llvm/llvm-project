@@ -1672,6 +1672,14 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
           assert(!WasmIndices.contains(&WS));
           WasmIndices[&WS] = Global.Index;
           Globals.push_back(Global);
+
+          if (WS.hasExportName()) {
+            wasm::WasmExport Export;
+            Export.Name = WS.getExportName();
+            Export.Kind = wasm::WASM_EXTERNAL_GLOBAL;
+            Export.Index = Global.Index;
+            Exports.push_back(Export);
+          }
         } else {
           // An import; the index was assigned above
           LLVM_DEBUG(dbgs() << "  -> global index: "

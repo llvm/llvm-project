@@ -358,49 +358,59 @@ SemaWasm::mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL) {
 
 void SemaWasm::handleWebAssemblyImportModuleAttr(Decl *D,
                                                  const ParsedAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-
   StringRef Str;
   SourceLocation ArgLoc;
   if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
     return;
-  if (FD->hasBody()) {
-    Diag(AL.getLoc(), diag::warn_import_on_definition) << 0;
-    return;
-  }
 
-  FD->addAttr(::new (getASTContext())
-                  WebAssemblyImportModuleAttr(getASTContext(), AL, Str));
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->hasBody()) {
+      Diag(AL.getLoc(), diag::warn_import_on_definition) << 0 << 0;
+      return;
+    }
+    FD->addAttr(::new (getASTContext())
+                    WebAssemblyImportModuleAttr(getASTContext(), AL, Str));
+  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
+      Diag(AL.getLoc(), diag::warn_import_on_definition) << 0 << 1;
+      return;
+    }
+    VD->addAttr(::new (getASTContext())
+                    WebAssemblyImportModuleAttr(getASTContext(), AL, Str));
+  }
 }
 
 void SemaWasm::handleWebAssemblyImportNameAttr(Decl *D, const ParsedAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-
   StringRef Str;
   SourceLocation ArgLoc;
   if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
     return;
-  if (FD->hasBody()) {
-    Diag(AL.getLoc(), diag::warn_import_on_definition) << 1;
-    return;
-  }
 
-  FD->addAttr(::new (getASTContext())
-                  WebAssemblyImportNameAttr(getASTContext(), AL, Str));
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->hasBody()) {
+      Diag(AL.getLoc(), diag::warn_import_on_definition) << 1 << 0;
+      return;
+    }
+    FD->addAttr(::new (getASTContext())
+                    WebAssemblyImportNameAttr(getASTContext(), AL, Str));
+  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
+      Diag(AL.getLoc(), diag::warn_import_on_definition) << 1 << 1;
+      return;
+    }
+    VD->addAttr(::new (getASTContext())
+                    WebAssemblyImportNameAttr(getASTContext(), AL, Str));
+  }
 }
 
 void SemaWasm::handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL) {
   ASTContext &Context = getASTContext();
-  if (!isFuncOrMethodForAttrSubject(D)) {
-    Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
-        << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
-    return;
-  }
 
-  auto *FD = cast<FunctionDecl>(D);
-  if (FD->isThisDeclarationADefinition()) {
-    Diag(D->getLocation(), diag::err_alias_is_definition) << FD << 0;
-    return;
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->isThisDeclarationADefinition()) {
+      Diag(D->getLocation(), diag::err_alias_is_definition) << FD << 0;
+      return;
+    }
   }
 
   StringRef Str;
