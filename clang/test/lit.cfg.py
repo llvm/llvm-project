@@ -414,17 +414,8 @@ if config.enable_threads:
 
 # Add clang resource directory as a substitution
 if config.clang:
-    try:
-        clang_exe_cmd = subprocess.Popen(
-            [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE
-        )
-    except OSError:
-        print("could not exec clang")
-
-    clang_resource_dir = clang_exe_cmd.stdout.read().decode("ascii")
-    clang_exe_cmd.wait()
-
-    config.substitutions.append(("%clang-resource-dir", clang_resource_dir.strip()))
+    clang_resource_dir = subprocess.run([config.clang, "-print-resource-dir"], stdout=subprocess.PIPE, text=True).stdout.rstrip()
+    config.substitutions.append(("%clang-resource-dir", clang_resource_dir))
 
 # Check if we should allow outputs to console.
 run_console_tests = int(lit_config.params.get("enable_console", "0"))
