@@ -967,6 +967,38 @@ TEST_F(PointerFlowTest, ArrayOfStructInitList) {
                                       }));
 }
 
+TEST_F(PointerFlowTest, EmptyInitsScalarInt) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    void foo() {
+      int x{};
+      int y = {};
+      int *p{};
+      int *q = {};
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  // No pointer-flow edge for 0-initialized scalar.
+  ASSERT_EQ(Sum, nullptr);
+}
+
+TEST_F(PointerFlowTest, EmptyInitsUnion) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    union U { int x; int *p; };
+    void foo() {
+      U u{};
+      U uu = {};
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
 //////////////////////////////////////////////////////////////
 //              Return Tests.                               //
 //////////////////////////////////////////////////////////////

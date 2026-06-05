@@ -222,9 +222,8 @@ llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
   if (RecordTy->isUnion()) {
     auto *InitField = ILE->getInitializedFieldInUnion();
 
-    if (!InitField)
+    if (!InitField || ILE->inits().empty())
       return llvm::Error::success();
-    assert(!ILE->inits().empty());
     return Matcher.matchesInitializerList(InitField, ILE->getInit(0));
   }
   // Handle struct/class:
@@ -299,7 +298,11 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
   if (Type->isArrayType())
     return matchInitializerListForArray(*this, Base, ILE,
                                         ArrayElementIndirectLevel);
-  // Must be the case of using a initializer-list for a scalar:
+
+  // Must be the case of using a initializer-list for a scalar.
+  // The initializer-list can be either singleton or empty:
+  if (ILE->getNumInits() == 0)
+    return llvm::Error::success();
   return matchesInitializerList(Base, ILE->getInit(0));
 }
 
