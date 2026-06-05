@@ -707,8 +707,7 @@ public:
         mlir::Location loc = cgf.getLoc(e->getExprLoc());
         auto fpType = mlir::cast<cir::FPTypeInterface>(value.getType());
         mlir::Value amount = builder.getConstFP(
-            loc, value.getType(),
-            llvm::APFloat(fpType.getFloatSemantics(), 1));
+            loc, value.getType(), llvm::APFloat(fpType.getFloatSemantics(), 1));
         value = e->isIncrementOp() ? builder.createFAdd(loc, value, amount)
                                    : builder.createFSub(loc, value, amount);
       } else {

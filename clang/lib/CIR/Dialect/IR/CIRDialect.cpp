@@ -3013,8 +3013,8 @@ OpFoldResult cir::MinusOp::fold(FoldAdaptor adaptor) {
 
   // Fold with constant inputs. Floating-point negation is handled by
   // cir::FNegOp.
-  if (auto intAttr = mlir::dyn_cast_if_present<cir::IntAttr>(
-          adaptor.getInput())) {
+  if (auto intAttr =
+          mlir::dyn_cast_if_present<cir::IntAttr>(adaptor.getInput())) {
     APInt val = intAttr.getValue();
     val.negate();
     return cir::IntAttr::get(getType(), val);
@@ -3032,8 +3032,8 @@ OpFoldResult cir::FNegOp::fold(FoldAdaptor adaptor) {
     return adaptor.getInput();
 
   // Fold with constant inputs.
-  if (auto fpAttr = mlir::dyn_cast_if_present<cir::FPAttr>(
-          adaptor.getInput())) {
+  if (auto fpAttr =
+          mlir::dyn_cast_if_present<cir::FPAttr>(adaptor.getInput())) {
     APFloat val = fpAttr.getValue();
     val.changeSign();
     return cir::FPAttr::get(getType(), val);

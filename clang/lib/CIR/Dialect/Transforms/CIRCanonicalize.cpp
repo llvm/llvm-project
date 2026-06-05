@@ -72,8 +72,7 @@ void CIRCanonicalizePass::runOnOperation() {
     // applyOpPatternsGreedily.
     if (isa<BrOp, BrCondOp, CastOp, ScopeOp, SwitchOp, SelectOp, IncOp, DecOp,
             MinusOp, FNegOp, NotOp, AddOp, MulOp, AndOp, OrOp, XorOp, MaxOp,
-            MinOp,
-            ComplexCreateOp, ComplexImagOp, ComplexRealOp, VecCmpOp,
+            MinOp, ComplexCreateOp, ComplexImagOp, ComplexRealOp, VecCmpOp,
             VecCreateOp, VecExtractOp, VecShuffleOp, VecShuffleDynamicOp,
             VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp, BitFfsOp, BitParityOp,
             BitPopcountOp, BitReverseOp, ByteSwapOp, RotateOp, ConstantOp,
