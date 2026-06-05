@@ -164,7 +164,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // For loads: qc.e.li rd, sym; lx rd, 0(rd), %qc.access(sym)
   // For stores: qc.e.li rt, sym; sx rs, 0(rt), %qc.access(sym)
   void emitQCELILoadStoreSymbol(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
-                                 MCStreamer &Out, bool HasTmpReg);
+                                MCStreamer &Out, bool HasTmpReg);
 
   // Helper to emit pseudo sign/zero extend instruction.
   void emitPseudoExtend(MCInst &Inst, bool SignExtend, int64_t Width,
@@ -3726,8 +3726,8 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
 }
 
 void RISCVAsmParser::emitQCELILoadStoreSymbol(MCInst &Inst, unsigned Opcode,
-                                               SMLoc IDLoc, MCStreamer &Out,
-                                               bool HasTmpReg) {
+                                              SMLoc IDLoc, MCStreamer &Out,
+                                              bool HasTmpReg) {
   // For loads (HasTmpReg=false): operands are [rd, symbol]
   //   qc.e.li rd, symbol
   //   lx rd, 0(rd), %qc.access(symbol)   [possibly compressed]
@@ -4322,35 +4322,35 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case RISCV::PseudoQC_E_LB:
     emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLB, IDLoc, Out,
-                              /*HasTmpReg=*/false);
+                             /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoQC_E_LBU:
     emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLBU, IDLoc, Out,
-                              /*HasTmpReg=*/false);
+                             /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoQC_E_LH:
     emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLH, IDLoc, Out,
-                              /*HasTmpReg=*/false);
+                             /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoQC_E_LHU:
     emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLHU, IDLoc, Out,
-                              /*HasTmpReg=*/false);
+                             /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoQC_E_LW:
     emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLW, IDLoc, Out,
-                              /*HasTmpReg=*/false);
+                             /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoQC_E_SB:
     emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessSB, IDLoc, Out,
-                              /*HasTmpReg=*/true);
+                             /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoQC_E_SH:
     emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessSH, IDLoc, Out,
-                              /*HasTmpReg=*/true);
+                             /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoQC_E_SW:
     emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessSW, IDLoc, Out,
-                              /*HasTmpReg=*/true);
+                             /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoFSH:
     emitLoadStoreSymbol(Inst, RISCV::FSH, IDLoc, Out, /*HasTmpReg=*/true);
