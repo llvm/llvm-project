@@ -804,6 +804,10 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
   MinNumAGPRs = YamlMFI.MinNumAGPRs;
+  // A non-zero value means that we got this value from the function attribute.
+  // It takes precedence over the MFI value.
+  if (DynamicVGPRBlockSize == 0)
+    DynamicVGPRBlockSize = YamlMFI.DynamicVGPRBlockSize;
 
   UserSGPRInfo.allocKernargPreloadSGPRs(YamlMFI.NumKernargPreloadSGPRs);
 
