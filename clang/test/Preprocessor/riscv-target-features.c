@@ -150,6 +150,10 @@
 // CHECK-NOT: __riscv_zve64d {{.*$}}
 // CHECK-NOT: __riscv_zve64f {{.*$}}
 // CHECK-NOT: __riscv_zve64x {{.*$}}
+// CHECK-NOT: __riscv_zvqwdota8i {{.*$}}
+// CHECK-NOT: __riscv_zvqwdota16i {{.*$}}
+// CHECK-NOT: __riscv_zvfqwdota8f {{.*$}}
+// CHECK-NOT: __riscv_zvfwdota16bf {{.*$}}
 // CHECK-NOT: __riscv_zvfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zvfbfwma {{.*$}}
 // CHECK-NOT: __riscv_zvfh {{.*$}}
@@ -1695,6 +1699,38 @@
 // RUN:   -march=rv64i_zve32x_zvdot4a8i0p1 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVDOT4A8I-EXT %s
 // CHECK-ZVDOT4A8I-EXT: __riscv_zvdot4a8i 1000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_zve32x_zvqwdota8i0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVQWDOTA8I-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_zve32x_zvqwdota8i0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVQWDOTA8I-EXT %s
+// CHECK-ZVQWDOTA8I-EXT: __riscv_zvqwdota8i 2000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_zve64x_zvqwdota16i0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVQWDOTA16I-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_zve64x_zvqwdota16i0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVQWDOTA16I-EXT %s
+// CHECK-ZVQWDOTA16I-EXT: __riscv_zvqwdota16i 2000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_zve32f_zvfqwdota8f0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFQWDOTA8F-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_zve32f_zvfqwdota8f0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFQWDOTA8F-EXT %s
+// CHECK-ZVFQWDOTA8F-EXT: __riscv_zvfqwdota8f 2000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_zve32f_zvfwdota16bf0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFWDOTA16BF-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_zve32f_zvfwdota16bf0p2 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFWDOTA16BF-EXT %s
+// CHECK-ZVFWDOTA16BF-EXT: __riscv_zvfwdota16bf 2000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_zve32x_zvzip0p1 -E -dM %s \

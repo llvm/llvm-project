@@ -226,6 +226,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_ptrace_macros
+  HDR
+    sys-ptrace-macros.h
+)
+
+add_macro_header(
   sys_epoll_macros
   HDR
     sys-epoll-macros.h
@@ -265,6 +271,14 @@ add_macro_header(
   sys_personality_macros
   HDR
     sys-personality-macros.h
+)
+
+add_macro_header(
+  sys_param_macros
+  HDR
+    sys-param-macros.h
+  DEPENDS
+    .limits_macros
 )
 
 add_macro_header(
@@ -334,6 +348,12 @@ add_macro_header(
   wchar_macros
   HDR
     wchar-macros.h
+)
+
+add_macro_header(
+  inet_address_macros
+  HDR
+    inet-address-macros.h
 )
 
 add_macro_header(

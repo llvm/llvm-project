@@ -563,6 +563,9 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
 
+        if lldbplatformutil.getArchitecture() == "arm64e":
+            return "simulators do not support arm64e."
+
         # Make sure we recognize the platform.
         mapping = {
             "iphone": "ios",
