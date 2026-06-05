@@ -90,7 +90,7 @@ program main
   end type
   type, bind(c) :: t13b
     !ERROR: Each component of an interoperable derived type must have an interoperable type
-    real(kind=3) x ! bfloat16 is not interoperable
+    complex(kind=3) x ! bfloat16 is not interoperable
   end type
   type, bind(c) :: t15
     !ERROR: An array component of an interoperable type must have at least one element
