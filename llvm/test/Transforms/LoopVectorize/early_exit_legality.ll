@@ -383,7 +383,7 @@ loop.end:
 
 define i64 @uncountable_exit_infinite_loop() {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_infinite_loop'
-; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
+; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -470,7 +470,8 @@ loop.end:
 
 define void @exit_conditions_combined_in_single_branch(ptr noalias dereferenceable(40) %array, ptr readonly align 2 dereferenceable(40) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'exit_conditions_combined_in_single_branch'
-; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
+; CHECK:       LV: We can vectorize this loop!
+; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit and side effects is not enabled.
 entry:
   br label %for.body
 

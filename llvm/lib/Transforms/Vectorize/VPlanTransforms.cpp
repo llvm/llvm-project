@@ -4638,6 +4638,61 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     }
   }
 
+  // If we didn't find any, perhaps the exit was combined.
+  if (Exits.empty() && Plan.getExitBlocks().size() == 1) {
+    // TODO: Make this work with other styles.
+    if (Style != UncountableExitStyle::MaskedHandleExitInScalarLoop)
+      return false;
+
+    // TODO: Relax assumptions to cover more loops.
+    VPValue *Uncounted = nullptr;
+    VPValue *Counted = nullptr;
+    auto *IV = cast<VPSingleDefRecipe>(&HeaderVPBB->front());
+    VPRecipeBase *LatchBr = LatchVPBB->getTerminator();
+
+    if (!match(
+            LatchBr,
+            m_BranchOnCond(m_c_LogicalOr(
+                m_VPValue(Uncounted,
+                          m_Cmp(m_VPInstruction<Instruction::Load>(m_VPValue()),
+                                m_VPValue())),
+                m_VPValue(Counted, m_Cmp(m_Add(m_Specific(IV), m_VPValue()),
+                                         m_VPValue()))))))
+      return false;
+
+    // TODO: Exits currently assumes the ExitBlock must be an existing IR
+    //       basic block, and MiddleVPBB doesn't qualify. For now, hack around
+    //       this and duplicate the work from below.
+    // TODO: Find a nicer way to integrate this into the rest of the function.
+
+    auto *CondToEarlyExit =
+        LatchBuilder.createNaryOp(VPInstruction::MaskedCond, Uncounted);
+
+    VPValue *IsUncountableExitTaken =
+        LatchBuilder.createNaryOp(VPInstruction::AnyOf, {CondToEarlyExit});
+
+    DebugLoc LatchDL = LatchBr->getDebugLoc();
+    VPSingleDefRecipe *LBC = cast<VPSingleDefRecipe>(LatchBr->getOperand(0));
+    LatchBr->eraseFromParent();
+    // Deleting the condition because of the single use restriction...
+    // TODO: Relax single use a bit?
+    LBC->eraseFromParent();
+    LatchBuilder.setInsertPoint(LatchVPBB);
+    LatchBuilder.createNaryOp(VPInstruction::BranchOnTwoConds,
+                              {IsUncountableExitTaken, Counted}, LatchDL);
+    // TODO: Are we guaranteed to have the successors in the expected order
+    //       at this point?
+    LatchVPBB->clearSuccessors();
+
+    // If handling the exiting lane in the scalar loop, combine the exit
+    // conditions into a single BranchOnCond.
+    LatchVPBB->setSuccessors({MiddleVPBB, MiddleVPBB, HeaderVPBB});
+    MiddleVPBB->clearPredecessors();
+    MiddleVPBB->setPredecessors({LatchVPBB, LatchVPBB});
+    return handleUncountableExitsWithSideEffects(
+        Plan, Exits, HeaderVPBB, LatchVPBB, MiddleVPBB, TheLoop, PSE, DT, AC);
+  }
+
   assert(!Exits.empty() && "must have at least one early exit");
   // Sort exits by RPO order to get correct program order. RPO gives a
   // topological ordering of the CFG, ensuring upstream exits are checked

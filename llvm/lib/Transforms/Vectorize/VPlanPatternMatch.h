@@ -203,6 +203,18 @@ inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
 /// Match a VPValue, capturing it if we match.
 inline match_bind<VPValue> m_VPValue(VPValue *&V) { return V; }
 
+/// Match against the nested pattern, and capture the value if we match.
+template <typename Pattern>
+inline auto m_VPValue(VPValue *&V, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<VPValue>(V));
+}
+
+/// Match against the nested pattern, and capture the value if we match.
+template <typename Pattern>
+inline auto m_VPValue(const VPValue *&V, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<const VPValue>(V));
+}
+
 /// Match a VPIRValue.
 inline match_bind<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
 
