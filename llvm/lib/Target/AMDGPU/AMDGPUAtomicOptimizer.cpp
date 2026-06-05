@@ -657,9 +657,9 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // are expected to be active; for a divergent LDS atomic, when that count is
   // small (<= 5), skip DPP and let each lane issue its own atomic.
   //
-  // FIXME: The threshold was tuned empirically on gfx12. The DPP scan overhead
-  // differs across subtargets, so the break-even point may differ too; this may
-  // need to become subtarget-dependent.
+  // FIXME: The threshold was tuned empirically on gfx11 and gfx12. The DPP scan
+  // overhead differs across subtargets, so the break-even point may differ too;
+  // this may need to become subtarget-dependent.
   if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP) {
     if (MDNode *MD = I.getMetadata("amdgpu.expected.active.lanes")) {
       auto *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
