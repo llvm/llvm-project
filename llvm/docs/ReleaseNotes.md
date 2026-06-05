@@ -236,6 +236,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Support for the experimental `XRivosVizip` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 * Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
+* Adds experimental assembler support for the 'Zvvmtls` and 'Zvvmttls` (RISC-V
+  Matrix Tile Load/Store) extensions.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
 * Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
 * `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
@@ -282,6 +284,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Renamed G_CTTZ_ZERO_UNDEF to G_CTTZ_ZERO_POISON opcode to make it clear that
   a zero input results in poison.
+
+* GlobalISel's IRTranslator now supports the LLVM IR byte type (`bN`). Byte
+  values are translated as the equi-sized integer scalar (`sN`), `ConstantByte`
+  is materialised via `G_CONSTANT`, and `bitcast` between a byte type and a
+  pointer is lowered to `G_INTTOPTR` / `G_PTRTOINT` rather than the
+  verifier-illegal `G_BITCAST`.
 
 ### Changes to the Metadata Info
 
