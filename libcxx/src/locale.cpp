@@ -159,11 +159,11 @@ locale::__imp::__imp(size_t refs) : facet(refs), facets_(N), name_("C") {
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
   install(&make<codecvt<char16_t, char, mbstate_t> >(1u));
   install(&make<codecvt<char32_t, char, mbstate_t> >(1u));
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
   install(&make<codecvt<char16_t, char8_t, mbstate_t> >(1u));
   install(&make<codecvt<char32_t, char8_t, mbstate_t> >(1u));
 #endif
+  _LIBCPP_SUPPRESS_DEPRECATED_POP
   install(&make<numpunct<char> >(1u));
 #if _LIBCPP_HAS_WIDE_CHARACTERS
   install(&make<numpunct<wchar_t> >(1u));
@@ -229,11 +229,11 @@ locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N),
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
   install(new codecvt_byname<char16_t, char, mbstate_t>(name_));
   install(new codecvt_byname<char32_t, char, mbstate_t>(name_));
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
   install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name_));
   install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name_));
 #endif
+  _LIBCPP_SUPPRESS_DEPRECATED_POP
   install(new numpunct_byname<char>(name_));
 #if _LIBCPP_HAS_WIDE_CHARACTERS
   install(new numpunct_byname<wchar_t>(name_));
@@ -295,11 +295,11 @@ locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     install(new codecvt_byname<char16_t, char, mbstate_t>(name));
     install(new codecvt_byname<char32_t, char, mbstate_t>(name));
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
     install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name));
     install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name));
 #endif
+    _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
   if (c & locale::monetary) {
     install(new moneypunct_byname<char, false>(name));
@@ -367,11 +367,11 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     install_from<std::codecvt<char16_t, char, mbstate_t> >(one);
     install_from<std::codecvt<char32_t, char, mbstate_t> >(one);
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
     install_from<std::codecvt<char16_t, char8_t, mbstate_t> >(one);
     install_from<std::codecvt<char32_t, char8_t, mbstate_t> >(one);
 #endif
+    _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_WIDE_CHARACTERS
     install_from<std::codecvt<wchar_t, char, mbstate_t> >(one);
 #endif
@@ -5652,8 +5652,10 @@ template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_
 template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
     codecvt_byname<char32_t, char, mbstate_t>;
 #if _LIBCPP_HAS_CHAR8_T
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t, char8_t, mbstate_t>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char8_t, mbstate_t>;
+template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+    codecvt_byname<char16_t, char8_t, mbstate_t>;
+template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+    codecvt_byname<char32_t, char8_t, mbstate_t>;
 #endif
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
