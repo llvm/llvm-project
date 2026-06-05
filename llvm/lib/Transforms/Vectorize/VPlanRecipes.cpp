@@ -3688,21 +3688,6 @@ static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
   return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), L) ? Addr : nullptr;
 }
 
-/// Return true if \p R is a predicated store with a loop-invariant address
-/// only masked by the header mask.
-static bool isPredicatedUniformMemOpAfterTailFolding(const VPReplicateRecipe &R,
-                                                     const SCEV *PtrSCEV,
-                                                     VPCostContext &Ctx) {
-  const VPRegionBlock *ParentRegion = R.getRegion();
-  if (R.getOpcode() != Instruction::Store || !ParentRegion ||
-      !ParentRegion->isReplicator() || !PtrSCEV ||
-      !Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
-    return false;
-  auto *BOM =
-      cast<VPBranchOnMaskRecipe>(&ParentRegion->getEntryBasicBlock()->front());
-  return vputils::isHeaderMask(BOM->getOperand(0), *ParentRegion->getPlan());
-}
-
 InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   Instruction *UI = cast<Instruction>(getUnderlyingValue());
@@ -3811,21 +3796,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
         UsedByLoadStoreAddress ? UI : nullptr);
-
-    // Check if this is a predicated store with a loop-invariant address only
-    // masked by the header mask. If so, return the uniform mem op cost.
-    if (isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
-      InstructionCost UniformCost =
-          ScalarMemOpCost +
-          Ctx.TTI.getAddressComputationCost(ScalarPtrTy, /*SE=*/nullptr,
-                                            /*Ptr=*/nullptr, Ctx.CostKind);
-      auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-      VPValue *StoredVal = getOperand(0);
-      if (!StoredVal->isDefinedOutsideLoopRegions())
-        UniformCost += Ctx.TTI.getIndexedVectorInstrCostFromEnd(
-            Instruction::ExtractElement, VectorTy, Ctx.CostKind, 0);
-      return UniformCost;
-    }
 
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
     InstructionCost ScalarCost =
