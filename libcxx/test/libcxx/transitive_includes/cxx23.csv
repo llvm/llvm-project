@@ -466,6 +466,15 @@ future string_view
 future tuple
 future typeinfo
 future version
+generator compare
+generator cstdint
+generator cstring
+generator initializer_list
+generator limits
+generator new
+generator tuple
+generator typeinfo
+generator version
 initializer_list version
 iomanip cctype
 iomanip cerrno

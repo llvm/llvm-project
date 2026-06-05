@@ -217,7 +217,7 @@
 "`LWG3759 <https://wg21.link/LWG3759>`__","``ranges::rotate_copy`` should use ``std::move``","2022-11 (Kona)","|Complete|","15","`#105027 <https://github.com/llvm/llvm-project/issues/105027>`__",""
 "`LWG3760 <https://wg21.link/LWG3760>`__","``cartesian_product_view::iterator``'s ``parent_`` is never valid","2022-11 (Kona)","","","`#105028 <https://github.com/llvm/llvm-project/issues/105028>`__",""
 "`LWG3761 <https://wg21.link/LWG3761>`__","``cartesian_product_view::iterator::operator-`` should pass by reference","2022-11 (Kona)","","","`#105029 <https://github.com/llvm/llvm-project/issues/105029>`__",""
-"`LWG3762 <https://wg21.link/LWG3762>`__","``generator::iterator::operator==`` should pass by reference","2022-11 (Kona)","","","`#105030 <https://github.com/llvm/llvm-project/issues/105030>`__",""
+"`LWG3762 <https://wg21.link/LWG3762>`__","``generator::iterator::operator==`` should pass by reference","2022-11 (Kona)","|Complete|","23","`#105030 <https://github.com/llvm/llvm-project/issues/105030>`__",""
 "`LWG3764 <https://wg21.link/LWG3764>`__","``reference_wrapper::operator()`` should propagate noexcept","2022-11 (Kona)","|Complete|","17","`#105031 <https://github.com/llvm/llvm-project/issues/105031>`__",""
 "`LWG3765 <https://wg21.link/LWG3765>`__","``const_sentinel`` should be constrained","2022-11 (Kona)","","","`#105032 <https://github.com/llvm/llvm-project/issues/105032>`__",""
 "`LWG3766 <https://wg21.link/LWG3766>`__","``view_interface::cbegin`` is underconstrained","2022-11 (Kona)","","","`#105033 <https://github.com/llvm/llvm-project/issues/105033>`__",""

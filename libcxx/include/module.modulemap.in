@@ -1476,6 +1476,11 @@ module std [system] {
     export *
   }
 
+  module generator {
+    header "generator"
+    export *
+  }
+
   module iomanip {
     header "iomanip"
     export *

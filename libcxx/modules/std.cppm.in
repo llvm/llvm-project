@@ -67,6 +67,7 @@ module;
 #include <fstream>
 #include <functional>
 #include <future>
+#include <generator>
 #include <initializer_list>
 #include <iomanip>
 #include <ios>
@@ -135,9 +136,6 @@ module;
 #  if __has_include(<debugging>)
 #    error "please update the header information for <debugging> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<debugging>)
-#  if __has_include(<generator>)
-#    error "please update the header information for <generator> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<generator>)
 #  if __has_include(<hazard_pointer>)
 #    error "please update the header information for <hazard_pointer> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<hazard_pointer>)
