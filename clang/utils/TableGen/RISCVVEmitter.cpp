@@ -343,6 +343,7 @@ void emitCIRCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   }
 
   OS << "  hasCirManualCodegen = false;\n";
+  OS << "  policyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
 
   for (const auto &I : enumerate(RVVI->getInputTypes())) {
     if (I.value()->isPointer()) {
@@ -357,7 +358,7 @@ void emitCIRCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
       if (RVVI->hasPolicyOperand())
         OS << "  ops.push_back(getBuilder().getConstInt(loc, "
               "ops.back().getType(),"
-              " PolicyAttrs));\n";
+              " policyAttrs));\n";
       if (RVVI->hasMaskedOffOperand() && RVVI->getPolicyAttrs().isTAMAPolicy())
         OS << "  ops.insert(ops.begin(), "
               "getBuilder().getConstant(loc, "
@@ -374,7 +375,7 @@ void emitCIRCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
     if (RVVI->hasPolicyOperand())
       OS << "  ops.push_back(getBuilder().getConstInt(loc, "
             "ops.back().getType(), "
-            "PolicyAttrs));\n";
+            "policyAttrs));\n";
     else if (RVVI->hasPassthruOperand() && RVVI->getPolicyAttrs().isTAPolicy())
       OS << "  ops.insert(ops.begin(), "
             "getBuilder().getConstant(loc, "

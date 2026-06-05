@@ -64,7 +64,7 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
   // TODO: Handle ManualCodegen.
   bool hasCirManualCodegen = false;
-  int PolicyAttrs = 0;
+  int policyAttrs = 0;
 
   switch (builtinID) {
   default:
