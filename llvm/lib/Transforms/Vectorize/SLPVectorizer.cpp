@@ -30371,12 +30371,20 @@ private:
           if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
             assert(SLPReVec && "FixedVectorType is not expected.");
             unsigned ScalarTyNumElements = VecTy->getNumElements();
-            for (unsigned I : seq<unsigned>(ReducedVals.size() - 1)) {
+            for (unsigned I : seq<unsigned>(ReducedVals.size())) {
               VectorCost +=
                   ::getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VectorTy, {},
                                    CostKind, I * ScalarTyNumElements, VecTy);
-              VectorCost +=
-                  TTI->getArithmeticInstrCost(RdxOpcode, VecTy, CostKind);
+            }
+            // We get one less arithmetic instruction compared to number of
+            // reduced values. We are also passing CtxI so that the backend can
+            // synthesize FMF from the respective reduction instruction.
+            for (unsigned I : seq<unsigned>(ReducedVals.size() - 1)) {
+              VectorCost += TTI->getArithmeticInstrCost(
+                  RdxOpcode, VecTy, CostKind,
+                  TTI::getOperandInfo(ReducedVals[I]),
+                  TTI::getOperandInfo(ReducedVals[I + 1]), {},
+                  ReducedValsToOps[ReducedVals[I]].front());
             }
           } else {
             Type *RedTy = VectorTy->getElementType();
