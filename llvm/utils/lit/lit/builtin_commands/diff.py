@@ -56,6 +56,7 @@ def getDirTree(path: str, basedir: str = "") -> DirTree:
         for filename in files:
             child_trees.append((filename, None))
         return path, sorted(child_trees)
+    return path, sorted(child_trees)
 
 
 def compareTwoFiles(flags: DiffFlags, filepaths: list[str]) -> int:
@@ -130,13 +131,15 @@ def compareTwoTextFiles(
 
     for idx, lines in enumerate(filelines):
         if flags.ignore_matching_lines:
-            lines = filter(
+            selected = filter(
                 lambda x: not re.match(
                     r"{}".format(flags.ignore_matching_lines_regex), x
                 ),
                 lines,
             )
-        filelines[idx] = [f(line) for line in lines]
+            filelines[idx] = [f(line) for line in selected]
+        else:
+            filelines[idx] = [f(line) for line in lines]
 
     func = difflib.unified_diff if flags.unified_diff else difflib.context_diff
     for diff in func(
@@ -209,8 +212,11 @@ def compareDirTrees(
 
     # Compare two directories via recursive use of compareDirTrees.
     exitCode = 0
-    left_names = [node[0] for node in left_tree[1]]
-    right_names = [node[0] for node in right_tree[1]]
+    left_children = left_tree[1]
+    right_children = right_tree[1]
+    assert left_children is not None and right_children is not None
+    left_names = [node[0] for node in left_children]
+    right_names = [node[0] for node in right_children]
     l, r = 0, 0
     while l < len(left_names) and r < len(right_names):
         # Names are sorted in getDirTree, rely on that order.
@@ -225,7 +231,7 @@ def compareDirTrees(
         else:
             exitCode |= compareDirTrees(
                 flags,
-                [left_tree[1][l], right_tree[1][r]],
+                [left_children[l], right_children[r]],
                 [
                     os.path.join(left_base, left_tree[0]),
                     os.path.join(right_base, right_tree[0]),
@@ -272,7 +278,7 @@ def main(argv: list[str]) -> None:
             try:
                 flags.num_context_lines = int(a)
                 if flags.num_context_lines < 0:
-                    raise ValueException
+                    raise ValueError
             except:
                 sys.stderr.write("Error: invalid '-U' argument: {}\n".format(a))
                 sys.exit(1)
