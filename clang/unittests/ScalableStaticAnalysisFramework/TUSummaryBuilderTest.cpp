@@ -275,7 +275,6 @@ struct TUSummaryBuilderLinkageTest : TUSummaryBuilderTest {
   std::unique_ptr<ASTUnit> AST;
   static constexpr auto Internal = EntityLinkageType::Internal;
   static constexpr auto External = EntityLinkageType::External;
-  static constexpr auto None = EntityLinkageType::None;
 
   const FunctionDecl *findFnByName(StringRef Name) {
     return ssaf::findFnByName(Name, AST->getASTContext());
