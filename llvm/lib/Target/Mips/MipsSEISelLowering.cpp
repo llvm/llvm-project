@@ -193,6 +193,10 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
     setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
 
+    setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
+    if (Subtarget.isGP64bit())
+      setOperationAction(ISD::SINT_TO_FP, MVT::i64, Custom);
+
     setTargetDAGCombine({ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR});
   }
 
@@ -515,6 +519,20 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                      Op->getOperand(2));
 }
 
+SDValue MipsSETargetLowering::lowerINT_TO_FP(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  // The f32/f64 case is already legal.
+  if (Op.getValueType() != MVT::f16)
+    return Op;
+
+  // The f16 type is storage-only, and hence needs special handling. An
+  // f16 cannot be produced directly, so convert the integer to f32 and round
+  // the result down to f16.
+  SDLoc DL(Op);
+  SDValue FP = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Op.getOperand(0));
+  return DAG.getFPExtendOrRound(FP, DL, MVT::f16);
+}
+
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
@@ -562,6 +580,8 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
+  case ISD::SINT_TO_FP:
+    return lowerINT_TO_FP(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   case ISD::FADD:
     return lowerR5900FPOp(Op, DAG, RTLIB::ADD_F32);
