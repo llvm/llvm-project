@@ -8485,47 +8485,6 @@ bool CombinerHelper::matchFoldAMinusC1PlusC2(const MachineInstr &MI,
   return true;
 }
 
-bool CombinerHelper::matchFoldSubSmaxSub(const MachineInstr &MI,
-                                         BuildFnTy &MatchInfo) const {
-  // fold (sub 0, (smax X, (sub 0, X))) --> (smin X, (sub 0, X))
-  const GSub *Sub1 = cast<GSub>(&MI);
-
-  MachineInstr *MaxMI = MRI.getVRegDef(Sub1->getRHSReg());
-  if (!MaxMI || MaxMI->getOpcode() != TargetOpcode::G_SMAX)
-    return false;
-
-  MachineInstr *Sub2MI = MRI.getVRegDef(MaxMI->getOperand(2).getReg());
-  if (!Sub2MI || Sub2MI->getOpcode() != TargetOpcode::G_SUB)
-    return false;
-
-  // Verify Sub1 LHS == 0
-  auto MaybeCst1 = getIConstantVRegValWithLookThrough(Sub1->getLHSReg(), MRI);
-  if (!MaybeCst1 || !MaybeCst1->Value.isZero())
-    return false;
-
-  // Verify Sub2 LHS == 0
-  auto MaybeCst2 =
-      getIConstantVRegValWithLookThrough(Sub2MI->getOperand(1).getReg(), MRI);
-  if (!MaybeCst2 || !MaybeCst2->Value.isZero())
-    return false;
-
-  // Verify X is the same register in both smax and the inner sub
-  Register X = MaxMI->getOperand(1).getReg();
-  if (X != Sub2MI->getOperand(2).getReg())
-    return false;
-
-  if (!MRI.hasOneNonDBGUse(Sub2MI->getOperand(0).getReg()))
-    return false;
-  if (!MRI.hasOneNonDBGUse(MaxMI->getOperand(0).getReg()))
-    return false;
-
-  Register Dst = Sub1->getReg(0);
-  Register Sub2Result = Sub2MI->getOperand(0).getReg();
-
-  MatchInfo = [=](MachineIRBuilder &B) { B.buildSMin(Dst, X, Sub2Result); };
-  return true;
-}
-
 bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(
     const MachineInstr &MI, BuildFnTy &MatchInfo) const {
   const GUnmerge *Unmerge = cast<GUnmerge>(&MI);

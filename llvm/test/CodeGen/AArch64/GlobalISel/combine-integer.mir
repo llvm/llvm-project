@@ -596,8 +596,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(s64) = COPY $x0
     ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %zero, %a
-    ; CHECK-NEXT: %sub2:_(s64) = G_SMIN %a, %sub1
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB %zero, %a
+    ; CHECK-NEXT: %sub2:_(s64) = G_SMIN %a, [[SUB]]
     ; CHECK-NEXT: $x0 = COPY %sub2(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
@@ -614,6 +614,7 @@ name:   ASubSMaxOneUse
 body:             |
   bb.0:
     liveins: $x0
+
 
     ; CHECK-LABEL: name: ASubSMaxOneUse
     ; CHECK: liveins: $x0
@@ -666,6 +667,7 @@ name:   ASubUMaxOneUse
 body:             |
   bb.0:
     liveins: $x0
+
 
     ; CHECK-LABEL: name: ASubUMaxOneUse
     ; CHECK: liveins: $x0
