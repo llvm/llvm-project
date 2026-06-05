@@ -703,6 +703,25 @@ void LoopConvertCheck::doConversion(
         ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
                           ? VarNameOrStructuredBinding + "."
                           : VarNameOrStructuredBinding;
+        // In cases like `delete*it`, we can't just change it to `deleteit`,
+        // we need to introduce space after `delete` to make it `delete it`.
+        Token StarToken;
+        if (Usage.Kind == Usage::UK_Default &&
+            !Lexer::getRawToken(Usage.Range.getBegin(), StarToken,
+                                Context->getSourceManager(), getLangOpts(),
+                                false) &&
+            StarToken.is(tok::star)) {
+          std::optional<Token> PrevToken = Lexer::findPreviousToken(
+              Usage.Range.getBegin(), Context->getSourceManager(),
+              getLangOpts(), true);
+          if (PrevToken) {
+            // Check whether StarToken has leading space or not
+            const bool StarTokenHasNoLeadingSpace =
+                PrevToken->getEndLoc() == StarToken.getLocation();
+            if (PrevToken->isAnyIdentifier() && StarTokenHasNoLeadingSpace)
+              ReplaceText = " " + ReplaceText;
+          }
+        }
         const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
