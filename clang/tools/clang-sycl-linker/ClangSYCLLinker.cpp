@@ -824,10 +824,10 @@ int main(int argc, char **argv) {
     reportError(createStringError("Output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
 
-  // Get the input files to pass to the linking stage.
-  auto FilesOrErr = getInput(Args);
-  if (!FilesOrErr)
-    reportError(FilesOrErr.takeError());
+  // Get the input buffers to pass to the linking stage.
+  auto BuffersOrErr = getInput(Args);
+  if (!BuffersOrErr)
+    reportError(BuffersOrErr.takeError());
 
   if (auto *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ)) {
     StringRef V = A->getValue();
@@ -846,7 +846,7 @@ int main(int argc, char **argv) {
   }
 
   // Run SYCL linking process on the generated inputs.
-  if (Error Err = runSYCLLink(*FilesOrErr, Args))
+  if (Error Err = runSYCLLink(*BuffersOrErr, Args))
     reportError(std::move(Err));
 
   // Remove the temporary files created.
