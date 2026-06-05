@@ -4383,8 +4383,8 @@ declare <2 x float> @llvm.amdgcn.image.sample.l.1d.v2f32.f32.v8i32.v4i32(i32, fl
 ;      so the dmask shrinks from 15 to 3 and the return type shrinks from
 ;      <4 x float> to <2 x float>.
 ; Each transform rebuilds the call with IC.Builder.CreateIntrinsic, which
-; would drop any call-site-only attributes (here, memory(argmem: read)
-; attached via #3).
+; would drop any call-site-only attributes (here, an arbitrary string
+; attribute attached via #3).
 ; This test checks that the call-site attributes are preserved
 ; after both transforms have run.
 define amdgpu_ps <2 x float> @image_l_to_lz_shrink_preserve_callsite_attrs(<8 x i32> inreg %rsrc, float %s, <4 x i32> inreg %samp) {
@@ -5430,6 +5430,6 @@ declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32.v8i32(i32 immarg, i32, 
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
-attributes #3 = { memory(argmem: read) }
+attributes #3 = { "amdgpu-test-callsite-attr" }
 
 !0 = !{float 2.500000e+00}
