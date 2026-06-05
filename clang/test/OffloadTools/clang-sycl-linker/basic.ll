@@ -106,9 +106,7 @@
 ; NO-RESOLVED-INPUT: No input files could be resolved
 ;
 ; Test that providing only a lazy archive with no extracted members results in "No input files could be resolved" error
-; RUN: rm -f %t/lazy.a
-; RUN: llvm-ar rc %t/lazy.a %t/libs/lib1.bc
-; RUN: not clang-sycl-linker --dry-run %t/lazy.a -o a.spv 2>&1 \
+; RUN: not clang-sycl-linker --dry-run %t/libs/libdevice.a -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NO-RESOLVED-LAZY
 ; NO-RESOLVED-LAZY: No input files could be resolved
 ;
