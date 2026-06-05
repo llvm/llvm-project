@@ -17,7 +17,7 @@
 #define LLVM_FRONTEND_OFFLOADING_ARCHIVELINKER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,6 +25,7 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include <cstdint>
 #include <memory>
 
 namespace llvm {
