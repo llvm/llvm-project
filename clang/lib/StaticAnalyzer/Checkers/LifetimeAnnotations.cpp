@@ -88,17 +88,17 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
 
 void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
                                      const char *NL, const char *Sep) const {
-  auto LBVal = State->get<LifetimeBoundMap>();
-  auto LBValTwo = State->get<LifetimeBoundMapVal>();
+  auto LBMap = State->get<LifetimeBoundMap>();
+  auto LBMapVal = State->get<LifetimeBoundMapVal>();
 
-  if (LBVal.isEmpty() && LBValTwo.isEmpty())
+  if (LBMap.isEmpty() && LBMapVal.isEmpty())
     return;
 
   Out << Sep << "LifetimeBound bindings:" << NL;
-  for (auto&& [RetValSym, ArgValRegion] : LBVal) {
+  for (auto&& [RetValSym, ArgValRegion] : LBMap) {
     Out << " Origin " << RetValSym << " contains Loan " << ArgValRegion << NL;
   }
-  for (auto&& [RetVal, ArgValRegion]: LBValTwo) {
+  for (auto&& [RetVal, ArgValRegion]: LBMapVal) {
     Out << " Origin " << RetVal << " contains Loan " << ArgValRegion << NL;
   }
 }

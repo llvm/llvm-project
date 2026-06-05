@@ -81,6 +81,20 @@ void caller_five() {
   clang_analyzer_dump(s);
 }
 
+// Free function with both annotated and non-annotated parameters.
+int& fn(int& f, int& s [[clang::lifetimebound]]) { return s; }
+
+void clang_analyzer_lifetime_bound(int&);
+
+void caller_six() {
+  int even = 50;
+  int odd = 55;
+  int& s = fn(even, odd);
+
+  clang_analyzer_lifetime_bound(s); // expected-warning {{Origin odd bound to odd}}
+  clang_analyzer_dump(s);
+}
+
 
 
 // These are the cases when the result of function calls are SymbolRefs.
@@ -90,7 +104,7 @@ int* foo(int* n [[clang::lifetimebound]]);
 
 void clang_analyzer_lifetime_bound(int*);
 
-void caller_six() {
+void caller_seven() {
   int y = 15;
   int* y_ptr = &y;
   auto* bind = foo(y_ptr);
@@ -114,7 +128,7 @@ int& func(int& some_number [[clang::lifetimebound]]);
 
 void clang_analyzer_lifetime_bound(int&);
 
-void caller_seven() {
+void caller_eight() {
   int f = 15;
   auto& bind = func(f);
 
@@ -131,7 +145,7 @@ int& f(int& a [[clang::lifetimebound]], int& b [[clang::lifetimebound]]);
 
 void clang_analyzer_lifetime_bound(int&);
 
-void caller_eight() {
+void caller_nine() {
   int first_num = 1;
   int second_num = 2;
   auto numbers = f(first_num, second_num);
