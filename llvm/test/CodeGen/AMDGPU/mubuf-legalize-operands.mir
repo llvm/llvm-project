@@ -94,8 +94,8 @@ body:             |
     ; W64-NEXT: [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
     ; W64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
     ; W64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e64_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
-    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e64_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .2:
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -244,8 +244,8 @@ body:             |
     ; W64-NEXT: [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
     ; W64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
     ; W64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e64_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
-    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e64_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .2:
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -395,8 +395,8 @@ body:             |
     ; W64-NEXT: [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
     ; W64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
     ; W64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e64_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
-    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e64_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .2:
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -664,8 +664,8 @@ body:             |
     ; W64-NEXT: [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
     ; W64-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
     ; W64-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e64_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
-    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e64_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
+    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec
+    ; W64-NEXT: V_CMPX_EQ_U64_nosdst_e32_term [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit-def $exec, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .2:
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)

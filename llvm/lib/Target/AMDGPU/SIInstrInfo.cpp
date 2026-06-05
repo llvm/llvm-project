@@ -7190,7 +7190,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
 
       if (UseNewExecInstructions) {
         auto CmpxMI =
-            BuildMI(LoopBB, LoopBB.end(), DL, TII.get(LMC.CmpXEqU32TermOpc))
+            BuildMI(LoopBB, LoopBB.end(), DL,
+                    TII.get(AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term))
                 .addReg(CurReg)
                 .addReg(VScalarOp);
         if (I == LoopBB.end())
@@ -7262,7 +7263,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
 
         if (UseNewExecInstructions) {
           auto CmpxMI =
-              BuildMI(LoopBB, LoopBB.end(), DL, TII.get(LMC.CmpXEqU64TermOpc))
+              BuildMI(LoopBB, LoopBB.end(), DL,
+                      TII.get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term))
                   .addReg(CurReg)
                   .addReg(VScalarOp, VScalarOpUndef, SubReg);
           if (I == LoopBB.end())
