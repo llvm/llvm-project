@@ -5,7 +5,25 @@
 
 typedef void *omp_interop_t;
 
-#ifndef PRE_OMP60
+#ifdef PRE_OMP60
+// Brace-grouped syntax is rejected before OpenMP 6.0.
+static void foo() {
+  omp_interop_t obj;
+
+  // Flat string list — valid before OMP 6.0, no error expected.
+  #pragma omp interop init(prefer_type("sycl", "level_zero", "opencl"), targetsync: obj)
+
+  // fr() with a string literal.
+  // pre-omp60-error@+2 {{brace-grouped 'prefer_type' argument requires OpenMP version 6.0 or later}}
+  // pre-omp60-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
+  #pragma omp interop init(prefer_type({fr("cuda")}), targetsync: obj)
+
+  // attr() with a single string literal.
+  // pre-omp60-error@+2 {{brace-grouped 'prefer_type' argument requires OpenMP version 6.0 or later}}
+  // pre-omp60-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
+  #pragma omp interop init(prefer_type({attr("ompx_propX")}), targetsync: obj)
+}
+#else
 static void foo() {
   omp_interop_t obj;
 
@@ -61,25 +79,5 @@ static void foo() {
   // expected-error@+2 {{expected preference-specification in 'prefer_type'}}
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type(), targetsync: obj)
-}
-#endif // PRE_OMP60
-
-// Brace-grouped syntax is rejected before OpenMP 6.0.
-#ifdef PRE_OMP60
-static void foo() {
-  omp_interop_t obj;
-
-  // Flat string list — valid before OMP 6.0, no error expected.
-  #pragma omp interop init(prefer_type("sycl", "level_zero", "opencl"), targetsync: obj)
-
-  // fr() with a string literal.
-  // pre-omp60-error@+2 {{brace-grouped 'prefer_type' argument requires OpenMP version 6.0 or later}}
-  // pre-omp60-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
-  #pragma omp interop init(prefer_type({fr("cuda")}), targetsync: obj)
-
-  // attr() with a single string literal.
-  // pre-omp60-error@+2 {{brace-grouped 'prefer_type' argument requires OpenMP version 6.0 or later}}
-  // pre-omp60-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
-  #pragma omp interop init(prefer_type({attr("ompx_propX")}), targetsync: obj)
 }
 #endif // PRE_OMP60
