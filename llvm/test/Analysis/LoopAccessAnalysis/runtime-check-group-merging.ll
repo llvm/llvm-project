@@ -1704,4 +1704,89 @@ exit:
   ret void
 }
 
+;; Test 15: %gep Start/End expressions are min/max expressions.
+;; getMinusSCEV for such expressions can produce SCEVCouldNotCompute.
+define void @stencil_merge_range_could_not_compute(ptr %p, ptr %q, i64 %m) {
+; MERGE-LABEL: 'stencil_merge_range_could_not_compute'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:        ptr %q
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %gep = getelementptr i8, ptr %p, i64 %off
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:        ptr %q
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:        ptr %p
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %q High: (1 + %q))
+; MERGE-NEXT:            Member: %q
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: ((1 + %m + %p) umin %p) High: (1 + ((1 + %m + %p) umax %p)))
+; MERGE-NEXT:            Member: {%p,+,(1 + %m)}<%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: %p High: (1 + %p))
+; MERGE-NEXT:            Member: %p
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      {%p,+,(1 + %m)}<%loop> Added Flags: <nusw>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_range_could_not_compute'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:        ptr %q
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %gep = getelementptr i8, ptr %p, i64 %off
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:        ptr %q
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:        ptr %p
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %q High: (1 + %q))
+; NOMERGE-NEXT:            Member: %q
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: ((1 + %m + %p) umin %p) High: (1 + ((1 + %m + %p) umax %p)))
+; NOMERGE-NEXT:            Member: {%p,+,(1 + %m)}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: %p High: (1 + %p))
+; NOMERGE-NEXT:            Member: %p
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-NEXT:      {%p,+,(1 + %m)}<%loop> Added Flags: <nusw>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %step = add i64 %m, 1
+  br label %loop
+
+loop:
+  %off = phi i64 [ 0, %entry ], [ %off.next, %loop ]
+  %i = phi i1 [ false, %entry ], [ true, %loop ]
+  load i8, ptr %p
+  %gep = getelementptr i8, ptr %p, i64 %off
+  load i8, ptr %gep
+  store i8 0, ptr %q
+  %off.next = add i64 %off, %step
+  br i1 %i, label %done, label %loop
+
+done:
+  ret void
+}
+
 declare i64 @llvm.smax.i64(i64, i64)
