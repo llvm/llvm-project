@@ -1037,15 +1037,14 @@ void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
         cast<MDString>(CFBranchLabelSchemeFlag)->getString();
     switch (getZicfilpLabelScheme(CFBranchLabelScheme)) {
     case ZicfilpLabelSchemeKind::Invalid:
-      report_fatal_error("invalid RISC-V Zicfilp label scheme");
+      reportFatalInternalError("invalid RISC-V Zicfilp label scheme");
     case ZicfilpLabelSchemeKind::Unlabeled:
       GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
       break;
     case ZicfilpLabelSchemeKind::FuncSig:
       // TODO: Emit the func-sig bit after the feature is implemented
-      report_fatal_error("the complete func-sig label scheme feature is not "
-                         "implemented yet",
-                         /*GenCrashDiag=*/false);
+      reportFatalUsageError("the complete func-sig label scheme feature is not "
+                            "implemented yet");
       break;
     }
   }
