@@ -73,8 +73,9 @@ Sections:
 # RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=INVALID-FEATURE-DATA
 # INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0x100
 # INVALID-FEATURE-DATA:      Name: .llvm_bb_addr_map
+# INVALID-FEATURE-DATA:      Size: 3
 # INVALID-FEATURE-DATA:      SectionData (
-# INVALID-FEATURE-DATA-NEXT:   0000: 0200 |
+# INVALID-FEATURE-DATA-NEXT:   0000: 050001 {{ *}}|
 # INVALID-FEATURE-DATA-NEXT: )
 
 --- !ELF
@@ -86,7 +87,7 @@ Sections:
   - Name: '.llvm_bb_addr_map'
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
-      - Version: 2
+      - Version: 5
 ##  Specify unsupported feature
         Feature: 0x100
         BBRanges:
