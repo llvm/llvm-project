@@ -62,7 +62,8 @@ Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
 /// Return an event to the pool.
 Error EventPoolTy::releaseEvent(ze_event_handle_t Event) {
   std::lock_guard<std::mutex> Lock(*Mtx);
-  CALL_ZE_RET_ERROR(zeEventHostReset, Event);
+  if (!UseCounterBasedEvents)
+    CALL_ZE_RET_ERROR(zeEventHostReset, Event);
   Events.push_back(Event);
   return Plugin::success();
 }
@@ -80,7 +81,7 @@ Expected<L0EventTy *> EventPoolTy::getEventObject() {
   }
 
   auto *Ret = EventObjects.back();
-  if (auto Err = Ret->reset())
+  if (auto Err = Ret->reset(/* SkipZeReset */ UseCounterBasedEvents))
     return std::move(Err);
 
   EventObjects.pop_back();

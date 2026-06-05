@@ -33,9 +33,10 @@ public:
   ze_event_handle_t getZeEvent() const { return ZeEvent; }
   L0QueueTy *getQueue() const { return Queue; }
 
-  Error reset() {
+  Error reset(bool SkipEventReset) {
     Queue = nullptr;
-    CALL_ZE_RET_ERROR(zeEventHostReset, ZeEvent);
+    if (!SkipEventReset)
+      CALL_ZE_RET_ERROR(zeEventHostReset, ZeEvent);
     return Plugin::success();
   }
 
@@ -71,6 +72,9 @@ class EventPoolTy {
   /// Additional event pool flags common to this pool.
   uint32_t Flags = 0;
 
+  /// Whether counter-based events are being used (don't need reset).
+  bool UseCounterBasedEvents = false;
+
   /// Protection.
   std::unique_ptr<std::mutex> Mtx;
 
@@ -89,9 +93,13 @@ class EventPoolTy {
 
 public:
   /// Initialize context, flags, and mutex.
-  Error init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
+  Error init(ze_context_handle_t ContextIn, bool UseCounterBased,
+             uint32_t FlagsIn) {
     Context = ContextIn;
     Flags = FlagsIn;
+    UseCounterBasedEvents = UseCounterBased;
+    if (UseCounterBasedEvents)
+      Flags |= ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP;
     Mtx.reset(new std::mutex);
     return Plugin::success();
   }
