@@ -7,290 +7,31 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
+#include <__locale_dir/locale_base_api.h>
+#include <__utility/scope_guard.h>
 #include <text_encoding>
-
-#if defined(_LIBCPP_WIN32API)
-#  include <__algorithm/max.h>
-#  include <cctype>
-#  include <charconv>
-#  include <cwchar>
-#  include <windows.h>
-#else
-#  include <__locale_dir/locale_base_api.h>
-#  include <__utility/scope_guard.h>
-#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#if defined(_LIBCPP_WIN32API)
-_LIBCPP_HIDDEN text_encoding static __get_win32_acp(unsigned int __codepage) {
-  switch (__codepage) {
-  case 0:
-    // If no ANSI code page is available, only Unicode can be used for the locale.
-    // In this case, the value is CP_ACP (0).
-    // Such a locale cannot be set as the system locale.
-    // Applications that do not support Unicode do not work correctly with locales
-    // marked as "Unicode only".
-    return std::text_encoding::id::unknown;
-  case 037:
-    return std::text_encoding::id::IBM037;
-  case 437:
-    return std::text_encoding::id::PC8CodePage437;
-  case 500:
-    return std::text_encoding::id::IBM500;
-  case 708:
-    return std::text_encoding::id::ISOLatinArabic;
-  case 709:
-    return std::text_encoding::id::ISO89ASMO449;
-  case 775:
-    return std::text_encoding::id::PC775Baltic;
-  case 850:
-    return std::text_encoding::id::PC850Multilingual;
-  case 852:
-    return std::text_encoding::id::PCp852;
-  case 855:
-    return std::text_encoding::id::IBM855;
-  case 857:
-    return std::text_encoding::id::IBM857;
-  case 858:
-    return std::text_encoding::id::IBM00858;
-  case 860:
-    return std::text_encoding::id::IBM860;
-  case 861:
-    return std::text_encoding::id::IBM861;
-  case 862:
-    return std::text_encoding::id::PC862LatinHebrew;
-  case 863:
-    return std::text_encoding::id::IBM863;
-  case 864:
-    return std::text_encoding::id::IBM864;
-  case 865:
-    return std::text_encoding::id::IBM865;
-  case 866:
-    return std::text_encoding::id::IBM866;
-  case 869:
-    return std::text_encoding::id::IBM869;
-  case 870:
-    return std::text_encoding::id::IBM870;
-  case 874:
-    return std::text_encoding::id::windows874;
-  case 932:
-    return std::text_encoding::id::ShiftJIS;
-  case 936:
-    return std::text_encoding::id::GB2312;
-  case 949:
-    return std::text_encoding::id::KSC56011987;
-  case 950:
-    return std::text_encoding::id::Big5;
-  case 1026:
-    return std::text_encoding::id::IBM1026;
-  case 1047:
-    return std::text_encoding::id::IBM1047;
-  case 1140:
-    return std::text_encoding::id::IBM01140;
-  case 1141:
-    return std::text_encoding::id::IBM01141;
-  case 1142:
-    return std::text_encoding::id::IBM01142;
-  case 1143:
-    return std::text_encoding::id::IBM01143;
-  case 1144:
-    return std::text_encoding::id::IBM01144;
-  case 1145:
-    return std::text_encoding::id::IBM01145;
-  case 1146:
-    return std::text_encoding::id::IBM01146;
-  case 1147:
-    return std::text_encoding::id::IBM01147;
-  case 1148:
-    return std::text_encoding::id::IBM01148;
-  case 1149:
-    return std::text_encoding::id::IBM01149;
-  case 1200:
-    return std::text_encoding::id::UTF16LE;
-  case 1201:
-    return std::text_encoding::id::UTF16BE;
-  case 1250:
-    return std::text_encoding::id::windows1250;
-  case 1251:
-    return std::text_encoding::id::windows1251;
-  case 1252:
-    return std::text_encoding::id::windows1252;
-  case 1253:
-    return std::text_encoding::id::windows1253;
-  case 1254:
-    return std::text_encoding::id::windows1254;
-  case 1255:
-    return std::text_encoding::id::windows1255;
-  case 1256:
-    return std::text_encoding::id::windows1256;
-  case 1257:
-    return std::text_encoding::id::windows1257;
-  case 1258:
-    return std::text_encoding::id::windows1258;
-  case 10000:
-    return std::text_encoding::id::Macintosh;
-  case 12000:
-    return std::text_encoding::id::UTF32LE;
-  case 12001:
-    return std::text_encoding::id::UTF32BE;
-  case 20127:
-    return std::text_encoding::id::ASCII;
-  case 20273:
-    return std::text_encoding::id::IBM273;
-  case 20277:
-    return std::text_encoding::id::IBM277;
-  case 20278:
-    return std::text_encoding::id::IBM278;
-  case 20280:
-    return std::text_encoding::id::IBM280;
-  case 20284:
-    return std::text_encoding::id::IBM284;
-  case 20285:
-    return std::text_encoding::id::IBM285;
-  case 20290:
-    return std::text_encoding::id::IBM290;
-  case 20297:
-    return std::text_encoding::id::IBM297;
-  case 20420:
-    return std::text_encoding::id::IBM420;
-  case 20423:
-    return std::text_encoding::id::IBM423;
-  case 20424:
-    return std::text_encoding::id::IBM424;
-  case 20838:
-    return std::text_encoding::id::IBMThai;
-  case 20866:
-    return std::text_encoding::id::KOI8R;
-  case 20871:
-    return std::text_encoding::id::IBM871;
-  case 20880:
-    return std::text_encoding::id::IBM880;
-  case 20905:
-    return std::text_encoding::id::IBM905;
-  case 20924:
-    return std::text_encoding::id::IBM00924;
-  case 20932:
-    return std::text_encoding::id::EUCPkdFmtJapanese;
-  case 21866:
-    return std::text_encoding::id::KOI8U;
-  case 28591:
-    return std::text_encoding::id::ISOLatin1;
-  case 28592:
-    return std::text_encoding::id::ISOLatin2;
-  case 28593:
-    return std::text_encoding::id::ISOLatin3;
-  case 28594:
-    return std::text_encoding::id::ISOLatin4;
-  case 28595:
-    return std::text_encoding::id::ISOLatin5;
-  case 28596:
-    return std::text_encoding::id::ISOLatin6;
-  case 28597:
-    return std::text_encoding::id::ISOLatinGreek;
-  case 28598:
-    return std::text_encoding::id::ISOLatinHebrew;
-  case 28599:
-    return std::text_encoding::id::Windows31Latin5;
-  case 28603:
-    return std::text_encoding::id::ISO885913;
-  case 28605:
-    return std::text_encoding::id::ISO885915;
-  case 38598:
-    return std::text_encoding::id::ISO88598I;
-  case 50220:
-  case 50221:
-  case 50222:
-    return std::text_encoding::id::ISO2022JP;
-  case 51932:
-    return std::text_encoding::id::EUCPkdFmtJapanese;
-  case 51936:
-    return std::text_encoding::id::GB2312;
-  case 51949:
-    return std::text_encoding::id::EUCKR;
-  case 52936:
-    return std::text_encoding::id::HZGB2312;
-  case 54936:
-    return std::text_encoding::id::GB18030;
-  case 65000:
-    return std::text_encoding::id::UTF7;
-  case 65001:
-    return std::text_encoding::id::UTF8;
-  default:
-    return std::text_encoding::id::unknown;
-  }
+static text_encoding __make_text_encoding(const char* __name) {
+  if (__name == nullptr)
+    return text_encoding{};
+
+  string_view __name_view(__name);
+  if (__name_view.size() > text_encoding::max_name_length)
+    return text_encoding{};
+
+  return text_encoding(__name_view);
 }
 
+#if defined(__ANDROID__)
+// UTF-8 is the always the environment encoding on Android.
+std::text_encoding __get_locale_encoding([[maybe_unused]] const char* __name) { return std::text_encoding::id::UTF8; }
+#else
 std::text_encoding __get_locale_encoding(const char* __name) {
-  if (__name == nullptr) {
-    return __get_win32_acp(::GetACP());
-  }
-
-  wchar_t __locale_wbuffer[LOCALE_NAME_MAX_LENGTH + 1]{};
-  wchar_t __number_buffer[11]{};
-
-  string_view __sv(__name);
-
-  // locale :: "locale-name"
-  // | "language"[_country-region[.code-page]]
-  // | ".code-page"
-  // GetLocaleInfoEx doesn't accept anything other than BCP-47 locale names, e.g. "en_US",
-  // so we'll try to do a best-attempt to derive the text encoding from the name.
-  if (__sv == "C" || __sv == "") {
-    // "A locale argument value of C specifies the minimal ANSI conforming environment for C translation."
-    // TODO: Figure out what to do for an empty string:
-    // "If locale points to an empty string, the locale is the implementation-defined native environment."
-    return __get_win32_acp(::GetACP());
-  } else if (auto __dot = __sv.find('.'); __dot != std::string_view::npos) {
-    string_view __code_page(__name + __dot + 1);
-
-    // Windows allows the codepage number as part of the name,
-    // e.g. "en_US.1252" for English US, Windows-1252.
-    if (std::isdigit(__code_page[0])) {
-      unsigned int __cpage{};
-      auto __res = std::from_chars(__code_page.data(), __code_page.data() + __code_page.size(), __cpage);
-      if (__res) {
-        return __get_win32_acp(__cpage);
-      }
-    } else { // POSIX-style name
-      std::text_encoding __te = std::text_encoding(__code_page);
-      if (__te != std::text_encoding::id::unknown) {
-        return __te;
-      }
-    }
-  }
-
-  bool __is_ansi  = ::AreFileApisANSI();
-  auto __codepage = __is_ansi ? CP_ACP : CP_OEMCP;
-  int __ret       = ::MultiByteToWideChar(
-      __codepage, MB_ERR_INVALID_CHARS, __name, __sv.size(), __locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
-
-  if (__ret <= 0)
-    return std::text_encoding();
-
-  // The below function fills the string with the number in text.
-  auto __lctype = __is_ansi ? LOCALE_IDEFAULTANSICODEPAGE : LOCALE_IDEFAULTCODEPAGE;
-  int __result  = ::GetLocaleInfoEx(__locale_wbuffer, __lctype, __number_buffer, 10);
-
-  if (__result <= 0)
-    return std::text_encoding();
-
-  unsigned int __acp = std::wcstoul(__number_buffer, nullptr, 10);
-
-  return __get_win32_acp(__acp);
-}
-
-#elif defined(__ANDROID__)
-// Android has minimal libc suppport for locale, and doesn't support any other locale
-// than the ones checked for below.
-std::text_encoding __get_locale_encoding([[maybe_unused]] const char* __name) {
-  return std::text_encoding(std::text_encoding::id::UTF8);
-}
-
-#else // POSIX
-std::text_encoding __get_locale_encoding(const char* __name) {
-  std::text_encoding __e;
+  if (__name == nullptr)
+    return __make_text_encoding(__locale::__get_locale_encoding(static_cast<__locale::__locale_t>(nullptr)));
 
   __locale::__locale_t __l = __locale::__newlocale(_LIBCPP_CTYPE_MASK, __name, static_cast<__locale::__locale_t>(0));
 
@@ -301,25 +42,13 @@ std::text_encoding __get_locale_encoding(const char* __name) {
   });
 
   if (!__l) {
-    return __e;
+    return text_encoding{};
   }
 
-  const char* __codeset = __locale::__nl_langinfo(_LIBCPP_NL_CODESET, __l);
-
-  if (!__codeset) {
-    return __e;
-  }
-
-  string_view __codeset_sv(__codeset);
-
-  if (__codeset_sv.size() <= std::text_encoding::max_name_length) {
-    __e = std::text_encoding(__codeset_sv);
-  }
-
-  return __e;
+  return __make_text_encoding(__locale::__get_locale_encoding(__l));
 }
 
-#endif // _LIBCPP_WIN32API
+#endif // __ANDROID__
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

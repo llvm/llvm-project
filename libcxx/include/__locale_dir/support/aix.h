@@ -57,7 +57,6 @@ struct __locale_guard {
 #define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
 #define _LIBCPP_ALL_MASK LC_ALL_MASK
 #define _LIBCPP_LC_ALL LC_ALL
-#define _LIBCPP_NL_CODESET CODESET
 
 // Get MB_CUE_MAX before __locale_t is defined because it uses a defferent definition in <sys/localedef.h>.
 inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_cur_max() { return MB_CUR_MAX; }
@@ -82,8 +81,8 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
   return std::localeconv();
 }
 
-inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
-  return ::nl_langinfo_l(__item, __loc);
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
 }
 #endif // _LIBCPP_BUILDING_LIBRARY
 

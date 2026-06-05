@@ -49,7 +49,6 @@
 // #define _LIBCPP_MESSAGES_MASK  /* implementation-defined */
 // #define _LIBCPP_ALL_MASK       /* implementation-defined */
 // #define _LIBCPP_LC_ALL         /* implementation-defined */
-// #define _LIBCPP_NL_CODESET     /* implementation-defined */
 //
 // Strtonum functions
 // ------------------
@@ -104,7 +103,7 @@
 //  int     __snprintf(char*, size_t, __locale_t, const char*, ...); // required by the headers
 //  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
 //
-// const char* __nl_langinfo(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc);
+//  const char* __get_locale_encoding(__locale_t);
 // }
 
 #if _LIBCPP_HAS_LOCALIZATION
@@ -161,7 +160,6 @@ namespace __locale {
 #    define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
 #    define _LIBCPP_ALL_MASK LC_ALL_MASK
 #    define _LIBCPP_LC_ALL LC_ALL
-#    define _LIBCPP_NL_CODESET CODESET
 
 using __locale_t _LIBCPP_NODEBUG = locale_t;
 
@@ -274,8 +272,8 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
 }
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
-  return ::nl_langinfo_l(__item, __loc);
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
 }
 
 #    endif // _LIBCPP_BUILDING_LIBRARY

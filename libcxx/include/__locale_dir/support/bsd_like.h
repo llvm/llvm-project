@@ -183,8 +183,8 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
-  return ::nl_langinfo_l(__item, __loc);
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(_LIBCPP_NL_CODESET, __loc);
 }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
