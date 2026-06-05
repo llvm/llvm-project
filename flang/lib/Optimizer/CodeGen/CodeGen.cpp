@@ -2100,8 +2100,8 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
     bool needsDeviceAlloc =
         isDeviceAllocation(embox.getMemref(), adaptor.getMemref()) ||
         isUsedByGPULaunchFunc(embox);
-    auto result = placeInMemoryIfNotGlobalInit(
-        rewriter, embox.getLoc(), boxTy, dest, needsDeviceAlloc);
+    auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), boxTy,
+                                               dest, needsDeviceAlloc);
     rewriter.replaceOp(embox, result);
     return mlir::success();
   }
