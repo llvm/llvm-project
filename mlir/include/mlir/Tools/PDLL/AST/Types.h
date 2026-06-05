@@ -399,11 +399,6 @@ struct DenseMapInfo<mlir::pdll::ast::Type> {
     return mlir::pdll::ast::Type(
         static_cast<mlir::pdll::ast::Type::Storage *>(pointer));
   }
-  static mlir::pdll::ast::Type getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::pdll::ast::Type(
-        static_cast<mlir::pdll::ast::Type::Storage *>(pointer));
-  }
   static unsigned getHashValue(mlir::pdll::ast::Type val) {
     return llvm::hash_value(val.getImpl());
   }

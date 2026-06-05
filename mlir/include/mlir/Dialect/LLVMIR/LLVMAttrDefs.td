@@ -1784,4 +1784,8 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
 }
 
+def LLVM_AnyMDAttr : AnyAttrOf<[
+    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDFuncAttr, LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_func, or md_node)">;
+
 #endif // LLVMIR_ATTRDEFS

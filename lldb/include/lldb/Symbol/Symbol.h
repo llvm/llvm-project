@@ -276,11 +276,11 @@ public:
   ///
   /// \param offset_ptr
   ///   A pointer that contains the offset from which the data will be decoded
-  ///   from that gets updated as data gets decoded.
+  ///   from.  The offset_ptr offset value will be updated as data is read.
   ///
   /// \param section_list
   ///   A section list that allows lldb_private::Address objects to be filled
-  ///   in. The address information for symbols are serilized as file addresses
+  ///   in. The address information for symbols are serialized as file addresses
   ///   and must be converted into Address objects with the right section and
   ///   offset.
   ///
@@ -359,6 +359,16 @@ protected:
 };
 
 } // namespace lldb_private
+
+#if __SIZEOF_POINTER__ == 8
+static_assert(
+    sizeof(lldb_private::Symbol) == 80,
+    "Symbol is a high volume data type, size must be increased with care");
+#elif __SIZEOF_POINTER__ == 4 && !defined(_WIN32)
+static_assert(
+    sizeof(lldb_private::Symbol) == 52,
+    "Symbol is a high volume data type, size must be increased with care");
+#endif
 
 namespace llvm {
 namespace json {

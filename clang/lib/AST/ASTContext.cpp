@@ -6943,11 +6943,6 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
 QualType ASTContext::getDeducedTemplateSpecializationType(
     DeducedKind DK, QualType DeducedAsType, ElaboratedTypeKeyword Keyword,
     TemplateName Template) const {
-  // DeducedAsPack only ever occurs for lambda init-capture pack, which always
-  // use AutoType.
-  assert(DK != DeducedKind::DeducedAsPack &&
-         "unexpected DeducedAsPack for DeducedTemplateSpecializationType");
-
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
@@ -13048,6 +13043,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
   case TSK_ExplicitInstantiationDeclaration:
     return GVA_AvailableExternally;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     External = GVA_DiscardableODR;
     break;
@@ -13064,7 +13060,8 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
 
     // GNU or C99 inline semantics. Determine whether this symbol should be
     // externally visible.
-    if (FD->isInlineDefinitionExternallyVisible())
+    if (auto *Def = FD->getDefinition();
+        Def && Def->isInlineDefinitionExternallyVisible())
       return External;
 
     // C99 inline semantics, where the symbol is not externally visible.
@@ -13236,6 +13233,7 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
   case TSK_ExplicitInstantiationDeclaration:
     return GVA_AvailableExternally;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     return GVA_DiscardableODR;
   }
