@@ -289,12 +289,13 @@ jobs:
       id: build-windows
       if: runner.os == 'Windows'
       env:
+        INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
         .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout
-        if ("${{ inputs.runs-on }}" -eq "windows-11-arm") {
+        if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
           mv $zstd $env:GITHUB_WORKSPACE
         }
