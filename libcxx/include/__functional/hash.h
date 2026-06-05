@@ -258,8 +258,10 @@ _LIBCPP_HIDE_FROM_ABI inline size_t __hash_memory(const void* __ptr, size_t __si
 }
 #endif
 
-// Primary template covers any width not handled by the explicit
-// specializations below (in particular _BitInt(N) with sizeof > 4 * sizeof(size_t)).
+// Primary template covers widths beyond the 0..4-word specializations
+// below (in particular _BitInt(N) with sizeof > 4 * sizeof(size_t)). The
+// by-value parameter normalizes _BitInt(N) padding bits via Clang's ABI
+// before the hash reads them; see test_padding_bits_dont_break_equivalence.
 template <class _Tp, size_t = sizeof(_Tp) / sizeof(size_t)>
 struct __scalar_hash : public __unary_function<_Tp, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {

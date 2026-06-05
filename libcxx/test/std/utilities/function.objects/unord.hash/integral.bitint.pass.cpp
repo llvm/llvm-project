@@ -14,7 +14,9 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstring>
 #include <functional>
+#include <limits>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -88,11 +90,32 @@ void test_equal_values_same_hash_via_different_paths() {
   }
 }
 
+// Probe [hash.requirements] `a == b => hash(a) == hash(b)` directly by
+// injecting different bits at padding-bit storage positions.
+template <class T>
+void test_padding_bits_dont_break_equivalence() {
+  constexpr int value_bits   = std::numeric_limits<T>::digits + std::is_signed_v<T>;
+  constexpr int storage_bits = static_cast<int>(sizeof(T)) * 8;
+  if constexpr (storage_bits > value_bits) {
+    std::hash<T> h;
+    T clean(static_cast<T>(5));
+    T dirty;
+    std::memcpy(&dirty, &clean, sizeof(T));
+    // Flip every padding-bit position (little-endian _BitInt: high bits of high bytes).
+    auto* bytes = reinterpret_cast<unsigned char*>(&dirty);
+    for (int i = value_bits; i < storage_bits; ++i)
+      bytes[i / 8] ^= static_cast<unsigned char>(1u << (i % 8));
+    assert(clean == dirty);
+    assert(h(clean) == h(dirty));
+  }
+}
+
 template <class T>
 void test_all() {
   test_basic<T>();
   test_distinct_values_distinct_hashes<T>();
   test_equal_values_same_hash_via_different_paths<T>();
+  test_padding_bits_dont_break_equivalence<T>();
 }
 
 #endif // TEST_HAS_EXTENSION(bit_int)
