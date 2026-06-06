@@ -108,7 +108,7 @@ static llvm::Expected<Info *> reduce(SmallVectorImpl<Info *> &Values) {
                                    "no value to reduce");
   T *Merged = allocateTransient<T>(Values[0]->USR);
   for (auto &I : Values)
-    Merged->merge(std::move(*static_cast<T *>(I)));
+    Merged->merge(std::move(*cast<T>(I)));
   return Merged;
 }
 
@@ -220,36 +220,29 @@ llvm::Error mergeSingleInfo(doc::Info *&Reduced, doc::Info *NewInfo,
 
   switch (Reduced->IT) {
   case InfoType::IT_namespace:
-    static_cast<NamespaceInfo *>(Reduced)->merge(
-        std::move(*static_cast<NamespaceInfo *>(NewInfo)));
+    cast<NamespaceInfo>(Reduced)->merge(
+        std::move(*cast<NamespaceInfo>(NewInfo)));
     break;
   case InfoType::IT_record:
-    static_cast<RecordInfo *>(Reduced)->merge(
-        std::move(*static_cast<RecordInfo *>(NewInfo)));
+    cast<RecordInfo>(Reduced)->merge(std::move(*cast<RecordInfo>(NewInfo)));
     break;
   case InfoType::IT_enum:
-    static_cast<EnumInfo *>(Reduced)->merge(
-        std::move(*static_cast<EnumInfo *>(NewInfo)));
+    cast<EnumInfo>(Reduced)->merge(std::move(*cast<EnumInfo>(NewInfo)));
     break;
   case InfoType::IT_function:
-    static_cast<FunctionInfo *>(Reduced)->merge(
-        std::move(*static_cast<FunctionInfo *>(NewInfo)));
+    cast<FunctionInfo>(Reduced)->merge(std::move(*cast<FunctionInfo>(NewInfo)));
     break;
   case InfoType::IT_typedef:
-    static_cast<TypedefInfo *>(Reduced)->merge(
-        std::move(*static_cast<TypedefInfo *>(NewInfo)));
+    cast<TypedefInfo>(Reduced)->merge(std::move(*cast<TypedefInfo>(NewInfo)));
     break;
   case InfoType::IT_concept:
-    static_cast<ConceptInfo *>(Reduced)->merge(
-        std::move(*static_cast<ConceptInfo *>(NewInfo)));
+    cast<ConceptInfo>(Reduced)->merge(std::move(*cast<ConceptInfo>(NewInfo)));
     break;
   case InfoType::IT_variable:
-    static_cast<VarInfo *>(Reduced)->merge(
-        std::move(*static_cast<VarInfo *>(NewInfo)));
+    cast<VarInfo>(Reduced)->merge(std::move(*cast<VarInfo>(NewInfo)));
     break;
   case InfoType::IT_friend:
-    static_cast<FriendInfo *>(Reduced)->merge(
-        std::move(*static_cast<FriendInfo *>(NewInfo)));
+    cast<FriendInfo>(Reduced)->merge(std::move(*cast<FriendInfo>(NewInfo)));
     break;
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
