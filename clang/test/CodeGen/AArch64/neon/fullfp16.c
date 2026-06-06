@@ -179,7 +179,7 @@ float16_t test_vrsqrtsh_f16(float16_t a, float16_t b) {
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vnegh_f16
 float16_t test_vnegh_f16(float16_t a) {
-// CIR: cir.minus {{.*}} : !cir.f16
+// CIR: cir.fneg {{.*}} : !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]])
 // LLVM: [[NEG:%.*]] = fneg half [[A:%.*]]
@@ -202,7 +202,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 
 // ALL-LABEL: test_vfmsh_f16
 float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
-// CIR: [[SUB:%.*]] = cir.minus %{{.*}} : !cir.f16
+// CIR: [[SUB:%.*]] = cir.fneg %{{.*}} : !cir.f16
 // CIR: cir.call_llvm_intrinsic "fma" [[SUB]], {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])
