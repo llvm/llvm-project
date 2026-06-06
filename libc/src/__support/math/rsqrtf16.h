@@ -30,12 +30,14 @@ LIBC_INLINE_VAR constexpr int RSQRT_FRACTION_BITS = 29;
 LIBC_INLINE_VAR constexpr int64_t ONE = int64_t(1) << RSQRT_FRACTION_BITS;
 LIBC_INLINE_VAR constexpr int64_t THREE_HALVES = 3 * (ONE >> 1);
 
-// Degree-4 minimax polynomial generated with Sollya:
-//   P = fpminimax(1/sqrt(x), 4,
-//       [|single,single,single,single,single|], [0.5;1])
-// Coefficients are stored in Q29 fixed-point format.
-LIBC_INLINE_VAR constexpr int64_t COEFFS[5] = {
-    1'573'164'416, -2'940'085'504, 3'653'406'208, -2'366'894'080, 617'319'616,
+// Midpoint lookup table for 1/sqrt(x) on 16 sub-intervals of [0.5;1).
+// Values are stored in Q29 fixed-point format.  The Newton step and exact
+// rounding below correct the seed before producing the final half result.
+LIBC_INLINE_VAR constexpr uint32_t RSQRT_APPROX[16] = {
+    747'657'839, 725'981'977, 706'088'274, 687'745'184,
+    670'761'200, 654'976'372, 640'255'922, 626'485'368,
+    613'566'757, 601'415'717, 589'959'130, 579'133'272,
+    568'882'316, 559'157'115, 549'914'212, 541'115'017,
 };
 LIBC_INLINE_VAR constexpr int64_t ONE_OVER_SQRT2 = 0x16a09e60;
 
@@ -43,13 +45,8 @@ LIBC_INLINE constexpr int floor_log2(uint64_t x) {
   return 63 - cpp::countl_zero(x);
 }
 
-LIBC_INLINE constexpr int64_t eval_polynomial(uint32_t m) {
-  int64_t y = COEFFS[4];
-  y = COEFFS[3] + ((y * m) >> RSQRT_FRACTION_BITS);
-  y = COEFFS[2] + ((y * m) >> RSQRT_FRACTION_BITS);
-  y = COEFFS[1] + ((y * m) >> RSQRT_FRACTION_BITS);
-  y = COEFFS[0] + ((y * m) >> RSQRT_FRACTION_BITS);
-  return y;
+LIBC_INLINE constexpr int64_t initial_approximation(uint32_t x_mant) {
+  return RSQRT_APPROX[(x_mant - 0x0400) >> 6];
 }
 
 LIBC_INLINE constexpr int64_t newton_raphson(uint32_t m, int64_t y) {
@@ -75,13 +72,24 @@ LIBC_INLINE constexpr uint16_t fixed_to_half_bits(uint64_t y, int scale_exp) {
   return static_cast<uint16_t>((biased_exp << 10) | (out_sig & 0x3ff));
 }
 
-LIBC_INLINE constexpr uint16_t approximate_rsqrt(uint16_t x_abs) {
+struct ApproxResult {
+  uint16_t value;
+  uint32_t x_sig;
+  int x_exp;
+};
+
+LIBC_INLINE constexpr ApproxResult approximate_rsqrt(uint16_t x_abs) {
   uint32_t x_mant = x_abs & 0x03ff;
+  uint32_t x_sig = x_mant;
+  int x_exp = -24;
   int exponent = 0;
 
   if (x_abs >= 0x0400) {
+    int biased_exp = static_cast<int>(x_abs >> 10);
     x_mant |= 0x0400;
-    exponent = static_cast<int>(x_abs >> 10) - 14;
+    x_sig = x_mant;
+    x_exp = biased_exp - 25;
+    exponent = biased_exp - 14;
   } else {
     int shift = cpp::countl_zero(x_mant) - (32 - 11);
     x_mant <<= shift;
@@ -89,7 +97,7 @@ LIBC_INLINE constexpr uint16_t approximate_rsqrt(uint16_t x_abs) {
   }
 
   uint32_t m = x_mant << (RSQRT_FRACTION_BITS - 11);
-  int64_t y = newton_raphson(m, eval_polynomial(m));
+  int64_t y = newton_raphson(m, initial_approximation(x_mant));
 
   int scale_exp = 0;
   if (exponent & 1) {
@@ -99,7 +107,8 @@ LIBC_INLINE constexpr uint16_t approximate_rsqrt(uint16_t x_abs) {
     scale_exp = -(exponent / 2);
   }
 
-  return fixed_to_half_bits(static_cast<uint64_t>(y), scale_exp);
+  return {fixed_to_half_bits(static_cast<uint64_t>(y), scale_exp), x_sig,
+          x_exp};
 }
 
 // Compare y = sig * 2^exp with 1 / sqrt(x_sig * 2^x_exp).
@@ -107,15 +116,9 @@ LIBC_INLINE constexpr uint16_t approximate_rsqrt(uint16_t x_abs) {
 LIBC_INLINE constexpr int compare_with_rsqrt(uint32_t sig, int exp,
                                              uint32_t x_sig, int x_exp) {
   uint64_t lhs = static_cast<uint64_t>(sig) * sig * x_sig;
-  int scale = 2 * exp + x_exp;
-
-  if (scale >= 0)
-    return (scale == 0 && lhs == 1) ? 0 : 1;
-
-  int rshift = -scale;
-  if (rshift >= 64)
-    return -1;
-
+  // For all finite positive half inputs and candidates produced by this
+  // algorithm, 2 * exp + x_exp is in [-34, -20].
+  int rshift = -(2 * exp + x_exp);
   uint64_t rhs = uint64_t(1) << rshift;
   if (lhs < rhs)
     return -1;
@@ -131,20 +134,32 @@ LIBC_INLINE constexpr int compare_half_with_rsqrt(uint16_t y, uint32_t x_sig,
   return compare_with_rsqrt(y_sig, y_exp, x_sig, x_exp);
 }
 
-LIBC_INLINE constexpr uint16_t floor_rsqrt(uint16_t approx, uint32_t x_sig,
-                                           int x_exp) {
+struct FloorResult {
+  uint16_t value;
+  int cmp;
+};
+
+LIBC_INLINE constexpr FloorResult floor_rsqrt(uint16_t approx, uint32_t x_sig,
+                                              int x_exp) {
   uint16_t y = approx < 0x0400 ? 0x0400 : approx;
-  if (LIBC_UNLIKELY(compare_half_with_rsqrt(y, x_sig, x_exp) > 0))
+  int cmp = compare_half_with_rsqrt(y, x_sig, x_exp);
+  if (LIBC_UNLIKELY(cmp > 0)) {
     --y;
-  if (LIBC_UNLIKELY(y < 0x7bff &&
-                    compare_half_with_rsqrt(y + 1, x_sig, x_exp) <= 0))
-    ++y;
-  return y;
+    cmp = compare_half_with_rsqrt(y, x_sig, x_exp);
+  } else if (LIBC_UNLIKELY(y < 0x7bff)) {
+    int next_cmp = compare_half_with_rsqrt(y + 1, x_sig, x_exp);
+    if (LIBC_UNLIKELY(next_cmp <= 0)) {
+      ++y;
+      cmp = next_cmp;
+    }
+  }
+  return {y, cmp};
 }
 
-LIBC_INLINE constexpr uint16_t round_result(uint16_t y, uint32_t x_sig,
+LIBC_INLINE constexpr uint16_t round_result(FloorResult floor, uint32_t x_sig,
                                             int x_exp) {
-  if (compare_half_with_rsqrt(y, x_sig, x_exp) == 0)
+  uint16_t y = floor.value;
+  if (floor.cmp == 0)
     return y;
 
   int rounding_mode = FE_TONEAREST;
@@ -168,19 +183,11 @@ LIBC_INLINE constexpr uint16_t round_result(uint16_t y, uint32_t x_sig,
 }
 
 LIBC_INLINE constexpr float16 rsqrtf16_no_float(uint16_t x_abs) {
-  uint32_t x_sig = 0;
-  int x_exp = 0;
-  if (x_abs >= 0x0400) {
-    x_sig = 0x0400 | (x_abs & 0x03ff);
-    x_exp = static_cast<int>(x_abs >> 10) - 25;
-  } else {
-    x_sig = x_abs;
-    x_exp = -24;
-  }
-
-  uint16_t approx = approximate_rsqrt(x_abs);
-  uint16_t y = floor_rsqrt(approx, x_sig, x_exp);
-  return fputil::FPBits<float16>(round_result(y, x_sig, x_exp)).get_val();
+  ApproxResult approx = approximate_rsqrt(x_abs);
+  FloorResult floor = floor_rsqrt(approx.value, approx.x_sig, approx.x_exp);
+  return fputil::FPBits<float16>(
+             round_result(floor, approx.x_sig, approx.x_exp))
+      .get_val();
 }
 
 } // namespace rsqrtf16_internal
