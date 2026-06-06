@@ -3332,12 +3332,12 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   Value *DIV;
 
   using namespace PatternMatch;
-  Value *SV = nullptr, *DI = nullptr;
-  Instruction *SVI = nullptr;
-  if (!match(&RootZExt,
-             m_ZExt(m_CombineOr(
-                 m_ExtractValue(m_Value(DI, m_Deinterleave2(m_Value(DIV)))),
-                 m_Value(SV, m_Shuffle(m_Value(), m_Value()))))))
+  Instruction *SVI = nullptr, *DI = nullptr;
+  if (!match(
+          &RootZExt,
+          m_ZExt(m_CombineOr(
+              m_ExtractValue(m_Instruction(DI, m_Deinterleave2(m_Value(DIV)))),
+              m_Instruction(SVI, m_Shuffle(m_Value(), m_Value()))))))
     return nullptr;
 
   auto isDeinterleaveShuffle =
@@ -3362,8 +3362,7 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
 
   // Validate either the shufflevector or the vector.deinterleave2 and obtain
   // the value they're de-interleaving.
-  if (SV) {
-    SVI = cast<Instruction>(SV);
+  if (SVI) {
     // We will find other shufflevectors later.
     DIV = isDeinterleaveShuffle(SVI).first;
     if (!DIV)
@@ -3433,7 +3432,7 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   }
 
   // This will insert replacement instructions before all the fields users.
-  Builder.SetInsertPoint(DI ? cast<Instruction>(DI) : SVI);
+  Builder.SetInsertPoint(DI ? DI : SVI);
 
   // Double the element size but half the vector length.
   auto *BitcastedTy = VectorType::getExtendedElementVectorType(InputVecTy);
