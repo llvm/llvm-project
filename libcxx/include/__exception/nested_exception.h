@@ -30,7 +30,7 @@
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class _LIBCPP_EXPORTED_FROM_ABI nested_exception {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] nested_exception {
   exception_ptr __ptr_;
 
 public:

@@ -937,7 +937,7 @@ template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator =
 class multimap;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
-class map {
+class [[__gnu__::__warn_unused__]] map {
 public:
   // types:
   typedef _Key key_type;
@@ -1718,7 +1718,7 @@ struct __container_traits<map<_Key, _Tp, _Compare, _Allocator> > {
 };
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-class multimap {
+class [[__gnu__::__warn_unused__]] multimap {
 public:
   // types:
   typedef _Key key_type;

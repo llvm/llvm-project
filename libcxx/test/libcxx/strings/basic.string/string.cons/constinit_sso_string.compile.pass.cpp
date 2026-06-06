@@ -22,4 +22,4 @@
 #endif
 
 constinit std::string g_str = LONGEST_STR;
-void fn() { constexpr std::string l_str = LONGEST_STR; }
+void fn() { [[maybe_unused]] constexpr std::string l_str = LONGEST_STR; }

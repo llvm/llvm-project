@@ -40,6 +40,7 @@ int main(int, char**) {
   // Make sure that the allocator isn't rebound to an incomplete type
   std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, complete_type_allocator<std::pair<const int, int> > >
       m;
+  (void)m;
 
   return 0;
 }

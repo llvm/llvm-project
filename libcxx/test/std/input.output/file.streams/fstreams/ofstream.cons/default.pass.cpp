@@ -22,16 +22,20 @@ int main(int, char**)
 {
     {
         std::ofstream fs;
+        (void)fs;
     }
     {
       std::basic_ofstream<char, operator_hijacker_char_traits<char> > fs;
+      (void)fs;
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wofstream fs;
+        (void)fs;
     }
     {
       std::basic_fstream<wchar_t, operator_hijacker_char_traits<wchar_t> > fs;
+      (void)fs;
     }
 #endif
 

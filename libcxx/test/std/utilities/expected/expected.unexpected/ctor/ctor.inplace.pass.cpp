@@ -90,6 +90,7 @@ void testException() {
 
   try {
     std::unexpected<Throwing> u(std::in_place, 5);
+    (void)u;
     assert(false);
   } catch (Except) {
   }

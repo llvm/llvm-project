@@ -78,7 +78,7 @@ template <class _Key,
           class _Compare         = less<_Key>,
           class _KeyContainer    = vector<_Key>,
           class _MappedContainer = vector<_Tp>>
-class flat_multimap {
+class [[__gnu__::__warn_unused__]] flat_multimap {
   template <class, class, class, class, class>
   friend class flat_multimap;
 

@@ -44,7 +44,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _CharT, class _Traits>
-class basic_ostream : virtual public basic_ios<_CharT, _Traits> {
+class [[__gnu__::__warn_unused__]] basic_ostream : virtual public basic_ios<_CharT, _Traits> {
 public:
   // types (inherited from basic_ios (27.5.4)):
   typedef _CharT char_type;

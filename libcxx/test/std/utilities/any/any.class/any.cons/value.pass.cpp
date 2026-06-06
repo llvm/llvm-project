@@ -59,6 +59,7 @@ void test_move_value_throws()
         assert(throws_on_move::count == 1);
         try {
             std::any a = std::move(v);
+            (void)a;
             assert(false);
         } catch (const my_any_exception&) {
             // do nothing

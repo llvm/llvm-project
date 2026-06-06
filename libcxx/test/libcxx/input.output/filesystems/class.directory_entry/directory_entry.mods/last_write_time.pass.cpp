@@ -40,7 +40,6 @@ static void last_write_time_not_representable_error() {
   using namespace fs;
   using namespace std::chrono;
   scoped_test_env env;
-  const path dir = env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
 
   TimeSpec ToTime;

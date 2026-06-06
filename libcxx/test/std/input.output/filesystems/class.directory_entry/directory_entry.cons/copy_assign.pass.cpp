@@ -50,7 +50,7 @@ static void test_copy_assign_operator() {
 static void copy_assign_copies_cache() {
   using namespace fs;
   scoped_test_env env;
-  const path dir = env.create_dir("dir");
+  env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
   const path sym = env.create_symlink("dir/file", "sym");
 

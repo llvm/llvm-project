@@ -122,6 +122,7 @@ void testException() {
 
   try {
     std::expected<Throwing, int> u(std::in_place, 5);
+    (void)u;
     assert(false);
   } catch (Except) {
   }

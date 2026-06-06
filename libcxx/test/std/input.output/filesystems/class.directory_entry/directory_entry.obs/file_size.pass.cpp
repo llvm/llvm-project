@@ -51,7 +51,7 @@ static void basic() {
 
   scoped_test_env env;
   const path file = env.create_file("file", 42);
-  const path dir = env.create_dir("dir");
+  env.create_dir("dir");
   const path sym = env.create_symlink("file", "sym");
 
   {
@@ -123,7 +123,7 @@ static void error_reporting() {
 
   const path dir = env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
-  const path file_out_of_dir = env.create_file("file2", 101);
+  env.create_file("file2", 101);
   const path sym_out_of_dir = env.create_symlink("dir/file", "sym");
   const path sym_in_dir = env.create_symlink("file2", "dir/sym2");
 

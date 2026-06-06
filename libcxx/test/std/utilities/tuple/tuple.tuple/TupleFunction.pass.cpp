@@ -29,6 +29,7 @@ int main(int, char**)
 {
     X x;
     std::function<void()> f(x);
+    (void)f;
 
   return 0;
 }

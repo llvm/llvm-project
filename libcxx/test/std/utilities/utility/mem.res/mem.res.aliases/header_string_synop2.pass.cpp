@@ -29,11 +29,15 @@ int main(int, char**) {
   {
     // Check that std::pmr::string is usable without <memory_resource>.
     std::pmr::string s;
+    (void)s;
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     std::pmr::wstring ws;
+    (void)ws;
 #endif
     std::pmr::u16string u16s;
+    (void)u16s;
     std::pmr::u32string u32s;
+    (void)u32s;
   }
 
   return 0;

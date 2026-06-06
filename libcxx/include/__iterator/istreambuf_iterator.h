@@ -26,7 +26,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits>
-class istreambuf_iterator
+class [[__gnu__::__warn_unused__]] istreambuf_iterator
     : public __iterator_base<istreambuf_iterator<_CharT, _Traits>,
                              input_iterator_tag,
                              _CharT,

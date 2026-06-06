@@ -52,12 +52,14 @@ int main(int, char**) {
 
   try {
     std::future<int> fut = std::async(std::launch::async, [] { return 1; });
+    (void)fut;
     assert(false);
   } catch (const std::system_error&) {
   }
 
   try {
     std::future<void> fut = std::async(std::launch::async, [] { return; });
+    (void)fut;
     assert(false);
   } catch (const std::system_error&) {
   }

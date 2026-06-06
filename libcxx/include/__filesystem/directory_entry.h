@@ -41,7 +41,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class directory_entry {
+class [[__gnu__::__warn_unused__]] directory_entry {
   typedef filesystem::path _Path;
 
 public:

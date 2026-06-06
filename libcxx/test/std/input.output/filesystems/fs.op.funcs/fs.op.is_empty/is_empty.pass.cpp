@@ -104,7 +104,7 @@ static void test_directory_access_denied()
         return;
 #else
     const path dir = env.create_dir("dir");
-    const path file1 = env.create_file("dir/file", 42);
+    env.create_file("dir/file", 42);
     permissions(dir, perms::none);
 #endif
 

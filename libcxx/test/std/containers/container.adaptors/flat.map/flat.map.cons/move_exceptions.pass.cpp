@@ -52,6 +52,7 @@ int main(int, char**) {
     countdown = 1;
     try {
       M m = std::move(mo);
+      (void)m;
       assert(false); // not reached
     } catch (int x) {
       assert(x == 42);
@@ -66,6 +67,7 @@ int main(int, char**) {
     countdown = 1;
     try {
       M m = std::move(mo);
+      (void)m;
       assert(false); // not reached
     } catch (int x) {
       assert(x == 42);

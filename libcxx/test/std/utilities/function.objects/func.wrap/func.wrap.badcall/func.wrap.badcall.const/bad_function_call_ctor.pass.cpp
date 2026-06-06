@@ -20,6 +20,7 @@
 int main(int, char**)
 {
     std::bad_function_call ex;
+    (void)ex;
 
   return 0;
 }

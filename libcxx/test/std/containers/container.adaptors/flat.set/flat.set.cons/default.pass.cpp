@@ -67,27 +67,15 @@ constexpr void test() {
     }
   }
 #if defined(_LIBCPP_VERSION)
-  {
-    using C = std::flat_set<MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly>>;
-    static_assert(std::is_nothrow_default_constructible_v<C>);
-    C c;
-  }
-  {
-    using C = std::flat_set<MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly, test_allocator<MoveOnly>>>;
-    static_assert(std::is_nothrow_default_constructible_v<C>);
-    C c;
-  }
+  static_assert(
+      std::is_nothrow_default_constructible_v<std::flat_set<MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly>>>);
+  static_assert(std::is_nothrow_default_constructible_v<
+                std::flat_set<MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly, test_allocator<MoveOnly>>>>);
 #endif // _LIBCPP_VERSION
-  {
-    using C = std::flat_set<MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly, other_allocator<MoveOnly>>>;
-    static_assert(!std::is_nothrow_default_constructible_v<C>);
-    C c;
-  }
-  {
-    using C = std::flat_set<MoveOnly, ThrowingCtorComp, KeyContainer<MoveOnly>>;
-    static_assert(!std::is_nothrow_default_constructible_v<C>);
-    C c;
-  }
+  static_assert(!std::is_nothrow_default_constructible_v<
+                std::flat_set<MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly, other_allocator<MoveOnly>>>>);
+  static_assert(
+      !std::is_nothrow_default_constructible_v<std::flat_set<MoveOnly, ThrowingCtorComp, KeyContainer<MoveOnly>>>);
 }
 
 constexpr bool test() {

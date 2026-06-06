@@ -35,7 +35,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-class reference_wrapper : public __weak_result_type<_Tp> {
+class [[__gnu__::__warn_unused__]] reference_wrapper : public __weak_result_type<_Tp> {
 public:
   // types
   typedef _Tp type;

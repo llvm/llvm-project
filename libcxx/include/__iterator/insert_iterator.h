@@ -36,7 +36,7 @@ using __insert_iterator_iter_t _LIBCPP_NODEBUG = typename _Container::iterator;
 #endif
 
 template <class _Container>
-class insert_iterator
+class [[__gnu__::__warn_unused__]] insert_iterator
     : public __iterator_base<insert_iterator<_Container>, output_iterator_tag, void, void, void, void> {
 protected:
   _Container* container;

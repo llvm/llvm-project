@@ -24,6 +24,7 @@ int main(int, char**) {
   {
     // Check that std::pmr::deque is usable without <memory_resource>.
     std::pmr::deque<int> d;
+    (void)d;
   }
 
   return 0;

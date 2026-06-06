@@ -151,7 +151,7 @@ public:
 };
 
 template <class _CompletionF = __empty_completion>
-class barrier {
+class [[__gnu__::__warn_unused__]] barrier {
   __barrier_base<_CompletionF> __b_;
 
 public:

@@ -109,6 +109,7 @@ void testException() {
   Throwing t;
   try {
     std::unexpected<Throwing> u(t);
+    (void)u;
     assert(false);
   } catch (Except) {
   }

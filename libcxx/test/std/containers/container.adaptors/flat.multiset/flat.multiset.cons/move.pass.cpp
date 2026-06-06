@@ -124,34 +124,16 @@ struct MoveSensitiveComp {
 };
 
 void test_move_noexcept() {
-  {
-    using C = std::flat_multiset<int>;
-    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
-  {
-    using C = std::flat_multiset<int, std::less<int>, std::deque<int, test_allocator<int>>>;
-    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
+  LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<std::flat_multiset<int>>);
+  LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<
+                       std::flat_multiset<int, std::less<int>, std::deque<int, test_allocator<int>>>>);
 #if _LIBCPP_VERSION
-  {
-    // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
-    using C = std::flat_multiset<int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>>;
-    static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
-  {
-    // Comparator fails to be nothrow-move-constructible
-    using C = std::flat_multiset<int, ThrowingMoveComp>;
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
+  // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
+  static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
+  static_assert(!std::is_nothrow_move_constructible_v<
+                std::flat_multiset<int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>>>);
+  // Comparator fails to be nothrow-move-constructible
+  static_assert(!std::is_nothrow_move_constructible_v<std::flat_multiset<int, ThrowingMoveComp>>);
 #endif // _LIBCPP_VERSION
 }
 
@@ -184,6 +166,7 @@ void test_move_exception() {
     countdown = 1;
     try {
       M m = std::move(mo);
+      (void)m;
       assert(false); // not reached
     } catch (int x) {
       assert(x == 42);

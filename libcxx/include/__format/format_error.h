@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
-class _LIBCPP_EXPORTED_FROM_ABI format_error : public runtime_error {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] format_error : public runtime_error {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit format_error(const string& __s) : runtime_error(__s) {}
   _LIBCPP_HIDE_FROM_ABI explicit format_error(const char* __s) : runtime_error(__s) {}

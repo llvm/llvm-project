@@ -118,7 +118,6 @@ void test_constructors() {
 
 void test_signatures() {
   using namespace fs;
-  const path p;
   std::error_code ec;
   const filesystem_error e("lala", ec);
   // const path& path1() const noexcept;

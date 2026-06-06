@@ -163,7 +163,7 @@ struct __unlock_guard {
   __unlock_guard& operator=(const __unlock_guard&) = delete;
 };
 
-class _LIBCPP_EXPORTED_FROM_ABI condition_variable_any {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] condition_variable_any {
   condition_variable __cv_;
   shared_ptr<mutex> __mut_;
 

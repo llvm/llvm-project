@@ -33,25 +33,21 @@ constexpr void test() {
   {
     using C = std::flat_set<MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly>>;
     static_assert(std::is_nothrow_destructible_v<C>);
-    C c;
   }
   {
     using V = KeyContainer<MoveOnly, test_allocator<MoveOnly>>;
     using C = std::flat_set<MoveOnly, std::less<MoveOnly>, V>;
     static_assert(std::is_nothrow_destructible_v<C>);
-    C c;
   }
   {
     using V = KeyContainer<MoveOnly, other_allocator<MoveOnly>>;
     using C = std::flat_set<MoveOnly, std::greater<MoveOnly>, V>;
     static_assert(std::is_nothrow_destructible_v<C>);
-    C c;
   }
 #if defined(_LIBCPP_VERSION)
   {
     using C = std::flat_set<MoveOnly, ThrowingDtorComp, KeyContainer<MoveOnly>>;
     static_assert(!std::is_nothrow_destructible_v<C>);
-    C c;
   }
 #endif // _LIBCPP_VERSION
 }

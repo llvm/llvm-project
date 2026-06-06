@@ -24,7 +24,9 @@ int main(int, char**) {
   {
     // Check that std::pmr::unordered_map is usable without <memory_resource>.
     std::pmr::unordered_map<int, int> m;
+    (void)m;
     std::pmr::unordered_multimap<int, int> mm;
+    (void)mm;
   }
 
   return 0;

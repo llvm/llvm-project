@@ -371,7 +371,7 @@ struct _PathExport<char8_t> {
 #    endif   // _LIBCPP_HAS_LOCALIZATION
 #  endif     // _LIBCPP_WIN32API
 
-class _LIBCPP_EXPORTED_FROM_ABI path {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] path {
   template <class _SourceOrIter, class _Tp = path&>
   using _EnableIfPathable _LIBCPP_NODEBUG = __enable_if_t<__is_pathable<_SourceOrIter>::value, _Tp>;
 

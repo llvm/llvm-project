@@ -34,7 +34,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class recursive_directory_iterator {
+class [[__gnu__::__warn_unused__]] recursive_directory_iterator {
 public:
   using value_type        = directory_entry;
   using difference_type   = ptrdiff_t;

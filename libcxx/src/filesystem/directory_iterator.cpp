@@ -257,7 +257,6 @@ recursive_directory_iterator& recursive_directory_iterator::__increment(error_co
 void recursive_directory_iterator::__advance(error_code* ec) {
   ErrorHandler<void> err("recursive_directory_iterator::operator++()", ec);
 
-  const directory_iterator end_it;
   auto& stack = __imp_->__stack_;
   error_code m_ec;
   while (stack.size() > 0) {

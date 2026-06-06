@@ -57,7 +57,7 @@ using __valid_std_unexpected _LIBCPP_NODEBUG = _BoolConstant< //
     >;
 
 template <class _Err>
-class unexpected {
+class [[__gnu__::__warn_unused__]] unexpected {
   static_assert(__valid_std_unexpected<_Err>::value,
                 "[expected.un.general] states a program that instantiates std::unexpected for a non-object type, an "
                 "array type, a specialization of unexpected, or a cv-qualified type is ill-formed.");

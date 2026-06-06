@@ -40,7 +40,7 @@ struct __std_exception_data {
   bool _DoFree;
 };
 
-class exception { // base of all library exceptions
+class [[__gnu__::__warn_unused__]] exception { // base of all library exceptions
 public:
   exception() _NOEXCEPT : __data_() {}
 
@@ -63,7 +63,7 @@ private:
   __std_exception_data __data_;
 };
 
-class bad_exception : public exception {
+class [[__gnu__::__warn_unused__]] bad_exception : public exception {
 public:
   bad_exception() _NOEXCEPT : exception("bad exception") {}
 };
@@ -72,7 +72,7 @@ public:
 // On all other platforms, we define our own std::exception and std::bad_exception types
 // regardless of whether exceptions are turned on as a language feature.
 
-class _LIBCPP_EXPORTED_FROM_ABI exception {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] exception {
 public:
   _LIBCPP_HIDE_FROM_ABI exception() _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI exception(const exception&) _NOEXCEPT            = default;
@@ -82,7 +82,7 @@ public:
   [[__nodiscard__]] virtual const char* what() const _NOEXCEPT;
 };
 
-class _LIBCPP_EXPORTED_FROM_ABI bad_exception : public exception {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] bad_exception : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_exception() _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI bad_exception(const bad_exception&) _NOEXCEPT            = default;

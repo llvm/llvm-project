@@ -202,6 +202,7 @@ void testException() {
 
   try {
     std::expected<Throwing, int> u(5);
+    (void)u;
     assert(false);
   } catch (Except) {
   }

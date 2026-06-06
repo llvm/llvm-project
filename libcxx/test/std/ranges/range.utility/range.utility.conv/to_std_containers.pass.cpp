@@ -61,7 +61,6 @@ void test_is_equal(std::vector<std::vector<typename From::value_type>> inputs) {
 template <class From, class To>
 void test_is_permutation(std::vector<std::vector<typename From::value_type>> inputs) {
   for (const auto& in : inputs) {
-    From from(in.begin(), in.end());
     std::same_as<To> decltype(auto) result = std::ranges::to<To>(in);
     assert(std::ranges::is_permutation(in, result));
   }

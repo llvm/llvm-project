@@ -24,6 +24,7 @@ int main(int, char**) {
   {
     // Check that std::pmr::list is usable without <memory_resource>.
     std::pmr::list<int> l;
+    (void)l;
   }
 
   return 0;

@@ -277,7 +277,7 @@ public:
 };
 
 template <class _Context>
-class _LIBCPP_NO_SPECIALIZATIONS basic_format_arg {
+class _LIBCPP_NO_SPECIALIZATIONS [[__gnu__::__warn_unused__]] basic_format_arg {
 public:
   class handle;
 

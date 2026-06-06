@@ -70,7 +70,7 @@ static void create_directories_multi_level()
 
 static void create_directory_symlinks() {
   scoped_test_env env;
-  const path root = env.create_dir("dir");
+  env.create_dir("dir");
   const path sym_dest_dead = env.make_env_path("dead");
   const path dead_sym = env.create_directory_symlink(sym_dest_dead, "dir/sym_dir");
   const path target = env.make_env_path("dir/sym_dir/foo");

@@ -70,7 +70,7 @@ static void test_path_assign_ec_method() {
 static void test_assign_calls_refresh() {
   using namespace fs;
   scoped_test_env env;
-  const path dir = env.create_dir("dir");
+  env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
   const path sym = env.create_symlink("dir/file", "sym");
 
@@ -120,7 +120,7 @@ static void test_assign_propagates_error() {
   const path dir = env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
   const path sym_out_of_dir = env.create_symlink("dir/file", "sym");
-  const path file_out_of_dir = env.create_file("file1");
+  env.create_file("file1");
   const path sym_in_dir = env.create_symlink("file1", "dir/sym1");
 
   permissions(dir, perms::none);

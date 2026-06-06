@@ -68,7 +68,7 @@ using wformat_context = basic_format_context< back_insert_iterator<__format::__o
 
 template <class _OutIt, class _CharT>
 class _LIBCPP_PREFERRED_NAME(format_context) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context))
-    basic_format_context {
+    [[__gnu__::__warn_unused__]] basic_format_context {
 public:
   using iterator  = _OutIt;
   using char_type = _CharT;

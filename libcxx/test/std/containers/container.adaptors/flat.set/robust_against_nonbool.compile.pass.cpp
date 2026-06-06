@@ -26,6 +26,7 @@ void test() {
   std::flat_set m2(std::from_range, v, StrictBinaryPredicate);
   std::flat_set m3(std::sorted_unique, v, StrictBinaryPredicate);
   std::flat_set m4(m1.begin(), m1.end(), StrictBinaryPredicate);
+  (void)m4;
   m2.insert(m1.begin(), m1.end());
   m2.insert(std::sorted_unique, m1.begin(), m1.end());
   m2.insert_range(m1);

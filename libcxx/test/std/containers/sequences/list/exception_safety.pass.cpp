@@ -150,6 +150,7 @@ int main(int, char**) {
     // list& operator=(const list& x);
     test_exception_safety_throwing_copy_container<C, ThrowOn, Size>([](C&& in) {
       std::list<T> c;
+      (void)c;
       c = in;
     });
 

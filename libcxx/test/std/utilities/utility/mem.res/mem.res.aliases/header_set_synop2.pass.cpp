@@ -24,7 +24,9 @@ int main(int, char**) {
   {
     // Check that std::pmr::set is usable without <memory_resource>.
     std::pmr::set<int> s;
+    (void)s;
     std::pmr::multiset<int> ms;
+    (void)ms;
   }
 
   return 0;

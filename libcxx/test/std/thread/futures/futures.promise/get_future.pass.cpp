@@ -35,6 +35,7 @@ int main(int, char**)
         try
         {
             f = p.get_future();
+            (void)f;
             assert(false);
         }
         catch (const std::future_error& e)
@@ -45,9 +46,11 @@ int main(int, char**)
     {
         std::promise<double> p;
         std::promise<double> p0 = std::move(p);
+        (void)p0;
         try
         {
             std::future<double> f = p.get_future();
+            (void)f;
             assert(false);
         }
         catch (const std::future_error& e)

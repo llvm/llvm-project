@@ -192,7 +192,7 @@ using _Handler _LIBCPP_NODEBUG = conditional_t< _IsSmallObject<_Tp>::value, _Sma
 
 } // namespace __any_imp
 
-class any {
+class [[__gnu__::__warn_unused__]] any {
 public:
   // construct/destruct
   _LIBCPP_HIDE_FROM_ABI constexpr any() noexcept : __h_(nullptr) {}

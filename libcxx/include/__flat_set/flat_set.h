@@ -70,7 +70,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Key, class _Compare = less<_Key>, class _KeyContainer = vector<_Key>>
-class flat_set {
+class [[__gnu__::__warn_unused__]] flat_set {
   template <class, class, class>
   friend class flat_set;
 

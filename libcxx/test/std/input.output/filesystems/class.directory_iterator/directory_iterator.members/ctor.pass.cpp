@@ -231,6 +231,7 @@ static void test_open_on_dot_dir()
 
     std::error_code ec;
     directory_iterator it(testPath, ec);
+    (void)it;
     assert(!ec);
 }
 

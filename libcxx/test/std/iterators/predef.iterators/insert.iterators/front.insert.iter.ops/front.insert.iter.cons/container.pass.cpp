@@ -24,6 +24,7 @@ TEST_CONSTEXPR_CXX20 bool
 test(C c)
 {
     std::front_insert_iterator<C> i(c);
+    (void)i;
     return true;
 }
 

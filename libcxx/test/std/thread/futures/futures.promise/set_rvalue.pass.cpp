@@ -52,6 +52,7 @@ int main(int, char**)
         T i;
         std::promise<T> p;
         std::future<T> f = p.get_future();
+        (void)f;
         try
         {
             p.set_value(std::move(i));

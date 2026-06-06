@@ -27,7 +27,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Container>
-class front_insert_iterator
+class [[__gnu__::__warn_unused__]] front_insert_iterator
     : public __iterator_base<front_insert_iterator<_Container>, output_iterator_tag, void, void, void, void> {
 protected:
   _Container* container;

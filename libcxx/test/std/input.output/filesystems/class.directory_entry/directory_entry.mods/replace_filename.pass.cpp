@@ -91,7 +91,7 @@ static void test_replace_filename_ec_method() {
 static void test_replace_filename_calls_refresh() {
   using namespace fs;
   scoped_test_env env;
-  const path dir = env.create_dir("dir");
+  env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
   const path file_two = env.create_file("dir/file_two", 101);
   const path sym = env.create_symlink("dir/file", "sym");
@@ -131,7 +131,7 @@ static void test_replace_filename_propagates_error() {
   const path dir = env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
   const path file_two = env.create_file("dir/file_two", 99);
-  const path file_out_of_dir = env.create_file("file_three", 101);
+  env.create_file("file_three", 101);
   const path sym_out_of_dir = env.create_symlink("dir/file", "sym");
   const path sym_out_of_dir_two = env.create_symlink("dir/file", "sym_two");
   const path sym_in_dir = env.create_symlink("file_two", "dir/sym_three");

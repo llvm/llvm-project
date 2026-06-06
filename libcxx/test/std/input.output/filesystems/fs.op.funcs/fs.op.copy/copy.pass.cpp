@@ -158,7 +158,7 @@ static void from_is_regular_file()
 {
     scoped_test_env env;
     const path file = env.create_file("file", 42);
-    const path dir = env.create_dir("dir");
+    env.create_dir("dir");
     { // skip copy because of directory
         const path dest = env.make_env_path("dest1");
         std::error_code ec = GetTestEC();
@@ -270,7 +270,7 @@ static void test_copy_symlinks_to_symlink_dir()
     scoped_test_env env;
     const path file1 = env.create_file("file1", 42);
     const path file2 = env.create_file("file2", 101);
-    const path file2_sym = env.create_symlink(file2, "file2_sym");
+    env.create_symlink(file2, "file2_sym");
     const path dir = env.create_dir("dir");
     const path dir_sym = env.create_directory_symlink(dir, "dir_sym");
     {

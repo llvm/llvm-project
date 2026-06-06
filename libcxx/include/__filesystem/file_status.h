@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-class file_status {
+class [[__gnu__::__warn_unused__]] file_status {
 public:
   // constructors
   _LIBCPP_HIDE_FROM_ABI file_status() noexcept : file_status(file_type::none) {}

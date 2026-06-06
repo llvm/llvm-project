@@ -36,7 +36,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_HIDDEN __dir_stream;
-class directory_iterator {
+class [[__gnu__::__warn_unused__]] directory_iterator {
 public:
   typedef directory_entry value_type;
   typedef ptrdiff_t difference_type;

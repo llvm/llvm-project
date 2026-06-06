@@ -28,7 +28,7 @@
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] filesystem_error : public system_error {
 public:
   _LIBCPP_HIDE_FROM_ABI filesystem_error(const string& __what, error_code __ec)
       : system_error(__ec, __what), __storage_(make_shared<_Storage>(path(), path())) {

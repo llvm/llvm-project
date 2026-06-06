@@ -260,6 +260,7 @@ void test_set_exception_safety_throwing_copy() {
 
   try {
     Container<T> c(std::from_range, in);
+    (void)c;
     assert(false); // The constructor call above should throw.
 
   } catch (int) {
@@ -279,6 +280,7 @@ void test_set_exception_safety_throwing_allocator() {
 
     globalMemCounter.reset();
     Container<T, test_less<T>, ThrowingAllocator<T>> c(std::from_range, in, alloc);
+    (void)c;
     assert(false); // The constructor call above should throw.
 
   } catch (int) {

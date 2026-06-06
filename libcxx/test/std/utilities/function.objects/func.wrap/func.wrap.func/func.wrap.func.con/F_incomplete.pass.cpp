@@ -21,13 +21,6 @@
 
 #include "test_macros.h"
 
-struct X{
-    typedef std::function<void(X&)> callback_type;
-    virtual ~X() {}
-private:
-    callback_type _cb;
-};
-
 struct IncompleteReturnType {
   std::function<IncompleteReturnType ()> fn;
 };

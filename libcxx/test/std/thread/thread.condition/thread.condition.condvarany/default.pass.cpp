@@ -22,6 +22,7 @@
 int main(int, char**)
 {
     std::condition_variable_any cv;
+    (void)cv;
 
   return 0;
 }

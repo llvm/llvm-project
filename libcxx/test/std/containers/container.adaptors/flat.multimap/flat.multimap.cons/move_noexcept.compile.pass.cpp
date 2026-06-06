@@ -10,7 +10,7 @@
 
 // <flat_map>
 
-// flat_map(flat_map&&)
+// flat_multimap(flat_multimap&&)
 //        noexcept(is_nothrow_move_constructible<key_container_type>::value &&
 //                 is_nothrow_move_constructible<mapped_container_type>::value &&
 //                 is_nothrow_copy_constructible<key_compare>::value);
@@ -26,7 +26,6 @@
 #include <vector>
 
 #include "test_macros.h"
-#include "MoveOnly.h"
 #include "test_allocator.h"
 
 template <class T>
@@ -60,43 +59,20 @@ struct MoveSensitiveComp {
   bool is_moved_from_ = false;
 };
 
-int main(int, char**) {
-  {
-    using C = std::flat_map<int, int>;
-    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
-  {
-    using C = std::flat_map<int, int, std::less<int>, std::deque<int, test_allocator<int>>>;
-    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
+LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<std::flat_multimap<int, int>>);
+LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<
+                     std::flat_multimap<int, int, std::less<int>, std::deque<int, test_allocator<int>>>>);
 #if _LIBCPP_VERSION
-  {
-    // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
-    using C = std::flat_map<int, int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>, std::vector<int>>;
-    static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
-  {
-    // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
-    using C = std::flat_map<int, int, std::less<int>, std::vector<int>, std::deque<int, ThrowingMoveAllocator<int>>>;
-    static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
+// Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
+static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
+static_assert(
+    !std::is_nothrow_move_constructible_v<
+        std::flat_multimap<int, int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>, std::vector<int>>>);
+// Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
+static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
+static_assert(
+    !std::is_nothrow_move_constructible_v<
+        std::flat_multimap<int, int, std::less<int>, std::vector<int>, std::deque<int, ThrowingMoveAllocator<int>>>>);
 #endif // _LIBCPP_VERSION
-  {
-    // Comparator fails to be nothrow-move-constructible
-    using C = std::flat_map<int, int, ThrowingMoveComp>;
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
-  return 0;
-}
+// Comparator fails to be nothrow-move-constructible
+static_assert(!std::is_nothrow_move_constructible_v<std::flat_multimap<int, int, ThrowingMoveComp>>);

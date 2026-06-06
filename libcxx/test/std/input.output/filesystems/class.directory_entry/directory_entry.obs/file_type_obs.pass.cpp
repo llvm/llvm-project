@@ -31,6 +31,7 @@ namespace fs = std::filesystem;
 static void file_dne() {
   using namespace fs;
   directory_entry p("dne");
+  (void)p;
 }
 
 static void signatures() {

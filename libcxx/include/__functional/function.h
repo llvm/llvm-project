@@ -49,7 +49,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
-class _LIBCPP_EXPORTED_FROM_ABI bad_function_call : public exception {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] bad_function_call : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT                                    = default;
   _LIBCPP_HIDE_FROM_ABI bad_function_call(const bad_function_call&) _NOEXCEPT            = default;
@@ -605,7 +605,7 @@ public:
 } // namespace __function
 
 template <class _Rp, class... _ArgTypes>
-class function<_Rp(_ArgTypes...)>
+class [[__gnu__::__warn_unused__]] function<_Rp(_ArgTypes...)>
     : public __function::__maybe_derive_from_unary_function<_Rp(_ArgTypes...)>,
       public __function::__maybe_derive_from_binary_function<_Rp(_ArgTypes...)> {
 #  ifndef _LIBCPP_ABI_OPTIMIZED_FUNCTION

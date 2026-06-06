@@ -25,7 +25,9 @@ void test() {
   std::flat_multimap<Key, Value> m1;
   std::flat_multimap m2(std::from_range, m1, StrictBinaryPredicate);
   std::flat_multimap m3(std::sorted_equivalent, m1.keys(), m1.values(), StrictBinaryPredicate);
+  (void)m3;
   std::flat_multimap m4(m1.begin(), m1.end(), StrictBinaryPredicate);
+  (void)m4;
   m2.insert(m1.begin(), m1.end());
   m2.insert(std::sorted_equivalent, m1.begin(), m1.end());
   m2.insert_range(m1);

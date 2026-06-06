@@ -56,6 +56,7 @@ int main(int, char**)
         T i;
         std::promise<T> p;
         std::future<T> f = p.get_future();
+        (void)f;
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {

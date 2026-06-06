@@ -101,6 +101,7 @@ void test_string_exception_safety_throwing_allocator() {
     // Note: the input string must be long enough to prevent SSO, otherwise the allocator won't be used.
     std::basic_string<char, std::char_traits<char>, ThrowingAllocator<char>> c(
         std::from_range, std::vector<char>(64, 'A'), alloc);
+    (void)c;
     assert(false); // The constructor call should throw.
 
   } catch (int) {

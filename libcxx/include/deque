@@ -282,7 +282,7 @@ template <class _ValueType,
               __deque_block_size<_ValueType, _DiffType>::value
 #  endif
           >
-class __deque_iterator {
+class [[__gnu__::__warn_unused__]] __deque_iterator {
   using __map_iterator _LIBCPP_NODEBUG = __rebind_pointer_t<_Pointer, const __rebind_pointer_t<_Pointer, _ValueType> >;
 
 // TODO(LLVM 25): Remove this check
@@ -495,7 +495,7 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
     __deque_block_size<_ValueType, _DiffType>::value;
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
-class deque {
+class [[__gnu__::__warn_unused__]] deque {
   template <class _Up, class _Alloc>
   using __split_buffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
 

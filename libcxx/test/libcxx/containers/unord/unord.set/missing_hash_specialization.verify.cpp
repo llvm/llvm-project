@@ -56,14 +56,17 @@ int main(int, char**) {
   {
     using Set = std::unordered_set<int, BadHashNoCopy>;
     Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
+    (void)s;
   }
   {
     using Set = std::unordered_set<int, BadHashNoCall>;
     Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
+    (void)s;
   }
   {
     using Set = std::unordered_set<int, GoodHashNoDefault>;
     Set s(/*bucketcount*/ 42, GoodHashNoDefault(nullptr));
+    (void)s;
   }
 
   return 0;

@@ -49,5 +49,6 @@ int main(int, char**) {
     std::function<Ptr(Ptr)> g(one_arg); g(x);
     std::function<void(Ptr)> h(one_arg_void); h(x);
     std::function<void()> i(Callable<Holder<Incomplete>>{});
+    (void)i;
     return 0;
 }

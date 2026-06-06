@@ -213,12 +213,14 @@ int main(int, char**) {
     // forward_list& operator=(const forward_list& x);
     test_exception_safety_throwing_copy_container<C, ThrowOn, Size>([](C&& in) {
       std::forward_list<T> c;
+      (void)c;
       c = in;
     });
 
     // forward_list& operator=(initializer_list<value_type> il);
     test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
       std::forward_list<T> c;
+      (void)c;
       c = il;
     });
 

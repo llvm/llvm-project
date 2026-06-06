@@ -33,6 +33,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   // Make sure that the allocator isn't rebound to and incomplete type
   std::map<int, int, std::less<int>, complete_type_allocator<std::pair<const int, int> > > m;
+  (void)m;
 
   return true;
 }

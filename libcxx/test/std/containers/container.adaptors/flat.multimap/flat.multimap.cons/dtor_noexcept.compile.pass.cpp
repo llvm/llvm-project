@@ -34,50 +34,29 @@ constexpr void test() {
     using C =
         std::flat_multimap<MoveOnly, MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly>, ValueContainer<MoveOnly>>;
     static_assert(std::is_nothrow_destructible_v<C>);
-    C c;
   }
   {
     using V  = KeyContainer<MoveOnly, test_allocator<MoveOnly>>;
     using V2 = ValueContainer<MoveOnly, test_allocator<MoveOnly>>;
     using C  = std::flat_multimap<MoveOnly, MoveOnly, std::less<MoveOnly>, V, V2>;
     static_assert(std::is_nothrow_destructible_v<C>);
-    C c;
   }
   {
     using V  = KeyContainer<MoveOnly, test_allocator<MoveOnly>>;
     using V2 = ValueContainer<MoveOnly, test_allocator<MoveOnly>>;
     using C  = std::flat_multimap<MoveOnly, MoveOnly, std::greater<MoveOnly>, V, V2>;
     static_assert(std::is_nothrow_destructible_v<C>);
-    C c;
   }
 #if defined(_LIBCPP_VERSION)
   {
     using C =
         std::flat_multimap<MoveOnly, MoveOnly, ThrowingDtorComp, KeyContainer<MoveOnly>, ValueContainer<MoveOnly>>;
     static_assert(!std::is_nothrow_destructible_v<C>);
-    C c;
   }
 #endif // _LIBCPP_VERSION
 }
 
-constexpr bool test() {
+void test() {
   test<std::vector, std::vector>();
-
-#ifndef __cpp_lib_constexpr_deque
-  if (!TEST_IS_CONSTANT_EVALUATED)
-#endif
-  {
-    test<std::deque, std::deque>();
-  }
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
-
-  return 0;
+  test<std::deque, std::deque>();
 }

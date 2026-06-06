@@ -184,10 +184,12 @@ void test_ctor_under_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)));
+      (void)v;
     }
     {
       ExpectConstructGuard<int&> G(3);
       C v(It(arr2), It(std::end(arr2)));
+      (void)v;
     }
   }
   {
@@ -196,10 +198,12 @@ void test_ctor_under_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)));
+      (void)v;
     }
     {
       ExpectConstructGuard<int&> G(3);
       C v(It(arr2), It(std::end(arr2)));
+      (void)v;
     }
   }
 #endif
@@ -217,10 +221,12 @@ void test_ctor_under_alloc_with_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)), a);
+      (void)v;
     }
     {
       ExpectConstructGuard<int&> G(3);
       C v(It(arr2), It(std::end(arr2)), a);
+      (void)v;
     }
   }
   {

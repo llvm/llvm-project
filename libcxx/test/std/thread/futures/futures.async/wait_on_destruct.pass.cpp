@@ -28,7 +28,7 @@ std::mutex mux;
 int main(int, char**) {
   std::condition_variable cond;
   std::unique_lock lock(mux);
-  auto v = std::async(std::launch::async, [&cond, value = 1]() mutable {
+  (void)std::async(std::launch::async, [&cond, value = 1]() mutable {
     std::unique_lock thread_lock(mux);
     cond.notify_all();
     thread_lock.unlock();

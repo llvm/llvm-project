@@ -45,6 +45,7 @@ int main(int, char**)
         try
         {
             f = p.get_future();
+            (void)f;
             assert(false);
         }
         catch (const std::future_error& e)

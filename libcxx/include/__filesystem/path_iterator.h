@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class _LIBCPP_EXPORTED_FROM_ABI path::iterator {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] path::iterator {
 public:
   enum _ParserState : unsigned char {
     _Singular,

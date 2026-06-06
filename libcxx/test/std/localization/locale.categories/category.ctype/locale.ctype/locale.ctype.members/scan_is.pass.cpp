@@ -16,7 +16,6 @@
 
 #include <locale>
 #include <string>
-#include <vector>
 #include <cassert>
 
 #include <stdio.h>
@@ -30,7 +29,6 @@ int main(int, char**)
         typedef std::ctype<wchar_t> F;
         const F& f = std::use_facet<F>(l);
         const std::wstring in(L" A\x07.a1");
-        std::vector<F::mask> m(in.size());
         assert(f.scan_is(F::space, in.data(), in.data() + in.size()) - in.data() == 0);
         assert(f.scan_is(F::print, in.data(), in.data() + in.size()) - in.data() == 0);
         assert(f.scan_is(F::cntrl, in.data(), in.data() + in.size()) - in.data() == 2);

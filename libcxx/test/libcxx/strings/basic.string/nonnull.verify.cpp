@@ -13,7 +13,7 @@
 // AppleClang doesn't have diagnose_if with diagnostic flags
 // UNSUPPORTED: apple-clang-21
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-unused-result
+// ADDITIONAL_COMPILE_FLAGS: -Wno-unused
 
 #include <string>
 

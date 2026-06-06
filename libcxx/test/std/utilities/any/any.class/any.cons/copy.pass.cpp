@@ -28,6 +28,7 @@ void test_copy_throws() {
         assert(Type::count == 1);
         try {
             const std::any a2(a);
+            (void)a2;
             assert(false);
         } catch (my_any_exception const &) {
             // do nothing

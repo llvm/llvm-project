@@ -24,7 +24,9 @@ int main(int, char**) {
   {
     // Check that std::pmr::map is usable without <memory_resource>.
     std::pmr::map<int, int> m;
+    (void)m;
     std::pmr::multimap<int, int> mm;
+    (void)mm;
   }
 
   return 0;

@@ -26,6 +26,7 @@ void test() {
   std::flat_multiset m2(std::from_range, v, StrictBinaryPredicate);
   std::flat_multiset m3(std::sorted_equivalent, v, StrictBinaryPredicate);
   std::flat_multiset m4(m1.begin(), m1.end(), StrictBinaryPredicate);
+  (void)m4;
   m2.insert(m1.begin(), m1.end());
   m2.insert(std::sorted_equivalent, m1.begin(), m1.end());
   m2.insert_range(m1);

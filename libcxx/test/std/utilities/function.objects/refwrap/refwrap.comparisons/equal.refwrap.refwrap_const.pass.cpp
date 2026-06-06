@@ -40,7 +40,6 @@ constexpr void test() {
 
   std::reference_wrapper<T> rw1{i};
 
-  std::reference_wrapper<T> rw3{j};
   std::reference_wrapper<const T> crw1{i};
   std::reference_wrapper<const T> crw3{j};
 

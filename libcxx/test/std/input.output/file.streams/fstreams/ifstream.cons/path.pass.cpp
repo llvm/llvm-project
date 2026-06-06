@@ -61,7 +61,6 @@ static_assert(test_non_convert_to_path<char32_t>());
 
 int main(int, char**) {
   {
-    fs::path p;
     static_assert(!std::is_convertible<fs::path, std::ifstream>::value,
                   "ctor should be explicit");
     static_assert(std::is_constructible<std::ifstream, fs::path const&,

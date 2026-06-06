@@ -81,7 +81,7 @@ template <class _Key,
           class _Compare         = less<_Key>,
           class _KeyContainer    = vector<_Key>,
           class _MappedContainer = vector<_Tp>>
-class flat_map {
+class [[__gnu__::__warn_unused__]] flat_map {
   template <class, class, class, class, class>
   friend class flat_map;
 

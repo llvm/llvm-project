@@ -67,6 +67,7 @@ void testException() {
 
   try {
     std::expected<Throwing, int> u;
+    (void)u;
     assert(false);
   } catch (Except) {
   }

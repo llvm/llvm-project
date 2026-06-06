@@ -66,7 +66,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT;
 
-class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] exception_ptr {
   void* __ptr_;
 
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;

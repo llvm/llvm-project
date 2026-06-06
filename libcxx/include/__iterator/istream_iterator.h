@@ -26,7 +26,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _CharT = char, class _Traits = char_traits<_CharT>, class _Distance = ptrdiff_t>
-class istream_iterator
+class [[__gnu__::__warn_unused__]] istream_iterator
     : public __iterator_base<istream_iterator<_Tp, _CharT, _Traits, _Distance>,
                              input_iterator_tag,
                              _Tp,

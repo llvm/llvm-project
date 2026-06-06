@@ -54,7 +54,7 @@ public:
 _LIBCPP_DIAGNOSTIC_POP
 
 template <class _Err>
-class bad_expected_access : public bad_expected_access<void> {
+class [[__gnu__::__warn_unused__]] bad_expected_access : public bad_expected_access<void> {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit bad_expected_access(_Err __e) : __unex_(std::move(__e)) {}
 

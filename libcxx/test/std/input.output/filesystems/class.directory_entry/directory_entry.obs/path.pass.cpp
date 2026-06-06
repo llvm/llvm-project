@@ -49,7 +49,6 @@ void test_path_conversion() {
   const path p("foo/bar/baz.exe");
   const path p2("abc");
   {
-    directory_entry nce;
     const directory_entry e("");
     // Check conversions exist
     static_assert(std::is_convertible<directory_entry&,        path const&>::value, "");

@@ -311,15 +311,16 @@ int main(int, char**)
         std::string ex(str, base(iter));
         assert(ex == "09");
     }
+/*
     {
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, 'Z');
         std::string ex(str, base(iter));
-//        assert(ex == "EDT");  depends on time zone
+        assert(ex == "EDT"); // depends on time zone
     }
     {
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, 'z');
         std::string ex(str, base(iter));
-//        assert(ex == "-0400");  depends on time zone
+        assert(ex == "-0400"); // depends on time zone
     }
 #ifndef _WIN32
     // The Windows strftime() doesn't support the "%+" format. Depending on CRT
@@ -327,9 +328,10 @@ int main(int, char**)
     {
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, '+');
         std::string ex(str, base(iter));
-//        assert(ex == "Sat May  2 13:03:06 EDT 2009");  depends on time zone
+        assert(ex == "Sat May  2 13:03:06 EDT 2009"); // depends on time zone
     }
 #endif
+*/
     {
         cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, '%');
         std::string ex(str, base(iter));

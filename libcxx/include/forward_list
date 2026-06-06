@@ -625,7 +625,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __forward_list_base<_Tp, _Alloc>::clear() _NO
 }
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
-class forward_list : private __forward_list_base<_Tp, _Alloc> {
+class [[__gnu__::__warn_unused__]] forward_list : private __forward_list_base<_Tp, _Alloc> {
   typedef __forward_list_base<_Tp, _Alloc> __base;
   typedef typename __base::__node_allocator __node_allocator;
   typedef typename __base::__node_type __node_type;

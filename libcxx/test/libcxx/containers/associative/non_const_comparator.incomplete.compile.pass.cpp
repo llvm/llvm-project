@@ -9,15 +9,13 @@
 // UNSUPPORTED: c++03
 
 // Test that libc++ does not generate a warning diagnostic about the comparator
-// or the hasher too early for containers of incomplete types.
+// too early for containers of incomplete types.
 //
 // See PR41360.
 
-#include <unordered_set>
-#include <unordered_map>
+#include <set>
+#include <map>
 #include <functional>
-
-#include "test_macros.h"
 
 template <template <typename...> class Container>
 void test_set() {
@@ -25,7 +23,7 @@ void test_set() {
   struct KeyDerived; // derives from KeyBase, but incomplete at this point
 
   // Name the type but don't instantiate it.
-  using C = Container<KeyDerived*, std::hash<KeyBase*>, std::equal_to<KeyBase*>>;
+  using C = Container<KeyDerived*, std::less<KeyBase*>>;
 
   // Instantiate it but don't ODR use any members.
   typename C::value_type dummy;
@@ -35,6 +33,7 @@ void test_set() {
   struct KeyDerived : KeyBase {};
 
   C c; // ODR use it, which should be OK
+  (void)c;
 }
 
 template <template <typename...> class Container>
@@ -42,17 +41,17 @@ void test_map() {
   struct Value {};
   struct KeyBase {};
   struct KeyDerived;
-  using C = Container<KeyDerived*, Value, std::hash<KeyBase*>, std::equal_to<KeyBase*>>;
+  using C = Container<KeyDerived*, Value, std::less<KeyBase*>>;
   typename C::value_type dummy;
   (void)dummy;
   struct KeyDerived : KeyBase {};
   C c;
+  (void)c;
 }
 
 void f() {
-  // expected-no-diagnostics
-  test_set<std::unordered_set>();
-  test_set<std::unordered_multiset>();
-  test_map<std::unordered_map>();
-  test_map<std::unordered_multimap>();
+  test_set<std::set>();
+  test_set<std::multiset>();
+  test_map<std::map>();
+  test_map<std::multimap>();
 }

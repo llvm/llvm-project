@@ -227,6 +227,7 @@ static void refresh_cannot_resolve() {
     permissions(dir, perms::none);
     ((void)ent_file);
     ((void)ent_sym);
+    (void)ent_sym2;
 
     TEST_THROWS_TYPE(filesystem_error, ent_file.refresh());
     TEST_THROWS_TYPE(filesystem_error, ent_sym.refresh());
@@ -291,7 +292,7 @@ static void access_cache_after_refresh_fails() {
   scoped_test_env env;
   const path dir = env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
-  const path file_out_of_dir = env.create_file("file1", 101);
+  env.create_file("file1", 101);
   const path sym = env.create_symlink("dir/file", "sym");
   const path sym_in_dir = env.create_symlink("dir/file", "dir/sym2");
 

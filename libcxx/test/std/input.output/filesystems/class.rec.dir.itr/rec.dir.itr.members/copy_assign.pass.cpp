@@ -78,7 +78,6 @@ static void test_assignment_signature() {
 static void test_copy_to_end_iterator()
 {
     static_test_env static_env;
-    const recursive_directory_iterator endIt;
 
     const recursive_directory_iterator from = createInterestingIterator(static_env);
     const path entry = *from;
@@ -107,7 +106,6 @@ static void test_copy_from_end_iterator()
 static void test_copy_valid_iterator()
 {
     static_test_env static_env;
-    const recursive_directory_iterator endIt;
 
     const recursive_directory_iterator it = createInterestingIterator(static_env);
     const path entry = *it;

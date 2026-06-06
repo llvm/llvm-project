@@ -193,7 +193,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _CharT, class _Traits>
-class basic_istream : virtual public basic_ios<_CharT, _Traits> {
+class [[__gnu__::__warn_unused__]] basic_istream : virtual public basic_ios<_CharT, _Traits> {
   streamsize __gc_;
 
   _LIBCPP_HIDE_FROM_ABI void __inc_gcount() {
@@ -1175,7 +1175,9 @@ _LIBCPP_HIDE_FROM_ABI _Stream&& operator>>(_Stream&& __is, _Tp&& __x) {
 }
 
 template <class _CharT, class _Traits>
-class basic_iostream : public basic_istream<_CharT, _Traits>, public basic_ostream<_CharT, _Traits> {
+class [[__gnu__::__warn_unused__]] basic_iostream
+    : public basic_istream<_CharT, _Traits>,
+      public basic_ostream<_CharT, _Traits> {
 public:
   // types:
   typedef _CharT char_type;

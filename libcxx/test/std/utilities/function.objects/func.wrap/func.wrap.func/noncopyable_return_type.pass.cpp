@@ -78,24 +78,36 @@ void void_test()
 {
     std::function<void()> f1a = []() { return NonCopyable(); };
     std::function<void()> f2a = +[]() { return NonCopyable(); };
+    (void)f2a;
     std::function<void()> f3a = LargeLambda();
+    (void)f3a;
     std::function<void()> f4a = std::ref(f1a);
+    (void)f4a;
     std::function<void(int)> f1b = [](int) { return NonCopyable(); };
     std::function<void(int)> f2b = +[](int) { return NonCopyable(); };
+    (void)f2b;
     std::function<void(int)> f3b = LargeLambda();
+    (void)f3b;
     std::function<void(int)> f4b = std::ref(f1b);
+    (void)f4b;
 }
 
 void const_void_test()
 {
     std::function<const void()> f1a = []() { return NonCopyable(); };
     std::function<const void()> f2a = +[]() { return NonCopyable(); };
+    (void)f2a;
     std::function<const void()> f3a = LargeLambda();
+    (void)f3a;
     std::function<const void()> f4a = std::ref(f1a);
+    (void)f4a;
     std::function<const void(int)> f1b = [](int) { return NonCopyable(); };
     std::function<const void(int)> f2b = +[](int) { return NonCopyable(); };
+    (void)f2b;
     std::function<const void(int)> f3b = LargeLambda();
+    (void)f3b;
     std::function<const void(int)> f4b = std::ref(f1b);
+    (void)f4b;
 }
 
 void member_pointer_test()

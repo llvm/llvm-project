@@ -38,8 +38,6 @@ constexpr void test() {
   std::reference_wrapper<T> rw1{i};
   std::reference_wrapper<T> rw2 = rw1;
   std::reference_wrapper<T> rw3{j};
-  std::reference_wrapper<const T> crw1{i};
-  std::reference_wrapper<const T> crw3{j};
 
   AssertEqualityReturnBool<decltype(rw1), decltype(rw2)>();
   assert(testEquality(rw1, rw2, true));

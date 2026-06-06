@@ -87,7 +87,7 @@ inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::
   return nanoseconds(__result);
 }
 
-class _LIBCPP_EXPORTED_FROM_ABI condition_variable {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] condition_variable {
   __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 
 public:

@@ -922,7 +922,7 @@ template <class _Rp, class _Fp>
 _LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Fp&& __f);
 
 template <class _Rp>
-class future {
+class [[__gnu__::__warn_unused__]] future {
   __assoc_state<_Rp>* __state_;
 
   explicit _LIBCPP_HIDE_FROM_ABI future(__assoc_state<_Rp>* __state);
@@ -993,7 +993,7 @@ _Rp future<_Rp>::get() {
 }
 
 template <class _Rp>
-class future<_Rp&> {
+class [[__gnu__::__warn_unused__]] future<_Rp&> {
   __assoc_state<_Rp&>* __state_;
 
   explicit _LIBCPP_HIDE_FROM_ABI future(__assoc_state<_Rp&>* __state);
@@ -1060,7 +1060,7 @@ _Rp& future<_Rp&>::get() {
 }
 
 template <>
-class _LIBCPP_EXPORTED_FROM_ABI future<void> {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] future<void> {
   __assoc_sub_state* __state_;
 
   explicit future(__assoc_sub_state* __state);
@@ -1118,7 +1118,7 @@ template <class _Callable>
 class packaged_task;
 
 template <class _Rp>
-class promise {
+class [[__gnu__::__warn_unused__]] promise {
   __assoc_state<_Rp>* __state_;
 
   _LIBCPP_HIDE_FROM_ABI explicit promise(nullptr_t) _NOEXCEPT : __state_(nullptr) {}
@@ -1235,7 +1235,7 @@ void promise<_Rp>::set_exception_at_thread_exit(exception_ptr __p) {
 // promise<R&>
 
 template <class _Rp>
-class promise<_Rp&> {
+class [[__gnu__::__warn_unused__]] promise<_Rp&> {
   __assoc_state<_Rp&>* __state_;
 
   _LIBCPP_HIDE_FROM_ABI explicit promise(nullptr_t) _NOEXCEPT : __state_(nullptr) {}
@@ -1336,7 +1336,7 @@ void promise<_Rp&>::set_exception_at_thread_exit(exception_ptr __p) {
 // promise<void>
 
 template <>
-class _LIBCPP_EXPORTED_FROM_ABI promise<void> {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] promise<void> {
   __assoc_sub_state* __state_;
 
   _LIBCPP_HIDE_FROM_ABI explicit promise(nullptr_t) _NOEXCEPT : __state_(nullptr) {}
@@ -1607,7 +1607,7 @@ inline _Rp __packaged_task_function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... 
 }
 
 template <class _Rp, class... _ArgTypes>
-class packaged_task<_Rp(_ArgTypes...)> {
+class [[__gnu__::__warn_unused__]] packaged_task<_Rp(_ArgTypes...)> {
 private:
   __packaged_task_function<_Rp(_ArgTypes...)> __f_;
   promise<_Rp> __p_;
@@ -1698,7 +1698,7 @@ void packaged_task<_Rp(_ArgTypes...)>::reset() {
 }
 
 template <class... _ArgTypes>
-class packaged_task<void(_ArgTypes...)> {
+class [[__gnu__::__warn_unused__]] packaged_task<void(_ArgTypes...)> {
 private:
   __packaged_task_function<void(_ArgTypes...)> __f_;
   promise<void> __p_;
@@ -1890,7 +1890,7 @@ async(_Fp&& __f, _Args&&... __args) {
 // shared_future
 
 template <class _Rp>
-class shared_future {
+class [[__gnu__::__warn_unused__]] shared_future {
   __assoc_state<_Rp>* __state_;
 
 public:
@@ -1946,7 +1946,7 @@ shared_future<_Rp>& shared_future<_Rp>::operator=(const shared_future& __rhs) _N
 }
 
 template <class _Rp>
-class shared_future<_Rp&> {
+class [[__gnu__::__warn_unused__]] shared_future<_Rp&> {
   __assoc_state<_Rp&>* __state_;
 
 public:
@@ -2002,7 +2002,7 @@ shared_future<_Rp&>& shared_future<_Rp&>::operator=(const shared_future& __rhs) 
 }
 
 template <>
-class _LIBCPP_EXPORTED_FROM_ABI shared_future<void> {
+class _LIBCPP_EXPORTED_FROM_ABI [[__gnu__::__warn_unused__]] shared_future<void> {
   __assoc_sub_state* __state_;
 
 public:

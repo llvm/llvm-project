@@ -101,7 +101,6 @@ static void value_after_move_construction_and_assignment_test()
 static void increment_resets_value()
 {
     static_test_env static_env;
-    const recursive_directory_iterator endIt;
     {
         recursive_directory_iterator it(static_env.Dir);
         it.disable_recursion_pending();
