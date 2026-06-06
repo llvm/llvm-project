@@ -464,7 +464,8 @@ splitMixedByteGlobals(Module &M,
   return Changed;
 }
 
-static bool concurrentWithMMAScratch(Value *V, SmallPtrSetImpl<Value *> &Seen) {
+static bool concurrentWithMMAScratch(Value *V, SmallPtrSetImpl<Value *> &Seen,
+                                     bool SawDynGEP) {
   if (!Seen.insert(V).second)
     return false;
   for (User *U : V->users()) {
@@ -479,8 +480,15 @@ static bool concurrentWithMMAScratch(Value *V, SmallPtrSetImpl<Value *> &Seen) {
             return true;
         }
       }
-    } else if (isa<GetElementPtrInst>(U) || isa<BitCastInst>(U)) {
-      if (concurrentWithMMAScratch(U, Seen))
+    } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+      if (SawDynGEP && SI->getPointerOperand() == V)
+        return true;
+    } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+      if (concurrentWithMMAScratch(GEP, Seen,
+                                   SawDynGEP || !GEP->hasAllConstantIndices()))
+        return true;
+    } else if (isa<BitCastInst>(U)) {
+      if (concurrentWithMMAScratch(U, Seen, SawDynGEP))
         return true;
     }
   }
@@ -597,7 +605,7 @@ static bool mergeByteMMA(Module &M,
     MergeElemSize = 4;
   }
   SmallPtrSet<Value *, 16> SeenMMA;
-  bool ByteIsMMA = concurrentWithMMAScratch(ByteGV, SeenMMA);
+  bool ByteIsMMA = concurrentWithMMAScratch(ByteGV, SeenMMA, false);
   uint64_t ByteElemCount =
       (ByteBytes + MergeElemSize - 1) / MergeElemSize;
   uint64_t MMAElemCount =
