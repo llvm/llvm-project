@@ -160,7 +160,7 @@ public:
   void getExitingBlocks(SmallVectorImpl<BlockT *> &TmpStorage) const;
 
   /// Return the preheader block for this cycle. Pre-header is well-defined for
-  /// reducible cycle in docs/LoopTerminology.rst as: the only one entering
+  /// reducible cycle in docs/LoopTerminology.md as: the only one entering
   /// block and its only edge is to the entry block. Return null for irreducible
   /// cycles.
   BlockT *getCyclePreheader() const;

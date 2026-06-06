@@ -76,15 +76,50 @@ private:
 
 typedef llvm::SmallDenseMap<FileSpec, PluginInfo> DynamicPluginMap;
 
-static std::recursive_mutex &GetPluginMapMutex() {
-  static std::recursive_mutex g_plugin_map_mutex;
-  return g_plugin_map_mutex;
+namespace {
+enum class PluginLifecycle { Uninitialized, Initialized, Terminated };
+
+struct PluginRegistry {
+  std::recursive_mutex mutex;
+  DynamicPluginMap map;
+
+  void Initialize() {
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    lifecycle = PluginLifecycle::Initialized;
+  }
+
+  void Terminate() {
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    lifecycle = PluginLifecycle::Terminated;
+    map.clear();
+  }
+
+  // Only after Terminate() is a leftover PluginInstances registration a bug;
+  // exiting in any other state (e.g. `import lldb`, which never calls
+  // Terminate()) is supported and leaves plugins registered.
+  bool IsTerminated() const { return lifecycle == PluginLifecycle::Terminated; }
+
+private:
+  PluginLifecycle lifecycle = PluginLifecycle::Uninitialized;
+};
+} // namespace
+
+// Never destroyed: at static-destruction time the PluginInstances containers
+// (separate statics, arbitrary teardown order) still call IsTerminated(), and
+// the map's PluginInfo terminate callbacks must not run when the containers
+// they unregister from may already be gone. Terminate() clears the map
+// explicitly while everything is alive. The static pointer keeps it reachable,
+// so this is not a LeakSanitizer leak.
+static PluginRegistry &GetPluginRegistry() {
+  static PluginRegistry *g_registry = new PluginRegistry();
+  return *g_registry;
 }
 
-static DynamicPluginMap &GetPluginMap() {
-  static DynamicPluginMap g_plugin_map;
-  return g_plugin_map;
+static std::recursive_mutex &GetPluginMapMutex() {
+  return GetPluginRegistry().mutex;
 }
+
+static DynamicPluginMap &GetPluginMap() { return GetPluginRegistry().map; }
 
 static bool PluginIsLoaded(const FileSpec &plugin_file_spec) {
   std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
@@ -234,6 +269,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
 }
 
 void PluginManager::Initialize() {
+  GetPluginRegistry().Initialize();
+
   static const bool find_directories = true;
   static const bool find_files = true;
   static const bool find_other = true;
@@ -256,10 +293,7 @@ void PluginManager::Initialize() {
   }
 }
 
-void PluginManager::Terminate() {
-  std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
-  GetPluginMap().clear();
-}
+void PluginManager::Terminate() { GetPluginRegistry().Terminate(); }
 
 llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   static PluginNamespace PluginNamespaces[] = {
@@ -494,6 +528,9 @@ template <typename Callback> struct PluginInstance {
 template <typename Instance> class PluginInstances {
 public:
   ~PluginInstances() {
+    // Only meaningful after a real teardown; see PluginRegistry::IsTerminated.
+    if (!GetPluginRegistry().IsTerminated())
+      return;
 #ifndef NDEBUG
     for (const auto &instance : m_instances)
       llvm::errs() << llvm::formatv("Use `image lookup -va {0:x}` to find out "

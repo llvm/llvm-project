@@ -8,6 +8,13 @@
 ; RUN: llvm-objdump %t/a.dylib -d --macho | FileCheck %s --check-prefixes=CHECK-ARM64
 ; RUN: cat %t/a.map | FileCheck %s --check-prefixes=CHECK-ARM64-MAP
 
+;; Test LTO path: llvm-as assembles IR to bitcode, then lld links with LTO
+;; (which should emit __llvm_addrsig for safe_thunks, enabling body-folding).
+; RUN: llvm-as %t/a.ll -o %t/a.bc
+; RUN: %lld -arch arm64 -lSystem --icf=safe_thunks -dylib -o %t/a-lto.dylib -map %t/a-lto.map %t/a.bc
+; RUN: llvm-objdump %t/a-lto.dylib -d --macho | FileCheck %s --check-prefixes=CHECK-LTO
+; RUN: cat %t/a-lto.map | FileCheck %s --check-prefixes=CHECK-LTO-MAP
+
 ; CHECK-ARM64:        (__TEXT,__text) section
 ; CHECK-ARM64-NEXT:   _func_unique_1:
 ; CHECK-ARM64-NEXT:        mov {{.*}}, #0x1
@@ -44,6 +51,58 @@
 ; CHECK-ARM64-NEXT:   _func_3identical_v3:
 ; CHECK-ARM64-NEXT:        b  _func_3identical_v1
 
+
+; CHECK-LTO:        (__TEXT,__text) section
+; CHECK-LTO-NEXT:   _func_unique_1:
+; CHECK-LTO-NEXT:        mov {{.*}}, #0x1
+;
+; CHECK-LTO:        _func_unique_2_canmerge:
+; CHECK-LTO-NEXT:   _func_2identical_v1:
+; CHECK-LTO-NEXT:        mov {{.*}}, #0x2
+;
+; CHECK-LTO:        _func_3identical_v1:
+; CHECK-LTO-NEXT:        mov {{.*}}, #0x3
+;
+; CHECK-LTO:        _func_3identical_v1_canmerge:
+; CHECK-LTO-NEXT:   _func_3identical_v2_canmerge:
+; CHECK-LTO-NEXT:   _func_3identical_v3_canmerge:
+; CHECK-LTO-NEXT:        mov {{.*}}, #0x21
+;
+; CHECK-LTO:        _func_call_thunked_1_nomerge:
+; CHECK-LTO-NEXT:        stp	x29
+;
+; CHECK-LTO:        _func_call_thunked_2_nomerge:
+; CHECK-LTO-NEXT:   _func_call_thunked_2_merge:
+; CHECK-LTO-NEXT:        stp	x29
+;
+; CHECK-LTO:        _call_all_funcs:
+; CHECK-LTO-NEXT:        stp  x29
+;
+; CHECK-LTO:        _take_func_addr:
+; CHECK-LTO-NEXT:        adr
+;
+; CHECK-LTO:        _func_2identical_v2:
+; CHECK-LTO-NEXT:        b  _func_2identical_v1
+; CHECK-LTO-NEXT:   _func_3identical_v2:
+; CHECK-LTO-NEXT:        b  _func_3identical_v1
+; CHECK-LTO-NEXT:   _func_3identical_v3:
+; CHECK-LTO-NEXT:        b  _func_3identical_v1
+
+; CHECK-LTO-MAP:      0x00000010 [  2] _func_unique_1
+; CHECK-LTO-MAP-NEXT: 0x00000010 [  2] _func_2identical_v1
+; CHECK-LTO-MAP-NEXT: 0x00000000 [  2] _func_unique_2_canmerge
+; CHECK-LTO-MAP-NEXT: 0x00000010 [  2] _func_3identical_v1
+; CHECK-LTO-MAP-NEXT: 0x00000010 [  2] _func_3identical_v1_canmerge
+; CHECK-LTO-MAP-NEXT: 0x00000000 [  2] _func_3identical_v2_canmerge
+; CHECK-LTO-MAP-NEXT: 0x00000000 [  2] _func_3identical_v3_canmerge
+; CHECK-LTO-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_1_nomerge
+; CHECK-LTO-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_2_nomerge
+; CHECK-LTO-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_merge
+; CHECK-LTO-MAP-NEXT: 0x00000034 [  2] _call_all_funcs
+; CHECK-LTO-MAP-NEXT: 0x00000050 [  2] _take_func_addr
+; CHECK-LTO-MAP-NEXT: 0x00000004 [  2] _func_2identical_v2
+; CHECK-LTO-MAP-NEXT: 0x00000004 [  2] _func_3identical_v2
+; CHECK-LTO-MAP-NEXT: 0x00000004 [  2] _func_3identical_v3
 
 ; CHECK-ARM64-MAP:      0x00000010 [  2] _func_unique_1
 ; CHECK-ARM64-MAP-NEXT: 0x00000010 [  2] _func_2identical_v1

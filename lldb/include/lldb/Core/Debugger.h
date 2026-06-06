@@ -300,6 +300,10 @@ public:
 
   bool SetTerminalHeight(uint64_t term_height);
 
+  /// Set the terminal width and height together, so observers are notified
+  /// once with both dimensions current.
+  bool SetTerminalDimensions(uint64_t term_width, uint64_t term_height);
+
   llvm::StringRef GetPrompt() const;
 
   llvm::StringRef GetPromptAnsiPrefix() const;

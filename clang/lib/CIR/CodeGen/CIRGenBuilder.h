@@ -467,27 +467,17 @@ public:
   //===--------------------------------------------------------------------===//
   // UnaryOp creation helpers
   //===--------------------------------------------------------------------===//
-  mlir::Value createNeg(mlir::Value value, bool nsw = false) {
+  mlir::Value createNeg(mlir::Location loc, mlir::Value value,
+                        bool nsw = false) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return createMinus(value.getLoc(), value, nsw);
+      return createMinus(loc, value, nsw);
     }
 
     llvm_unreachable("negation for the given type is NYI");
-  }
-
-  mlir::Value createFNeg(mlir::Value value) {
-    assert(mlir::isa<cir::FPTypeInterface>(value.getType()) &&
-           "Non-fp input type!");
-
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return createMinus(value.getLoc(), value);
   }
 
   //===--------------------------------------------------------------------===//
@@ -651,6 +641,29 @@ public:
   Address createComplexImagPtr(mlir::Location loc, Address addr) {
     return Address{createComplexImagPtr(loc, addr.getPointer()),
                    addr.getAlignment()};
+  }
+
+  using CIRBaseBuilderTy::createGetMember;
+  Address createGetMember(mlir::Location loc, Address base,
+                          llvm::StringRef name, unsigned index) {
+    auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
+
+    assert(index < recordTy.getMembers().size() &&
+           "member index out of bounds");
+    mlir::Type memberTy = recordTy.getMembers()[index];
+    mlir::Type memberPtrTy = getPointerTo(memberTy);
+
+    auto moduleOp =
+        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+    mlir::DataLayout layout(moduleOp);
+    auto memberOffset =
+        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+
+    mlir::Value memberPtr =
+        createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);
+    return Address(memberPtr, memberTy,
+                   base.getAlignment().alignmentAtOffset(memberOffset),
+                   base.isKnownNonNull());
   }
 
   cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,

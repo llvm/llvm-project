@@ -48,8 +48,8 @@ struct C : A, B {
 // HOST: @"??_7J@@6B@" = alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
 // HOST: @"??_7I@@6B@" = alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @1, i32 0, i32 0, i32 1)
 
-// DEV: @_ZTV1J = linkonce_odr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN1J1gEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @_ZN1J1hEv to ptr addrspace(1))] }, comdat, align 8
-// DEV: @_ZTV1I = linkonce_odr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1))] }, comdat, align 8
+// DEV: @_ZTV1J = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN1J1gEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @_ZN1J1hEv to ptr addrspace(1))] }, comdat, align 8
+// DEV: @_ZTV1I = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1))] }, comdat, align 8
 struct I {
     virtual void f() = 0;
     __device__ virtual void g() = 0;

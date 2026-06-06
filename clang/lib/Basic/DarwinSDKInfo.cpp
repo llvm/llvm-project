@@ -100,117 +100,39 @@ parseOSAndEnvironment(std::optional<StringRef> XcodePlatform) {
   return {OS, Environment};
 }
 
-static DarwinSDKInfo::PlatformInfoStorageType
-legacyPlatformInfos(llvm::Triple::OSType SDKOS,
-                    llvm::Triple::EnvironmentType SDKEnvironment) {
-  DarwinSDKInfo::PlatformInfoStorageType PlatformInfos;
-  // Synthesize platform infos for older SDKs from the first SDKs with
-  // SupportedTargets: macOS 10.15 (DriverKit 19.0), iOS 13.0, tvOS 13.0,
-  // watchOS 6.0. Older SDKs (especially iOS) most likely supported armv6 and
-  // armv7 architectures that aren't listed here and are difficult to identify
-  // from the SDK.
-  switch (SDKOS) {
-  case llvm::Triple::MacOSX:
-    PlatformInfos.push_back({{llvm::Triple("x86_64-apple-macosx")}, ""});
-    // macOS 10.15 also has a Mac Catalyst supported target, but Mac Catalyst
-    // was new in that version so omit it for older versions.
-    break;
-  case llvm::Triple::DriverKit:
-    // DriverKit 19.0 only had SDKSettings.plist, which isn't used. So this code
-    // path is used in 19.x as well, not just earlier versions.
-    PlatformInfos.push_back(
-        {{llvm::Triple("x86_64-apple-driverkit")}, "/System/DriverKit"});
-    break;
-  case llvm::Triple::IOS:
-    switch (SDKEnvironment) {
-    case llvm::Triple::UnknownEnvironment:
-      PlatformInfos.push_back(
-          {{llvm::Triple("armv7-apple-ios"), llvm::Triple("armv7s-apple-ios"),
-            llvm::Triple("arm64-apple-ios")},
-           ""});
-      break;
-    case llvm::Triple::Simulator:
-      PlatformInfos.push_back(
-          {{llvm::Triple("x86_64-apple-ios-simulator")}, ""});
-      break;
-    default:
-      break;
-    }
-    break;
-  case llvm::Triple::TvOS:
-    switch (SDKEnvironment) {
-    case llvm::Triple::UnknownEnvironment:
-      PlatformInfos.push_back({{llvm::Triple("arm64-apple-tvos")}, ""});
-      break;
-    case llvm::Triple::Simulator:
-      PlatformInfos.push_back(
-          {{llvm::Triple("x86_64-apple-tvos-simulator")}, ""});
-      break;
-    default:
-      break;
-    }
-    break;
-  case llvm::Triple::WatchOS:
-    switch (SDKEnvironment) {
-    case llvm::Triple::UnknownEnvironment:
-      PlatformInfos.push_back({{llvm::Triple("armv7k-apple-watchos"),
-                                llvm::Triple("arm64_32-apple-watchos")},
-                               ""});
-      break;
-    case llvm::Triple::Simulator:
-      PlatformInfos.push_back(
-          {{llvm::Triple("x86_64-apple-watchos-simulator")}, ""});
-      break;
-    default:
-      break;
-    }
-    break;
-  case llvm::Triple::BridgeOS:
-    PlatformInfos.push_back({{llvm::Triple("armv7-apple-bridgeos"),
-                              llvm::Triple("armv7s-apple-bridgeos"),
-                              llvm::Triple("arm64-apple-bridgeos")},
-                             ""});
-    break;
-  default:
-    break;
-  }
-  return PlatformInfos;
-}
-
 static DarwinSDKInfo::PlatformInfoStorageType parsePlatformInfos(
     const llvm::json::Object &Obj, std::optional<StringRef> XcodePlatform,
     llvm::Triple::OSType SDKOS, llvm::Triple::EnvironmentType SDKEnvironment,
     VersionTuple Version) {
   DarwinSDKInfo::PlatformInfoStorageType PlatformInfos;
   auto SupportedTargets = Obj.getObject("SupportedTargets");
-  if (!SupportedTargets)
-    return legacyPlatformInfos(SDKOS, SDKEnvironment);
+  if (!SupportedTargets) {
+    // For older SDKs that don't have SupportedTargets, infer one from the SDK's
+    // OS/Environment.
+    StringRef PlatformPrefix;
+    if (SDKOS == llvm::Triple::DriverKit)
+      PlatformPrefix = "/System/DriverKit";
+    PlatformInfos.push_back({llvm::Triple::Apple, SDKOS, SDKEnvironment,
+                             llvm::Triple::MachO, PlatformPrefix});
+    return PlatformInfos;
+  }
 
-  for (const auto &SupportedTargetPair : *SupportedTargets) {
-    const llvm::json::Object *SupportedTarget =
+  for (auto SupportedTargetPair : *SupportedTargets) {
+    llvm::json::Object *SupportedTarget =
         SupportedTargetPair.getSecond().getAsObject();
-    if (!SupportedTarget)
-      continue;
-
-    auto Archs = SupportedTarget->getArray("Archs");
     auto Vendor = SupportedTarget->getString("LLVMTargetTripleVendor");
     auto OS = SupportedTarget->getString("LLVMTargetTripleSys");
-    if (!Archs || !Vendor || !OS)
+    if (!Vendor || !OS)
       continue;
 
-    DarwinSDKInfo::SDKPlatformInfo::TripleStorageType Triples;
+    StringRef Arch = llvm::Triple::getArchName(llvm::Triple::UnknownArch);
     auto Environment =
         SupportedTarget->getString("LLVMTargetTripleEnvironment");
-    for (const auto &ArchValue : *Archs) {
-      if (auto Arch = ArchValue.getAsString()) {
-        if (Environment)
-          Triples.emplace_back(*Arch, *Vendor, *OS, *Environment);
-        else
-          Triples.emplace_back(*Arch, *Vendor, *OS);
-      }
-    }
-    if (Triples.empty())
-      continue;
+    llvm::Triple Triple;
+    if (Environment)
+      Triple = llvm::Triple(Arch, *Vendor, *OS, *Environment);
+    else
+      Triple = llvm::Triple(Arch, *Vendor, *OS);
 
     // The key is either the Xcode platform, or a variant. The platform must be
     // the first entry in the returned PlatformInfoStorageType.
@@ -225,17 +147,19 @@ static DarwinSDKInfo::PlatformInfoStorageType parsePlatformInfos(
       } else {
         // Older SDKs don't have SystemPrefix in SupportedTargets, manually add
         // their prefixes.
-        if ((Triples[0].getOS() == llvm::Triple::DriverKit) &&
+        if ((Triple.getOS() == llvm::Triple::DriverKit) &&
             (Version < VersionTuple(22, 1)))
           EffectivePlatformPrefix = "/System/DriverKit";
       }
     }
 
+    DarwinSDKInfo::SDKPlatformInfo PlatformInfo(
+        Triple.getVendor(), Triple.getOS(), Triple.getEnvironment(),
+        Triple.getObjectFormat(), EffectivePlatformPrefix);
     if (PlatformOrVariant == XcodePlatform)
-      PlatformInfos.insert(PlatformInfos.begin(),
-                           {std::move(Triples), EffectivePlatformPrefix});
+      PlatformInfos.insert(PlatformInfos.begin(), PlatformInfo);
     else
-      PlatformInfos.emplace_back(std::move(Triples), EffectivePlatformPrefix);
+      PlatformInfos.push_back(PlatformInfo);
   }
   return PlatformInfos;
 }
@@ -341,11 +265,3 @@ clang::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
   return llvm::make_error<llvm::StringError>("invalid SDKSettings.json",
                                              llvm::inconvertibleErrorCode());
 }
-
-DarwinSDKInfo::DarwinSDKInfo(llvm::Triple::OSType OS,
-                             llvm::Triple::EnvironmentType Environment,
-                             VersionTuple Version, StringRef DisplayName,
-                             VersionTuple MaximumDeploymentTarget)
-    : DarwinSDKInfo("", OS, Environment, Version, DisplayName,
-                    MaximumDeploymentTarget,
-                    legacyPlatformInfos(OS, Environment)) {}

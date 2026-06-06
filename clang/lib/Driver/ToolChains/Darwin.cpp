@@ -1221,7 +1221,7 @@ AppleMachO::~AppleMachO() {}
 MachO::~MachO() {}
 
 void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
-                                const llvm::Triple &Triple) const {
+                                const llvm::Triple Triple) const {
   if (SDKInfo) {
     if (!SDKInfo->supportsTriple(Triple))
       getDriver().Diag(diag::warn_incompatible_sysroot)
@@ -2042,14 +2042,15 @@ struct DarwinPlatform {
   }
   static DarwinPlatform createFromSDKInfo(StringRef SDKRoot,
                                           const DarwinSDKInfo &SDKInfo) {
-    const llvm::Triple &PlatformTriple = SDKInfo.getCanonicalPlatformTriple();
-    const llvm::Triple::OSType OS = PlatformTriple.getOS();
+    const DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
+        SDKInfo.getCanonicalPlatformInfo();
+    const llvm::Triple::OSType OS = PlatformInfo.getOS();
     VersionTuple Version = SDKInfo.getVersion();
     if (OS == llvm::Triple::MacOSX)
       Version = getVersionFromString(
           getSystemOrSDKMacOSVersion(Version.getAsString()));
     DarwinPlatform Result(InferredFromSDK, getPlatformFromOS(OS), Version);
-    Result.Environment = getEnvKindFromEnvType(PlatformTriple.getEnvironment());
+    Result.Environment = getEnvKindFromEnvType(PlatformInfo.getEnvironment());
     Result.InferSimulatorFromArch = false;
     Result.InferredSource = SDKRoot;
     return Result;
@@ -2082,10 +2083,15 @@ struct DarwinPlatform {
     llvm::Triple::OSType OS = getOSFromPlatform(Platform);
     llvm::Triple::EnvironmentType EnvironmentType =
         getEnvTypeFromEnvKind(Environment);
-    return DarwinSDKInfo(OS, EnvironmentType, getOSVersion(),
+    StringRef PlatformPrefix =
+        (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
+    return DarwinSDKInfo("", OS, EnvironmentType, getOSVersion(),
                          getDisplayName(Platform, Environment, getOSVersion()),
                          /*MaximumDeploymentTarget=*/
-                         VersionTuple(getOSVersion().getMajor(), 0, 99));
+                         VersionTuple(getOSVersion().getMajor(), 0, 99),
+                         {DarwinSDKInfo::SDKPlatformInfo(
+                             llvm::Triple::Apple, OS, EnvironmentType,
+                             llvm::Triple::MachO, PlatformPrefix)});
   }
 
 private:

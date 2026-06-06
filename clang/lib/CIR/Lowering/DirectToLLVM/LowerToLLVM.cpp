@@ -2589,66 +2589,45 @@ static mlir::LLVM::IntegerOverflowFlags nswFlag(bool nsw) {
 template <typename CIROp, typename LLVMIntOp>
 static mlir::LogicalResult
 lowerIncDecOp(CIROp op, typename CIROp::Adaptor adaptor,
-              mlir::ConversionPatternRewriter &rewriter, double fpConstant) {
+              mlir::ConversionPatternRewriter &rewriter) {
   mlir::Type elementType = elementTypeIfVector(op.getType());
   mlir::Type llvmType = adaptor.getInput().getType();
   mlir::Location loc = op.getLoc();
 
-  if (mlir::isa<cir::IntType>(elementType)) {
-    auto maybeNSW = nswFlag(op.getNoSignedWrap());
-    auto one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
-    rewriter.replaceOpWithNewOp<LLVMIntOp>(op, adaptor.getInput(), one,
-                                           maybeNSW);
-    return mlir::success();
-  }
-  if (mlir::isa<cir::FPTypeInterface>(elementType)) {
-    auto fpConst = mlir::LLVM::ConstantOp::create(
-        rewriter, loc, rewriter.getFloatAttr(llvmType, fpConstant));
-    rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, fpConst,
-                                                    adaptor.getInput());
-    return mlir::success();
-  }
-  return op.emitError() << "Unsupported type for IncOp/DecOp";
+  auto maybeNSW = nswFlag(op.getNoSignedWrap());
+  auto one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
+  rewriter.replaceOpWithNewOp<LLVMIntOp>(op, adaptor.getInput(), one, maybeNSW);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMIncOpLowering::matchAndRewrite(
     cir::IncOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  return lowerIncDecOp<cir::IncOp, mlir::LLVM::AddOp>(op, adaptor, rewriter,
-                                                      1.0);
+  return lowerIncDecOp<cir::IncOp, mlir::LLVM::AddOp>(op, adaptor, rewriter);
 }
 
 mlir::LogicalResult CIRToLLVMDecOpLowering::matchAndRewrite(
     cir::DecOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  return lowerIncDecOp<cir::DecOp, mlir::LLVM::SubOp>(op, adaptor, rewriter,
-                                                      -1.0);
+  return lowerIncDecOp<cir::DecOp, mlir::LLVM::SubOp>(op, adaptor, rewriter);
 }
 
 mlir::LogicalResult CIRToLLVMMinusOpLowering::matchAndRewrite(
     cir::MinusOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type elementType = elementTypeIfVector(op.getType());
   bool isVector = mlir::isa<cir::VectorType>(op.getType());
   mlir::Type llvmType = adaptor.getInput().getType();
   mlir::Location loc = op.getLoc();
 
-  if (mlir::isa<cir::IntType>(elementType)) {
-    auto maybeNSW = nswFlag(op.getNoSignedWrap());
-    mlir::Value zero;
-    if (isVector)
-      zero = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmType);
-    else
-      zero = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 0);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, zero, adaptor.getInput(),
-                                                   maybeNSW);
-    return mlir::success();
-  }
-  if (mlir::isa<cir::FPTypeInterface>(elementType)) {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::FNegOp>(op, adaptor.getInput());
-    return mlir::success();
-  }
-  return op.emitError() << "Unsupported type for unary minus";
+  auto maybeNSW = nswFlag(op.getNoSignedWrap());
+  mlir::Value zero;
+  if (isVector)
+    zero = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmType);
+  else
+    zero = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 0);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, zero, adaptor.getInput(),
+                                                 maybeNSW);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(

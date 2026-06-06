@@ -235,6 +235,7 @@ C2y Feature Support
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
+- Clang now supports the C23 ``wN`` and ``wfN`` length modifiers. (#GH116962)
 
 Objective-C Language Changes
 -----------------------------

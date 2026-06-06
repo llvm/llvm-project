@@ -314,6 +314,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
   // pointer handling
@@ -424,6 +425,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min=*/8)
       .clampScalar(1, s8, sMaxScalar)
       .scalarize(0);
+
+  getActionDefinitionsBuilder(G_TRUNC).legalForCartesianProduct(
+      {s1, s8, s16, s32, s64}, {s8, s16, s32, s64, s128});
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -547,7 +551,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
                (HasSSE2 && typeInSet(0, {v2s64, v8s16, v16s8})(Query)) ||
                (HasAVX && typeInSet(0, {v4s64, v8s32, v16s16, v32s8})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v8s64, v16s32, v32s16, v64s8}));
+               (HasAVX512 &&
+                typeInSet(0, {v8s64, v16s32, v32s16, v64s8})(Query));
       })
       .clampNumElements(0, v16s8, s8MaxVector)
       .clampNumElements(0, v8s16, s16MaxVector)
@@ -614,6 +619,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
       .libcall();
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());

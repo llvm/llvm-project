@@ -626,10 +626,6 @@ template <class T>
 #    pragma GCC system_header
 #  endif
 
-#  if !_LIBCPP_HAS_ATOMIC_HEADER
-#    error <atomic> is not implemented
-#  endif
-
 #  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <cmath>
 #    include <compare>

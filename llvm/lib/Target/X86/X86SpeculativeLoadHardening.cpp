@@ -356,7 +356,6 @@ static void canonicalizePHIOperands(MachineFunction &MF) {
 
       // Now walk the duplicate indices, removing both the block and value. Note
       // that these are stored as a vector making this element-wise removal
-      // :w
       // potentially quadratic.
       //
       // FIXME: It is really frustrating that we have to use a quadratic

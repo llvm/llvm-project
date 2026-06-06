@@ -185,6 +185,9 @@ public:
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
         if (isAllocInit(E))
           return;
+        auto SelectorName = E->getSelector().getNameForSlot(0);
+        if (SelectorName == "isEqual" || SelectorName == "isEqualToString")
+          return;
         reportBugOnReceiver(Receiver, D);
       }
     }
@@ -513,11 +516,6 @@ public:
 
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrOrOSPtrType(type);
-  }
-
-  bool isSafeExpr(const Expr *E) const final {
-    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
-           isa<ObjCMessageExpr>(E);
   }
 
   bool isSafeDecl(const Decl *D) const final {

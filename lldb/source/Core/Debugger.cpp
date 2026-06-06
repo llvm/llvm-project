@@ -463,19 +463,7 @@ uint64_t Debugger::GetTerminalWidth() const {
 }
 
 bool Debugger::SetTerminalWidth(uint64_t term_width) {
-  const uint32_t idx = ePropertyTerminalWidth;
-  const bool success = SetPropertyAtIndex(idx, term_width);
-
-  if (auto handler_sp = m_io_handler_stack.Top())
-    handler_sp->TerminalSizeChanged();
-
-  {
-    std::lock_guard<std::mutex> guard(m_statusline_mutex);
-    if (m_statusline)
-      m_statusline->TerminalSizeChanged();
-  }
-
-  return success;
+  return SetTerminalDimensions(term_width, GetTerminalHeight());
 }
 
 uint64_t Debugger::GetTerminalHeight() const {
@@ -485,8 +473,17 @@ uint64_t Debugger::GetTerminalHeight() const {
 }
 
 bool Debugger::SetTerminalHeight(uint64_t term_height) {
-  const uint32_t idx = ePropertyTerminalHeight;
-  const bool success = SetPropertyAtIndex(idx, term_height);
+  return SetTerminalDimensions(GetTerminalWidth(), term_height);
+}
+
+bool Debugger::SetTerminalDimensions(uint64_t term_width,
+                                     uint64_t term_height) {
+  // Set both properties before notifying, so observers never recompute from a
+  // mix of fresh and stale dimensions.
+  const bool width_success =
+      SetPropertyAtIndex(ePropertyTerminalWidth, term_width);
+  const bool height_success =
+      SetPropertyAtIndex(ePropertyTerminalHeight, term_height);
 
   if (auto handler_sp = m_io_handler_stack.Top())
     handler_sp->TerminalSizeChanged();
@@ -497,7 +494,7 @@ bool Debugger::SetTerminalHeight(uint64_t term_height) {
       m_statusline->TerminalSizeChanged();
   }
 
-  return success;
+  return width_success && height_success;
 }
 
 bool Debugger::GetUseExternalEditor() const {

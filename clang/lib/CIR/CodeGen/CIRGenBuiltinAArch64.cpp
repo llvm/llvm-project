@@ -2444,10 +2444,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vnegd_s64: {
-    return builder.createNeg(ops[0]);
+    return builder.createNeg(loc, ops[0]);
   }
   case NEON::BI__builtin_neon_vnegh_f16: {
-    return builder.createFNeg(ops[0]);
+    return builder.createFNeg(loc, ops[0]);
   }
   case NEON::BI__builtin_neon_vtstd_s64:
   case NEON::BI__builtin_neon_vtstd_u64:
@@ -2519,7 +2519,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vfmsh_f16:
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
     std::rotate(ops.begin(), ops.begin() + 1, ops.end());
-    ops[0] = builder.createFNeg(ops[0]);
+    ops[0] = builder.createFNeg(loc, ops[0]);
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
                                            convertType(expr->getType()), ops);
   case NEON::BI__builtin_neon_vaddd_s64:
@@ -2571,7 +2571,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cir::IntType int64Type = builtinID == NEON::BI__builtin_neon_vrsrad_n_u64
                                  ? builder.getUInt64Ty()
                                  : builder.getSInt64Ty();
-    ops[2] = builder.createNeg(ops[2]);
+    ops[2] = builder.createNeg(loc, ops[2]);
     const StringRef intrName = builtinID == NEON::BI__builtin_neon_vrsrad_n_u64
                                    ? "aarch64.neon.urshl"
                                    : "aarch64.neon.srshl";

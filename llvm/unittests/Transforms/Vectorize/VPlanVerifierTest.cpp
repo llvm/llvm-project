@@ -374,8 +374,8 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhiInScalarHeaderVPIRBB) {
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan(LoopHeader);
-  VPValue *Zero = Plan->getConstantInt(32, 0);
-  Plan->getScalarHeader()->front().addOperand(Zero);
+  VPValue *Zero = Plan->getConstantInt(64, 0);
+  cast<VPIRPhi>(&Plan->getScalarHeader()->front())->addIncoming(Zero);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -416,7 +416,7 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhiInExitVPIRBB) {
       new VPInstruction(VPInstruction::ExtractLastLane,
                         {HeaderBlock->front().getVPSingleValue()});
   DefI->insertBefore(Plan->getMiddleBlock()->getTerminator());
-  Plan->getExitBlocks()[0]->front().addOperand(DefI);
+  cast<VPIRPhi>(&Plan->getExitBlocks()[0]->front())->addIncoming(DefI);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();

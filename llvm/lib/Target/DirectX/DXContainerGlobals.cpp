@@ -53,6 +53,7 @@ class DXContainerGlobals : public llvm::ModulePass {
   void addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV);
   void addPipelineStateValidationInfo(Module &M,
                                       SmallVector<GlobalValue *> &Globals);
+  void addCompilerVersion(Module &M, SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -83,6 +84,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   addSignature(M, Globals);
   addRootSignature(M, Globals);
   addPipelineStateValidationInfo(M, Globals);
+  addCompilerVersion(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -337,6 +339,21 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   PSV.finalize(MMI.ShaderProfile);
   PSV.write(OS);
   addSection(M, Globals, Data, "dx.psv0", "PSV0");
+}
+
+void DXContainerGlobals::addCompilerVersion(
+    Module &M, SmallVector<GlobalValue *> &Globals) {
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+
+  if (M.debug_compile_units().empty())
+    return;
+
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  mcdxbc::CompilerVersion CompilerVersion;
+  CompilerVersion.write(OS);
+  addSection(M, Globals, Data, "dx.vers", "VERS");
 }
 
 char DXContainerGlobals::ID = 0;
