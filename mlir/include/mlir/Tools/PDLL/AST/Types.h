@@ -394,11 +394,6 @@ MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::ValueTypeStorage)
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::pdll::ast::Type> {
-  static mlir::pdll::ast::Type getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::pdll::ast::Type(
-        static_cast<mlir::pdll::ast::Type::Storage *>(pointer));
-  }
   static unsigned getHashValue(mlir::pdll::ast::Type val) {
     return llvm::hash_value(val.getImpl());
   }
