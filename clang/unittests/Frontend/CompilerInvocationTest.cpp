@@ -672,7 +672,8 @@ TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg2) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg3) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=sycl-1.2.1", "-x", "c++"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=sycl-1.2.1", "-x",
+                        "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
