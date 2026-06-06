@@ -121,7 +121,7 @@ protected: // Can only create subclasses.
   std::optional<PGOOptions> PGOOption;
 
 public:
-  TargetOptions Options;
+  const TargetOptions Options;
 
   TargetMachine(const TargetMachine &) = delete;
   void operator=(const TargetMachine &) = delete;
