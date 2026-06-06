@@ -362,6 +362,17 @@ New Compiler Flags
   be aligned to 4-byte alignment rather than fully unaligned or fully (8-byte)
   aligned.
 
+- New ``-cl`` option ``/pathmap:`` added to match MSVC. This option acts as a
+  clang's ``-ffile-prefix-map=value`` and has known differences in behaviour
+  with the CL's option that do not affect the functionality: nomalizes the
+  macro prefix map pathes -- removes `./` and uses the target's platform-
+  specific path separator character when expanding the preprocessor macros -- 
+  ``-ffile-reproducible`` (but not the debug and coverage prefix maps);
+  does not require ``/experimental:deterministic`` as by MSVC. It needed for
+  removing a hostname from a mangling hash gen, but clang-cl does not use
+  a hostname when generates the hashes. Known issues -- does not remap the
+  source file pathes within PCH/PCM files.
+
 Deprecated Compiler Flags
 -------------------------
 
