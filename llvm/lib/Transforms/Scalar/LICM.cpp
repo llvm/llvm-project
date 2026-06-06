@@ -1076,7 +1076,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 
 static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
                                           Loop *CurLoop,
-                                          SmallSet<uint64_t, 4> &SeenIndices) {
+                                          std::optional<uint64_t> HoistIndex) {
   // Must have constant insertion lane
   auto *InsertedIdxCI = dyn_cast<ConstantInt>(CurrIns->getOperand(2));
   if (!InsertedIdxCI)
@@ -1090,7 +1090,9 @@ static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
     return nullptr;
 
   // Make sure not hoisting past insertions into the same lane
-  if (!SeenIndices.insert(InsertedIdxCI->getValue().getLimitedValue()).second)
+  if (!HoistIndex)
+    HoistIndex = InsertedIdxCI->getValue().getLimitedValue();
+  else if (*HoistIndex == InsertedIdxCI->getValue().getLimitedValue())
     return nullptr;
 
   Value *InnerVal = CurrIns->getOperand(0);
@@ -1107,7 +1109,7 @@ static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
     if (!InnerIns->hasOneUse())
       return nullptr;
 
-    return canBypassInsert(InnerIns, CurLoop, SeenIndices);
+    return canBypassInsert(InnerIns, CurLoop, HoistIndex);
   }
   return CurrIns;
 }
@@ -1133,8 +1135,8 @@ static bool hoistInsertPastInsert(
   if (!CurLoop->isLoopInvariant(InsertedElt))
     return false;
 
-  SmallSet<uint64_t, 4> SeenIndices;
-  InsertElementInst *Inner = canBypassInsert(Ins, CurLoop, SeenIndices);
+  InsertElementInst *Inner =
+      canBypassInsert(Ins, CurLoop, /*HoistIndex*/ std::nullopt);
   if (!Inner || Inner == Ins)
     return false;
 
