@@ -509,6 +509,10 @@ static bool mergeByteMMA(Module &M,
   if (MMAGlobals.size() != 1) {
     if (!MMAGlobals.empty() || CvtCount != 1)
       return false;
+    auto *CvtAT = dyn_cast<ArrayType>(CvtGV->getValueType());
+    if (!CvtAT ||
+        M.getDataLayout().getTypeAllocSize(CvtAT->getElementType()) <= 1)
+      return false;
     MMAGlobals.push_back(CvtGV);
     CvtOverlay = true;
   } else if (CvtCount != 0) {
