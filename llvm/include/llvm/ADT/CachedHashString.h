@@ -75,13 +75,6 @@ class CachedHashString {
 
   bool isEmpty() const { return P == getEmptyKeyPtr(); }
 
-  struct ConstructEmptyTy {};
-
-  CachedHashString(ConstructEmptyTy, char *EmptyKeyPtr)
-      : P(EmptyKeyPtr), Size(0), Hash(0) {
-    assert(isEmpty());
-  }
-
   // TODO: Use small-string optimization to avoid allocating.
 
 public:
