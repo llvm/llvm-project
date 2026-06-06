@@ -172,15 +172,11 @@ private:
 
 /// Info type for the DenseMap storing the DeclContext pointers.
 struct DeclMapInfo : private DenseMapInfo<DeclContext *> {
-  using DenseMapInfo<DeclContext *>::getEmptyKey;
-
   static unsigned getHashValue(const DeclContext *Ctxt) {
     return Ctxt->QualifiedNameHash;
   }
 
   static bool isEqual(const DeclContext *LHS, const DeclContext *RHS) {
-    if (RHS == getEmptyKey())
-      return RHS == LHS;
     return LHS->QualifiedNameHash == RHS->QualifiedNameHash &&
            LHS->Line == RHS->Line && LHS->ByteSize == RHS->ByteSize &&
            LHS->NameForUniquing.data() == RHS->NameForUniquing.data() &&
