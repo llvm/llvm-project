@@ -219,9 +219,6 @@ template <> struct DenseMapInfo<clang::include_cleaner::Symbol> {
   using Outer = clang::include_cleaner::Symbol;
   using Base = DenseMapInfo<decltype(Outer::Storage)>;
 
-  static Outer getEmptyKey() {
-    return {Outer::SentinelTag{}, Base::getEmptyKey()};
-  }
   static unsigned getHashValue(const Outer &Val) {
     return Base::getHashValue(Val.Storage);
   }
@@ -233,7 +230,6 @@ template <> struct DenseMapInfo<clang::include_cleaner::Macro> {
   using Outer = clang::include_cleaner::Macro;
   using Base = DenseMapInfo<decltype(Outer::Definition)>;
 
-  static Outer getEmptyKey() { return {nullptr, Base::getEmptyKey()}; }
   static unsigned getHashValue(const Outer &Val) {
     return Base::getHashValue(Val.Definition);
   }
@@ -245,9 +241,6 @@ template <> struct DenseMapInfo<clang::include_cleaner::Header> {
   using Outer = clang::include_cleaner::Header;
   using Base = DenseMapInfo<decltype(Outer::Storage)>;
 
-  static Outer getEmptyKey() {
-    return {Outer::SentinelTag{}, Base::getEmptyKey()};
-  }
   static unsigned getHashValue(const Outer &Val) {
     return Base::getHashValue(Val.Storage);
   }

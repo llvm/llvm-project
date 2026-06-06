@@ -90,9 +90,6 @@ std::vector<Token> generateQueryTrigrams(llvm::StringRef Query);
 namespace llvm {
 template <> struct DenseMapInfo<clang::clangd::dex::Trigram> {
   using Trigram = clang::clangd::dex::Trigram;
-  static inline Trigram getEmptyKey() {
-    return Trigram(Trigram::Sentinel::Empty);
-  }
   static unsigned getHashValue(Trigram V) {
     // Finalize step from MurmurHash3.
     uint32_t X = V.id();

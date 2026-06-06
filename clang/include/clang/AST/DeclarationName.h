@@ -924,10 +924,6 @@ namespace llvm {
 /// in DenseMap and DenseSets.
 template<>
 struct DenseMapInfo<clang::DeclarationName> {
-  static inline clang::DeclarationName getEmptyKey() {
-    return clang::DeclarationName::getEmptyMarker();
-  }
-
   static unsigned getHashValue(clang::DeclarationName Name) {
     return DenseMapInfo<void*>::getHashValue(Name.getAsOpaquePtr());
   }
