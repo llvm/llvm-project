@@ -119,8 +119,6 @@ namespace llvm {
 /// correct error message is reported when verification fails.
 template <>
 struct DenseMapInfo<mlir::tblgen::Constraint> {
-  using RecordDenseMapInfo = llvm::DenseMapInfo<const llvm::Record *>;
-
   static unsigned getHashValue(mlir::tblgen::Constraint constraint);
   static bool isEqual(mlir::tblgen::Constraint lhs,
                       mlir::tblgen::Constraint rhs);
