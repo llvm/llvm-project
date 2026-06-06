@@ -352,6 +352,7 @@ add_header_library(
   HDRS
     ptrace.h
   DEPENDS
+    libc.hdr.types.pid_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
