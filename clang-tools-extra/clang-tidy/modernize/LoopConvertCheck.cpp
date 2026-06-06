@@ -698,13 +698,10 @@ void LoopConvertCheck::doConversion(
       std::string ReplaceText;
       SourceRange Range = Usage.Range;
       if (Usage.Expression) {
-        // If this is an access to a member through the arrow operator, after
-        // the replacement it must be accessed through the '.' operator.
-        ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
-                          ? VarNameOrStructuredBinding + "."
-                          : VarNameOrStructuredBinding;
-        // In cases like `delete*it`, we can't just change it to `deleteit`,
-        // we need to introduce space after `delete` to make it `delete it`.
+        // Decide whether `ReplaceText` needs to be pre-appended with a space
+        // or not. In cases like `delete*it`, we can't just change it to
+        // `deleteit` we need to introduce space after `delete` to make it
+        // `delete it`.
         Token StarToken;
         if (Usage.Kind == Usage::UK_Default &&
             !Lexer::getRawToken(Usage.Range.getBegin(), StarToken,
@@ -719,9 +716,14 @@ void LoopConvertCheck::doConversion(
             const bool StarTokenHasNoLeadingSpace =
                 PrevToken->getEndLoc() == StarToken.getLocation();
             if (PrevToken->isAnyIdentifier() && StarTokenHasNoLeadingSpace)
-              ReplaceText = " " + ReplaceText;
+              ReplaceText = " ";
           }
         }
+        // If this is an access to a member through the arrow operator, after
+        // the replacement it must be accessed through the '.' operator.
+        ReplaceText += Usage.Kind == Usage::UK_MemberThroughArrow
+                          ? VarNameOrStructuredBinding + "."
+                          : VarNameOrStructuredBinding;
         const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
