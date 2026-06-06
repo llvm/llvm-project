@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___MEMORY_SHARED_PTR_H
 #define _LIBCPP___MEMORY_SHARED_PTR_H
 
+#include <__atomic/memory_order.h>
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
@@ -59,9 +60,6 @@
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <typeinfo>
-#if _LIBCPP_HAS_ATOMIC_HEADER
-#  include <__atomic/memory_order.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

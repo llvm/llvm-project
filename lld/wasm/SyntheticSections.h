@@ -131,11 +131,6 @@ inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
 // key in a `DenseMap`.
 namespace llvm {
 template <typename T> struct DenseMapInfo<lld::wasm::ImportKey<T>> {
-  static lld::wasm::ImportKey<T> getEmptyKey() {
-    typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
-    key.state = lld::wasm::ImportKey<T>::State::Empty;
-    return key;
-  }
   static unsigned getHashValue(const lld::wasm::ImportKey<T> &key) {
     uintptr_t hash = hash_value(key.importModule);
     hash = hash_combine(hash, key.importName);

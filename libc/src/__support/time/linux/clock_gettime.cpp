@@ -27,12 +27,29 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
   int ret;
 #if defined(SYS_clock_gettime64)
   TypedSymbol<VDSOSym::ClockGetTime64> clock_gettime64;
-  if (LIBC_LIKELY(clock_gettime64 != nullptr)) {
-    ret = clock_gettime64(clockid, reinterpret_cast<__kernel_timespec *>(ts));
+  if constexpr (sizeof(timespec) == sizeof(__kernel_timespec)) {
+    if (LIBC_LIKELY(clock_gettime64 != nullptr))
+      ret = clock_gettime64(clockid, reinterpret_cast<__kernel_timespec *>(ts));
+    else
+      ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime64,
+                                              static_cast<long>(clockid),
+                                              reinterpret_cast<long>(ts));
   } else {
-    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime64,
-                                            static_cast<long>(clockid),
-                                            reinterpret_cast<long>(ts));
+    __kernel_timespec ts64{};
+    __kernel_timespec *ts64_ptr = nullptr;
+    if (ts != nullptr)
+      ts64_ptr = &ts64;
+    if (ts64_ptr != nullptr && LIBC_LIKELY(clock_gettime64 != nullptr)) {
+      ret = clock_gettime64(clockid, ts64_ptr);
+    } else {
+      ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime64,
+                                              static_cast<long>(clockid),
+                                              reinterpret_cast<long>(ts64_ptr));
+    }
+    if (ret == 0 && ts != nullptr) {
+      ts->tv_sec = static_cast<decltype(ts->tv_sec)>(ts64.tv_sec);
+      ts->tv_nsec = static_cast<decltype(ts->tv_nsec)>(ts64.tv_nsec);
+    }
   }
 #elif defined(SYS_clock_gettime)
   static_assert(

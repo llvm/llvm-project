@@ -4254,7 +4254,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MRI = &MF->getRegInfo();
   DL = &F.getDataLayout();
   const TargetMachine &TM = MF->getTarget();
-  TM.resetTargetOptions(F);
   EnableOpts = OptLevel != CodeGenOptLevel::None && !skipFunction(F);
   FuncInfo.MF = MF;
   if (EnableOpts) {

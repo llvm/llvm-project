@@ -479,11 +479,6 @@ hasHazard(StateT InitialState,
     }
   };
   struct StateMapKeyTraits : DenseMapInfo<StateMapKey> {
-    static inline StateMapKey getEmptyKey() {
-      return {static_cast<SmallVectorImpl<StateT> *>(
-                  DenseMapInfo<void *>::getEmptyKey()),
-              DenseMapInfo<unsigned>::getEmptyKey()};
-    }
     static unsigned getHashValue(const StateMapKey &Key) {
       return StateT::getHashValue((*Key.States)[Key.Idx]);
     }
@@ -491,14 +486,9 @@ hasHazard(StateT InitialState,
       return StateT::getHashValue(State);
     }
     static bool isEqual(const StateMapKey &LHS, const StateMapKey &RHS) {
-      const auto EKey = getEmptyKey();
-      if (StateMapKey::isEqual(LHS, EKey) || StateMapKey::isEqual(RHS, EKey))
-        return StateMapKey::isEqual(LHS, RHS);
       return StateT::isEqual((*LHS.States)[LHS.Idx], (*RHS.States)[RHS.Idx]);
     }
     static bool isEqual(const StateT &LHS, const StateMapKey &RHS) {
-      if (StateMapKey::isEqual(RHS, getEmptyKey()))
-        return false;
       return StateT::isEqual(LHS, (*RHS.States)[RHS.Idx]);
     }
   };

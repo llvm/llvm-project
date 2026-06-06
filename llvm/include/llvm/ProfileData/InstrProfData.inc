@@ -176,7 +176,7 @@ INSTR_PROF_GPU_SECT(uint64_t *, llvm::PointerType::getUnqual(Ctx),             \
 
 /* INSTR_PROF_RAW_HEADER  start */
 /* Definition of member fields of the raw profile header data structure. */
-/* Please update llvm/docs/InstrProfileFormat.rst as appropriate when updating
+/* Please update llvm/docs/InstrProfileFormat.md as appropriate when updating
    raw profile format. */
 #ifndef INSTR_PROF_RAW_HEADER
 #define INSTR_PROF_RAW_HEADER(Type, Name, Initializer)

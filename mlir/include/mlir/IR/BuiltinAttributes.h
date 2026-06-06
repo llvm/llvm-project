@@ -1104,10 +1104,6 @@ namespace llvm {
 
 template <>
 struct DenseMapInfo<mlir::StringAttr> : public DenseMapInfo<mlir::Attribute> {
-  static mlir::StringAttr getEmptyKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
-    return mlir::StringAttr::getFromOpaquePointer(pointer);
-  }
 };
 template <>
 struct PointerLikeTypeTraits<mlir::StringAttr>

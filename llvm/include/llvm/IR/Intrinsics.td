@@ -244,8 +244,6 @@ def AnyKind {
   int AnyFloat   = 2;
   int AnyVector  = 3;
   int AnyPointer = 4;
-
-  int MatchType  = 7;
 }
 
 // Placeholder to encode the overload index of the current type. We encode bit
@@ -255,7 +253,7 @@ def AnyKind {
 // Note that this is just a transient representation till its gets processed
 // by `DoPatchOverloadIndex` below, so this is *not* the encoding of the
 // final type signature.
-class OverloadIndexPlaceholder <int AnyKindVal> {
+class OverloadIndexPlaceholder<int AnyKindVal> {
   int ID = 0x100;
   int ret = !or(ID, AnyKindVal);
 }
@@ -329,7 +327,7 @@ def IIT_V64 : IIT_Vec<64, 16>;
 def IIT_MMX : IIT_VT<x86mmx, 17>;
 def IIT_TOKEN : IIT_VT<token, 18>;
 def IIT_METADATA : IIT_VT<MetadataVT, 19>;
-// Note: Unused IIT code 20.
+def IIT_MATCH : IIT_Base<20>;
 def IIT_STRUCT : IIT_Base<21>;
 def IIT_EXTEND_ARG : IIT_Base<22>;
 def IIT_TRUNC_ARG : IIT_Base<23>;
@@ -454,7 +452,7 @@ class LLVMFullyDependentType<int oidx, IIT_Base IIT_Info>
   // followed by the overload index of the overload type it depends on.
   let Sig = [
     IIT_Info.Number,
-    PackOverloadIndex<OverloadIndex, AnyKind.MatchType>.ret
+    PackOverloadIndex<OverloadIndex, 0>.ret
   ];
 }
 
@@ -466,7 +464,7 @@ class LLVMPartiallyDependentType<int oidx, IIT_Base IIT_Info>
   let Sig = [
     IIT_Info.Number,
     // This types overload index, arg kind ignored.
-    OverloadIndexPlaceholder <0>.ret,
+    OverloadIndexPlaceholder<0>.ret,
     // Overload index of the reference overload type, arg kind ignored.
     PackOverloadIndex<OverloadIndex, 0>.ret,
   ];
@@ -494,7 +492,7 @@ class LLVMPartiallyDependentType<int oidx, IIT_Base IIT_Info>
 //
 // LLVMMatchType<0> therefore will match the return type, and
 // LLVMMatchType<2> will match the 3rd argument.
-class LLVMMatchType<int oidx> : LLVMFullyDependentType<oidx, IIT_ANY>;
+class LLVMMatchType<int oidx> : LLVMFullyDependentType<oidx, IIT_MATCH>;
 
 // Match the type of another intrinsic parameter that is expected to be based on
 // an integral type (i.e. either iN or <N x iM>), but change the scalar size to
@@ -1868,7 +1866,7 @@ def int_experimental_gc_get_pointer_offset : DefaultAttrsIntrinsic<
     [IntrNoMem, ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 //===------------------------ Coroutine Intrinsics ---------------===//
-// These are documented in docs/Coroutines.rst
+// These are documented in docs/Coroutines.md
 
 // Coroutine Structure Intrinsics.
 

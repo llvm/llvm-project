@@ -376,6 +376,12 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Overloaded, OverloadInfo));
     return;
   }
+  case IIT_MATCH: {
+    unsigned OverloadIndex = Infos[NextElt++];
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::Match, OverloadIndex));
+    return;
+  }
   case IIT_EXTEND_ARG: {
     unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
@@ -564,10 +570,12 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
       Elts.push_back(DecodeFixedType(Infos, OverloadTys, Context));
     return StructType::get(Context, Elts);
   }
-  // For any overload kind or partially dependent type, substitute it with the
-  // corresponding concrete type from OverloadTys.
+  // For any overload type or partially dependent type, substitute it with the
+  // corresponding concrete type from OverloadTys. Additionally, do the same
+  // for the fully dependent type that matches an overload type.
   case IITDescriptor::Overloaded:
   case IITDescriptor::VecOfAnyPtrsToElt:
+  case IITDescriptor::Match:
     return OverloadTys[D.getOverloadIndex()];
   case IITDescriptor::Extend:
     return OverloadTys[D.getOverloadIndex()]->getExtendedType();
@@ -1064,15 +1072,6 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
   case IITDescriptor::Overloaded: {
     unsigned OIdx = D.getOverloadIndex();
-    if (D.getOverloadKind() == IITDescriptor::AK_MatchType) {
-      // This is a dependent type instance, check it similarly to other
-      // dependent types.
-      if (OIdx >= OverloadTys.size())
-        return IsDeferredCheck || DeferCheck(Ty);
-      return PrintMsgInvalidDepType(Ty == OverloadTys[OIdx], "matching",
-                                    formatv("{}", *OverloadTys[OIdx]), OIdx);
-    }
-
     assert(OIdx == OverloadTys.size() && !IsDeferredCheck &&
            "Table consistency error");
     OverloadTys.push_back(Ty);
@@ -1089,10 +1088,16 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return PrintMsg(isa<VectorType>(Ty), "any vector type", OIdx);
     case IITDescriptor::AK_AnyPointer:
       return PrintMsg(isa<PointerType>(Ty), "any pointer type", OIdx);
-    default:
-      break;
     }
     llvm_unreachable("all argument kinds not covered");
+  }
+
+  case IITDescriptor::Match: {
+    unsigned OIdx = D.getOverloadIndex();
+    if (OIdx >= OverloadTys.size())
+      return IsDeferredCheck || DeferCheck(Ty);
+    return PrintMsgInvalidDepType(Ty == OverloadTys[OIdx], "matching",
+                                  formatv("{}", *OverloadTys[OIdx]), OIdx);
   }
 
   case IITDescriptor::Extend:

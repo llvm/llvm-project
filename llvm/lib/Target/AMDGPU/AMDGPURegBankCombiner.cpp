@@ -74,6 +74,11 @@ public:
     Register Val0, Val1, Val2;
   };
 
+  struct MinMaxToMinMax3MatchInfo {
+    unsigned Opc;
+    Register Val0, Val1, Val2;
+  };
+
   MinMaxMedOpc getMinMaxPair(unsigned Opc) const;
 
   template <class m_Cst, typename CstTy>
@@ -92,6 +97,11 @@ public:
   bool combineD16Load(MachineInstr &MI) const;
   bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
                     MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+
+  bool matchMinMaxToMinMax3(MachineInstr &MI,
+                            MinMaxToMinMax3MatchInfo &MatchInfo) const;
+  void applyMinMaxToMinMax3(MachineInstr &MI,
+                            MinMaxToMinMax3MatchInfo &MatchInfo) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
@@ -479,6 +489,78 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   }
 
   return false;
+}
+
+void AMDGPURegBankCombinerImpl::applyMinMaxToMinMax3(
+    MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
+  B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
+               {MatchInfo.Val0, MatchInfo.Val1, MatchInfo.Val2}, MI.getFlags());
+  MI.eraseFromParent();
+  return;
+}
+
+// min(min(a, b), c) == min(a, min(b, c)) == min3(a, b, c)
+// supported scalar type: S32 S16 U32 U16 F32 F16
+bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
+    MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src1 = MI.getOperand(1).getReg();
+  Register Src2 = MI.getOperand(2).getReg();
+  // If the register is SGPR, don't optimize it.
+  if (!(isVgprRegBank(Dst) && isVgprRegBank(Src1) && isVgprRegBank(Src2))) {
+    return false;
+  }
+
+  LLT Ty = MRI.getType(Dst);
+  unsigned Opc = MI.getOpcode();
+  if (!(Ty == LLT::scalar(32) ||
+        (Ty == LLT::scalar(16) && STI.hasMin3Max3_16())))
+    return false;
+
+  Register R0, R1, R2;
+  if (!mi_match(MI, MRI,
+                m_CommutativeBinOp(
+                    Opc, m_OneNonDBGUse(m_BinOp(Opc, m_Reg(R0), m_Reg(R1))),
+                    m_Reg(R2)))) {
+    return false;
+  }
+
+  unsigned AMDGPUOpc = 0;
+  switch (Opc) {
+  case AMDGPU::G_SMAX:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_SMAX3;
+    break;
+  case AMDGPU::G_SMIN:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_SMIN3;
+    break;
+  case AMDGPU::G_UMAX:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_UMAX3;
+    break;
+  case AMDGPU::G_UMIN:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_UMIN3;
+    break;
+  case AMDGPU::G_FMAXNUM:
+  case AMDGPU::G_FMAXNUM_IEEE:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMAX3;
+    break;
+  case AMDGPU::G_FMINNUM:
+  case AMDGPU::G_FMINNUM_IEEE:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMIN3;
+    break;
+  case AMDGPU::G_FMAXIMUM:
+  case AMDGPU::G_FMAXIMUMNUM:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMAXIMUM3;
+    break;
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMINIMUMNUM:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMINIMUM3;
+    break;
+  default:
+    return false;
+  }
+
+  MatchInfo = {AMDGPUOpc, R0, R1, R2};
+  return true;
 }
 
 bool AMDGPURegBankCombinerImpl::applyD16Load(

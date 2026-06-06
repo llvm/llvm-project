@@ -1844,10 +1844,6 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::AsmDialectResourceHandle> {
-  static inline mlir::AsmDialectResourceHandle getEmptyKey() {
-    return {DenseMapInfo<void *>::getEmptyKey(),
-            DenseMapInfo<mlir::TypeID>::getEmptyKey(), nullptr};
-  }
   static unsigned getHashValue(const mlir::AsmDialectResourceHandle &handle) {
     return DenseMapInfo<void *>::getHashValue(handle.getResource());
   }

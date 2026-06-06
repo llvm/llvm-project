@@ -13539,6 +13539,12 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
   return QualTy;
 }
 
+QualType ASTContext::getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                                unsigned Signed) const {
+  return getFromTargetType(
+      getTargetInfo().getLeastIntTypeByWidth(DestWidth, Signed));
+}
+
 /// getRealTypeForBitwidth -
 /// sets floating point QualTy according to specified bitwidth.
 /// Returns empty type if there is no appropriate target types.

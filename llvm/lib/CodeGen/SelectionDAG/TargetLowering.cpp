@@ -3732,7 +3732,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         // If we're after type legalization and SrcSVT is not legal, use the
         // promoted type for creating constants to avoid creating nodes with
         // illegal types.
-        if (AfterLegalizeTypes)
+        if (TLO.LegalTypes())
           SrcSVT = getLegalTypeToTransformTo(*TLO.DAG.getContext(), SrcSVT);
 
         SmallVector<SDValue> MaskElts;

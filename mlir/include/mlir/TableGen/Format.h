@@ -68,9 +68,6 @@ private:
   struct PHKindInfo : DenseMapInfo<PHKind> {
     using CharInfo = DenseMapInfo<char>;
 
-    static inline PHKind getEmptyKey() {
-      return static_cast<PHKind>(CharInfo::getEmptyKey());
-    }
     static unsigned getHashValue(const PHKind &val) {
       return CharInfo::getHashValue(static_cast<char>(val));
     }
