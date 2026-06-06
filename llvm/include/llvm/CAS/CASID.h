@@ -103,9 +103,6 @@ public:
     return *Context;
   }
 
-  static CASID getDenseMapEmptyKey() {
-    return CASID(nullptr, DenseMapInfo<StringRef>::getEmptyKey());
-  }
   static CASID getDenseMapTombstoneKey() {
     // A reserved StringRef value distinct from the empty key, used only as a
     // DenseMap sentinel for CASID.
@@ -132,8 +129,6 @@ private:
 } // namespace cas
 
 template <> struct DenseMapInfo<cas::CASID> {
-  static cas::CASID getEmptyKey() { return cas::CASID::getDenseMapEmptyKey(); }
-
   static unsigned getHashValue(cas::CASID ID) {
     return (unsigned)hash_value(ID);
   }

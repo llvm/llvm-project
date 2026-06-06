@@ -329,10 +329,6 @@ inline hash_code hash_value(const orc::SymbolStringPtrBase &S) {
 template <>
 struct DenseMapInfo<orc::SymbolStringPtr> {
 
-  static orc::SymbolStringPtr getEmptyKey() {
-    return orc::SymbolStringPtr::getEmptyVal();
-  }
-
   static unsigned getHashValue(const orc::SymbolStringPtrBase &V) {
     return DenseMapInfo<orc::SymbolStringPtr::PoolEntryPtr>::getHashValue(V.S);
   }
@@ -344,10 +340,6 @@ struct DenseMapInfo<orc::SymbolStringPtr> {
 };
 
 template <> struct DenseMapInfo<orc::NonOwningSymbolStringPtr> {
-
-  static orc::NonOwningSymbolStringPtr getEmptyKey() {
-    return orc::NonOwningSymbolStringPtr::getEmptyVal();
-  }
 
   static unsigned getHashValue(const orc::SymbolStringPtrBase &V) {
     return DenseMapInfo<

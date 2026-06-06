@@ -1526,14 +1526,6 @@ template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version1, IntPtrT> {
 
 /// Provide DenseMapInfo for CounterExpression
 template<> struct DenseMapInfo<coverage::CounterExpression> {
-  static inline coverage::CounterExpression getEmptyKey() {
-    using namespace coverage;
-
-    return CounterExpression(CounterExpression::ExprKind::Subtract,
-                             Counter::getCounter(~0U),
-                             Counter::getCounter(~0U));
-  }
-
   static unsigned getHashValue(const coverage::CounterExpression &V) {
     return static_cast<unsigned>(
         hash_combine(V.Kind, V.LHS.getKind(), V.LHS.getCounterID(),
