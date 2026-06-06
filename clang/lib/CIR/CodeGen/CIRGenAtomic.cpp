@@ -128,9 +128,9 @@ public:
   LValue projectValue() const {
     assert(lvalue.isSimple());
     Address addr = getAtomicAddress();
-    if (hasPadding()) {
-      cgf.cgm.errorNYI(loc, "AtomicInfo::projectValue: padding");
-    }
+    if (hasPadding())
+      addr = cgf.getBuilder().createGetMember(loc, addr, /*name=*/"value",
+                                              /*index=*/0);
 
     assert(!cir::MissingFeatures::opTBAA());
     return LValue::makeAddr(addr, getValueType(), lvalue.getBaseInfo());
@@ -293,9 +293,14 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   if (!requiresMemSetZero(addr.getElementType()))
     return false;
 
-  cgf.cgm.errorNYI(loc,
-                   "AtomicInfo::emitMemSetZeroIfNecaessary: emit memset zero");
-  return false;
+  addr = addr.withElementType(cgf.getBuilder(), cgf.cgm.voidTy);
+  mlir::Value zero = cgf.getBuilder().getConstInt(loc, cgf.cgm.uInt8Ty, 0);
+  mlir::Value memSetSize = cgf.getBuilder().getConstInt(
+      loc, cgf.cgm.uInt64Ty,
+      cgf.getContext().toCharUnitsFromBits(atomicSizeInBits).getQuantity());
+
+  cgf.getBuilder().createMemSet(loc, addr, zero, memSetSize);
+  return true;
 }
 
 /// Return true if \param valueTy is a type that should be casted to integer

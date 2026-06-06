@@ -601,6 +601,12 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsPtrDiff:
       return ArgType::makePtrdiffT(
           ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
+    case LengthModifier::AsIntN:
+    case LengthModifier::AsFastIntN:
+      return ArgType::makeIntNType(Ctx, LM,
+                                   CS.getKind() != ConversionSpecifier::bArg &&
+                                       CS.getKind() !=
+                                           ConversionSpecifier::BArg);
     case LengthModifier::AsAllocate:
     case LengthModifier::AsMAllocate:
     case LengthModifier::AsWide:
@@ -642,6 +648,9 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsPtrDiff:
       return ArgType::makePtrdiffT(
           ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t"));
+    case LengthModifier::AsIntN:
+    case LengthModifier::AsFastIntN:
+      return ArgType::makeIntNType(Ctx, LM, /*Signed=*/false);
     case LengthModifier::AsAllocate:
     case LengthModifier::AsMAllocate:
     case LengthModifier::AsWide:
@@ -699,6 +708,9 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsPtrDiff:
       return ArgType::PtrTo(ArgType::makePtrdiffT(
           ArgType(Ctx.getPointerDiffType(), "ptrdiff_t")));
+    case LengthModifier::AsIntN:
+    case LengthModifier::AsFastIntN:
+      return ArgType::PtrTo(ArgType::makeIntNType(Ctx, LM, /*Signed=*/true));
     case LengthModifier::AsLongDouble:
       return ArgType(); // FIXME: Is this a known extension?
     case LengthModifier::AsAllocate:

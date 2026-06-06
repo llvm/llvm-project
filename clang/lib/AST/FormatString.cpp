@@ -14,6 +14,7 @@
 #include "FormatStringParsing.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include <optional>
 
@@ -57,6 +58,21 @@ OptionalAmount clang::analyze_format_string::ParseAmount(const char *&Beg,
   }
 
   return OptionalAmount();
+}
+
+static bool ParseWidthModifier(const char *&I, const char *E,
+                               unsigned &BitWidth, unsigned &ModifierLength) {
+  StringRef W = StringRef(I, E - I).take_while(llvm::isDigit);
+  if (W.empty() || W.front() == '0')
+    return false;
+
+  if (W.getAsInteger(10, BitWidth))
+    return false;
+
+  I = W.end();
+  ModifierLength += W.size();
+
+  return true;
 }
 
 OptionalAmount clang::analyze_format_string::ParseNonPositionAmount(
@@ -306,6 +322,25 @@ bool clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
     }
     return false;
   case 'w':
+    if (LO.C23) {
+      const char *WidthModifier = I + 1;
+      unsigned BitWidth = 0;
+      unsigned ModifierLength = 1;
+
+      LengthModifier::Kind WidthKind = LengthModifier::AsIntN;
+      if (WidthModifier != E && *WidthModifier == 'f') {
+        WidthModifier = I + 2;
+        ModifierLength = 2;
+        WidthKind = LengthModifier::AsFastIntN;
+      }
+
+      if (ParseWidthModifier(WidthModifier, E, BitWidth, ModifierLength)) {
+        I = WidthModifier;
+        FS.setLengthModifier(
+            LengthModifier(lmPosition, WidthKind, BitWidth, ModifierLength));
+        return true;
+      }
+    }
     lmKind = LengthModifier::AsWide;
     ++I;
     break;
@@ -486,7 +521,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
   }
 
   case SpecificTy: {
-    if (TK != TypeKind::DontCare) {
+    if (TK == TypeKind::SizeT || TK == TypeKind::PtrdiffT) {
       return matchesSizeTPtrdiffT(C, argTy, T);
     }
 
@@ -798,6 +833,22 @@ ArgType ArgType::makeVectorType(ASTContext &C, unsigned NumElts) const {
   return ArgType(Vec, Name);
 }
 
+ArgType ArgType::makeIntNType(ASTContext &Ctx, const LengthModifier &LengthMod,
+                              bool Signed) {
+  bool IsFast = LengthMod.getKind() == LengthModifier::AsFastIntN;
+  QualType Ty =
+      IsFast ? Ctx.getLeastIntTypeForBitwidth(LengthMod.getBitWidth(), Signed)
+             : Ctx.getIntTypeForBitwidth(LengthMod.getBitWidth(), Signed);
+  if (Ty.isNull())
+    return ArgType::Invalid();
+
+  ArgType Res(Ty);
+  Res.TK = IsFast ? (Signed ? TypeKind::FastIntN : TypeKind::FastUIntN)
+                  : (Signed ? TypeKind::IntN : TypeKind::UIntN);
+  Res.BitWidth = LengthMod.getBitWidth();
+  return Res;
+}
+
 QualType ArgType::getRepresentativeType(ASTContext &C) const {
   QualType Res;
   switch (K) {
@@ -849,6 +900,33 @@ std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
   if (Name) {
     // Use a specific name for this type, e.g. "size_t".
     Alias = Name;
+  } else {
+    const char *Prefix = nullptr;
+    switch (TK) {
+    case TypeKind::IntN:
+      Prefix = "int";
+      break;
+    case TypeKind::UIntN:
+      Prefix = "uint";
+      break;
+    case TypeKind::FastIntN:
+      Prefix = "int_fast";
+      break;
+    case TypeKind::FastUIntN:
+      Prefix = "uint_fast";
+      break;
+    case TypeKind::DontCare:
+    case TypeKind::SizeT:
+    case TypeKind::PtrdiffT:
+      break;
+    }
+    if (Prefix) {
+      Alias = Prefix;
+      Alias += std::to_string(BitWidth);
+      Alias += "_t";
+    }
+  }
+  if (!Alias.empty()) {
     if (Ptr) {
       // If ArgType is actually a pointer to T, append an asterisk.
       Alias += (Alias[Alias.size() - 1] == '*') ? "*" : " *";
@@ -878,7 +956,7 @@ analyze_format_string::OptionalAmount::getArgType(ASTContext &Ctx) const {
 // Methods on LengthModifier.
 //===----------------------------------------------------------------------===//
 
-const char *analyze_format_string::LengthModifier::toString() const {
+StringRef analyze_format_string::LengthModifier::toString() const {
   switch (kind) {
   case AsChar:
     return "hh";
@@ -912,6 +990,9 @@ const char *analyze_format_string::LengthModifier::toString() const {
     return "D";
   case AsDecimal128:
     return "DD";
+  case AsIntN:
+  case AsFastIntN:
+    return StringRef(Position, getLength());
   case AsAllocate:
     return "a";
   case AsMAllocate:
@@ -921,7 +1002,7 @@ const char *analyze_format_string::LengthModifier::toString() const {
   case None:
     return "";
   }
-  return nullptr;
+  llvm_unreachable("Invalid LengthModifier Kind!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1193,6 +1274,35 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
       return false;
     }
 
+  case LengthModifier::AsIntN:
+  case LengthModifier::AsFastIntN: {
+    if (!LO.C23)
+      return false;
+
+    TargetInfo::IntType TargetType =
+        LM.getKind() == LengthModifier::AsIntN
+            ? Target.getIntTypeByWidth(LM.getBitWidth(), /*IsSigned=*/true)
+            : Target.getLeastIntTypeByWidth(LM.getBitWidth(),
+                                            /*IsSigned=*/true);
+    if (TargetType == TargetInfo::NoInt)
+      return false;
+
+    switch (CS.getKind()) {
+    case ConversionSpecifier::bArg:
+    case ConversionSpecifier::BArg:
+    case ConversionSpecifier::dArg:
+    case ConversionSpecifier::iArg:
+    case ConversionSpecifier::oArg:
+    case ConversionSpecifier::uArg:
+    case ConversionSpecifier::xArg:
+    case ConversionSpecifier::XArg:
+    case ConversionSpecifier::nArg:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   case LengthModifier::AsAllocate:
     switch (CS.getKind()) {
     case ConversionSpecifier::sArg:
@@ -1274,6 +1384,8 @@ bool FormatSpecifier::hasStandardLengthModifier() const {
   case LengthModifier::AsDecimal32:
   case LengthModifier::AsDecimal64:
   case LengthModifier::AsDecimal128:
+  case LengthModifier::AsIntN:
+  case LengthModifier::AsFastIntN:
     return true;
   case LengthModifier::AsAllocate:
   case LengthModifier::AsMAllocate:
