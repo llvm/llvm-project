@@ -4,20 +4,13 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zbb | FileCheck %s --check-prefixes=RV32,RV32IZbb
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zbb | FileCheck %s --check-prefixes=RV64,RV64IZbb
 
-declare i4 @llvm.ssub.sat.i4(i4, i4)
-declare i8 @llvm.ssub.sat.i8(i8, i8)
-declare i16 @llvm.ssub.sat.i16(i16, i16)
-declare i32 @llvm.ssub.sat.i32(i32, i32)
-declare i64 @llvm.ssub.sat.i64(i64, i64)
-
 define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: func:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a2, a0
-; RV32-NEXT:    sgtz a3, a1
+; RV32-NEXT:    slt a2, a0, a1
 ; RV32-NEXT:    sub a0, a0, a1
-; RV32-NEXT:    slt a1, a0, a2
-; RV32-NEXT:    beq a3, a1, .LBB0_2
+; RV32-NEXT:    srli a1, a0, 31
+; RV32-NEXT:    beq a2, a1, .LBB0_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    lui a1, 524288
@@ -27,19 +20,15 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; RV64I-LABEL: func:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    addiw a2, a1, -1
-; RV64I-NEXT:    bge a0, a2, .LBB0_3
+; RV64I-NEXT:    mv a2, a0
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sub a2, a2, a1
+; RV64I-NEXT:    beq a0, a2, .LBB0_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    bge a1, a0, .LBB0_4
+; RV64I-NEXT:    sraiw a0, a2, 31
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:  .LBB0_2:
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB0_3:
-; RV64I-NEXT:    mv a0, a2
-; RV64I-NEXT:    blt a1, a2, .LBB0_2
-; RV64I-NEXT:  .LBB0_4:
-; RV64I-NEXT:    lui a0, 524288
 ; RV64I-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func:
@@ -76,11 +65,10 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ;
 ; RV64-LABEL: func2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    mv a2, a0
-; RV64-NEXT:    sgtz a3, a1
+; RV64-NEXT:    slt a2, a0, a1
 ; RV64-NEXT:    sub a0, a0, a1
-; RV64-NEXT:    slt a1, a0, a2
-; RV64-NEXT:    beq a3, a1, .LBB1_2
+; RV64-NEXT:    srli a1, a0, 63
+; RV64-NEXT:    beq a2, a1, .LBB1_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    li a1, -1
@@ -116,7 +104,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    lui a1, 8
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    bge a0, a1, .LBB2_3
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    lui a1, 1048568
@@ -145,7 +133,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    sub a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 8
-; RV64IZbb-NEXT:    addiw a1, a1, -1
+; RV64IZbb-NEXT:    addi a1, a1, -1
 ; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 1048568
 ; RV64IZbb-NEXT:    max a0, a0, a1

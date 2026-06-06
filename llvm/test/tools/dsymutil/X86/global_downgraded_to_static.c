@@ -1,8 +1,8 @@
-// REQUIRES : system-darwin
-// RUN: dsymutil -oso-prepend-path %p/.. -dump-debug-map \
+// REQUIRES: system-darwin
+// RUN: dsymutil --linker classic -oso-prepend-path %p/.. -dump-debug-map \
 // RUN: %p/../Inputs/global_downgraded_to_static.x86_64 2>&1 | FileCheck %s
 //
-// RUN: dsymutil --linker llvm -oso-prepend-path %p/.. -dump-debug-map \
+// RUN: dsymutil --linker parallel -oso-prepend-path %p/.. -dump-debug-map \
 // RUN: %p/../Inputs/global_downgraded_to_static.x86_64 2>&1 | FileCheck %s
 //
 //  To build:

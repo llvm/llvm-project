@@ -29,4 +29,4 @@
 # RUN: echo '%{lines-rel}'
 # CHECK:# | [[#@LINE+1]], [[#@LINE-3]], [[#@LINE-12]]
 
-# CHECK: Passed: 1
+# CHECK: Passed: 1 {{\([0-9]*.[0-9]*%\)}}

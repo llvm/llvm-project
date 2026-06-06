@@ -2,76 +2,15 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
 // RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
-
 // RUN: %check_clang_tidy -std=c++17-or-later -check-suffix=,CXX17 %s bugprone-dangling-handle %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
 // RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
-
-namespace std {
-
-template <typename T>
-class vector {
- public:
-  using const_iterator = const T*;
-  using iterator = T*;
-  using size_type = int;
-
-  void assign(size_type count, const T& value);
-  iterator insert(const_iterator pos, const T& value);
-  iterator insert(const_iterator pos, T&& value);
-  iterator insert(const_iterator pos, size_type count, const T& value);
-  void push_back(const T&);
-  void push_back(T&&);
-  void resize(size_type count, const T& value);
-};
-
-template <typename, typename>
-class pair {};
-
-template <typename T>
-class set {
- public:
-  using const_iterator = const T*;
-  using iterator = T*;
-
-  std::pair<iterator, bool> insert(const T& value);
-  std::pair<iterator, bool> insert(T&& value);
-  iterator insert(const_iterator hint, const T& value);
-  iterator insert(const_iterator hint, T&& value);
-};
-
-template <typename Key, typename Value>
-class map {
- public:
-  using value_type = pair<Key, Value>;
-  value_type& operator[](const Key& key);
-  value_type& operator[](Key&& key);
-};
-
-class basic_string_view;
-
-class basic_string {
- public:
-  basic_string();
-  basic_string(const char*);
-
-  typedef basic_string_view str_view;
-  operator str_view() const noexcept;
-
-  ~basic_string();
-};
-
-typedef basic_string string;
-
-class basic_string_view {
- public:
-  basic_string_view(const char*);
-};
-
-typedef basic_string_view string_view;
-
-}  // namespace std
+#include <map>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -108,6 +47,14 @@ void Positives() {
   std::string_view view4(ReturnsAString());
   // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives
   // CHECK-MESSAGES-CXX17: [[@LINE-2]]:26: warning: std::basic_string_view outlives
+
+  std::string_view view5 = std::string("test");
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:28: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+
+  std::string_view view6 = std::string{"test"};
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:28: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
 }
 
 void OtherTypes() {

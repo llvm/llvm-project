@@ -37,6 +37,7 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
     FnParent       = parent->FnParent;
     BlockParent    = parent->BlockParent;
     TemplateParamParent = parent->TemplateParamParent;
+    DeclParent = parent->DeclParent;
     MSLastManglingParent = parent->MSLastManglingParent;
     MSCurManglingNumber = getMSLastManglingNumber();
     if ((Flags & (FnScope | ClassScope | BlockScope | TemplateParamScope |
@@ -52,6 +53,7 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
     PrototypeIndex = 0;
     MSLastManglingParent = FnParent = BlockParent = nullptr;
     TemplateParamParent = nullptr;
+    DeclParent = nullptr;
     MSLastManglingNumber = 1;
     MSCurManglingNumber = 1;
   }
@@ -76,6 +78,7 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
     PrototypeDepth++;
 
   if (flags & DeclScope) {
+    DeclParent = this;
     if (flags & FunctionPrototypeScope)
       ; // Prototype scopes are uninteresting.
     else if ((flags & ClassScope) && getParent()->isClassScope())
@@ -96,6 +99,7 @@ void Scope::Init(Scope *parent, unsigned flags) {
   UsingDirectives.clear();
   Entity = nullptr;
   ErrorTrap.reset();
+  PrecedingLabel = nullptr;
   NRVO = std::nullopt;
 }
 
@@ -109,18 +113,23 @@ bool Scope::containedInPrototypeScope() const {
   return false;
 }
 
-void Scope::AddFlags(unsigned FlagsToSet) {
-  assert((FlagsToSet & ~(BreakScope | ContinueScope)) == 0 &&
-         "Unsupported scope flags");
-  if (FlagsToSet & BreakScope) {
-    assert((Flags & BreakScope) == 0 && "Already set");
-    BreakParent = this;
-  }
-  if (FlagsToSet & ContinueScope) {
-    assert((Flags & ContinueScope) == 0 && "Already set");
-    ContinueParent = this;
-  }
-  Flags |= FlagsToSet;
+void Scope::EnterLoopBody(LabelDecl *LD) {
+  Flags |= BreakScope | ContinueScope;
+  BreakParent = ContinueParent = this;
+  PrecedingLabel = LD;
+}
+
+void Scope::EnterSwitchBody(LabelDecl *LD) {
+  Flags |= BreakScope;
+  BreakParent = this;
+  PrecedingLabel = LD;
+}
+
+void Scope::LeaveLoopBody() {
+  Flags &= ~(BreakScope | ContinueScope);
+  BreakParent = getParent()->BreakParent;
+  ContinueParent = getParent()->ContinueParent;
+  PrecedingLabel = nullptr;
 }
 
 // The algorithm for updating NRVO candidate is as follows:
@@ -225,7 +234,14 @@ void Scope::dumpImpl(raw_ostream &OS) const {
       {CompoundStmtScope, "CompoundStmtScope"},
       {ClassInheritanceScope, "ClassInheritanceScope"},
       {CatchScope, "CatchScope"},
-  };
+      {Unused, "Unused"},
+      {OpenMPOrderClauseScope, "OpenMPOrderClauseScope"},
+      {LambdaScope, "LambdaScope"},
+      {OpenACCComputeConstructScope, "OpenACCComputeConstructScope"},
+      {TypeAliasScope, "TypeAliasScope"},
+      {FriendScope, "FriendScope"},
+      {OpenACCComputeConstructScope, "OpenACCComputeConstructScope"},
+      {OpenACCLoopConstructScope, "OpenACCLoopConstructScope"}};
 
   for (auto Info : FlagInfo) {
     if (Flags & Info.first) {

@@ -1,6 +1,6 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zvfbfwma,+d < %s 2>&1 | \
+# RUN: not llvm-mc -triple riscv32 -mattr=+zvfbfwma,+d < %s 2>&1 | \
 # RUN:   FileCheck %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zvfbfwma,+d < %s 2>&1 | \
+# RUN: not llvm-mc -triple riscv64 -mattr=+zvfbfwma,+d < %s 2>&1 | \
 # RUN:   FileCheck %s
 
 # Attempting to use fcvt instructions from zfhmin

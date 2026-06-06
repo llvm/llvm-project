@@ -32,11 +32,30 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace {
+/// RAII scope that resets the result's status to eReturnStatusInvalid on entry
+/// and asserts on exit that DoExecute changed it (directly via SetStatus, or
+/// indirectly via AppendError/SetError, which call SetStatus internally).
+class DoExecuteStatusCheck {
+public:
+  explicit DoExecuteStatusCheck(CommandReturnObject &result)
+      : m_result(result) {
+    m_result.SetStatus(eReturnStatusInvalid);
+  }
+  ~DoExecuteStatusCheck() {
+    assert(m_result.GetStatus() != eReturnStatusInvalid &&
+           "DoExecute did not set a status on the CommandReturnObject");
+  }
+
+private:
+  CommandReturnObject &m_result;
+};
+} // namespace
 
 // CommandObject
 
@@ -120,26 +139,24 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     if (args_or) {
       args = std::move(*args_or);
       error = options->NotifyOptionParsingFinished(&exe_ctx);
-    } else
-      error = args_or.takeError();
-
-    if (error.Success()) {
-      if (options->VerifyOptions(result))
-        return true;
     } else {
-      const char *error_cstr = error.AsCString();
-      if (error_cstr) {
-        // We got an error string, lets use that
-        result.AppendError(error_cstr);
-      } else {
-        // No error string, output the usage information into result
-        options->GenerateOptionUsage(
-            result.GetErrorStream(), *this,
-            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
-      }
+      error = Status::FromError(args_or.takeError());
     }
-    result.SetStatus(eReturnStatusFailed);
-    return false;
+
+    if (error.Fail()) {
+      result.SetError(error.takeError());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    if (llvm::Error error = options->VerifyOptions()) {
+      result.SetError(std::move(error));
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return true;
   }
   return true;
 }
@@ -150,28 +167,38 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   // we don't want any CommandObject instances to keep any of these objects
   // around longer than for a single command. Every command should call
   // CommandObject::Cleanup() after it has completed.
-  assert(!m_exe_ctx.GetTargetPtr());
+  //
+  // The dummy target is allowed here because it is always alive, never causes
+  // resource leaks, and can appear when a command (e.g. "command source") is
+  // invoked re-entrantly before the outer Cleanup() has run.
+  assert(!m_exe_ctx.GetTargetPtr() ||
+         m_exe_ctx.GetTargetPtr()->IsDummyTarget());
   assert(!m_exe_ctx.GetProcessPtr());
   assert(!m_exe_ctx.GetThreadPtr());
   assert(!m_exe_ctx.GetFramePtr());
 
   // Lock down the interpreter's execution context prior to running the command
   // so we guarantee the selected target, process, thread and frame can't go
-  // away during the execution
-  m_exe_ctx = m_interpreter.GetExecutionContext();
-
+  // away during the execution. The dummy target is only adopted when the
+  // command opts in via eCommandAllowsDummyTarget, so other commands won't
+  // accidentally see it through m_exe_ctx.
   const uint32_t flags = GetFlags().Get();
+  const bool adopt_dummy_target = flags & eCommandAllowsDummyTarget;
+  m_exe_ctx = m_interpreter.GetExecutionContext(adopt_dummy_target);
+
   if (flags & (eCommandRequiresTarget | eCommandRequiresProcess |
                eCommandRequiresThread | eCommandRequiresFrame |
                eCommandTryTargetAPILock)) {
 
-    if ((flags & eCommandRequiresTarget) && !m_exe_ctx.HasTargetScope()) {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if ((flags & eCommandRequiresTarget) &&
+        (!target || target->IsDummyTarget())) {
       result.AppendError(GetInvalidTargetDescription());
       return false;
     }
 
     if ((flags & eCommandRequiresProcess) && !m_exe_ctx.HasProcessScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else
         result.AppendError(GetInvalidProcessDescription());
@@ -179,7 +206,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if ((flags & eCommandRequiresThread) && !m_exe_ctx.HasThreadScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else if (!m_exe_ctx.HasProcessScope())
         result.AppendError(GetInvalidProcessDescription());
@@ -189,7 +216,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if ((flags & eCommandRequiresFrame) && !m_exe_ctx.HasFrameScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else if (!m_exe_ctx.HasProcessScope())
         result.AppendError(GetInvalidProcessDescription());
@@ -207,8 +234,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if (flags & eCommandTryTargetAPILock) {
-      Target *target = m_exe_ctx.GetTargetPtr();
-      if (target)
+      if (target && !target->IsDummyTarget())
         m_api_locker =
             std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
     }
@@ -220,7 +246,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     if (process == nullptr) {
       // A process that is not running is considered paused.
       if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
-        result.AppendError("Process must exist.");
+        result.AppendError("process must exist");
         return false;
       }
     } else {
@@ -239,7 +265,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       case eStateExited:
       case eStateUnloaded:
         if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
-          result.AppendError("Process must be launched.");
+          result.AppendError("process must be launched");
           return false;
         }
         break;
@@ -258,7 +284,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   if (GetFlags().Test(eCommandProcessMustBeTraced)) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target && !target->GetTrace()) {
-      result.AppendError("Process is not being traced.");
+      result.AppendError("process is not being traced");
       return false;
     }
   }
@@ -275,7 +301,7 @@ void CommandObject::Cleanup() {
 void CommandObject::HandleCompletion(CompletionRequest &request) {
 
   m_exe_ctx = m_interpreter.GetExecutionContext();
-  auto reset_ctx = llvm::make_scope_exit([this]() { Cleanup(); });
+  llvm::scope_exit reset_ctx([this]() { Cleanup(); });
 
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument
@@ -287,7 +313,6 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   } else {
     // Can we do anything generic with the options?
     Options *cur_options = GetOptions();
-    CommandReturnObject result(m_interpreter.GetDebugger().GetUseColor());
     OptionElementVector opt_element_vector;
 
     if (cur_options != nullptr) {
@@ -305,13 +330,47 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   }
 }
 
+void CommandObject::HandleArgumentCompletion(
+    CompletionRequest &request, OptionElementVector &opt_element_vector) {
+  size_t num_arg_entries = GetNumArgumentEntries();
+  if (num_arg_entries != 1)
+    return;
+
+  CommandArgumentEntry *entry_ptr = GetArgumentEntryAtIndex(0);
+  if (!entry_ptr) {
+    assert(entry_ptr && "We said there was one entry, but there wasn't.");
+    return; // Not worth crashing if asserts are off...
+  }
+  
+  CommandArgumentEntry &entry = *entry_ptr;
+  // For now, we only handle the simple case of one homogenous argument type.
+  if (entry.size() != 1)
+    return;
+
+  // Look up the completion type, and if it has one, invoke it:
+  const CommandObject::ArgumentTableEntry *arg_entry =
+      FindArgumentDataByType(entry[0].arg_type);
+  const ArgumentRepetitionType repeat = entry[0].arg_repetition;
+
+  if (arg_entry == nullptr || arg_entry->completion_type == lldb::eNoCompletion)
+    return;
+
+  // FIXME: This should be handled higher in the Command Parser.
+  // Check the case where this command only takes one argument, and don't do
+  // the completion if we aren't on the first entry:
+  if (repeat == eArgRepeatPlain && request.GetCursorIndex() != 0)
+    return;
+
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+      GetCommandInterpreter(), arg_entry->completion_type, request, nullptr);
+
+}
+
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,
                                          bool search_syntax,
                                          bool search_options) {
-  std::string options_usage_help;
-
   bool found_word = false;
 
   llvm::StringRef short_help = GetHelp();
@@ -329,7 +388,8 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
     StreamString usage_help;
     GetOptions()->GenerateOptionUsage(
         usage_help, *this,
-        GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+        GetCommandInterpreter().GetDebugger().GetUseColor());
     if (!usage_help.Empty()) {
       llvm::StringRef usage_text = usage_help.GetString();
       if (usage_text.contains_insensitive(search_word))
@@ -353,6 +413,24 @@ bool CommandObject::ParseOptionsAndNotify(Args &args,
     return false;
   }
   return true;
+}
+
+void CommandObject::AddSimpleArgumentList(
+    CommandArgumentType arg_type, ArgumentRepetitionType repetition_type) {
+
+  CommandArgumentEntry arg_entry;
+  CommandArgumentData simple_arg;
+
+  // Define the first (and only) variant of this arg.
+  simple_arg.arg_type = arg_type;
+  simple_arg.arg_repetition = repetition_type;
+
+  // There is only one variant this argument could be; put it into the argument
+  // entry.
+  arg_entry.push_back(simple_arg);
+
+  // Push the data for the first argument into the m_arguments vector.
+  m_arguments.push_back(arg_entry);
 }
 
 int CommandObject::GetNumArgumentEntries() { return m_arguments.size(); }
@@ -445,6 +523,23 @@ bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
          (arg_repeat_type == eArgRepeatPairStar) ||
          (arg_repeat_type == eArgRepeatPairRange) ||
          (arg_repeat_type == eArgRepeatPairRangeOptional);
+}
+
+std::optional<ArgumentRepetitionType> 
+CommandObject::ArgRepetitionFromString(llvm::StringRef string) {
+  return llvm::StringSwitch<ArgumentRepetitionType>(string)
+  .Case("plain", eArgRepeatPlain)  
+  .Case("optional", eArgRepeatOptional)
+  .Case("plus", eArgRepeatPlus)
+  .Case("star", eArgRepeatStar) 
+  .Case("range", eArgRepeatRange)
+  .Case("pair-plain", eArgRepeatPairPlain)
+  .Case("pair-optional", eArgRepeatPairOptional)
+  .Case("pair-plus", eArgRepeatPairPlus)
+  .Case("pair-star", eArgRepeatPairStar)
+  .Case("pair-range", eArgRepeatPairRange)
+  .Case("pair-range-optional", eArgRepeatPairRangeOptional)
+  .Default({});
 }
 
 static CommandObject::CommandArgumentEntry
@@ -607,7 +702,8 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   if (options != nullptr) {
     options->GenerateOptionUsage(
         output_strm, *this,
-        GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+        GetCommandInterpreter().GetDebugger().GetUseColor());
   }
   llvm::StringRef long_help = GetHelpLong();
   if (!long_help.empty()) {
@@ -640,20 +736,24 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   }
 }
 
-void CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg,
-                                       CommandArgumentType ID,
-                                       CommandArgumentType IDRange) {
+void CommandObject::AddIDsArgumentData(CommandObject::IDType type) {
+  CommandArgumentEntry arg;
   CommandArgumentData id_arg;
   CommandArgumentData id_range_arg;
 
   // Create the first variant for the first (and only) argument for this
   // command.
-  id_arg.arg_type = ID;
+  switch (type) {
+  case eBreakpointArgs:
+    id_arg.arg_type = eArgTypeBreakpointID;
+    id_range_arg.arg_type = eArgTypeBreakpointIDRange;
+    break;
+  case eWatchpointArgs:
+    id_arg.arg_type = eArgTypeWatchpointID;
+    id_range_arg.arg_type = eArgTypeWatchpointIDRange;
+    break;
+  }
   id_arg.arg_repetition = eArgRepeatOptional;
-
-  // Create the second variant for the first (and only) argument for this
-  // command.
-  id_range_arg.arg_type = IDRange;
   id_range_arg.arg_repetition = eArgRepeatOptional;
 
   // The first (and only) argument for this command could be either an id or an
@@ -661,6 +761,7 @@ void CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg,
   // this command.
   arg.push_back(id_arg);
   arg.push_back(id_range_arg);
+  m_arguments.push_back(arg);
 }
 
 const char *CommandObject::GetArgumentTypeAsCString(
@@ -681,17 +782,24 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
-}
+Target *CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object, falling back
+  // to the interpreter's execution context for paths like multi-line
+  // expressions or breakpoint callbacks that run after DoExecute has
+  // finished. Both honor eCommandAllowsDummyTarget when deciding whether to
+  // substitute the dummy target, so no post-hoc filtering is needed.
+  const uint32_t flags = GetFlags().Get();
+  const bool adopt_dummy_target = flags & eCommandAllowsDummyTarget;
+  Target *target = m_exe_ctx.GetTargetPtr();
+  if (!target)
+    target =
+        m_interpreter.GetExecutionContext(adopt_dummy_target).GetTargetPtr();
 
-Target &CommandObject::GetSelectedTarget() {
-  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
-                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
-                        eCommandRequiresThread | eCommandRequiresProcess |
-                        eCommandRequiresRegContext) &&
-         "GetSelectedTarget called from object that may have no target");
-  return *m_interpreter.GetDebugger().GetSelectedTarget();
+  // CheckRequirements has already guaranteed a non-dummy target for any
+  // command declaring a Requires* flag.
+  assert(target || !(flags & (eCommandRequiresTarget | eCommandRequiresProcess |
+                              eCommandRequiresThread | eCommandRequiresFrame)));
+  return target;
 }
 
 Thread *CommandObject::GetDefaultThread() {
@@ -703,7 +811,7 @@ Thread *CommandObject::GetDefaultThread() {
   if (!process) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (!target) {
-      target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+      target = m_interpreter.GetSelectedTarget().get();
     }
     if (target)
       process = target->GetProcessSP().get();
@@ -715,7 +823,7 @@ Thread *CommandObject::GetDefaultThread() {
     return nullptr;
 }
 
-bool CommandObjectParsed::Execute(const char *args_string,
+void CommandObjectParsed::Execute(const char *args_string,
                                   CommandReturnObject &result) {
   bool handled = false;
   Args cmd_args(args_string);
@@ -746,18 +854,19 @@ bool CommandObjectParsed::Execute(const char *args_string,
           result.AppendErrorWithFormatv("'{0}' doesn't take any arguments.",
                                         GetCommandName());
           Cleanup();
-          return false;
+          return;
         }
-        handled = DoExecute(cmd_args, result);
+        m_interpreter.IncreaseCommandUsage(*this);
+        DoExecuteStatusCheck check(result);
+        DoExecute(cmd_args, result);
       }
     }
 
     Cleanup();
   }
-  return handled;
 }
 
-bool CommandObjectRaw::Execute(const char *args_string,
+void CommandObjectRaw::Execute(const char *args_string,
                                CommandReturnObject &result) {
   bool handled = false;
   if (HasOverrideCallback()) {
@@ -769,10 +878,11 @@ bool CommandObjectRaw::Execute(const char *args_string,
     handled = InvokeOverrideCallback(argv, result);
   }
   if (!handled) {
-    if (CheckRequirements(result))
-      handled = DoExecute(args_string, result);
+    if (CheckRequirements(result)) {
+      DoExecuteStatusCheck check(result);
+      DoExecute(args_string, result);
+    }
 
     Cleanup();
   }
-  return handled;
 }

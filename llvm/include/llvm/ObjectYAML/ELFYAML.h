@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/ObjectYAML/BBAddrMapYAML.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -117,7 +118,7 @@ struct FileHeader {
   llvm::yaml::Hex8 ABIVersion;
   ELF_ET Type;
   std::optional<ELF_EM> Machine;
-  ELF_EF Flags;
+  std::optional<ELF_EF> Flags;
   llvm::yaml::Hex64 Entry;
   std::optional<StringRef> SectionHeaderStringTable;
 
@@ -154,20 +155,6 @@ struct SectionOrType {
 struct DynamicEntry {
   ELF_DYNTAG Tag;
   llvm::yaml::Hex64 Val;
-};
-
-struct BBAddrMapEntry {
-  struct BBEntry {
-    uint32_t ID;
-    llvm::yaml::Hex64 AddressOffset;
-    llvm::yaml::Hex64 Size;
-    llvm::yaml::Hex64 Metadata;
-  };
-  uint8_t Version;
-  llvm::yaml::Hex8 Feature;
-  llvm::yaml::Hex64 Address;
-  std::optional<uint64_t> NumBlocks;
-  std::optional<std::vector<BBEntry>> BBEntries;
 };
 
 struct StackSizeEntry {
@@ -316,7 +303,8 @@ struct SectionHeaderTable : Chunk {
 };
 
 struct BBAddrMapSection : Section {
-  std::optional<std::vector<BBAddrMapEntry>> Entries;
+  std::optional<std::vector<BBAddrMapYAML::BBAddrMapEntry>> Entries;
+  std::optional<std::vector<BBAddrMapYAML::PGOAnalysisMapEntry>> PGOAnalyses;
 
   BBAddrMapSection() : Section(ChunkKind::BBAddrMap) {}
 
@@ -556,6 +544,7 @@ struct VerdefEntry {
   std::optional<uint16_t> Flags;
   std::optional<uint16_t> VersionNdx;
   std::optional<uint32_t> Hash;
+  std::optional<uint16_t> VDAux;
   std::vector<StringRef> VerNames;
 };
 
@@ -735,8 +724,6 @@ bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntryWeight)
@@ -895,14 +882,6 @@ struct MappingTraits<ELFYAML::Symbol> {
 
 template <> struct MappingTraits<ELFYAML::StackSizeEntry> {
   static void mapping(IO &IO, ELFYAML::StackSizeEntry &Rel);
-};
-
-template <> struct MappingTraits<ELFYAML::BBAddrMapEntry> {
-  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry &Rel);
-};
-
-template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry> {
-  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::GnuHashHeader> {

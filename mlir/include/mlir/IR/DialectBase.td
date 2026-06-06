@@ -34,6 +34,11 @@ class Dialect {
   // pattern or interfaces.
   list<string> dependentDialects = [];
 
+  // A list of key/value pair representing an attribute type and a name.
+  // This will generate helper classes on the dialect to be able to
+  // manage discardable attributes on operations in a type safe way.
+  dag discardableAttrs = (ins);
+
   // The C++ namespace that ops of this dialect should be placed into.
   //
   // By default, uses the name of the dialect as the only namespace. To avoid
@@ -87,9 +92,6 @@ class Dialect {
 
   // If this dialect can be extended at runtime with new operations or types.
   bit isExtensible = 0;
-
-  // Whether inherent Attributes defined in ODS will be stored as Properties.
-  bit usePropertiesForAttributes = 1;
 }
 
 #endif // DIALECTBASE_TD

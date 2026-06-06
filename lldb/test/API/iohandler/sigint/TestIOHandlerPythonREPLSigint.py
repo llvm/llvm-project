@@ -23,7 +23,7 @@ class TestCase(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_while_evaluating_code(self):
         """Tests SIGINT handling while Python code is being evaluated."""
         self.start_python_repl()
@@ -49,7 +49,6 @@ class TestCase(PExpectTest):
         # Send EOF to quit the Python REPL.
         self.child.sendeof()
 
-        self.quit()
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
@@ -71,4 +70,3 @@ class TestCase(PExpectTest):
         # Send EOF to quit the Python REPL.
         self.child.sendeof()
 
-        self.quit()

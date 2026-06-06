@@ -7,18 +7,63 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Analysis/CallGraph.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/IR/Utils.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/SCCIterator.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Verifier.h"
+#include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
 
-#ifndef NDEBUG
+namespace {
+/// This interface enables inlining of `transform.named_sequence` operations
+/// into the body of other `transform.named_sequence` operations. The dialect
+/// does not allow inlining into any other context.
+struct TransformInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+
+  /// A call may be inlined when its callee is a `transform.named_sequence`.
+  bool isLegalToInline(Operation *call, Operation *callable,
+                       bool wouldBeCloned) const final {
+    return isa<transform::NamedSequenceOp>(callable);
+  }
+
+  /// A region may be inlined into another region only when both are bodies of
+  /// `transform.named_sequence` operations: this restricts inlining to the
+  /// "named sequence into named sequence" case.
+  bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
+                       IRMapping &valueMapping) const final {
+    return isa_and_nonnull<transform::NamedSequenceOp>(dest->getParentOp()) &&
+           isa_and_nonnull<transform::NamedSequenceOp>(src->getParentOp());
+  }
+
+  /// Any operation is legal to inline into the body of a
+  /// `transform.named_sequence`. Whether a particular operation is actually
+  /// valid in that context is enforced by the regular op verifiers.
+  bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
+                       IRMapping &valueMapping) const final {
+    return isa_and_nonnull<transform::NamedSequenceOp>(dest->getParentOp());
+  }
+
+  /// Replace the `transform.yield` terminator of an inlined single-block
+  /// region by directly forwarding its operands to the values that used to be
+  /// produced by the call site.
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
+    auto yieldOp = cast<transform::YieldOp>(op);
+    assert(yieldOp.getNumOperands() == valuesToRepl.size() &&
+           "mismatched yield/call result count");
+    for (auto [from, to] : llvm::zip(valuesToRepl, yieldOp.getOperands()))
+      from.replaceAllUsesWith(to);
+  }
+};
+} // namespace
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 void transform::detail::checkImplementsTransformOpInterface(
     StringRef name, MLIRContext *context) {
   // Since the operation is being inserted into the Transform dialect and the
@@ -30,13 +75,15 @@ void transform::detail::checkImplementsTransformOpInterface(
           opName.hasInterface<PatternDescriptorOpInterface>() ||
           opName.hasInterface<ConversionPatternDescriptorOpInterface>() ||
           opName.hasInterface<TypeConverterBuilderOpInterface>() ||
-          opName.hasTrait<OpTrait::IsTerminator>()) &&
+          opName.hasTrait<OpTrait::IsTerminator>() ||
+          opName.hasInterface<NormalFormCheckedOpInterface>()) &&
          "non-terminator ops injected into the transform dialect must "
          "implement TransformOpInterface or PatternDescriptorOpInterface or "
          "ConversionPatternDescriptorOpInterface");
   if (!opName.hasInterface<PatternDescriptorOpInterface>() &&
       !opName.hasInterface<ConversionPatternDescriptorOpInterface>() &&
-      !opName.hasInterface<TypeConverterBuilderOpInterface>()) {
+      !opName.hasInterface<TypeConverterBuilderOpInterface>() &&
+      !opName.hasInterface<NormalFormCheckedOpInterface>()) {
     assert(opName.hasInterface<MemoryEffectOpInterface>() &&
            "ops injected into the transform dialect must implement "
            "MemoryEffectsOpInterface");
@@ -55,7 +102,7 @@ void transform::detail::checkImplementsTransformHandleTypeInterface(
          "expected Transform dialect type to implement one of the three "
          "interfaces");
 }
-#endif // NDEBUG
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 void transform::TransformDialect::initialize() {
   // Using the checked versions to enable the same assertions as for the ops
@@ -64,7 +111,33 @@ void transform::TransformDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
+  initializeAttributes();
   initializeTypes();
+  initializeLibraryModule();
+  addInterfaces<TransformInlinerInterface>();
+}
+
+Attribute transform::TransformDialect::parseAttribute(DialectAsmParser &parser,
+                                                      Type type) const {
+  StringRef keyword;
+  SMLoc loc = parser.getCurrentLocation();
+  if (failed(parser.parseKeyword(&keyword)))
+    return nullptr;
+
+  auto it = attributeParsingHooks.find(keyword);
+  if (it == attributeParsingHooks.end()) {
+    parser.emitError(loc) << "unknown attribute mnemonic: " << keyword;
+    return nullptr;
+  }
+
+  return it->getValue()(parser, type);
+}
+
+void transform::TransformDialect::printAttribute(
+    Attribute attribute, DialectAsmPrinter &printer) const {
+  auto it = attributePrintingHooks.find(attribute.getTypeID());
+  assert(it != attributePrintingHooks.end() && "printing unknown attribute");
+  it->getSecond()(attribute, printer);
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {
@@ -89,13 +162,35 @@ void transform::TransformDialect::printType(Type type,
   it->getSecond()(type, printer);
 }
 
+LogicalResult transform::TransformDialect::loadIntoLibraryModule(
+    ::mlir::OwningOpRef<::mlir::ModuleOp> &&library) {
+  return detail::mergeSymbolsInto(getLibraryModule(), std::move(library));
+}
+
+void transform::TransformDialect::initializeLibraryModule() {
+  MLIRContext *context = getContext();
+  auto loc =
+      FileLineColLoc::get(context, "<transform-dialect-library-module>", 0, 0);
+  libraryModule = ModuleOp::create(loc, "__transform_library");
+  libraryModule.get()->setAttr(TransformDialect::kWithNamedSequenceAttrName,
+                               UnitAttr::get(context));
+}
+
+void transform::TransformDialect::reportDuplicateAttributeRegistration(
+    StringRef attrName) {
+  std::string buffer;
+  llvm::raw_string_ostream msg(buffer);
+  msg << "extensible dialect attribute '" << attrName
+      << "' is already registered with a different implementation";
+  llvm::report_fatal_error(StringRef(buffer));
+}
+
 void transform::TransformDialect::reportDuplicateTypeRegistration(
     StringRef mnemonic) {
   std::string buffer;
   llvm::raw_string_ostream msg(buffer);
   msg << "extensible dialect type '" << mnemonic
       << "' is already registered with a different implementation";
-  msg.flush();
   llvm::report_fatal_error(StringRef(buffer));
 }
 
@@ -105,7 +200,6 @@ void transform::TransformDialect::reportDuplicateOpRegistration(
   llvm::raw_string_ostream msg(buffer);
   msg << "extensible dialect operation '" << opName
       << "' is already registered with a mismatching TypeID";
-  msg.flush();
   llvm::report_fatal_error(StringRef(buffer));
 }
 
@@ -118,34 +212,21 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
                                         "operations with symbol tables";
     }
 
-    const mlir::CallGraph callgraph(op);
-    for (auto scc = llvm::scc_begin(&callgraph); !scc.isAtEnd(); ++scc) {
-      if (!scc.hasCycle())
-        continue;
+    // Pre-verify calls and callables because call graph construction below
+    // assumes they are valid, but this verifier runs before verifying the
+    // nested operations.
+    WalkResult walkResult = op->walk([](Operation *nested) {
+      if (!isa<CallableOpInterface, CallOpInterface>(nested))
+        return WalkResult::advance();
 
-      // Need to check this here additionally because this verification may run
-      // before we check the nested operations.
-      if ((*scc->begin())->isExternal())
-        return op->emitOpError() << "contains a call to an external operation, "
-                                    "which is not allowed";
+      if (failed(verify(nested, /*verifyRecursively=*/false)))
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    if (walkResult.wasInterrupted())
+      return failure();
 
-      Operation *first = (*scc->begin())->getCallableRegion()->getParentOp();
-      InFlightDiagnostic diag = emitError(first->getLoc())
-                                << "recursion not allowed in named sequences";
-      for (auto it = std::next(scc->begin()); it != scc->end(); ++it) {
-        // Need to check this here additionally because this verification may
-        // run before we check the nested operations.
-        if ((*it)->isExternal()) {
-          return op->emitOpError() << "contains a call to an external "
-                                      "operation, which is not allowed";
-        }
-
-        Operation *current = (*it)->getCallableRegion()->getParentOp();
-        diag.attachNote(current->getLoc()) << "operation on recursion stack";
-      }
-      return diag;
-    }
-    return success();
+    return detail::verifyNoRecursionInCallGraph(op);
   }
   if (attribute.getName().getValue() == kTargetTagAttrName) {
     if (!llvm::isa<StringAttr>(attribute.getValue())) {
@@ -162,7 +243,8 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
     }
     return success();
   }
-  if (attribute.getName().getValue() == kSilenceTrackingFailuresAttrName) {
+  if (attribute.getName().getValue() ==
+      FindPayloadReplacementOpInterface::kSilenceTrackingFailuresAttrName) {
     if (!llvm::isa<UnitAttr>(attribute.getValue())) {
       return op->emitError()
              << attribute.getName() << " must be a unit attribute";

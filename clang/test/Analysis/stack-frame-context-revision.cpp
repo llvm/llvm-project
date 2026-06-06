@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=core,cplusplus.NewDelete -verify %s
 
 // expected-no-diagnostics:
-// From now the profile of the 'StackFrameContext' also contains the
+// From now the profile of the 'StackFrame' also contains the
 // 'NodeBuilderContext::blockCount()'. With this addition we can distinguish
 // between the 'StackArgumentsSpaceRegion' of the 'P' arguments being different
 // on every iteration.
@@ -31,7 +31,7 @@ void test(Node *N) {
     delete N;
 
     N = Next.getPointer();
-    // no-warning: 'Use of memory after it is freed' was here as the same
+    // no-warning: 'Use of memory after it is released' was here as the same
     //             'StackArgumentsSpaceRegion' purged out twice as 'P'.
   }
 }

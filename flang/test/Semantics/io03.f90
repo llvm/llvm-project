@@ -58,6 +58,13 @@
   read(internal_file2, *) jj
   read(internal_file4, *) jj
 
+  !This is a valid statement but it's not what it looks like; "(internal-file)"
+  !must be parsed as a format expression, not as an internal unit.
+  read(internal_file) jj
+
+  !ERROR: If UNIT=internal-file appears, FMT or NML must also appear
+  read(internal_file, iostat=stat1) jj
+
   !ERROR: Internal file must not have a vector subscript
   read(internal_fileA(vv), *) jj
 
@@ -106,11 +113,12 @@
   !ERROR: If UNIT=* appears, POS must not appear
   read(*, pos=13)
 
+  !ERROR: If UNIT=internal-file appears, FMT or NML must also appear
   !ERROR: If UNIT=internal-file appears, REC must not appear
   read(internal_file, rec=13)
 
   !ERROR: If UNIT=internal-file appears, POS must not appear
-  read(internal_file, pos=13)
+  read(internal_file, *, pos=13)
 
   !ERROR: If REC appears, END must not appear
   read(10, fmt='(I4)', end=9, rec=13) jj
@@ -120,6 +128,9 @@
 
   !ERROR: If ADVANCE appears, UNIT=internal-file must not appear
   read(internal_file, '(I4)', eor=9, advance='no') jj
+
+  !ERROR: If ADVANCE appears, REC must not appear
+  read(10, '(I4)', advance='no', rec=13) jj
 
   !ERROR: If ADVANCE appears, an explicit format must also appear
   !ERROR: If EOR appears, ADVANCE with value 'NO' must also appear
@@ -135,7 +146,7 @@
   read(*, asynchronous='yes')
 
   !ERROR: If ASYNCHRONOUS='YES' appears, UNIT=number must also appear
-  read(internal_file, asynchronous='y'//'es')
+  read(internal_file, *, asynchronous='y'//'es')
 
   !ERROR: If ID appears, ASYNCHRONOUS='YES' must also appear
   read(10, id=id)
@@ -155,8 +166,29 @@
   !ERROR: If PAD appears, FMT or NML must also appear
   read(10, pad='no', round='nearest') jj
 
+  !PORTABILITY: If NML appears, SIZE should not appear
+  read(10, nml=nnn, size=kk)
+  !PORTABILITY: If FMT=* appears, SIZE should not appear
+  read(10, *, size=kk) jj
+
   !ERROR: ID kind (2) is smaller than default INTEGER kind (4)
   read(10, id=id2, asynchronous='yes') jj
+
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  read((msg), *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(KIND=1,LEN=8_8)
+  read("a string", *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  read(msg//msg, *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type LOGICAL(4)
+  read(.true., *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type REAL(4)
+  read(1.0, *)
+  read(internal_fileA, *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  read((internal_fileA), *)
+  !ERROR: I/O unit number must be scalar
+  read([1,2,3], *)
 
 9 continue
 end

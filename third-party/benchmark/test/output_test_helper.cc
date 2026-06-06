@@ -45,7 +45,7 @@ SubMap& GetSubstitutions() {
   static SubMap map = {
       {"%float", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?"},
       // human-readable float
-      {"%hrfloat", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?[kMGTPEZYmunpfazy]?"},
+      {"%hrfloat", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?[kKMGTPEZYmunpfazy]?i?"},
       {"%percentage", percentage_re},
       {"%int", "[ ]*[0-9]+"},
       {" %s ", "[ ]+"},
@@ -65,6 +65,7 @@ SubMap& GetSubstitutions() {
       {"%csv_us_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",us,,,,,"},
       {"%csv_ms_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ms,,,,,"},
       {"%csv_s_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",s,,,,,"},
+      {"%csv_cv_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",,,,,,"},
       {"%csv_bytes_report",
        "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns," + safe_dec_re + ",,,,"},
       {"%csv_items_report",
@@ -82,7 +83,7 @@ std::string PerformSubstitutions(std::string source) {
   SubMap const& subs = GetSubstitutions();
   using SizeT = std::string::size_type;
   for (auto const& KV : subs) {
-    SizeT pos;
+    SizeT pos = 0;
     SizeT next_start = 0;
     while ((pos = source.find(KV.first, next_start)) != std::string::npos) {
       next_start = pos + KV.second.size();
@@ -97,7 +98,7 @@ void CheckCase(std::stringstream& remaining_output, TestCase const& TC,
   std::string first_line;
   bool on_first = true;
   std::string line;
-  while (remaining_output.eof() == false) {
+  while (!remaining_output.eof()) {
     BM_CHECK(remaining_output.good());
     std::getline(remaining_output, line);
     if (on_first) {
@@ -111,7 +112,9 @@ void CheckCase(std::stringstream& remaining_output, TestCase const& TC,
           << "\n    actual regex string \"" << TC.substituted_regex << "\""
           << "\n    started matching near: " << first_line;
     }
-    if (TC.regex->Match(line)) return;
+    if (TC.regex->Match(line)) {
+      return;
+    }
     BM_CHECK(TC.match_rule != MR_Next)
         << "Expected line \"" << line << "\" to match regex \"" << TC.regex_str
         << "\""
@@ -143,10 +146,10 @@ class TestReporter : public benchmark::BenchmarkReporter {
   TestReporter(std::vector<benchmark::BenchmarkReporter*> reps)
       : reporters_(std::move(reps)) {}
 
-  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
+  bool ReportContext(const Context& context) override {
     bool last_ret = false;
     bool first = true;
-    for (auto rep : reporters_) {
+    for (auto* rep : reporters_) {
       bool new_ret = rep->ReportContext(context);
       BM_CHECK(first || new_ret == last_ret)
           << "Reports return different values for ReportContext";
@@ -157,11 +160,15 @@ class TestReporter : public benchmark::BenchmarkReporter {
     return last_ret;
   }
 
-  void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
-    for (auto rep : reporters_) rep->ReportRuns(report);
+  void ReportRuns(const std::vector<Run>& report) override {
+    for (auto* rep : reporters_) {
+      rep->ReportRuns(report);
+    }
   }
-  void Finalize() BENCHMARK_OVERRIDE {
-    for (auto rep : reporters_) rep->Finalize();
+  void Finalize() override {
+    for (auto* rep : reporters_) {
+      rep->Finalize();
+    }
   }
 
  private:
@@ -199,15 +206,17 @@ class ResultsChecker {
   void SetHeader_(const std::string& csv_header);
   void SetValues_(const std::string& entry_csv_line);
 
-  std::vector<std::string> SplitCsv_(const std::string& line);
+  std::vector<std::string> SplitCsv_(const std::string& line) const;
 };
 
+namespace {
 // store the static ResultsChecker in a function to prevent initialization
 // order problems
 ResultsChecker& GetResultsChecker() {
   static ResultsChecker rc;
   return rc;
 }
+}  // end namespace
 
 // add a results checker for a benchmark
 void ResultsChecker::Add(const std::string& entry_pattern,
@@ -223,14 +232,16 @@ void ResultsChecker::CheckResults(std::stringstream& output) {
     // clear before calling tellg()
     output.clear();
     // seek to zero only when needed
-    if (output.tellg() > start) output.seekg(start);
+    if (output.tellg() > start) {
+      output.seekg(start);
+    }
     // and just in case
     output.clear();
   }
   // now go over every line and publish it to the ResultsChecker
   std::string line;
   bool on_first = true;
-  while (output.eof() == false) {
+  while (!output.eof()) {
     BM_CHECK(output.good());
     std::getline(output, line);
     if (on_first) {
@@ -248,9 +259,8 @@ void ResultsChecker::CheckResults(std::stringstream& output) {
       if (!p.regex->Match(r.name)) {
         BM_VLOG(2) << p.regex_str << " is not matched by " << r.name << "\n";
         continue;
-      } else {
-        BM_VLOG(2) << p.regex_str << " is matched by " << r.name << "\n";
       }
+      BM_VLOG(2) << p.regex_str << " is matched by " << r.name << "\n";
       BM_VLOG(1) << "Checking results of " << r.name << ": ... \n";
       p.fn(r);
       BM_VLOG(1) << "Checking results of " << r.name << ": OK.\n";
@@ -265,7 +275,9 @@ void ResultsChecker::SetHeader_(const std::string& csv_header) {
 
 // set the values for a benchmark
 void ResultsChecker::SetValues_(const std::string& entry_csv_line) {
-  if (entry_csv_line.empty()) return;  // some lines are empty
+  if (entry_csv_line.empty()) {
+    return;
+  }  // some lines are empty
   BM_CHECK(!field_names.empty());
   auto vals = SplitCsv_(entry_csv_line);
   BM_CHECK_EQ(vals.size(), field_names.size());
@@ -277,30 +289,45 @@ void ResultsChecker::SetValues_(const std::string& entry_csv_line) {
 }
 
 // a quick'n'dirty csv splitter (eliminating quotes)
-std::vector<std::string> ResultsChecker::SplitCsv_(const std::string& line) {
+std::vector<std::string> ResultsChecker::SplitCsv_(
+    const std::string& line) const {
   std::vector<std::string> out;
-  if (line.empty()) return out;
-  if (!field_names.empty()) out.reserve(field_names.size());
-  size_t prev = 0, pos = line.find_first_of(','), curr = pos;
-  while (pos != line.npos) {
+  if (line.empty()) {
+    return out;
+  }
+  if (!field_names.empty()) {
+    out.reserve(field_names.size());
+  }
+  size_t prev = 0;
+  size_t pos = line.find_first_of(',');
+  size_t curr = pos;
+  while (pos != std::string::npos) {
     BM_CHECK(curr > 0);
-    if (line[prev] == '"') ++prev;
-    if (line[curr - 1] == '"') --curr;
+    if (line[prev] == '"') {
+      ++prev;
+    }
+    if (line[curr - 1] == '"') {
+      --curr;
+    }
     out.push_back(line.substr(prev, curr - prev));
     prev = pos + 1;
     pos = line.find_first_of(',', pos + 1);
     curr = pos;
   }
   curr = line.size();
-  if (line[prev] == '"') ++prev;
-  if (line[curr - 1] == '"') --curr;
+  if (line[prev] == '"') {
+    ++prev;
+  }
+  if (line[curr - 1] == '"') {
+    --curr;
+  }
   out.push_back(line.substr(prev, curr - prev));
   return out;
 }
 
 }  // end namespace internal
 
-size_t AddChecker(const char* bm_name, const ResultsCheckFn& fn) {
+size_t AddChecker(const std::string& bm_name, const ResultsCheckFn& fn) {
   auto& rc = internal::GetResultsChecker();
   rc.Add(bm_name, fn);
   return rc.results.size();
@@ -308,7 +335,9 @@ size_t AddChecker(const char* bm_name, const ResultsCheckFn& fn) {
 
 int Results::NumThreads() const {
   auto pos = name.find("/threads:");
-  if (pos == name.npos) return 1;
+  if (pos == std::string::npos) {
+    return 1;
+  }
   auto end = name.find('/', pos + 9);
   std::stringstream ss;
   ss << name.substr(pos + 9, end);
@@ -324,20 +353,22 @@ double Results::GetTime(BenchmarkTime which) const {
   BM_CHECK(which == kCpuTime || which == kRealTime);
   const char* which_str = which == kCpuTime ? "cpu_time" : "real_time";
   double val = GetAs<double>(which_str);
-  auto unit = Get("time_unit");
+  const auto* unit = Get("time_unit");
   BM_CHECK(unit);
   if (*unit == "ns") {
     return val * 1.e-9;
-  } else if (*unit == "us") {
-    return val * 1.e-6;
-  } else if (*unit == "ms") {
-    return val * 1.e-3;
-  } else if (*unit == "s") {
-    return val;
-  } else {
-    BM_CHECK(1 == 0) << "unknown time unit: " << *unit;
-    return 0;
   }
+  if (*unit == "us") {
+    return val * 1.e-6;
+  }
+  if (*unit == "ms") {
+    return val * 1.e-3;
+  }
+  if (*unit == "s") {
+    return val;
+  }
+  BM_CHECK(1 == 0) << "unknown time unit: " << *unit;
+  return 0;
 }
 
 // ========================================================================= //
@@ -376,7 +407,9 @@ int SetSubstitutions(
         break;
       }
     }
-    if (!exists) subs.push_back(std::move(KV));
+    if (!exists) {
+      subs.push_back(std::move(KV));
+    }
   }
   return 0;
 }
@@ -393,14 +426,14 @@ void RunOutputTests(int argc, char* argv[]) {
   benchmark::JSONReporter JR;
   benchmark::CSVReporter CSVR;
   struct ReporterTest {
-    const char* name;
+    std::string name;
     std::vector<TestCase>& output_cases;
     std::vector<TestCase>& error_cases;
     benchmark::BenchmarkReporter& reporter;
     std::stringstream out_stream;
     std::stringstream err_stream;
 
-    ReporterTest(const char* n, std::vector<TestCase>& out_tc,
+    ReporterTest(const std::string& n, std::vector<TestCase>& out_tc,
                  std::vector<TestCase>& err_tc,
                  benchmark::BenchmarkReporter& br)
         : name(n), output_cases(out_tc), error_cases(err_tc), reporter(br) {
@@ -408,12 +441,12 @@ void RunOutputTests(int argc, char* argv[]) {
       reporter.SetErrorStream(&err_stream);
     }
   } TestCases[] = {
-      {"ConsoleReporter", GetTestCaseList(TC_ConsoleOut),
+      {std::string("ConsoleReporter"), GetTestCaseList(TC_ConsoleOut),
        GetTestCaseList(TC_ConsoleErr), CR},
-      {"JSONReporter", GetTestCaseList(TC_JSONOut), GetTestCaseList(TC_JSONErr),
-       JR},
-      {"CSVReporter", GetTestCaseList(TC_CSVOut), GetTestCaseList(TC_CSVErr),
-       CSVR},
+      {std::string("JSONReporter"), GetTestCaseList(TC_JSONOut),
+       GetTestCaseList(TC_JSONErr), JR},
+      {std::string("CSVReporter"), GetTestCaseList(TC_CSVOut),
+       GetTestCaseList(TC_CSVErr), CSVR},
   };
 
   // Create the test reporter and run the benchmarks.
@@ -422,7 +455,8 @@ void RunOutputTests(int argc, char* argv[]) {
   benchmark::RunSpecifiedBenchmarks(&test_rep);
 
   for (auto& rep_test : TestCases) {
-    std::string msg = std::string("\nTesting ") + rep_test.name + " Output\n";
+    std::string msg =
+        std::string("\nTesting ") + rep_test.name + std::string(" Output\n");
     std::string banner(msg.size() - 1, '-');
     std::cout << banner << msg << banner << "\n";
 
@@ -439,57 +473,67 @@ void RunOutputTests(int argc, char* argv[]) {
   // the checks to subscribees.
   auto& csv = TestCases[2];
   // would use == but gcc spits a warning
-  BM_CHECK(std::strcmp(csv.name, "CSVReporter") == 0);
+  BM_CHECK(csv.name == std::string("CSVReporter"));
   internal::GetResultsChecker().CheckResults(csv.out_stream);
 }
 
 BENCHMARK_RESTORE_DEPRECATED_WARNING
 
 int SubstrCnt(const std::string& haystack, const std::string& pat) {
-  if (pat.length() == 0) return 0;
+  if (pat.length() == 0) {
+    return 0;
+  }
   int count = 0;
   for (size_t offset = haystack.find(pat); offset != std::string::npos;
-       offset = haystack.find(pat, offset + pat.length()))
+       offset = haystack.find(pat, offset + pat.length())) {
     ++count;
+  }
   return count;
 }
 
-static char ToHex(int ch) {
+namespace {
+char ToHex(int ch) {
   return ch < 10 ? static_cast<char>('0' + ch)
                  : static_cast<char>('a' + (ch - 10));
 }
 
-static char RandomHexChar() {
+char RandomHexChar() {
   static std::mt19937 rd{std::random_device{}()};
   static std::uniform_int_distribution<int> mrand{0, 15};
   return ToHex(mrand(rd));
 }
 
-static std::string GetRandomFileName() {
+std::string GetRandomFileName() {
   std::string model = "test.%%%%%%";
   for (auto& ch : model) {
-    if (ch == '%') ch = RandomHexChar();
+    if (ch == '%') {
+      ch = RandomHexChar();
+    }
   }
   return model;
 }
 
-static bool FileExists(std::string const& name) {
+bool FileExists(std::string const& name) {
   std::ifstream in(name.c_str());
   return in.good();
 }
 
-static std::string GetTempFileName() {
+std::string GetTempFileName() {
   // This function attempts to avoid race conditions where two tests
   // create the same file at the same time. However, it still introduces races
   // similar to tmpnam.
   int retries = 3;
-  while (--retries) {
+  while (--retries != 0) {
     std::string name = GetRandomFileName();
-    if (!FileExists(name)) return name;
+    if (!FileExists(name)) {
+      return name;
+    }
   }
-  std::cerr << "Failed to create unique temporary file name" << std::endl;
-  std::abort();
+  std::cerr << "Failed to create unique temporary file name\n";
+  std::flush(std::cerr);
+  std::exit(1);
 }
+}  // end namespace
 
 std::string GetFileReporterOutput(int argc, char* argv[]) {
   std::vector<char*> new_argv(argv, argv + argc);
@@ -502,7 +546,7 @@ std::string GetFileReporterOutput(int argc, char* argv[]) {
   tmp += tmp_file_name;
   new_argv.emplace_back(const_cast<char*>(tmp.c_str()));
 
-  argc = int(new_argv.size());
+  argc = static_cast<int>(new_argv.size());
 
   benchmark::Initialize(&argc, new_argv.data());
   benchmark::RunSpecifiedBenchmarks();

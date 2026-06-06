@@ -25,6 +25,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/TargetParser/Triple.h"
@@ -33,7 +34,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "printfToRuntime"
-#define DWORD_ALIGN 4
+enum { DWORD_ALIGN = 4 };
 
 namespace {
 class AMDGPUPrintfRuntimeBinding final : public ModulePass {
@@ -41,7 +42,7 @@ class AMDGPUPrintfRuntimeBinding final : public ModulePass {
 public:
   static char ID;
 
-  explicit AMDGPUPrintfRuntimeBinding();
+  explicit AMDGPUPrintfRuntimeBinding() : ModulePass(ID) {}
 
 private:
   bool runOnModule(Module &M) override;
@@ -49,7 +50,7 @@ private:
 
 class AMDGPUPrintfRuntimeBindingImpl {
 public:
-  AMDGPUPrintfRuntimeBindingImpl() {}
+  AMDGPUPrintfRuntimeBindingImpl() = default;
   bool run(Module &M);
 
 private:
@@ -75,14 +76,8 @@ INITIALIZE_PASS_END(AMDGPUPrintfRuntimeBinding, "amdgpu-printf-runtime-binding",
 
 char &llvm::AMDGPUPrintfRuntimeBindingID = AMDGPUPrintfRuntimeBinding::ID;
 
-namespace llvm {
-ModulePass *createAMDGPUPrintfRuntimeBinding() {
+ModulePass *llvm::createAMDGPUPrintfRuntimeBinding() {
   return new AMDGPUPrintfRuntimeBinding();
-}
-} // namespace llvm
-
-AMDGPUPrintfRuntimeBinding::AMDGPUPrintfRuntimeBinding() : ModulePass(ID) {
-  initializeAMDGPUPrintfRuntimeBindingPass(*PassRegistry::getPassRegistry());
 }
 
 void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
@@ -93,7 +88,7 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
   // are %p and %s, which use to know if we
   // are either storing a literal string or a
   // pointer to the printf buffer.
-  static const char ConvSpecifiers[] = "cdieEfgGaosuxXp";
+  static const char ConvSpecifiers[] = "cdieEfFgGaAosuxXp";
   size_t CurFmtSpecifierIdx = 0;
   size_t PrevFmtSpecifierIdx = 0;
 
@@ -102,7 +97,7 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
     bool ArgDump = false;
     StringRef CurFmt = Fmt.substr(PrevFmtSpecifierIdx,
                                   CurFmtSpecifierIdx - PrevFmtSpecifierIdx);
-    size_t pTag = CurFmt.find_last_of("%");
+    size_t pTag = CurFmt.find_last_of('%');
     if (pTag != StringRef::npos) {
       ArgDump = true;
       while (pTag && CurFmt[--pTag] == '%') {
@@ -133,12 +128,11 @@ static StringRef getAsConstantStr(Value *V) {
 }
 
 static void diagnoseInvalidFormatString(const CallBase *CI) {
-  DiagnosticInfoUnsupported UnsupportedFormatStr(
-      *CI->getParent()->getParent(),
+  CI->getContext().diagnose(DiagnosticInfoUnsupported(
+      *CI->getFunction(),
       "printf format string must be a trivially resolved constant string "
       "global variable",
-      CI->getDebugLoc());
-  CI->getContext().diagnose(UnsupportedFormatStr);
+      CI->getDebugLoc()));
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
@@ -188,22 +182,17 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       // expand the arguments that do not follow this rule.
       //
       if (ArgSize % DWORD_ALIGN != 0) {
-        Type *ResType = Type::getInt32Ty(Ctx);
-        if (auto *VecType = dyn_cast<VectorType>(ArgType))
-          ResType = VectorType::get(ResType, VecType->getElementCount());
+        Type *ResType = ArgType->getWithNewType(Type::getInt32Ty(Ctx));
         Builder.SetInsertPoint(CI);
         Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
-        if (ArgType->isFloatingPointTy()) {
-          Arg = Builder.CreateBitCast(
-              Arg,
-              IntegerType::getIntNTy(Ctx, ArgType->getPrimitiveSizeInBits()));
-        }
-
-        if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
-            OpConvSpecifiers[ArgCount - 1] == 'X' ||
-            OpConvSpecifiers[ArgCount - 1] == 'u' ||
-            OpConvSpecifiers[ArgCount - 1] == 'o')
+        if (ArgType->isFPOrFPVectorTy()) {
+          Arg = Builder.CreateFPExt(
+              Arg, ArgType->getWithNewType(Type::getFloatTy(Ctx)));
+        } else if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'X' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'u' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'o')
           Arg = Builder.CreateZExt(Arg, ResType);
         else
           Arg = Builder.CreateSExt(Arg, ResType);
@@ -276,7 +265,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
     Type *Tys_alloc[1] = {SizetTy};
     Type *I8Ty = Type::getInt8Ty(Ctx);
-    Type *I8Ptr = PointerType::get(I8Ty, 1);
+    Type *I8Ptr = PointerType::get(Ctx, 1);
     FunctionType *FTy_alloc = FunctionType::get(I8Ptr, Tys_alloc, false);
     FunctionCallee PrintfAllocFn =
         M.getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
@@ -290,8 +279,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     Value *sumC = ConstantInt::get(SizetTy, Sum, false);
     SmallVector<Value *, 1> alloc_args;
     alloc_args.push_back(sumC);
-    CallInst *pcall =
-        CallInst::Create(PrintfAllocFn, alloc_args, "printf_alloc_fn", CI);
+    CallInst *pcall = CallInst::Create(PrintfAllocFn, alloc_args,
+                                       "printf_alloc_fn", CI->getIterator());
 
     //
     // Insert code to split basicblock with a
@@ -299,7 +288,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     // basicblock splits after buffer overflow check
     //
     ConstantPointerNull *zeroIntPtr =
-        ConstantPointerNull::get(PointerType::get(I8Ty, 1));
+        ConstantPointerNull::get(PointerType::get(Ctx, 1));
     auto *cmp = cast<ICmpInst>(Builder.CreateICmpNE(pcall, zeroIntPtr, ""));
     if (!CI->use_empty()) {
       Value *result =
@@ -309,25 +298,27 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     SplitBlock(CI->getParent(), cmp);
     Instruction *Brnch =
         SplitBlockAndInsertIfThen(cmp, cmp->getNextNode(), false);
+    BasicBlock::iterator BrnchPoint = Brnch->getIterator();
 
     Builder.SetInsertPoint(Brnch);
 
     // store unique printf id in the buffer
     //
     GetElementPtrInst *BufferIdx = GetElementPtrInst::Create(
-        I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID", Brnch);
+        I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID",
+        BrnchPoint);
 
-    Type *idPointer = PointerType::get(I32Ty, AMDGPUAS::GLOBAL_ADDRESS);
+    Type *idPointer = PointerType::get(Ctx, AMDGPUAS::GLOBAL_ADDRESS);
     Value *id_gep_cast =
-        new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", Brnch);
+        new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", BrnchPoint);
 
-    new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast, Brnch);
+    new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast, BrnchPoint);
 
     // 1st 4 bytes hold the printf_id
     // the following GEP is the buffer pointer
     BufferIdx = GetElementPtrInst::Create(I8Ty, pcall,
                                           ConstantInt::get(Ctx, APInt(32, 4)),
-                                          "PrintBuffGep", Brnch);
+                                          "PrintBuffGep", BrnchPoint);
 
     Type *Int32Ty = Type::getInt32Ty(Ctx);
     for (unsigned ArgCount = 1;
@@ -358,7 +349,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           if (!S.empty()) {
             const uint64_t ReadSize = 4;
 
-            DataExtractor Extractor(S, /*IsLittleEndian=*/true, 8);
+            DataExtractor Extractor(S, /*IsLittleEndian=*/true);
             DataExtractor::Cursor Offset(0);
             while (Offset && Offset.tell() < S.size()) {
               uint64_t ReadNow = std::min(ReadSize, S.size() - Offset.tell());
@@ -405,7 +396,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
         Value *TheBtCast = WhatToStore[I];
         unsigned ArgSize = TD->getTypeAllocSize(TheBtCast->getType());
-        StoreInst *StBuff = new StoreInst(TheBtCast, BufferIdx, Brnch);
+        StoreInst *StBuff = new StoreInst(TheBtCast, BufferIdx, BrnchPoint);
         LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
                           << *StBuff << '\n');
         (void)StBuff;
@@ -413,28 +404,40 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           break;
         BufferIdx = GetElementPtrInst::Create(
             I8Ty, BufferIdx, {ConstantInt::get(I32Ty, ArgSize)},
-            "PrintBuffNextPtr", Brnch);
+            "PrintBuffNextPtr", BrnchPoint);
         LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:\n"
                           << *BufferIdx << '\n');
       }
     }
   }
 
-  // erase the printf calls
-  for (auto *CI : Printfs)
+  // Erase the printf calls and replace all uses with 0, signaling success.
+  // Since OpenCL only specifies undefined behaviors and not success criteria,
+  // returning 0 sinalling success always is valid.
+  for (auto *CI : Printfs) {
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
     CI->eraseFromParent();
+  }
 
   Printfs.clear();
   return true;
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
-  Triple TT(M.getTargetTriple());
-  if (TT.getArch() == Triple::r600)
+  auto *PrintfFunction = M.getFunction("printf");
+  if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
+      M.getModuleFlag("openmp"))
     return false;
 
-  auto PrintfFunction = M.getFunction("printf");
-  if (!PrintfFunction || !PrintfFunction->isDeclaration())
+  // Verify the signature of the printf function and skip if it isn't correct.
+  const FunctionType *PrintfFunctionTy = PrintfFunction->getFunctionType();
+  if (PrintfFunctionTy->getNumParams() != 1 || !PrintfFunctionTy->isVarArg() ||
+      !PrintfFunctionTy->getReturnType()->isIntegerTy(32))
+    return false;
+  Type *PrintfFormatArgTy = PrintfFunctionTy->getParamType(0);
+  if (!PrintfFormatArgTy->isPointerTy() ||
+      !AMDGPU::isFlatGlobalAddrSpace(
+          PrintfFormatArgTy->getPointerAddressSpace()))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {

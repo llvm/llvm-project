@@ -23,7 +23,7 @@
 #include <windows.h>
 #else
 #include <fcntl.h>
-#ifndef BENCHMARK_OS_FUCHSIA
+#if !defined(BENCHMARK_OS_FUCHSIA) && !defined(BENCHMARK_OS_QURT)
 #include <sys/resource.h>
 #endif
 #include <sys/time.h>
@@ -37,6 +37,9 @@
 #include <mach/mach_init.h>
 #include <mach/mach_port.h>
 #include <mach/thread_act.h>
+#endif
+#if defined(BENCHMARK_OS_QURT)
+#include <qurt.h>
 #endif
 #endif
 
@@ -56,7 +59,6 @@
 
 #include "check.h"
 #include "log.h"
-#include "sleep.h"
 #include "string_util.h"
 
 namespace benchmark {
@@ -64,6 +66,9 @@ namespace benchmark {
 // Suppress unused warnings on helper functions.
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+#if defined(__NVCOMPILER)
+#pragma diag_suppress declared_but_not_referenced
 #endif
 
 namespace {
@@ -79,7 +84,7 @@ double MakeTime(FILETIME const& kernel_time, FILETIME const& user_time) {
           static_cast<double>(user.QuadPart)) *
          1e-7;
 }
-#elif !defined(BENCHMARK_OS_FUCHSIA)
+#elif !defined(BENCHMARK_OS_FUCHSIA) && !defined(BENCHMARK_OS_QURT)
 double MakeTime(struct rusage const& ru) {
   return (static_cast<double>(ru.ru_utime.tv_sec) +
           static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 +
@@ -97,12 +102,14 @@ double MakeTime(thread_basic_info_data_t const& info) {
 #endif
 #if defined(CLOCK_PROCESS_CPUTIME_ID) || defined(CLOCK_THREAD_CPUTIME_ID)
 double MakeTime(struct timespec const& ts) {
-  return ts.tv_sec + (static_cast<double>(ts.tv_nsec) * 1e-9);
+  return static_cast<double>(ts.tv_sec) +
+         (static_cast<double>(ts.tv_nsec) * 1e-9);
 }
 #endif
 
-BENCHMARK_NORETURN static void DiagnoseAndExit(const char* msg) {
-  std::cerr << "ERROR: " << msg << std::endl;
+BENCHMARK_NORETURN void DiagnoseAndExit(const char* msg) {
+  std::cerr << "ERROR: " << msg << '\n';
+  std::flush(std::cerr);
   std::exit(EXIT_FAILURE);
 }
 
@@ -119,18 +126,27 @@ double ProcessCPUUsage() {
                       &user_time))
     return MakeTime(kernel_time, user_time);
   DiagnoseAndExit("GetProccessTimes() failed");
+#elif defined(BENCHMARK_OS_QURT)
+  // Note that qurt_timer_get_ticks() is no longer documented as of SDK 5.3.0,
+  // and doesn't appear to work on at least some devices (eg Samsung S22),
+  // so let's use the actually-documented and apparently-equivalent
+  // qurt_sysclock_get_hw_ticks() call instead.
+  return static_cast<double>(
+             qurt_timer_timetick_to_us(qurt_sysclock_get_hw_ticks())) *
+         1.0e-6;
 #elif defined(BENCHMARK_OS_EMSCRIPTEN)
   // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ...) returns 0 on Emscripten.
   // Use Emscripten-specific API. Reported CPU time would be exactly the
   // same as total time, but this is ok because there aren't long-latency
-  // syncronous system calls in Emscripten.
+  // synchronous system calls in Emscripten.
   return emscripten_get_now() * 1e-3;
 #elif defined(CLOCK_PROCESS_CPUTIME_ID) && !defined(BENCHMARK_OS_MACOSX)
   // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
   // See https://github.com/google/benchmark/pull/292
-  struct timespec spec;
-  if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &spec) == 0)
+  struct timespec spec {};
+  if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &spec) == 0) {
     return MakeTime(spec);
+  }
   DiagnoseAndExit("clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ...) failed");
 #else
   struct rusage ru;
@@ -149,6 +165,14 @@ double ThreadCPUUsage() {
   GetThreadTimes(this_thread, &creation_time, &exit_time, &kernel_time,
                  &user_time);
   return MakeTime(kernel_time, user_time);
+#elif defined(BENCHMARK_OS_QURT)
+  // Note that qurt_timer_get_ticks() is no longer documented as of SDK 5.3.0,
+  // and doesn't appear to work on at least some devices (eg Samsung S22),
+  // so let's use the actually-documented and apparently-equivalent
+  // qurt_sysclock_get_hw_ticks() call instead.
+  return static_cast<double>(
+             qurt_timer_timetick_to_us(qurt_sysclock_get_hw_ticks())) *
+         1.0e-6;
 #elif defined(BENCHMARK_OS_MACOSX)
   // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
   // See https://github.com/google/benchmark/pull/292
@@ -168,13 +192,18 @@ double ThreadCPUUsage() {
   // RTEMS doesn't support CLOCK_THREAD_CPUTIME_ID. See
   // https://github.com/RTEMS/rtems/blob/master/cpukit/posix/src/clockgettime.c
   return ProcessCPUUsage();
+#elif defined(BENCHMARK_OS_ZOS)
+  // z/OS doesn't support CLOCK_THREAD_CPUTIME_ID.
+  return ProcessCPUUsage();
 #elif defined(BENCHMARK_OS_SOLARIS)
   struct rusage ru;
   if (getrusage(RUSAGE_LWP, &ru) == 0) return MakeTime(ru);
   DiagnoseAndExit("getrusage(RUSAGE_LWP, ...) failed");
 #elif defined(CLOCK_THREAD_CPUTIME_ID)
-  struct timespec ts;
-  if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) return MakeTime(ts);
+  struct timespec ts {};
+  if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) {
+    return MakeTime(ts);
+  }
   DiagnoseAndExit("clock_gettime(CLOCK_THREAD_CPUTIME_ID, ...) failed");
 #else
 #error Per-thread timing is not available on your system.
@@ -188,9 +217,9 @@ std::string LocalDateTimeString() {
   const std::size_t kTzOffsetLen = 6;
   const std::size_t kTimestampLen = 19;
 
-  std::size_t tz_len;
-  std::size_t timestamp_len;
-  long int offset_minutes;
+  std::size_t tz_len = 0;
+  std::size_t timestamp_len = 0;
+  long int offset_minutes = 0;
   char tz_offset_sign = '+';
   // tz_offset is set in one of three ways:
   // * strftime with %z - This either returns empty or the ISO 8601 time.  The
@@ -210,7 +239,7 @@ std::string LocalDateTimeString() {
 #if defined(BENCHMARK_OS_WINDOWS)
   std::tm* timeinfo_p = ::localtime(&now);
 #else
-  std::tm timeinfo;
+  std::tm timeinfo{};
   std::tm* timeinfo_p = &timeinfo;
   ::localtime_r(&now, &timeinfo);
 #endif
@@ -228,9 +257,9 @@ std::string LocalDateTimeString() {
       tz_offset_sign = '-';
     }
 
-    tz_len =
+    tz_len = static_cast<size_t>(
         ::snprintf(tz_offset, sizeof(tz_offset), "%c%02li:%02li",
-                   tz_offset_sign, offset_minutes / 100, offset_minutes % 100);
+                   tz_offset_sign, offset_minutes / 100, offset_minutes % 100));
     BM_CHECK(tz_len == kTzOffsetLen);
     ((void)tz_len);  // Prevent unused variable warning in optimized build.
   } else {

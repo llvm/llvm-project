@@ -100,16 +100,25 @@ public:
   bool isLegacyDispatchDefaultForArch(llvm::Triple::ArchType Arch) {
     // The GNUstep runtime uses a newer dispatch method by default from
     // version 1.6 onwards
-    if (getKind() == GNUstep && getVersion() >= VersionTuple(1, 6)) {
-      if (Arch == llvm::Triple::arm ||
-          Arch == llvm::Triple::x86 ||
-          Arch == llvm::Triple::x86_64)
-        return false;
-    }
-    else if ((getKind() ==  MacOSX) && isNonFragile() &&
-             (getVersion() >= VersionTuple(10, 0)) &&
-             (getVersion() < VersionTuple(10, 6)))
-        return Arch != llvm::Triple::x86_64;
+    if (getKind() == GNUstep) {
+      switch (Arch) {
+      case llvm::Triple::arm:
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+        return !(getVersion() >= VersionTuple(1, 6));
+      case llvm::Triple::aarch64:
+      case llvm::Triple::mips64:
+        return !(getVersion() >= VersionTuple(1, 9));
+      case llvm::Triple::riscv64:
+      case llvm::Triple::riscv64be:
+        return !(getVersion() >= VersionTuple(2, 2));
+      default:
+        return true;
+      }
+    } else if ((getKind() == MacOSX) && isNonFragile() &&
+               (getVersion() >= VersionTuple(10, 0)) &&
+               (getVersion() < VersionTuple(10, 6)))
+      return Arch != llvm::Triple::x86_64;
     // Except for deployment target of 10.5 or less,
     // Mac runtimes use legacy dispatch everywhere now.
     return true;
@@ -203,7 +212,13 @@ public:
     case GCC:
       return false;
     case GNUstep:
-      return false;
+      // This could be enabled for all versions, except for the fact that the
+      // implementation of `objc_retain` and friends prior to 2.2 call [object
+      // retain] in their fall-back paths, which leads to infinite recursion if
+      // the runtime is built with this enabled.  Since distributions typically
+      // build all Objective-C things with the same compiler version and flags,
+      // it's better to be conservative here.
+      return (getVersion() >= VersionTuple(2, 2));
     case ObjFW:
       return false;
     }
@@ -240,7 +255,7 @@ public:
     case GCC:
       return false;
     case GNUstep:
-      return false;
+      return getVersion() >= VersionTuple(2, 2);
     case ObjFW:
       return false;
     }
@@ -258,6 +273,8 @@ public:
       return getVersion() >= VersionTuple(12, 2);
     case WatchOS:
       return getVersion() >= VersionTuple(5, 2);
+    case GNUstep:
+      return getVersion() >= VersionTuple(2, 2);
     default:
       return false;
     }
@@ -277,6 +294,24 @@ public:
       default:
         return false;
     }
+  }
+
+  /// Are Foundation backed constant literal classes supported?
+  bool hasConstantLiteralClasses() const {
+    switch (getKind()) {
+    case MacOSX:
+      return getVersion() >= VersionTuple(11);
+    case iOS:
+      return getVersion() >= VersionTuple(14);
+    case WatchOS:
+      return getVersion() >= VersionTuple(7);
+    default:
+      return false;
+    }
+  }
+  bool hasConstantCFBooleans() const { return hasConstantLiteralClasses(); }
+  bool hasConstantEmptyCollections() const {
+    return hasConstantLiteralClasses();
   }
 
   /// Does this runtime allow the use of __weak?
@@ -455,8 +490,9 @@ public:
     case iOS: return true;
     case WatchOS: return true;
     case GCC: return false;
-    case GNUstep: return false;
-    case ObjFW: return false;
+    case GNUstep:
+      return (getVersion() >= VersionTuple(2, 2));
+    case ObjFW: return true;
     }
     llvm_unreachable("bad kind");
   }

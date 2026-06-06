@@ -15,8 +15,8 @@
 
 using namespace llvm;
 namespace {
-std::unique_ptr<LLVMTargetMachine> createTargetMachine(const std::string &CPU) {
-  auto TT(Triple::normalize("aarch64--"));
+std::unique_ptr<TargetMachine> createTargetMachine(const std::string &CPU) {
+  Triple TT("aarch64--");
 
   LLVMInitializeAArch64TargetInfo();
   LLVMInitializeAArch64Target();
@@ -25,9 +25,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine(const std::string &CPU) {
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       TheTarget->createTargetMachine(TT, CPU, "", TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default));
 }
 
 std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {
@@ -52,13 +52,13 @@ static bool isInstructionSupportedByCPU(unsigned Opcode,
 
 void runSVEPseudoTestForCPU(const std::string &CPU) {
 
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine(CPU);
+  std::unique_ptr<TargetMachine> TM = createTargetMachine(CPU);
   ASSERT_TRUE(TM);
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
   ASSERT_TRUE(II);
 
-  const MCSubtargetInfo *STI = TM->getMCSubtargetInfo();
-  MCSchedModel SchedModel = STI->getSchedModel();
+  const MCSubtargetInfo &STI = TM->getMCSubtargetInfo();
+  MCSchedModel SchedModel = STI.getSchedModel();
 
   for (unsigned i = 0; i < AArch64::INSTRUCTION_LIST_END; ++i) {
     // Check if instruction is in the pseudo table
@@ -72,7 +72,7 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
     // model for the CPU we're testing. This avoids this test from failing when
     // new instructions are added that are not yet covered by the scheduler
     // model.
-    if (!isInstructionSupportedByCPU(OrigInstr, STI->getFeatureBits()))
+    if (!isInstructionSupportedByCPU(OrigInstr, STI.getFeatureBits()))
       continue;
 
     const MCInstrDesc &Desc = II->get(i);
@@ -90,9 +90,9 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
     for (unsigned DefIdx = 0, DefEnd = SCDesc->NumWriteLatencyEntries;
          DefIdx != DefEnd; ++DefIdx) {
       const MCWriteLatencyEntry *WLEntry =
-          STI->getWriteLatencyEntry(SCDesc, DefIdx);
+          STI.getWriteLatencyEntry(SCDesc, DefIdx);
       const MCWriteLatencyEntry *WLEntryOrig =
-          STI->getWriteLatencyEntry(SCDescOrig, DefIdx);
+          STI.getWriteLatencyEntry(SCDescOrig, DefIdx);
       Latency = std::max(Latency, static_cast<int>(WLEntry->Cycles));
       LatencyOrig = std::max(Latency, static_cast<int>(WLEntryOrig->Cycles));
     }
@@ -103,12 +103,40 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
 }
 
 // TODO : Add more CPUs that support SVE/SVE2
+TEST(AArch64SVESchedPseudoTesta320, IsCorrect) {
+  runSVEPseudoTestForCPU("cortex-a320");
+}
+
 TEST(AArch64SVESchedPseudoTesta510, IsCorrect) {
   runSVEPseudoTestForCPU("cortex-a510");
 }
 
+TEST(AArch64SVESchedPseudoTestn2, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-n2");
+}
+
+TEST(AArch64SVESchedPseudoTestn3, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-n3");
+}
+
+TEST(AArch64SVESchedPseudoTestv1, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-v1");
+}
+
 TEST(AArch64SVESchedPseudoTestv2, IsCorrect) {
   runSVEPseudoTestForCPU("neoverse-v2");
+}
+
+TEST(AArch64SVESchedPseudoTestv3, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-v3");
+}
+
+TEST(AArch64SVESchedPseudoTestv3ae, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-v3ae");
+}
+
+TEST(AArch64SVESchedPseudoTestOlympus, IsCorrect) {
+  runSVEPseudoTestForCPU("olympus");
 }
 
 } // namespace

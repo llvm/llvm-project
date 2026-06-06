@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --pre-sparsification-rewrite \
+// RUN:             --sparse-reinterpret-map \
 // RUN:             --sparsification="parallelization-strategy=dense-outer-loop" \
 // RUN:             --sparse-gpu-codegen | FileCheck %s
 
@@ -10,19 +11,19 @@
 //
 // CHECK-LABEL: gpu.module @sparse_kernels
 // CHECK-LABEL: gpu.func @kernel0(
-// CHECK-SAME:        %[[VAL_0:.*0]]: index,
-// CHECK-SAME:        %[[VAL_1:.*1]]: index,
-// CHECK-SAME:        %[[VAL_2:.*2]]: memref<?xindex>,
-// CHECK-SAME:        %[[VAL_3:.*3]]: memref<?xindex>,
-// CHECK-SAME:        %[[VAL_4:.*4]]: memref<?xf64>,
-// CHECK-SAME:        %[[VAL_5:.*5]]: memref<?x?xf64>,
-// CHECK-SAME:        %[[VAL_6:.*6]]: memref<?x?xf64>) kernel {
-// CHECK:         %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK:         %[[VAL_8:.*]] = arith.constant 0 : index
-// CHECK:         %[[VAL_9:.*]] = gpu.block_id  x
-// CHECK:         %[[VAL_10:.*]] = gpu.block_dim  x
-// CHECK:         %[[VAL_11:.*]] = gpu.thread_id  x
-// CHECK:         %[[VAL_12:.*]] = gpu.grid_dim  x
+// CHECK-SAME:    %[[VAL_0:.*0]]: index,
+// CHECK-SAME:    %[[VAL_1:.*1]]: index,
+// CHECK-SAME:    %[[VAL_2:.*2]]: memref<?xindex>,
+// CHECK-SAME:    %[[VAL_3:.*3]]: memref<?xindex>,
+// CHECK-SAME:    %[[VAL_4:.*4]]: memref<?xf64>,
+// CHECK-SAME:    %[[VAL_5:.*5]]: memref<?x?xf64>,
+// CHECK-SAME:    %[[VAL_6:.*6]]: memref<?x?xf64>) kernel {
+// CHECK-DAG:     %[[VAL_7:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[VAL_8:.*]] = arith.constant 0 : index
+// CHECK:         %[[VAL_9:.*]] = gpu.block_id x
+// CHECK:         %[[VAL_10:.*]] = gpu.block_dim x
+// CHECK:         %[[VAL_11:.*]] = gpu.thread_id x
+// CHECK:         %[[VAL_12:.*]] = gpu.grid_dim x
 // CHECK:         %[[VAL_13:.*]] = arith.muli %[[VAL_9]], %[[VAL_10]] : index
 // CHECK:         %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_11]] : index
 // CHECK:         %[[VAL_15:.*]] = arith.muli %[[VAL_10]], %[[VAL_12]] : index
@@ -46,7 +47,11 @@
 // CHECK:       }
 //
 //
-// CHECK-LABEL: func.func @matmul
+// CHECK-LABEL: func.func @matmul(
+// CHECK-SAME:    %[[ARG0:.*]]: tensor<?x?xf64, #sparse>,
+// CHECK-SAME:    %[[ARG1:.*]]: tensor<?x?xf64>,
+// CHECK-SAME:    %[[ARG2:.*]]: tensor<?x?xf64>) -> tensor<?x?xf64> {
+// CHECK:       %[[OUT_BUF:.*]] = bufferization.to_buffer %[[ARG2]]
 // CHECK:       gpu.wait async
 // CHECK:       gpu.alloc async
 // CHECK:       %[[S0:.*]] = gpu.memcpy async
@@ -57,24 +62,26 @@
 // CHECK:       gpu.alloc async
 // CHECK:       %[[S2:.*]] = gpu.memcpy async
 // CHECK:       gpu.wait async
-// CHECK:       gpu.alloc async
-// CHECK:       %[[S3:.*]] = gpu.memcpy async
+// CHECK:       %[[GPU_OUT_BUF:.*]], %[[T0:.*]] = gpu.alloc async
+// CHECK:       %[[S3:.*]] = gpu.memcpy async [%[[T0]]] %[[GPU_OUT_BUF]], %[[OUT_BUF]]
 // CHECK:       gpu.wait async
 // CHECK:       gpu.alloc async
 // CHECK:       %[[S4:.*]] = gpu.memcpy async
 // CHECK:       gpu.wait [%[[S0]], %[[S1]], %[[S2]], %[[S3]], %[[S4]]
 // CHECK:       %[[T0:.*]] = gpu.launch_func async @sparse_kernels::@kernel0 blocks
-// CHECK:       %[[M0:.*]] = gpu.memcpy async [%[[T0]]]
+// CHECK:       %[[M0:.*]] = gpu.wait async
 // CHECK:       %[[M1:.*]] = gpu.dealloc async [%[[M0]]]
 // CHECK:       %[[M2:.*]] = gpu.wait async
 // CHECK:       %[[M3:.*]] = gpu.dealloc async [%[[M2]]]
 // CHECK:       %[[M4:.*]] = gpu.wait async
 // CHECK:       %[[M5:.*]] = gpu.dealloc async [%[[M4]]]
-// CHECK:       %[[M6:.*]] = gpu.wait async
+// CHECK:       %[[M6:.*]] = gpu.memcpy async [%[[T0]]] %[[OUT_BUF]], %[[GPU_OUT_BUF]]
 // CHECK:       %[[M7:.*]] = gpu.dealloc async [%[[M6]]]
 // CHECK:       %[[M8:.*]] = gpu.wait async
 // CHECK:       %[[M9:.*]] = gpu.dealloc async [%[[M8]]]
 // CHECK:       gpu.wait [%[[M1]], %[[M3]], %[[M5]], %[[M7]], %[[M9]]
+// CHECK:       %[[OUT_TENSOR:.*]] = bufferization.to_tensor %[[OUT_BUF]]
+// CHECK:       return %[[OUT_TENSOR]]
 //
 func.func @matmul(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xf64>, %C_in: tensor<?x?xf64>) -> tensor<?x?xf64> {
   %C_out = linalg.matmul

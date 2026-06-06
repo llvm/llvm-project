@@ -68,11 +68,6 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
             for match in re.finditer(r"([^:]+):([^;]+);", host_info_raw)
         }
 
-        import pprint
-
-        print("\nqHostInfo response:")
-        pprint.pprint(host_info_dict)
-
         # Validate keys are known.
         for key, val in list(host_info_dict.items()):
             self.assertIn(
@@ -111,7 +106,7 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
             for key in self.DARWIN_REQUIRED_HOST_INFO_KEYS
             if key not in host_info_dict
         ]
-        self.assertEquals(
+        self.assertEqual(
             0,
             len(missing_keys),
             "qHostInfo is missing the following required " "keys: " + str(missing_keys),

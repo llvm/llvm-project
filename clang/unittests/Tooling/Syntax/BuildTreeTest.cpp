@@ -88,8 +88,12 @@ private:
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(SyntaxTreeTests, BuildSyntaxTreeTest,
-                        testing::ValuesIn(allTestClangConfigs()) );
+INSTANTIATE_TEST_SUITE_P(
+    SyntaxTreeTests, BuildSyntaxTreeTest,
+    testing::ValuesIn(allTestClangConfigs()),
+    [](const testing::TestParamInfo<TestClangConfig> &Info) {
+      return Info.param.toShortString();
+    });
 
 TEST_P(BuildSyntaxTreeTest, Simple) {
   EXPECT_TRUE(treeDumpEqual(
@@ -667,10 +671,6 @@ TEST_P(BuildSyntaxTreeTest, UnqualifiedId_DecltypeDestructor) {
       R"cpp(
 struct X { };
 void test(X x) {
-  // FIXME: Make `decltype(x)` a child of `MemberExpression`. It is currently
-  // not because `Expr::getSourceRange()` returns the range of `x.~` for the
-  // `MemberExpr` instead of the expected `x.~decltype(x)`, this is a bug in
-  // clang.
   [[x.~decltype(x)()]];
 }
 )cpp",
@@ -683,12 +683,14 @@ CallExpression Expression
 | |-'.' AccessToken
 | `-IdExpression Member
 |   `-UnqualifiedId UnqualifiedId
-|     `-'~'
-|-'decltype'
-|-'('
-|-'x'
-|-')'
-|-'('
+|     |-'~'
+|     |-'decltype'
+|     |-'('
+|     |-IdExpression
+|     | `-UnqualifiedId UnqualifiedId
+|     |   `-'x'
+|     `-')'
+|-'(' OpenParen
 `-')' CloseParen
 )txt"}));
 }
@@ -4600,7 +4602,7 @@ TEST_P(BuildSyntaxTreeTest, ConstructorCall_DefaultArguments) {
 struct X {
   X(int i = 1, char c = '2');
 };
-X test() {
+void test() {
   auto x0 = [[X()]];
   auto x1 = [[X(1)]];
   auto x2 = [[X(1, '2')]];
@@ -5655,8 +5657,6 @@ struct X {
 };
 [[void (X::*xp)();]]
 [[void (X::**xpp)(const int*);]]
-// FIXME: Generate the right syntax tree for this type,
-// i.e. create a syntax node for the outer member pointer
 [[void (X::Y::*xyp)(const int*, char);]]
 )cpp",
       {R"txt(
@@ -5710,9 +5710,9 @@ SimpleDeclaration
 | `-SimpleDeclarator ListElement
 |   |-ParenDeclarator
 |   | |-'(' OpenParen
-|   | |-'X'
-|   | |-'::'
 |   | |-MemberPointer
+|   | | |-'X'
+|   | | |-'::'
 |   | | |-'Y'
 |   | | |-'::'
 |   | | `-'*'

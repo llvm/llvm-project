@@ -25,9 +25,6 @@
 #include "timers.h"
 
 namespace benchmark {
-namespace internal {
-extern std::map<std::string, std::string> *global_context;
-}
 
 BenchmarkReporter::BenchmarkReporter()
     : output_stream_(&std::cout), error_stream_(&std::cerr) {}
@@ -39,22 +36,29 @@ void BenchmarkReporter::PrintBasicContext(std::ostream *out,
   BM_CHECK(out) << "cannot be null";
   auto &Out = *out;
 
+#ifndef BENCHMARK_OS_QURT
+  // Date/time information is not available on QuRT.
+  // Attempting to get it via this call cause the binary to crash.
   Out << LocalDateTimeString() << "\n";
+#endif
 
-  if (context.executable_name)
-    Out << "Running " << context.executable_name << "\n";
+  if (benchmark::BenchmarkReporter::Context::executable_name != nullptr) {
+    Out << "Running " << benchmark::BenchmarkReporter::Context::executable_name
+        << "\n";
+  }
 
   const CPUInfo &info = context.cpu_info;
   Out << "Run on (" << info.num_cpus << " X "
       << (info.cycles_per_second / 1000000.0) << " MHz CPU "
       << ((info.num_cpus > 1) ? "s" : "") << ")\n";
-  if (info.caches.size() != 0) {
+  if (!info.caches.empty()) {
     Out << "CPU Caches:\n";
-    for (auto &CInfo : info.caches) {
+    for (const auto &CInfo : info.caches) {
       Out << "  L" << CInfo.level << " " << CInfo.type << " "
           << (CInfo.size / 1024) << " KiB";
-      if (CInfo.num_sharing != 0)
+      if (CInfo.num_sharing != 0) {
         Out << " (x" << (info.num_cpus / CInfo.num_sharing) << ")";
+      }
       Out << "\n";
     }
   }
@@ -62,13 +66,18 @@ void BenchmarkReporter::PrintBasicContext(std::ostream *out,
     Out << "Load Average: ";
     for (auto It = info.load_avg.begin(); It != info.load_avg.end();) {
       Out << StrFormat("%.2f", *It++);
-      if (It != info.load_avg.end()) Out << ", ";
+      if (It != info.load_avg.end()) {
+        Out << ", ";
+      }
     }
     Out << "\n";
   }
 
-  if (internal::global_context != nullptr) {
-    for (const auto &kv : *internal::global_context) {
+  std::map<std::string, std::string> *global_context =
+      internal::GetGlobalContext();
+
+  if (global_context != nullptr) {
+    for (const auto &kv : *global_context) {
       Out << kv.first << ": " << kv.second << "\n";
     }
   }
@@ -77,6 +86,12 @@ void BenchmarkReporter::PrintBasicContext(std::ostream *out,
     Out << "***WARNING*** CPU scaling is enabled, the benchmark "
            "real time measurements may be noisy and will incur extra "
            "overhead.\n";
+  }
+
+  const SystemInfo &sysinfo = context.sys_info;
+  if (SystemInfo::ASLR::ENABLED == sysinfo.ASLRStatus) {
+    Out << "***WARNING*** ASLR is enabled, the results may have unreproducible "
+           "noise in them.\n";
   }
 
 #ifndef NDEBUG
@@ -101,13 +116,17 @@ std::string BenchmarkReporter::Run::benchmark_name() const {
 
 double BenchmarkReporter::Run::GetAdjustedRealTime() const {
   double new_time = real_accumulated_time * GetTimeUnitMultiplier(time_unit);
-  if (iterations != 0) new_time /= static_cast<double>(iterations);
+  if (iterations != 0) {
+    new_time /= static_cast<double>(iterations);
+  }
   return new_time;
 }
 
 double BenchmarkReporter::Run::GetAdjustedCPUTime() const {
   double new_time = cpu_accumulated_time * GetTimeUnitMultiplier(time_unit);
-  if (iterations != 0) new_time /= static_cast<double>(iterations);
+  if (iterations != 0) {
+    new_time /= static_cast<double>(iterations);
+  }
   return new_time;
 }
 

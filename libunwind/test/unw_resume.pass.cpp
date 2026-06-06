@@ -15,7 +15,7 @@
 
 #include <libunwind.h>
 
-void test_unw_resume() {
+__attribute__((noinline)) void test_unw_resume() {
   unw_context_t context;
   unw_cursor_t cursor;
 
@@ -25,7 +25,7 @@ void test_unw_resume() {
   unw_resume(&cursor);
 }
 
-int main() {
+int main(int, char **) {
   test_unw_resume();
   return 0;
 }

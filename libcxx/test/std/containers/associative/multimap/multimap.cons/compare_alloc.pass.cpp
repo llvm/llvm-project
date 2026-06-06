@@ -20,9 +20,8 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef test_less<int> C;
     typedef test_allocator<std::pair<const int, double> > A;
     std::multimap<int, double, C, A> m(C(4), A(5));
@@ -30,9 +29,9 @@ int main(int, char**)
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(4));
     assert(m.get_allocator() == A(5));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef test_less<int> C;
     typedef min_allocator<std::pair<const int, double> > A;
     std::multimap<int, double, C, A> m(C(4), A());
@@ -40,8 +39,8 @@ int main(int, char**)
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(4));
     assert(m.get_allocator() == A());
-    }
-    {
+  }
+  {
     typedef test_less<int> C;
     typedef explicit_allocator<std::pair<const int, double> > A;
     std::multimap<int, double, C, A> m(C(4), A{});
@@ -49,7 +48,7 @@ int main(int, char**)
     assert(m.begin() == m.end());
     assert(m.key_comp() == C(4));
     assert(m.get_allocator() == A{});
-    }
+  }
 #endif
 
   return 0;

@@ -186,8 +186,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
         LLDB_LOG(log, "Failed to deallocate the sel str at {0} - error: {1}",
                  m_sel_str_addr, dealloc_error);
       objc_runtime->AddToMethodCache(m_isa_addr, m_sel_str, target_addr);
-      LLDB_LOG(log,
-               "Adding \\{isa-addr={0}, sel-addr={1}\\} = addr={2} to cache.",
+      LLDB_LOG(log, "Adding {{isa-addr={}, sel-addr={}}} = addr={} to cache.",
                m_isa_addr, m_sel_str, target_addr);
     } else {
       objc_runtime->AddToMethodCache(m_isa_addr, m_sel_addr, target_addr);
@@ -240,8 +239,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::WillStop() { return true; }
 
 AppleThreadPlanStepThroughDirectDispatch ::
     AppleThreadPlanStepThroughDirectDispatch(
-        Thread &thread, AppleObjCTrampolineHandler &handler,
-        llvm::StringRef dispatch_func_name)
+        Thread &thread, AppleObjCTrampolineHandler &handler)
     : ThreadPlanStepOut(thread, nullptr, true /* first instruction */, false,
                         eVoteNoOpinion, eVoteNoOpinion,
                         0 /* Step out of zeroth frame */,
@@ -250,9 +248,7 @@ AppleThreadPlanStepThroughDirectDispatch ::
                         ,
                         true /* Run to branch for inline step out */,
                         false /* Don't gather the return value */),
-      m_trampoline_handler(handler),
-      m_dispatch_func_name(std::string(dispatch_func_name)),
-      m_at_msg_send(false) {
+      m_trampoline_handler(handler), m_at_msg_send(false) {
   // Set breakpoints on the dispatch functions:
   auto bkpt_callback = [&] (lldb::addr_t addr, 
                             const AppleObjCTrampolineHandler
@@ -290,8 +286,7 @@ void AppleThreadPlanStepThroughDirectDispatch::GetDescription(
     s->PutCString("Step through ObjC direct dispatch function.");
     break;
   default:
-    s->Printf("Step through ObjC direct dispatch '%s'  using breakpoints: ",
-              m_dispatch_func_name.c_str());
+    s->Printf("Step through ObjC direct dispatch using breakpoints: ");
     bool first = true;
     for (auto bkpt_sp : m_msgSend_bkpts) {
         if (!first) {
@@ -333,7 +328,7 @@ AppleThreadPlanStepThroughDirectDispatch::DoPlanExplainsStop(Event *event_ptr) {
       if (site_sp->IsBreakpointAtThisSite(break_sp->GetID())) {
         // If we aren't the only one with a breakpoint on this site, then we
         // should just stop and return control to the user.
-        if (site_sp->GetNumberOfOwners() > 1) {
+        if (site_sp->GetNumberOfConstituents() > 1) {
           SetPlanComplete(true);
           return false;
         }

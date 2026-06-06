@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,GFX90A %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx801 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,GFX801 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=CHECK,GFX90A %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx908 < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx801 < %s | FileCheck -check-prefixes=CHECK,GFX801 %s
 
 ; COM: Adapted from agpr-register-count.ll
 ; COM: GFX900 and below should not have .agpr_count present in the metadata
@@ -98,4 +98,4 @@ bb:
   ret void
 }
 
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }
+attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

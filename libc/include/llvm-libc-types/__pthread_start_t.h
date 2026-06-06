@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_PTHREAD_START_T_H__
-#define __LLVM_LIBC_TYPES_PTHREAD_START_T_H__
+#ifndef LLVM_LIBC_TYPES___PTHREAD_START_T_H
+#define LLVM_LIBC_TYPES___PTHREAD_START_T_H
 
 typedef void *(*__pthread_start_t)(void *);
 
-#endif // __LLVM_LIBC_TYPES_PTHREAD_START_T_H__
+#endif // LLVM_LIBC_TYPES___PTHREAD_START_T_H

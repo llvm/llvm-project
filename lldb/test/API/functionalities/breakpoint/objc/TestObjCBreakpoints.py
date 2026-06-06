@@ -13,6 +13,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestObjCBreakpoints(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @add_test_categories(["objc"])
     def test_break(self):
         """Test setting Objective-C specific breakpoints (DWARF in .o files)."""
@@ -42,8 +44,9 @@ class TestObjCBreakpoints(TestBase):
         )
         for bp_loc in selector_bp:
             function_name = bp_loc.GetAddress().GetSymbol().GetName()
-            self.assertTrue(
-                " myCategoryFunction]" in function_name,
+            self.assertIn(
+                " myCategoryFunction]",
+                function_name,
                 'Make sure all function names have " myCategoryFunction]" in their names',
             )
 
@@ -108,8 +111,9 @@ class TestObjCBreakpoints(TestBase):
         )  # There are 93 on the latest MacOSX
         for bp_loc in selector_bp:
             function_name = bp_loc.GetAddress().GetSymbol().GetName()
-            self.assertTrue(
-                " count]" in function_name,
+            self.assertIn(
+                " count]",
+                function_name,
                 'Make sure all function names have " count]" in their names',
             )
 
@@ -132,8 +136,9 @@ class TestObjCBreakpoints(TestBase):
         )
         for bp_loc in selector_bp:
             function_name = bp_loc.GetAddress().GetSymbol().GetName()
-            self.assertTrue(
-                " isEqual:]" in function_name,
+            self.assertIn(
+                " isEqual:]",
+                function_name,
                 'Make sure all function names have " isEqual:]" in their names',
             )
 

@@ -1,4 +1,4 @@
-; RUN: opt -passes=lowerswitch -S < %s | FileCheck %s
+; RUN: opt -passes=lower-switch -S < %s | FileCheck %s
 
 ; Test that we don't crash and have a different basic block for each incoming edge.
 define void @test0(i32 %mode) {
@@ -31,7 +31,7 @@ BB3:
   br label %BB2
 }
 
-; Test switch cases that are merged into a single case during lowerswitch
+; Test switch cases that are merged into a single case during lower-switch
 ; (take 84 and 85 below) - check that the number of incoming phi values match
 ; the number of branches.
 define void @test1(i32 %mode) {
@@ -55,7 +55,7 @@ bb3:
 ; CHECK-LABEL: bb3
 ; CHECK: %tmp = phi i32 [ 1, %NodeBlock ], [ 0, %bb2 ], [ 1, %LeafBlock3 ]
   %tmp = phi i32 [ 1, %bb1 ], [ 0, %bb2 ], [ 1, %bb1 ], [ 1, %bb1 ]
-; CHECK-NEXT: %tmp2 = phi i32 [ 2, %NodeBlock ], [ 5, %bb2 ], [ 2, %LeafBlock3 ]
+; CHECK-NEXT: %tmp2 = phi i32 [ 2, %NodeBlock ], [ 2, %LeafBlock3 ], [ 5, %bb2 ]
   %tmp2 = phi i32 [ 2, %bb1 ], [ 2, %bb1 ], [ 5, %bb2 ], [ 2, %bb1 ]
   br label %exit
 
@@ -198,7 +198,7 @@ define void @test2(i32 %mode, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5, i1 %c6) {
 }
 
 ; Test that the PHI node in for.cond should have one entry for each predecessor
-; of its parent basic block after lowerswitch merged several cases into a new
+; of its parent basic block after lower-switch merged several cases into a new
 ; default block.
 define void @test3(i32 %mode, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @test3
@@ -293,7 +293,7 @@ cleanup10:
 
 for.inc:
 ; CHECK: for.inc:
-; CHECK-NEXT: phi i16 [ 0, %cleanup10.thread ], [ undef, %cleanup10 ]
+; CHECK-NEXT: phi i16 [ undef, %cleanup10 ], [ 0, %cleanup10.thread ]
 %0 = phi i16 [ undef, %cleanup10 ], [ 0, %cleanup10.thread ], [ undef, %cleanup10 ]
   unreachable
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -S -emit-llvm -fsanitize=alignment %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -emit-llvm -fsanitize=alignment %s -o - | FileCheck %s
 
 struct alignas(32) S1 {
   int x;
@@ -136,11 +136,12 @@ S4 *func_14() {
   return new S4;
 }
 
-S5 *func_15(const S5 *ptr) {
-  // CHECK-LABEL: define {{.*}} @_Z7func_15PK2S5
+S5 *func_15() {
+  // CHECK-LABEL: define {{.*}} @_Z7func_15v
   // CHECK:       and i64 %{{.*}}, 31, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
   // CHECK-NOT:   and i64
   // CHECK:       ret ptr
-  return new S5(*ptr);
+  S5 local = {};
+  return new S5(local);
 }

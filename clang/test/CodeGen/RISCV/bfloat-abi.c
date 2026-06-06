@@ -6,35 +6,31 @@ struct bfloat1 {
   __bf16 a;
 };
 
-// CHECK-RV64-LABEL: define dso_local i64 @h1
+// CHECK-RV64-LABEL: define dso_local i16 @h1
 // CHECK-RV64-SAME: (bfloat noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_BFLOAT1:%.*]], align 2
 // CHECK-RV64-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2
-// CHECK-RV64-NEXT:    [[COERCE_DIVE_COERCE:%.*]] = alloca i64, align 8
 // CHECK-RV64-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT1]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT1]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
-// CHECK-RV64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT1]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-RV64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[COERCE_DIVE_COERCE]], ptr align 2 [[COERCE_DIVE]], i64 2, i1 false)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = load i64, ptr [[COERCE_DIVE_COERCE]], align 8
-// CHECK-RV64-NEXT:    ret i64 [[TMP1]]
+// CHECK-RV64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT1]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = load i16, ptr [[COERCE_DIVE]], align 2
+// CHECK-RV64-NEXT:    ret i16 [[TMP1]]
 //
-// CHECK-RV32-LABEL: define dso_local i32 @h1
+// CHECK-RV32-LABEL: define dso_local i16 @h1
 // CHECK-RV32-SAME: (bfloat noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_BFLOAT1:%.*]], align 2
 // CHECK-RV32-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2
-// CHECK-RV32-NEXT:    [[COERCE_DIVE_COERCE:%.*]] = alloca i32, align 4
 // CHECK-RV32-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT1]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT1]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
-// CHECK-RV32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT1]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-RV32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[COERCE_DIVE_COERCE]], ptr align 2 [[COERCE_DIVE]], i32 2, i1 false)
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[COERCE_DIVE_COERCE]], align 4
-// CHECK-RV32-NEXT:    ret i32 [[TMP1]]
+// CHECK-RV32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT1]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = load i16, ptr [[COERCE_DIVE]], align 2
+// CHECK-RV32-NEXT:    ret i16 [[TMP1]]
 //
 struct bfloat1 h1(__bf16 a) {
   struct bfloat1 x;
@@ -47,24 +43,22 @@ struct bfloat2 {
   __bf16 b;
 };
 
-// CHECK-RV64-LABEL: define dso_local i64 @h2
+// CHECK-RV64-LABEL: define dso_local i32 @h2
 // CHECK-RV64-SAME: (bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_BFLOAT2:%.*]], align 2
 // CHECK-RV64-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2
 // CHECK-RV64-NEXT:    [[B_ADDR:%.*]] = alloca bfloat, align 2
-// CHECK-RV64-NEXT:    [[RETVAL_COERCE:%.*]] = alloca i64, align 8
 // CHECK-RV64-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
 // CHECK-RV64-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
-// CHECK-RV64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL_COERCE]], ptr align 2 [[RETVAL]], i64 4, i1 false)
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[RETVAL_COERCE]], align 8
-// CHECK-RV64-NEXT:    ret i64 [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 2
+// CHECK-RV64-NEXT:    ret i32 [[TMP2]]
 //
 // CHECK-RV32-LABEL: define dso_local i32 @h2
 // CHECK-RV32-SAME: (bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]]) #[[ATTR0]] {
@@ -75,10 +69,10 @@ struct bfloat2 {
 // CHECK-RV32-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
 // CHECK-RV32-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 2
 // CHECK-RV32-NEXT:    ret i32 [[TMP2]]
@@ -96,29 +90,29 @@ struct bfloat3 {
   __bf16 c;
 };
 
-// CHECK-RV64-LABEL: define dso_local i64 @h3
+// CHECK-RV64-LABEL: define dso_local i48 @h3
 // CHECK-RV64-SAME: (bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_BFLOAT3:%.*]], align 2
 // CHECK-RV64-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2
 // CHECK-RV64-NEXT:    [[B_ADDR:%.*]] = alloca bfloat, align 2
 // CHECK-RV64-NEXT:    [[C_ADDR:%.*]] = alloca bfloat, align 2
-// CHECK-RV64-NEXT:    [[RETVAL_COERCE:%.*]] = alloca i64, align 8
+// CHECK-RV64-NEXT:    [[RETVAL_COERCE:%.*]] = alloca i48, align 8
 // CHECK-RV64-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
 // CHECK-RV64-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV64-NEXT:    store bfloat [[C]], ptr [[C_ADDR]], align 2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV64-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL_COERCE]], ptr align 2 [[RETVAL]], i64 6, i1 false)
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = load i64, ptr [[RETVAL_COERCE]], align 8
-// CHECK-RV64-NEXT:    ret i64 [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = load i48, ptr [[RETVAL_COERCE]], align 8
+// CHECK-RV64-NEXT:    ret i48 [[TMP3]]
 //
 // CHECK-RV32-LABEL: define dso_local [2 x i32] @h3
 // CHECK-RV32-SAME: (bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]]) #[[ATTR0]] {
@@ -132,13 +126,13 @@ struct bfloat3 {
 // CHECK-RV32-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV32-NEXT:    store bfloat [[C]], ptr [[C_ADDR]], align 2
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT3]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV32-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[RETVAL_COERCE]], ptr align 2 [[RETVAL]], i32 6, i1 false)
 // CHECK-RV32-NEXT:    [[TMP3:%.*]] = load [2 x i32], ptr [[RETVAL_COERCE]], align 4
@@ -172,16 +166,16 @@ struct bfloat4 {
 // CHECK-RV64-NEXT:    store bfloat [[C]], ptr [[C_ADDR]], align 2
 // CHECK-RV64-NEXT:    store bfloat [[D]], ptr [[D_ADDR]], align 2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV64-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = load bfloat, ptr [[D_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[D4:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 3
+// CHECK-RV64-NEXT:    [[D4:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 3
 // CHECK-RV64-NEXT:    store bfloat [[TMP3]], ptr [[D4]], align 2
 // CHECK-RV64-NEXT:    [[TMP4:%.*]] = load i64, ptr [[RETVAL]], align 2
 // CHECK-RV64-NEXT:    ret i64 [[TMP4]]
@@ -199,16 +193,16 @@ struct bfloat4 {
 // CHECK-RV32-NEXT:    store bfloat [[C]], ptr [[C_ADDR]], align 2
 // CHECK-RV32-NEXT:    store bfloat [[D]], ptr [[D_ADDR]], align 2
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV32-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV32-NEXT:    [[TMP3:%.*]] = load bfloat, ptr [[D_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[D4:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 3
+// CHECK-RV32-NEXT:    [[D4:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT4]], ptr [[RETVAL]], i32 0, i32 3
 // CHECK-RV32-NEXT:    store bfloat [[TMP3]], ptr [[D4]], align 2
 // CHECK-RV32-NEXT:    [[TMP4:%.*]] = load [2 x i32], ptr [[RETVAL]], align 2
 // CHECK-RV32-NEXT:    ret [2 x i32] [[TMP4]]
@@ -236,10 +230,10 @@ struct floatbfloat {
 // CHECK-RV64-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK-RV64-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store float [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    ret i64 [[TMP2]]
@@ -253,10 +247,10 @@ struct floatbfloat {
 // CHECK-RV32-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK-RV32-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store float [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load [2 x i32], ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    ret [2 x i32] [[TMP2]]
@@ -285,13 +279,13 @@ struct floatbfloat2 {
 // CHECK-RV64-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV64-NEXT:    store bfloat [[C]], ptr [[C_ADDR]], align 2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store float [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV64-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = load i64, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    ret i64 [[TMP3]]
@@ -307,13 +301,13 @@ struct floatbfloat2 {
 // CHECK-RV32-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV32-NEXT:    store bfloat [[C]], ptr [[C_ADDR]], align 2
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store float [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT2]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV32-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV32-NEXT:    [[TMP3:%.*]] = load [2 x i32], ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    ret [2 x i32] [[TMP3]]
@@ -340,10 +334,10 @@ struct bfloatfloat {
 // CHECK-RV64-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
 // CHECK-RV64-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOATFLOAT]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOATFLOAT]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOATFLOAT]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOATFLOAT]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store float [[TMP1]], ptr [[B2]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    ret i64 [[TMP2]]
@@ -357,10 +351,10 @@ struct bfloatfloat {
 // CHECK-RV32-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
 // CHECK-RV32-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOATFLOAT]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOATFLOAT]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOATFLOAT]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOATFLOAT]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store float [[TMP1]], ptr [[B2]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load [2 x i32], ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    ret [2 x i32] [[TMP2]]
@@ -389,13 +383,13 @@ struct bfloat2float {
 // CHECK-RV64-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV64-NEXT:    store float [[C]], ptr [[C_ADDR]], align 4
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load float, ptr [[C_ADDR]], align 4
-// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV64-NEXT:    store float [[TMP2]], ptr [[C3]], align 4
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = load i64, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    ret i64 [[TMP3]]
@@ -411,13 +405,13 @@ struct bfloat2float {
 // CHECK-RV32-NEXT:    store bfloat [[B]], ptr [[B_ADDR]], align 2
 // CHECK-RV32-NEXT:    store float [[C]], ptr [[C_ADDR]], align 4
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load float, ptr [[C_ADDR]], align 4
-// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT2FLOAT]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV32-NEXT:    store float [[TMP2]], ptr [[C3]], align 4
 // CHECK-RV32-NEXT:    [[TMP3:%.*]] = load [2 x i32], ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    ret [2 x i32] [[TMP3]]
@@ -451,23 +445,23 @@ struct floatbfloat3 {
 // CHECK-RV64-NEXT:    store bfloat [[C]], ptr [[C_ADDR]], align 2
 // CHECK-RV64-NEXT:    store bfloat [[D]], ptr [[D_ADDR]], align 2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT3]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT3]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store float [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT3]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT3]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT3]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT3]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV64-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = load bfloat, ptr [[D_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[D4:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT3]], ptr [[RETVAL]], i32 0, i32 3
+// CHECK-RV64-NEXT:    [[D4:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT3]], ptr [[RETVAL]], i32 0, i32 3
 // CHECK-RV64-NEXT:    store bfloat [[TMP3]], ptr [[D4]], align 4
 // CHECK-RV64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL_COERCE]], ptr align 4 [[RETVAL]], i64 12, i1 false)
 // CHECK-RV64-NEXT:    [[TMP4:%.*]] = load [2 x i64], ptr [[RETVAL_COERCE]], align 8
 // CHECK-RV64-NEXT:    ret [2 x i64] [[TMP4]]
 //
 // CHECK-RV32-LABEL: define dso_local void @fh3
-// CHECK-RV32-SAME: (ptr noalias sret([[STRUCT_FLOATBFLOAT3:%.*]]) align 4 [[AGG_RESULT:%.*]], float noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]], bfloat noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK-RV32-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_FLOATBFLOAT3:%.*]]) align 4 [[AGG_RESULT:%.*]], float noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]], bfloat noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-RV32-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
@@ -480,16 +474,16 @@ struct floatbfloat3 {
 // CHECK-RV32-NEXT:    store bfloat [[C]], ptr [[C_ADDR]], align 2
 // CHECK-RV32-NEXT:    store bfloat [[D]], ptr [[D_ADDR]], align 2
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT3]], ptr [[AGG_RESULT]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT3]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store float [[TMP0]], ptr [[A1]], align 4
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT3]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT3]], ptr [[AGG_RESULT]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT3]], ptr [[AGG_RESULT]], i32 0, i32 2
+// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT3]], ptr [[AGG_RESULT]], i32 0, i32 2
 // CHECK-RV32-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV32-NEXT:    [[TMP3:%.*]] = load bfloat, ptr [[D_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[D4:%.*]] = getelementptr inbounds [[STRUCT_FLOATBFLOAT3]], ptr [[AGG_RESULT]], i32 0, i32 3
+// CHECK-RV32-NEXT:    [[D4:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOATBFLOAT3]], ptr [[AGG_RESULT]], i32 0, i32 3
 // CHECK-RV32-NEXT:    store bfloat [[TMP3]], ptr [[D4]], align 4
 // CHECK-RV32-NEXT:    ret void
 //
@@ -526,26 +520,26 @@ struct bfloat5 {
 // CHECK-RV64-NEXT:    store bfloat [[D]], ptr [[D_ADDR]], align 2
 // CHECK-RV64-NEXT:    store bfloat [[E]], ptr [[E_ADDR]], align 2
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-RV64-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 0
 // CHECK-RV64-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 1
+// CHECK-RV64-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 1
 // CHECK-RV64-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 2
+// CHECK-RV64-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 2
 // CHECK-RV64-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = load bfloat, ptr [[D_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[D4:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 3
+// CHECK-RV64-NEXT:    [[D4:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 3
 // CHECK-RV64-NEXT:    store bfloat [[TMP3]], ptr [[D4]], align 2
 // CHECK-RV64-NEXT:    [[TMP4:%.*]] = load bfloat, ptr [[E_ADDR]], align 2
-// CHECK-RV64-NEXT:    [[E5:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 4
+// CHECK-RV64-NEXT:    [[E5:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[RETVAL]], i32 0, i32 4
 // CHECK-RV64-NEXT:    store bfloat [[TMP4]], ptr [[E5]], align 2
 // CHECK-RV64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL_COERCE]], ptr align 2 [[RETVAL]], i64 10, i1 false)
 // CHECK-RV64-NEXT:    [[TMP5:%.*]] = load [2 x i64], ptr [[RETVAL_COERCE]], align 8
 // CHECK-RV64-NEXT:    ret [2 x i64] [[TMP5]]
 //
 // CHECK-RV32-LABEL: define dso_local void @h5
-// CHECK-RV32-SAME: (ptr noalias sret([[STRUCT_BFLOAT5:%.*]]) align 2 [[AGG_RESULT:%.*]], bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]], bfloat noundef [[D:%.*]], bfloat noundef [[E:%.*]]) #[[ATTR0]] {
+// CHECK-RV32-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_BFLOAT5:%.*]]) align 2 [[AGG_RESULT:%.*]], bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]], bfloat noundef [[D:%.*]], bfloat noundef [[E:%.*]]) #[[ATTR0]] {
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-RV32-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2
@@ -560,19 +554,19 @@ struct bfloat5 {
 // CHECK-RV32-NEXT:    store bfloat [[D]], ptr [[D_ADDR]], align 2
 // CHECK-RV32-NEXT:    store bfloat [[E]], ptr [[E_ADDR]], align 2
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 0
+// CHECK-RV32-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-RV32-NEXT:    store bfloat [[TMP0]], ptr [[A1]], align 2
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = load bfloat, ptr [[B_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-RV32-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 1
 // CHECK-RV32-NEXT:    store bfloat [[TMP1]], ptr [[B2]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = load bfloat, ptr [[C_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 2
+// CHECK-RV32-NEXT:    [[C3:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 2
 // CHECK-RV32-NEXT:    store bfloat [[TMP2]], ptr [[C3]], align 2
 // CHECK-RV32-NEXT:    [[TMP3:%.*]] = load bfloat, ptr [[D_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[D4:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 3
+// CHECK-RV32-NEXT:    [[D4:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 3
 // CHECK-RV32-NEXT:    store bfloat [[TMP3]], ptr [[D4]], align 2
 // CHECK-RV32-NEXT:    [[TMP4:%.*]] = load bfloat, ptr [[E_ADDR]], align 2
-// CHECK-RV32-NEXT:    [[E5:%.*]] = getelementptr inbounds [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 4
+// CHECK-RV32-NEXT:    [[E5:%.*]] = getelementptr inbounds nuw [[STRUCT_BFLOAT5]], ptr [[AGG_RESULT]], i32 0, i32 4
 // CHECK-RV32-NEXT:    store bfloat [[TMP4]], ptr [[E5]], align 2
 // CHECK-RV32-NEXT:    ret void
 //

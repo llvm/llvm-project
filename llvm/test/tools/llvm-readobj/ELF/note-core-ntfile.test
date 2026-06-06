@@ -3,6 +3,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU
 # RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --notes %t.o | FileCheck %s --check-prefix=JSON
 
 ## llvm-mc doesn't support generating ET_CORE files; the 'Content' field was
 ## generated with the following steps:
@@ -62,34 +63,76 @@ ProgramHeaders:
 # GNU-NEXT:         [stack]
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSections [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset:
 # LLVM-NEXT:     Size:
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: CORE
-# LLVM-NEXT:       Data size: 0x80
-# LLVM-NEXT:       Type: NT_FILE (mapped files)
-# LLVM-NEXT:       Page Size: 4096
-# LLVM-NEXT:       Mapping [
-# LLVM-NEXT:         Start: 0x1000
-# LLVM-NEXT:         End: 0x2000
-# LLVM-NEXT:         Offset: 0x3000
-# LLVM-NEXT:         Filename: /path/to/a.out
-# LLVM-NEXT:       ]
-# LLVM-NEXT:       Mapping [
-# LLVM-NEXT:         Start: 0x4000
-# LLVM-NEXT:         End: 0x5000
-# LLVM-NEXT:         Offset: 0x6000
-# LLVM-NEXT:         Filename: /path/to/libc.so
-# LLVM-NEXT:       ]
-# LLVM-NEXT:       Mapping [
-# LLVM-NEXT:         Start: 0x7000
-# LLVM-NEXT:         End: 0x8000
-# LLVM-NEXT:         Offset: 0x9000
-# LLVM-NEXT:         Filename: [stack]
-# LLVM-NEXT:       ]
-# LLVM-NEXT:     }
-# LLVM-NEXT:   }
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: CORE
+# LLVM-NEXT:            Data size: 0x80
+# LLVM-NEXT:            Type: NT_FILE (mapped files)
+# LLVM-NEXT:            Page Size: 4096
+# LLVM-NEXT:            Mappings [
+# LLVM-NEXT:                {
+# LLVM-NEXT:                    Start: 0x1000
+# LLVM-NEXT:                    End: 0x2000
+# LLVM-NEXT:                    Offset: 0x3000
+# LLVM-NEXT:                    Filename: /path/to/a.out
+# LLVM-NEXT:                }
+# LLVM-NEXT:                {
+# LLVM-NEXT:                    Start: 0x4000
+# LLVM-NEXT:                    End: 0x5000
+# LLVM-NEXT:                    Offset: 0x6000
+# LLVM-NEXT:                    Filename: /path/to/libc.so
+# LLVM-NEXT:                }
+# LLVM-NEXT:                {
+# LLVM-NEXT:                    Start: 0x7000
+# LLVM-NEXT:                    End: 0x8000
+# LLVM-NEXT:                    Offset: 0x9000
+# LLVM-NEXT:                    Filename: [stack]
+# LLVM-NEXT:                }
+# LLVM-NEXT:            ]
+# LLVM-NEXT:        }
+# LLVM-NEXT:    ]
+# LLVM-NEXT: }
 # LLVM-NEXT: ]
+
+# JSON:      "NoteSections": [
+# JSON-NEXT:  {
+# JSON-NEXT:      "NoteSection": {
+# JSON-NEXT:          "Name": "<?>",
+# JSON-NEXT:          "Offset": 120,
+# JSON-NEXT:          "Size": 148,
+# JSON-NEXT:          "Notes": [
+# JSON-NEXT:            {
+# JSON-NEXT:                "Owner": "CORE",
+# JSON-NEXT:                "Data size": 128,
+# JSON-NEXT:                "Type": "NT_FILE (mapped files)",
+# JSON-NEXT:                "Page Size": 4096,
+# JSON-NEXT:                "Mappings": [
+# JSON-NEXT:                    {
+# JSON-NEXT:                        "Start": 4096,
+# JSON-NEXT:                        "End": 8192,
+# JSON-NEXT:                        "Offset": 12288,
+# JSON-NEXT:                        "Filename": "/path/to/a.out"
+# JSON-NEXT:                    },
+# JSON-NEXT:                    {
+# JSON-NEXT:                        "Start": 16384,
+# JSON-NEXT:                        "End": 20480,
+# JSON-NEXT:                        "Offset": 24576,
+# JSON-NEXT:                        "Filename": "/path/to/libc.so"
+# JSON-NEXT:                    },
+# JSON-NEXT:                    {
+# JSON-NEXT:                        "Start": 28672,
+# JSON-NEXT:                        "End": 32768,
+# JSON-NEXT:                        "Offset": 36864,
+# JSON-NEXT:                        "Filename": "[stack]"
+# JSON-NEXT:                    }
+# JSON-NEXT:                ]
+# JSON-NEXT:            }
+# JSON-NEXT:        ]
+# JSON-NEXT:      }
+# JSON-NEXT: }
+# JSON-NEXT: ]

@@ -24,29 +24,26 @@ define i64 @test_no_prep(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    cmplwi r4, 0
 ; CHECK-NEXT:    beq cr0, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %bb3.preheader
-; CHECK-NEXT:    cmpldi r4, 1
-; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    addi r3, r3, 4004
+; CHECK-NEXT:    mtctr r4
+; CHECK-NEXT:    addi r5, r3, 4004
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r6, -3
 ; CHECK-NEXT:    li r7, -2
 ; CHECK-NEXT:    li r8, -1
-; CHECK-NEXT:    iselgt r5, r4, r5
-; CHECK-NEXT:    mtctr r5
-; CHECK-NEXT:    li r5, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb3
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldx r9, r3, r6
-; CHECK-NEXT:    ldx r10, r3, r7
-; CHECK-NEXT:    ldx r11, r3, r8
-; CHECK-NEXT:    ld r12, 0(r3)
-; CHECK-NEXT:    addi r3, r3, 1
+; CHECK-NEXT:    ldx r9, r5, r6
+; CHECK-NEXT:    ldx r10, r5, r7
+; CHECK-NEXT:    ldx r11, r5, r8
+; CHECK-NEXT:    ld r12, 0(r5)
+; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    mulld r9, r10, r9
 ; CHECK-NEXT:    mulld r9, r9, r11
-; CHECK-NEXT:    maddld r5, r9, r12, r5
+; CHECK-NEXT:    maddld r3, r9, r12, r3
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %bb25
-; CHECK-NEXT:    add r3, r5, r4
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    addi r3, r4, 0
@@ -105,21 +102,19 @@ define i64 @test_ds_prep(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    cmplwi r4, 0
 ; CHECK-NEXT:    beq cr0, .LBB1_4
 ; CHECK-NEXT:  # %bb.1: # %bb3.preheader
-; CHECK-NEXT:    cmpldi r4, 1
-; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    addi r6, r3, 4002
-; CHECK-NEXT:    li r7, -1
-; CHECK-NEXT:    iselgt r3, r4, r5
-; CHECK-NEXT:    mtctr r3
+; CHECK-NEXT:    mtctr r4
+; CHECK-NEXT:    addi r7, r3, 4002
 ; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    li r5, -1
+; CHECK-NEXT:    li r6, 1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %bb3
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldx r8, r6, r7
-; CHECK-NEXT:    ld r9, 0(r6)
-; CHECK-NEXT:    ldx r10, r6, r5
-; CHECK-NEXT:    ld r11, 4(r6)
-; CHECK-NEXT:    addi r6, r6, 1
+; CHECK-NEXT:    ldx r8, r7, r5
+; CHECK-NEXT:    ld r9, 0(r7)
+; CHECK-NEXT:    ldx r10, r7, r6
+; CHECK-NEXT:    ld r11, 4(r7)
+; CHECK-NEXT:    addi r7, r7, 1
 ; CHECK-NEXT:    mulld r8, r9, r8
 ; CHECK-NEXT:    mulld r8, r8, r10
 ; CHECK-NEXT:    maddld r3, r8, r11, r3
@@ -194,12 +189,12 @@ define i64 @test_max_number_reminder(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    cmplwi r4, 0
 ; CHECK-NEXT:    beq cr0, .LBB2_4
 ; CHECK-NEXT:  # %bb.1: # %bb3.preheader
-; CHECK-NEXT:    cmpldi r4, 1
-; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    addi r10, r3, 4002
 ; CHECK-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    li r6, -1
 ; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi r10, r3, 4002
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    li r5, -1
+; CHECK-NEXT:    li r6, 1
 ; CHECK-NEXT:    li r7, 3
 ; CHECK-NEXT:    li r8, 5
 ; CHECK-NEXT:    li r9, 9
@@ -207,15 +202,13 @@ define i64 @test_max_number_reminder(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    iselgt r3, r4, r5
-; CHECK-NEXT:    mtctr r3
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    mtctr r4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_2: # %bb3
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldx r11, r10, r6
+; CHECK-NEXT:    ldx r11, r10, r5
 ; CHECK-NEXT:    ld r12, 0(r10)
-; CHECK-NEXT:    ldx r0, r10, r5
+; CHECK-NEXT:    ldx r0, r10, r6
 ; CHECK-NEXT:    ldx r30, r10, r7
 ; CHECK-NEXT:    mulld r11, r12, r11
 ; CHECK-NEXT:    ld r29, 4(r10)
@@ -313,26 +306,24 @@ define dso_local i64 @test_update_ds_prep_interact(ptr %arg, i32 signext %arg1) 
 ; CHECK-NEXT:    cmplwi r4, 0
 ; CHECK-NEXT:    beq cr0, .LBB3_4
 ; CHECK-NEXT:  # %bb.1: # %bb3.preheader
-; CHECK-NEXT:    cmpldi r4, 1
-; CHECK-NEXT:    li r6, 1
-; CHECK-NEXT:    addi r3, r3, 3998
-; CHECK-NEXT:    li r7, -1
-; CHECK-NEXT:    iselgt r5, r4, r6
-; CHECK-NEXT:    mtctr r5
-; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    mtctr r4
+; CHECK-NEXT:    addi r5, r3, 3998
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    li r6, -1
+; CHECK-NEXT:    li r7, 1
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB3_2: # %bb3
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldu r8, 4(r3)
-; CHECK-NEXT:    ldx r9, r3, r7
-; CHECK-NEXT:    ldx r10, r3, r6
-; CHECK-NEXT:    ld r11, 4(r3)
+; CHECK-NEXT:    ldu r8, 4(r5)
+; CHECK-NEXT:    ldx r9, r5, r6
+; CHECK-NEXT:    ldx r10, r5, r7
+; CHECK-NEXT:    ld r11, 4(r5)
 ; CHECK-NEXT:    mulld r8, r8, r9
 ; CHECK-NEXT:    mulld r8, r8, r10
-; CHECK-NEXT:    maddld r5, r8, r11, r5
+; CHECK-NEXT:    maddld r3, r8, r11, r3
 ; CHECK-NEXT:    bdnz .LBB3_2
 ; CHECK-NEXT:  # %bb.3: # %bb26
-; CHECK-NEXT:    add r3, r5, r4
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    addi r3, r4, 0
@@ -392,28 +383,25 @@ define i64 @test_update_ds_prep_nointeract(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    cmplwi r4, 0
 ; CHECK-NEXT:    beq cr0, .LBB4_4
 ; CHECK-NEXT:  # %bb.1: # %bb3.preheader
-; CHECK-NEXT:    cmpldi r4, 1
-; CHECK-NEXT:    li r6, 1
+; CHECK-NEXT:    mtctr r4
 ; CHECK-NEXT:    addi r5, r3, 4000
-; CHECK-NEXT:    addi r3, r3, 4003
+; CHECK-NEXT:    addi r6, r3, 4003
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r7, -1
-; CHECK-NEXT:    iselgt r6, r4, r6
-; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    li r6, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_2: # %bb3
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbzu r8, 1(r5)
-; CHECK-NEXT:    ldx r9, r3, r7
-; CHECK-NEXT:    ld r10, 0(r3)
-; CHECK-NEXT:    ld r11, 4(r3)
-; CHECK-NEXT:    addi r3, r3, 1
+; CHECK-NEXT:    ldx r9, r6, r7
+; CHECK-NEXT:    ld r10, 0(r6)
+; CHECK-NEXT:    ld r11, 4(r6)
+; CHECK-NEXT:    addi r6, r6, 1
 ; CHECK-NEXT:    mulld r8, r9, r8
 ; CHECK-NEXT:    mulld r8, r8, r10
-; CHECK-NEXT:    maddld r6, r8, r11, r6
+; CHECK-NEXT:    maddld r3, r8, r11, r3
 ; CHECK-NEXT:    bdnz .LBB4_2
 ; CHECK-NEXT:  # %bb.3: # %bb25
-; CHECK-NEXT:    add r3, r6, r4
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB4_4:
 ; CHECK-NEXT:    addi r3, r4, 0
@@ -477,23 +465,20 @@ define dso_local i64 @test_ds_multiple_chains(ptr %arg, ptr %arg1, i32 signext %
 ; CHECK-NEXT:    cmplwi r5, 0
 ; CHECK-NEXT:    beq cr0, .LBB5_4
 ; CHECK-NEXT:  # %bb.1: # %bb4.preheader
-; CHECK-NEXT:    cmpldi r5, 1
-; CHECK-NEXT:    li r6, 1
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi r3, r3, 4001
+; CHECK-NEXT:    addi r6, r3, 4001
 ; CHECK-NEXT:    addi r4, r4, 4001
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r7, 9
-; CHECK-NEXT:    iselgt r6, r5, r6
-; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    li r6, 0
+; CHECK-NEXT:    mtctr r5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_2: # %bb4
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ld r8, 0(r3)
-; CHECK-NEXT:    ldx r9, r3, r7
-; CHECK-NEXT:    ld r10, 4(r3)
-; CHECK-NEXT:    ld r11, 8(r3)
-; CHECK-NEXT:    addi r3, r3, 1
+; CHECK-NEXT:    ld r8, 0(r6)
+; CHECK-NEXT:    ldx r9, r6, r7
+; CHECK-NEXT:    ld r10, 4(r6)
+; CHECK-NEXT:    ld r11, 8(r6)
+; CHECK-NEXT:    addi r6, r6, 1
 ; CHECK-NEXT:    mulld r8, r9, r8
 ; CHECK-NEXT:    ld r12, 0(r4)
 ; CHECK-NEXT:    ldx r0, r4, r7
@@ -505,11 +490,11 @@ define dso_local i64 @test_ds_multiple_chains(ptr %arg, ptr %arg1, i32 signext %
 ; CHECK-NEXT:    mulld r8, r8, r12
 ; CHECK-NEXT:    mulld r8, r8, r0
 ; CHECK-NEXT:    mulld r8, r8, r30
-; CHECK-NEXT:    maddld r6, r8, r9, r6
+; CHECK-NEXT:    maddld r3, r8, r9, r3
 ; CHECK-NEXT:    bdnz .LBB5_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    add r3, r6, r5
+; CHECK-NEXT:    add r3, r3, r5
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB5_4:
 ; CHECK-NEXT:    addi r3, r5, 0
@@ -598,72 +583,70 @@ define i64 @test_ds_cross_basic_blocks(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    beq cr0, .LBB6_9
 ; CHECK-NEXT:  # %bb.1: # %bb3
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
-; CHECK-NEXT:    cmpldi r4, 1
-; CHECK-NEXT:    li r7, 1
-; CHECK-NEXT:    addi r6, r3, 4009
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
-; CHECK-NEXT:    iselgt r3, r4, r7
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    li r4, -7
+; CHECK-NEXT:    addi r6, r3, 4009
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    li r7, -7
 ; CHECK-NEXT:    li r8, -6
 ; CHECK-NEXT:    li r9, 1
 ; CHECK-NEXT:    li r10, 1
 ; CHECK-NEXT:    li r11, 1
 ; CHECK-NEXT:    li r12, 1
-; CHECK-NEXT:    li r30, 1
+; CHECK-NEXT:    li r0, 1
 ; CHECK-NEXT:    ld r5, 0(r5)
-; CHECK-NEXT:    mtctr r3
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    mtctr r4
+; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    addi r5, r5, -1
 ; CHECK-NEXT:    b .LBB6_4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_2: # %bb18
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    addi r29, r6, -9
-; CHECK-NEXT:    ld r0, 0(r29)
-; CHECK-NEXT:    add r30, r0, r30
-; CHECK-NEXT:    ld r0, -8(r6)
-; CHECK-NEXT:    add r12, r0, r12
+; CHECK-NEXT:    addi r30, r6, -9
+; CHECK-NEXT:    ld r30, 0(r30)
+; CHECK-NEXT:    add r0, r30, r0
+; CHECK-NEXT:    ld r30, -8(r6)
+; CHECK-NEXT:    add r12, r30, r12
 ; CHECK-NEXT:  .LBB6_3: # %bb49
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    mulld r0, r12, r30
+; CHECK-NEXT:    mulld r30, r12, r0
 ; CHECK-NEXT:    addi r6, r6, 1
-; CHECK-NEXT:    mulld r0, r0, r11
-; CHECK-NEXT:    mulld r0, r0, r10
-; CHECK-NEXT:    mulld r0, r0, r9
-; CHECK-NEXT:    maddld r3, r0, r7, r3
+; CHECK-NEXT:    mulld r30, r30, r11
+; CHECK-NEXT:    mulld r30, r30, r10
+; CHECK-NEXT:    mulld r30, r30, r9
+; CHECK-NEXT:    maddld r3, r30, r4, r3
 ; CHECK-NEXT:    bdz .LBB6_8
 ; CHECK-NEXT:  .LBB6_4: # %bb5
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lbzu r0, 1(r5)
-; CHECK-NEXT:    mulli r29, r0, 171
+; CHECK-NEXT:    lbzu r30, 1(r5)
+; CHECK-NEXT:    mulli r29, r30, 171
 ; CHECK-NEXT:    rlwinm r28, r29, 24, 8, 30
 ; CHECK-NEXT:    srwi r29, r29, 9
 ; CHECK-NEXT:    add r29, r29, r28
-; CHECK-NEXT:    sub r0, r0, r29
-; CHECK-NEXT:    clrlwi r0, r0, 24
-; CHECK-NEXT:    cmplwi r0, 1
+; CHECK-NEXT:    sub r30, r30, r29
+; CHECK-NEXT:    clrlwi r30, r30, 24
+; CHECK-NEXT:    cmplwi r30, 1
 ; CHECK-NEXT:    beq cr0, .LBB6_2
 ; CHECK-NEXT:  # %bb.5: # %bb28
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    cmplwi r0, 2
+; CHECK-NEXT:    cmplwi r30, 2
 ; CHECK-NEXT:    bne cr0, .LBB6_7
 ; CHECK-NEXT:  # %bb.6: # %bb31
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldx r0, r6, r4
-; CHECK-NEXT:    add r11, r0, r11
-; CHECK-NEXT:    ld r0, -4(r6)
-; CHECK-NEXT:    add r10, r0, r10
+; CHECK-NEXT:    ldx r30, r6, r7
+; CHECK-NEXT:    add r11, r30, r11
+; CHECK-NEXT:    ld r30, -4(r6)
+; CHECK-NEXT:    add r10, r30, r10
 ; CHECK-NEXT:    b .LBB6_3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_7: # %bb40
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldx r0, r6, r8
-; CHECK-NEXT:    add r9, r0, r9
-; CHECK-NEXT:    ld r0, 0(r6)
-; CHECK-NEXT:    add r7, r0, r7
+; CHECK-NEXT:    ldx r30, r6, r8
+; CHECK-NEXT:    add r9, r30, r9
+; CHECK-NEXT:    ld r30, 0(r6)
+; CHECK-NEXT:    add r4, r30, r4
 ; CHECK-NEXT:    b .LBB6_3
 ; CHECK-NEXT:  .LBB6_8:
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload

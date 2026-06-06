@@ -34,6 +34,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 // This file is using the LSP syntax for identifier names which is different
@@ -261,6 +262,18 @@ bool fromJSON(const llvm::json::Value &, TextEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
 
+struct InsertReplaceEdit {
+  /// The string to be inserted.
+  std::string newText;
+
+  /// The range if the insert is requested.
+  Range insert;
+
+  /// The range if the replace is requested.
+  Range replace;
+};
+llvm::json::Value toJSON(const InsertReplaceEdit &);
+
 struct ChangeAnnotation {
   /// A human-readable string describing the actual change. The string
   /// is rendered prominent in the user interface.
@@ -281,7 +294,7 @@ struct TextDocumentEdit {
   /// The text document to change.
   VersionedTextDocumentIdentifier textDocument;
 
-	/// The edits to be applied.
+  /// The edits to be applied.
   /// FIXME: support the AnnotatedTextEdit variant.
   std::vector<TextEdit> edits;
 };
@@ -417,7 +430,7 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
 // Note, some are not perfect matches and should be improved when this LSP
 // issue is addressed:
 // https://github.com/Microsoft/language-server-protocol/issues/344
-SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind);
+SymbolKind indexSymbolKindToSymbolKind(const index::SymbolInfo &Info);
 
 // Determines the encoding used to measure offsets and lengths of source in LSP.
 enum class OffsetEncoding {
@@ -452,6 +465,7 @@ struct ClientCapabilities {
   std::optional<SymbolKindBitset> WorkspaceSymbolKinds;
 
   /// Whether the client accepts diagnostics with codeActions attached inline.
+  /// This is a clangd extension.
   /// textDocument.publishDiagnostics.codeActionsInline.
   bool DiagnosticFixes = false;
 
@@ -475,6 +489,7 @@ struct ClientCapabilities {
 
   /// Client supports displaying a container string for results of
   /// textDocument/reference (clangd extension)
+  /// textDocument.references.container
   bool ReferenceContainer = false;
 
   /// Client supports hierarchical document symbols.
@@ -508,6 +523,10 @@ struct ClientCapabilities {
   /// textDocument.completion.completionItem.documentationFormat
   MarkupKind CompletionDocumentationFormat = MarkupKind::PlainText;
 
+  /// Client supports insert replace edit to control different behavior if a
+  /// completion item is inserted in the text or should replace text.
+  bool InsertReplace = false;
+
   /// The client has support for completion item label details.
   /// textDocument.completion.completionItem.labelDetailsSupport.
   bool CompletionLabelDetail = false;
@@ -526,8 +545,9 @@ struct ClientCapabilities {
   /// textDocument.semanticHighlightingCapabilities.semanticHighlighting
   bool TheiaSemanticHighlighting = false;
 
-  /// Supported encodings for LSP character offsets. (clangd extension).
-  std::optional<std::vector<OffsetEncoding>> offsetEncoding;
+  /// Supported encodings for LSP character offsets.
+  /// general.positionEncodings
+  std::optional<std::vector<OffsetEncoding>> PositionEncodings;
 
   /// The content format that should be used for Hover requests.
   /// textDocument.hover.contentEncoding
@@ -557,12 +577,13 @@ struct ClientCapabilities {
 
   /// The client supports versioned document changes for WorkspaceEdit.
   bool DocumentChanges = false;
-  
+
   /// The client supports change annotations on text edits,
   bool ChangeAnnotation = false;
 
   /// Whether the client supports the textDocument/inactiveRegions
   /// notification. This is a clangd extension.
+  /// textDocument.inactiveRegionsCapabilities.inactiveRegions
   bool InactiveRegions = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
@@ -855,6 +876,16 @@ struct DocumentRangeFormattingParams {
 bool fromJSON(const llvm::json::Value &, DocumentRangeFormattingParams &,
               llvm::json::Path);
 
+struct DocumentRangesFormattingParams {
+  /// The document to format.
+  TextDocumentIdentifier textDocument;
+
+  /// The list of ranges to format
+  std::vector<Range> ranges;
+};
+bool fromJSON(const llvm::json::Value &, DocumentRangesFormattingParams &,
+              llvm::json::Path);
+
 struct DocumentOnTypeFormattingParams {
   /// The document to format.
   TextDocumentIdentifier textDocument;
@@ -1013,12 +1044,12 @@ struct WorkspaceEdit {
   /// Versioned document edits.
   ///
   /// If a client neither supports `documentChanges` nor
-	/// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
-	/// using the `changes` property are supported.
+  /// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
+  /// using the `changes` property are supported.
   std::optional<std::vector<TextDocumentEdit>> documentChanges;
-  
+
   /// A map of change annotations that can be referenced in
-	/// AnnotatedTextEdit.
+  /// AnnotatedTextEdit.
   std::map<std::string, ChangeAnnotation> changeAnnotations;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceEdit &, llvm::json::Path);
@@ -1090,6 +1121,35 @@ struct CodeAction {
 };
 llvm::json::Value toJSON(const CodeAction &);
 
+/// Symbol tags are extra annotations that can be attached to a symbol.
+/// \see https://github.com/microsoft/language-server-protocol/pull/2003
+enum class SymbolTag {
+  Deprecated = 1,
+  Private = 2,
+  Package = 3,
+  Protected = 4,
+  Public = 5,
+  Internal = 6,
+  File = 7,
+  Static = 8,
+  Abstract = 9,
+  Final = 10,
+  Sealed = 11,
+  Transient = 12,
+  Volatile = 13,
+  Synchronized = 14,
+  Virtual = 15,
+  Nullable = 16,
+  NonNull = 17,
+  Declaration = 18,
+  Definition = 19,
+  ReadOnly = 20,
+
+  // Update as needed
+  FirstTag = Deprecated,
+  LastTag = ReadOnly
+};
+llvm::json::Value toJSON(SymbolTag);
 /// Represents programming constructs like variables, classes, interfaces etc.
 /// that appear in a document. Document symbols can be hierarchical and they
 /// have two ranges: one that encloses its definition and one that points to its
@@ -1106,6 +1166,9 @@ struct DocumentSymbol {
 
   /// Indicates if this symbol is deprecated.
   bool deprecated = false;
+
+  /// The tags for this symbol.
+  std::vector<SymbolTag> tags;
 
   /// The range enclosing this symbol not including leading/trailing whitespace
   /// but everything else like comments. This information is typically used to
@@ -1131,6 +1194,9 @@ struct SymbolInformation {
 
   /// The kind of this symbol.
   SymbolKind kind;
+
+  /// Tags for this symbol, e.g public, private, static, const etc.
+  std::vector<SymbolTag> tags;
 
   /// The location of this symbol.
   Location location;
@@ -1274,13 +1340,13 @@ enum class InsertTextFormat {
 /// Additional details for a completion item label.
 struct CompletionItemLabelDetails {
   /// An optional string which is rendered less prominently directly after label
-	/// without any spacing. Should be used for function signatures or type
+  /// without any spacing. Should be used for function signatures or type
   /// annotations.
   std::string detail;
 
   /// An optional string which is rendered less prominently after
-	/// CompletionItemLabelDetails.detail. Should be used for fully qualified
-	/// names or file path.
+  /// CompletionItemLabelDetails.detail. Should be used for fully qualified
+  /// names or file path.
   std::string description;
 };
 llvm::json::Value toJSON(const CompletionItemLabelDetails &);
@@ -1323,9 +1389,13 @@ struct CompletionItem {
   /// An edit which is applied to a document when selecting this completion.
   /// When an edit is provided `insertText` is ignored.
   ///
-  /// Note: The range of the edit must be a single line range and it must
-  /// contain the position at which completion has been requested.
-  std::optional<TextEdit> textEdit;
+  /// Note 1: The text edit's range as well as both ranges from an insert
+  /// replace edit must be a single line range and must contain the position
+  /// at which completion has been requested.
+  /// Note 2: If an `InsertReplaceEdit` is returned, the edit's insert range
+  /// must be a prefix of the edit's replace range, meaning it must be
+  /// contained in and starting at the same position.
+  std::optional<std::variant<TextEdit, InsertReplaceEdit>> textEdit;
 
   /// An optional array of additional text edits that are applied when selecting
   /// this completion. Edits must not overlap with the main edit nor with
@@ -1435,6 +1505,15 @@ struct RenameParams {
   std::string newName;
 };
 bool fromJSON(const llvm::json::Value &, RenameParams &, llvm::json::Path);
+llvm::json::Value toJSON(const RenameParams &);
+
+struct PrepareRenameResult {
+  /// Range of the string to rename.
+  Range range;
+  /// Placeholder text to use in the editor if non-empty.
+  std::string placeholder;
+};
+llvm::json::Value toJSON(const PrepareRenameResult &PRR);
 
 enum class DocumentHighlightKind { Text = 1, Read = 2, Write = 3 };
 
@@ -1549,9 +1628,6 @@ struct ResolveTypeHierarchyItemParams {
 bool fromJSON(const llvm::json::Value &, ResolveTypeHierarchyItemParams &,
               llvm::json::Path);
 
-enum class SymbolTag { Deprecated = 1 };
-llvm::json::Value toJSON(SymbolTag);
-
 /// The parameter of a `textDocument/prepareCallHierarchy` request.
 struct CallHierarchyPrepareParams : public TextDocumentPositionParams {};
 
@@ -1604,6 +1680,12 @@ struct CallHierarchyIncomingCall {
   /// The range at which the calls appear.
   /// This is relative to the caller denoted by `From`.
   std::vector<Range> fromRanges;
+
+  /// For the case of being a virtual function we also return calls
+  /// to the base function. This caller might be a false positive.
+  /// We currently have no way of discerning this.
+  /// This is a clangd extension.
+  bool mightNeverCall = false;
 };
 llvm::json::Value toJSON(const CallHierarchyIncomingCall &);
 
@@ -1672,6 +1754,15 @@ enum class InlayHintKind {
   /// This is a clangd extension.
   BlockEnd = 4,
 
+  /// An inlay hint that is for a default argument.
+  ///
+  /// An example of a parameter hint for a default argument:
+  ///    void foo(bool A = true);
+  ///    foo(^);
+  /// Adds an inlay hint "A: true".
+  /// This is a clangd extension.
+  DefaultArgument = 6,
+
   /// Other ideas for hints that are not currently implemented:
   ///
   /// * Chaining hints, showing the types of intermediate expressions
@@ -1679,6 +1770,48 @@ enum class InlayHintKind {
   /// * Hints indicating implicit conversions or implicit constructor calls.
 };
 llvm::json::Value toJSON(const InlayHintKind &);
+
+/// An inlay hint label part allows for interactive and composite labels
+/// of inlay hints.
+struct InlayHintLabelPart {
+
+  InlayHintLabelPart() = default;
+
+  InlayHintLabelPart(std::string value,
+                     std::optional<Location> location = std::nullopt)
+      : value(std::move(value)), location(std::move(location)) {}
+
+  /// The value of this label part.
+  std::string value;
+
+  /// The tooltip text when you hover over this label part. Depending on
+  /// the client capability `inlayHint.resolveSupport`, clients might resolve
+  /// this property late using the resolve request.
+  std::optional<MarkupContent> tooltip;
+
+  /// An optional source code location that represents this
+  /// label part.
+  ///
+  /// The editor will use this location for the hover and for code navigation
+  /// features: This part will become a clickable link that resolves to the
+  /// definition of the symbol at the given location (not necessarily the
+  /// location itself), it shows the hover that shows at the given location,
+  /// and it shows a context menu with further code navigation commands.
+  ///
+  /// Depending on the client capability `inlayHint.resolveSupport` clients
+  /// might resolve this property late using the resolve request.
+  std::optional<Location> location;
+
+  /// An optional command for this label part.
+  ///
+  /// Depending on the client capability `inlayHint.resolveSupport` clients
+  /// might resolve this property late using the resolve request.
+  std::optional<Command> command;
+};
+llvm::json::Value toJSON(const InlayHintLabelPart &);
+bool operator==(const InlayHintLabelPart &, const InlayHintLabelPart &);
+bool operator<(const InlayHintLabelPart &, const InlayHintLabelPart &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const InlayHintLabelPart &);
 
 /// Inlay hint information.
 struct InlayHint {
@@ -1689,7 +1822,7 @@ struct InlayHint {
   /// InlayHintLabelPart label parts.
   ///
   /// *Note* that neither the string nor the label part can be empty.
-  std::string label;
+  std::vector<InlayHintLabelPart> label;
 
   /// The kind of this hint. Can be omitted in which case the client should fall
   /// back to a reasonable default.
@@ -1715,6 +1848,9 @@ struct InlayHint {
   /// The range allows clients more flexibility of when/how to display the hint.
   /// This is an (unserialized) clangd extension.
   Range range;
+
+  /// Join the label[].value together.
+  std::string joinLabels() const;
 };
 llvm::json::Value toJSON(const InlayHint &);
 bool operator==(const InlayHint &, const InlayHint &);
@@ -1969,6 +2105,23 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ASTNode &);
 } // namespace clang
 
 namespace llvm {
+
+template <> struct DenseMapInfo<clang::clangd::Range> {
+  using Range = clang::clangd::Range;
+  static inline Range getEmptyKey() {
+    static clang::clangd::Position Tomb{-1, -1};
+    static Range R{Tomb, Tomb};
+    return R;
+  }
+  static unsigned getHashValue(const Range &Val) {
+    return llvm::hash_combine(Val.start.line, Val.start.character, Val.end.line,
+                              Val.end.character);
+  }
+  static bool isEqual(const Range &LHS, const Range &RHS) {
+    return std::tie(LHS.start, LHS.end) == std::tie(RHS.start, RHS.end);
+  }
+};
+
 template <> struct format_provider<clang::clangd::Position> {
   static void format(const clang::clangd::Position &Pos, raw_ostream &OS,
                      StringRef Style) {

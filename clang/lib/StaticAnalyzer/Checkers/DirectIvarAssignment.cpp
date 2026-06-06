@@ -1,4 +1,4 @@
-//=- DirectIvarAssignment.cpp - Check rules on ObjC properties -*- C++ ----*-==//
+//===- DirectIvarAssignment.cpp - Check rules on ObjC properties -*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -62,7 +62,7 @@ class DirectIvarAssignment :
     const ObjCInterfaceDecl *InterfD;
     BugReporter &BR;
     const CheckerBase *Checker;
-    LocationOrAnalysisDeclContext DCtx;
+    StackFrameOrAnalysisDeclContext DCtx;
 
   public:
     MethodCrawler(const IvarToPropertyMapTy &InMap, const ObjCMethodDecl *InMD,

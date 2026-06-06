@@ -48,14 +48,14 @@ AppleObjCRuntimeV1::AppleObjCRuntimeV1(Process *process)
 bool AppleObjCRuntimeV1::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type) {
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   class_type_or_name.Clear();
   value_type = Value::ValueType::Scalar;
   if (CouldHaveDynamicValue(in_value)) {
     auto class_descriptor(GetClassDescriptor(in_value));
     if (class_descriptor && class_descriptor->IsValid() &&
         class_descriptor->GetClassName()) {
-      const addr_t object_ptr = in_value.GetPointerValue();
+      const addr_t object_ptr = in_value.GetPointerValue().address;
       address.SetRawAddress(object_ptr);
       class_type_or_name.SetName(class_descriptor->GetClassName());
     }
@@ -100,9 +100,9 @@ AppleObjCRuntimeV1::CreateExceptionResolver(const BreakpointSP &bkpt,
 
   if (throw_bp)
     resolver_sp = std::make_shared<BreakpointResolverName>(
-        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
+        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(nullptr),
         eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
-        eLazyBoolNo);
+        /*offset_is_insn_count = */ false, eLazyBoolNo);
   // FIXME: don't do catch yet.
   return resolver_sp;
 }
@@ -161,7 +161,7 @@ AppleObjCRuntimeV1::CreateObjectChecker(std::string name,
                "           \n",
                name.c_str());
   assert(strformatsize < (int)sizeof(buf->contents));
-  (void)strformatsize;
+  UNUSED_IF_ASSERT_DISABLED(strformatsize);
 
   return GetTargetRef().CreateUtilityFunction(buf->contents, std::move(name),
                                               eLanguageTypeC, exe_ctx);
@@ -380,12 +380,12 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                     ClassDescriptorSP descriptor_sp(
                         new ClassDescriptorV1(isa, process_sp));
 
-                    if (log && log->GetVerbose())
-                      LLDB_LOGF(log,
-                                "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
-                                " from _objc_debug_class_hash to "
-                                "isa->descriptor cache",
-                                isa);
+                    LLDB_LOGF_VERBOSE(
+                        log,
+                        "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
+                        " from _objc_debug_class_hash to "
+                        "isa->descriptor cache",
+                        isa);
 
                     AddClass(isa, descriptor_sp);
                   }
@@ -403,13 +403,12 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                       ClassDescriptorSP descriptor_sp(
                           new ClassDescriptorV1(isa, process_sp));
 
-                      if (log && log->GetVerbose())
-                        LLDB_LOGF(
-                            log,
-                            "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
-                            " from _objc_debug_class_hash to isa->descriptor "
-                            "cache",
-                            isa);
+                      LLDB_LOGF_VERBOSE(
+                          log,
+                          "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
+                          " from _objc_debug_class_hash to isa->descriptor "
+                          "cache",
+                          isa);
 
                       AddClass(isa, descriptor_sp);
                     }

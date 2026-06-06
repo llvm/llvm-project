@@ -13,6 +13,9 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
+#include <optional>
+#include <string>
+
 namespace clang {
 namespace driver {
 namespace tools {
@@ -20,7 +23,7 @@ namespace hexagon {
 // For Hexagon, we do not need to instantiate tools for PreProcess, PreCompile
 // and Compile.
 // We simply use "clang -cc1" for those actions.
-class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
+class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
   Assembler(const ToolChain &TC)
       : Tool("hexagon::Assembler", "hexagon-as", TC) {}
@@ -35,15 +38,15 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("hexagon::Linker", "hexagon-ld", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
 
-  virtual void RenderExtraToolArgs(const JobAction &JA,
-                                   llvm::opt::ArgStringList &CmdArgs) const;
+  void RenderExtraToolArgs(const JobAction &JA,
+                           llvm::opt::ArgStringList &CmdArgs) const;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
@@ -89,6 +92,11 @@ public:
     return getTriple().isMusl() ? "ld.lld" : "hexagon-link";
   }
 
+  RuntimeLibType
+  GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
+
+  UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
+
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
 
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
@@ -99,10 +107,19 @@ public:
   std::string getHexagonTargetDir(
       const std::string &InstalledDir,
       const SmallVectorImpl<std::string> &PrefixDirs) const;
+  SmallString<128> getEffectiveSysRoot(const llvm::opt::ArgList &Args) const;
+  void getBaseIncludeDir(const llvm::opt::ArgList &Args,
+                         llvm::SmallString<128> &) const;
+  void getLibraryDir(const llvm::opt::ArgList &Args,
+                     llvm::SmallString<128> &) const;
   void getHexagonLibraryPaths(const llvm::opt::ArgList &Args,
-      ToolChain::path_list &LibPaths) const;
+                              ToolChain::path_list &LibPaths) const;
 
   std::string getCompilerRTPath() const override;
+
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return getTriple().isOSLinux() && Linux::isPIEDefault(Args);
+  }
 
   static bool isAutoHVXEnabled(const llvm::opt::ArgList &Args);
   static StringRef GetDefaultCPU();
@@ -110,6 +127,8 @@ public:
 
   static std::optional<unsigned>
   getSmallDataThreshold(const llvm::opt::ArgList &Args);
+  static std::optional<std::string>
+  GetHVXVersion(const llvm::opt::ArgList &Args);
 };
 
 } // end namespace toolchains

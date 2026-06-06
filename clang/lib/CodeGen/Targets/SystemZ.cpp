@@ -31,15 +31,15 @@ public:
   bool isPromotableIntegerTypeForABI(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
-  bool isFPArgumentType(QualType Ty) const;
+  llvm::Type *getFPArgumentType(QualType Ty, uint64_t Size) const;
   QualType GetSingleElementType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType ArgTy) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -107,11 +107,12 @@ public:
       return nullptr;
 
     llvm::Type *Ty = V->getType();
-    if (Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isFP128Ty()) {
+    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy() ||
+        Ty->isFP128Ty()) {
       llvm::Module &M = CGM.getModule();
       auto &Ctx = M.getContext();
-      llvm::Function *TDCFunc =
-          llvm::Intrinsic::getDeclaration(&M, llvm::Intrinsic::s390_tdc, Ty);
+      llvm::Function *TDCFunc = llvm::Intrinsic::getOrInsertDeclaration(
+          &M, llvm::Intrinsic::s390_tdc, Ty);
       unsigned TDCBits = 0;
       switch (BuiltinID) {
       case Builtin::BI__builtin_isnan:
@@ -144,8 +145,8 @@ public:
 
 bool SystemZABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (ABIInfo::isPromotableIntegerTypeForABI(Ty))
@@ -179,27 +180,36 @@ bool SystemZABIInfo::isVectorArgumentType(QualType Ty) const {
           getContext().getTypeSize(Ty) <= 128);
 }
 
-bool SystemZABIInfo::isFPArgumentType(QualType Ty) const {
+// The Size argument will in case of af an overaligned single element struct
+// reflect the overalignment value. In such a case the argument will be
+// passed using the type matching Size.
+llvm::Type *SystemZABIInfo::getFPArgumentType(QualType Ty,
+                                              uint64_t Size) const {
   if (IsSoftFloatABI)
-    return false;
+    return nullptr;
 
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
     switch (BT->getKind()) {
+    case BuiltinType::Float16:
+      if (Size == 16)
+        return llvm::Type::getHalfTy(getVMContext());
+      [[fallthrough]];
     case BuiltinType::Float:
+      if (Size == 32)
+        return llvm::Type::getFloatTy(getVMContext());
+      [[fallthrough]];
     case BuiltinType::Double:
-      return true;
+      return llvm::Type::getDoubleTy(getVMContext());
     default:
-      return false;
+      return nullptr;
     }
 
-  return false;
+  return nullptr;
 }
 
 QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
-  const RecordType *RT = Ty->getAs<RecordType>();
-
-  if (RT && RT->isStructureOrClassType()) {
-    const RecordDecl *RD = RT->getDecl();
+  const auto *RD = Ty->getAsRecordDecl();
+  if (RD && RD->isStructureOrClass()) {
     QualType Found;
 
     // If this is a C++ record, check the bases first.
@@ -243,8 +253,8 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
   return Ty;
 }
 
-Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType Ty) const {
+RValue SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
   // Assume that va_list type is correct; should be pointer to LLVM type:
   // struct {
   //   i64 __gpr;
@@ -272,12 +282,13 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   SZCGI.handleExternallyVisibleObjABI(Ty.getTypePtr(), CGT.getCGM(),
                                       /*IsParam*/true);
   if (IsIndirect) {
-    DirectTy = llvm::PointerType::getUnqual(DirectTy);
+    DirectTy = llvm::PointerType::getUnqual(DirectTy->getContext());
     UnpaddedSize = DirectAlign = CharUnits::fromQuantity(8);
   } else {
     if (AI.getCoerceToType())
       ArgTy = AI.getCoerceToType();
-    InFPRs = (!IsSoftFloatABI && (ArgTy->isFloatTy() || ArgTy->isDoubleTy()));
+    InFPRs = (!IsSoftFloatABI &&
+              (ArgTy->isHalfTy() || ArgTy->isFloatTy() || ArgTy->isDoubleTy()));
     IsVector = ArgTy->isVectorTy();
     UnpaddedSize = TyInfo.Width;
     DirectAlign = TyInfo.Align;
@@ -306,11 +317,11 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
     // Update overflow_arg_area_ptr pointer
     llvm::Value *NewOverflowArgArea = CGF.Builder.CreateGEP(
-        OverflowArgArea.getElementType(), OverflowArgArea.getPointer(),
+        OverflowArgArea.getElementType(), OverflowArgArea.emitRawPointer(CGF),
         PaddedSizeV, "overflow_arg_area");
     CGF.Builder.CreateStore(NewOverflowArgArea, OverflowArgAreaPtr);
 
-    return MemAddr;
+    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(MemAddr, Ty), Slot);
   }
 
   assert(PaddedSize.getQuantity() == 8);
@@ -382,10 +393,9 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   Address MemAddr = RawMemAddr.withElementType(DirectTy);
 
   // Update overflow_arg_area_ptr pointer
-  llvm::Value *NewOverflowArgArea =
-    CGF.Builder.CreateGEP(OverflowArgArea.getElementType(),
-                          OverflowArgArea.getPointer(), PaddedSizeV,
-                          "overflow_arg_area");
+  llvm::Value *NewOverflowArgArea = CGF.Builder.CreateGEP(
+      OverflowArgArea.getElementType(), OverflowArgArea.emitRawPointer(CGF),
+      PaddedSizeV, "overflow_arg_area");
   CGF.Builder.CreateStore(NewOverflowArgArea, OverflowArgAreaPtr);
   CGF.EmitBranch(ContBlock);
 
@@ -398,7 +408,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     ResAddr = Address(CGF.Builder.CreateLoad(ResAddr, "indirect_arg"), ArgTy,
                       TyInfo.Align);
 
-  return ResAddr;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(ResAddr, Ty), Slot);
 }
 
 ABIArgInfo SystemZABIInfo::classifyReturnType(QualType RetTy) const {
@@ -407,19 +417,23 @@ ABIArgInfo SystemZABIInfo::classifyReturnType(QualType RetTy) const {
   if (isVectorArgumentType(RetTy))
     return ABIArgInfo::getDirect();
   if (isCompoundType(RetTy) || getContext().getTypeSize(RetTy) > 64)
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
+  // Handle transparent union types.
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
   // Handle the generic C++ ABI.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Integers and enums are extended to full register width.
   if (isPromotableIntegerTypeForABI(Ty))
-    return ABIArgInfo::getExtend(Ty);
+    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
 
   // Handle vector types and vector-like structure types.  Note that
   // as opposed to float-like structure types, we do not allow any
@@ -432,32 +446,33 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
 
   // Values that are not 1, 2, 4 or 8 bytes in size are passed indirectly.
   if (Size != 8 && Size != 16 && Size != 32 && Size != 64)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
 
   // Handle small structures.
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     // Structures with flexible arrays have variable length, so really
     // fail the size test above.
-    const RecordDecl *RD = RT->getDecl();
     if (RD->hasFlexibleArrayMember())
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
 
-    // The structure is passed as an unextended integer, a float, or a double.
-    llvm::Type *PassTy;
-    if (isFPArgumentType(SingleElementTy)) {
-      assert(Size == 32 || Size == 64);
-      if (Size == 32)
-        PassTy = llvm::Type::getFloatTy(getVMContext());
-      else
-        PassTy = llvm::Type::getDoubleTy(getVMContext());
-    } else
-      PassTy = llvm::IntegerType::get(getVMContext(), Size);
-    return ABIArgInfo::getDirect(PassTy);
+    // The structure is passed as an unextended integer, a half, a float,
+    // or a double.
+    if (llvm::Type *FPArgTy = getFPArgumentType(SingleElementTy, Size)) {
+      assert(Size == 16 || Size == 32 || Size == 64);
+      return ABIArgInfo::getDirect(FPArgTy);
+    } else {
+      llvm::IntegerType *PassTy = llvm::IntegerType::get(getVMContext(), Size);
+      return Size <= 32 ? ABIArgInfo::getNoExtend(PassTy)
+                        : ABIArgInfo::getDirect(PassTy);
+    }
   }
 
   // Non-structure compounds are passed indirectly.
   if (isCompoundType(Ty))
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
 
   return ABIArgInfo::getDirect(nullptr);
 }
@@ -507,8 +522,7 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
   if (Ty->isVectorType() && Ctx.getTypeSize(Ty) / 8 >= 16)
       return true;
 
-  if (const auto *RecordTy = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RecordTy->getDecl();
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
       if (CXXRD->hasDefinition())
         for (const auto &I : CXXRD->bases())
@@ -530,9 +544,379 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
   return false;
 }
 
+//===----------------------------------------------------------------------===//
+// z/OS XPLINK ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class ZOSXPLinkABIInfo : public ABIInfo {
+  const unsigned GPRBits = 64;
+  bool HasVector;
+
+public:
+  ZOSXPLinkABIInfo(CodeGenTypes &CGT, bool HV) : ABIInfo(CGT), HasVector(HV) {}
+
+  bool isPromotableIntegerTypeForABI(QualType Ty) const;
+  bool isCompoundType(QualType Ty) const;
+  bool isVectorArgumentType(QualType Ty) const;
+  QualType getSingleElementType(QualType Ty) const;
+  std::optional<QualType> getFPTypeOfComplexLikeType(QualType Ty) const;
+
+  ABIArgInfo classifyReturnType(QualType RetTy,
+                                unsigned functionCallConv) const;
+  ABIArgInfo classifyArgumentType(QualType ArgTy, bool IsNamedArg,
+                                  unsigned functionCallConv) const;
+
+  void computeInfo(CGFunctionInfo &FI) const override {
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() =
+          classifyReturnType(FI.getReturnType(), FI.getCallingConvention());
+
+    unsigned NumRequiredArgs = FI.getNumRequiredArgs();
+    unsigned ArgNo = 0;
+
+    for (auto &I : FI.arguments()) {
+      bool IsNamedArg = ArgNo < NumRequiredArgs;
+      I.info =
+          classifyArgumentType(I.type, IsNamedArg, FI.getCallingConvention());
+      ++ArgNo;
+    }
+  }
+
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
+};
+
+class ZOSXPLinkTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  ZOSXPLinkTargetCodeGenInfo(CodeGenTypes &CGT, bool HasVector)
+      : TargetCodeGenInfo(std::make_unique<ZOSXPLinkABIInfo>(CGT, HasVector)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
+};
+
+} // namespace
+
+// Return true if the ABI requires Ty to be passed sign- or zero-
+// extended to 64 bits.
+bool ZOSXPLinkABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
+  // Treat an enum type as its underlying type.
+  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+    Ty = EnumTy->getDecl()->getIntegerType();
+
+  // Promotable integer types are required to be promoted by the ABI.
+  if (ABIInfo::isPromotableIntegerTypeForABI(Ty))
+    return true;
+
+  if (const auto *EIT = Ty->getAs<BitIntType>())
+    if (EIT->getNumBits() < 64)
+      return true;
+
+  // In addition to the usual promotable integer types, we also need to
+  // extend all 32-bit types, since the ABI requires promotion to 64 bits.
+  if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
+    switch (BT->getKind()) {
+    case BuiltinType::Int:
+    case BuiltinType::UInt:
+    case BuiltinType::ULong:
+    case BuiltinType::Long:
+      return true;
+    default:
+      break;
+    }
+
+  return false;
+}
+
+bool ZOSXPLinkABIInfo::isCompoundType(QualType Ty) const {
+  return (Ty->isAnyComplexType() || Ty->isVectorType() ||
+          isAggregateTypeForABI(Ty));
+}
+
+bool ZOSXPLinkABIInfo::isVectorArgumentType(QualType Ty) const {
+  return (HasVector && Ty->isVectorType() &&
+          getContext().getTypeSize(Ty) <= 128);
+}
+
+QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
+  // Unions just containing a floating point type, e.g. union { float f1, f2; };
+  // are treated as a single floating point number. Check if the union only
+  // consists of a single type (handling embedded unions recursively), and
+  // return that type.
+  if (const RecordType *RT = Ty->getAsUnionType()) {
+    QualType Found;
+    // Check the fields.
+    const RecordDecl *RD = RT->getDecl();
+    for (const auto *FD : RD->fields()) {
+      if (Found.isNull())
+        Found = getSingleElementType(FD->getType());
+      else if (Found != getSingleElementType(FD->getType()))
+        return Ty;
+    }
+    return Found.isNull() ? Ty : Found;
+  }
+
+  if (const RecordType *RT = Ty->getAsStructureType()) {
+    const RecordDecl *RD = RT->getDecl();
+    QualType Found;
+
+    // If this is a C++ class/struct, inspect its base classes first.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+      for (const auto &I : CXXRD->bases()) {
+        QualType Base = I.getType();
+
+        // Skip empty base classes, they cannot contribute a data member.
+        if (isEmptyRecord(getContext(), Base, true))
+          continue;
+
+        // A candidate base type was already found; encountering another
+        // non-empty base means the choice is no longer unique. Return the type
+        // from the first candidate.
+        if (!Found.isNull())
+          return Ty;
+        Found = getSingleElementType(Base);
+      }
+
+    // Inspect the record's fields. A struct qualifies as single-element if it
+    // has exactly one non-empty field. Empty fields (zero-size structs, arrays,
+    // bitfields, or [[no_unique_address]] members) don't affect this
+    // classification. Validated by zos-abi.cpp tests.
+    for (const auto *FD : RD->fields()) {
+      if (!Found.isNull())
+        return Ty; // Multiple non-empty fields found
+      Found = getSingleElementType(FD->getType());
+    }
+    return Found.isNull() ? Ty : Found;
+  }
+  return Ty; // not record/union, unchanged
+}
+
+std::optional<QualType>
+ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
+  if (const RecordType *RT = Ty->getAsStructureType()) {
+    const RecordDecl *RD = RT->getDecl();
+
+    // Check for non-empty base classes.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+      if (CXXRD->hasDefinition())
+        for (const auto &I : CXXRD->bases()) {
+          QualType Base = I.getType();
+          if (!isEmptyRecord(getContext(), Base, true))
+            return std::nullopt;
+        }
+
+    // Check for exactly two elements with exactly the same floating point type.
+    // A single-element struct containing only a float, double, or long double
+    // counts as a field of that type. If the struct has one field consisting
+    // of a complex type, it does not count. This design may be somewhat
+    // inconsistent but it matches the behavior of the legacy C compiler.
+    int Count = 0;
+    clang::BuiltinType::Kind elemKind;
+    QualType RetTy;
+    for (const auto *FD : RD->fields()) {
+      if (Count >= 2)
+        return std::nullopt;
+
+      QualType FT = FD->getType();
+      QualType FTSingleTy = getSingleElementType(FT);
+
+      if (const BuiltinType *BT = FTSingleTy->getAs<BuiltinType>()) {
+        switch (BT->getKind()) {
+        case BuiltinType::Float:
+        case BuiltinType::Double:
+        case BuiltinType::LongDouble:
+          if (Count == 0) {
+            elemKind = BT->getKind();
+            RetTy = FTSingleTy;
+            break;
+          } else if (elemKind == BT->getKind())
+            break;
+          else
+            return std::nullopt;
+        default:
+          return std::nullopt;
+        }
+      } else
+        return std::nullopt;
+
+      Count++;
+    }
+
+    if (Count == 2) {
+      // A record can be treated as complex-like if its size is exactly
+      // 2 * sizeof(T), matching the layout of two adjacent FP elements.
+      auto &Ctx = getContext();
+      if (Ctx.getTypeSize(Ty) == 2 * Ctx.getTypeSize(RetTy))
+        return RetTy;
+    }
+  }
+  return std::nullopt;
+}
+
+ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
+                                                unsigned CallConv) const {
+
+  // Ignore void types.
+  if (RetTy->isVoidType())
+    return ABIArgInfo::getIgnore();
+
+  // Handle transparent union types.
+  RetTy = useFirstFieldIfTransparentUnion(RetTy);
+
+  // For non-C calling convention, indirect by value for structs and complex.
+  if ((CallConv != llvm::CallingConv::C) &&
+      (isAggregateTypeForABI(RetTy) || RetTy->isAnyComplexType())) {
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
+  }
+
+  // Vectors are returned directly.
+  if (isVectorArgumentType(RetTy))
+    return ABIArgInfo::getDirect();
+
+  // Complex types are returned by value as per the XPLINK docs.
+  // Their members will be placed in FPRs.
+  if (RetTy->isAnyComplexType())
+    return ABIArgInfo::getDirect();
+
+  // Complex LIKE structures are returned by value as per the XPLINK docs.
+  // Their members will be placed in FPRs.
+  if (RetTy->getAs<RecordType>()) {
+    if (getFPTypeOfComplexLikeType(RetTy))
+      return ABIArgInfo::getDirect();
+  }
+
+  // Aggregates with a size of less than 3 GPRs are returned in GRPs 1, 2 and 3.
+  // Other aggregates are passed in memory as an implicit first parameter.
+  if (isAggregateTypeForABI(RetTy)) {
+    uint64_t AggregateTypeSize = getContext().getTypeSize(RetTy);
+
+    if (AggregateTypeSize <= 3 * GPRBits) {
+      uint64_t NumElements =
+          AggregateTypeSize / GPRBits + (AggregateTypeSize % GPRBits != 0);
+
+      // Types up to 8 bytes are passed as an integer type in GPR1.
+      // Types between 8 and 16 bytes are passed as integer types in GPR1, 2.
+      // Types between 16 and 24 bytes are passed as integer types in GPR1, 2
+      // and 3.
+      llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), GPRBits);
+      CoerceTy = llvm::ArrayType::get(CoerceTy, NumElements);
+      return ABIArgInfo::getDirectInReg(CoerceTy);
+    } else
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
+  }
+  return (isPromotableIntegerTypeForABI(RetTy)
+              ? ABIArgInfo::getExtend(RetTy, CGT.ConvertType(RetTy))
+              : ABIArgInfo::getDirect(CGT.ConvertType(RetTy)));
+}
+
+ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
+                                                  unsigned CallConv) const {
+  // Handle transparent union types.
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  // Handle the generic C++ ABI.
+  if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
+
+  // Integers and enums are extended to full register width.
+  if (isPromotableIntegerTypeForABI(Ty))
+    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+
+  // For non-C calling conventions, compound types passed by address copy.
+  if ((CallConv != llvm::CallingConv::C) && isCompoundType(Ty))
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
+
+  // Complex types are passed by value as per the XPLINK docs.
+  // If place available, their members will be placed in FPRs.
+  auto CompTy = getFPTypeOfComplexLikeType(Ty);
+  if (IsNamedArg) {
+    if (Ty->isComplexType()) {
+      auto AI = ABIArgInfo::getDirect(CGT.ConvertType(Ty));
+
+      // Complex types must be preserved as opaque structs per XPLINK ABI.
+      // Without this, flattening would incorrectly split { float, float } into
+      // separate FP registers, breaking ABI compliance.
+      // Example: _Complex float pass_complex_float(_Complex float arg) { return
+      // arg; }
+      AI.setCanBeFlattened(false);
+      return AI;
+    }
+
+    if (CompTy.has_value()) {
+      llvm::Type *FPTy = CGT.ConvertType(*CompTy);
+      llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
+      auto AI = ABIArgInfo::getDirect(CoerceTy);
+
+      // Preserve { float, float } signature for complex-like structs per XPLINK
+      // ABI. Flattening would incorrectly decompose into separate FP registers.
+      // Example: struct complexlike_float { float re, im; };
+      //          struct complexlike_float pass_complexlike_float2(struct
+      //          complexlike_float arg) { return arg; }
+      AI.setCanBeFlattened(false);
+      return AI;
+    }
+  }
+
+  // Vectors are passed directly.
+  if (isVectorArgumentType(Ty))
+    return ABIArgInfo::getDirect();
+
+  // Handle structures. They are returned by value.
+  // If not complex like types, they are passed in GPRs, if possible.
+  // If place available, complex like types will have their members
+  // placed in FPRs.
+  if (Ty->getAs<RecordType>() || Ty->isAnyComplexType() || CompTy.has_value()) {
+    // Since an aggregate may end up in registers, pass the aggregate as
+    // array. This is usually beneficial since we avoid forcing the back-end
+    // to store the argument to memory.
+    uint64_t Bits = getContext().getTypeSize(Ty);
+    llvm::Type *CoerceTy;
+
+    // Struct types up to 8 bytes are passed as integer type (which  will be
+    // properly aligned in the argument save area doubleword).
+    if (Bits <= GPRBits)
+      CoerceTy = llvm::IntegerType::get(getVMContext(), GPRBits);
+    // Larger types are passed as arrays, with the base type selected
+    // according to the required alignment in the save area.
+    else {
+      uint64_t NumRegs = llvm::alignTo(Bits, GPRBits) / GPRBits;
+      llvm::Type *RegTy = llvm::IntegerType::get(getVMContext(), GPRBits);
+      CoerceTy = llvm::ArrayType::get(RegTy, NumRegs);
+    }
+    return ABIArgInfo::getDirect(CoerceTy);
+  }
+
+  // Non-structure compounds are passed indirectly, i.e. arrays.
+  if (isCompoundType(Ty))
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
+
+  return ABIArgInfo::getDirect();
+}
+
+RValue ZOSXPLinkABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                   QualType Ty, AggValueSlot Slot) const {
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
+                          CGF.getContext().getTypeInfoInChars(Ty),
+                          CGF.getPointerSize(),
+                          /*allowHigherAlign*/ false, Slot);
+}
+
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createSystemZTargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
                                         bool SoftFloatABI) {
   return std::make_unique<SystemZTargetCodeGenInfo>(CGM.getTypes(), HasVector,
                                                     SoftFloatABI);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createSystemZ_ZOS_TargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
+                                             bool SoftFloatABI) {
+  return std::make_unique<ZOSXPLinkTargetCodeGenInfo>(CGM.getTypes(),
+                                                      HasVector);
 }

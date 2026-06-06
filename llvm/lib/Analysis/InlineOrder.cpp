@@ -114,9 +114,15 @@ public:
   CostBenefitPriority(const CallBase *CB, FunctionAnalysisManager &FAM,
                       const InlineParams &Params) {
     auto IC = getInlineCostWrapper(const_cast<CallBase &>(*CB), FAM, Params);
-    Cost = IC.getCost();
-    StaticBonusApplied = IC.getStaticBonusApplied();
-    CostBenefit = IC.getCostBenefit();
+    if (IC.isVariable()) {
+      Cost = IC.getCost();
+      StaticBonusApplied = IC.getStaticBonusApplied();
+      CostBenefit = IC.getCostBenefit();
+    } else {
+      Cost = IC.isNever() ? INT_MAX : INT_MIN;
+      StaticBonusApplied = 0;
+      CostBenefit = std::nullopt;
+    }
   }
 
   static bool isMoreDesirable(const CostBenefitPriority &P1,
@@ -196,10 +202,7 @@ private:
   int Cost = INT_MAX;
 };
 
-template <typename PriorityT>
-class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
-  using T = std::pair<CallBase *, int>;
-
+template <typename PriorityT> class PriorityInlineOrder : public InlineOrder {
   bool hasLowerPriority(const CallBase *L, const CallBase *R) const {
     const auto I1 = Priorities.find(L);
     const auto I2 = Priorities.find(R);
@@ -218,14 +221,15 @@ class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
   // A call site could become less desirable for inlining because of the size
   // growth from prior inlining into the callee. This method is used to lazily
   // update the desirability of a call site if it's decreasing. It is only
-  // called on pop() or front(), not every time the desirability changes. When
-  // the desirability of the front call site decreases, an updated one would be
-  // pushed right back into the heap. For simplicity, those cases where
-  // the desirability of a call site increases are ignored here.
-  void adjust() {
-    while (updateAndCheckDecreased(Heap.front())) {
-      std::pop_heap(Heap.begin(), Heap.end(), isLess);
+  // called on pop(), not every time the desirability changes. When the
+  // desirability of the front call site decreases, an updated one would be
+  // pushed right back into the heap. For simplicity, those cases where the
+  // desirability of a call site increases are ignored here.
+  void pop_heap_adjust() {
+    std::pop_heap(Heap.begin(), Heap.end(), isLess);
+    while (updateAndCheckDecreased(Heap.back())) {
       std::push_heap(Heap.begin(), Heap.end(), isLess);
+      std::pop_heap(Heap.begin(), Heap.end(), isLess);
     }
   }
 
@@ -239,40 +243,27 @@ public:
 
   size_t size() override { return Heap.size(); }
 
-  void push(const T &Elt) override {
-    CallBase *CB = Elt.first;
-    const int InlineHistoryID = Elt.second;
-
+  void push(CallBase *CB) override {
     Heap.push_back(CB);
     Priorities[CB] = PriorityT(CB, FAM, Params);
     std::push_heap(Heap.begin(), Heap.end(), isLess);
-    InlineHistoryMap[CB] = InlineHistoryID;
   }
 
-  T pop() override {
+  CallBase *pop() override {
     assert(size() > 0);
-    adjust();
+    pop_heap_adjust();
 
-    CallBase *CB = Heap.front();
-    T Result = std::make_pair(CB, InlineHistoryMap[CB]);
-    InlineHistoryMap.erase(CB);
-    std::pop_heap(Heap.begin(), Heap.end(), isLess);
-    Heap.pop_back();
-    return Result;
+    return Heap.pop_back_val();
   }
 
-  void erase_if(function_ref<bool(T)> Pred) override {
-    auto PredWrapper = [=](CallBase *CB) -> bool {
-      return Pred(std::make_pair(CB, 0));
-    };
-    llvm::erase_if(Heap, PredWrapper);
+  void erase_if(function_ref<bool(CallBase *)> Pred) override {
+    llvm::erase_if(Heap, Pred);
     std::make_heap(Heap.begin(), Heap.end(), isLess);
   }
 
 private:
   SmallVector<CallBase *, 16> Heap;
   std::function<bool(const CallBase *L, const CallBase *R)> isLess;
-  DenseMap<CallBase *, int> InlineHistoryMap;
   DenseMap<const CallBase *, PriorityT> Priorities;
   FunctionAnalysisManager &FAM;
   const InlineParams &Params;
@@ -281,9 +272,8 @@ private:
 } // namespace
 
 AnalysisKey llvm::PluginInlineOrderAnalysis::Key;
-bool llvm::PluginInlineOrderAnalysis::HasBeenRegistered;
 
-std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
+std::unique_ptr<InlineOrder>
 llvm::getDefaultInlineOrder(FunctionAnalysisManager &FAM,
                             const InlineParams &Params,
                             ModuleAnalysisManager &MAM, Module &M) {
@@ -308,10 +298,11 @@ llvm::getDefaultInlineOrder(FunctionAnalysisManager &FAM,
   return nullptr;
 }
 
-std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
-llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params,
-                     ModuleAnalysisManager &MAM, Module &M) {
-  if (llvm::PluginInlineOrderAnalysis::isRegistered()) {
+std::unique_ptr<InlineOrder> llvm::getInlineOrder(FunctionAnalysisManager &FAM,
+                                                  const InlineParams &Params,
+                                                  ModuleAnalysisManager &MAM,
+                                                  Module &M) {
+  if (MAM.isPassRegistered<PluginInlineOrderAnalysis>()) {
     LLVM_DEBUG(dbgs() << "    Current used priority: plugin ---- \n");
     return MAM.getResult<PluginInlineOrderAnalysis>(M).Factory(FAM, Params, MAM,
                                                                M);

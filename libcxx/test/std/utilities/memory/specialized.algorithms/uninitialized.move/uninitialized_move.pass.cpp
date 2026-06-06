@@ -17,8 +17,10 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "MoveOnly.h"
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "../overload_compare_iterator.h"
 
 struct Counted {
   static int count;
@@ -53,6 +55,25 @@ struct ThrowsCounted {
 int ThrowsCounted::count = 0;
 int ThrowsCounted::constructed = 0;
 int ThrowsCounted::throw_after = 0;
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  const int n    = 3;
+  MoveOnly in[n] = {1, 2, 3};
+  std::allocator<MoveOnly> alloc;
+  MoveOnly* out = alloc.allocate(n);
+
+  MoveOnly* result = std::uninitialized_move(in, in + n, out);
+  assert(result == out + n);
+  for (int i = 0; i < n; ++i) {
+    assert(in[i] == 0);
+    assert(out[i] == i + 1);
+  }
+
+  std::destroy(out, out + n);
+  alloc.deallocate(out, n);
+
+  return true;
+}
 
 void test_ctor_throws()
 {
@@ -111,5 +132,39 @@ int main(int, char**) {
     test_counted();
     test_ctor_throws();
 
-  return 0;
+    // Test with an iterator that overloads operator== and operator!= as the input and output iterators
+    {
+        using T = int;
+        using Iterator = overload_compare_iterator<T*>;
+        const int N = 5;
+
+        // input
+        {
+            char pool[sizeof(T) * N] = {0};
+            T* p = reinterpret_cast<T*>(pool);
+            T array[N] = {1, 2, 3, 4, 5};
+            std::uninitialized_move(Iterator(array), Iterator(array + N), p);
+            for (int i = 0; i != N; ++i) {
+                assert(array[i] == p[i]);
+            }
+        }
+
+        // output
+        {
+            char pool[sizeof(T) * N] = {0};
+            T* p = reinterpret_cast<T*>(pool);
+            T array[N] = {1, 2, 3, 4, 5};
+            std::uninitialized_move(array, array + N, Iterator(p));
+            for (int i = 0; i != N; ++i) {
+                assert(array[i] == p[i]);
+            }
+        }
+    }
+
+    test();
+#if TEST_STD_VER >= 26
+    static_assert(test());
+#endif
+
+    return 0;
 }

@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: %clang_profgen -DCHECK_SYMBOLS -O3 -o %t.symbols %s
 // RUN: llvm-nm %t.symbols | FileCheck %s --check-prefix=CHECK-SYMBOLS
 // RUN: %clang_profgen -O3 -o %t %s

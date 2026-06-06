@@ -359,13 +359,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
           MLC.dysymtab_command_data.nextrel != 0)
         return createStringError(llvm::errc::not_supported,
                                  "shared library is not yet supported");
-
-      if (!O.IndirectSymTable.Symbols.empty()) {
-        MLC.dysymtab_command_data.indirectsymoff = StartOfIndirectSymbols;
-        MLC.dysymtab_command_data.nindirectsyms =
-            O.IndirectSymTable.Symbols.size();
-      }
-
+      MLC.dysymtab_command_data.indirectsymoff =
+          O.IndirectSymTable.Symbols.size() ? StartOfIndirectSymbols : 0;
+      MLC.dysymtab_command_data.nindirectsyms =
+          O.IndirectSymTable.Symbols.size();
       updateDySymTab(MLC);
       break;
     }

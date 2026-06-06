@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// UNSUPPORTED: availability-bad_any_cast-missing
-
 // <any>
 
 // template <class ValueType>
@@ -33,27 +31,27 @@
 #include <any>
 
 struct no_copy {
-    no_copy() {}
-    no_copy(no_copy &&) {}
-    no_copy(no_copy const &) = delete;
+  no_copy() {}
+  no_copy(no_copy&&) {}
+  no_copy(no_copy const&) = delete;
 };
 
 struct no_move {
-    no_move() {}
-    no_move(no_move&&) = delete;
-    no_move(no_move const&) {}
+  no_move() {}
+  no_move(no_move&&) = delete;
+  no_move(no_move const&) {}
 };
 
-void f() {
-    std::any a;
-    // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an lvalue reference or a CopyConstructible type}}
-    std::any_cast<no_copy>(static_cast<std::any&>(a)); // expected-note {{requested here}}
+void test() {
+  std::any a;
+  // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an lvalue reference or a CopyConstructible type}}
+  (void)std::any_cast<no_copy>(static_cast<std::any&>(a)); // expected-note {{requested here}}
 
-    // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
-    std::any_cast<no_copy>(static_cast<std::any const&>(a)); // expected-note {{requested here}}
+  // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
+  (void)std::any_cast<no_copy>(static_cast<std::any const&>(a)); // expected-note {{requested here}}
 
-    std::any_cast<no_copy>(static_cast<std::any &&>(a)); // OK
+  (void)std::any_cast<no_copy>(static_cast<std::any&&>(a)); // OK
 
-    // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an rvalue reference or a CopyConstructible type}}
-    std::any_cast<no_move>(static_cast<std::any &&>(a));
+  // expected-error-re@any:* {{static assertion failed{{.*}}ValueType is required to be an rvalue reference or a CopyConstructible type}}
+  (void)std::any_cast<no_move>(static_cast<std::any&&>(a));
 }

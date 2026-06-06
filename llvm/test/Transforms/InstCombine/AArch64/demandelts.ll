@@ -4,7 +4,7 @@
 define <2 x float> @fcvtxn(<2 x double> %d1) {
 ; CHECK-LABEL: @fcvtxn(
 ; CHECK-NEXT:    [[I:%.*]] = call <2 x float> @llvm.aarch64.neon.fcvtxn.v2f32.v2f64(<2 x double> [[D1:%.*]])
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[I]], <2 x float> undef, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[I]], <2 x float> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    ret <2 x float> [[S]]
 ;
   %a = shufflevector <2 x double> %d1, <2 x double> undef, <2 x i32> <i32 0, i32 0>
@@ -17,7 +17,7 @@ define <4 x i16> @rshrn(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @rshrn(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.rshrn.v4i16(<4 x i32> [[A]], i32 9)
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -30,7 +30,7 @@ define <4 x i16> @sqrshrn(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @sqrshrn(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrn.v4i16(<4 x i32> [[A]], i32 9)
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -43,7 +43,7 @@ define <4 x i16> @sqrshrun(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @sqrshrun(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[A]], i32 9)
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -56,7 +56,7 @@ define <4 x i16> @sqshrn(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @sqshrn(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshrn.v4i16(<4 x i32> [[A]], i32 9)
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -69,7 +69,7 @@ define <4 x i16> @sqshrun(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @sqshrun(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshrun.v4i16(<4 x i32> [[A]], i32 9)
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -82,7 +82,7 @@ define <4 x i16> @sqxtn(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @sqxtn(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[A]])
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -95,7 +95,7 @@ define <4 x i16> @sqxtun(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @sqxtun(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[A]])
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -108,7 +108,7 @@ define <4 x i16> @uqrshrn(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @uqrshrn(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqrshrn.v4i16(<4 x i32> [[A]], i32 9)
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -121,7 +121,7 @@ define <4 x i16> @uqshrn(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @uqshrn(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshrn.v4i16(<4 x i32> [[A]], i32 9)
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -134,7 +134,7 @@ define <4 x i16> @uqxtn(<2 x i32> %d1, <2 x i32> %d2) {
 ; CHECK-LABEL: @uqxtn(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[D1:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> [[A]])
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i16> [[I]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[S]]
 ;
   %a = shufflevector <2 x i32> %d1, <2 x i32> %d2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

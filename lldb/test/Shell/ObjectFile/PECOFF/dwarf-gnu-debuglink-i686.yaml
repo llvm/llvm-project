@@ -2,10 +2,9 @@
 # gnu-debuglink section to it linking to the unstripped version of the object
 # file. The debug info shall be loaded from the gnu-debuglink reference.
 #
-# This test is added to check that Symbols::LocateExecutableSymbolFile (in
-# LocateSymbolFile.cpp) can handle ObjectFilePECOFF::GetModuleSpecifications
-# returning two different module specs for MachineX86 -- "i386-pc-windows" and
-# "i686-pc-windows".
+# This test is added to check that LocateExecutableSymbolFile can handle
+# ObjectFilePECOFF::GetModuleSpecifications returning two different module
+# specs for MachineX86 -- "i386-pc-windows" and "i686-pc-windows".
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-all --add-gnu-debuglink=%t %t %t.stripped

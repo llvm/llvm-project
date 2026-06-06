@@ -11,6 +11,8 @@ unittest("FormatTests") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AlignBracketsTest.cpp",
+    "AlignmentTest.cpp",
     "BracesInserterTest.cpp",
     "BracesRemoverTest.cpp",
     "CleanupTest.cpp",
@@ -35,7 +37,11 @@ unittest("FormatTests") {
     "IntegerLiteralSeparatorTest.cpp",
     "MacroCallReconstructorTest.cpp",
     "MacroExpanderTest.cpp",
+    "MatchFilePathTest.cpp",
     "NamespaceEndCommentsFixerTest.cpp",
+    "NumericLiteralCaseTest.cpp",
+    "NumericLiteralInfoTest.cpp",
+    "ObjCPropertyAttributeOrderFixerTest.cpp",
     "QualifierFixerTest.cpp",
     "SortImportsTestJS.cpp",
     "SortImportsTestJava.cpp",

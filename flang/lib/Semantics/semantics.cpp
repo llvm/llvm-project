@@ -9,6 +9,7 @@
 #include "flang/Semantics/semantics.h"
 #include "assignment.h"
 #include "canonicalize-acc.h"
+#include "canonicalize-directives.h"
 #include "canonicalize-do.h"
 #include "canonicalize-omp.h"
 #include "check-acc-structure.h"
@@ -36,12 +37,12 @@
 #include "resolve-labels.h"
 #include "resolve-names.h"
 #include "rewrite-parse-tree.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/default-kinds.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -159,6 +160,79 @@ private:
   SemanticsContext &context_;
 };
 
+static bool WasDefined(const SemanticsContext &context, const Symbol &symbol) {
+  return context.IsSymbolDefined(symbol) ||
+      IsInitialized(symbol, /*ignoreDataStatements=*/true,
+          /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
+}
+
+static void WarnUndefinedFunctionResult(
+    SemanticsContext &context, const Scope &scope) {
+  if (const Symbol * symbol{scope.symbol()}) {
+    if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
+      if (subp->isFunction() && !subp->isInterface() && !subp->stmtFunction()) {
+        bool wasDefined{WasDefined(context, subp->result())};
+        if (!wasDefined) {
+          // Definitions of ENTRY result variables also count.
+          for (const auto &pair : scope) {
+            const Symbol &local{*pair.second};
+            if (IsFunctionResult(local) && WasDefined(context, local)) {
+              wasDefined = true;
+              break;
+            }
+          }
+          if (!wasDefined) {
+            context.Warn(common::UsageWarning::UndefinedFunctionResult,
+                symbol->name(), "Function result is never defined"_warn_en_US);
+          }
+        }
+      }
+    }
+  }
+  if (!scope.IsModuleFile()) {
+    for (const Scope &child : scope.children()) {
+      WarnUndefinedFunctionResult(context, child);
+    }
+  }
+}
+
+static void WarnUnusedOrUndefinedLocal(
+    SemanticsContext &context, const Scope &scope) {
+  if (scope.kind() == Scope::Kind::Subprogram ||
+      scope.kind() == Scope::Kind::MainProgram ||
+      scope.kind() == Scope::Kind::BlockConstruct) {
+    for (const auto &[_, symbolRef] : scope) {
+      const Symbol &symbol{*symbolRef};
+      if ((symbol.has<semantics::ObjectEntityDetails>() ||
+              (symbol.has<semantics::ProcEntityDetails>() &&
+                  IsProcedurePointer(symbol))) &&
+          !IsFunctionResult(symbol) && !IsNamedConstant(symbol) &&
+          !IsDummy(symbol) && !FindEquivalenceSet(symbol) &&
+          !FindCommonBlockContaining(symbol)) {
+        if (context.IsSymbolUsed(symbol)) {
+          if (!WasDefined(context, symbol)) {
+            context.Warn(common::UsageWarning::UsedUndefinedVariable,
+                symbol.name(),
+                "Value of uninitialized local variable '%s' is used but never defined"_warn_en_US,
+                symbol.name());
+          }
+        } else {
+          if (!context.IsSymbolDefined(symbol)) { // ignore initialization
+            context.Warn(common::UsageWarning::UnusedVariable, symbol.name(),
+                "Value of local variable '%s' is never used"_warn_en_US,
+                symbol.name());
+          }
+        }
+      }
+    }
+  }
+  if (!scope.IsModuleFile()) {
+    for (const Scope &child : scope.children()) {
+      WarnUnusedOrUndefinedLocal(context, child);
+    }
+  }
+}
+
 using StatementSemanticsPass1 = ExprChecker;
 using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     ArithmeticIfStmtChecker, AssignmentChecker, CaseChecker, CoarrayChecker,
@@ -185,8 +259,10 @@ static bool PerformStatementSemantics(
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
     SemanticsVisitor<CUDAChecker>{context}.Walk(program);
   }
-  if (!context.AnyFatalError()) {
+  if (!context.messages().AnyFatalError()) {
+    WarnUndefinedFunctionResult(context, context.globalScope());
     pass2.CompileDataInitializationsIntoInitializers();
+    WarnUnusedOrUndefinedLocal(context, context.globalScope());
   }
   return !context.AnyFatalError();
 }
@@ -244,13 +320,14 @@ public:
         }
       }
       if (common.size() != info.biggestSize->size() && !common.name().empty()) {
-        context
-            .Say(common.name(),
+        if (auto *msg{context.Warn(common::LanguageFeature::DistinctCommonSizes,
+                common.name(),
                 "A named COMMON block should have the same size everywhere it appears (%zd bytes here)"_port_en_US,
-                common.size())
-            .Attach(info.biggestSize->name(),
-                "Previously defined with a size of %zd bytes"_en_US,
-                info.biggestSize->size());
+                common.size())}) {
+          msg->Attach(info.biggestSize->name(),
+              "Previously defined with a size of %zd bytes"_en_US,
+              info.biggestSize->size());
+        }
       }
       if (common.size() > info.biggestSize->size()) {
         info.biggestSize = common;
@@ -273,15 +350,13 @@ private:
   /// Return the symbol of an initialized member if a COMMON block
   /// is initalized. Otherwise, return nullptr.
   static Symbol *CommonBlockIsInitialized(const Symbol &common) {
-    const auto &commonDetails =
-        common.get<Fortran::semantics::CommonBlockDetails>();
-
+    const auto &commonDetails{
+        common.get<Fortran::semantics::CommonBlockDetails>()};
     for (const auto &member : commonDetails.objects()) {
       if (IsInitialized(*member)) {
         return &*member;
       }
     }
-
     // Common block may be initialized via initialized variables that are in an
     // equivalence with the common block members.
     for (const Fortran::semantics::EquivalenceSet &set :
@@ -305,14 +380,17 @@ private:
 SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
-    parser::AllCookedSources &allCookedSources)
+    const common::LangOptions &langOpts,
+    parser::AllCookedSources &allCookedSources,
+    common::FPMaxminBehavior fpMaxminBehavior)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
-      allCookedSources_{allCookedSources},
+      langOpts_{langOpts}, allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
       foldingContext_{parser::ContextualMessages{&messages_}, defaultKinds_,
-          intrinsics_, targetCharacteristics_} {}
+          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_,
+          fpMaxminBehavior} {}
 
 SemanticsContext::~SemanticsContext() {}
 
@@ -335,8 +413,7 @@ const DeclTypeSpec &SemanticsContext::MakeLogicalType(int kind) {
 }
 
 bool SemanticsContext::AnyFatalError() const {
-  return !messages_.empty() &&
-      (warningsAreErrors_ || messages_.AnyFatalError());
+  return messages_.AnyFatalError(warningsAreErrors_);
 }
 bool SemanticsContext::HasError(const Symbol &symbol) {
   return errorSymbols_.count(symbol) > 0;
@@ -414,6 +491,15 @@ void SemanticsContext::UpdateScopeIndex(
   }
 }
 
+void SemanticsContext::DumpScopeIndex(llvm::raw_ostream &out) const {
+  out << "scopeIndex_:\n";
+  for (const auto &[source, scope] : scopeIndex_) {
+    out << "source '" << source.ToString() << "' -> scope " << scope
+        << "... whose source range is '" << scope.sourceRange().ToString()
+        << "'\n";
+  }
+}
+
 bool SemanticsContext::IsInModuleFile(parser::CharBlock source) const {
   for (const Scope *scope{&FindScope(source)}; !scope->IsGlobal();
        scope = &scope->parent()) {
@@ -429,21 +515,29 @@ void SemanticsContext::PopConstruct() {
   constructStack_.pop_back();
 }
 
-void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
-    const Symbol &variable, parser::MessageFixedText &&message) {
+parser::Message *SemanticsContext::CheckIndexVarRedefine(
+    const parser::CharBlock &location, const Symbol &variable,
+    parser::MessageFixedText &&message) {
   const Symbol &symbol{ResolveAssociations(variable)};
   auto it{activeIndexVars_.find(symbol)};
   if (it != activeIndexVars_.end()) {
     std::string kind{EnumToString(it->second.kind)};
-    Say(location, std::move(message), kind, symbol.name())
-        .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
+    return &Say(location, std::move(message), kind, symbol.name())
+                .Attach(
+                    it->second.location, "Enclosing %s construct"_en_US, kind);
+  } else {
+    return nullptr;
   }
 }
 
 void SemanticsContext::WarnIndexVarRedefine(
     const parser::CharBlock &location, const Symbol &variable) {
-  CheckIndexVarRedefine(location, variable,
-      "Possible redefinition of %s variable '%s'"_warn_en_US);
+  if (ShouldWarn(common::UsageWarning::IndexVarRedefinition)) {
+    if (auto *msg{CheckIndexVarRedefine(location, variable,
+            "Possible redefinition of %s variable '%s'"_warn_en_US)}) {
+      msg->set_usageWarning(common::UsageWarning::IndexVarRedefinition);
+    }
+  }
 }
 
 void SemanticsContext::CheckIndexVarRedefine(
@@ -514,7 +608,7 @@ bool SemanticsContext::IsTempName(const std::string &name) {
 
 Scope *SemanticsContext::GetBuiltinModule(const char *name) {
   return ModFileReader{*this}.Read(SourceName{name, std::strlen(name)},
-      true /*intrinsic*/, nullptr, true /*silence errors*/);
+      true /*intrinsic*/, nullptr, /*silent=*/true);
 }
 
 void SemanticsContext::UseFortranBuiltinsModule() {
@@ -532,12 +626,31 @@ void SemanticsContext::UsePPCBuiltinTypesModule() {
   }
 }
 
-const Scope &SemanticsContext::GetCUDABuiltinsScope() {
+static void SayMissingCUDAIntrinsicModule(
+    SemanticsContext &context, const char *moduleName) {
+  context.messages().Say(context.location().value_or(parser::CharBlock{}),
+      "Cannot read required CUDA intrinsic module '%s'; check -fintrinsic-modules-path or rebuild the Fortran intrinsic modules"_err_en_US,
+      moduleName);
+}
+
+const Scope *SemanticsContext::GetCUDABuiltinsScope() {
   if (!cudaBuiltinsScope_) {
     cudaBuiltinsScope_ = GetBuiltinModule("__cuda_builtins");
-    CHECK(cudaBuiltinsScope_.value() != nullptr);
+    if (cudaBuiltinsScope_.value() == nullptr) {
+      SayMissingCUDAIntrinsicModule(*this, "__cuda_builtins");
+    }
   }
-  return **cudaBuiltinsScope_;
+  return cudaBuiltinsScope_.value();
+}
+
+const Scope *SemanticsContext::GetCUDADeviceScope() {
+  if (!cudaDeviceScope_) {
+    cudaDeviceScope_ = GetBuiltinModule("cudadevice");
+    if (cudaDeviceScope_.value() == nullptr) {
+      SayMissingCUDAIntrinsicModule(*this, "cudadevice");
+    }
+  }
+  return cudaDeviceScope_.value();
 }
 
 void SemanticsContext::UsePPCBuiltinsModule() {
@@ -558,12 +671,15 @@ bool Semantics::Perform() {
     const auto *frontModule{std::get_if<common::Indirection<parser::Module>>(
         &program_.v.front().u)};
     if (frontModule &&
-        (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                    .statement.v.source == "__fortran_builtins" ||
-            std::get<parser::Statement<parser::ModuleStmt>>(
-                frontModule->value().t)
-                    .statement.v.source == "__ppc_types")) {
+        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                .statement.v.source == "__fortran_builtins") {
       // Don't try to read the builtins module when we're actually building it.
+    } else if (frontModule &&
+        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                .statement.v.source == "__ppc_types") {
+      // Don't try to read the UsePPCBuiltinTypesModule() we are currently
+      // building, but __fortran_builtins is needed to build it.
+      context_.UseFortranBuiltinsModule();
     } else if (frontModule &&
         (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
                     .statement.v.source == "__ppc_intrinsics" ||
@@ -583,22 +699,44 @@ bool Semantics::Perform() {
       }
     }
   }
-  return ValidateLabels(context_, program_) &&
-      parser::CanonicalizeDo(program_) && // force line break
-      CanonicalizeAcc(context_.messages(), program_) &&
-      CanonicalizeOmp(context_.messages(), program_) &&
-      CanonicalizeCUDA(program_) &&
-      PerformStatementSemantics(context_, program_) &&
-      ModFileWriter{context_}.WriteAll();
+  if (!(ValidateLabels(context_, program_) &&
+          parser::CanonicalizeDo(program_) && // force line break
+          CanonicalizeAcc(context_.messages(), program_) &&
+          CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
+          PerformStatementSemantics(context_, program_) &&
+          CanonicalizeDirectives(context_.messages(), program_))) {
+    return false;
+  }
+
+  // When compiling with offloading, write only the host's module file. The
+  // device invocations would otherwise overwrite the host's mod file.
+  if (context_.langOptions().OffloadDevice) {
+    return true;
+  }
+
+  return ModFileWriter{context_}
+      .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
+      .WriteAll();
 }
 
-void Semantics::EmitMessages(llvm::raw_ostream &os) const {
-  context_.messages().Emit(os, context_.allCookedSources());
+void Semantics::EmitMessages(llvm::raw_ostream &os) {
+  // Resolve the CharBlock locations of the Messages to ProvenanceRanges
+  // so messages from parsing and semantics are intermixed in source order.
+  context_.messages().ResolveProvenances(context_.allCookedSources());
+  context_.messages().Emit(os, context_.allCookedSources(),
+      /*echoSourceLine=*/true, &context_.languageFeatures(),
+      context_.maxErrors(), context_.warningsAreErrors());
 }
 
-void Semantics::DumpSymbols(llvm::raw_ostream &os) {
-  DoDumpSymbols(os, context_.globalScope());
+void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
+  DoDumpSymbols(os, globalScope());
 }
+
+ProgramTree &SemanticsContext::SaveProgramTree(ProgramTree &&tree) {
+  return programTrees_.emplace_back(std::move(tree));
+}
+
+void Semantics::DumpSymbols(llvm::raw_ostream &os) { context_.DumpSymbols(os); }
 
 void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   NameToSymbolMap symbols;
@@ -662,6 +800,7 @@ void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
     for (const auto &[pointee, pointer] : scope.crayPointers()) {
       os << " (" << pointer->name() << ',' << pointee << ')';
     }
+    os << '\n';
   }
   for (const auto &pair : scope.commonBlocks()) {
     const auto &symbol{*pair.second};
@@ -692,6 +831,27 @@ CommonBlockList SemanticsContext::GetCommonBlocks() const {
     return commonBlockMap_->GetCommonBlocks();
   }
   return {};
+}
+
+void SemanticsContext::NoteDefinedSymbol(const Symbol &symbol) {
+  isDefined_.insert(symbol);
+}
+
+bool SemanticsContext::IsSymbolDefined(const Symbol &symbol) const {
+  return isDefined_.find(symbol) != isDefined_.end();
+}
+
+void SemanticsContext::NoteUsedSymbol(const Symbol &symbol) {
+  isUsed_.insert(symbol);
+}
+void SemanticsContext::NoteUsedSymbols(const UnorderedSymbolSet &set) {
+  for (const Symbol &symbol : set) {
+    NoteUsedSymbol(symbol);
+  }
+}
+
+bool SemanticsContext::IsSymbolUsed(const Symbol &symbol) const {
+  return isUsed_.find(symbol) != isUsed_.end();
 }
 
 } // namespace Fortran::semantics

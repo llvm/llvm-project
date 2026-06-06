@@ -109,24 +109,27 @@ bool ParseKvPairs(const std::string& src_text, const char* str,
 // Returns the name of the environment variable corresponding to the
 // given flag.  For example, FlagToEnvVar("foo") will return
 // "BENCHMARK_FOO" in the open-source version.
-static std::string FlagToEnvVar(const char* flag) {
+std::string FlagToEnvVar(const char* flag) {
   const std::string flag_str(flag);
 
   std::string env_var;
-  for (size_t i = 0; i != flag_str.length(); ++i)
+  for (size_t i = 0; i != flag_str.length(); ++i) {
     env_var += static_cast<char>(::toupper(flag_str.c_str()[i]));
+  }
 
   return env_var;
 }
 
 }  // namespace
 
+BENCHMARK_EXPORT
 bool BoolFromEnv(const char* flag, bool default_val) {
   const std::string env_var = FlagToEnvVar(flag);
   const char* const value_str = getenv(env_var.c_str());
   return value_str == nullptr ? default_val : IsTruthyFlagValue(value_str);
 }
 
+BENCHMARK_EXPORT
 int32_t Int32FromEnv(const char* flag, int32_t default_val) {
   const std::string env_var = FlagToEnvVar(flag);
   const char* const value_str = getenv(env_var.c_str());
@@ -139,6 +142,7 @@ int32_t Int32FromEnv(const char* flag, int32_t default_val) {
   return value;
 }
 
+BENCHMARK_EXPORT
 double DoubleFromEnv(const char* flag, double default_val) {
   const std::string env_var = FlagToEnvVar(flag);
   const char* const value_str = getenv(env_var.c_str());
@@ -151,18 +155,22 @@ double DoubleFromEnv(const char* flag, double default_val) {
   return value;
 }
 
+BENCHMARK_EXPORT
 const char* StringFromEnv(const char* flag, const char* default_val) {
   const std::string env_var = FlagToEnvVar(flag);
   const char* const value = getenv(env_var.c_str());
   return value == nullptr ? default_val : value;
 }
 
+BENCHMARK_EXPORT
 std::map<std::string, std::string> KvPairsFromEnv(
     const char* flag, std::map<std::string, std::string> default_val) {
   const std::string env_var = FlagToEnvVar(flag);
   const char* const value_str = getenv(env_var.c_str());
 
-  if (value_str == nullptr) return default_val;
+  if (value_str == nullptr) {
+    return default_val;
+  }
 
   std::map<std::string, std::string> value;
   if (!ParseKvPairs("Environment variable " + env_var, value_str, &value)) {
@@ -170,6 +178,8 @@ std::map<std::string, std::string> KvPairsFromEnv(
   }
   return value;
 }
+
+namespace {
 
 // Parses a string as a command line flag.  The string should have
 // the format "--flag=value".  When def_optional is true, the "=value"
@@ -179,107 +189,137 @@ std::map<std::string, std::string> KvPairsFromEnv(
 const char* ParseFlagValue(const char* str, const char* flag,
                            bool def_optional) {
   // str and flag must not be nullptr.
-  if (str == nullptr || flag == nullptr) return nullptr;
+  if (str == nullptr || flag == nullptr) {
+    return nullptr;
+  }
 
   // The flag must start with "--".
   const std::string flag_str = std::string("--") + std::string(flag);
   const size_t flag_len = flag_str.length();
-  if (strncmp(str, flag_str.c_str(), flag_len) != 0) return nullptr;
+  if (strncmp(str, flag_str.c_str(), flag_len) != 0) {
+    return nullptr;
+  }
 
   // Skips the flag name.
   const char* flag_end = str + flag_len;
 
   // When def_optional is true, it's OK to not have a "=value" part.
-  if (def_optional && (flag_end[0] == '\0')) return flag_end;
+  if (def_optional && (flag_end[0] == '\0')) {
+    return flag_end;
+  }
 
   // If def_optional is true and there are more characters after the
   // flag name, or if def_optional is false, there must be a '=' after
   // the flag name.
-  if (flag_end[0] != '=') return nullptr;
+  if (flag_end[0] != '=') {
+    return nullptr;
+  }
 
   // Returns the string after "=".
   return flag_end + 1;
 }
 
+}  // end namespace
+
+BENCHMARK_EXPORT
 bool ParseBoolFlag(const char* str, const char* flag, bool* value) {
   // Gets the value of the flag as a string.
   const char* const value_str = ParseFlagValue(str, flag, true);
 
   // Aborts if the parsing failed.
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   // Converts the string value to a bool.
   *value = IsTruthyFlagValue(value_str);
   return true;
 }
 
+BENCHMARK_EXPORT
 bool ParseInt32Flag(const char* str, const char* flag, int32_t* value) {
   // Gets the value of the flag as a string.
   const char* const value_str = ParseFlagValue(str, flag, false);
 
   // Aborts if the parsing failed.
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   // Sets *value to the value of the flag.
   return ParseInt32(std::string("The value of flag --") + flag, value_str,
                     value);
 }
 
+BENCHMARK_EXPORT
 bool ParseDoubleFlag(const char* str, const char* flag, double* value) {
   // Gets the value of the flag as a string.
   const char* const value_str = ParseFlagValue(str, flag, false);
 
   // Aborts if the parsing failed.
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   // Sets *value to the value of the flag.
   return ParseDouble(std::string("The value of flag --") + flag, value_str,
                      value);
 }
 
+BENCHMARK_EXPORT
 bool ParseStringFlag(const char* str, const char* flag, std::string* value) {
   // Gets the value of the flag as a string.
   const char* const value_str = ParseFlagValue(str, flag, false);
 
   // Aborts if the parsing failed.
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   *value = value_str;
   return true;
 }
 
+BENCHMARK_EXPORT
 bool ParseKeyValueFlag(const char* str, const char* flag,
                        std::map<std::string, std::string>* value) {
   const char* const value_str = ParseFlagValue(str, flag, false);
 
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   for (const auto& kvpair : StrSplit(value_str, ',')) {
     const auto kv = StrSplit(kvpair, '=');
-    if (kv.size() != 2) return false;
+    if (kv.size() != 2) {
+      return false;
+    }
     value->emplace(kv[0], kv[1]);
   }
 
   return true;
 }
 
+BENCHMARK_EXPORT
 bool IsFlag(const char* str, const char* flag) {
   return (ParseFlagValue(str, flag, true) != nullptr);
 }
 
+BENCHMARK_EXPORT
 bool IsTruthyFlagValue(const std::string& value) {
   if (value.size() == 1) {
     char v = value[0];
     return isalnum(v) &&
            !(v == '0' || v == 'f' || v == 'F' || v == 'n' || v == 'N');
-  } else if (!value.empty()) {
+  }
+  if (!value.empty()) {
     std::string value_lower(value);
     std::transform(value_lower.begin(), value_lower.end(), value_lower.begin(),
                    [](char c) { return static_cast<char>(::tolower(c)); });
     return !(value_lower == "false" || value_lower == "no" ||
              value_lower == "off");
-  } else
-    return true;
+  }
+  return true;
 }
 
 }  // end namespace benchmark

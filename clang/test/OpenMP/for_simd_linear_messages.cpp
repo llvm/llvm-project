@@ -1,12 +1,14 @@
 // RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 
 void xxx(int argc) {
-  int i, lin, step; // expected-note {{initialize the variable 'lin' to silence this warning}} expected-note {{initialize the variable 'step' to silence this warning}}
-#pragma omp for simd linear(i, lin : step) // expected-warning {{variable 'lin' is uninitialized when used here}} expected-warning {{variable 'step' is uninitialized when used here}}
+  int i, lin, step_sz; // expected-note {{initialize the variable 'lin' to silence this warning}} expected-note {{initialize the variable 'step_sz' to silence this warning}}
+#pragma omp for simd linear(i, lin : step_sz) // expected-warning {{variable 'lin' is uninitialized when used here}} expected-warning {{variable 'step_sz' is uninitialized when used here}}
   for (i = 0; i < 10; ++i)
     ;
 }
@@ -70,7 +72,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
 
 template<int LEN> int test_warn() {
   int ind2 = 0;
-  // expected-warning@+1 {{zero linear step (ind2 should probably be const)}}
+  // expected-warning@+1 {{zero linear step ('ind2' should probably be const)}}
   #pragma omp for simd linear(ind2:LEN)
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
@@ -210,15 +212,35 @@ int main(int argc, char **argv) {
   #pragma omp parallel
   {
     int i;
-    #pragma omp for simd linear(i : i)
+    #pragma omp for simd linear(i)
     for (int k = 0; k < argc; ++k) ++k;
+#ifdef OMP52
+    #pragma omp for simd linear(i : step(4))
+#else
     #pragma omp for simd linear(i : 4)
+#endif
     for (int k = 0; k < argc; ++k) { ++k; i += 4; }
   }
+#ifdef OMP52
+  #pragma omp for simd linear(j: step() //omp52-error 2 {{expected expression}} omp52-error{{expected ')'}} omp52-note{{to match this '('}}
+#else
   #pragma omp for simd linear(j)
+#endif
   for (int k = 0; k < argc; ++k) ++k;
+#ifdef OMP52
+  #pragma omp for simd linear(i: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}}
+#else
   #pragma omp for simd linear(i)
+#endif
   for (int k = 0; k < argc; ++k) ++k;
+#ifdef OMP52
+  #pragma omp for simd linear(j: step()) // omp52-error 2 {{expected expression}}
+  for (int k = 0; k < argc; ++k) ++k;
+  #pragma omp for simd linear(j: pval) // omp52-error {{use of undeclared identifier 'pval'}}
+  for (int k = 0; k < argc; ++k) ++k;
+  #pragma omp for simd linear(i: val, step(2 // omp52-error 3 {{expected ')'}}  omp52-note 2 {{to match this '('}}
+  for (int k = 0; k < argc; ++k) ++k;
+#endif
 
   foomain<int,char>(argc,argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}
   return 0;

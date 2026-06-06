@@ -4,8 +4,6 @@
 #include <iostream>
 #include <ostream>
 
-#include "benchmark/benchmark.h"
-
 namespace benchmark {
 namespace internal {
 
@@ -23,7 +21,11 @@ class LogType {
  private:
   LogType(std::ostream* out) : out_(out) {}
   std::ostream* out_;
-  BENCHMARK_DISALLOW_COPY_AND_ASSIGN(LogType);
+
+  // NOTE: we could use BENCHMARK_DISALLOW_COPY_AND_ASSIGN but we shouldn't have
+  // a dependency on benchmark.h from here.
+  LogType(const LogType&) = delete;
+  LogType& operator=(const LogType&) = delete;
 };
 
 template <class Tp>
@@ -47,13 +49,13 @@ inline int& LogLevel() {
 }
 
 inline LogType& GetNullLogInstance() {
-  static LogType log(nullptr);
-  return log;
+  static LogType null_log(static_cast<std::ostream*>(nullptr));
+  return null_log;
 }
 
 inline LogType& GetErrorLogInstance() {
-  static LogType log(&std::clog);
-  return log;
+  static LogType error_log(&std::clog);
+  return error_log;
 }
 
 inline LogType& GetLogInstanceForLevel(int level) {

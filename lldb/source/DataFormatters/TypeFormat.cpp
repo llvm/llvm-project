@@ -80,7 +80,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
               Status error;
               WritableDataBufferSP buffer_sp(
                   new DataBufferHeap(max_len + 1, 0));
-              Address address(valobj->GetPointerValue());
+              Address address(valobj->GetPointerValue().address);
               target_sp->ReadCStringFromMemory(
                   address, (char *)buffer_sp->GetBytes(), max_len, error);
               if (error.Success())
@@ -96,16 +96,20 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
 
         ExecutionContextScope *exe_scope =
             exe_ctx.GetBestExecutionContextScope();
-        std::optional<uint64_t> size = compiler_type.GetByteSize(exe_scope);
-        if (!size)
+        auto size_or_err = compiler_type.GetByteSize(exe_scope);
+        if (!size_or_err) {
+          LLDB_LOG_ERRORV(
+              GetLog(LLDBLog::Types), size_or_err.takeError(),
+              "Cannot get size of type while formatting object: {0}");
           return false;
+        }
         StreamString sstr;
         compiler_type.DumpTypeValue(
             &sstr,                          // The stream to use for display
             GetFormat(),                    // Format to display this type with
             data,                           // Data to extract from
             0,                              // Byte offset into "m_data"
-            *size,                          // Byte size of item in "m_data"
+            *size_or_err,                   // Byte size of item in "m_data"
             valobj->GetBitfieldBitSize(),   // Bitfield bit size
             valobj->GetBitfieldBitOffset(), // Bitfield bit offset
             exe_scope);
@@ -161,13 +165,12 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     if (!target_sp)
       return false;
     const ModuleList &images(target_sp->GetImages());
-    TypeList types;
-    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    images.FindTypes(nullptr, m_enum_type, false, UINT32_MAX,
-                     searched_symbol_files, types);
-    if (types.Empty())
+    TypeQuery query(m_enum_type.GetStringRef());
+    TypeResults results;
+    images.FindTypes(nullptr, query, results);
+    if (results.GetTypeMap().Empty())
       return false;
-    for (lldb::TypeSP type_sp : types.Types()) {
+    for (lldb::TypeSP type_sp : results.GetTypeMap().Types()) {
       if (!type_sp)
         continue;
       if ((type_sp->GetForwardCompilerType().GetTypeInfo() &

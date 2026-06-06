@@ -41,12 +41,12 @@ static Status EnsureFDFlags(int fd, int flags) {
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -78,15 +78,13 @@ NativeProcessNetBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::make_error<StringError>("Could not sync with inferior process",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("cannot get process architecture");
   }
 
   // Set the architecture to the exe architecture.
@@ -117,8 +115,7 @@ NativeProcessNetBSD::Manager::Attach(
   // Retrieve the architecture for the running process.
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("cannot get process architecture");
   }
 
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
@@ -379,6 +376,29 @@ void NativeProcessNetBSD::MonitorSignal(lldb::pid_t pid, int signal) {
   SetState(StateType::eStateStopped, true);
 }
 
+Status NativeProcessNetBSD::StopProcess(lldb::pid_t pid) {
+#ifdef PT_STOP
+  return PtraceWrapper(PT_STOP, pid);
+#else
+  Log *log = GetLog(POSIXLog::Ptrace);
+  Status error;
+  int ret;
+
+  errno = 0;
+  ret = kill(pid, SIGSTOP);
+
+  if (ret == -1)
+    error = Status::FromErrno();
+
+  LLDB_LOG(log, "kill({0}, SIGSTOP)", pid);
+
+  if (error.Fail())
+    LLDB_LOG(log, "kill() failed: {0}", error);
+
+  return error;
+#endif
+}
+
 Status NativeProcessNetBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
                                           int data, int *result) {
   Log *log = GetLog(POSIXLog::Ptrace);
@@ -389,7 +409,7 @@ Status NativeProcessNetBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   ret = ptrace(req, static_cast<::pid_t>(pid), addr, data);
 
   if (ret == -1)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   if (result)
     *result = ret;
@@ -424,8 +444,9 @@ static llvm::Expected<ptrace_siginfo_t> ComputeSignalInfo(
         signaled_threads++;
         if (action->signal != signal) {
           if (signal != LLDB_INVALID_SIGNAL_NUMBER)
-            return Status("NetBSD does not support passing multiple signals "
-                          "simultaneously")
+            return Status::FromErrorString(
+                       "NetBSD does not support passing multiple signals "
+                       "simultaneously")
                 .ToError();
           signal = action->signal;
           signaled_lwp = thread->GetID();
@@ -441,7 +462,8 @@ static llvm::Expected<ptrace_siginfo_t> ComputeSignalInfo(
   }
 
   if (signaled_threads > 1 && signaled_threads < threads.size())
-    return Status("NetBSD does not support passing signal to 1<i<all threads")
+    return Status::FromErrorString(
+               "NetBSD does not support passing signal to 1<i<all threads")
         .ToError();
 
   ptrace_siginfo_t siginfo;
@@ -499,16 +521,17 @@ Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
     case eStateSuspended:
     case eStateStopped:
       if (action->signal != LLDB_INVALID_SIGNAL_NUMBER)
-        return Status("Passing signal to suspended thread unsupported");
+        return Status::FromErrorString(
+            "Passing signal to suspended thread unsupported");
 
       ret = thread.Suspend();
       break;
 
     default:
-      return Status("NativeProcessNetBSD::%s (): unexpected state %s specified "
-                    "for pid %" PRIu64 ", tid %" PRIu64,
-                    __FUNCTION__, StateAsCString(action->state), GetID(),
-                    thread.GetID());
+      return Status::FromErrorStringWithFormat(
+          "NativeProcessNetBSD::%s (): unexpected state %s specified "
+          "for pid %" PRIu64 ", tid %" PRIu64,
+          __FUNCTION__, StateAsCString(action->state), GetID(), thread.GetID());
     }
 
     if (!ret.Success())
@@ -531,7 +554,7 @@ Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
   return ret;
 }
 
-Status NativeProcessNetBSD::Halt() { return PtraceWrapper(PT_STOP, GetID()); }
+Status NativeProcessNetBSD::Halt() { return StopProcess(GetID()); }
 
 Status NativeProcessNetBSD::Detach() {
   Status error;
@@ -550,14 +573,12 @@ Status NativeProcessNetBSD::Signal(int signo) {
   Status error;
 
   if (kill(GetID(), signo))
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
 
-Status NativeProcessNetBSD::Interrupt() {
-  return PtraceWrapper(PT_STOP, GetID());
-}
+Status NativeProcessNetBSD::Interrupt() { return StopProcess(GetID()); }
 
 Status NativeProcessNetBSD::Kill() {
   Log *log = GetLog(POSIXLog::Process);
@@ -588,7 +609,7 @@ Status NativeProcessNetBSD::Kill() {
   }
 
   if (kill(GetID(), SIGKILL) != 0) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -600,7 +621,7 @@ Status NativeProcessNetBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
 
   if (m_supports_mem_region == LazyBool::eLazyBoolNo) {
     // We're done.
-    return Status("unsupported");
+    return Status::FromErrorString("unsupported");
   }
 
   Status error = PopulateMemoryRegionCache();
@@ -626,10 +647,10 @@ Status NativeProcessNetBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
       range_info.GetRange().SetRangeBase(load_addr);
       range_info.GetRange().SetByteSize(
           proc_entry_info.GetRange().GetRangeBase() - load_addr);
-      range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+      range_info.SetReadable(eLazyBoolNo);
+      range_info.SetWritable(eLazyBoolNo);
+      range_info.SetExecutable(eLazyBoolNo);
+      range_info.SetMapped(eLazyBoolNo);
       return error;
     } else if (proc_entry_info.GetRange().Contains(load_addr)) {
       // The target address is within the memory region we're processing here.
@@ -644,10 +665,10 @@ Status NativeProcessNetBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
   // load address and the end of the memory as size.
   range_info.GetRange().SetRangeBase(load_addr);
   range_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+  range_info.SetReadable(eLazyBoolNo);
+  range_info.SetWritable(eLazyBoolNo);
+  range_info.SetExecutable(eLazyBoolNo);
+  range_info.SetMapped(eLazyBoolNo);
   return error;
 }
 
@@ -667,7 +688,7 @@ Status NativeProcessNetBSD::PopulateMemoryRegionCache() {
   if (vm == NULL) {
     m_supports_mem_region = LazyBool::eLazyBoolNo;
     Status error;
-    error.SetErrorString("not supported");
+    error = Status::FromErrorString("not supported");
     return error;
   }
   for (i = 0; i < count; i++) {
@@ -675,22 +696,22 @@ Status NativeProcessNetBSD::PopulateMemoryRegionCache() {
     info.Clear();
     info.GetRange().SetRangeBase(vm[i].kve_start);
     info.GetRange().SetRangeEnd(vm[i].kve_end);
-    info.SetMapped(MemoryRegionInfo::OptionalBool::eYes);
+    info.SetMapped(eLazyBoolYes);
 
     if (vm[i].kve_protection & VM_PROT_READ)
-      info.SetReadable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetReadable(eLazyBoolYes);
     else
-      info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetReadable(eLazyBoolNo);
 
     if (vm[i].kve_protection & VM_PROT_WRITE)
-      info.SetWritable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetWritable(eLazyBoolYes);
     else
-      info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetWritable(eLazyBoolNo);
 
     if (vm[i].kve_protection & VM_PROT_EXECUTE)
-      info.SetExecutable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetExecutable(eLazyBoolYes);
     else
-      info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetExecutable(eLazyBoolNo);
 
     if (vm[i].kve_path[0])
       info.SetName(vm[i].kve_path);
@@ -707,7 +728,7 @@ Status NativeProcessNetBSD::PopulateMemoryRegionCache() {
                   "for memory region metadata retrieval");
     m_supports_mem_region = LazyBool::eLazyBoolNo;
     Status error;
-    error.SetErrorString("not supported");
+    error = Status::FromErrorString("not supported");
     return error;
   }
   LLDB_LOG(log, "read {0} memory region entries from process {1}",
@@ -727,7 +748,8 @@ size_t NativeProcessNetBSD::UpdateThreads() { return m_threads.size(); }
 Status NativeProcessNetBSD::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                           bool hardware) {
   if (hardware)
-    return Status("NativeProcessNetBSD does not support hardware breakpoints");
+    return Status::FromErrorString(
+        "NativeProcessNetBSD does not support hardware breakpoints");
   else
     return SetSoftwareBreakpoint(addr, size);
 }
@@ -748,8 +770,9 @@ Status NativeProcessNetBSD::GetLoadedModuleFileSpec(const char *module_path,
       return Status();
     }
   }
-  return Status("Module file (%s) not found in process' memory map!",
-                module_file_spec.GetFilename().AsCString());
+  return Status::FromErrorStringWithFormatv(
+      "Module file ({0}) not found in process' memory map!",
+      module_file_spec.GetFilename());
 }
 
 Status NativeProcessNetBSD::GetFileLoadAddress(const llvm::StringRef &file_name,
@@ -766,7 +789,8 @@ Status NativeProcessNetBSD::GetFileLoadAddress(const llvm::StringRef &file_name,
       return Status();
     }
   }
-  return Status("No load address found for file %s.", file_name.str().c_str());
+  return Status::FromErrorStringWithFormat("No load address found for file %s.",
+                                           file_name.str().c_str());
 }
 
 void NativeProcessNetBSD::SigchldHandler() {
@@ -1089,7 +1113,7 @@ NativeProcessNetBSD::SaveCore(llvm::StringRef path_hint) {
 
   if (std::error_code errc =
           llvm::sys::fs::createTemporaryFile("lldb", "core", path))
-    return llvm::createStringError(errc, "Unable to create a temporary file");
+    return llvm::createStringError(errc, "unable to create a temporary file");
 
   error = PtraceWrapper(PT_DUMPCORE, GetID(), path.data(), path.size());
   if (error.Fail())

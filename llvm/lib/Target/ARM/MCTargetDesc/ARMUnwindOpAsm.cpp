@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMUnwindOpAsm.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/ARMEHABI.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MathExtras.h"
 #include <cassert>
 
 using namespace llvm;
@@ -160,7 +160,7 @@ void UnwindOpcodeAssembler::Finalize(unsigned &PersonalityIndex,
   UnwindOpcodeStreamer OpStreamer(Result);
 
   if (HasPersonality) {
-    // User-specifed personality routine: [ SIZE , OP1 , OP2 , ... ]
+    // User-specified personality routine: [ SIZE , OP1 , OP2 , ... ]
     PersonalityIndex = ARM::EHABI::NUM_PERSONALITY_INDEX;
     size_t TotalSize = Ops.size() + 1;
     size_t RoundUpSize = (TotalSize + 3) / 4 * 4;

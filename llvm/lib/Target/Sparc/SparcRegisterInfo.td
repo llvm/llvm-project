@@ -370,6 +370,10 @@ def LowQFPRegs : RegisterClass<"SP", [f128], 128, (sequence "Q%u", 0, 7)>;
 // Floating point control register classes.
 def FCCRegs : RegisterClass<"SP", [i1], 1, (sequence "FCC%u", 0, 3)>;
 
+// GPR argument registers.
+def GPROutgoingArg : RegisterClass<"SP", [i32, i64], 32, (sequence "O%u", 0, 5)>;
+def GPRIncomingArg : RegisterClass<"SP", [i32, i64], 32, (sequence "I%u", 0, 5)>;
+
 let isAllocatable = 0 in {
   // Ancillary state registers
   // FIXME: TICK is special-cased here as it can be accessed

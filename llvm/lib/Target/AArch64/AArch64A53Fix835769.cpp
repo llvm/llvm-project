@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -77,20 +76,24 @@ static bool isSecondInstructionInSequence(MachineInstr *MI) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class AArch64A53Fix835769 : public MachineFunctionPass {
-  const TargetInstrInfo *TII;
+class AArch64A53Fix835769Impl {
+public:
+  bool run(MachineFunction &MF);
 
+private:
+  const TargetInstrInfo *TII;
+  bool runOnBasicBlock(MachineBasicBlock &MBB);
+};
+
+class AArch64A53Fix835769Legacy : public MachineFunctionPass {
 public:
   static char ID;
-  explicit AArch64A53Fix835769() : MachineFunctionPass(ID) {
-    initializeAArch64A53Fix835769Pass(*PassRegistry::getPassRegistry());
-  }
+  explicit AArch64A53Fix835769Legacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override {
@@ -101,23 +104,34 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  bool runOnBasicBlock(MachineBasicBlock &MBB);
 };
-char AArch64A53Fix835769::ID = 0;
+char AArch64A53Fix835769Legacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64A53Fix835769, "aarch64-fix-cortex-a53-835769-pass",
+INITIALIZE_PASS(AArch64A53Fix835769Legacy, "aarch64-fix-cortex-a53-835769-pass",
                 "AArch64 fix for A53 erratum 835769", false, false)
 
 //===----------------------------------------------------------------------===//
 
-bool
-AArch64A53Fix835769::runOnMachineFunction(MachineFunction &F) {
+PreservedAnalyses
+AArch64A53Fix835769Pass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = AArch64A53Fix835769Impl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool AArch64A53Fix835769Legacy::runOnMachineFunction(MachineFunction &F) {
+  return AArch64A53Fix835769Impl().run(F);
+}
+
+bool AArch64A53Fix835769Impl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "***** AArch64A53Fix835769 *****\n");
-  auto &STI = F.getSubtarget<AArch64Subtarget>();
+  auto &STI = MF.getSubtarget<AArch64Subtarget>();
   // Fix not requested, skip pass.
   if (!STI.fixCortexA53_835769())
     return false;
@@ -125,7 +139,7 @@ AArch64A53Fix835769::runOnMachineFunction(MachineFunction &F) {
   bool Changed = false;
   TII = STI.getInstrInfo();
 
-  for (auto &MBB : F) {
+  for (auto &MBB : MF) {
     Changed |= runOnBasicBlock(MBB);
   }
   return Changed;
@@ -182,18 +196,16 @@ static void insertNopBeforeInstruction(MachineBasicBlock &MBB, MachineInstr* MI,
     MachineInstr *I = getLastNonPseudo(MBB, TII);
     assert(I && "Expected instruction");
     DebugLoc DL = I->getDebugLoc();
-    BuildMI(I->getParent(), DL, TII->get(AArch64::HINT)).addImm(0);
-  }
-  else {
+    BuildMI(I->getParent(), DL, TII->get(AArch64::NOP));
+  } else {
     DebugLoc DL = MI->getDebugLoc();
-    BuildMI(MBB, MI, DL, TII->get(AArch64::HINT)).addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AArch64::NOP));
   }
 
   ++NumNopsAdded;
 }
 
-bool
-AArch64A53Fix835769::runOnBasicBlock(MachineBasicBlock &MBB) {
+bool AArch64A53Fix835769Impl::runOnBasicBlock(MachineBasicBlock &MBB) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "Running on MBB: " << MBB
                     << " - scanning instructions...\n");
@@ -246,6 +258,6 @@ AArch64A53Fix835769::runOnBasicBlock(MachineBasicBlock &MBB) {
 
 // Factory function used by AArch64TargetMachine to add the pass to
 // the passmanager.
-FunctionPass *llvm::createAArch64A53Fix835769() {
-  return new AArch64A53Fix835769();
+FunctionPass *llvm::createAArch64A53Fix835769LegacyPass() {
+  return new AArch64A53Fix835769Legacy();
 }

@@ -1,12 +1,10 @@
 // REQUIRES: arm-registered-target
 // RUN: %clang_cc1 -emit-llvm -o - -triple arm-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
+// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64 %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
 // RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
 // RUN: %clang_cc1 -emit-llvm -o - -triple arm-none-linux-gnueabi -fnative-half-type %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
-// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fnative-half-type %s \
-// RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
-// RUN: %clang_cc1 -emit-llvm -o - -x renderscript %s \
+// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64 -fnative-half-type %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
 typedef unsigned cond_t;
 typedef __fp16 float16_t;
@@ -357,12 +355,12 @@ void foo(void) {
   // CHECK: [[F16TOF32]]
   // CHECK: [[F16TOF32]]
   // CHECK: [[F32TOF16]]
-  // NATIVE-HALF: fcmp une half {{.*}}, 0xH0000
+  // NATIVE-HALF: fcmp une half {{.*}}, 0.000000e+00
   h1 = (h1 ? h2 : h0);
   // Check assignments (inc. compound)
   h0 = h1;
-  // NOTNATIVE: store {{.*}} half 0xHC000
-  // NATIVE-HALF: store {{.*}} half 0xHC000
+  // NOTNATIVE: store {{.*}} half -2.000000e+00
+  // NATIVE-HALF: store {{.*}} half -2.000000e+00
   h0 = (__fp16)-2.0f;
   // CHECK: [[F32TOF16]]
   // NATIVE-HALF: fptrunc float

@@ -4,17 +4,23 @@
 // CHECK-SAME: 'int'
 // CHECK-NEXT: CXXDefaultInitExpr
 // CHECK-SAME: 'int'
+// CHECK-NEXT: IntegerLiteral
+// CHECK-SAME: 'int'
 
 // CHECK-NEXT: CXXCtorInitializer
 // CHECK-SAME: 'float_member'
 // CHECK-SAME: 'float'
 // CHECK-NEXT: CXXDefaultInitExpr
 // CHECK-SAME: 'float'
+// CHECK-NEXT: FloatingLiteral
+// CHECK-SAME: 'float'
 
 // CHECK-NEXT: CXXCtorInitializer
 // CHECK-SAME: 'class_member'
 // CHECK-SAME: 'Foo'
 // CHECK-NEXT: CXXDefaultInitExpr
+// CHECK-SAME: 'Foo'
+// CHECK-NEXT: ExprWithCleanups
 // CHECK-SAME: 'Foo'
 
 void expr() {

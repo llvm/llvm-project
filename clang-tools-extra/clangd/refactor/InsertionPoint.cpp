@@ -65,7 +65,7 @@ std::optional<const Decl *> insertionDecl(const DeclContext &DC,
 
 SourceLocation beginLoc(const Decl &D) {
   auto Loc = D.getBeginLoc();
-  if (RawComment *Comment = D.getASTContext().getRawCommentForDeclNoCache(&D)) {
+  if (RawComment *Comment = D.getASTContext().getRawCommentNoCache(&D)) {
     auto CommentLoc = Comment->getBeginLoc();
     if (CommentLoc.isValid() && Loc.isValid() &&
         D.getASTContext().getSourceManager().isBeforeInTranslationUnit(
@@ -85,7 +85,8 @@ SourceLocation endLoc(const DeclContext &DC) {
 }
 
 AccessSpecifier getAccessAtEnd(const CXXRecordDecl &C) {
-  AccessSpecifier Spec = (C.getTagKind() == TTK_Class ? AS_private : AS_public);
+  AccessSpecifier Spec =
+      (C.getTagKind() == TagTypeKind::Class ? AS_private : AS_public);
   for (const auto *D : C.decls())
     if (const auto *ASD = llvm::dyn_cast<AccessSpecDecl>(D))
       Spec = ASD->getAccess();

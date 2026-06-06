@@ -68,8 +68,7 @@ void SDTRewriter::readSection() {
     return;
 
   StringRef Buf = SDTSection->getContents();
-  DataExtractor DE = DataExtractor(Buf, BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE = DataExtractor(Buf, BC.AsmInfo->isLittleEndian());
   uint64_t Offset = 0;
 
   while (DE.isValidOffset(Offset)) {
@@ -87,7 +86,7 @@ void SDTRewriter::readSection() {
 
     StringRef Name = DE.getCStr(&Offset);
 
-    if (!Name.equals("stapsdt"))
+    if (Name != "stapsdt")
       errs() << "BOLT-WARNING: SDT note name \"" << Name
              << "\" is not expected\n";
 

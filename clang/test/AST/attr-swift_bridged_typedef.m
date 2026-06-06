@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -ast-dump %s | FileCheck %s
 
 typedef struct T TBridged __attribute((__swift_bridged_typedef__));
 // CHECK: TypedefDecl {{.*}} TBridged 'struct T'

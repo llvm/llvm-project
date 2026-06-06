@@ -42,25 +42,27 @@
 define dso_local i32 @test(i32 noundef %0) #0 !dbg !10 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %3, align 4
-  %4 = load i32, i32* %3, align 4
+  store i32 %0, ptr %3, align 4
+  %4 = load i32, ptr %3, align 4
   %5 = icmp slt i32 %4, 0
   br i1 %5, label %6, label %7
 6:                                                ; preds = %1
-  store i32 -1, i32* %2, align 4
+  store i32 -1, ptr %2, align 4
   ret i32 0
 7:
   ret i32 1
 }
 
 !llvm.dbg.cu = !{!0}
+!11 = !{null}
+!12 = !DISubroutineType(types: !11)
 !llvm.module.flags = !{!2, !3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
 !1 = !DIFile(filename: "/path/to/dir/test_filename", directory: "/path/to/dir")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!10 = distinct !DISubprogram(name: "test", scope: !1, unit: !0)
+!10 = distinct !DISubprogram(name: "test", scope: !1, type: !12, unit: !0)
 
 ;; Check that the split section is created when using the correct module name, or no module name.
 ;

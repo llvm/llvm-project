@@ -52,7 +52,7 @@ public:
   };
 
   LLVMUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                     llvm::StringRef prefix, lldb::LanguageType language,
+                     llvm::StringRef prefix, SourceLanguage language,
                      ResultType desired_type,
                      const EvaluateExpressionOptions &options);
   ~LLVMUserExpression() override;
@@ -77,9 +77,6 @@ protected:
             const EvaluateExpressionOptions &options,
             lldb::UserExpressionSP &shared_ptr_to_me,
             lldb::ExpressionVariableSP &result) override;
-
-  virtual void ScanContext(ExecutionContext &exe_ctx,
-                           lldb_private::Status &err) = 0;
 
   bool PrepareToExecuteJITExpression(DiagnosticManager &diagnostic_manager,
                                      ExecutionContext &exe_ctx,

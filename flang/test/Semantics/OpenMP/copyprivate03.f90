@@ -6,6 +6,8 @@
 
 program omp_copyprivate
   integer :: a(10), b(10)
+  real, dimension(:), allocatable :: c
+  real, dimension(:), pointer :: d
   integer, save :: k
 
   !$omp threadprivate(k)
@@ -34,6 +36,25 @@ program omp_copyprivate
   !$omp end parallel
   !$omp end parallel sections
 
+  !The use of FIRSTPRIVATE with COPYPRIVATE is allowed
+  !$omp parallel firstprivate(a)
+  !$omp single
+  a = a + k
+  !$omp end single copyprivate(a)
+  !$omp end parallel
+
   print *, a, b
 
+  !$omp task
+    !$omp parallel private(c, d)
+      allocate(c(5))
+      allocate(d(10))
+      !$omp single
+        c = 22
+        d = 33
+      !Check that 'c' and 'd' inherit PRIVATE DSA from the enclosing PARALLEL
+      !and no error occurs.
+      !$omp end single copyprivate(c, d)
+    !$omp end parallel
+  !$omp end task
 end program omp_copyprivate

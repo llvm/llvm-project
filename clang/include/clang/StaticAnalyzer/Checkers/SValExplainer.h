@@ -19,6 +19,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 
@@ -27,6 +28,14 @@ namespace ento {
 class SValExplainer : public FullSValVisitor<SValExplainer, std::string> {
 private:
   ASTContext &ACtx;
+  ProgramStateRef State;
+
+  std::string printCFGElementRef(ConstCFGElementRef Elem) {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    Elem->dumpToStream(OS, /*TerminateWithNewLine=*/false);
+    return Str;
+  }
 
   std::string printStmt(const Stmt *S) {
     std::string Str;
@@ -55,7 +64,8 @@ private:
   }
 
 public:
-  SValExplainer(ASTContext &Ctx) : ACtx(Ctx) {}
+  SValExplainer(ASTContext &Ctx, ProgramStateRef State)
+      : ACtx(Ctx), State(State) {}
 
   std::string VisitUnknownVal(UnknownVal V) {
     return "unknown value";
@@ -65,7 +75,7 @@ public:
     return "undefined value";
   }
 
-  std::string VisitLocMemRegionVal(loc::MemRegionVal V) {
+  std::string VisitMemRegionVal(loc::MemRegionVal V) {
     const MemRegion *R = V.getRegion();
     // Avoid the weird "pointer to pointee of ...".
     if (auto SR = dyn_cast<SymbolicRegion>(R)) {
@@ -76,7 +86,7 @@ public:
     return "pointer to " + Visit(R);
   }
 
-  std::string VisitLocConcreteInt(loc::ConcreteInt V) {
+  std::string VisitConcreteInt(loc::ConcreteInt V) {
     const llvm::APSInt &I = V.getValue();
     std::string Str;
     llvm::raw_string_ostream OS(Str);
@@ -84,11 +94,11 @@ public:
     return Str;
   }
 
-  std::string VisitNonLocSymbolVal(nonloc::SymbolVal V) {
+  std::string VisitSymbolVal(nonloc::SymbolVal V) {
     return Visit(V.getSymbol());
   }
 
-  std::string VisitNonLocConcreteInt(nonloc::ConcreteInt V) {
+  std::string VisitConcreteInt(nonloc::ConcreteInt V) {
     const llvm::APSInt &I = V.getValue();
     std::string Str;
     llvm::raw_string_ostream OS(Str);
@@ -97,7 +107,7 @@ public:
     return Str;
   }
 
-  std::string VisitNonLocLazyCompoundVal(nonloc::LazyCompoundVal V) {
+  std::string VisitLazyCompoundVal(nonloc::LazyCompoundVal V) {
     return "lazily frozen compound value of " + Visit(V.getRegion());
   }
 
@@ -112,7 +122,8 @@ public:
 
   std::string VisitSymbolConjured(const SymbolConjured *S) {
     return "symbol of type '" + S->getType().getAsString() +
-           "' conjured at statement '" + printStmt(S->getStmt()) + "'";
+           "' conjured at CFG element '" +
+           printCFGElementRef(S->getCFGElementRef()) + "'";
   }
 
   std::string VisitSymbolDerived(const SymbolDerived *S) {
@@ -166,7 +177,7 @@ public:
             .getCanonicalType()->getAs<ObjCObjectPointerType>())
       return "object at " + Visit(R->getSymbol());
     // Other heap-based symbolic regions are also special.
-    if (isa<HeapSpaceRegion>(R->getMemorySpace()))
+    if (R->hasMemorySpace<HeapSpaceRegion>(State))
       return "heap segment that starts at " + Visit(R->getSymbol());
     return "pointee of " + Visit(R->getSymbol());
   }

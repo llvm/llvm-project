@@ -25,7 +25,69 @@ LogicalResult dropOutermostUnitDims(RewriterBase &rewriter,
                                     linalg::GenericOp genericOp) {
   linalg::ControlDropUnitDims options;
   options.controlFn = [](Operation *op) { return SmallVector<unsigned>{0}; };
-  return linalg::dropUnitDims(rewriter, genericOp, options);
+  FailureOr<linalg::DropUnitDimsResult> result =
+      linalg::dropUnitDims(rewriter, genericOp, options);
+  if (failed(result)) {
+    return failure();
+  }
+  rewriter.replaceOp(genericOp, result->replacements);
+  return success();
+}
+
+LogicalResult dropOutermostUnitDimsWithEncoding(RewriterBase &rewriter,
+                                                linalg::GenericOp genericOp) {
+  linalg::ControlDropUnitDims options;
+  linalg::ControlDropUnitDims::CollapseFnTy defaultCollapseFn =
+      options.collapseFn;
+  linalg::ControlDropUnitDims::ExpandFnTy defaultExpandFn = options.expandFn;
+  options.controlFn = [](Operation *op) { return SmallVector<unsigned>{0}; };
+  options.collapseFn =
+      [=](RewriterBase &rewriter, Location loc, Value operand,
+          ArrayRef<int64_t> targetShape,
+          ArrayRef<ReassociationIndices> reassociation,
+          const linalg::ControlDropUnitDims &control) -> FailureOr<Value> {
+    if (auto tensorType = dyn_cast<RankedTensorType>(operand.getType())) {
+      if (tensorType.getEncoding()) {
+        assert(control.rankReductionStrategy ==
+                   linalg::ControlDropUnitDims::RankReductionStrategy::
+                       ReassociativeReshape &&
+               "unexpected rank reduction strategy");
+        auto targetType = RankedTensorType::get(
+            targetShape, tensorType.getElementType(), tensorType.getEncoding());
+        return tensor::CollapseShapeOp::create(rewriter, loc, targetType,
+                                               operand, reassociation)
+            .getResult();
+      }
+    }
+    return defaultCollapseFn(rewriter, loc, operand, targetShape, reassociation,
+                             control);
+  };
+  options.expandFn =
+      [=](RewriterBase &rewriter, Location loc, Value result, Value origDest,
+          ArrayRef<ReassociationIndices> reassociation,
+          const linalg::ControlDropUnitDims &control) -> FailureOr<Value> {
+    if (auto tensorType = dyn_cast<RankedTensorType>(origDest.getType())) {
+      if (tensorType.getEncoding()) {
+        assert(control.rankReductionStrategy ==
+                   linalg::ControlDropUnitDims::RankReductionStrategy::
+                       ReassociativeReshape &&
+               "unexpected rank reduction strategy");
+        return tensor::ExpandShapeOp::create(rewriter, loc, tensorType, result,
+                                             reassociation)
+            .getResult();
+      }
+    }
+    return defaultExpandFn(rewriter, loc, result, origDest, reassociation,
+                           control);
+  };
+
+  FailureOr<linalg::DropUnitDimsResult> result =
+      linalg::dropUnitDims(rewriter, genericOp, options);
+  if (failed(result)) {
+    return failure();
+  }
+  rewriter.replaceOp(genericOp, result->replacements);
+  return success();
 }
 
 struct TestLinalgDropUnitDims
@@ -36,6 +98,11 @@ struct TestLinalgDropUnitDims
   TestLinalgDropUnitDims() = default;
   TestLinalgDropUnitDims(const TestLinalgDropUnitDims &pass)
       : PassWrapper(pass) {}
+
+  Option<bool> collapseEncoded{
+      *this, "collapse-encoded",
+      llvm::cl::desc("Collapse and expand tensors with encodings"),
+      llvm::cl::init(false)};
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<linalg::LinalgDialect>();
@@ -58,6 +125,10 @@ struct TestLinalgDropUnitDims
 
     for (auto genericOp : genericOps) {
       rewriter.setInsertionPoint(genericOp);
+      if (collapseEncoded) {
+        (void)dropOutermostUnitDimsWithEncoding(rewriter, genericOp);
+        continue;
+      }
       (void)dropOutermostUnitDims(rewriter, genericOp);
     }
   }

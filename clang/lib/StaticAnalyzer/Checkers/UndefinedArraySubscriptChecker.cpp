@@ -24,7 +24,7 @@ using namespace ento;
 namespace {
 class UndefinedArraySubscriptChecker
   : public Checker< check::PreStmt<ArraySubscriptExpr> > {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Array subscript is undefined"};
 
 public:
   void checkPreStmt(const ArraySubscriptExpr *A, CheckerContext &C) const;
@@ -40,7 +40,7 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
 
   // Sema generates anonymous array variables for copying array struct fields.
   // Don't warn if we're in an implicitly-generated constructor.
-  const Decl *D = C.getLocationContext()->getDecl();
+  const Decl *D = C.getStackFrame()->getDecl();
   if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D))
     if (Ctor->isDefaulted())
       return;
@@ -48,11 +48,8 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
     return;
-  if (!BT)
-    BT.reset(new BugType(this, "Array subscript is undefined"));
-
   // Generate a report for this bug.
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, BT.getDescription(), N);
   R->addRange(A->getIdx()->getSourceRange());
   bugreporter::trackExpressionValue(N, A->getIdx(), *R);
   C.emitReport(std::move(R));

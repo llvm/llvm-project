@@ -40,12 +40,10 @@ func.func @rectangular(%arg0: memref<?x?xf32>) {
  scf.for %i = %c2 to %c44 step %c1 {
     // Upper bound for the inner loop min(%i + %step, %c44).
     // COMMON:      %[[stepped:.*]] = arith.addi %[[i]], %[[step]]
-    // COMMON-NEXT: arith.cmpi slt, %c44, %[[stepped]]
-    // COMMON-NEXT: %[[ub:.*]] = arith.select {{.*}}, %c44, %[[stepped]]
+    // COMMON-NEXT: %[[ub:.*]] = arith.minsi %c44, %[[stepped]]
     //
     // TILE_74:      %[[stepped2:.*]] = arith.addi %[[j]], %[[step2]]
-    // TILE_74-NEXT: arith.cmpi slt, %c44, %[[stepped2]]
-    // TILE_74-NEXT: %[[ub2:.*]] = arith.select {{.*}}, %c44, %[[stepped2]]
+    // TILE_74-NEXT: %[[ub2:.*]] = arith.minsi %c44, %[[stepped2]]
 
     // Created inner scf.
     // COMMON:scf.for %[[ii:.*]] = %[[i]] to %[[ub:.*]] step %c1
@@ -108,11 +106,9 @@ func.func @triangular(%arg0: memref<?x?xf32>) {
  scf.for %i = %c2 to %c44 step %c1 {
     // Upper bound for the inner loop min(%i + %step, %c44).
     // COMMON:      %[[stepped:.*]] = arith.addi %[[i]], %[[step]]
-    // COMMON-NEXT: arith.cmpi slt, %c44, %[[stepped]]
-    // COMMON-NEXT: %[[ub:.*]] = arith.select {{.*}}, %c44, %[[stepped]]
+    // COMMON-NEXT: %[[ub:.*]] = arith.minsi %c44, %[[stepped]]
     // TILE_74:      %[[stepped2:.*]] = arith.addi %[[j]], %[[step2]]
-    // TILE_74-NEXT: arith.cmpi slt, %[[i]], %[[stepped2]]
-    // TILE_74-NEXT: %[[ub2:.*]] = arith.select {{.*}}, %[[i]], %[[stepped2]]
+    // TILE_74-NEXT: %[[ub2:.*]] = arith.minsi %[[i]], %[[stepped2]]
     //
     // Created inner scf.
     // COMMON:scf.for %[[ii:.*]] = %[[i]] to %[[ub:.*]] step %c1
@@ -130,4 +126,23 @@ func.func @triangular(%arg0: memref<?x?xf32>) {
     }
   }
   return
+}
+
+// Verify that extractFixedOuterLoops silently skips loops with iter_args
+// instead of producing invalid IR (regression test for
+// https://github.com/llvm/llvm-project/issues/129044).
+
+// COMMON-LABEL: @loop_with_iter_args
+// COMMON: scf.for {{.*}} iter_args({{.*}}) -> (f32)
+func.func @loop_with_iter_args(%buffer: memref<1024xf32>, %lb: index,
+                               %ub: index, %step: index) -> f32 {
+  %initial_sum = arith.constant 0.0 : f32
+  // This loop has iter_args; strip-mining must not be applied.
+  %final_sum = scf.for %iv = %lb to %ub step %step
+      iter_args(%sum_iter = %initial_sum) -> (f32) {
+    %element = memref.load %buffer[%iv] : memref<1024xf32>
+    %updated_sum = arith.addf %sum_iter, %element : f32
+    scf.yield %updated_sum : f32
+  }
+  return %final_sum : f32
 }

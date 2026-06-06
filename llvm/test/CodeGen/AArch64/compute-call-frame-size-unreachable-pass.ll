@@ -3,8 +3,8 @@
 ; This tests that the MFI assert in unreachableblockelim pass
 ; does not trigger
 
-%struct.ngtcp2_crypto_aead = type { i8*, i64 }
-%struct.ngtcp2_crypto_aead_ctx = type { i8* }
+%struct.ngtcp2_crypto_aead = type { ptr, i64 }
+%struct.ngtcp2_crypto_aead_ctx = type { ptr }
 
 ; Function Attrs: noinline optnone
 define internal fastcc void @decrypt_pkt() unnamed_addr #0 !type !0 !type !1 {
@@ -15,7 +15,7 @@ trap:                                             ; preds = %entry
   unreachable, !nosanitize !2
 
 cont:                                             ; preds = %entry
-  %call = call i32 undef(i8* undef, %struct.ngtcp2_crypto_aead* undef, %struct.ngtcp2_crypto_aead_ctx* undef, i8* undef, i64 undef, i8* undef, i64 undef, i8* undef, i64 undef)
+  %call = call i32 undef(ptr undef, ptr undef, ptr undef, ptr undef, i64 undef, ptr undef, i64 undef, ptr undef, i64 undef)
   ret void
 }
 

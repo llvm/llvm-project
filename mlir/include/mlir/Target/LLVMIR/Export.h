@@ -15,18 +15,27 @@
 namespace llvm {
 class LLVMContext;
 class Module;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 } // namespace llvm
 
 namespace mlir {
 class Operation;
 
-/// Translate operation that satisfies LLVM dialect module requirements into an
-/// LLVM IR module living in the given context. This translates operations from
-/// any dilalect that has a registered implementation of
-/// LLVMTranslationDialectInterface.
+/// Translates a given LLVM dialect `module` into an LLVM IR module living in
+/// the given context. Operates on any operation from dialects that provide a
+/// registered implementation of the LLVMTranslationDialectInterface. Returns
+/// nullptr when the translation fails.
+/// Verifies the produced LLVM module, except when `disableVerification` is set.
+/// An optional \p fs can be provided to avoid direct filesystem access (e.g.,
+/// to comply with the IO sandbox in clang -cc1). When null, the real filesystem
+/// is used.
 std::unique_ptr<llvm::Module>
 translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
-                        llvm::StringRef name = "LLVMDialectModule");
+                        llvm::StringRef name = "LLVMDialectModule",
+                        bool disableVerification = false,
+                        llvm::vfs::FileSystem *fs = nullptr);
 } // namespace mlir
 
 #endif // MLIR_TARGET_LLVMIR_EXPORT_H

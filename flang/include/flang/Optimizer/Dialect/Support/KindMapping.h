@@ -66,7 +66,7 @@ public:
   /// of 6 KindTy must be passed. The kinds must be the given in the following
   /// order: CHARACTER, COMPLEX, DOUBLE PRECISION, INTEGER, LOGICAL, and REAL.
   explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
-                       llvm::ArrayRef<KindTy> defs = std::nullopt);
+                       llvm::ArrayRef<KindTy> defs = {});
   explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
                        llvm::StringRef defs)
       : KindMapping{context, map, toDefaultKinds(defs)} {}
@@ -124,7 +124,7 @@ public:
 private:
   MatchResult badMapString(const llvm::Twine &ptr);
   MatchResult parse(llvm::StringRef kindMap);
-  mlir::LogicalResult setDefaultKinds(llvm::ArrayRef<KindTy> defs);
+  llvm::LogicalResult setDefaultKinds(llvm::ArrayRef<KindTy> defs);
 
   mlir::MLIRContext *context;
   llvm::DenseMap<std::pair<char, KindTy>, Bitsize> intMap;

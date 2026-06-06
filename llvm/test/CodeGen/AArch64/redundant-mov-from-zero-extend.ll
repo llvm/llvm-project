@@ -10,34 +10,38 @@ define i32 @test(i32 %input, i32 %n, i32 %a) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %bb.0
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    mov w0, #100
-; CHECK-NEXT:    cmp w8, #4
-; CHECK-NEXT:    b.hi .LBB0_5
+; CHECK-NEXT:    mov w0, #100 // =0x64
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    b.le .LBB0_7
 ; CHECK-NEXT:  // %bb.3: // %bb.0
-; CHECK-NEXT:    adrp x9, .LJTI0_0
-; CHECK-NEXT:    add x9, x9, :lo12:.LJTI0_0
-; CHECK-NEXT:    adr x10, .LBB0_4
-; CHECK-NEXT:    ldrb w11, [x9, x8]
-; CHECK-NEXT:    add x10, x10, x11, lsl #2
-; CHECK-NEXT:    br x10
-; CHECK-NEXT:  .LBB0_4: // %sw.bb
-; CHECK-NEXT:    add w0, w2, #1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_5: // %bb.0
+; CHECK-NEXT:    cmp w8, #2
+; CHECK-NEXT:    b.eq .LBB0_10
+; CHECK-NEXT:  // %bb.4: // %bb.0
+; CHECK-NEXT:    cmp w8, #4
+; CHECK-NEXT:    b.eq .LBB0_11
+; CHECK-NEXT:  // %bb.5: // %bb.0
 ; CHECK-NEXT:    cmp w8, #200
-; CHECK-NEXT:    b.ne .LBB0_10
+; CHECK-NEXT:    b.ne .LBB0_12
 ; CHECK-NEXT:  // %bb.6: // %sw.bb7
 ; CHECK-NEXT:    add w0, w2, #7
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_7: // %sw.bb1
+; CHECK-NEXT:  .LBB0_7: // %bb.0
+; CHECK-NEXT:    cbz w8, .LBB0_13
+; CHECK-NEXT:  // %bb.8: // %bb.0
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    b.ne .LBB0_12
+; CHECK-NEXT:  // %bb.9: // %sw.bb1
 ; CHECK-NEXT:    add w0, w2, #3
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_8: // %sw.bb3
+; CHECK-NEXT:  .LBB0_10: // %sw.bb3
 ; CHECK-NEXT:    add w0, w2, #4
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_9: // %sw.bb5
+; CHECK-NEXT:  .LBB0_11: // %sw.bb5
 ; CHECK-NEXT:    add w0, w2, #5
-; CHECK-NEXT:  .LBB0_10: // %return
+; CHECK-NEXT:  .LBB0_12: // %return
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_13: // %sw.bb
+; CHECK-NEXT:    add w0, w2, #1
 ; CHECK-NEXT:    ret
 entry:
   %b = add nsw i32 %input, %n
@@ -77,3 +81,4 @@ return:
   %retval.0 = phi i32 [ %add8, %sw.bb7 ], [ %add6, %sw.bb5 ], [ %add4, %sw.bb3 ], [ %add2, %sw.bb1 ], [ %add, %sw.bb ], [ 100, %bb.0 ], [ 0, %entry ]
   ret i32 %retval.0
 }
+

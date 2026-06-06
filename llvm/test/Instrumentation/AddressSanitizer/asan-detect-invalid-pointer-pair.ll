@@ -1,9 +1,6 @@
-; RUN: opt < %s -passes=asan -asan-detect-invalid-pointer-cmp -S \
-; RUN:     | FileCheck %s --check-prefixes=CMP,NOSUB,ALL
-; RUN: opt < %s -passes=asan -asan-detect-invalid-pointer-sub -S \
-; RUN:     | FileCheck %s --check-prefixes=SUB,NOCMP,ALL
-; RUN: opt < %s -passes=asan -asan-detect-invalid-pointer-pair -S \
-; RUN:     | FileCheck %s --check-prefixes=CMP,SUB,ALL
+; RUN: opt < %s -passes=asan -asan-detect-invalid-pointer-cmp -S | FileCheck %s --check-prefixes=CMP,NOSUB,ALL
+; RUN: opt < %s -passes=asan -asan-detect-invalid-pointer-sub -S | FileCheck %s --check-prefixes=SUB,NOCMP,ALL
+; RUN: opt < %s -passes=asan -asan-detect-invalid-pointer-pair -S | FileCheck %s --check-prefixes=CMP,SUB,ALL
 ; Support instrumentation of invalid pointer pair detection.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

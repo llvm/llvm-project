@@ -11,26 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips16FrameLowering.h"
-#include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips16InstrInfo.h"
 #include "MipsInstrInfo.h"
 #include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MachineLocation.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
-#include <cassert>
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/MathExtras.h"
 #include <cstdint>
 #include <vector>
 
@@ -55,33 +50,19 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   // No need to allocate space on the stack.
   if (StackSize == 0 && !MFI.adjustsStack()) return;
 
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
-
   // Adjust stack.
   TII.makeFrame(Mips::SP, StackSize, MBB, MBBI);
 
-  // emit ".cfi_def_cfa_offset StackSize"
-  unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
-  BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
+  CFIBuilder.buildDefCFAOffset(StackSize);
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   if (!CSI.empty()) {
-    const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-
-    for (const CalleeSavedInfo &I : CSI) {
-      int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      Register Reg = I.getReg();
-      unsigned DReg = MRI->getDwarfRegNum(Reg, true);
-      unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createOffset(nullptr, DReg, Offset));
-      BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex);
-    }
+    for (const CalleeSavedInfo &I : CSI)
+      CFIBuilder.buildOffset(I.getReg(), MFI.getObjectOffset(I.getFrameIdx()));
   }
+
   if (hasFP(MF))
     BuildMI(MBB, MBBI, dl, TII.get(Mips::MoveR3216), Mips::S0)
       .addReg(Mips::SP).setMIFlag(MachineInstr::FrameSetup);
@@ -124,7 +105,7 @@ bool Mips16FrameLowering::spillCalleeSavedRegisters(
     // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA)
       && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)

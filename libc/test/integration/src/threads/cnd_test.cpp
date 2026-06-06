@@ -11,6 +11,7 @@
 #include "src/threads/cnd_destroy.h"
 #include "src/threads/cnd_init.h"
 #include "src/threads/cnd_signal.h"
+#include "src/threads/cnd_timedwait.h"
 #include "src/threads/cnd_wait.h"
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
@@ -18,10 +19,20 @@
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
+#include "src/time/timespec_get.h"
 
 #include "test/IntegrationTest/test.h"
 
 #include <threads.h>
+#include <time.h> // for TIME_UTC
+
+static void add_ns(struct timespec &ts, long ns) {
+  ts.tv_nsec += ns;
+  if (ts.tv_nsec >= 1'000'000'000) {
+    ++ts.tv_sec;
+    ts.tv_nsec -= 1'000'000'000;
+  }
+}
 
 namespace wait_notify_broadcast_test {
 
@@ -100,7 +111,14 @@ namespace single_waiter_test {
 mtx_t waiter_mtx, main_thread_mtx;
 cnd_t waiter_cnd, main_thread_cnd;
 
-int waiter_thread_func(void *unused) {
+enum class WaitMode {
+  Default,
+  Timed,
+};
+
+int waiter_thread_func(void *arg) {
+  auto *waiter_unblocked =
+      static_cast<LIBC_NAMESPACE::cpp::Atomic<bool> *>(arg);
   LIBC_NAMESPACE::mtx_lock(&waiter_mtx);
 
   LIBC_NAMESPACE::mtx_lock(&main_thread_mtx);
@@ -108,12 +126,13 @@ int waiter_thread_func(void *unused) {
   LIBC_NAMESPACE::mtx_unlock(&main_thread_mtx);
 
   LIBC_NAMESPACE::cnd_wait(&waiter_cnd, &waiter_mtx);
+  waiter_unblocked->store(true);
   LIBC_NAMESPACE::mtx_unlock(&waiter_mtx);
 
   return 0x600D;
 }
 
-void single_waiter_test() {
+void single_waiter_test(WaitMode wait_mode) {
   ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&waiter_mtx, mtx_plain),
             int(thrd_success));
   ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&main_thread_mtx, mtx_plain),
@@ -124,15 +143,29 @@ void single_waiter_test() {
   ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&main_thread_mtx), int(thrd_success));
 
   thrd_t waiter_thread;
-  LIBC_NAMESPACE::thrd_create(&waiter_thread, waiter_thread_func, nullptr);
+  LIBC_NAMESPACE::cpp::Atomic<bool> waiter_unblocked(false);
+  LIBC_NAMESPACE::thrd_create(&waiter_thread, waiter_thread_func,
+                              &waiter_unblocked);
 
-  ASSERT_EQ(LIBC_NAMESPACE::cnd_wait(&main_thread_cnd, &main_thread_mtx),
-            int(thrd_success));
+  if (wait_mode == WaitMode::Default) {
+    ASSERT_EQ(LIBC_NAMESPACE::cnd_wait(&main_thread_cnd, &main_thread_mtx),
+              int(thrd_success));
+  } else {
+    ASSERT_EQ(wait_mode, WaitMode::Timed);
+    struct timespec ts;
+    ASSERT_EQ(LIBC_NAMESPACE::timespec_get(&ts, TIME_UTC), TIME_UTC);
+    add_ns(ts, 50'000);
+    int result =
+        LIBC_NAMESPACE::cnd_timedwait(&main_thread_cnd, &main_thread_mtx, &ts);
+    ASSERT_TRUE(result == int(thrd_success) || result == int(thrd_timedout));
+  }
   ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&main_thread_mtx), int(thrd_success));
 
-  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&waiter_mtx), int(thrd_success));
-  ASSERT_EQ(LIBC_NAMESPACE::cnd_signal(&waiter_cnd), int(thrd_success));
-  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&waiter_mtx), int(thrd_success));
+  while (!waiter_unblocked.load()) {
+    ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&waiter_mtx), int(thrd_success));
+    ASSERT_EQ(LIBC_NAMESPACE::cnd_signal(&waiter_cnd), int(thrd_success));
+    ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&waiter_mtx), int(thrd_success));
+  }
 
   int retval;
   LIBC_NAMESPACE::thrd_join(waiter_thread, &retval);
@@ -146,8 +179,53 @@ void single_waiter_test() {
 
 } // namespace single_waiter_test
 
+namespace timed_wait_test {
+
+void timeout_test() {
+  cnd_t cnd;
+  mtx_t mtx;
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_init(&cnd), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&mtx, mtx_plain), int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&mtx), int(thrd_success));
+
+  struct timespec ts;
+  ts.tv_sec = 0;
+  ts.tv_nsec = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_timedwait(&cnd, &mtx, &ts), int(thrd_timedout));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mtx), int(thrd_success));
+
+  LIBC_NAMESPACE::cnd_destroy(&cnd);
+  LIBC_NAMESPACE::mtx_destroy(&mtx);
+}
+
+void future_timeout_test() {
+  cnd_t cnd;
+  mtx_t mtx;
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_init(&cnd), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&mtx, mtx_plain), int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&mtx), int(thrd_success));
+
+  struct timespec ts;
+  ASSERT_EQ(LIBC_NAMESPACE::timespec_get(&ts, TIME_UTC), TIME_UTC);
+  add_ns(ts, 50'000);
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_timedwait(&cnd, &mtx, &ts), int(thrd_timedout));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mtx), int(thrd_success));
+
+  LIBC_NAMESPACE::cnd_destroy(&cnd);
+  LIBC_NAMESPACE::mtx_destroy(&mtx);
+}
+
+} // namespace timed_wait_test
+
 TEST_MAIN() {
   wait_notify_broadcast_test::wait_notify_broadcast_test();
-  single_waiter_test::single_waiter_test();
+  single_waiter_test::single_waiter_test(single_waiter_test::WaitMode::Default);
+  single_waiter_test::single_waiter_test(single_waiter_test::WaitMode::Timed);
+  timed_wait_test::timeout_test();
+  timed_wait_test::future_timeout_test();
   return 0;
 }

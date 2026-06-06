@@ -110,6 +110,13 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info
     bool found_any_static_type;
     // Set whenever a search can be stopped
     bool search_done;
+
+    // Data that modifies the search mechanism.
+
+    // There is no object (seen when we throw a null pointer to object).
+    bool have_object;
+    // Virtual base
+    const void* vbase_cookie;
 };
 
 // Has no base class
@@ -138,7 +145,7 @@ public:
 // Has one non-virtual public base class at offset zero
 class _LIBCXXABI_TYPE_VIS __si_class_type_info : public __class_type_info {
 public:
-  const __class_type_info *__base_type;
+  _LIBCXXABI_DISABLE_POINTER_FIELD_PROTECTION const __class_type_info* __base_type;
 
   _LIBCXXABI_HIDDEN virtual ~__si_class_type_info();
 
@@ -197,7 +204,7 @@ public:
 class _LIBCXXABI_TYPE_VIS __pbase_type_info : public __shim_type_info {
 public:
   unsigned int __flags;
-  const __shim_type_info *__pointee;
+  _LIBCXXABI_DISABLE_POINTER_FIELD_PROTECTION const __shim_type_info* __pointee;
 
   enum __masks {
     __const_mask = 0x1,
@@ -238,7 +245,7 @@ public:
 class _LIBCXXABI_TYPE_VIS __pointer_to_member_type_info
     : public __pbase_type_info {
 public:
-  const __class_type_info *__context;
+  _LIBCXXABI_DISABLE_POINTER_FIELD_PROTECTION const __class_type_info* __context;
 
   _LIBCXXABI_HIDDEN virtual ~__pointer_to_member_type_info();
   _LIBCXXABI_HIDDEN virtual bool can_catch(const __shim_type_info *,

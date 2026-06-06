@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-extern cl::opt<std::string> BBSectionsColdTextPrefix;
+extern LLVM_ABI cl::opt<std::string> BBSectionsColdTextPrefix;
 
 class MachineFunction;
 class MachineBasicBlock;
@@ -22,10 +22,20 @@ class MachineBasicBlock;
 using MachineBasicBlockComparator =
     function_ref<bool(const MachineBasicBlock &, const MachineBasicBlock &)>;
 
-void sortBasicBlocksAndUpdateBranches(MachineFunction &MF,
-                                      MachineBasicBlockComparator MBBCmp);
+LLVM_ABI void
+sortBasicBlocksAndUpdateBranches(MachineFunction &MF,
+                                 MachineBasicBlockComparator MBBCmp);
 
-void avoidZeroOffsetLandingPad(MachineFunction &MF);
+LLVM_ABI void avoidZeroOffsetLandingPad(MachineFunction &MF);
+
+/// This checks if the source of this function has drifted since this binary was
+/// profiled previously.
+/// For now, we are piggy backing on what PGO does to
+/// detect this with instrumented profiles.  PGO emits an hash of the IR and
+/// checks if the hash has changed.  Advanced basic block layout is usually done
+/// on top of PGO optimized binaries and hence this check works well in
+/// practice.
+LLVM_ABI bool hasInstrProfHashMismatch(MachineFunction &MF);
 
 } // end namespace llvm
 

@@ -17,7 +17,6 @@
 
 #include "complexity.h"
 
-#include <algorithm>
 #include <cmath>
 
 #include "benchmark/benchmark.h"
@@ -25,9 +24,10 @@
 
 namespace benchmark {
 
+namespace {
+
 // Internal function to calculate the different scalability forms
 BigOFunc* FittingCurve(BigO complexity) {
-  static const double kLog2E = 1.44269504088896340736;
   switch (complexity) {
     case oN:
       return [](IterationCount n) -> double { return static_cast<double>(n); };
@@ -36,19 +36,20 @@ BigOFunc* FittingCurve(BigO complexity) {
     case oNCubed:
       return [](IterationCount n) -> double { return std::pow(n, 3); };
     case oLogN:
-      /* Note: can't use log2 because Android's GNU STL lacks it */
-      return
-          [](IterationCount n) { return kLog2E * log(static_cast<double>(n)); };
+      return [](IterationCount n) -> double {
+        return std::log2(static_cast<double>(n));
+      };
     case oNLogN:
-      /* Note: can't use log2 because Android's GNU STL lacks it */
-      return [](IterationCount n) {
-        return kLog2E * n * log(static_cast<double>(n));
+      return [](IterationCount n) -> double {
+        return static_cast<double>(n) * std::log2(static_cast<double>(n));
       };
     case o1:
     default:
       return [](IterationCount) { return 1.0; };
   }
 }
+
+}  // end namespace
 
 // Function to return an string for the calculated complexity
 std::string GetBigOString(BigO complexity) {
@@ -70,17 +71,19 @@ std::string GetBigOString(BigO complexity) {
   }
 }
 
+namespace {
+
 // Find the coefficient for the high-order term in the running time, by
 // minimizing the sum of squares of relative error, for the fitting curve
 // given by the lambda expression.
 //   - n             : Vector containing the size of the benchmark tests.
 //   - time          : Vector containing the times for the benchmark tests.
-//   - fitting_curve : lambda expression (e.g. [](int64_t n) {return n; };).
+//   - fitting_curve : lambda expression (e.g. [](ComplexityN n) {return n; };).
 
 // For a deeper explanation on the algorithm logic, please refer to
 // https://en.wikipedia.org/wiki/Least_squares#Least_squares,_regression_analysis_and_statistics
 
-LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
+LeastSq MinimalLeastSq(const std::vector<ComplexityN>& n,
                        const std::vector<double>& time,
                        BigOFunc* fitting_curve) {
   double sigma_gn_squared = 0.0;
@@ -105,12 +108,12 @@ LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
   double rms = 0.0;
   for (size_t i = 0; i < n.size(); ++i) {
     double fit = result.coef * fitting_curve(n[i]);
-    rms += pow((time[i] - fit), 2);
+    rms += std::pow((time[i] - fit), 2);
   }
 
   // Normalized RMS by the mean of the observed values
-  double mean = sigma_time / n.size();
-  result.rms = sqrt(rms / n.size()) / mean;
+  double mean = sigma_time / static_cast<double>(n.size());
+  result.rms = std::sqrt(rms / static_cast<double>(n.size())) / mean;
 
   return result;
 }
@@ -122,7 +125,7 @@ LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
 //   - complexity : If different than oAuto, the fitting curve will stick to
 //                  this one. If it is oAuto, it will be calculated the best
 //                  fitting curve.
-LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
+LeastSq MinimalLeastSq(const std::vector<ComplexityN>& n,
                        const std::vector<double>& time, const BigO complexity) {
   BM_CHECK_EQ(n.size(), time.size());
   BM_CHECK_GE(n.size(), 2);  // Do not compute fitting curve is less than two
@@ -154,15 +157,19 @@ LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
   return best_fit;
 }
 
+}  // end namespace
+
 std::vector<BenchmarkReporter::Run> ComputeBigO(
     const std::vector<BenchmarkReporter::Run>& reports) {
   typedef BenchmarkReporter::Run Run;
   std::vector<Run> results;
 
-  if (reports.size() < 2) return results;
+  if (reports.size() < 2) {
+    return results;
+  }
 
   // Accumulators.
-  std::vector<int64_t> n;
+  std::vector<ComplexityN> n;
   std::vector<double> real_time;
   std::vector<double> cpu_time;
 
@@ -171,8 +178,10 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
     BM_CHECK_GT(run.complexity_n, 0)
         << "Did you forget to call SetComplexityN?";
     n.push_back(run.complexity_n);
-    real_time.push_back(run.real_accumulated_time / run.iterations);
-    cpu_time.push_back(run.cpu_accumulated_time / run.iterations);
+    real_time.push_back(run.real_accumulated_time /
+                        static_cast<double>(run.iterations));
+    cpu_time.push_back(run.cpu_accumulated_time /
+                       static_cast<double>(run.iterations));
   }
 
   LeastSq result_cpu;
@@ -182,8 +191,19 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
     result_cpu = MinimalLeastSq(n, cpu_time, reports[0].complexity_lambda);
     result_real = MinimalLeastSq(n, real_time, reports[0].complexity_lambda);
   } else {
-    result_cpu = MinimalLeastSq(n, cpu_time, reports[0].complexity);
-    result_real = MinimalLeastSq(n, real_time, result_cpu.complexity);
+    const BigO* InitialBigO = &reports[0].complexity;
+    const bool use_real_time_for_initial_big_o =
+        reports[0].use_real_time_for_initial_big_o;
+    if (use_real_time_for_initial_big_o) {
+      result_real = MinimalLeastSq(n, real_time, *InitialBigO);
+      InitialBigO = &result_real.complexity;
+      // The Big-O complexity for CPU time must have the same Big-O function!
+    }
+    result_cpu = MinimalLeastSq(n, cpu_time, *InitialBigO);
+    InitialBigO = &result_cpu.complexity;
+    if (!use_real_time_for_initial_big_o) {
+      result_real = MinimalLeastSq(n, real_time, *InitialBigO);
+    }
   }
 
   // Drop the 'args' when reporting complexity.

@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=aarch64 %s -stop-after=irtranslator -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null
 ; RUN: llc -mtriple=aarch64 -global-isel --global-isel-abort=0 %s -o /dev/null -debug
+;
 
 ; CHECK-LABEL: name: debug_declare
 ; CHECK: stack:
@@ -30,11 +31,11 @@ entry:
 ; CHECK-LABEL: name: debug_value
 ; CHECK: stack:
 ; CHECK:    - { id: {{.*}}, name: addr
-; CHECK: [[IN:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK: [[IN:%[0-9]+]]:_(i32) = COPY $w0
 define void @debug_value(i32 %in) #0 !dbg !16 {
 ; CHECK: G_FRAME_INDEX %[[stack_slot:.*]]
   %addr = alloca i32
-; CHECK: DBG_VALUE [[IN]](s32), $noreg, !17, !DIExpression(), debug-location !18
+; CHECK: DBG_VALUE [[IN]](i32), $noreg, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata i32 %in, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
   store i32 %in, ptr %addr
 ; CHECK: DBG_VALUE %[[stack_slot]], 0, !17, !DIExpression(), debug-location !18

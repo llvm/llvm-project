@@ -25,20 +25,13 @@ def G_ADD_LOW : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// Pseudo for a rev16 instruction. Produced post-legalization from
-// G_SHUFFLE_VECTORs with appropriate masks.
-def G_REV16 : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
 // Pseudo for a rev32 instruction. Produced post-legalization from
 // G_SHUFFLE_VECTORs with appropriate masks.
 def G_REV32 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Pseudo for a rev64 instruction. Produced post-legalization from
@@ -47,6 +40,7 @@ def G_REV64 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents an uzp1 instruction. Produced post-legalization from
@@ -55,6 +49,7 @@ def G_UZP1 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents an uzp2 instruction. Produced post-legalization from
@@ -63,6 +58,7 @@ def G_UZP2 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a zip1 instruction. Produced post-legalization from
@@ -71,6 +67,7 @@ def G_ZIP1 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a zip2 instruction. Produced post-legalization from
@@ -79,6 +76,7 @@ def G_ZIP2 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a dup instruction. Produced post-legalization from
@@ -87,6 +85,7 @@ def G_DUP: AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a lane duplicate operation.
@@ -94,21 +93,25 @@ def G_DUPLANE8 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 def G_DUPLANE16 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 def G_DUPLANE32 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 def G_DUPLANE64 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a trn1 instruction. Produced post-legalization from
@@ -117,6 +120,7 @@ def G_TRN1 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a trn2 instruction. Produced post-legalization from
@@ -125,6 +129,7 @@ def G_TRN2 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents an ext instruction. Produced post-legalization from
@@ -133,6 +138,7 @@ def G_EXT: AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2, untyped_imm_0:$imm);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a vector G_ASHR with an immediate.
@@ -147,6 +153,13 @@ def G_VLSHR : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, untyped_imm_0:$imm);
   let hasSideEffects = 0;
+}
+
+// Float truncation using round to odd
+def G_FPTRUNC_ODD : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
 }
 
 // Represents an integer to FP conversion on the FPR bank.
@@ -179,39 +192,15 @@ def G_FCMGT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_FCMEQZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMGEZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMGTZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMLEZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMLTZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_PREFETCH : AArch64GenericInstruction {
+def G_AARCH64_PREFETCH : AArch64GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$imm, ptype0:$src1);
+  let hasSideEffects = 1;
+}
+
+def G_AARCH64_RANGE_PREFETCH : AArch64GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$imm, ptype0:$src1, type1:$src2);
   let hasSideEffects = 1;
 }
 
@@ -227,15 +216,93 @@ def G_SMULL : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_PMULL : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_UADDLP : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_SADDLP : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_UADDLV : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_SADDLV : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_UDOT : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+}
+
+def G_SDOT : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+}
+
+def G_USDOT : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+}
+
+def G_SQSHLU_I : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_SRSHR_I: AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_URSHR_I: AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_SLI: AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$src3);
+  let hasSideEffects = 0;
+}
+
+def G_SRI: AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$src3);
+  let hasSideEffects = 0;
+}
+
 // Generic instruction for the BSP pseudo. It is expanded into BSP, which
 // expands into BSL/BIT/BIF after register allocation.
 def G_BSP : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
-def : GINodeEquiv<G_REV16, AArch64rev16>;
 def : GINodeEquiv<G_REV32, AArch64rev32>;
 def : GINodeEquiv<G_REV64, AArch64rev64>;
 def : GINodeEquiv<G_UZP1, AArch64uzp1>;
@@ -259,58 +326,51 @@ def : GINodeEquiv<G_FCMEQ, AArch64fcmeq>;
 def : GINodeEquiv<G_FCMGE, AArch64fcmge>;
 def : GINodeEquiv<G_FCMGT, AArch64fcmgt>;
 
-def : GINodeEquiv<G_FCMEQZ, AArch64fcmeqz>;
-def : GINodeEquiv<G_FCMGEZ, AArch64fcmgez>;
-def : GINodeEquiv<G_FCMGTZ, AArch64fcmgtz>;
-def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
-def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
-
 def : GINodeEquiv<G_BSP, AArch64bsp>;
 
+def : GINodeEquiv<G_PMULL, AArch64pmull>;
 def : GINodeEquiv<G_UMULL, AArch64umull>;
 def : GINodeEquiv<G_SMULL, AArch64smull>;
 
+def : GINodeEquiv<G_SADDLP, AArch64saddlp_n>;
+def : GINodeEquiv<G_UADDLP, AArch64uaddlp_n>;
+
+def : GINodeEquiv<G_SADDLV, AArch64saddlv>;
+def : GINodeEquiv<G_UADDLV, AArch64uaddlv>;
+
+def : GINodeEquiv<G_UDOT, AArch64udot>;
+def : GINodeEquiv<G_SDOT, AArch64sdot>;
+def : GINodeEquiv<G_USDOT, AArch64usdot>;
+
+def : GINodeEquiv<G_SQSHLU_I, AArch64sqshlui>;
+def : GINodeEquiv<G_SRSHR_I, AArch64srshri>;
+def : GINodeEquiv<G_URSHR_I, AArch64urshri>;
+def : GINodeEquiv<G_SLI, AArch64vsli>;
+def : GINodeEquiv<G_SRI, AArch64vsri>;
+
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
-def : GINodeEquiv<G_PREFETCH, AArch64Prefetch>;
+def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
+def : GINodeEquiv<G_AARCH64_RANGE_PREFETCH, AArch64RangePrefetch>;
+
+def : GINodeEquiv<G_FPTRUNC_ODD, AArch64fcvtxn_n>;
 
 // These are patterns that we only use for GlobalISel via the importer.
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),
                      (vector_extract (v2f32 FPR64:$Rn), (i64 1)))),
            (f32 (FADDPv2i32p (v2f32 FPR64:$Rn)))>;
 
-let Predicates = [HasNEON] in {
-  def : Pat<(v2f64 (sint_to_fp v2i32:$src)),
-            (SCVTFv2f64 (SSHLLv2i32_shift V64:$src, 0))>;
-  def : Pat<(v2f64 (uint_to_fp v2i32:$src)),
-            (UCVTFv2f64 (USHLLv2i32_shift V64:$src, 0))>;
-  def : Pat<(v2f32 (sint_to_fp v2i64:$src)),
-            (FCVTNv2i32 (SCVTFv2f64 V128:$src))>;
-  def : Pat<(v2f32 (uint_to_fp v2i64:$src)),
-            (FCVTNv2i32 (UCVTFv2f64 V128:$src))>;
-
-  def : Pat<(v2i64 (fp_to_sint v2f32:$src)),
-            (FCVTZSv2f64 (FCVTLv2i32 V64:$src))>;
-  def : Pat<(v2i64 (fp_to_uint v2f32:$src)),
-            (FCVTZUv2f64 (FCVTLv2i32 V64:$src))>;
-  def : Pat<(v2i32 (fp_to_sint v2f64:$src)),
-            (XTNv2i32 (FCVTZSv2f64 V128:$src))>;
-  def : Pat<(v2i32 (fp_to_uint v2f64:$src)),
-            (XTNv2i32 (FCVTZUv2f64 V128:$src))>;
-
-}
-
 let Predicates = [HasNoLSE] in {
-def : Pat<(atomic_cmp_swap_8 GPR64:$addr, GPR32:$desired, GPR32:$new),
+def : Pat<(atomic_cmp_swap_i8 GPR64:$addr, GPR32:$desired, GPR32:$new),
           (CMP_SWAP_8 GPR64:$addr, GPR32:$desired, GPR32:$new)>;
 
-def : Pat<(atomic_cmp_swap_16 GPR64:$addr, GPR32:$desired, GPR32:$new),
+def : Pat<(atomic_cmp_swap_i16 GPR64:$addr, GPR32:$desired, GPR32:$new),
           (CMP_SWAP_16 GPR64:$addr, GPR32:$desired, GPR32:$new)>;
 
-def : Pat<(atomic_cmp_swap_32 GPR64:$addr, GPR32:$desired, GPR32:$new),
+def : Pat<(atomic_cmp_swap_i32 GPR64:$addr, GPR32:$desired, GPR32:$new),
           (CMP_SWAP_32 GPR64:$addr, GPR32:$desired, GPR32:$new)>;
 
-def : Pat<(atomic_cmp_swap_64 GPR64:$addr, GPR64:$desired, GPR64:$new),
+def : Pat<(atomic_cmp_swap_i64 GPR64:$addr, GPR64:$desired, GPR64:$new),
           (CMP_SWAP_64 GPR64:$addr, GPR64:$desired, GPR64:$new)>;
 }
 
@@ -511,3 +571,20 @@ let AddedComplexity = 19 in {
   defm : VecROStoreLane64_0Pat<ro16, store, v4i16, i16, hsub, STRHroW, STRHroX>;
   defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
 }
+
+def : Pat<(v8i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
+          (LD1Rv8b GPR64sp:$Rn)>;
+def : Pat<(v16i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
+          (LD1Rv16b GPR64sp:$Rn)>;
+def : Pat<(v4i16 (AArch64dup (i16 (load GPR64sp:$Rn)))),
+          (LD1Rv4h GPR64sp:$Rn)>;
+def : Pat<(v8i16 (AArch64dup (i16 (load GPR64sp:$Rn)))),
+          (LD1Rv8h GPR64sp:$Rn)>;
+def : Pat<(v2i32 (AArch64dup (i32 (load GPR64sp:$Rn)))),
+          (LD1Rv2s GPR64sp:$Rn)>;
+def : Pat<(v4i32 (AArch64dup (i32 (load GPR64sp:$Rn)))),
+          (LD1Rv4s GPR64sp:$Rn)>;
+def : Pat<(v2i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
+          (LD1Rv2d GPR64sp:$Rn)>;
+def : Pat<(v1i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
+          (LD1Rv1d GPR64sp:$Rn)>;

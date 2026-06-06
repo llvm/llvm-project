@@ -31,7 +31,7 @@ program openacc_clause_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -40,7 +40,7 @@ program openacc_clause_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
@@ -49,7 +49,7 @@ program openacc_clause_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end kernels
 
@@ -57,21 +57,21 @@ program openacc_clause_validity
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc serial loop
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop
   do i = 1, N
     !ERROR: Directive SET may not be called within a compute region
     !$acc set default_async(i)
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: At least one of DEFAULT_ASYNC, DEVICE_NUM, DEVICE_TYPE clause must appear on the SET directive
@@ -90,17 +90,17 @@ program openacc_clause_validity
   !$acc set device_num(1) device_num(i)
 
   !ERROR: At most one DEVICE_TYPE clause can appear on the SET directive
-  !$acc set device_type(i) device_type(2)
+  !$acc set device_type(*) device_type(nvidia)
 
   !$acc set default_async(2)
   !$acc set default_async(i)
   !$acc set device_num(1)
   !$acc set device_num(i)
-  !$acc set device_type(i)
-  !$acc set device_num(1) default_async(2) device_type(2)
+  !$acc set device_type(default)
+  !$acc set device_num(1) default_async(2) device_type(*)
 
   !ERROR: The DEVICE_TYPE clause on the SET directive accepts only one value
-  !$acc set device_type(1, 2)
+  !$acc set device_type(*, default)
 
   !ERROR: At least one of DEFAULT_ASYNC, DEVICE_NUM, DEVICE_TYPE clause must appear on the SET directive
   !$acc set

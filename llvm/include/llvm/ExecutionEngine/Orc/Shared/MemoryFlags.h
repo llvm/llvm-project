@@ -184,7 +184,7 @@ public:
   iterator end() { return Elems.end(); }
   iterator find(AllocGroup G) {
     auto I = lower_bound(Elems, G, compareKey);
-    return (I->first == G) ? I : end();
+    return (I == end() || I->first == G) ? I : end();
   }
 
   bool empty() const { return Elems.empty(); }
@@ -210,9 +210,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, AllocGroup AG) {
 
 template <> struct DenseMapInfo<orc::MemProt> {
   static inline orc::MemProt getEmptyKey() { return orc::MemProt(~uint8_t(0)); }
-  static inline orc::MemProt getTombstoneKey() {
-    return orc::MemProt(~uint8_t(0) - 1);
-  }
   static unsigned getHashValue(const orc::MemProt &Val) {
     using UT = std::underlying_type_t<orc::MemProt>;
     return DenseMapInfo<UT>::getHashValue(static_cast<UT>(Val));
@@ -225,9 +222,6 @@ template <> struct DenseMapInfo<orc::MemProt> {
 template <> struct DenseMapInfo<orc::AllocGroup> {
   static inline orc::AllocGroup getEmptyKey() {
     return orc::AllocGroup(~uint8_t(0));
-  }
-  static inline orc::AllocGroup getTombstoneKey() {
-    return orc::AllocGroup(~uint8_t(0) - 1);
   }
   static unsigned getHashValue(const orc::AllocGroup &Val) {
     return DenseMapInfo<orc::AllocGroup::underlying_type>::getHashValue(Val.Id);

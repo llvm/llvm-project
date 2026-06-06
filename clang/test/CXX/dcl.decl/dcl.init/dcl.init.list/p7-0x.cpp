@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -triple x86_64-apple-macosx10.6.7 -verify %s
+// The following narrowing does not involve const references, so
+// -Wno-c++11-narrowing-const-reference does not suppress the errors.
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -triple x86_64-apple-macosx10.6.7 -Wno-c++11-narrowing-const-reference -verify %s
 
 // Verify that narrowing conversions in initializer lists cause errors in C++0x
 // mode.
@@ -134,6 +137,8 @@ void int_to_float() {
   Agg<float> f7 = {12345678};  // OK (exactly fits in a float)
   Agg<float> f8 = {EnumVal};  // OK
   Agg<float> f9 = {123456789};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
+  Agg<float> f10 = {2147483646}; // expected-error {{constant expression evaluates to 2147483646 which cannot be narrowed to type 'float'}} expected-note {{silence}}
+  Agg<float> f11 = {2147483647}; // expected-error {{constant expression evaluates to 2147483647 which cannot be narrowed to type 'float'}} expected-note {{silence}}
 
   Agg<float> ce1 = { Convert<int>(123456789) }; // expected-error {{constant expression evaluates to 123456789 which cannot be narrowed to type 'float'}} expected-note {{silence}}
   Agg<double> ce2 = { ConvertVar<long long>() }; // expected-error {{non-constant-expression cannot be narrowed from type 'long long' to 'double'}} expected-note {{silence}}

@@ -64,6 +64,7 @@ static void runForAllWeCare(std::map<uint64_t, BinaryFunction> &BFs,
 void AllocCombinerPass::combineAdjustments(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
+    SmallVector<MCInst *, 2> ToErase;
     MCInst *Prev = nullptr;
     for (MCInst &Inst : llvm::reverse(BB)) {
       if (isIndifferentToSP(Inst, BC))
@@ -94,26 +95,29 @@ void AllocCombinerPass::combineAdjustments(BinaryFunction &BF) {
         Inst.dump();
       });
 
-      BB.eraseInstruction(BB.findInstruction(Prev));
+      ToErase.push_back(Prev);
       ++NumCombined;
       DynamicCountCombined += BB.getKnownExecutionCount();
       FuncsChanged.insert(&BF);
       Prev = &Inst;
     }
+    for (MCInst *Inst : ToErase)
+      BB.eraseInstruction(BB.findInstruction(Inst));
   }
 }
 
-void AllocCombinerPass::runOnFunctions(BinaryContext &BC) {
+Error AllocCombinerPass::runOnFunctions(BinaryContext &BC) {
   if (opts::FrameOptimization == FOP_NONE)
-    return;
+    return Error::success();
 
   runForAllWeCare(BC.getBinaryFunctions(), [&](BinaryFunction &Function) {
     combineAdjustments(Function);
   });
 
-  outs() << "BOLT-INFO: Allocation combiner: " << NumCombined
-         << " empty spaces coalesced (dyn count: " << DynamicCountCombined
-         << ").\n";
+  BC.outs() << "BOLT-INFO: Allocation combiner: " << NumCombined
+            << " empty spaces coalesced (dyn count: " << DynamicCountCombined
+            << ").\n";
+  return Error::success();
 }
 
 } // end namespace bolt

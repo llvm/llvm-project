@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/limits.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This just checks against the C spec, almost all implementations will surpass
 // this.
@@ -29,17 +31,24 @@ TEST(LlvmLibcLimitsTest, LimitsFollowSpec) {
   ASSERT_EQ(cpp::numeric_limits<long long>::min(), LLONG_MIN);
 
   ASSERT_EQ(cpp::numeric_limits<unsigned long long>::max(), ULLONG_MAX);
-}
 
-TEST(LlvmLibcLimitsTest, UInt128Limits) {
-  auto umax128 = cpp::numeric_limits<LIBC_NAMESPACE::cpp::UInt<128>>::max();
-  auto umax64 =
-      LIBC_NAMESPACE::cpp::UInt<128>(cpp::numeric_limits<uint64_t>::max());
-  EXPECT_GT(umax128, umax64);
-  ASSERT_EQ(~LIBC_NAMESPACE::cpp::UInt<128>(0), umax128);
-#ifdef __SIZEOF_INT128__
-  ASSERT_EQ(~__uint128_t(0), cpp::numeric_limits<__uint128_t>::max());
+#ifdef SSIZE_MAX
+  ASSERT_EQ(cpp::numeric_limits<__PTRDIFF_TYPE__>::max(), SSIZE_MAX);
+#else
+#ifdef LIBC_FULL_BUILD
+#error "SSIZE_MAX is not defined in full build mode"
+#endif
 #endif
 }
 
-} // namespace LIBC_NAMESPACE
+TEST(LlvmLibcLimitsTest, UInt128Limits) {
+  auto umax128 = cpp::numeric_limits<LIBC_NAMESPACE::UInt<128>>::max();
+  auto umax64 = LIBC_NAMESPACE::UInt<128>(cpp::numeric_limits<uint64_t>::max());
+  EXPECT_GT(umax128, umax64);
+  ASSERT_EQ(~LIBC_NAMESPACE::UInt<128>(0), umax128);
+#ifdef LIBC_TYPES_HAS_INT128
+  ASSERT_EQ(~__uint128_t(0), cpp::numeric_limits<__uint128_t>::max());
+#endif // LIBC_TYPES_HAS_INT128
+}
+
+} // namespace LIBC_NAMESPACE_DECL

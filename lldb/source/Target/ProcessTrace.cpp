@@ -16,9 +16,13 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(ProcessTrace)
 
 llvm::StringRef ProcessTrace::GetPluginDescriptionStatic() {
   return "Trace process plug-in.";
@@ -34,15 +38,17 @@ ProcessSP ProcessTrace::CreateInstance(TargetSP target_sp,
                                        bool can_connect) {
   if (can_connect)
     return nullptr;
-  return std::make_shared<ProcessTrace>(target_sp, listener_sp);
+  return std::make_shared<ProcessTrace>(target_sp, listener_sp,
+                                        crash_file ? *crash_file : FileSpec());
 }
 
 bool ProcessTrace::CanDebug(TargetSP target_sp, bool plugin_specified_by_name) {
   return plugin_specified_by_name;
 }
 
-ProcessTrace::ProcessTrace(TargetSP target_sp, ListenerSP listener_sp)
-    : PostMortemProcess(target_sp, listener_sp) {}
+ProcessTrace::ProcessTrace(TargetSP target_sp, ListenerSP listener_sp,
+                           const FileSpec &core_file)
+    : PostMortemProcess(target_sp, listener_sp, core_file) {}
 
 ProcessTrace::~ProcessTrace() {
   Clear();
@@ -50,7 +56,7 @@ ProcessTrace::~ProcessTrace() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 void ProcessTrace::DidAttach(ArchSpec &process_arch) {
@@ -59,8 +65,16 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
   HijackProcessEvents(listener_sp);
 
   SetCanJIT(false);
-  StartPrivateStateThread();
-  SetPrivateState(eStateStopped);
+  StartPrivateStateThread(lldb::eStateStopped, false);
+  if (!m_current_private_state_thread_sp) {
+    LLDB_LOG(GetLog(LLDBLog::Process), "ProcessTrace: failed to start private "
+                                       "state thread.");
+    return;
+  }
+
+  // Pretend we stopped so we can show all of the threads
+  // in the trace and explore the final state.
+  SetPrivateState(lldb::eStateStopped);
 
   EventSP event_sp;
   WaitForProcessToStop(std::nullopt, &event_sp, true, listener_sp);
@@ -92,12 +106,8 @@ size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
 void ProcessTrace::Clear() { m_thread_list.Clear(); }
 
 void ProcessTrace::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 ArchSpec ProcessTrace::GetArchitecture() {
@@ -120,7 +130,7 @@ bool ProcessTrace::GetProcessInfo(ProcessInstanceInfo &info) {
 size_t ProcessTrace::DoReadMemory(addr_t addr, void *buf, size_t size,
                                   Status &error) {
   Address resolved_address;
-  GetTarget().GetSectionLoadList().ResolveLoadAddress(addr, resolved_address);
+  GetTarget().ResolveLoadAddress(addr, resolved_address);
 
   return GetTarget().ReadMemoryFromFileCache(resolved_address, buf, size,
                                              error);

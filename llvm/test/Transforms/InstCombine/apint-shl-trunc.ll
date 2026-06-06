@@ -3,9 +3,8 @@
 
 define i1 @test0(i39 %X, i39 %A) {
 ; CHECK-LABEL: @test0(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i39 1, [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i39 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = icmp ne i39 [[TMP2]], 0
+; CHECK-NEXT:    [[B:%.*]] = lshr i39 [[X:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = trunc i39 [[B]] to i1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %B = lshr i39 %X, %A
@@ -15,9 +14,8 @@ define i1 @test0(i39 %X, i39 %A) {
 
 define i1 @test1(i799 %X, i799 %A) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i799 1, [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i799 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = icmp ne i799 [[TMP2]], 0
+; CHECK-NEXT:    [[B:%.*]] = lshr i799 [[X:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = trunc i799 [[B]] to i1
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
   %B = lshr i799 %X, %A

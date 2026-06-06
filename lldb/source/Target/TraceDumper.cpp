@@ -30,7 +30,7 @@ static std::optional<const char *> ToOptionalString(const char *s) {
 static const char *GetModuleName(const SymbolContext &sc) {
   if (!sc.module_sp)
     return nullptr;
-  return sc.module_sp->GetFileSpec().GetFilename().AsCString();
+  return sc.module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
 }
 
 /// \return
@@ -57,7 +57,7 @@ static bool FileLineAndColumnMatches(const LineEntry &a, const LineEntry &b) {
     return false;
   if (a.column != b.column)
     return false;
-  return a.file == b.file;
+  return a.GetFile() == b.GetFile();
 }
 
 /// Compare the symbol contexts of the provided \a SymbolInfo
@@ -156,9 +156,10 @@ public:
     m_s.Format("    {0}: ", item.id);
 
     if (m_options.show_timestamps) {
-      m_s.Format("[{0}] ", item.timestamp
-                               ? formatv("{0:3} ns", *item.timestamp).str()
-                               : "unavailable");
+      if (item.timestamp)
+        m_s << formatv("[{0:3} ns]", *item.timestamp);
+      else
+        m_s << "[unavailable]";
     }
 
     if (item.event) {
@@ -244,7 +245,7 @@ private:
     else if (!sc.function && !sc.symbol)
       m_s << module_name << "`(none)";
     else
-      m_s << module_name << "`" << sc.GetFunctionName().AsCString();
+      m_s << module_name << "`" << sc.GetFunctionName();
   }
 
   void DumpFunctionCallTree(const TraceDumper::FunctionCall &function_call) {
@@ -376,7 +377,8 @@ public:
       m_j.attribute("module", ToOptionalString(GetModuleName(item)));
       m_j.attribute(
           "symbol",
-          ToOptionalString(item.symbol_info->sc.GetFunctionName().AsCString()));
+          ToOptionalString(
+              item.symbol_info->sc.GetFunctionName().AsCString(nullptr)));
 
       if (lldb::InstructionSP instruction = item.symbol_info->instruction) {
         ExecutionContext exe_ctx = item.symbol_info->exe_ctx;
@@ -396,7 +398,7 @@ public:
         m_j.attribute(
             "source",
             ToOptionalString(
-                item.symbol_info->sc.line_entry.file.GetPath().c_str()));
+                item.symbol_info->sc.line_entry.GetFile().GetPath().c_str()));
         m_j.attribute("line", item.symbol_info->sc.line_entry.line);
         m_j.attribute("column", item.symbol_info->sc.line_entry.column);
       }
@@ -472,7 +474,7 @@ TraceDumper::TraceItem TraceDumper::CreatRawTraceItem() {
 static SymbolContext
 CalculateSymbolContext(const Address &address,
                        const SymbolContext &prev_symbol_context) {
-  AddressRange range;
+  lldb_private::AddressRange range;
   if (prev_symbol_context.GetAddressRange(eSymbolContextEverything, 0,
                                           /*inline_block_range*/ true, range) &&
       range.Contains(address))
@@ -508,10 +510,11 @@ CalculateDisass(const TraceDumper::SymbolInfo &symbol_info,
   // We fallback to a single instruction disassembler
   Target &target = exe_ctx.GetTargetRef();
   const ArchSpec arch = target.GetArchitecture();
-  AddressRange range(symbol_info.address, arch.GetMaximumOpcodeByteSize());
-  DisassemblerSP disassembler =
-      Disassembler::DisassembleRange(arch, /*plugin_name*/ nullptr,
-                                     /*flavor*/ nullptr, target, range);
+  lldb_private::AddressRange range(symbol_info.address,
+                                   arch.GetMaximumOpcodeByteSize());
+  DisassemblerSP disassembler = Disassembler::DisassembleRange(
+      arch, /*plugin_name=*/nullptr,
+      /*flavor=*/nullptr, /*cpu=*/nullptr, /*features=*/nullptr, target, range);
   return std::make_tuple(
       disassembler,
       disassembler ? disassembler->GetInstructionList().GetInstructionAtAddress(
@@ -778,7 +781,7 @@ static TraceDumper::FunctionCall &AppendInstructionToFunctionCallForest(
     return *roots.back();
   }
 
-  AddressRange range;
+  lldb_private::AddressRange range;
   if (symbol_info.sc.GetAddressRange(
           eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol,
           0, /*inline_block_range*/ true, range)) {

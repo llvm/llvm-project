@@ -8,8 +8,6 @@
 //
 // This file describes the RISC-V instructions from the standard Integer
 // Conditional operations extension (Zicond).
-// This version is still experimental as the 'Zicond' extension hasn't been
-// ratified yet. It is based on v1.0-rc1 of the specification.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,8 +15,10 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def riscv_czero_eqz : SDNode<"RISCVISD::CZERO_EQZ", SDTIntBinOp>;
-def riscv_czero_nez : SDNode<"RISCVISD::CZERO_NEZ", SDTIntBinOp>;
+// Branchless select operations, matching the semantics of the instructions
+// defined in Zicond or XVentanaCondOps
+def riscv_czero_eqz : RVSDNode<"CZERO_EQZ", SDTIntBinOp>; // vt.maskc for XVentanaCondOps.
+def riscv_czero_nez : RVSDNode<"CZERO_NEZ", SDTIntBinOp>; // vt.maskcn for XVentanaCondOps.
 
 //===----------------------------------------------------------------------===//
 // Instructions

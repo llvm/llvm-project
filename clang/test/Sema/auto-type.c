@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -Wno-strict-prototypes -verify -pedantic -std=c11
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-strict-prototypes -verify -pedantic -std=c11 -fexperimental-new-constant-interpreter
 
 __auto_type a = 5; // expected-warning {{'__auto_type' is a GNU extension}}
 __extension__ __auto_type a1 = 5;
@@ -87,4 +88,13 @@ void Issue55702(void) {
   __auto_type v = ptr;
   (void)_Generic(v, long double : 0, double : 0, default : 1); // OK
   _Static_assert(_Generic(v, long double : 0, default : 1) == 1, "fail");
+}
+
+
+void incompatible_initializer(void) {
+  __auto_type s1[] = "test";   // expected-error {{cannot use '__auto_type' with array in C}}
+  __auto_type s2[4] = "test";  // expected-error {{cannot use '__auto_type' with array in C}}
+  __auto_type s3[5] = "test";  // expected-error {{cannot use '__auto_type' with array in C}}
+  __auto_type i = { 1 };       // expected-error {{cannot use '__auto_type' with initializer list in C}}
+  __auto_type i2 = { 1, 2 };   // expected-error {{cannot use '__auto_type' with initializer list in C}}
 }

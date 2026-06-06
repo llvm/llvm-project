@@ -10,7 +10,6 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
@@ -20,9 +19,7 @@ using namespace mlir::complex;
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) {
-  return getValue();
-}
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 void ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
@@ -58,10 +55,12 @@ LogicalResult ConstantOp::verify() {
   }
 
   auto complexEltTy = getType().getElementType();
-  auto re = llvm::dyn_cast<FloatAttr>(arrayAttr[0]);
-  auto im = llvm::dyn_cast<FloatAttr>(arrayAttr[1]);
-  if (!re || !im)
-    return emitOpError("requires attribute's elements to be float attributes");
+  if (!isa<FloatAttr, IntegerAttr>(arrayAttr[0]) ||
+      !isa<FloatAttr, IntegerAttr>(arrayAttr[1]))
+    return emitOpError(
+        "requires attribute's elements to be float or integer attributes");
+  auto re = llvm::dyn_cast<TypedAttr>(arrayAttr[0]);
+  auto im = llvm::dyn_cast<TypedAttr>(arrayAttr[1]);
   if (complexEltTy != re.getType() || complexEltTy != im.getType()) {
     return emitOpError()
            << "requires attribute's element types (" << re.getType() << ", "
@@ -100,7 +99,8 @@ LogicalResult BitcastOp::verify() {
   }
 
   if (isa<ComplexType>(operandType) == isa<ComplexType>(resultType)) {
-    return emitOpError("requires input or output is a complex type");
+    return emitOpError(
+        "requires that either input or output has a complex type");
   }
 
   if (isa<ComplexType>(resultType))
@@ -125,8 +125,15 @@ struct MergeComplexBitcast final : OpRewritePattern<BitcastOp> {
   LogicalResult matchAndRewrite(BitcastOp op,
                                 PatternRewriter &rewriter) const override {
     if (auto defining = op.getOperand().getDefiningOp<BitcastOp>()) {
-      rewriter.replaceOpWithNewOp<BitcastOp>(op, op.getType(),
-                                             defining.getOperand());
+      if (isa<ComplexType>(op.getType()) ||
+          isa<ComplexType>(defining.getOperand().getType())) {
+        // complex.bitcast requires that input or output is complex.
+        rewriter.replaceOpWithNewOp<BitcastOp>(op, op.getType(),
+                                               defining.getOperand());
+      } else {
+        rewriter.replaceOpWithNewOp<arith::BitcastOp>(op, op.getType(),
+                                                      defining.getOperand());
+      }
       return success();
     }
 
@@ -155,24 +162,9 @@ struct MergeArithBitcast final : OpRewritePattern<arith::BitcastOp> {
   }
 };
 
-struct ArithBitcast final : OpRewritePattern<BitcastOp> {
-  using OpRewritePattern<complex::BitcastOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(BitcastOp op,
-                                PatternRewriter &rewriter) const override {
-    if (isa<ComplexType>(op.getType()) ||
-        isa<ComplexType>(op.getOperand().getType()))
-      return failure();
-
-    rewriter.replaceOpWithNewOp<arith::BitcastOp>(op, op.getType(),
-                                                  op.getOperand());
-    return success();
-  }
-};
-
 void BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ArithBitcast, MergeComplexBitcast, MergeArithBitcast>(context);
+  results.add<MergeComplexBitcast, MergeArithBitcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -369,6 +361,48 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
 
   // complex.mul(a, complex.constant<1.0, 0.0>) -> a
   if (real == APFloat(real.getSemantics(), 1))
+    return getLhs();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// DivOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
+  Attribute rhs = adaptor.getRhs();
+  Attribute lhs = adaptor.getLhs();
+
+  // complex.div(complex.constant<NaN, NaN>, a) -> complex.constant<NaN, NaN>
+  // complex.div(complex.constant<NaN, a>, b) -> complex.constant<NaN, NaN>
+  // complex.div(complex.constant<a, NaN>, b) -> complex.constant<NaN, NaN>
+  bool isLhsComplexHasNan = false;
+  ArrayAttr lhsArrayAttr = dyn_cast_if_present<ArrayAttr>(lhs);
+  if (lhsArrayAttr && lhsArrayAttr.size() == 2) {
+    APFloat lhsReal = cast<FloatAttr>(lhsArrayAttr[0]).getValue();
+    APFloat lhsImag = cast<FloatAttr>(lhsArrayAttr[1]).getValue();
+    isLhsComplexHasNan = lhsReal.isNaN() || lhsImag.isNaN();
+    if (isLhsComplexHasNan) {
+      Attribute nanValue = lhsReal.isNaN() ? lhsArrayAttr[0] : lhsArrayAttr[1];
+      return ArrayAttr::get(getContext(), {nanValue, nanValue});
+    }
+  }
+
+  ArrayAttr rhsArrayAttr = dyn_cast_if_present<ArrayAttr>(rhs);
+  if (!rhsArrayAttr || rhsArrayAttr.size() != 2)
+    return {};
+
+  // Fold only if RHS is complex.constant<1.0, 0.0>
+  APFloat rhsImag = cast<FloatAttr>(rhsArrayAttr[1]).getValue();
+  APFloat rhsReal = cast<FloatAttr>(rhsArrayAttr[0]).getValue();
+  if (!rhsImag.isZero() || rhsReal != APFloat(rhsReal.getSemantics(), 1))
+    return {};
+
+  // Fold to LHS if it doesn't contains NaNs or fast math flag nan is set
+  // complex.div(a, complex.constant<1.0, 0.0>) fastmath<nnan> -> a
+  if ((lhsArrayAttr && !isLhsComplexHasNan) ||
+      arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan))
     return getLhs();
 
   return {};

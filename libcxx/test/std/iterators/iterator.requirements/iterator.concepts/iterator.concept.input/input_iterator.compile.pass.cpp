@@ -11,6 +11,7 @@
 // template<class T>
 // concept input_iterator;
 
+#include <cstddef>
 #include <iterator>
 
 #include "test_iterators.h"
@@ -81,6 +82,7 @@ struct not_indirectly_readable {
 };
 static_assert(!std::indirectly_readable<not_indirectly_readable> && !std::input_iterator<not_indirectly_readable>);
 
+// FIXME(cjdb): deduplicate
 struct bad_iterator_category {
   using value_type = int;
   using difference_type = std::ptrdiff_t;

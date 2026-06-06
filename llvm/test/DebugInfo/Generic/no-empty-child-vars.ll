@@ -68,11 +68,14 @@
 ; CHECK:       DW_TAG_inlined_subroutine
 ; CHECK:     NULL
 
+; NOTE: Instructions below changed from `add` to `mul` to make them more expensive
+; and unlikely to be sunk to replace COPYs into a return value register.
+
 ; Function Attrs: norecurse nounwind readnone uwtable willreturn
 define dso_local i32 @foo(i32 %bar) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %bar, metadata !12, metadata !DIExpression()), !dbg !14
-  %add = add nsw i32 %bar, 12, !dbg !15
+  %add = mul nsw i32 %bar, 12, !dbg !15
   call void @llvm.dbg.value(metadata i32 %add, metadata !13, metadata !DIExpression()), !dbg !14
   ret i32 %add, !dbg !16
 }
@@ -80,7 +83,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone uwtable willreturn
 define dso_local i32 @qux(i32 %quux) local_unnamed_addr !dbg !17 {
 entry:
-  %add.i = add nsw i32 %quux, 12, !dbg !24
+  %add.i = mul nsw i32 %quux, 12, !dbg !24
   ret i32 %add.i, !dbg !25
 }
 
@@ -89,7 +92,7 @@ define dso_local i32 @croix(i32 %quux) local_unnamed_addr !dbg !26 {
 entry:
   call void @llvm.dbg.value(metadata i32 undef, metadata !28, metadata !DIExpression()), !dbg !30
   call void @llvm.dbg.value(metadata i32 undef, metadata !12, metadata !DIExpression()), !dbg !31
-  %add.i = add nsw i32 %quux, 12, !dbg !33
+  %add.i = mul nsw i32 %quux, 12, !dbg !33
   call void @llvm.dbg.value(metadata i32 undef, metadata !13, metadata !DIExpression()), !dbg !31
   call void @llvm.dbg.value(metadata i32 undef, metadata !29, metadata !DIExpression()), !dbg !30
   ret i32 %add.i, !dbg !34

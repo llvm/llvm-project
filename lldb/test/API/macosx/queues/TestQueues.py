@@ -4,6 +4,7 @@ import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbplatformutil import findBacktraceRecordingDylib
 from lldbsuite.test import lldbutil
 
 
@@ -35,8 +36,9 @@ class TestQueues(TestBase):
         self.main_source = "main.c"
 
     def check_queue_for_valid_queue_id(self, queue):
-        self.assertTrue(
-            queue.GetQueueID() != 0,
+        self.assertNotEqual(
+            queue.GetQueueID(),
+            0,
             "Check queue %s for valid QueueID (got 0x%x)"
             % (queue.GetName(), queue.GetQueueID()),
         )
@@ -306,11 +308,10 @@ class TestQueues(TestBase):
         """Test queues inspection SB APIs with libBacktraceRecording present."""
         exe = self.getBuildArtifact("a.out")
 
-        if not os.path.isfile(
-            "/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib"
-        ):
+        libbtr_path = findBacktraceRecordingDylib()
+        if not libbtr_path:
             self.skipTest(
-                "Skipped because libBacktraceRecording.dylib was present on the system."
+                "Skipped because libBacktraceRecording.dylib was not found on the system."
             )
 
         if not os.path.isfile("/usr/lib/system/introspection/libdispatch.dylib"):
@@ -325,18 +326,6 @@ class TestQueues(TestBase):
 
         break1 = target.BreakpointCreateByName("stopper", "a.out")
         self.assertTrue(break1, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        libbtr_path = "/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib"
-        if self.getArchitecture() in [
-            "arm",
-            "arm64",
-            "arm64e",
-            "arm64_32",
-            "armv7",
-            "armv7k",
-        ]:
-            libbtr_path = "/Developer/usr/lib/libBacktraceRecording.dylib"
 
         process = target.LaunchSimple(
             [],
@@ -363,8 +352,8 @@ class TestQueues(TestBase):
                 "Skipped because libBacktraceRecording.dylib was not loaded into the process."
             )
 
-        self.assertTrue(
-            process.GetNumQueues() >= 4, "Found the correct number of queues."
+        self.assertGreaterEqual(
+            process.GetNumQueues(), 4, "Found the correct number of queues."
         )
 
         queue_submittor_1 = lldb.SBQueue()
@@ -456,8 +445,8 @@ class TestQueues(TestBase):
             "doing_the_work_2",
             "queue 2's pending item #0 should be doing_the_work_2",
         )
-        self.assertTrue(
-            queue_performer_2.GetPendingItemAtIndex(9999).IsValid() == False,
+        self.assertFalse(
+            queue_performer_2.GetPendingItemAtIndex(9999).IsValid(),
             "queue 2's pending item #9999 is invalid",
         )
 

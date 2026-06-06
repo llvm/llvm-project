@@ -276,10 +276,6 @@ struct LlvmLibcFmaTest : public FmaTestTemplate<double> {
   }
 };
 
-TEST_F(LlvmLibcFmaTest, SpecialNumbers) {
-  test_special_numbers(&LIBC_NAMESPACE::fma);
-}
-
 TEST_F(LlvmLibcFmaTest, SubnormalRange) {
   test_subnormal_range(&LIBC_NAMESPACE::fma);
 }

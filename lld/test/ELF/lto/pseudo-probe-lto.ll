@@ -1,6 +1,7 @@
 ; REQUIRES: x86
 ; RUN: opt < %s -passes=pseudo-probe -function-sections -o %t.o
-; RUN: ld.lld %t.o -shared --lto-emit-asm -o - | FileCheck %s
+; RUN: ld.lld %t.o -shared --lto-emit-asm -o %t
+; RUN: FileCheck %s < %t.lto.s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-scei-ps4"
@@ -18,7 +19,7 @@ entry:
   ret void
 }
 
-; CHECK:      .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat
+; CHECK:      .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo.{{[0-9a-f]+}},comdat
 ; CHECK-NEXT: .quad [[#GUID]]
 ; CHECK-NEXT: .quad [[#HASH:]]
 ; CHECK-NEXT: .byte  3
@@ -29,7 +30,9 @@ entry:
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
 !1 = !DIFile(filename: "test.c", directory: "")
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 2, unit: !0)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 2, type: !14, unit: !0)
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !DILocation(line: 2, column: 20, scope: !4)
+!14 = !DISubroutineType(types: !15)
+!15 = !{null}

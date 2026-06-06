@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -fp-contract=fast < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -fp-contract=fast < %s | FileCheck %s
 
 @g0 = global float 0.000000e+00, align 4
 @g1 = global float 1.000000e+00, align 4

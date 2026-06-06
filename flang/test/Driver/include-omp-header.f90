@@ -1,25 +1,34 @@
-! Verify that the omp_lib.h header is found and included correctly. This header file should be available at a path:
-!   * relative to the driver, that's
-!   * known the driver.
-! This is taken care of at the CMake and the driver levels. Note that when searching for header files, the directory of the current
-! source file takes precedence over other search paths. Hence adding omp_lib.h in the current directory will make Flang use that
-! header file instead of the one shipped with Flang.
+! REQUIRES: openmp_runtime
 
-! This should just work
-! RUN: not rm omp_lib.h
-! RUN: %flang -fsyntax-only -fopenmp %s  2>&1
+! Check omp_lib.h works with driver
+! RUN: %flang -fsyntax-only -cpp %s -v 2>&1 | FileCheck %s --check-prefix=DRIVER
+! RUN: %flang -fsyntax-only -cpp %s -v -DHASHINCLUDE 2>&1 | FileCheck %s --check-prefix=DRIVER
+! DRIVER: -fc1
+! DRIVER-SAME: -fintrinsic-modules-path
 
-! Create an empty omp_lib.h header that _does not_ define omp_default_mem_alloc - this should lead to semantic errors
-! RUN: touch omp_lib.h
-! RUN: not %flang -fsyntax-only -fopenmp %s  2>&1 | FileCheck %s
-! RUN: rm omp_lib.h
+! Check frontend only works (no output expected)
+! RUN: %flang_fc1 -fsyntax-only -cpp %s
+! RUN: %flang_fc1 -fsyntax-only -cpp -DHASHINCLUDE %s
 
-! CHECK: error: Must have INTEGER type, but is REAL(4)
+! Check non-#include
+! RUN: %flang_fc1 -cpp %s -E -fno-reformat 2>&1 | FileCheck %s --check-prefix=INCLUDE
+! INCLUDE: include "omp_lib.h"
 
-include "omp_lib.h"
+! Check omp_lib.h contents
+! RUN: %flang_fc1 -cpp %s -E -fno-reformat -DHASHINCLUDE 2>&1 | FileCheck %s --check-prefix=PREPROCESSED
+! PREPROCESSED: integer(kind=omp_integer_kind)openmp_version
+! PREPROCESSED: parameter(openmp_version={{[0-9]+}})
 
-integer :: x, y
 
-!$omp allocate(x, y) allocator(omp_default_mem_alloc)
+program main
+#ifdef HASHINCLUDE
+  #include "omp_lib.h"
+#else
+  include "omp_lib.h"
+#endif
 
-end
+  integer :: x, y
+  !$omp allocate(x, y) allocator(omp_default_mem_alloc)
+
+  print *, 'PASS: openmp_version parameter ', openmp_version
+end program main

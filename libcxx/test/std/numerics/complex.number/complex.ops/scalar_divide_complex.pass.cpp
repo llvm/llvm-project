@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Missing some math functions that compiler-rt buildins need.
+// XFAIL: LLVM-LIBC-FIXME
+
 // <complex>
 
 // template<class T>
@@ -24,7 +27,11 @@ test()
 {
     const T lhs(-8.5);
     const std::complex<T> rhs(1.5, 2.5);
-    assert(lhs / rhs == std::complex<T>(-1.5, 2.5));
+    const std::complex<T> c = lhs / rhs;
+    assert(c.real() >= T(-1.500000000000001));
+    assert(c.real() <= T(-1.499999999999999));
+    assert(c.imag() >= T(2.499999999999999));
+    assert(c.imag() <= T(2.500000000000001));
     return true;
 }
 

@@ -9,70 +9,123 @@
 
 // <span>
 
-// template <class ElementType, size_t Extent>
-//     span<const byte,
-//          Extent == dynamic_extent
-//              ? dynamic_extent
-//              : sizeof(ElementType) * Extent>
+// template<class ElementType, size_t Extent>
+//   span<const byte, Extent == dynamic_extent ? dynamic_extent : sizeof(ElementType) * Extent>
 //     as_bytes(span<ElementType, Extent> s) noexcept;
+//
+// Constraints:
+//   is_volatile_v<ElementType> is false.
 
-
-#include <span>
 #include <cassert>
+#include <cstddef>
+#include <span>
 #include <string>
 
 #include "test_macros.h"
 
-template<typename Span>
-void testRuntimeSpan(Span sp)
-{
-    ASSERT_NOEXCEPT(std::as_bytes(sp));
+template <class T, std::size_t Extent = std::dynamic_extent>
+concept hasAsBytes = requires(std::span<T, Extent> s) { std::as_bytes(s); };
 
-    auto spBytes = std::as_bytes(sp);
-    using SB = decltype(spBytes);
-    ASSERT_SAME_TYPE(const std::byte, typename SB::element_type);
+template <typename Span>
+void testRuntimeSpan(Span sp) {
+  ASSERT_NOEXCEPT(std::as_bytes(sp));
 
-    if constexpr (sp.extent == std::dynamic_extent)
-        assert(spBytes.extent == std::dynamic_extent);
-    else
-        assert(spBytes.extent == sizeof(typename Span::element_type) * sp.extent);
+  auto spBytes = std::as_bytes(sp);
+  using SB     = decltype(spBytes);
+  ASSERT_SAME_TYPE(const std::byte, typename SB::element_type);
 
-    assert((void *) spBytes.data() == (void *) sp.data());
-    assert(spBytes.size() == sp.size_bytes());
+  if constexpr (sp.extent == std::dynamic_extent)
+    assert(spBytes.extent == std::dynamic_extent);
+  else
+    assert(spBytes.extent == sizeof(typename Span::element_type) * sp.extent);
+
+  assert((void*)spBytes.data() == (void*)sp.data());
+  assert(spBytes.size() == sp.size_bytes());
 }
 
-struct A{};
-int iArr2[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
+struct A {};
+int iArr2[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-int main(int, char**)
-{
-    testRuntimeSpan(std::span<int>        ());
-    testRuntimeSpan(std::span<long>       ());
-    testRuntimeSpan(std::span<double>     ());
-    testRuntimeSpan(std::span<A>          ());
-    testRuntimeSpan(std::span<std::string>());
+void test_constraints() {
+  static_assert(hasAsBytes<int>);
+  static_assert(hasAsBytes<long>);
+  static_assert(hasAsBytes<double>);
+  static_assert(hasAsBytes<A>);
+  static_assert(hasAsBytes<std::string>);
 
-    testRuntimeSpan(std::span<int, 0>        ());
-    testRuntimeSpan(std::span<long, 0>       ());
-    testRuntimeSpan(std::span<double, 0>     ());
-    testRuntimeSpan(std::span<A, 0>          ());
-    testRuntimeSpan(std::span<std::string, 0>());
+  static_assert(hasAsBytes<const int>);
+  static_assert(hasAsBytes<const long>);
+  static_assert(hasAsBytes<const double>);
+  static_assert(hasAsBytes<const A>);
+  static_assert(hasAsBytes<const std::string>);
 
-    testRuntimeSpan(std::span<int>(iArr2, 1));
-    testRuntimeSpan(std::span<int>(iArr2, 2));
-    testRuntimeSpan(std::span<int>(iArr2, 3));
-    testRuntimeSpan(std::span<int>(iArr2, 4));
-    testRuntimeSpan(std::span<int>(iArr2, 5));
+  static_assert(!hasAsBytes<volatile int>);
+  static_assert(!hasAsBytes<volatile long>);
+  static_assert(!hasAsBytes<volatile double>);
+  static_assert(!hasAsBytes<volatile A>);
+  static_assert(!hasAsBytes<volatile std::string>);
 
-    testRuntimeSpan(std::span<int, 1>(iArr2 + 5, 1));
-    testRuntimeSpan(std::span<int, 2>(iArr2 + 4, 2));
-    testRuntimeSpan(std::span<int, 3>(iArr2 + 3, 3));
-    testRuntimeSpan(std::span<int, 4>(iArr2 + 2, 4));
-    testRuntimeSpan(std::span<int, 5>(iArr2 + 1, 5));
+  static_assert(!hasAsBytes<const volatile int>);
+  static_assert(!hasAsBytes<const volatile long>);
+  static_assert(!hasAsBytes<const volatile double>);
+  static_assert(!hasAsBytes<const volatile A>);
+  static_assert(!hasAsBytes<const volatile std::string>);
 
-    std::string s;
-    testRuntimeSpan(std::span<std::string>(&s, (std::size_t) 0));
-    testRuntimeSpan(std::span<std::string>(&s, 1));
+  static_assert(hasAsBytes<int, 0>);
+  static_assert(hasAsBytes<long, 0>);
+  static_assert(hasAsBytes<double, 0>);
+  static_assert(hasAsBytes<A, 0>);
+  static_assert(hasAsBytes<std::string, 0>);
+
+  static_assert(hasAsBytes<const int, 0>);
+  static_assert(hasAsBytes<const long, 0>);
+  static_assert(hasAsBytes<const double, 0>);
+  static_assert(hasAsBytes<const A, 0>);
+  static_assert(hasAsBytes<const std::string, 0>);
+
+  static_assert(!hasAsBytes<volatile int, 0>);
+  static_assert(!hasAsBytes<volatile long, 0>);
+  static_assert(!hasAsBytes<volatile double, 0>);
+  static_assert(!hasAsBytes<volatile A, 0>);
+  static_assert(!hasAsBytes<volatile std::string, 0>);
+
+  static_assert(!hasAsBytes<const volatile int, 0>);
+  static_assert(!hasAsBytes<const volatile long, 0>);
+  static_assert(!hasAsBytes<const volatile double, 0>);
+  static_assert(!hasAsBytes<const volatile A, 0>);
+  static_assert(!hasAsBytes<const volatile std::string, 0>);
+}
+
+int main(int, char**) {
+  test_constraints();
+
+  testRuntimeSpan(std::span<int>());
+  testRuntimeSpan(std::span<long>());
+  testRuntimeSpan(std::span<double>());
+  testRuntimeSpan(std::span<A>());
+  testRuntimeSpan(std::span<std::string>());
+
+  testRuntimeSpan(std::span<int, 0>());
+  testRuntimeSpan(std::span<long, 0>());
+  testRuntimeSpan(std::span<double, 0>());
+  testRuntimeSpan(std::span<A, 0>());
+  testRuntimeSpan(std::span<std::string, 0>());
+
+  testRuntimeSpan(std::span<int>(iArr2, 1));
+  testRuntimeSpan(std::span<int>(iArr2, 2));
+  testRuntimeSpan(std::span<int>(iArr2, 3));
+  testRuntimeSpan(std::span<int>(iArr2, 4));
+  testRuntimeSpan(std::span<int>(iArr2, 5));
+
+  testRuntimeSpan(std::span<int, 1>(iArr2 + 5, 1));
+  testRuntimeSpan(std::span<int, 2>(iArr2 + 4, 2));
+  testRuntimeSpan(std::span<int, 3>(iArr2 + 3, 3));
+  testRuntimeSpan(std::span<int, 4>(iArr2 + 2, 4));
+  testRuntimeSpan(std::span<int, 5>(iArr2 + 1, 5));
+
+  std::string s;
+  testRuntimeSpan(std::span<std::string>(&s, (std::size_t)0));
+  testRuntimeSpan(std::span<std::string>(&s, 1));
 
   return 0;
 }

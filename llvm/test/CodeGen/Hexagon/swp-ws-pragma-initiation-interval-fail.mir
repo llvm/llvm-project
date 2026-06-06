@@ -1,0 +1,83 @@
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
+# REQUIRES: asserts
+
+# Test that checks no window scheduler is performed if the II set by pragma was
+# enabled
+
+# CHECK: Window scheduling is disabled when llvm.loop.pipeline.initiationinterval is set.
+
+--- |
+  define void @test_pragma_ii_fail(ptr %a0, i32 %a1) {
+  b0:
+    %v0 = icmp sgt i32 %a1, 1
+    br i1 %v0, label %b1, label %b4
+
+  b1:                                               ; preds = %b0
+    %v1 = load i32, ptr %a0, align 4
+    %v2 = add i32 %v1, 10
+    %v4 = add i32 %a1, -1
+    %cgep = getelementptr i32, ptr %a0, i32 1
+    br label %b2
+
+  b2:                                               ; preds = %b2, %b1
+    %v5 = phi i32 [ %v12, %b2 ], [ %v4, %b1 ]
+    %v6 = phi ptr [ %cgep2, %b2 ], [ %cgep, %b1 ]
+    %v7 = phi i32 [ %v10, %b2 ], [ %v2, %b1 ]
+    store i32 %v7, ptr %v6, align 4
+    %v8 = add i32 %v7, 10
+    %cgep1 = getelementptr i32, ptr %v6, i32 -1
+    store i32 %v8, ptr %cgep1, align 4
+    %v10 = add i32 %v7, 10
+    %v12 = add i32 %v5, -1
+    %v13 = icmp eq i32 %v12, 0
+    %cgep2 = getelementptr i32, ptr %v6, i32 1
+    br i1 %v13, label %b4, label %b2, !llvm.loop !0
+
+  b4:                                               ; preds = %b2, %b0
+    ret void
+  }
+
+  !0 = distinct !{!0, !1}
+  !1 = !{!"llvm.loop.pipeline.initiationinterval", i32 2}
+...
+---
+name:            test_pragma_ii_fail
+tracksRegLiveness: true
+body:             |
+  bb.0.b0:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $r0, $r1
+  
+    %0:intregs = COPY $r1
+    %1:intregs = COPY $r0
+    %2:predregs = C2_cmpgti %0, 1
+    J2_jumpf %2, %bb.3, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+  
+  bb.1.b1:
+    successors: %bb.2(0x80000000)
+  
+    %3:intregs, %4:intregs = L2_loadri_pi %1, 4
+    %5:intregs = A2_addi killed %3, 10
+    %6:intregs = A2_addi %0, -1
+    %7:intregs = COPY %6
+    J2_loop0r %bb.2, %7, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+  
+  bb.2.b2 (machine-block-address-taken):
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  
+    %8:intregs = PHI %4, %bb.1, %9, %bb.2
+    %10:intregs = PHI %5, %bb.1, %11, %bb.2
+    S2_storeri_io %8, 0, %10
+    %11:intregs = A2_addi %10, 10
+    S2_storeri_io %8, -4, %11
+    %9:intregs = A2_addi %8, 4
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.3, implicit-def dead $pc
+  
+  bb.3.b4:
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

@@ -14,16 +14,16 @@
 
 ; CHECK-LABEL: bb1:
 ; CHECK-NEXT:  %bar.0 = phi i32
-; CHECK-NEXT:  dbg.value(metadata i32 %bar.0,{{.*}}), !dbg ![[UNKNOWN:[0-9]+]]
+; CHECK-NEXT:  #dbg_value(i32 %bar.0,{{.*}},  ![[UNKNOWN:[0-9]+]]
 ; CHECK-NEXT:  %totest = load
 ; CHECK-NEXT:  %add = add i32 %bar.0
-; CHECK-NEXT:  dbg.value(metadata i32 %add, {{.*}}), !dbg ![[UNKNOWN]]
+; CHECK-NEXT:  #dbg_value(i32 %add, {{.*}},  ![[UNKNOWN]]
 ; CHECK-NEXT:  %cond = icmp ult
 ; CHECK-NEXT:  br i1 %cond, label %bb1, label %bb2
 ;
 ; CHECK-LABEL: bb2:
 ; CHECK-NEXT:  %toret = add i32 %bar.0, 3
-; CHECK-NEXT:  dbg.value(metadata i32 %toret, {{.*}}), !dbg ![[UNKNOWN]]
+; CHECK-NEXT:  #dbg_value(i32 %toret, {{.*}},  ![[UNKNOWN]]
 ; CHECK-NEXT:  ret i32 %toret
 
 define i32 @foo(ptr %bees, ptr %output) {
@@ -51,16 +51,16 @@ bb2:
 ; line number, the other dbg.values should be unknown.
 ; CHECK-LABEL: define void @bar
 ;
-; CHECK:      dbg.value(metadata i32 %map, metadata ![[MAPVAR:[0-9]+]],{{.*}}),
-; CHECK-SAME:           !dbg ![[UNKNOWN2:[0-9]+]]
+; CHECK:      #dbg_value(i32 %map, ![[MAPVAR:[0-9]+]],{{.*}}),
+; CHECK-SAME:           ![[UNKNOWN2:[0-9]+]]
 ; CHECK-NEXT: store
-; CHECK-NEXT: dbg.value(metadata ptr %map.addr, metadata ![[MAPVAR]],
-; CHECK-SAME:           metadata !DIExpression(DW_OP_deref)),
-; CHECK-SAME:           !dbg ![[UNKNOWN2]]
+; CHECK-NEXT: #dbg_value(ptr %map.addr, ![[MAPVAR]],
+; CHECK-SAME:           !DIExpression(DW_OP_deref),
+; CHECK-SAME:           ![[UNKNOWN2]]
 ; CHECK-NEXT: call
 ; CHECK-NEXT: load
-; CHECK-NEXT: dbg.value(metadata i32 %{{[0-9]+}}, metadata ![[MAPVAR]],
-; CHECK-SAME:           !dbg ![[UNKNOWN2]]
+; CHECK-NEXT: #dbg_value(i32 %{{[0-9]+}}, ![[MAPVAR]],
+; CHECK-SAME:           ![[UNKNOWN2]]
 
 define void @bar(i32 %map) !dbg !20 {
 entry:
@@ -85,15 +85,17 @@ declare i32 @lookup(...)
 ; CHECK: ![[MAPVAR]] = !DILocalVariable(name: "floogie",
 ; CHECK: ![[UNKNOWN2]] = !DILocation(line: 0
 
+!28 = !{null}
+!29 = !DISubroutineType(types: !28)
 !llvm.module.flags = !{!4}
 !llvm.dbg.cu = !{!2}
-!1 = !DILocalVariable(name: "bees", scope: !5, type: null)
+!1 = !DILocalVariable(name: "bees", scope: !5, type: !17)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
 !3 = !DIFile(filename: "bees.cpp", directory: "")
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "nope", scope: !3, file: !3, line: 1, unit: !2)
+!5 = distinct !DISubprogram(name: "nope", scope: !3, file: !3, line: 1, type: !29, unit: !2)
 !6 = !DILocation(line: 1, scope: !5)
-!7 = !DILocalVariable(name: "flannel", scope: !5, type: null)
+!7 = !DILocalVariable(name: "flannel", scope: !5, type: !17)
 !8 = !DILocation(line: 2, scope: !5)
 !9 = !DILocation(line: 3, scope: !5)
 !10 = !DILocation(line: 4, scope: !5)
@@ -101,10 +103,11 @@ declare i32 @lookup(...)
 !12 = !DILocation(line: 6, scope: !5)
 !13 = !DILocation(line: 7, scope: !5)
 !14 = !DILocation(line: 8, scope: !5)
-!15 = distinct !DISubprogram(name: "wat", scope: !2, file: !3, line: 10, unit: !2)
+!15 = distinct !DISubprogram(name: "wat", scope: !2, file: !3, line: 10, type: !29, unit: !2)
 !16 = !DILocation(line: 9, scope: !15, inlinedAt: !14)
-!20 = distinct !DISubprogram(name: "thin", scope: !3, file: !3, line: 20, unit: !2)
-!21 = !DILocalVariable(name: "floogie", scope: !20, type: null)
+!17 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!20 = distinct !DISubprogram(name: "thin", scope: !3, file: !3, line: 20, type: !29, unit: !2)
+!21 = !DILocalVariable(name: "floogie", scope: !20, type: !17)
 !22 = !DILocation(line: 21, scope: !20)
 !23 = !DILocation(line: 22, scope: !20)
 !24 = !DILocation(line: 23, scope: !20)

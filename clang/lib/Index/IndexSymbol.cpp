@@ -8,10 +8,12 @@
 
 #include "clang/Index/IndexSymbol.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Lex/MacroInfo.h"
 
 using namespace clang;
@@ -36,7 +38,7 @@ static bool isUnitTest(const ObjCMethodDecl *D) {
     return false;
   if (!D->getReturnType()->isVoidType())
     return false;
-  if (!D->getSelector().getNameForSlot(0).startswith("test"))
+  if (!D->getSelector().getNameForSlot(0).starts_with("test"))
     return false;
   return isUnitTestCase(D->getClassInterface());
 }
@@ -66,19 +68,38 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     switch (ND->getFormalLinkage()) {
-      case NoLinkage:
-      case InternalLinkage:
-        return true;
-      case VisibleNoLinkage:
-      case UniqueExternalLinkage:
-        llvm_unreachable("Not a sema linkage");
-      case ModuleLinkage:
-      case ExternalLinkage:
-        return false;
+    case Linkage::Invalid:
+      llvm_unreachable("Linkage hasn't been computed!");
+    case Linkage::None:
+    case Linkage::Internal:
+      return true;
+    case Linkage::VisibleNone:
+    case Linkage::UniqueExternal:
+      llvm_unreachable("Not a sema linkage");
+    case Linkage::Module:
+    case Linkage::External:
+      return false;
     }
   }
 
   return true;
+}
+
+static SymbolSubKind getSubKindForTypedef(const TypedefNameDecl *TND) {
+  if (const TagDecl *TD = TND->getUnderlyingType()->getAsTagDecl()) {
+    switch (TD->getTagKind()) {
+    case TagTypeKind::Class:
+      return SymbolSubKind::UsingClass;
+    case TagTypeKind::Struct:
+      return SymbolSubKind::UsingStruct;
+    default:
+      // Leave SymbolSubKind blank.
+      // New subkinds like UsingUnion can be added if/when needed.
+      return SymbolSubKind::None;
+    }
+  }
+  // Not a tag type, e.g. typedef for a builtin type.
+  return SymbolSubKind::None;
 }
 
 SymbolInfo index::getSymbolInfo(const Decl *D) {
@@ -105,19 +126,19 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
-    case TTK_Struct:
+    case TagTypeKind::Struct:
       Info.Kind = SymbolKind::Struct; break;
-    case TTK_Union:
+    case TagTypeKind::Union:
       Info.Kind = SymbolKind::Union; break;
-    case TTK_Class:
+    case TagTypeKind::Class:
       Info.Kind = SymbolKind::Class;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case TTK_Interface:
+    case TagTypeKind::Interface:
       Info.Kind = SymbolKind::Protocol;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case TTK_Enum:
+    case TagTypeKind::Enum:
       Info.Kind = SymbolKind::Enum; break;
     }
 
@@ -169,8 +190,11 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
     case Decl::Import:
       Info.Kind = SymbolKind::Module;
       break;
-    case Decl::Typedef:
-      Info.Kind = SymbolKind::TypeAlias; break; // Lang = C
+    case Decl::Typedef: {
+      Info.Kind = SymbolKind::TypeAlias; // Lang = C
+      Info.SubKind = getSubKindForTypedef(cast<TypedefDecl>(D));
+      break;
+    }
     case Decl::Function:
       Info.Kind = SymbolKind::Function;
       break;
@@ -308,10 +332,12 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Lang = SymbolLanguage::CXX;
       Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;
       break;
-    case Decl::TypeAlias:
+    case Decl::TypeAlias: {
       Info.Kind = SymbolKind::TypeAlias;
+      Info.SubKind = getSubKindForTypedef(cast<TypeAliasDecl>(D));
       Info.Lang = SymbolLanguage::CXX;
       break;
+    }
     case Decl::UnresolvedUsingTypename:
       Info.Kind = SymbolKind::Using;
       Info.SubKind = SymbolSubKind::UsingTypename;
@@ -505,6 +531,9 @@ bool index::printSymbolName(const Decl *D, const LangOptions &LO,
 
 StringRef index::getSymbolKindString(SymbolKind K) {
   switch (K) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case SymbolKind::IncludeDirective:
   case SymbolKind::Unknown: return "<unknown>";
   case SymbolKind::Module: return "module";
   case SymbolKind::Namespace: return "namespace";
@@ -548,10 +577,16 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::CXXMoveConstructor: return "cxx-move-ctor";
   case SymbolSubKind::AccessorGetter: return "acc-get";
   case SymbolSubKind::AccessorSetter: return "acc-set";
-  case SymbolSubKind::UsingTypename: return "using-typename";
-  case SymbolSubKind::UsingValue: return "using-value";
+  case SymbolSubKind::UsingTypename:
+    return "using-typename";
+  case SymbolSubKind::UsingValue:
+    return "using-value";
   case SymbolSubKind::UsingEnum:
     return "using-enum";
+  case SymbolSubKind::UsingClass:
+    return "using-class";
+  case SymbolSubKind::UsingStruct:
+    return "using-struct";
   }
   llvm_unreachable("invalid symbol subkind");
 }

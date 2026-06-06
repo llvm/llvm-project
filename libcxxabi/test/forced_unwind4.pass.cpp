@@ -7,19 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux && target={{aarch64-.+}}
+// REQUIRES: linux && target=aarch64-{{.+}}-gnu
 
 // pthread_cancel in case of glibc calls _Unwind_ForcedUnwind from a signal on
-// the child_thread. This test ensures sigretrun is handled correctly (see:
+// the child_thread. This test ensures sigreturn is handled correctly (see:
 // UnwindCursor<A, R>::setInfoForSigReturn).
 
 #include <cstdlib> // defines __BIONIC__
 
 // Android/Bionic does not support pthread_cancel.
 #ifdef __BIONIC__
-int main() {
-  return 0;
-}
+int main(int, char**) { return 0; }
 #else
 
 #include <chrono>
@@ -45,7 +43,7 @@ static void* test(void* arg) {
   return (void*)1;
 }
 
-int main() {
+int main(int, char**) {
   pthread_t child_thread;
   std::unique_lock<std::mutex> lk(cv_m);
   pthread_create(&child_thread, 0, test, (void*)0);

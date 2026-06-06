@@ -2,30 +2,7 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:             {modernize-use-emplace.IgnoreImplicitConstructors: \
 // RUN:                true}}"
-
-namespace std {
-template <typename>
-class initializer_list
-{
-public:
-  initializer_list() noexcept {}
-};
-
-template <typename T>
-class vector {
-public:
-  vector() = default;
-  vector(initializer_list<T>) {}
-
-  void push_back(const T &) {}
-  void push_back(T &&) {}
-
-  template <typename... Args>
-  void emplace_back(Args &&... args){};
-  ~vector();
-};
-
-} // namespace std
+#include <vector>
 
 void testInts() {
   std::vector<int> v;

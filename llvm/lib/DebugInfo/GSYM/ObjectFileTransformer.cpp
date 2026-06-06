@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <unordered_set>
-
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
+#include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 
 using namespace llvm;
 using namespace gsym;
@@ -48,7 +47,7 @@ static std::vector<uint8_t> getUUID(const object::ObjectFile &Obj) {
         consumeError(E.takeError());
         continue;
       }
-      DataExtractor Decoder(BuildIDData, Obj.makeTriple().isLittleEndian(), 8);
+      DataExtractor Decoder(BuildIDData, Obj.makeTriple().isLittleEndian());
       uint64_t Offset = 0;
       const uint32_t NameSize = Decoder.getU32(&Offset);
       const uint32_t PayloadSize = Decoder.getU32(&Offset);
@@ -68,7 +67,7 @@ static std::vector<uint8_t> getUUID(const object::ObjectFile &Obj) {
 }
 
 llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
-                                           raw_ostream *Log,
+                                           OutputAggregator &Out,
                                            GsymCreator &Gsym) {
   using namespace llvm::object;
 
@@ -99,8 +98,8 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
     const uint64_t size = IsELF ? ELFSymbolRef(Sym).getSize() : 0;
     Expected<StringRef> Name = Sym.getName();
     if (!Name) {
-      if (Log)
-        logAllUnhandledErrors(Name.takeError(), *Log,
+      if (Out.GetOS())
+        logAllUnhandledErrors(Name.takeError(), *Out.GetOS(),
                               "ObjectFileTransformer: ");
       else
         consumeError(Name.takeError());
@@ -114,8 +113,8 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
         FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, NoCopy)));
   }
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
-  if (Log)
-    *Log << "Loaded " << FunctionsAddedCount
-         << " functions from symbol table.\n";
+  if (Out.GetOS())
+    *Out.GetOS() << "Loaded " << FunctionsAddedCount
+                 << " functions from symbol table.\n";
   return Error::success();
 }

@@ -37,11 +37,6 @@
 //===          and must not be UNIX code
 //===----------------------------------------------------------------------===//
 
-#ifdef __MINGW32__
-// This ban should be lifted when MinGW 1.0+ has defined this value.
-#define _HEAPOK (-2)
-#endif
-
 using namespace llvm;
 
 Process::Pid Process::getProcessId() {
@@ -95,9 +90,9 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
   sys_time = toDuration(KernelTime);
 }
 
-// Some LLVM programs such as bugpoint produce core files as a normal part of
-// their operation. To prevent the disk from filling up, this configuration
-// item does what's necessary to prevent their generation.
+// Some LLVM programs such as llvm-reduce produce core files as a normal part of
+// their operation. To prevent the disk from filling up, this configuration item
+// does what's necessary to prevent their generation.
 void Process::PreventCoreFiles() {
   // Windows does have the concept of core files, called minidumps.  However,
   // disabling minidumps for a particular application extends past the lifetime
@@ -108,7 +103,7 @@ void Process::PreventCoreFiles() {
   // later).
   //
   // Windows also has modal pop-up message boxes.  As this method is used by
-  // bugpoint, preventing these pop-ups is additionally important.
+  // llvm-reduce, preventing these pop-ups is additionally important.
   SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX |
                SEM_NOOPENFILEERRORBOX);
 
@@ -158,7 +153,7 @@ static std::error_code WildcardExpand(StringRef Arg,
   // option. Paths that start with \\?\ are absolute paths, and aren't
   // expected to be used with wildcard expressions.
   if (Arg.find_first_of("*?") == StringRef::npos || Arg == "/?" ||
-      Arg == "-?" || Arg.startswith("\\\\?\\")) {
+      Arg == "-?" || Arg.starts_with("\\\\?\\")) {
     Args.push_back(Arg.data());
     return EC;
   }
@@ -276,7 +271,7 @@ std::error_code Process::FixupStandardFileDescriptors() {
 
 std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   if (::close(FD) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
@@ -376,7 +371,7 @@ const char *Process::OutputBold(bool bg) {
 
 const char *Process::OutputColor(char code, bool bold, bool bg) {
   if (UseANSI)
-    return colorcodes[bg ? 1 : 0][bold ? 1 : 0][code & 7];
+    return colorcodes[bg ? 1 : 0][bold ? 1 : 0][code & 15];
 
   WORD current = DefaultColors::GetCurrentColor();
   WORD colors;
@@ -482,7 +477,8 @@ static RTL_OSVERSIONINFOEXW GetWindowsVer() {
     HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
     assert(hMod);
 
-    auto getVer = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+    auto getVer =
+        (RtlGetVersionPtr)(void *)::GetProcAddress(hMod, "RtlGetVersion");
     assert(getVer);
 
     RTL_OSVERSIONINFOEXW info{};
@@ -525,3 +521,32 @@ bool llvm::RunningWindows11OrGreater() {
   TerminateProcess(GetCurrentProcess(), RetCode);
   llvm_unreachable("TerminateProcess doesn't return");
 }
+
+namespace llvm::sys::windows {
+HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName) {
+  // Ensure we load indeed a module from system32 path.
+  // As per GetModuleHandle documentation:
+  // "If lpModuleName does not include a path and there is more than one loaded
+  // module with the same base name and extension, you cannot predict which
+  // module handle will be returned.". This mitigates
+  // https://learn.microsoft.com/en-us/security-updates/securityadvisories/2010/2269637
+  SmallVector<wchar_t, MAX_PATH> Buf;
+  size_t Size = MAX_PATH;
+  do {
+    Buf.resize_for_overwrite(Size);
+    SetLastError(NO_ERROR);
+    Size = ::GetSystemDirectoryW(Buf.data(), Buf.size());
+    if (Size == 0)
+      return NULL;
+
+    // Try again with larger buffer.
+  } while (Size > Buf.size());
+
+  Buf.truncate(Size);
+  Buf.push_back(L'\\');
+  Buf.append(lpModuleName, lpModuleName + std::wcslen(lpModuleName));
+  Buf.push_back(0);
+
+  return ::GetModuleHandleW(Buf.data());
+}
+} // namespace llvm::sys::windows

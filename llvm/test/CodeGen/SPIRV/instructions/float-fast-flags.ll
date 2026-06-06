@@ -1,4 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; DISABLED-CHECK-DAG: OpName [[FNEG:%.+]] "scalar_fneg"
 ; CHECK-DAG: OpName [[FADD:%.+]] "test_fadd"
@@ -8,7 +9,19 @@
 ; CHECK-DAG: OpName [[FREM:%.+]] "test_frem"
 ; CHECK-DAG: OpName [[FMA:%.+]] "test_fma"
 
-; CHECK-DAG: [[F32Ty:%.+]] = OpTypeFloat 32
+; CHECK: OpDecorate [[FADD]] LinkageAttributes "test_fadd" Export
+; CHECK-NEXT: OpDecorate [[FADD_RES:%.+]] FPFastMathMode NotNaN|NotInf{{$}}
+; CHECK: OpDecorate [[FSUB]] LinkageAttributes "test_fsub" Export
+; CHECK-NEXT: OpDecorate [[FSUB_RES:%.+]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|Fast{{$}}
+; CHECK: OpDecorate [[FMUL]] LinkageAttributes "test_fmul" Export
+; CHECK-NOT: FPFastMathMode
+; CHECK: OpDecorate [[FDIV]] LinkageAttributes "test_fdiv" Export
+; CHECK-NEXT: OpDecorate [[FDIV_RES:%.+]] FPFastMathMode NSZ|AllowRecip{{$}}
+; CHECK: OpDecorate [[FREM]] LinkageAttributes "test_frem" Export
+; CHECK-NEXT: OpDecorate [[FREM_RES:%.+]] FPFastMathMode NSZ{{$}}
+; CHECK: OpDecorate [[FMA]] LinkageAttributes "test_fma" Export
+; CHECK-NEXT: OpDecorate [[FMA_RES:%.+]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|Fast{{$}}
+; CHECK: [[F32Ty:%.+]] = OpTypeFloat 32
 ; CHECK-DAG: [[FNTy:%.+]] = OpTypeFunction [[F32Ty]] [[F32Ty]] [[F32Ty]]
 
 
@@ -16,9 +29,8 @@
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[C:%.+]] = OpFAdd [[F32Ty]] [[A]] [[B]]
-;; TODO: OpDecorate checks
-; CHECK-NEXT: OpReturnValue [[C]]
+; CHECK-NEXT: [[FADD_RES]] = OpFAdd [[F32Ty]] [[A]] [[B]]
+; CHECK-NEXT: OpReturnValue [[FADD_RES]]
 ; CHECK-NEXT: OpFunctionEnd
 define float @test_fadd(float %a, float %b) {
     %c = fadd nnan ninf float %a, %b
@@ -29,9 +41,8 @@ define float @test_fadd(float %a, float %b) {
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[C:%.+]] = OpFSub [[F32Ty]] [[A]] [[B]]
-;; TODO: OpDecorate checks
-; CHECK-NEXT: OpReturnValue [[C]]
+; CHECK-NEXT: [[FSUB_RES]] = OpFSub [[F32Ty]] [[A]] [[B]]
+; CHECK-NEXT: OpReturnValue [[FSUB_RES]]
 ; CHECK-NEXT: OpFunctionEnd
 define float @test_fsub(float %a, float %b) {
     %c = fsub fast float %a, %b
@@ -42,9 +53,8 @@ define float @test_fsub(float %a, float %b) {
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[C:%.+]] = OpFMul [[F32Ty]] [[A]] [[B]]
-;; TODO: OpDecorate checks]
-; CHECK-NEXT: OpReturnValue [[C]]
+; CHECK-NEXT: [[FMUL_RES:%.+]] = OpFMul [[F32Ty]] [[A]] [[B]]
+; CHECK-NEXT: OpReturnValue [[FMUL_RES]]
 ; CHECK-NEXT: OpFunctionEnd
 define float @test_fmul(float %a, float %b) {
     %c = fmul contract float %a, %b
@@ -55,9 +65,8 @@ define float @test_fmul(float %a, float %b) {
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[C:%.+]] = OpFDiv [[F32Ty]] [[A]] [[B]]
-;; TODO: OpDecorate checks
-; CHECK-NEXT: OpReturnValue [[C]]
+; CHECK-NEXT: [[FDIV_RES]] = OpFDiv [[F32Ty]] [[A]] [[B]]
+; CHECK-NEXT: OpReturnValue [[FDIV_RES]]
 ; CHECK-NEXT: OpFunctionEnd
 define float @test_fdiv(float %a, float %b) {
     %c = fdiv arcp nsz float %a, %b
@@ -68,9 +77,8 @@ define float @test_fdiv(float %a, float %b) {
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[C:%.+]] = OpFRem [[F32Ty]] [[A]] [[B]]
-;; TODO: OpDecorate checks
-; CHECK-NEXT: OpReturnValue [[C]]
+; CHECK-NEXT: [[FREM_RES]] = OpFRem [[F32Ty]] [[A]] [[B]]
+; CHECK-NEXT: OpReturnValue [[FREM_RES]]
 ; CHECK-NEXT: OpFunctionEnd
 define float @test_frem(float %a, float %b) {
     %c = frem nsz float %a, %b
@@ -85,11 +93,10 @@ declare float @llvm.fma.f32(float, float, float)
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: [[C:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[R:%.+]] = OpExtInst [[F32Ty]] {{%.+}} fma [[A]] [[B]] [[C]]
-;; TODO: OpDecorate checks
-; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: [[FMA_RES]] = OpExtInst [[F32Ty]] {{%.+}} fma [[A]] [[B]] [[C]]
+; CHECK-NEXT: OpReturnValue [[FMA_RES]]
 ; CHECK-NEXT: OpFunctionEnd
 define float @test_fma(float %a, float %b, float %c) {
-    %r = call float @llvm.fma.f32(float %a, float %b, float %c)
+    %r = call fast float @llvm.fma.f32(float %a, float %b, float %c)
     ret float %r
 }

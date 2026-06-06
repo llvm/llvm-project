@@ -8,16 +8,18 @@
 
 #include "src/ctype/ispunct.h"
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-// TODO: Currently restricted to default locale.
-// These should be extended using locale information.
 LLVM_LIBC_FUNCTION(int, ispunct, (int c)) {
-  const unsigned ch = static_cast<unsigned>(c);
+  if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
+    return 0;
+  const char ch = static_cast<char>(c);
   return static_cast<int>(!internal::isalnum(ch) && internal::isgraph(ch));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

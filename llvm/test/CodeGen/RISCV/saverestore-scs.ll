@@ -37,4 +37,3 @@ define void @callee_scs() nounwind shadowcallstack {
   store volatile [30 x i32] %val, ptr @var2
   ret void
 }
-

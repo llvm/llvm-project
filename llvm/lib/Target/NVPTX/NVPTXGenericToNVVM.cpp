@@ -13,7 +13,7 @@
 
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -27,10 +27,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;
-
-namespace llvm {
-void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
-}
 
 namespace {
 class GenericToNVVM {
@@ -61,8 +57,8 @@ bool GenericToNVVM::runOnModule(Module &M) {
 
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
     if (GV.getType()->getAddressSpace() == llvm::ADDRESS_SPACE_GENERIC &&
-        !llvm::isTexture(GV) && !llvm::isSurface(GV) && !llvm::isSampler(GV) &&
-        !GV.getName().startswith("llvm.")) {
+        llvm::getPTXOpaqueType(GV) == llvm::PTXOpaqueType::None &&
+        !GV.getName().starts_with("llvm.")) {
       GlobalVariable *NewGV = new GlobalVariable(
           M, GV.getValueType(), GV.isConstant(), GV.getLinkage(),
           GV.hasInitializer() ? GV.getInitializer() : nullptr, "", &GV,
@@ -86,7 +82,7 @@ bool GenericToNVVM::runOnModule(Module &M) {
     if (F.isDeclaration()) {
       continue;
     }
-    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(&*F.getEntryBlock().getFirstNonPHIOrDbg());
     for (BasicBlock &BB : F) {
       for (Instruction &II : BB) {
         for (unsigned i = 0, e = II.getNumOperands(); i < e; ++i) {
@@ -110,15 +106,14 @@ bool GenericToNVVM::runOnModule(Module &M) {
   // original global variables in GVMap with a use of the corresponding copies
   // in GVMap.  The copies need to be bitcast to the original global variable
   // types, as we cannot use cvta in global variable initializers.
-  for (GVMapTy::iterator I = GVMap.begin(), E = GVMap.end(); I != E;) {
-    GlobalVariable *GV = I->first;
-    GlobalVariable *NewGV = I->second;
-
-    // Remove GV from the map so that it can be RAUWed.  Note that
-    // DenseMap::erase() won't invalidate any iterators but this one.
-    auto Next = std::next(I);
-    GVMap.erase(I);
-    I = Next;
+  // Snapshot the map first: replaceAllUsesWith() and eraseFromParent() below
+  // fire ValueMap callbacks that mutate GVMap, so we must not hold an iterator
+  // into GVMap across them.
+  SmallVector<std::pair<GlobalVariable *, GlobalVariable *>, 0> GVs(
+      GVMap.begin(), GVMap.end());
+  for (auto [GV, NewGV] : GVs) {
+    // Remove GV from the map so that it can be RAUWed.
+    GVMap.erase(GV);
 
     Constant *BitCastNewGV = ConstantExpr::getPointerCast(NewGV, GV->getType());
     // At this point, the remaining uses of GV should be found only in global
@@ -154,8 +149,7 @@ Value *GenericToNVVM::remapConstant(Module *M, Function *F, Constant *C,
     if (I != GVMap.end()) {
       GlobalVariable *GV = I->second;
       NewValue = Builder.CreateAddrSpaceCast(
-          GV,
-          PointerType::get(GV->getValueType(), llvm::ADDRESS_SPACE_GENERIC));
+          GV, PointerType::get(GV->getContext(), llvm::ADDRESS_SPACE_GENERIC));
     }
   } else if (isa<ConstantAggregate>(C)) {
     // If any element in the constant vector or aggregate C is or uses a global
@@ -236,14 +230,6 @@ Value *GenericToNVVM::remapConstantExpr(Module *M, Function *F, ConstantExpr *C,
   // the converted operands.
   unsigned Opcode = C->getOpcode();
   switch (Opcode) {
-  case Instruction::ICmp:
-    // CompareConstantExpr (icmp)
-    return Builder.CreateICmp(CmpInst::Predicate(C->getPredicate()),
-                              NewOperands[0], NewOperands[1]);
-  case Instruction::FCmp:
-    // CompareConstantExpr (fcmp)
-    llvm_unreachable("Address space conversion should have no effect "
-                     "on float point CompareConstantExpr (fcmp)!");
   case Instruction::ExtractElement:
     // ExtractElementConstantExpr
     return Builder.CreateExtractElement(NewOperands[0], NewOperands[1]);

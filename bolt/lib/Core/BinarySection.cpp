@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -22,8 +23,8 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-extern cl::opt<bool> PrintRelocations;
 extern cl::opt<bool> HotData;
+extern cl::opt<bool> PrintRelocations;
 } // namespace opts
 
 uint64_t BinarySection::Count = 0;
@@ -72,7 +73,8 @@ BinarySection::hash(const BinaryData &BD,
 
 void BinarySection::emitAsData(MCStreamer &Streamer,
                                const Twine &SectionName) const {
-  StringRef SectionContents = getContents();
+  StringRef SectionContents =
+      isFinalized() ? getOutputContents() : getContents();
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
 
@@ -110,8 +112,10 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
       RI = ROE;
 
       // Skip undefined symbols.
-      auto HasUndefSym = [this](const auto &Relocation) {
-        return BC.UndefinedSymbols.count(Relocation.Symbol);
+      auto HasUndefSym = [](const auto &Relocation) {
+        return Relocation.Symbol && Relocation.Symbol->isTemporary() &&
+               Relocation.Symbol->isUndefined() &&
+               !Relocation.Symbol->isRegistered();
       };
 
       if (std::any_of(ROI, ROE, HasUndefSym))
@@ -141,6 +145,15 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
     Streamer.emitLabel(BC.Ctx->getOrCreateSymbol("__hot_data_end"));
 }
 
+uint64_t BinarySection::write(raw_ostream &OS) const {
+  const uint64_t NumValidContentBytes =
+      std::min<uint64_t>(getOutputContents().size(), getOutputSize());
+  OS.write(getOutputContents().data(), NumValidContentBytes);
+  if (getOutputSize() > NumValidContentBytes)
+    OS.write_zeros(getOutputSize() - NumValidContentBytes);
+  return getOutputSize();
+}
+
 void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
                                             SymbolResolverFuncTy Resolver) {
   if (PendingRelocations.empty() && Patches.empty())
@@ -164,11 +177,20 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
     OS.pwrite(Patch.Bytes.data(), Patch.Bytes.size(),
               SectionFileOffset + Patch.Offset);
 
+  uint64_t SkippedPendingRelocations = 0;
   for (Relocation &Reloc : PendingRelocations) {
     uint64_t Value = Reloc.Addend;
     if (Reloc.Symbol)
       Value += Resolver(Reloc.Symbol);
 
+    // Safely skip any optional pending relocation that cannot be encoded.
+    if (Reloc.isOptional() &&
+        !Relocation::canEncodeValue(Reloc.Type, Value,
+                                    SectionAddress + Reloc.Offset)) {
+
+      ++SkippedPendingRelocations;
+      continue;
+    }
     Value = Relocation::encodeValue(Reloc.Type, Value,
                                     SectionAddress + Reloc.Offset);
 
@@ -187,20 +209,14 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   }
 
   clearList(PendingRelocations);
-}
 
-BinarySection::~BinarySection() {
-  if (isReordered()) {
-    delete[] getData();
-    return;
-  }
-
-  if (!isAllocatable() && !hasValidSectionID() &&
-      (!hasSectionRef() ||
-       OutputContents.data() != getContents(Section).data())) {
-    delete[] getOutputData();
+  if (SkippedPendingRelocations > 0 && opts::Verbosity >= 1) {
+    BC.outs() << "BOLT-INFO: skipped " << SkippedPendingRelocations
+              << " out-of-range optional relocations\n";
   }
 }
+
+BinarySection::~BinarySection() { updateContents(nullptr, 0); }
 
 void BinarySection::clearRelocations() { clearList(Relocations); }
 
@@ -227,7 +243,7 @@ void BinarySection::print(raw_ostream &OS) const {
 BinarySection::RelocationSetType
 BinarySection::reorderRelocations(bool Inplace) const {
   assert(PendingRelocations.empty() &&
-         "reodering pending relocations not supported");
+         "reordering pending relocations not supported");
   RelocationSetType NewRelocations;
   for (const Relocation &Rel : relocations()) {
     uint64_t RelAddr = Rel.Offset + getAddress();

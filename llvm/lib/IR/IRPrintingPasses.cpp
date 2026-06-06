@@ -18,6 +18,7 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -55,6 +56,7 @@ public:
         }
       }
     }
+
     return false;
   }
 
@@ -84,6 +86,7 @@ public:
       else
         OS << Banner << '\n' << static_cast<Value &>(F);
     }
+
     return false;
   }
 

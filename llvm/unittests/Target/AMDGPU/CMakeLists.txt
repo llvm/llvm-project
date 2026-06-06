@@ -1,6 +1,7 @@
 include_directories(
   ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU
   ${PROJECT_BINARY_DIR}/lib/Target/AMDGPU
+  ${PROJECT_SOURCE_DIR}/unittests/CodeGen
   )
 
 set(LLVM_LINK_COMPONENTS
@@ -8,18 +9,27 @@ set(LLVM_LINK_COMPONENTS
   AMDGPUDesc
   AMDGPUInfo
   AMDGPUUtils
+  Analysis
+  AsmParser
   CodeGen
   CodeGenTypes
   Core
+  GlobalISel
   MC
+  MIRParser
+  Passes
   Support
   TargetParser
   )
 
 add_llvm_target_unittest(AMDGPUTests
+  AMDGPUMCExprTest.cpp
   AMDGPUUnitTests.cpp
+  CSETest.cpp
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
+  GCNRegPressureTest.cpp
+  LiveRegUnits.cpp
+  PALMetadata.cpp
+  UniformityAnalysisTest.cpp
   )
-
-set_property(TARGET AMDGPUTests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

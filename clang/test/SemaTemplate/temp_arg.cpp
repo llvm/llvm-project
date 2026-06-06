@@ -6,7 +6,9 @@ template<typename T,
   class A; // precxx17-note 3 {{template is declared here}} \
               cxx17-note 2 {{template is declared here}} \
               cxx17-note {{candidate template ignored: couldn't infer template argument 'T'}} \
-              cxx17-note {{candidate function template not viable: requires 1 argument, but 0 were provided}}
+              cxx17-note {{implicit deduction guide declared as 'template <typename T, int I, template <typename> class TT> A(A<T, I, TT>) -> A<T, I, TT>'}} \
+              cxx17-note {{candidate function template not viable: requires 1 argument, but 0 were provided}} \
+              cxx17-note {{implicit deduction guide declared as 'template <typename T, int I, template <typename> class TT> A() -> A<T, I, TT>'}} \
 
 template<typename> class X;
 

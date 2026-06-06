@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; This testcase used to crash due to putting the bitsplit instruction in a

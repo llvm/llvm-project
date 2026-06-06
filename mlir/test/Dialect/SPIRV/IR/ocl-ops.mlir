@@ -19,7 +19,7 @@ func.func @expvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 func.func @exp(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %2 = spirv.CL.exp %arg0 : i32
   return
 }
@@ -27,7 +27,7 @@ func.func @exp(%arg0 : i32) -> () {
 // -----
 
 func.func @exp(%arg0 : vector<5xf32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
   %2 = spirv.CL.exp %arg0 : vector<5xf32>
   return
 }
@@ -45,6 +45,206 @@ func.func @exp(%arg0 : f32, %arg1 : f32) -> () {
 func.func @exp(%arg0 : i32) -> () {
   // expected-error @+1 {{expected non-function type}}
   %2 = spirv.CL.exp %arg0 :
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.exp2
+//===----------------------------------------------------------------------===//
+
+func.func @exp2(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.exp2 {{%.*}} : f32
+  %2 = spirv.CL.exp2 %arg0 : f32
+  return
+}
+
+func.func @exp2vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.CL.exp2 {{%.*}} : vector<3xf16>
+  %2 = spirv.CL.exp2 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @exp2(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %2 = spirv.CL.exp2 %arg0 : i32
+  return
+}
+
+// -----
+
+func.func @exp2(%arg0 : vector<5xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
+  %2 = spirv.CL.exp2 %arg0 : vector<5xf32>
+  return
+}
+
+// -----
+
+func.func @exp2(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.exp2 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @exp2(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.exp2 %arg0 :
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.exp10
+//===----------------------------------------------------------------------===//
+
+func.func @exp10(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.exp10 {{%.*}} : f32
+  %2 = spirv.CL.exp10 %arg0 : f32
+  return
+}
+
+func.func @exp10vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.CL.exp10 {{%.*}} : vector<3xf16>
+  %2 = spirv.CL.exp10 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @exp10(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %2 = spirv.CL.exp10 %arg0 : i32
+  return
+}
+
+// -----
+
+func.func @exp10(%arg0 : vector<5xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
+  %2 = spirv.CL.exp10 %arg0 : vector<5xf32>
+  return
+}
+
+// -----
+
+func.func @exp10(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.exp10 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @exp10(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.exp10 %arg0 :
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.log2
+//===----------------------------------------------------------------------===//
+
+func.func @log2(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.log2 {{%.*}} : f32
+  %2 = spirv.CL.log2 %arg0 : f32
+  return
+}
+
+func.func @log2vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.CL.log2 {{%.*}} : vector<3xf16>
+  %2 = spirv.CL.log2 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @log2(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %2 = spirv.CL.log2 %arg0 : i32
+  return
+}
+
+// -----
+
+func.func @log2(%arg0 : vector<5xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
+  %2 = spirv.CL.log2 %arg0 : vector<5xf32>
+  return
+}
+
+// -----
+
+func.func @log2(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.log2 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @log2(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.log2 %arg0 :
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.log10
+//===----------------------------------------------------------------------===//
+
+func.func @log10(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.log10 {{%.*}} : f32
+  %2 = spirv.CL.log10 %arg0 : f32
+  return
+}
+
+func.func @log10vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.CL.log10 {{%.*}} : vector<3xf16>
+  %2 = spirv.CL.log10 %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @log10(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %2 = spirv.CL.log10 %arg0 : i32
+  return
+}
+
+// -----
+
+func.func @log10(%arg0 : vector<5xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
+  %2 = spirv.CL.log10 %arg0 : vector<5xf32>
+  return
+}
+
+// -----
+
+func.func @log10(%arg0 : f32, %arg1 : f32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.log10 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @log10(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.log10 %arg0 :
   return
 }
 
@@ -75,7 +275,7 @@ func.func @fabsf64(%arg0 : f64) -> () {
 // -----
 
 func.func @fabs(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %2 = spirv.CL.fabs %arg0 : i32
   return
 }
@@ -83,7 +283,7 @@ func.func @fabs(%arg0 : i32) -> () {
 // -----
 
 func.func @fabs(%arg0 : vector<5xf32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4}}
   %2 = spirv.CL.fabs %arg0 : vector<5xf32>
   return
 }
@@ -137,7 +337,7 @@ func.func @sabsi8(%arg0 : i8) -> () {
 // -----
 
 func.func @sabs(%arg0 : f32) -> () {
-  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values}}
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values}}
   %2 = spirv.CL.s_abs %arg0 : f32
   return
 }
@@ -145,7 +345,7 @@ func.func @sabs(%arg0 : f32) -> () {
 // -----
 
 func.func @sabs(%arg0 : vector<5xi32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
   %2 = spirv.CL.s_abs %arg0 : vector<5xi32>
   return
 }
@@ -169,6 +369,56 @@ func.func @sabs(%arg0 : i32) -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.clz
+//===----------------------------------------------------------------------===//
+
+func.func @clz(%arg0 : i32) -> () {
+  // CHECK: spirv.CL.clz {{%.*}} : i32
+  %2 = spirv.CL.clz %arg0 : i32
+  return
+}
+
+func.func @clzvec(%arg0 : vector<3xi16>) -> () {
+  // CHECK: spirv.CL.clz {{%.*}} : vector<3xi16>
+  %2 = spirv.CL.clz %arg0 : vector<3xi16>
+  return
+}
+
+// -----
+
+func.func @clz(%arg0 : f32) -> () {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values}}
+  %2 = spirv.CL.clz %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @clz(%arg0 : vector<5xi32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  %2 = spirv.CL.clz %arg0 : vector<5xi32>
+  return
+}
+
+// -----
+
+func.func @clz(%arg0 : i32, %arg1 : i32) -> () {
+  // expected-error @+1 {{expected ':'}}
+  %2 = spirv.CL.clz %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @clz(%arg0 : i32) -> () {
+  // expected-error @+1 {{expected non-function type}}
+  %2 = spirv.CL.clz %arg0 :
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.CL.fma
 //===----------------------------------------------------------------------===//
 
@@ -183,6 +433,26 @@ func.func @fma(%a : f32, %b : f32, %c : f32) -> () {
 func.func @fma(%a : vector<3xf32>, %b : vector<3xf32>, %c : vector<3xf32>) -> () {
   // CHECK: spirv.CL.fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xf32>
   %2 = spirv.CL.fma %a, %b, %c : vector<3xf32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.mix
+//===----------------------------------------------------------------------===//
+
+func.func @mix(%a : f32, %b : f32, %c : f32) -> () {
+  // CHECK: spirv.CL.mix {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+  %2 = spirv.CL.mix %a, %b, %c : f32
+  return
+}
+
+// -----
+
+func.func @mix(%a : vector<3xf32>, %b : vector<3xf32>, %c : vector<3xf32>) -> () {
+  // CHECK: spirv.CL.mix {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xf32>
+  %2 = spirv.CL.mix %a, %b, %c : vector<3xf32>
   return
 }
 
@@ -251,12 +521,339 @@ func.func @rintvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.trunc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @trunc(
+func.func @trunc(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.trunc {{%.*}} : f32
+  %0 = spirv.CL.trunc %arg0 : f32
+  return
+}
+
+// CHECK-LABEL: func.func @truncvec(
+func.func @truncvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.CL.trunc {{%.*}} : vector<3xf16>
+  %0 = spirv.CL.trunc %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.CL.printf
 //===----------------------------------------------------------------------===//
 // CHECK-LABEL: func.func @printf(
-func.func @printf(%arg0 : !spirv.ptr<i8, UniformConstant>, %arg1 : i32, %arg2 : i32) -> i32 {
-  // CHECK: spirv.CL.printf {{%.*}}, {{%.*}}, {{%.*}} : (!spirv.ptr<i8, UniformConstant>, (i32, i32)) -> i32
-  %0 = spirv.CL.printf %arg0, %arg1, %arg2 : (!spirv.ptr<i8, UniformConstant>, (i32, i32)) -> i32
+func.func @printf(%fmt : !spirv.ptr<i8, UniformConstant>, %arg1 : i32, %arg2 : i32) -> i32 {
+  // CHECK: spirv.CL.printf {{%.*}} {{%.*}}, {{%.*}} : !spirv.ptr<i8, UniformConstant>, i32, i32 -> i32
+  %0 = spirv.CL.printf %fmt %arg1, %arg2 : !spirv.ptr<i8, UniformConstant>, i32, i32 -> i32
   return %0 : i32
 }
 
+// -----
+
+func.func @tan(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.tan {{%.*}} : f32
+  %2 = spirv.CL.tan %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @tan(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.tan {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.tan %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @atan(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.atan {{%.*}} : f32
+  %2 = spirv.CL.atan %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @atan(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.atan {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.atan %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @atanh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.atanh {{%.*}} : f32
+  %2 = spirv.CL.atanh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @atanh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.atanh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.atanh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @sinh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.sinh {{%.*}} : f32
+  %2 = spirv.CL.sinh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @sinh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.sinh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.sinh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @cosh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.cosh {{%.*}} : f32
+  %2 = spirv.CL.cosh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @cosh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.cosh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.cosh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @erfc(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.erfc {{%.*}} : f32
+  %2 = spirv.CL.erfc %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @erfc(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.erfc {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.erfc %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @asin(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.asin {{%.*}} : f32
+  %2 = spirv.CL.asin %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @asin(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.asin {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.asin %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @asinh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.asinh {{%.*}} : f32
+  %2 = spirv.CL.asinh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @asinh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.asinh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.asinh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @acos(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.acos {{%.*}} : f32
+  %2 = spirv.CL.acos %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @acos(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.acos {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.acos %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @acosh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.acosh {{%.*}} : f32
+  %2 = spirv.CL.acosh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @acosh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.acosh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.acosh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @cbrt(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.cbrt {{%.*}} : f32
+  %2 = spirv.CL.cbrt %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @cbrt(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.cbrt {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.cbrt %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @atan2(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spirv.CL.atan2 {{%.*}}, {{%.*}} : f32
+  %2 = spirv.CL.atan2 %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+func.func @atan2(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.atan2 {{%.*}}, {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.atan2 %arg0, %arg1 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.ldexp
+//===----------------------------------------------------------------------===//
+
+func.func @ldexp(%arg0 : f32, %arg1 : i32) -> () {
+  // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : f32, i32 -> f32
+  %0 = spirv.CL.ldexp %arg0, %arg1 : f32, i32 -> f32
+  return
+}
+
+// -----
+
+func.func @ldexp_vec(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) -> () {
+  // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @ldexp_wrong_type_scalar(%arg0 : f32, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spirv.CL.ldexp %arg0, %arg1 : f32, vector<2xi32> -> f32
+  return
+}
+
+// -----
+
+func.func @ldexp_wrong_type_vec_1(%arg0 : vector<3xf32>, %arg1 : i32) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, i32 -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @ldexp_wrong_type_vec_2(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must have the same number of elements}}
+  %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, vector<2xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.pown
+//===----------------------------------------------------------------------===//
+
+func.func @pown(%arg0 : f32, %arg1 : i32) -> () {
+  // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : f32, i32 -> f32
+  %0 = spirv.CL.pown %arg0, %arg1 : f32, i32 -> f32
+  return
+}
+
+// -----
+
+func.func @pown_vec(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) -> () {
+  // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  %0 = spirv.CL.pown %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @pown_wrong_type_scalar(%arg0 : f32, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spirv.CL.pown %arg0, %arg1 : f32, vector<2xi32> -> f32
+  return
+}
+
+// -----
+
+func.func @pown_wrong_type_vec(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must have the same number of elements}}
+  %0 = spirv.CL.pown %arg0, %arg1 : vector<3xf32>, vector<2xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.rootn
+//===----------------------------------------------------------------------===//
+
+func.func @rootn(%arg0 : f32, %arg1 : i32) -> () {
+  // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : f32, i32 -> f32
+  %0 = spirv.CL.rootn %arg0, %arg1 : f32, i32 -> f32
+  return
+}
+
+// -----
+
+func.func @rootn_vec(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) -> () {
+  // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  %0 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @rootn_wrong_type_scalar(%arg0 : f32, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spirv.CL.rootn %arg0, %arg1 : f32, vector<2xi32> -> f32
+  return
+}
+
+// -----
+
+func.func @rootn_wrong_type_vec(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must have the same number of elements}}
+  %0 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<2xi32> -> vector<3xf32>
+  return
+}

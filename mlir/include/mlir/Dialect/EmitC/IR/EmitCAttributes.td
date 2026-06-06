@@ -41,6 +41,16 @@ def EmitC_CmpPredicateAttr : I64EnumAttr<
   let cppNamespace = "::mlir::emitc";
 }
 
+def EmitC_ClassTypeAttr : I32EnumAttr<
+    "ClassType", "C++ aggregate type keyword",
+    [
+      I32EnumAttrCase<"class_",  0, "class">,
+      I32EnumAttrCase<"struct_", 1, "struct">,
+      I32EnumAttrCase<"union_",  2, "union">,
+    ]> {
+  let cppNamespace = "::mlir::emitc";
+}
+
 def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
   let summary = "An opaque attribute";
 
@@ -57,8 +67,7 @@ def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
   }];
 
   let parameters = (ins StringRefParameter<"the opaque value">:$value);
-
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $value `>`";
 }
 
 def EmitC_OpaqueOrTypedAttr : AnyAttrOf<[EmitC_OpaqueAttr, TypedAttrInterface]>;

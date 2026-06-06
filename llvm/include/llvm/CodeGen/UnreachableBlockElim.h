@@ -22,15 +22,24 @@
 #ifndef LLVM_CODEGEN_UNREACHABLEBLOCKELIM_H
 #define LLVM_CODEGEN_UNREACHABLEBLOCKELIM_H
 
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
 class UnreachableBlockElimPass
-    : public PassInfoMixin<UnreachableBlockElimPass> {
+    : public OptionalPassInfoMixin<UnreachableBlockElimPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
+class UnreachableMachineBlockElimPass
+    : public OptionalPassInfoMixin<UnreachableMachineBlockElimPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(MachineFunction &F,
+                                 MachineFunctionAnalysisManager &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_UNREACHABLEBLOCKELIM_H

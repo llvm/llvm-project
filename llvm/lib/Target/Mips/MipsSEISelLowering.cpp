@@ -15,7 +15,6 @@
 #include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -26,12 +25,13 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsMips.h"
@@ -39,11 +39,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <utility>
@@ -52,14 +52,49 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
 
-static cl::opt<bool>
-UseMipsTailCalls("mips-tail-calls", cl::Hidden,
-                    cl::desc("MIPS: permit tail calls."), cl::init(false));
-
 static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
                                    cl::desc("Expand double precision loads and "
                                             "stores to their single precision "
                                             "counterparts"));
+
+// Widen the v2 vectors to the register width, i.e. v2i16 -> v8i16,
+// v2i32 -> v4i32, etc, to ensure the correct rail size is used, i.e.
+// INST.h for v16, INST.w for v32, INST.d for v64.
+TargetLoweringBase::LegalizeTypeAction
+MipsSETargetLowering::getPreferredVectorAction(MVT VT) const {
+  if (this->Subtarget.hasMSA()) {
+    switch (VT.SimpleTy) {
+    // Leave v2i1 vectors to be promoted to larger ones.
+    // Other i1 types will be promoted by default.
+    case MVT::v2i1:
+      return TypePromoteInteger;
+      break;
+    // 16-bit vector types (v2 and longer)
+    case MVT::v2i8:
+    // 32-bit vector types (v2 and longer)
+    case MVT::v2i16:
+    case MVT::v4i8:
+    // 64-bit vector types (v2 and longer)
+    case MVT::v2i32:
+    case MVT::v4i16:
+    case MVT::v8i8:
+      return TypeWidenVector;
+      break;
+    // Only word (.w) and doubleword (.d) are available for floating point
+    // vectors. That means floating point vectors should be either v2f64
+    // or v4f32.
+    // Here we only explicitly widen the f32 types - f16 will be promoted
+    // by default.
+    case MVT::v2f32:
+    case MVT::v3f32:
+      return TypeWidenVector;
+    // v2i64 is already 128-bit wide.
+    default:
+      break;
+    }
+  }
+  return TargetLoweringBase::getPreferredVectorAction(VT);
+}
 
 MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
                                            const MipsSubtarget &STI)
@@ -171,6 +206,22 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       else
         addRegisterClass(MVT::f64, &Mips::AFGR64RegClass);
     }
+
+    for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                    ISD::STRICT_FDIV, ISD::STRICT_FSQRT}) {
+      setOperationAction(Op, MVT::f32, Legal);
+      setOperationAction(Op, MVT::f64, Legal);
+    }
+  }
+
+  // Targets with 64bits integer registers, but no 64bit floating point register
+  // do not support conversion between them
+  if (Subtarget.isGP64bit() && Subtarget.isSingleFloat() &&
+      !Subtarget.useSoftFloat()) {
+    setOperationAction(ISD::FP_TO_SINT, MVT::i64, Expand);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i64, Expand);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
   }
 
   setOperationAction(ISD::SMUL_LOHI,          MVT::i32, Custom);
@@ -180,10 +231,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
   if (Subtarget.hasCnMips())
     setOperationAction(ISD::MUL,              MVT::i64, Legal);
-  else if (Subtarget.isGP64bit())
+  else if (Subtarget.isR5900()) {
+    // R5900 doesn't have DMULT/DMULTU/DDIV/DDIVU - expand to 32-bit ops
+    setOperationAction(ISD::MUL, MVT::i64, Expand);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::MULHS, MVT::i64, Expand);
+    setOperationAction(ISD::MULHU, MVT::i64, Expand);
+    setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
+    setOperationAction(ISD::UDIVREM, MVT::i64, Expand);
+  } else if (Subtarget.isGP64bit())
     setOperationAction(ISD::MUL,              MVT::i64, Custom);
 
-  if (Subtarget.isGP64bit()) {
+  if (Subtarget.isGP64bit() && !Subtarget.isR5900()) {
     setOperationAction(ISD::SMUL_LOHI,        MVT::i64, Custom);
     setOperationAction(ISD::UMUL_LOHI,        MVT::i64, Custom);
     setOperationAction(ISD::MULHS,            MVT::i64, Custom);
@@ -198,8 +258,13 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::SDIVREM, MVT::i32, Custom);
   setOperationAction(ISD::UDIVREM, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_FENCE,       MVT::Other, Custom);
-  setOperationAction(ISD::LOAD,               MVT::i32, Custom);
-  setOperationAction(ISD::STORE,              MVT::i32, Custom);
+  if (Subtarget.hasMips32r6()) {
+    setOperationAction(ISD::LOAD,               MVT::i32, Legal);
+    setOperationAction(ISD::STORE,              MVT::i32, Legal);
+  } else {
+    setOperationAction(ISD::LOAD,               MVT::i32, Custom);
+    setOperationAction(ISD::STORE,              MVT::i32, Custom);
+  }
 
   setTargetDAGCombine(ISD::MUL);
 
@@ -247,7 +312,7 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
     setOperationAction(ISD::SETCC, MVT::f64, Legal);
-    setOperationAction(ISD::SELECT, MVT::f64, Custom);
+    setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
     setOperationAction(ISD::BRCOND, MVT::Other, Legal);
@@ -257,11 +322,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
 
     setCondCodeAction(ISD::SETOGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETOGT, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGE, MVT::f64, Expand);
     setCondCodeAction(ISD::SETUGT, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f64, Expand);
   }
 
   if (Subtarget.hasMips64r6()) {
@@ -287,6 +360,34 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SETCC, MVT::i64, Legal);
     setOperationAction(ISD::SELECT, MVT::i64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
+  }
+
+  if (Subtarget.isR5900()) {
+    // R5900 FPU only supports 4 compare conditions: C.F, C.EQ, C.OLT, C.OLE
+    // (and their inversions via bc1t/bc1f). Expand all conditions that would
+    // require C.UN, C.UEQ, C.ULT, or C.ULE instructions (not available on
+    // R5900). The legalizer resolves these via operand swapping, condition
+    // inversion, and decomposition into supported conditions.
+    setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETOGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETULT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETULE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUEQ, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
+
+    // R5900 FPU does not support IEEE 754 special values (NaN, infinity). Use
+    // custom lowering to decide per-instruction: hardware when nnan+ninf flags
+    // guarantee no NaN or infinity, software libcall otherwise.
+    setOperationAction(ISD::FADD, MVT::f32, Custom);
+    setOperationAction(ISD::FSUB, MVT::f32, Custom);
+    setOperationAction(ISD::FMUL, MVT::f32, Custom);
+    setOperationAction(ISD::FDIV, MVT::f32, Custom);
+    setOperationAction(ISD::FSQRT, MVT::f32, Custom);
   }
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -426,6 +527,8 @@ bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     if (Fast)
       *Fast = 1;
     return true;
+  } else if (Subtarget.hasMips32r6()) {
+    return false;
   }
 
   switch (SVT) {
@@ -460,9 +563,39 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
+  case ISD::FADD:
+    return lowerR5900FPOp(Op, DAG, RTLIB::ADD_F32);
+  case ISD::FSUB:
+    return lowerR5900FPOp(Op, DAG, RTLIB::SUB_F32);
+  case ISD::FMUL:
+    return lowerR5900FPOp(Op, DAG, RTLIB::MUL_F32);
+  case ISD::FDIV:
+    return lowerR5900FPOp(Op, DAG, RTLIB::DIV_F32);
+  case ISD::FSQRT:
+    return lowerR5900FPOp(Op, DAG, RTLIB::SQRT_F32);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);
+}
+
+SDValue MipsSETargetLowering::lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
+                                             RTLIB::Libcall LC) const {
+  assert(Subtarget.isR5900());
+  SDNodeFlags Flags = Op->getFlags();
+
+  if (Flags.hasNoNaNs() && Flags.hasNoInfs()) {
+    // Use the hardware FPU instruction if the operation is guaranteed to have
+    // no NaN or infinity inputs/outputs (nnan+ninf flags).
+    return Op;
+  }
+
+  // Fall back to a software libcall for IEEE correctness.
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
+  TargetLowering::MakeLibCallOptions CallOptions;
+  auto [Result, Chain] = makeLibCall(DAG, LC, VT, Ops, CallOptions, DL);
+  return Result;
 }
 
 // Fold zero extensions into MipsISD::VEXTRACT_[SZ]EXT_ELT
@@ -1136,9 +1269,6 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 bool MipsSETargetLowering::isEligibleForTailCallOptimization(
     const CCState &CCInfo, unsigned NextStackOffset,
     const MipsFunctionInfo &FI) const {
-  if (!UseMipsTailCalls)
-    return false;
-
   // Exception has to be cleared with eret.
   if (FI.isISR())
     return false;
@@ -1147,8 +1277,7 @@ bool MipsSETargetLowering::isEligibleForTailCallOptimization(
   if (CCInfo.getInRegsParamsCount() > 0 || FI.hasByvalArg())
     return false;
 
-  // Return true if the callee's argument area is no larger than the
-  // caller's.
+  // Return true if the callee's argument area is no larger than the caller's.
   return NextStackOffset <= FI.getIncomingArgSize();
 }
 
@@ -1238,6 +1367,11 @@ SDValue MipsSETargetLowering::lowerBITCAST(SDValue Op,
 
   // Bitcast double to i64.
   if (Src == MVT::f64 && Dest == MVT::i64) {
+    // Skip lower bitcast when operand0 has converted float results to integer
+    // which was done by function SoftenFloatResult.
+    if (getTypeAction(*DAG.getContext(), Op.getOperand(0).getValueType()) ==
+        TargetLowering::TypeSoftenFloat)
+      return SDValue();
     SDValue Lo =
         DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Op.getOperand(0),
                     DAG.getConstant(0, DL, MVT::i32));
@@ -1520,7 +1654,7 @@ static SDValue lowerMSABitClearImm(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   EVT ResTy = Op->getValueType(0);
   APInt BitImm = APInt(ResTy.getScalarSizeInBits(), 1)
-                 << cast<ConstantSDNode>(Op->getOperand(2))->getAPIntValue();
+                 << Op->getConstantOperandAPInt(2);
   SDValue BitMask = DAG.getConstant(~BitImm, DL, ResTy);
 
   return DAG.getNode(ISD::AND, DL, ResTy, Op->getOperand(1), BitMask);
@@ -1529,7 +1663,7 @@ static SDValue lowerMSABitClearImm(SDValue Op, SelectionDAG &DAG) {
 SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  unsigned Intrinsic = cast<ConstantSDNode>(Op->getOperand(0))->getZExtValue();
+  unsigned Intrinsic = Op->getConstantOperandVal(0);
   switch (Intrinsic) {
   default:
     return SDValue();
@@ -2301,7 +2435,7 @@ static SDValue lowerMSALoadIntr(SDValue Op, SelectionDAG &DAG, unsigned Intr,
 
 SDValue MipsSETargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  unsigned Intr = cast<ConstantSDNode>(Op->getOperand(1))->getZExtValue();
+  unsigned Intr = Op->getConstantOperandVal(1);
   switch (Intr) {
   default:
     return SDValue();
@@ -2376,7 +2510,7 @@ static SDValue lowerMSAStoreIntr(SDValue Op, SelectionDAG &DAG, unsigned Intr,
 
 SDValue MipsSETargetLowering::lowerINTRINSIC_VOID(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  unsigned Intr = cast<ConstantSDNode>(Op->getOperand(1))->getZExtValue();
+  unsigned Intr = Op->getConstantOperandVal(1);
   switch (Intr) {
   default:
     return SDValue();
@@ -2726,7 +2860,7 @@ static SDValue lowerVECTOR_SHUFFLE_ILVOD(SDValue Op, EVT ResTy,
   else
     return SDValue();
 
-  return DAG.getNode(MipsISD::ILVOD, SDLoc(Op), ResTy, Wt, Ws);
+  return DAG.getNode(MipsISD::ILVOD, SDLoc(Op), ResTy, Ws, Wt);
 }
 
 // Lower VECTOR_SHUFFLE into ILVR (if possible).
@@ -2919,8 +3053,14 @@ static SDValue lowerVECTOR_SHUFFLE_PCKOD(SDValue Op, EVT ResTy,
 // if the type is v8i16 and all the indices are less than 8 then the second
 // operand is unused and can be replaced with anything. We choose to replace it
 // with the used operand since this reduces the number of instructions overall.
+//
+// NOTE: SPLATI shuffle masks may contain UNDEFs, since isSPLATI() treats
+//       UNDEFs as same as SPLATI index.
+//       For other instances we use the last valid index if UNDEF is
+//       encountered.
 static SDValue lowerVECTOR_SHUFFLE_VSHF(SDValue Op, EVT ResTy,
                                         const SmallVector<int, 16> &Indices,
+                                        const bool isSPLATI,
                                         SelectionDAG &DAG) {
   SmallVector<SDValue, 16> Ops;
   SDValue Op0;
@@ -2932,6 +3072,9 @@ static SDValue lowerVECTOR_SHUFFLE_VSHF(SDValue Op, EVT ResTy,
   SDLoc DL(Op);
   int ResTyNumElts = ResTy.getVectorNumElements();
 
+  assert(Indices[0] >= 0 &&
+         "shuffle mask starts with an UNDEF, which is not expected");
+
   for (int i = 0; i < ResTyNumElts; ++i) {
     // Idx == -1 means UNDEF
     int Idx = Indices[i];
@@ -2941,9 +3084,17 @@ static SDValue lowerVECTOR_SHUFFLE_VSHF(SDValue Op, EVT ResTy,
     if (ResTyNumElts <= Idx && Idx < ResTyNumElts * 2)
       Using2ndVec = true;
   }
-
-  for (int Idx : Indices)
+  int LastValidIndex = 0;
+  for (size_t i = 0; i < Indices.size(); i++) {
+    int Idx = Indices[i];
+    if (Idx < 0) {
+      // Continue using splati index or use the last valid index.
+      Idx = isSPLATI ? Indices[0] : LastValidIndex;
+    } else {
+      LastValidIndex = Idx;
+    }
     Ops.push_back(DAG.getTargetConstant(Idx, DL, MaskEltTy));
+  }
 
   SDValue MaskVec = DAG.getBuildVector(MaskVecTy, DL, Ops);
 
@@ -2986,7 +3137,7 @@ SDValue MipsSETargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   // splati.[bhwd] is preferable to the others but is matched from
   // MipsISD::VSHF.
   if (isVECTOR_SHUFFLE_SPLATI(Op, ResTy, Indices, DAG))
-    return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, DAG);
+    return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, true, DAG);
   SDValue Result;
   if ((Result = lowerVECTOR_SHUFFLE_ILVEV(Op, ResTy, Indices, DAG)))
     return Result;
@@ -3002,7 +3153,7 @@ SDValue MipsSETargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     return Result;
   if ((Result = lowerVECTOR_SHUFFLE_SHF(Op, ResTy, Indices, DAG)))
     return Result;
-  return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, DAG);
+  return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, false, DAG);
 }
 
 MachineBasicBlock *
@@ -3173,14 +3324,14 @@ MipsSETargetLowering::emitCOPY_FW(MachineInstr &MI,
       BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Wt).addReg(Ws);
     }
 
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_lo);
   } else {
     Register Wt = RegInfo.createVirtualRegister(
         Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass
                                 : &Mips::MSA128WEvensRegClass);
 
     BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_W), Wt).addReg(Ws).addImm(Lane);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_lo);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3210,12 +3361,12 @@ MipsSETargetLowering::emitCOPY_FD(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
 
   if (Lane == 0)
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Ws, 0, Mips::sub_64);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Ws, {}, Mips::sub_64);
   else {
     Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
     BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_D), Wt).addReg(Ws).addImm(1);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_64);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, {}, Mips::sub_64);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3243,7 +3394,6 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
                               : &Mips::MSA128WEvensRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-      .addImm(0)
       .addReg(Fs)
       .addImm(Mips::sub_lo);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_W), Wd)
@@ -3277,7 +3427,6 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
   Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-      .addImm(0)
       .addReg(Fs)
       .addImm(Mips::sub_64);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_D), Wd)
@@ -3362,7 +3511,6 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   if (IsFP) {
     Register Wt = RegInfo.createVirtualRegister(VecRC);
     BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
-        .addImm(0)
         .addReg(SrcValReg)
         .addImm(EltSizeInBytes == 8 ? Mips::sub_64 : Mips::sub_lo);
     SrcValReg = Wt;
@@ -3382,7 +3530,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), WdTmp1)
       .addReg(SrcVecReg)
       .addReg(SrcVecReg)
-      .addReg(LaneReg, 0, SubRegIdx);
+      .addReg(LaneReg, {}, SubRegIdx);
 
   Register WdTmp2 = RegInfo.createVirtualRegister(VecRC);
   if (IsFP) {
@@ -3411,7 +3559,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)
       .addReg(WdTmp2)
-      .addReg(LaneTmp2, 0, SubRegIdx);
+      .addReg(LaneTmp2, {}, SubRegIdx);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
@@ -3518,7 +3666,6 @@ MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
   if(!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR64RegClass);
     BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Tmp)
-        .addImm(0)
         .addReg(Rs)
         .addImm(Mips::sub_32);
     Rs = Tmp;
@@ -3574,7 +3721,8 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
 
   if(!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
-    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp).addReg(Rt, 0, Mips::sub_32);
+    BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp)
+        .addReg(Rt, {}, Mips::sub_32);
     Rt = Tmp;
   }
 

@@ -26,11 +26,13 @@ int main(int, char**) {
   static_assert(test_constraints_prepend_range<std::deque, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_prepend_range<std::deque<int, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_prepend_range<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
   });
   test_sequence_prepend_range_move_only<std::deque>();
+  // FIXME: This should work - see https://llvm.org/PR162605
+  // test_sequence_prepend_range_emplace_constructible<std::deque>();
 
   test_prepend_range_exception_safety_throwing_copy<std::deque>();
   test_prepend_range_exception_safety_throwing_allocator<std::deque, int>();

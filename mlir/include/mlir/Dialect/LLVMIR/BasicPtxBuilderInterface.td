@@ -22,6 +22,8 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 // Basic PTX Builder Interface
 //===----------------------------------------------------------------------===//
 
+def PtxPredicate : Optional<I1>;
+
 def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
   let description = [{
     This interface is used to generate inline assembly with PTX for basic 
@@ -63,6 +65,22 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
   let cppNamespace = "::mlir::NVVM";
   let methods = [
     InterfaceMethod<
+        /*desc=*/[{
+          Optional function for setting a predicate, which 
+          always returns a `PtxPredicate` value of type i1. If no predicate is 
+          provided, the instruction is unguarded; otherwise, it's guarded by the 
+          predicate value. The `PtxPredicate` value must always be the last argument. 
+          The provided PTX code by `getPtx` should not include the predicate usage.
+          The interface automatically handles predicate usage in the generated
+          PTX code when necessary.
+        }],
+        /*retType=*/"std::optional<::mlir::Value>",
+        /*methodName=*/"getPredicate",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
+      >,
+    InterfaceMethod<
         /*desc=*/[{ Returns PTX assembly with operand number. }],
         /*retType=*/"std::string",
         /*methodName=*/"getPtx"
@@ -96,7 +114,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
         /*methodBody=*/"",
         /*defaultImpl=*/ [{
             mlir::Operation* op = $_op;
-            return rewriter.create<LLVM::ConstantOp>(
+            return LLVM::ConstantOp::create(rewriter,
               op->getLoc(), rewriter.getIntegerType(32), val);
         }]
      >,
@@ -106,19 +124,21 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
             following this order:
              1) Adds results 
              2) Adds operands 
-             3) Adds attributes             
+             3) Adds attributes
+             Returns true if the OP is going to do register mapping itself
           }],
-         /*retType=*/"void",
+         /*retType=*/"bool",
          /*methodName=*/"getAsmValues",
          /*args=*/(ins "::mlir::RewriterBase &":$rewriter, 
-         "llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>&" : $asmValues),
+         "llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>&" : $asmValues         
+         ),
          /*methodBody=*/"",
          /*defaultImpl=*/ [{         
            mlir::Operation* op = $_op;
            
            // Step 1. Add results
-           for (auto val : op->getResults()) 
-            asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Write});
+            for (auto val : op->getResults()) 
+              asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Write});
 
            // Step 2. Add operands
            for (auto val : op->getOperands()) 
@@ -131,6 +151,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
              asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
              }
            }
+           return false; // No manual mapping needed
          }]
        >
   ];

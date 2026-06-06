@@ -19,11 +19,13 @@ namespace llvm {
 
 class Module;
 class ProfileSummaryInfo;
+class BasicBlock;
 class BlockFrequencyInfo;
 class TargetTransformInfo;
 class OptimizationRemarkEmitter;
 class AssumptionCache;
 class DominatorTree;
+class CodeExtractor;
 class CodeExtractorAnalysisCache;
 
 /// A sequence of basic blocks.
@@ -39,23 +41,21 @@ public:
                    std::function<OptimizationRemarkEmitter &(Function &)> *GORE,
                    function_ref<AssumptionCache *(Function &)> LAC)
       : PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetORE(GORE), LookupAC(LAC) {}
-  bool run(Module &M);
+  LLVM_ABI bool run(Module &M);
 
 private:
   bool isFunctionCold(const Function &F) const;
-  bool isBasicBlockCold(BasicBlock* BB,
-                        BranchProbability ColdProbThresh,
-                        SmallPtrSetImpl<BasicBlock *> &ColdBlocks,
+  bool isBasicBlockCold(BasicBlock *BB, BranchProbability ColdProbThresh,
                         SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks,
                         BlockFrequencyInfo *BFI) const;
   bool shouldOutlineFrom(const Function &F) const;
   bool outlineColdRegions(Function &F, bool HasProfileSummary);
-  Function *extractColdRegion(const BlockSequence &Region,
+  bool isSplittingBeneficial(CodeExtractor &CE, const BlockSequence &Region,
+                             TargetTransformInfo &TTI);
+  Function *extractColdRegion(BasicBlock &EntryPoint, CodeExtractor &CE,
                               const CodeExtractorAnalysisCache &CEAC,
-                              DominatorTree &DT, BlockFrequencyInfo *BFI,
-                              TargetTransformInfo &TTI,
-                              OptimizationRemarkEmitter &ORE,
-                              AssumptionCache *AC, unsigned Count);
+                              BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
+                              OptimizationRemarkEmitter &ORE);
   ProfileSummaryInfo *PSI;
   function_ref<BlockFrequencyInfo *(Function &)> GetBFI;
   function_ref<TargetTransformInfo &(Function &)> GetTTI;
@@ -64,9 +64,10 @@ private:
 };
 
 /// Pass to outline cold regions.
-class HotColdSplittingPass : public PassInfoMixin<HotColdSplittingPass> {
+class HotColdSplittingPass
+    : public OptionalPassInfoMixin<HotColdSplittingPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

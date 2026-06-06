@@ -11,6 +11,7 @@
 #define MLIR_C_DIALECT_NVGPU_H
 
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,8 +19,22 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(NVGPU, nvgpu);
 
+//===---------------------------------------------------------------------===//
+// TensorMapDescriptorType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsANVGPUTensorMapDescriptorType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirType mlirNVGPUTensorMapDescriptorTypeGet(
+    MlirContext ctx, MlirType tensorMemrefType, int swizzle, int l2promo,
+    int oobFill, int interleave);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirNVGPUTensorMapDescriptorTypeGetName(void);
+
 #ifdef __cplusplus
 }
 #endif
+
+#include "mlir/Dialect/NVGPU/Transforms/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_NVGPU_H

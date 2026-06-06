@@ -1,0 +1,47 @@
+## Test zero dumping when a data mapping symbol is active.
+# RUN: llvm-mc -filetype=obj -triple=armv7 %s -o %t
+# RUN: llvm-objdump -t -d %t | FileCheck %s
+
+# CHECK:      SYMBOL TABLE:
+# CHECK-NEXT: 00000000 l       .text  00000000 $d
+# CHECK-NEXT: 0000000c l       .text  00000000 $a
+# CHECK-NEXT: 00000010 l       .text  00000000 $d
+
+# CHECK:      00000000 <_start>:
+# CHECK-NEXT:                ...
+# CHECK-NEXT:       8: 01 00 00 00   .word   0x00000001
+# CHECK-NEXT:       c: e320f000      <unknown>
+# CHECK-NEXT:                ...
+# CHECK-NEXT:      18: e320f000      <unknown>
+# CHECK-NEXT:                ...
+# CHECK-NEXT:      28: e320f000      <unknown>
+# CHECK-NEXT:                ...
+# CHECK-NEXT:      40: e320f000      <unknown>
+
+# RUN: llvm-objdump -d -z --triple=armv7 %t | FileCheck %s --check-prefix=ZERO
+
+# ZERO:      00000000 <_start>:
+# ZERO-NEXT:       0: 00 00 00 00   .word   0x00000000
+# ZERO-NEXT:       4: 00 00 00 00   .word   0x00000000
+# ZERO-NEXT:       8: 01 00 00 00   .word   0x00000001
+# ZERO-NEXT:       c: e320f000      nop
+# ZERO-NEXT:      10: 00 00 00 00   .word   0x00000000
+# ZERO-NEXT:      14: 00 00 00 00   .word   0x00000000
+# ZERO-NEXT:      18: e320f000      nop
+
+.globl _start
+_start:
+  .space 8
+  .long 1
+  nop
+  .space 8
+  nop
+
+  .long x1
+  .space 8
+  nop
+
+  .space 8
+  .long x2
+  .space 8
+  nop

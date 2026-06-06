@@ -15,12 +15,17 @@ unittest("GlobalISelTests") {
   ]
   sources = [
     "CSETest.cpp",
+    "CallLowering.cpp",
     "ConstantFoldingTest.cpp",
+    "GIMatchTableExecutorTest.cpp",
     "GISelAliasTest.cpp",
     "GISelMITest.cpp",
     "GISelUtilsTest.cpp",
+    "IRTranslatorBF16Test.cpp",
+    "InstructionSelectTest.cpp",
     "KnownBitsTest.cpp",
     "KnownBitsVectorTest.cpp",
+    "KnownFPClassTest.cpp",
     "LegalizerHelperTest.cpp",
     "LegalizerInfoTest.cpp",
     "LegalizerTest.cpp",

@@ -18,9 +18,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace llvm {
@@ -30,6 +28,8 @@ class Module;
 class raw_ostream;
 
 namespace dxil {
+
+class DXILDebugInfoMap;
 
 class BitcodeWriter {
   SmallVectorImpl<char> &Buffer;
@@ -47,19 +47,20 @@ class BitcodeWriter {
 
 public:
   /// Create a BitcodeWriter that writes to Buffer.
-  BitcodeWriter(SmallVectorImpl<char> &Buffer, raw_fd_stream *FS = nullptr);
+  BitcodeWriter(SmallVectorImpl<char> &Buffer);
 
   ~BitcodeWriter();
 
   /// Write the specified module to the buffer specified at construction time.
-  void writeModule(const Module &M);
+  void writeModule(const Module &M, const DXILDebugInfoMap &DebugInfo);
 };
 
 /// Write the specified module to the specified raw output stream.
 ///
 /// For streams where it matters, the given stream should be in "binary"
 /// mode.
-void WriteDXILToFile(const Module &M, raw_ostream &Out);
+void WriteDXILToFile(const Module &M, raw_ostream &Out,
+                     const DXILDebugInfoMap &DebugInfo);
 
 } // namespace dxil
 

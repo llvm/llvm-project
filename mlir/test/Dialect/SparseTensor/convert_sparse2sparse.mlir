@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --stage-sparse-ops --post-sparsification-rewrite="enable-foreach=false" --canonicalize --cse | FileCheck %s
+// RUN: mlir-opt %s --stage-sparse-ops --lower-sparse-ops-to-foreach --canonicalize --cse | FileCheck %s
 
 #SparseVector64 = #sparse_tensor.encoding<{
   map = (d0) -> (d0 : compressed),
@@ -41,25 +41,24 @@ func.func @sparse_nop_convert(%arg0: tensor<64xf32, #SparseVector>) -> tensor<64
 }
 
 // CHECK-LABEL:   func.func @sparse_hidden_nop_cast
-// TODO: The following convert should be a cast instead.
-// CHECK:           sparse_tensor.convert
-// CHECK:           return
+// CHECK-NEXT:      sparse_tensor.convert
+// CHECK-NEXT:      return
 func.func @sparse_hidden_nop_cast(%arg0: tensor<32xf32, #SparseVector>) -> tensor<?xf32, #SparseVector> {
   %0 = sparse_tensor.convert %arg0 : tensor<32xf32, #SparseVector> to tensor<?xf32, #SparseVector>
   return %0 : tensor<?xf32, #SparseVector>
 }
 
 // CHECK-LABEL:   func.func @sparse_convert_1d_ss(
-// TODO: libgen path need to support efficient format conversion (e.g., 32 bit pos -> 64 bit pos).
-// Maybe we should use a different operator as well to be clear.
+// CHECK-NEXT:      sparse_tensor.convert
+// CHECK-NEXT:      return
 func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32, #SparseVector32> {
   %0 = sparse_tensor.convert %arg0 : tensor<?xf32, #SparseVector64> to tensor<?xf32, #SparseVector32>
   return %0 : tensor<?xf32, #SparseVector32>
 }
 
 // CHECK-LABEL:   func.func @sparse_convert(
-// TODO: libgen path need to support efficient format conversion (e.g., 32 bit pos -> 64 bit pos).
-// Maybe we should use a different operator as well to be clear.
+// CHECK-NEXT:      sparse_tensor.convert
+// CHECK-NEXT:      return
 func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32, #SparseVector32> {
   %0 = sparse_tensor.convert %arg0 : tensor<?xf32, #SparseVector64> to tensor<?xf32, #SparseVector32>
   return %0 : tensor<?xf32, #SparseVector32>
@@ -67,12 +66,13 @@ func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32
 
 // CHECK-LABEL:   func.func @sparse_convert_permuted
 // CHECK:           sparse_tensor.foreach
-// CHECK:             sparse_tensor.insert
+// CHECK:             tensor.insert
 // CHECK:           sparse_tensor.load
 // CHECK:           sparse_tensor.reorder_coo
 // CHECK:           sparse_tensor.foreach
-// CHECK:             sparse_tensor.insert
+// CHECK:             tensor.insert
 // CHECK:           sparse_tensor.load
+// CHECK:           return
 func.func @sparse_convert_permuted(%arg0: tensor<?x?x?xf32, #SortedCOO3D>) -> tensor<?x?x?xf32, #TsssPermuted> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x?x?xf32, #SortedCOO3D> to tensor<?x?x?xf32, #TsssPermuted>
   return %0 : tensor<?x?x?xf32, #TsssPermuted>
@@ -80,9 +80,10 @@ func.func @sparse_convert_permuted(%arg0: tensor<?x?x?xf32, #SortedCOO3D>) -> te
 
 // CHECK-LABEL:   func.func @sparse_convert_slice
 // CHECK:           sparse_tensor.foreach
-// CHECK:             sparse_tensor.insert
+// CHECK:             tensor.insert
 // CHECK:           sparse_tensor.load
 // CHECK-NOT:       sparse_tensor.reorder_coo
+// CHECK:           return
 func.func @sparse_convert_slice(%arg0: tensor<2x13xi32, #COOSlice>) -> (tensor<2x13xi32, #SortedCOO2D>)  {
   %0 = sparse_tensor.convert %arg0 : tensor<2x13xi32, #COOSlice> to tensor<2x13xi32, #SortedCOO2D>
   return %0 : tensor<2x13xi32, #SortedCOO2D>

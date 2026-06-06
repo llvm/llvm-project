@@ -2,7 +2,8 @@
 // depending on a real target.
 class BogusTargetLowering : public TargetLowering {
 public:
-  BogusTargetLowering(TargetMachine &TM) : TargetLowering(TM) {}
+  BogusTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI)
+      : TargetLowering(TM, STI) {}
 };
 
 class BogusFrameLowering : public TargetFrameLowering {
@@ -14,26 +15,26 @@ public:
                     MachineBasicBlock &MBB) const override {}
   void emitEpilogue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override {}
-  bool hasFP(const MachineFunction &MF) const override { return false; }
-};
 
-static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override { return false; }
+};
 
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses,
-                           nullptr, nullptr, LaneBitmask(~0u), nullptr, nullptr) {
+      : TargetRegisterInfo(nullptr, {}, nullptr, {}, nullptr, nullptr,
+                           LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
-                       nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr);
+                       nullptr, nullptr, nullptr, nullptr, 0, nullptr);
   }
 
   const MCPhysReg *
   getCalleeSavedRegs(const MachineFunction *MF) const override {
     return nullptr;
   }
-  ArrayRef<const uint32_t *> getRegMasks() const override { return std::nullopt; }
-  ArrayRef<const char *> getRegMaskNames() const override { return std::nullopt; }
+  ArrayRef<const uint32_t *> getRegMasks() const override { return {}; }
+  ArrayRef<const char *> getRegMaskNames() const override { return {}; }
   BitVector getReservedRegs(const MachineFunction &MF) const override {
     return BitVector();
   }
@@ -42,7 +43,7 @@ public:
     static RegClassWeight Bogus{1, 16};
     return Bogus;
   }
-  unsigned getRegUnitWeight(unsigned RegUnit) const override { return 1; }
+  unsigned getRegUnitWeight(MCRegUnit RegUnit) const override { return 1; }
   unsigned getNumRegPressureSets() const override { return 0; }
   const char *getRegPressureSetName(unsigned Idx) const override {
     return "bogus";
@@ -56,9 +57,14 @@ public:
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
   }
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override {
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override {
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
+  }
+
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const override {
+    return nullptr;
   }
 
   Register getFrameRegister(const MachineFunction &MF) const override {
@@ -72,13 +78,20 @@ public:
   }
 };
 
+class BogusTargetInstrInfo : public TargetInstrInfo {
+  BogusRegisterInfo RegInfo;
+
+public:
+  BogusTargetInstrInfo() : TargetInstrInfo(RegInfo) {}
+};
+
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, nullptr, nullptr,
-                            nullptr, nullptr, nullptr, nullptr),
-        FL(), TL(TM) {}
-  ~BogusSubtarget() override {}
+      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
+                            nullptr, nullptr, nullptr, nullptr, nullptr),
+        FL(), TL(TM, *this) {}
+  ~BogusSubtarget() override = default;
 
   const TargetFrameLowering *getFrameLowering() const override { return &FL; }
 
@@ -92,7 +105,7 @@ private:
   BogusFrameLowering FL;
   BogusRegisterInfo TRI;
   BogusTargetLowering TL;
-  TargetInstrInfo TII;
+  BogusTargetInstrInfo TII;
 };
 
 static TargetOptions getTargetOptionsForBogusMachine() {
@@ -101,15 +114,25 @@ static TargetOptions getTargetOptionsForBogusMachine() {
   return Opts;
 }
 
-class BogusTargetMachine : public LLVMTargetMachine {
+class BogusTargetMachine : public CodeGenTargetMachineImpl {
 public:
   BogusTargetMachine()
-      : LLVMTargetMachine(Target(), "", Triple(""), "", "",
-                          getTargetOptionsForBogusMachine(), Reloc::Static,
-                          CodeModel::Small, CodeGenOptLevel::Default),
-        ST(*this) {}
+      : CodeGenTargetMachineImpl(
+            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
+            Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
+        ST(*this) {
+    // With an empty Triple, `initAsmInfo` cannot be called. Provide
+    // default MC{AsmInfo,RegisterInfo,SubtargetInfo} so MCContext can be
+    // created.
+    AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
+    MRI = std::make_unique<MCRegisterInfo>();
+    STI = std::make_unique<MCSubtargetInfo>(
+        Triple(""), "", "", "", ArrayRef<StringRef>{},
+        ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
+        nullptr, nullptr, nullptr, nullptr, nullptr);
+  }
 
-  ~BogusTargetMachine() override {}
+  ~BogusTargetMachine() override = default;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override {
     return &ST;
@@ -124,16 +147,16 @@ BogusTargetMachine *createTargetMachine() {
   return &BogusTM;
 }
 
-std::unique_ptr<MachineFunction> createMachineFunction(LLVMContext &Ctx,
-                                                       Module &M) {
+std::unique_ptr<MachineFunction>
+createMachineFunction(LLVMContext &Ctx, Module &M, const Twine &Name = "Test") {
   auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &M);
+  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, Name, &M);
 
   auto TM = createTargetMachine();
   unsigned FunctionNum = 42;
   MachineModuleInfo MMI(TM);
   const TargetSubtargetInfo &STI = *TM->getSubtargetImpl(*F);
 
-  return std::make_unique<MachineFunction>(*F, *TM, STI, FunctionNum, MMI);
+  return std::make_unique<MachineFunction>(*F, *TM, STI, MMI.getContext(),
+                                           FunctionNum);
 }
-

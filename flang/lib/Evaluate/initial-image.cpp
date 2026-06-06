@@ -18,49 +18,67 @@ auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
   if (offset < 0 || offset + bytes > data_.size()) {
     return OutOfRange;
   } else {
-    auto elements{TotalElementCount(x.shape())};
+    auto optElements{TotalElementCount(x.shape())};
+    if (!optElements) {
+      return TooManyElems;
+    }
+    auto elements{*optElements};
     auto elementBytes{bytes > 0 ? bytes / elements : 0};
     if (elements * elementBytes != bytes) {
       return SizeMismatch;
     } else {
       auto at{x.lbounds()};
+      Result result{OkNoChange};
       for (; elements-- > 0; x.IncrementSubscripts(at)) {
         auto scalar{x.At(at)};
         // TODO: length type parameter values?
         for (const auto &[symbolRef, indExpr] : scalar) {
           const Symbol &component{*symbolRef};
+          Result status{OkNoChange};
           if (component.offset() + component.size() > elementBytes) {
             return SizeMismatch;
           } else if (IsPointer(component)) {
-            AddPointer(offset + component.offset(), indExpr.value());
+            status = AddPointer(offset + component.offset(), indExpr.value());
           } else if (IsAllocatable(component) || IsAutomatic(component)) {
             return NotAConstant;
-          } else if (auto result{Add(offset + component.offset(),
-                         component.size(), indExpr.value(), context)};
-                     result != Ok) {
-            return result;
+          } else {
+            status = Add(offset + component.offset(), component.size(),
+                indExpr.value(), context);
+          }
+          if (status == Ok) {
+            result = Ok;
+          } else if (status != OkNoChange) {
+            return status;
           }
         }
         offset += elementBytes;
       }
+      return result;
     }
-    return Ok;
   }
 }
 
-void InitialImage::AddPointer(
-    ConstantSubscript offset, const Expr<SomeType> &pointer) {
-  pointers_.emplace(offset, pointer);
+auto InitialImage::AddPointer(
+    ConstantSubscript offset, const Expr<SomeType> &pointer) -> Result {
+  auto [iter, isNew]{pointers_.emplace(offset, pointer)};
+  return !isNew && iter->second == pointer ? OkNoChange : Ok;
 }
 
-void InitialImage::Incorporate(ConstantSubscript toOffset,
+bool InitialImage::Incorporate(ConstantSubscript toOffset,
     const InitialImage &from, ConstantSubscript fromOffset,
     ConstantSubscript bytes) {
   CHECK(from.pointers_.empty()); // pointers are not allowed in EQUIVALENCE
   CHECK(fromOffset >= 0 && bytes >= 0 &&
       static_cast<std::size_t>(fromOffset + bytes) <= from.size());
   CHECK(static_cast<std::size_t>(toOffset + bytes) <= size());
-  std::memcpy(&data_[toOffset], &from.data_[fromOffset], bytes);
+  auto *dest{&data_[toOffset]};
+  const auto *source{&from.data_[fromOffset]};
+  if (std::memcmp(dest, source, bytes) != 0) {
+    std::memcpy(dest, source, bytes);
+    return true;
+  } else {
+    return false; // no change
+  }
 }
 
 // Classes used with common::SearchTypes() to (re)construct Constant<> values
@@ -89,7 +107,9 @@ public:
     }
     using Const = Constant<T>;
     using Scalar = typename Const::Element;
-    std::size_t elements{TotalElementCount(extents_)};
+    std::optional<uint64_t> optElements{TotalElementCount(extents_)};
+    CHECK(optElements);
+    uint64_t elements{*optElements};
     std::vector<Scalar> typedValue(elements);
     auto elemBytes{ToInt64(type_.MeasureSizeInBytes(
         context_, GetRank(extents_) > 0, charLength_))};
@@ -113,9 +133,16 @@ public:
             for (std::size_t j{0}; j < elements; ++j, at += stride) {
               if (Result value{image_.AsConstantPointer(at)}) {
                 typedValue[j].emplace(component, std::move(*value));
+              } else {
+                typedValue[j].emplace(component, Expr<SomeType>{NullPointer{}});
               }
             }
-          } else if (!IsAllocatable(component)) {
+          } else if (IsAllocatable(component)) {
+            // Lowering needs an explicit NULL() for allocatables
+            for (std::size_t j{0}; j < elements; ++j, at += stride) {
+              typedValue[j].emplace(component, Expr<SomeType>{NullPointer{}});
+            }
+          } else {
             auto componentType{DynamicType::From(component)};
             CHECK(componentType.has_value());
             auto componentExtents{GetConstantExtents(context_, component)};

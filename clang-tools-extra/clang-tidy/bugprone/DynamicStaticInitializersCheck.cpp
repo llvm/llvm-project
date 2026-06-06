@@ -1,4 +1,4 @@
-//===--- DynamicStaticInitializersCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,38 +15,25 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
+namespace {
+
+AST_MATCHER(VarDecl, hasConstantDeclaration) {
+  if (Node.isConstexpr() || Node.hasAttr<ConstInitAttr>())
+    return true;
+  if (const VarDecl *Def = Node.getDefinition();
+      Def && (Def->isConstexpr() || Def->hasAttr<ConstInitAttr>()))
+    return true;
   const Expr *Init = Node.getInit();
-  if (Init && !Init->isValueDependent()) {
-    if (Node.isConstexpr())
-      return true;
+  if (Init && !Init->isValueDependent())
     return Node.evaluateValue();
-  }
   return false;
 }
 
+} // namespace
+
 DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {
-  std::optional<StringRef> HeaderFileExtensionsOption =
-      Options.get("HeaderFileExtensions");
-  RawStringHeaderFileExtensions =
-      HeaderFileExtensionsOption.value_or(utils::defaultHeaderFileExtensions());
-  if (HeaderFileExtensionsOption) {
-    if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                    HeaderFileExtensions,
-                                    utils::defaultFileExtensionDelimiters())) {
-      this->configurationDiag("Invalid header file extension: '%0'")
-          << RawStringHeaderFileExtensions;
-    }
-  } else
-    HeaderFileExtensions = Context->getHeaderFileExtensions();
-}
-
-void DynamicStaticInitializersCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
+    : ClangTidyCheck(Name, Context) {}
 
 void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -54,16 +41,19 @@ void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void DynamicStaticInitializersCheck::check(const MatchFinder::MatchResult &Result) {
+void DynamicStaticInitializersCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
-  SourceLocation Loc = Var->getLocation();
-  if (!Loc.isValid() || !utils::isPresumedLocInHeaderFile(Loc, *Result.SourceManager,
-                                                          HeaderFileExtensions))
+  const SourceLocation Loc = Var->getLocation();
+  if (!Loc.isValid() ||
+      !utils::isPresumedLocInHeaderFile(Loc, *Result.SourceManager,
+                                        getHeaderFileExtensions()))
     return;
   // If the initializer is a constant expression, then the compiler
   // doesn't have to dynamically initialize it.
-  diag(Loc, "static variable %0 may be dynamically initialized in this header file")
-    << Var;
+  diag(Loc,
+       "static variable %0 may be dynamically initialized in this header file")
+      << Var;
 }
 
 } // namespace clang::tidy::bugprone

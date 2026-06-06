@@ -1,4 +1,4 @@
-//===--- StaticAccessedThroughInstanceCheck.cpp - clang-tidy---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,19 +19,25 @@ namespace {
 AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
 } // namespace
 
-static unsigned getNameSpecifierNestingLevel(const QualType &QType) {
-  if (const auto *ElType = QType->getAs<ElaboratedType>()) {
-    if (const NestedNameSpecifier *NestedSpecifiers = ElType->getQualifier()) {
-      unsigned NameSpecifierNestingLevel = 1;
-      do {
-        NameSpecifierNestingLevel++;
-        NestedSpecifiers = NestedSpecifiers->getPrefix();
-      } while (NestedSpecifiers);
-
+static unsigned getNameSpecifierNestingLevel(QualType QType) {
+  unsigned NameSpecifierNestingLevel = 1;
+  for (NestedNameSpecifier Qualifier = QType->getPrefix(); /**/;
+       ++NameSpecifierNestingLevel) {
+    switch (Qualifier.getKind()) {
+    case NestedNameSpecifier::Kind::Null:
       return NameSpecifierNestingLevel;
+    case NestedNameSpecifier::Kind::Global:
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      return NameSpecifierNestingLevel + 1;
+    case NestedNameSpecifier::Kind::Namespace:
+      Qualifier = Qualifier.getAsNamespaceAndPrefix().Prefix;
+      continue;
+    case NestedNameSpecifier::Kind::Type:
+      Qualifier = Qualifier.getAsType()->getPrefix();
+      continue;
     }
+    llvm_unreachable("unhandled nested name specifier kind");
   }
-  return 0;
 }
 
 void StaticAccessedThroughInstanceCheck::storeOptions(
@@ -59,10 +65,6 @@ void StaticAccessedThroughInstanceCheck::check(
 
   const Expr *BaseExpr = MemberExpression->getBase();
 
-  // Do not warn for overloaded -> operators.
-  if (isa<CXXOperatorCallExpr>(BaseExpr))
-    return;
-
   const QualType BaseType =
       BaseExpr->getType()->isPointerType()
           ? BaseExpr->getType()->getPointeeType().getUnqualifiedType()
@@ -73,7 +75,7 @@ void StaticAccessedThroughInstanceCheck::check(
   PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
   PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
 
-  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes =
+  PrintingPolicyWithSuppressedTag.PrintAsCanonical =
       !BaseExpr->getType()->isTypedefNameType();
 
   std::string BaseTypeName =
@@ -85,21 +87,34 @@ void StaticAccessedThroughInstanceCheck::check(
     return;
 
   // Do not warn for CUDA built-in variables.
-  if (StringRef(BaseTypeName).startswith("__cuda_builtin_"))
+  if (StringRef(BaseTypeName).starts_with("__cuda_builtin_"))
     return;
 
   SourceLocation MemberExprStartLoc = MemberExpression->getBeginLoc();
-  auto Diag =
-      diag(MemberExprStartLoc, "static member accessed through instance");
+  auto CreateFix = [&] {
+    return FixItHint::CreateReplacement(
+        CharSourceRange::getCharRange(MemberExprStartLoc,
+                                      MemberExpression->getMemberLoc()),
+        BaseTypeName + "::");
+  };
 
-  if (BaseExpr->HasSideEffects(*AstContext) ||
-      getNameSpecifierNestingLevel(BaseType) > NameSpecifierNestingThreshold)
-    return;
+  {
+    auto Diag =
+        diag(MemberExprStartLoc, "static member accessed through instance");
 
-  Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getCharRange(MemberExprStartLoc,
-                                    MemberExpression->getMemberLoc()),
-      BaseTypeName + "::");
+    if (getNameSpecifierNestingLevel(BaseType) > NameSpecifierNestingThreshold)
+      return;
+
+    if (!BaseExpr->HasSideEffects(*AstContext,
+                                  /* IncludePossibleEffects =*/true)) {
+      Diag << CreateFix();
+      return;
+    }
+  }
+
+  diag(MemberExprStartLoc, "member base expression may carry some side effects",
+       DiagnosticIDs::Level::Note)
+      << BaseExpr->getSourceRange() << CreateFix();
 }
 
 } // namespace clang::tidy::readability

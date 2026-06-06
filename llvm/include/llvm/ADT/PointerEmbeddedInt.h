@@ -42,9 +42,6 @@ class PointerEmbeddedInt {
     // We shift as many zeros into the value as we can while preserving the
     // number of bits desired for the integer.
     Shift = sizeof(uintptr_t) * CHAR_BIT - Bits,
-
-    // We also want to be able to mask out the preserved bits for asserts.
-    Mask = static_cast<uintptr_t>(-1) << Bits
   };
 
   struct RawValueTag {
@@ -105,7 +102,6 @@ struct DenseMapInfo<PointerEmbeddedInt<IntT, Bits>> {
   using IntInfo = DenseMapInfo<IntT>;
 
   static inline T getEmptyKey() { return IntInfo::getEmptyKey(); }
-  static inline T getTombstoneKey() { return IntInfo::getTombstoneKey(); }
 
   static unsigned getHashValue(const T &Arg) {
     return IntInfo::getHashValue(Arg);

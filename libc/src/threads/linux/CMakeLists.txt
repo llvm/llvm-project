@@ -1,15 +1,16 @@
 add_header_library(
   threads_utils
   HDRS
-    CndVar.h
     Futex.h
   DEPENDS
     libc.include.sys_syscall
     libc.include.threads
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.mutex
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.mutex
-    libc.src.__support.threads.linux.futex_word_type
+    libc.src.__support.threads.raw_mutex
+    libc.src.__support.threads.linux.futex_utils
 )
 
 add_entrypoint_object(
@@ -19,8 +20,9 @@ add_entrypoint_object(
   HDRS
     ../cnd_init.h
   DEPENDS
-    .threads_utils
     libc.include.threads
+    libc.src.__support.CPP.new
+    libc.src.__support.threads.CndVar
 )
 
 add_entrypoint_object(
@@ -30,8 +32,8 @@ add_entrypoint_object(
   HDRS
     ../cnd_destroy.h
   DEPENDS
-    .threads_utils
     libc.include.threads
+    libc.src.__support.threads.CndVar
 )
 
 add_entrypoint_object(
@@ -41,9 +43,23 @@ add_entrypoint_object(
   HDRS
     ../cnd_wait.h
   DEPENDS
-    .threads_utils
     libc.include.threads
     libc.src.__support.threads.mutex
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  cnd_timedwait
+  SRCS
+    cnd_timedwait.cpp
+  HDRS
+    ../cnd_timedwait.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+    libc.src.__support.threads.CndVar
+    libc.src.__support.time.abs_timeout
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -53,8 +69,8 @@ add_entrypoint_object(
   HDRS
     ../cnd_signal.h
   DEPENDS
-    .threads_utils
     libc.include.threads
+    libc.src.__support.threads.CndVar
 )
 
 add_entrypoint_object(
@@ -64,6 +80,6 @@ add_entrypoint_object(
   HDRS
     ../cnd_broadcast.h
   DEPENDS
-    .threads_utils
     libc.include.threads
+    libc.src.__support.threads.CndVar
 )

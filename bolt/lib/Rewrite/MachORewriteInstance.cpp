@@ -18,7 +18,9 @@
 #include "bolt/Rewrite/BinaryPassManager.h"
 #include "bolt/Rewrite/ExecutableFileMemoryManager.h"
 #include "bolt/Rewrite/JITLinkLinker.h"
+#include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/Support/Errc.h"
@@ -31,9 +33,8 @@ namespace opts {
 
 using namespace llvm;
 extern cl::opt<unsigned> AlignText;
-//FIXME! Upstream change
-//extern cl::opt<bool> CheckOverlappingElements;
-extern cl::opt<bool> ForcePatch;
+// FIXME! Upstream change
+// extern cl::opt<bool> CheckOverlappingElements;
 extern cl::opt<bool> Instrument;
 extern cl::opt<bool> InstrumentCalls;
 extern cl::opt<bolt::JumpTableSupportLevel> JumpTables;
@@ -54,37 +55,6 @@ extern cl::opt<unsigned> Verbosity;
 namespace llvm {
 namespace bolt {
 
-extern MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
-                                             const MCInstrInfo *,
-                                             const MCRegisterInfo *,
-                                             const MCSubtargetInfo *);
-extern MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *,
-                                                 const MCInstrInfo *,
-                                                 const MCRegisterInfo *,
-                                                 const MCSubtargetInfo *);
-
-namespace {
-
-MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
-                                   const MCInstrAnalysis *Analysis,
-                                   const MCInstrInfo *Info,
-                                   const MCRegisterInfo *RegInfo,
-                                   const MCSubtargetInfo *STI) {
-#ifdef X86_AVAILABLE
-  if (Arch == Triple::x86_64)
-    return createX86MCPlusBuilder(Analysis, Info, RegInfo, STI);
-#endif
-
-#ifdef AARCH64_AVAILABLE
-  if (Arch == Triple::aarch64)
-    return createAArch64MCPlusBuilder(Analysis, Info, RegInfo, STI);
-#endif
-
-  llvm_unreachable("architecture unsupported by MCPlusBuilder");
-}
-
-} // anonymous namespace
-
 #define DEBUG_TYPE "bolt"
 
 Expected<std::unique_ptr<MachORewriteInstance>>
@@ -102,8 +72,12 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
                                            StringRef ToolPath, Error &Err)
     : InputFile(InputFile), ToolPath(ToolPath) {
   ErrorAsOutParameter EAO(&Err);
+  Relocation::Arch = InputFile->makeTriple().getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
-      InputFile, /* IsPIC */ true, DWARFContext::create(*InputFile));
+      InputFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+      InputFile->getFileName(), nullptr,
+      /* IsPIC */ true, DWARFContext::create(*InputFile),
+      {llvm::outs(), llvm::errs()});
   if (Error E = BCOrErr.takeError()) {
     Err = std::move(E);
     return;
@@ -134,21 +108,21 @@ Error MachORewriteInstance::setProfile(StringRef Filename) {
 void MachORewriteInstance::preprocessProfileData() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->preprocessProfile(*BC.get()))
+  if (Error E = ProfileReader->preprocessProfile(*BC))
     report_error("cannot pre-process profile", std::move(E));
 }
 
 void MachORewriteInstance::processProfileDataPreCFG() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->readProfilePreCFG(*BC.get()))
+  if (Error E = ProfileReader->readProfilePreCFG(*BC))
     report_error("cannot read profile pre-CFG", std::move(E));
 }
 
 void MachORewriteInstance::processProfileData() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->readProfile(*BC.get()))
+  if (Error E = ProfileReader->readProfile(*BC))
     report_error("cannot read profile", std::move(E));
 }
 
@@ -337,7 +311,7 @@ void MachORewriteInstance::disassembleFunctions() {
     BinaryFunction &Function = BFI.second;
     if (!Function.isSimple())
       continue;
-    Function.disassemble();
+    BC->logBOLTErrorsAndQuitOnFatal(Function.disassemble());
     if (opts::PrintDisasm)
       Function.print(outs(), "after disassembly");
   }
@@ -348,10 +322,7 @@ void MachORewriteInstance::buildFunctionsCFG() {
     BinaryFunction &Function = BFI.second;
     if (!Function.isSimple())
       continue;
-    if (!Function.buildCFG(/*AllocId*/ 0)) {
-      errs() << "BOLT-WARNING: failed to build CFG for the function "
-             << Function << "\n";
-    }
+    BC->logBOLTErrorsAndQuitOnFatal(Function.buildCFG(/*AllocId*/ 0));
   }
 }
 
@@ -383,11 +354,12 @@ void MachORewriteInstance::runOptimizationPasses() {
       std::make_unique<ReorderBasicBlocks>(opts::PrintReordered));
   Manager.registerPass(
       std::make_unique<FixupBranches>(opts::PrintAfterBranchFixup));
+  Manager.registerPass(std::make_unique<PopulateOutputFunctions>());
   // This pass should always run last.*
   Manager.registerPass(
       std::make_unique<FinalizeFunctions>(opts::PrintFinalized));
 
-  Manager.runPasses();
+  BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
 }
 
 void MachORewriteInstance::mapInstrumentationSection(

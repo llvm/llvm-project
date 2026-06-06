@@ -15,9 +15,9 @@ using clang-14 on a X86 Ubuntu and [bloaty](https://github.com/google/bloaty).
 
 |                                  | Base   | Os     | Oz     | Os LTO | Oz LTO |
 | :------------------------------: | ------ | ------ | ------ | ------ | ------ |
-| `mlir-cat`                       | 1018kB | 836KB  | 879KB  | 697KB  | 649KB  |
-| `mlir-minimal-opt`               | 1.54MB | 1.25MB | 1.29MB | 1.10MB | 1.00MB |
-| `mlir-minimal-opt-canonicalizer` | 2.24MB | 1.81MB | 1.86MB | 1.62MB | 1.48MB |
+| `mlir-cat`                       | 1024KB |  840KB |  885KB |  706KB |  657KB |
+| `mlir-minimal-opt`               | 1.62MB | 1.32MB | 1.36MB | 1.17MB | 1.07MB |
+| `mlir-minimal-opt-canonicalize`  | 1.83MB | 1.40MB | 1.45MB | 1.25MB | 1.14MB |
 
 Base configuration:
 
@@ -32,6 +32,7 @@ cmake ../llvm/ -G Ninja \
    -DCMAKE_CXX_COMPILER=clang++ \
    -DLLVM_ENABLE_LLD=ON \
    -DLLVM_ENABLE_BACKTRACES=OFF \
+   -DMLIR_ENABLE_PDL_IN_PATTERNMATCH=OFF \
    -DCMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO=-Wl,-icf=all
 ```
 

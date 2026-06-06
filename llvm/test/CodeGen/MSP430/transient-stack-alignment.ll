@@ -8,7 +8,7 @@ define void @test() #0 {
 ; CHECK: sub #2, r1
   %1 = alloca i8, align 1
 ; CHECK-NEXT: clr.b 1(r1)
-  store i8 0, i8* %1, align 1
+  store i8 0, ptr %1, align 1
 ; CHECK-NEXT: add #2, r1
 ; CHECK-NEXT: ret
   ret void

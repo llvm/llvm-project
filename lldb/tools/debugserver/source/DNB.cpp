@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <libproc.h>
 #include <map>
+#include <mutex>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -50,6 +51,7 @@
 #include "MacOSX/MachProcess.h"
 #include "MacOSX/MachTask.h"
 #include "MacOSX/ThreadInfo.h"
+#include "RNBRemote.h"
 
 typedef std::shared_ptr<MachProcess> MachProcessSP;
 typedef std::map<nub_process_t, MachProcessSP> ProcessMap;
@@ -68,8 +70,8 @@ static ProcessMap *GetProcessMap(bool can_create) {
   static ProcessMap *g_process_map_ptr = NULL;
 
   if (can_create && g_process_map_ptr == NULL) {
-    static pthread_mutex_t g_process_map_mutex = PTHREAD_MUTEX_INITIALIZER;
-    PTHREAD_MUTEX_LOCKER(locker, &g_process_map_mutex);
+    static std::mutex g_process_map_mutex;
+    std::lock_guard<std::mutex> guard(g_process_map_mutex);
     if (g_process_map_ptr == NULL)
       g_process_map_ptr = new ProcessMap;
   }
@@ -377,7 +379,7 @@ nub_process_t DNBProcessLaunch(
         // point and get reparented to someone else and never go away.
         DNBLog("Could not get task port for process, sending SIGKILL and "
                "exiting.");
-        kill(SIGKILL, pid);
+        kill(pid, SIGKILL);
 
         if (err_str && err_len > 0) {
           if (launch_err.AsString()) {
@@ -474,9 +476,17 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
         extern int communication_fd;
 
         if (communication_fd == -1) {
-          fprintf(stderr, "Trying to attach to a translated process with the "
-                          "native debugserver, exiting...\n");
-          exit(1);
+          DNBLogError("Trying to attach to a translated process with the "
+                      "native debugserver, exiting...\n");
+          return INVALID_NUB_PROCESS_ARCH;
+        }
+
+        struct stat st;
+        if (::stat(translated_debugserver, &st) != 0) {
+          DNBLogError("Translated inferior process but Rosetta debugserver not "
+                      "found at %s",
+                      translated_debugserver);
+          return INVALID_NUB_PROCESS_ARCH;
         }
 
         snprintf(fdstr, sizeof(fdstr), "--fd=%d", communication_fd);
@@ -745,7 +755,6 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
         break;
       }
     } else {
-
       // Get the current process list, and check for matches that
       // aren't in our original list. If anyone wants to attach
       // to an existing process by name, they should do it with
@@ -799,7 +808,33 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
         break;
       }
 
-      ::usleep(waitfor_interval); // Sleep for WAITFOR_INTERVAL, then poll again
+      // Now we're going to wait a while before polling again.  But we also
+      // need to check whether we've gotten an event from the debugger  
+      // telling us to interrupt the wait.  So we'll use the wait for a possible
+      // next event to also be our short pause...
+      struct timespec short_timeout;
+      DNBTimer::OffsetTimeOfDay(&short_timeout, 0, waitfor_interval);
+      uint32_t event_mask = RNBContext::event_read_packet_available 
+          | RNBContext::event_read_thread_exiting;
+      nub_event_t set_events = ctx->Events().WaitForSetEvents(event_mask, 
+          &short_timeout);
+      if (set_events & RNBContext::event_read_packet_available) {
+        // If we get any packet from the debugger while waiting on the async,
+        // it has to be telling us to interrupt.  So always exit here.
+        // Over here in DNB land we can see that there was a packet, but all
+        // the methods to actually handle it are protected.  It's not worth
+        // rearranging all that just to get which packet we were sent...
+        DNBLogError("Interrupted by packet while waiting for '%s' to appear.\n",
+                   waitfor_process_name);
+        break;
+      }
+      if (set_events & RNBContext::event_read_thread_exiting) {
+        // The packet thread is shutting down, get out of here...
+        DNBLogError("Interrupted by packet thread shutdown while waiting for "
+                    "%s to appear.\n", waitfor_process_name);
+        break;
+      }
+      
     }
   }
 
@@ -1036,21 +1071,32 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
   return INVALID_NUB_ADDRESS;
 }
 
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+DNBGetMainBinaryCPUTypes(nub_process_t pid) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->GetMainBinaryCPUTypes(pid);
+  return {};
+}
+
 JSONGenerator::ObjectSP
-DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands) {
+DNBGetAllLoadedLibrariesInfos(nub_process_t pid,
+                              DNBBinaryInformationLevel info_level) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetAllLoadedLibrariesInfos(pid, report_load_commands);
+    return procSP->GetAllLoadedLibrariesInfos(pid, info_level);
   }
   return JSONGenerator::ObjectSP();
 }
 
 JSONGenerator::ObjectSP
 DNBGetLibrariesInfoForAddresses(nub_process_t pid,
+                                DNBBinaryInformationLevel info_level,
                                 std::vector<uint64_t> &macho_addresses) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetLibrariesInfoForAddresses(pid, macho_addresses);
+    return procSP->GetLibrariesInfoForAddresses(pid, info_level,
+                                                macho_addresses);
   }
   return JSONGenerator::ObjectSP();
 }
@@ -1058,7 +1104,7 @@ DNBGetLibrariesInfoForAddresses(nub_process_t pid,
 JSONGenerator::ObjectSP DNBGetSharedCacheInfo(nub_process_t pid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetSharedCacheInfo(pid);
+    return procSP->GetInferiorSharedCacheInfo(pid);
   }
   return JSONGenerator::ObjectSP();
 }
@@ -1341,6 +1387,16 @@ int DNBProcessMemoryRegionInfo(nub_process_t pid, nub_addr_t addr,
     return procSP->Task().GetMemoryRegionInfo(addr, region_info);
 
   return -1;
+}
+
+nub_bool_t DNBProcessGetMemoryTags(nub_process_t pid, nub_addr_t addr,
+                                   nub_size_t size,
+                                   std::vector<uint8_t> &tags) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->Task().GetMemoryTags(addr, size, tags);
+
+  return false;
 }
 
 std::string DNBProcessGetProfileData(nub_process_t pid,
@@ -1705,6 +1761,27 @@ uint32_t DNBProcessGetCPUType(nub_process_t pid) {
   return 0;
 }
 
+bool DNBProcessAddrSize(nub_process_t pid, int &addr_size) {
+  addr_size = 0;
+
+  // A single debugserver instance only attaches to one process,
+  // so we can save it in a global static once it's known.
+  static int g_addr_size = 0;
+
+  if (g_addr_size == 0) {
+    uint32_t cputype = DNBProcessGetCPUType(pid);
+    // unable to get process cpu type
+    if (cputype == 0)
+      return false;
+    if (cputype == CPU_TYPE_ARM64_32)
+      g_addr_size = 4;
+    else
+      g_addr_size = 8;
+  }
+  addr_size = g_addr_size;
+  return true;
+}
+
 nub_bool_t DNBResolveExecutablePath(const char *path, char *resolved_path,
                                     size_t resolved_path_size) {
   if (path == NULL || path[0] == '\0')
@@ -1803,6 +1880,21 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
     else if (strstr(arch, "arm64") == arch || strstr(arch, "aarch64") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
                                               CPU_SUBTYPE_ARM64_ALL);
+#if defined(CPU_SUBTYPE_ARM_V8M_MAIN)
+    else if (strstr(arch, "armv8m.main") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V8M_MAIN);
+#endif
+#if defined(CPU_SUBTYPE_ARM_V8M_BASE)
+    else if (strstr(arch, "armv8m.base") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V8M_BASE);
+#endif
+#if defined(CPU_SUBTYPE_ARM_V8_1M_MAIN)
+    else if (strstr(arch, "armv8.1m.main") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V8_1M_MAIN);
+#endif
     else if (strstr(arch, "armv8") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
                                               CPU_SUBTYPE_ARM64_V8);
@@ -1862,10 +1954,167 @@ bool DNBGetAddressingBits(uint32_t &addressing_bits) {
   return addressing_bits > 0;
 }
 
+nub_addr_t DNBFixAddress(nub_addr_t addr, nub_process_t pid) {
+  uint32_t addressing_bits = 0;
+  if (!DNBGetAddressingBits(addressing_bits))
+    return addr;
+
+  // On arm64_32, no ptrauth bits to clear.
+#if !defined(__LP64__)
+  return addr;
+#endif
+  if (pid != INVALID_NUB_PROCESS) {
+    cpu_type_t cputype = DNBProcessGetCPUType(pid);
+    if (cputype == CPU_TYPE_ARM64_32)
+      return addr;
+  }
+
+  uint64_t mask = ((1ULL << addressing_bits) - 1);
+
+  // Normally PAC bit clearing needs to check b55 and either set the
+  // non-addressing bits, or clear them, but debugserver only
+  // debugs userland processes in low memory.
+
+  return addr & mask; // high bits cleared to 0
+}
+
 nub_process_t DNBGetParentProcessID(nub_process_t child_pid) {
   return MachProcess::GetParentProcessID(child_pid);
 }
 
 bool DNBProcessIsBeingDebugged(nub_process_t pid) {
   return MachProcess::ProcessIsBeingDebugged(pid);
+}
+
+bool DNBSharedCacheRegionAddr(nub_process_t pid, nub_addr_t &vmaddr,
+                              nub_addr_t &size) {
+  vmaddr = size = 0;
+
+  // Get the shared cache VM address start and size.
+  JSONGenerator::ObjectSP sc_info = DNBGetSharedCacheInfo(pid);
+  if (!sc_info || !sc_info->GetAsDictionary())
+    return false;
+  JSONGenerator::Dictionary *sc_dict = sc_info->GetAsDictionary();
+  JSONGenerator::ObjectSP value =
+      sc_dict->GetValueForKey("shared_cache_base_address");
+  if (!value || !value->GetAsInteger())
+    return false;
+  // shared cache not yet set up; we're very early in process launch.
+  if (value->GetAsInteger()->GetValue() == 0)
+    return false;
+  vmaddr = value->GetAsInteger()->GetValue();
+
+  value = sc_dict->GetValueForKey("shared_cache_size");
+  if (!value || !value->GetAsInteger())
+    return false;
+  size = value->GetAsInteger()->GetValue();
+  if (size == 0)
+    return false;
+
+  return true;
+}
+
+bool DNBDyldNotificationFunctionAddr(nub_process_t pid,
+                                     nub_addr_t &lldb_image_notifier) {
+  static nub_addr_t g_notifier_breakpoint_addr = 0;
+  lldb_image_notifier = 0;
+
+  if (g_notifier_breakpoint_addr == 0) {
+    nub_addr_t sc_vmaddr, sc_size;
+    if (!DNBSharedCacheRegionAddr(pid, sc_vmaddr, sc_size))
+      return false;
+
+    int addr_size;
+    if (!DNBProcessAddrSize(pid, addr_size))
+      return false;
+
+    // Early return if the dyld_all_image_infos is outside
+    // the shared cache VM region.
+    nub_addr_t dyld_all_image_infos =
+        DNBProcessGetSharedLibraryInfoAddress(pid);
+    if (dyld_all_image_infos < sc_vmaddr ||
+        dyld_all_image_infos > sc_vmaddr + sc_size)
+      return false;
+
+    nub_addr_t notifier_fptr_addr = dyld_all_image_infos + 4 + // version
+                                    4 +                        // infoArrayCount
+                                    addr_size;                 // infoArray
+    nub_addr_t notifier_fptr = DNBProcessMemoryReadInteger(
+        pid, notifier_fptr_addr, addr_size, INVALID_NUB_ADDRESS);
+    if (notifier_fptr == INVALID_NUB_ADDRESS)
+      return false;
+
+    g_notifier_breakpoint_addr = DNBFixAddress(notifier_fptr, pid);
+    if (g_notifier_breakpoint_addr < sc_vmaddr ||
+        g_notifier_breakpoint_addr > sc_vmaddr + sc_size)
+      g_notifier_breakpoint_addr = 0;
+  }
+  if (g_notifier_breakpoint_addr == 0)
+    return false;
+
+  lldb_image_notifier = g_notifier_breakpoint_addr;
+  return true;
+}
+
+bool DNBGetBinariesLoadedInfo(nub_process_t pid, nub_thread_t tid,
+                              std::vector<uint64_t> &added_binaries,
+                              JSONGenerator::ObjectSP &detailed_binary_infos) {
+
+  std::optional<nub_addr_t> arg1, arg2, arg3, pc;
+  DNBRegisterValue regval;
+  if (DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                    GENERIC_REGNUM_PC, &regval))
+    pc = regval.value.uint64;
+  if (DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                    GENERIC_REGNUM_ARG1, &regval))
+    arg1 = regval.value.uint64;
+  if (DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                    GENERIC_REGNUM_ARG2, &regval))
+    arg2 = regval.value.uint64;
+  if (DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                    GENERIC_REGNUM_ARG3, &regval))
+    arg3 = regval.value.uint64;
+
+  if (!arg1 || !arg2 || !arg3 || !pc)
+    return false;
+
+  nub_addr_t notifier_breakpoint_addr;
+  if (!DNBDyldNotificationFunctionAddr(pid, notifier_breakpoint_addr))
+    return false;
+
+  if (*pc != notifier_breakpoint_addr)
+    return false;
+  if (*arg1 != /*dyld_notify_adding=*/0)
+    return false;
+  uint64_t count = *arg2;
+  if (count == 0)
+    return false;
+  nub_addr_t header_array = *arg3;
+
+  int addr_size;
+  if (!DNBProcessAddrSize(pid, addr_size))
+    return false;
+
+  // header_array points to an array of image_infos_count elements,
+  // each is
+  // struct dyld_image_info {
+  //   const struct mach_header* imageLoadAddress;
+  //   const char*               imageFilePath;
+  //   uintptr_t                 imageFileModDate;
+  // };
+  //
+  // and we only need the imageLoadAddress fields.
+  for (uint64_t i = 0; i < count; i++) {
+    nub_addr_t dyld_image_info = header_array + (addr_size * 3 * i);
+    nub_addr_t load_addr = DNBProcessMemoryReadInteger(
+        pid, dyld_image_info, addr_size, INVALID_NUB_ADDRESS);
+    if (load_addr != INVALID_NUB_ADDRESS)
+      added_binaries.push_back(load_addr);
+  }
+
+  if (added_binaries.size() == 1)
+    detailed_binary_infos = DNBGetLibrariesInfoForAddresses(
+        pid, DNBBinaryInformationLevel::eBinaryInformationLevelFull,
+        added_binaries);
+  return true;
 }

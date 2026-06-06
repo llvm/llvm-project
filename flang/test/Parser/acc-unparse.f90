@@ -9,13 +9,13 @@ program bug47659
     !$acc parallel loop
     do j = 1, 10
       if (j == 2) then
-        exit label1
+        stop 1
       end if
     end do
   end do label1
 end program
 
-!CHECK-LABEL: PROGRAM bug47659
+!CHECK-LABEL: PROGRAM BUG47659
 !CHECK: !$ACC PARALLEL LOOP
 
 
@@ -86,3 +86,12 @@ subroutine routine2()
   !$acc routine(routine2) bind(routine2)
 ! CHECK: !$ACC ROUTINE(routine2) BIND(routine2)
 end subroutine
+
+subroutine routine3()
+end subroutine
+
+module routine_multi_mod
+  ! Multi-name form: round-trips as-is (NV extension, not canonicalized).
+  !$acc routine(routine2, routine3) seq
+! CHECK: !$ACC ROUTINE(routine2,routine3) SEQ
+end module

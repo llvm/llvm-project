@@ -18,14 +18,15 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMS
-#define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMS
+#define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMSPASS
+#define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMSPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -68,7 +69,7 @@ struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     Location loc = dimOp->getLoc();
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
         dimOp, resultShape,
-        rewriter.create<arith::ConstantIndexOp>(loc, *dimIndex).getResult());
+        arith::ConstantIndexOp::create(rewriter, loc, *dimIndex).getResult());
     return success();
   }
 };
@@ -89,14 +90,94 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     if (!dimIndex)
       return failure();
 
-    ReifiedRankedShapedTypeDims reifiedResultShapes;
-    if (failed(reifyResultShapes(rewriter, dimValue.getOwner(),
-                                 reifiedResultShapes)))
+    // Save the op immediately before dimOp so we can identify and erase any
+    // ops inserted during the reification attempt if it fails. The
+    // pattern-rewrite invariant requires the IR to be unchanged on failure.
+    Operation *opBeforeReify = dimOp->getPrevNode();
+
+    // Erase any ops inserted between opBeforeReify and dimOp in reverse order
+    // to respect use-def chains within that range. Collect pointers first to
+    // avoid iterator invalidation: erasing a node in an ilist invalidates
+    // iterators to that node, and std::reverse_iterator stores the iterator to
+    // the *next* forward element, so make_early_inc_range(reverse(...)) would
+    // still dereference a stale iterator after erasure.
+    auto eraseInsertedOps = [&]() {
+      Block::iterator begin = opBeforeReify
+                                  ? std::next(opBeforeReify->getIterator())
+                                  : dimOp->getBlock()->begin();
+      SmallVector<Operation *> toErase;
+      for (Block::iterator it = begin; it != dimOp->getIterator(); ++it)
+        toErase.push_back(&*it);
+      for (Operation *op : llvm::reverse(toErase))
+        rewriter.eraseOp(op);
+    };
+
+    FailureOr<OpFoldResult> replacement = reifyDimOfResult(
+        rewriter, dimValue.getOwner(), dimValue.getResultNumber(), *dimIndex);
+    // An empty (or failed) OpFoldResult signals that this specific dimension
+    // cannot be reified. Some implementations materialize all dimensions at
+    // once (e.g. via reifyResultShapes) and may create ops for other dimensions
+    // before discovering that this dimension is not reifiable. Erase those
+    // stray ops before returning failure.
+    if (failed(replacement) || !replacement.value()) {
+      eraseInsertedOps();
       return failure();
-    unsigned resultNumber = dimValue.getResultNumber();
-    Value replacement = getValueOrCreateConstantIndexOp(
-        rewriter, dimOp.getLoc(), reifiedResultShapes[resultNumber][*dimIndex]);
-    rewriter.replaceOp(dimOp, replacement);
+    }
+    Value replacementVal = getValueOrCreateConstantIndexOp(
+        rewriter, dimOp.getLoc(), replacement.value());
+    rewriter.replaceOp(dimOp, replacementVal);
+    return success();
+  }
+};
+
+/// Fold dim ops of iter_args to dim ops of their respective init args. E.g.:
+///
+/// ```
+/// %0 = ... : tensor<?x?xf32>
+/// scf.forall ... shared_outs(%arg0 = %0) -> (tensor<?x?xf32>) {
+///   %1 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+///   ...
+/// }
+/// ```
+///
+/// is folded to:
+///
+/// ```
+/// %0 = ... : tensor<?x?xf32>
+/// scf.forall ... shared_outs(%arg0 = %0) -> (tensor<?x?xf32>) {
+///   %1 = tensor.dim %0, %c0 : tensor<?x?xf32>
+///   ...
+/// }
+/// ```
+struct IterArgsToInitArgs : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
+                                PatternRewriter &rewriter) const final {
+    auto blockArg = dyn_cast<BlockArgument>(dimOp.getSource());
+    if (!blockArg)
+      return failure();
+    // TODO: Enable this for loopLikeInterface. Restricting for scf.for
+    // because the init args shape might change in the loop body.
+    // For e.g.:
+    // ```
+    //  %0 = tensor.empty(%c1) : tensor<?xf32>
+    //  %r = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg0 = %0) ->
+    //  tensor<?xf32> {
+    //    %1 = tensor.dim %arg0, %c0 : tensor<?xf32>
+    //    %2 = arith.addi %c1, %1 : index
+    //    %3 = tensor.empty(%2) : tensor<?xf32>
+    //    scf.yield %3 : tensor<?xf32>
+    //  }
+    //
+    // ```
+    auto forAllOp =
+        dyn_cast<scf::ForallOp>(blockArg.getParentBlock()->getParentOp());
+    if (!forAllOp)
+      return failure();
+    Value initArg = forAllOp.getTiedLoopInit(blockArg)->get();
+    rewriter.modifyOpInPlace(
+        dimOp, [&]() { dimOp.getSourceMutable().assign(initArg); });
     return success();
   }
 };
@@ -108,14 +189,16 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
 
 namespace {
 struct ResolveRankedShapeTypeResultDimsPass final
-    : public memref::impl::ResolveRankedShapeTypeResultDimsBase<
+    : public memref::impl::ResolveRankedShapeTypeResultDimsPassBase<
           ResolveRankedShapeTypeResultDimsPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 
 struct ResolveShapedTypeResultDimsPass final
-    : public memref::impl::ResolveShapedTypeResultDimsBase<
+    : public memref::impl::ResolveShapedTypeResultDimsPassBase<
           ResolveShapedTypeResultDimsPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 
@@ -124,8 +207,8 @@ struct ResolveShapedTypeResultDimsPass final
 void memref::populateResolveRankedShapedTypeResultDimsPatterns(
     RewritePatternSet &patterns) {
   patterns.add<DimOfReifyRankedShapedTypeOpInterface<memref::DimOp>,
-               DimOfReifyRankedShapedTypeOpInterface<tensor::DimOp>>(
-      patterns.getContext());
+               DimOfReifyRankedShapedTypeOpInterface<tensor::DimOp>,
+               IterArgsToInitArgs>(patterns.getContext());
 }
 
 void memref::populateResolveShapedTypeResultDimsPatterns(
@@ -139,22 +222,22 @@ void memref::populateResolveShapedTypeResultDimsPatterns(
 void ResolveRankedShapeTypeResultDimsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  auto result = applyPatternsGreedily(getOperation(), std::move(patterns));
+  if (errorOnPatternIterationLimit && failed(result)) {
+    getOperation()->emitOpError(
+        "dim operation resolution hit pattern iteration limit");
     return signalPassFailure();
+  }
 }
 
 void ResolveShapedTypeResultDimsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  auto result = applyPatternsGreedily(getOperation(), std::move(patterns));
+  if (errorOnPatternIterationLimit && failed(result)) {
+    getOperation()->emitOpError(
+        "dim operation resolution hit pattern iteration limit");
     return signalPassFailure();
-}
-
-std::unique_ptr<Pass> memref::createResolveShapedTypeResultDimsPass() {
-  return std::make_unique<ResolveShapedTypeResultDimsPass>();
-}
-
-std::unique_ptr<Pass> memref::createResolveRankedShapeTypeResultDimsPass() {
-  return std::make_unique<ResolveRankedShapeTypeResultDimsPass>();
+  }
 }

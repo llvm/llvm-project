@@ -1,4 +1,4 @@
-;RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen < %s -S | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -polly-import-jscop-postfix=transformed -S < %s | FileCheck %s
 ;
 ;float A[100];
 ;

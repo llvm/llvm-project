@@ -38,7 +38,7 @@ $comdat.samesize = comdat samesize
 @const.int = constant i32 zeroinitializer
 ; CHECK: @const.int = constant i32 0
 @const.float = constant double 0.0
-; CHECK: @const.float = constant double 0.0
+; CHECK: @const.float = constant double 0.000000e+00
 @const.null = constant ptr null
 ; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8, i64 }
@@ -56,7 +56,7 @@ $comdat.samesize = comdat samesize
 @constant.array.i32 = constant [3 x i32] [i32 -0, i32 1, i32 0]
 ; CHECK: @constant.array.i64 = constant [3 x i64] [i64 0, i64 1, i64 0]
 @constant.array.i64 = constant [3 x i64] [i64 -0, i64 1, i64 0]
-; CHECK: @constant.array.f16 = constant [3 x half] [half 0xH8000, half 0xH3C00, half 0xH0000]
+; CHECK: @constant.array.f16 = constant [3 x half] [half -0.000000e+00, half 1.000000e+00, half 0.000000e+00]
 @constant.array.f16 = constant [3 x half] [half -0.0, half 1.0, half 0.0]
 ; CHECK: @constant.array.f32 = constant [3 x float] [float -0.000000e+00, float 1.000000e+00, float 0.000000e+00]
 @constant.array.f32 = constant [3 x float] [float -0.0, float 1.0, float 0.0]
@@ -71,7 +71,7 @@ $comdat.samesize = comdat samesize
 @constant.vector.i32 = constant <3 x i32> <i32 -0, i32 1, i32 0>
 ; CHECK: @constant.vector.i64 = constant <3 x i64> <i64 0, i64 1, i64 0>
 @constant.vector.i64 = constant <3 x i64> <i64 -0, i64 1, i64 0>
-; CHECK: @constant.vector.f16 = constant <3 x half> <half 0xH8000, half 0xH3C00, half 0xH0000>
+; CHECK: @constant.vector.f16 = constant <3 x half> <half -0.000000e+00, half 1.000000e+00, half 0.000000e+00>
 @constant.vector.f16 = constant <3 x half> <half -0.0, half 1.0, half 0.0>
 ; CHECK: @constant.vector.f32 = constant <3 x float> <float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>
 @constant.vector.f32 = constant <3 x float> <float -0.0, float 1.0, float 0.0>
@@ -216,6 +216,14 @@ declare void @g.f1()
 ; CHECK: @g.no_sanitize_multiple = global i32 0, no_sanitize_address, no_sanitize_hwaddress
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
+
+@ds = external global i32
+
+; ptrauth constant
+@auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null)
+; CHECK: @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535)
+@auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
+; CHECK: @auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
@@ -388,14 +396,14 @@ declare ghccc void @f.ghccc()
 ; CHECK: declare ghccc void @f.ghccc()
 declare cc11 void @f.cc11()
 ; CHECK: declare cc11 void @f.cc11()
-declare webkit_jscc void @f.webkit_jscc()
-; CHECK: declare webkit_jscc void @f.webkit_jscc()
 declare anyregcc void @f.anyregcc()
 ; CHECK: declare anyregcc void @f.anyregcc()
 declare preserve_mostcc void @f.preserve_mostcc()
 ; CHECK: declare preserve_mostcc void @f.preserve_mostcc()
 declare preserve_allcc void @f.preserve_allcc()
 ; CHECK: declare preserve_allcc void @f.preserve_allcc()
+declare preserve_nonecc void @f.preserve_nonecc()
+; CHECK: declare preserve_nonecc void @f.preserve_nonecc()
 declare swifttailcc void @f.swifttailcc()
 ; CHECK: declare swifttailcc void @f.swifttailcc()
 declare cc64 void @f.cc64()
@@ -512,6 +520,58 @@ declare cc96 void @f.cc96()
 ; CHECK: declare amdgpu_es void @f.cc96()
 declare amdgpu_es void @f.amdgpu_es()
 ; CHECK: declare amdgpu_es void @f.amdgpu_es()
+declare cc112 void @f.cc112()
+; CHECK: declare riscv_vls_cc(32) void @f.cc112()
+declare cc113 void @f.cc113()
+; CHECK: declare riscv_vls_cc(64) void @f.cc113()
+declare cc114 void @f.cc114()
+; CHECK: declare riscv_vls_cc(128) void @f.cc114()
+declare cc115 void @f.cc115()
+; CHECK: declare riscv_vls_cc(256) void @f.cc115()
+declare cc116 void @f.cc116()
+; CHECK: declare riscv_vls_cc(512) void @f.cc116()
+declare cc117 void @f.cc117()
+; CHECK: declare riscv_vls_cc(1024) void @f.cc117()
+declare cc118 void @f.cc118()
+; CHECK: declare riscv_vls_cc(2048) void @f.cc118()
+declare cc119 void @f.cc119()
+; CHECK: declare riscv_vls_cc(4096) void @f.cc119()
+declare cc120 void @f.cc120()
+; CHECK: declare riscv_vls_cc(8192) void @f.cc120()
+declare cc121 void @f.cc121()
+; CHECK: declare riscv_vls_cc(16384) void @f.cc121()
+declare cc122 void @f.cc122()
+; CHECK: declare riscv_vls_cc(32768) void @f.cc122()
+declare cc123 void @f.cc123()
+; CHECK: declare riscv_vls_cc(65536) void @f.cc123()
+declare riscv_vls_cc(32) void @riscv_vls_cc_32()
+; CHECK: declare riscv_vls_cc(32) void @riscv_vls_cc_32()
+declare riscv_vls_cc(64) void @riscv_vls_cc_64()
+; CHECK: declare riscv_vls_cc(64) void @riscv_vls_cc_64()
+declare riscv_vls_cc(128) void @riscv_vls_cc_128()
+; CHECK: declare riscv_vls_cc(128) void @riscv_vls_cc_128()
+declare riscv_vls_cc(256) void @riscv_vls_cc_256()
+; CHECK: declare riscv_vls_cc(256) void @riscv_vls_cc_256()
+declare riscv_vls_cc(512) void @riscv_vls_cc_512()
+; CHECK: declare riscv_vls_cc(512) void @riscv_vls_cc_512()
+declare riscv_vls_cc(1024) void @riscv_vls_cc_1024()
+; CHECK: declare riscv_vls_cc(1024) void @riscv_vls_cc_1024()
+declare riscv_vls_cc(2048) void @riscv_vls_cc_2048()
+; CHECK: declare riscv_vls_cc(2048) void @riscv_vls_cc_2048()
+declare riscv_vls_cc(4096) void @riscv_vls_cc_4096()
+; CHECK: declare riscv_vls_cc(4096) void @riscv_vls_cc_4096()
+declare riscv_vls_cc(8192) void @riscv_vls_cc_8192()
+; CHECK: declare riscv_vls_cc(8192) void @riscv_vls_cc_8192()
+declare riscv_vls_cc(16384) void @riscv_vls_cc_16384()
+; CHECK: declare riscv_vls_cc(16384) void @riscv_vls_cc_16384()
+declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
+; CHECK: declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
+declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+; CHECK: declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+declare cc124 void @f.cc124(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.cc124(i1)
+declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 
@@ -555,7 +615,7 @@ declare void @f.param.sret(ptr sret(i8))
 declare void @f.param.noalias(ptr noalias)
 ; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(ptr nocapture)
-; CHECK: declare void @f.param.nocapture(ptr nocapture)
+; CHECK: declare void @f.param.nocapture(ptr captures(none))
 declare void @f.param.nest(ptr nest)
 ; CHECK: declare void @f.param.nest(ptr nest)
 declare ptr @f.param.returned(ptr returned)
@@ -702,6 +762,24 @@ declare void @f.align4() align 4
 ; CHECK: declare void @f.align4() align 4
 declare void @f.align8() align 8
 ; CHECK: declare void @f.align8() align 8
+
+; Functions -- prefalign
+define void @f.prefalign2() prefalign(2) {
+  ret void
+}
+; CHECK: define void @f.prefalign2() prefalign(2)
+define void @f.prefalign4() prefalign(4) {
+  ret void
+}
+; CHECK: define void @f.prefalign4() prefalign(4)
+define void @f.prefalign8() prefalign(8) {
+  ret void
+}
+; CHECK: define void @f.prefalign8() prefalign(8)
+define void @f.prefalign4294967296() prefalign(4294967296) {
+  ret void
+}
+; CHECK: define void @f.prefalign4294967296() prefalign(4294967296)
 
 ; Functions -- GC
 declare void @f.gcshadow() gc "shadow-stack"
@@ -871,6 +949,18 @@ define void @fp_atomics(ptr %word) {
 ; CHECK: %atomicrmw.fmin = atomicrmw fmin ptr %word, float 1.000000e+00 monotonic
   %atomicrmw.fmin = atomicrmw fmin ptr %word, float 1.0 monotonic
 
+; CHECK: %atomicrmw.fmaximum = atomicrmw fmaximum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmaximum = atomicrmw fmaximum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.0 monotonic
+
   ret void
 }
 
@@ -902,9 +992,47 @@ define void @uinc_udec_wrap_atomics(ptr %word) {
   ret void
 }
 
+define void @usub_cond_usub_sat_atomics(ptr %word) {
+; CHECK: %atomicrmw.condsub0 = atomicrmw usub_cond ptr %word, i32 64 monotonic
+  %atomicrmw.condsub0 = atomicrmw usub_cond ptr %word, i32 64 monotonic
+
+; CHECK: %atomicrmw.condsub1 = atomicrmw usub_cond ptr %word, i32 128 seq_cst
+  %atomicrmw.condsub1 = atomicrmw usub_cond ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.condsub2 = atomicrmw volatile usub_cond ptr %word, i32 128 seq_cst
+  %atomicrmw.condsub2 = atomicrmw volatile usub_cond ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.condsub0.syncscope = atomicrmw usub_cond ptr %word, i32 27 syncscope("agent") monotonic
+  %atomicrmw.condsub0.syncscope = atomicrmw usub_cond ptr %word, i32 27 syncscope("agent") monotonic
+
+; CHECK: %atomicrmw.subclamp0 = atomicrmw usub_sat ptr %word, i32 99 monotonic
+  %atomicrmw.subclamp0 = atomicrmw usub_sat ptr %word, i32 99 monotonic
+
+; CHECK: %atomicrmw.subclamp1 = atomicrmw usub_sat ptr %word, i32 12 seq_cst
+  %atomicrmw.subclamp1 = atomicrmw usub_sat ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.subclamp2 = atomicrmw volatile usub_sat ptr %word, i32 12 seq_cst
+  %atomicrmw.subclamp2 = atomicrmw volatile usub_sat ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.subclamp0.syncscope = atomicrmw usub_sat ptr %word, i32 5 syncscope("system") monotonic
+  %atomicrmw.subclamp0.syncscope = atomicrmw usub_sat ptr %word, i32 5 syncscope("system") monotonic
+
+  ret void
+}
+
 define void @pointer_atomics(ptr %word) {
 ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
   %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
+  ret void
+}
+
+define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) {
+; CHECK: %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+  %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+
+; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+  %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+
   ret void
 }
 
@@ -1090,6 +1218,110 @@ define void @fastMathFlagsForArrayCalls([2 x float] %f, [2 x double] %d1, [2 x <
   ret void
 }
 
+declare { float, float } @fmf_struct_f32()
+declare { double, double, double } @fmf_struct_f64()
+declare { <4 x double> } @fmf_struct_v4f64()
+
+; CHECK-LABEL: fastMathFlagsForStructCalls(
+define void @fastMathFlagsForStructCalls() {
+  %call.fast = call fast { float, float } @fmf_struct_f32()
+  ; CHECK: %call.fast = call fast { float, float } @fmf_struct_f32()
+
+  ; Throw in some other attributes to make sure those stay in the right places.
+
+  %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+  ; CHECK: %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+
+  %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fpext(
+define void @fastmathflags_fpext(float %op1) {
+  %f.nnan = fpext nnan float %op1 to double
+  ; CHECK: %f.nnan = fpext nnan float %op1 to double
+  %f.ninf = fpext ninf float %op1 to double
+  ; CHECK: %f.ninf = fpext ninf float %op1 to double
+  %f.nsz = fpext nsz float %op1 to double
+  ; CHECK: %f.nsz = fpext nsz float %op1 to double
+  %f.arcp = fpext arcp float %op1 to double
+  ; CHECK: %f.arcp = fpext arcp float %op1 to double
+  %f.contract = fpext contract float %op1 to double
+  ; CHECK: %f.contract = fpext contract float %op1 to double
+  %f.afn = fpext afn float %op1 to double
+  ; CHECK: %f.afn = fpext afn float %op1 to double
+  %f.reassoc = fpext reassoc float %op1 to double
+  ; CHECK: %f.reassoc = fpext reassoc float %op1 to double
+  %f.fast = fpext fast float %op1 to double
+  ; CHECK: %f.fast = fpext fast float %op1 to double
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fptrunc(
+define void @fastmathflags_fptrunc(float %op1) {
+  %f.nnan = fptrunc nnan float %op1 to half
+  ; CHECK: %f.nnan = fptrunc nnan float %op1 to half
+  %f.ninf = fptrunc ninf float %op1 to half
+  ; CHECK: %f.ninf = fptrunc ninf float %op1 to half
+  %f.nsz = fptrunc nsz float %op1 to half
+  ; CHECK: %f.nsz = fptrunc nsz float %op1 to half
+  %f.arcp = fptrunc arcp float %op1 to half
+  ; CHECK: %f.arcp = fptrunc arcp float %op1 to half
+  %f.contract = fptrunc contract float %op1 to half
+  ; CHECK: %f.contract = fptrunc contract float %op1 to half
+  %f.afn = fptrunc afn float %op1 to half
+  ; CHECK: %f.afn = fptrunc afn float %op1 to half
+  %f.reassoc = fptrunc reassoc float %op1 to half
+  ; CHECK: %f.reassoc = fptrunc reassoc float %op1 to half
+  %f.fast = fptrunc fast float %op1 to half
+  ; CHECK: %f.fast = fptrunc fast float %op1 to half
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_uitofp(
+define void @fastmathflags_uitofp(i32 %op1) {
+  %f.nnan = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.nnan = uitofp nnan i32 %op1 to float
+  %f.ninf = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.ninf = uitofp nnan i32 %op1 to float
+  %f.nsz = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.nsz = uitofp nnan i32 %op1 to float
+  %f.arcp = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.arcp = uitofp nnan i32 %op1 to float
+  %f.contract = uitofp contract i32 %op1 to float
+  ; CHECK: %f.contract = uitofp contract i32 %op1 to float
+  %f.afn = uitofp afn i32 %op1 to float
+  ; CHECK: %f.afn = uitofp afn i32 %op1 to float
+  %f.reassoc = uitofp reassoc i32 %op1 to float
+  ; CHECK: %f.reassoc = uitofp reassoc i32 %op1 to float
+  %f.fast = uitofp fast i32 %op1 to float
+  ; CHECK: %f.fast = uitofp fast i32 %op1 to float
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_sitofp(
+define void @fastmathflags_sitofp(i32 %op1) {
+  %f.nnan = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.nnan = sitofp nnan i32 %op1 to float
+  %f.ninf = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.ninf = sitofp nnan i32 %op1 to float
+  %f.nsz = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.nsz = sitofp nnan i32 %op1 to float
+  %f.arcp = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.arcp = sitofp nnan i32 %op1 to float
+  %f.contract = sitofp contract i32 %op1 to float
+  ; CHECK: %f.contract = sitofp contract i32 %op1 to float
+  %f.afn = sitofp afn i32 %op1 to float
+  ; CHECK: %f.afn = sitofp afn i32 %op1 to float
+  %f.reassoc = sitofp reassoc i32 %op1 to float
+  ; CHECK: %f.reassoc = sitofp reassoc i32 %op1 to float
+  %f.fast = sitofp fast i32 %op1 to float
+  ; CHECK: %f.fast = sitofp fast i32 %op1 to float
+  ret void
+}
+
 ;; Type System
 %opaquety = type opaque
 define void @typesystem() {
@@ -1108,14 +1340,14 @@ define void @typesystem() {
   ; CHECK: %t5 = alloca x86_fp80
   %t6 = alloca ppc_fp128
   ; CHECK: %t6 = alloca ppc_fp128
-  %t7 = alloca x86_mmx
-  ; CHECK: %t7 = alloca x86_mmx
   %t8 = alloca ptr
   ; CHECK: %t8 = alloca ptr
   %t9 = alloca <4 x i32>
   ; CHECK: %t9 = alloca <4 x i32>
   %t10 = alloca <vscale x 4 x i32>
   ; CHECK: %t10 = alloca <vscale x 4 x i32>
+  %t11 = alloca b8
+  ; CHECK: %t11 = alloca b8
 
   ret void
 }
@@ -1277,6 +1509,14 @@ continue:
   ret i32 0
 }
 
+declare void @instructions.bundles.callee(i32)
+define void @instructions.bundles.metadata(i32 %x) {
+entry:
+  call void @instructions.bundles.callee(i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+; CHECK: call void @instructions.bundles.callee(i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+  ret void
+}
+
 ; Instructions -- Unary Operations
 define void @instructions.unops(double %op1) {
   fneg double %op1
@@ -1361,6 +1601,10 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   xor i8 %op1, %op2
   ; CHECK: xor i8 %op1, %op2
 
+  ; disjoint
+  or disjoint i8 %op1, %op2
+  ; CHECK: or disjoint i8 %op1, %op2
+
   ret void
 }
 
@@ -1423,6 +1667,10 @@ define void @instructions.aggregateops({ i8, i32 } %up, <{ i8, i32 }> %p,
 !7 = !{i32 1}
 !8 = !{}
 !9 = !{i64 4}
+!10 = !{i32 0, !11}
+!11 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_prefetch_size", i32 128}
+!12 = !{i32 1, !13}
+!13 = !{!"nvvm.l1_eviction", !"last"}
 define void @instructions.memops(ptr %base) {
   alloca i32, i8 4, align 4
   ; CHECK: alloca i32, i8 4, align 4
@@ -1433,11 +1681,15 @@ define void @instructions.memops(ptr %base) {
   ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  load ptr, ptr %base, align 8, !mem.cache_hint !10
+  ; CHECK: load ptr, ptr %base, align 8, !mem.cache_hint !10
 
   store ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8
   store volatile ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !8
+  store ptr null, ptr %base, align 4, !mem.cache_hint !12
+  ; CHECK: store ptr null, ptr %base, align 4, !mem.cache_hint !12
 
   ret void
 }
@@ -1556,7 +1808,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #51
+  ; CHECK: call void @f.nobuiltin() #87
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -1644,16 +1896,16 @@ define void @instructions.va_arg(ptr %v, ...) {
   %ap = alloca ptr
 
   call void @llvm.va_start(ptr %ap)
-  ; CHECK: call void @llvm.va_start(ptr %ap)
+  ; CHECK: call void @llvm.va_start.p0(ptr %ap)
 
   va_arg ptr %ap, i32
   ; CHECK: va_arg ptr %ap, i32
 
   call void @llvm.va_copy(ptr %v, ptr %ap)
-  ; CHECK: call void @llvm.va_copy(ptr %v, ptr %ap)
+  ; CHECK: call void @llvm.va_copy.p0(ptr %v, ptr %ap)
 
   call void @llvm.va_end(ptr %ap)
-  ; CHECK: call void @llvm.va_end(ptr %ap)
+  ; CHECK: call void @llvm.va_end.p0(ptr %ap)
 
   ret void
 }
@@ -1692,21 +1944,21 @@ declare i64 @llvm.readcyclecounter()
 declare void @llvm.clear_cache(ptr, ptr)
 declare void @llvm.instrprof_increment(ptr, i64, i32, i32)
 
-!10 = !{!"rax"}
+!14 = !{!"rax"}
 define void @intrinsics.codegen() {
   call ptr @llvm.returnaddress(i32 1)
-  ; CHECK: call ptr @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call ptr @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
-  call i32 @llvm.read_register.i32(metadata !10)
-  ; CHECK: call i32 @llvm.read_register.i32(metadata !10)
-  call i64 @llvm.read_register.i64(metadata !10)
-  ; CHECK: call i64 @llvm.read_register.i64(metadata !10)
-  call void @llvm.write_register.i32(metadata !10, i32 0)
-  ; CHECK: call void @llvm.write_register.i32(metadata !10, i32 0)
-  call void @llvm.write_register.i64(metadata !10, i64 0)
-  ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
+  call i32 @llvm.read_register.i32(metadata !14)
+  ; CHECK: call i32 @llvm.read_register.i32(metadata !14)
+  call i64 @llvm.read_register.i64(metadata !14)
+  ; CHECK: call i64 @llvm.read_register.i64(metadata !14)
+  call void @llvm.write_register.i32(metadata !14, i32 0)
+  ; CHECK: call void @llvm.write_register.i32(metadata !14, i32 0)
+  call void @llvm.write_register.i64(metadata !14, i64 0)
+  ; CHECK: call void @llvm.write_register.i64(metadata !14, i64 0)
 
   %stack = call ptr @llvm.stacksave()
   ; CHECK: %stack = call ptr @llvm.stacksave.p0()
@@ -1723,7 +1975,7 @@ define void @intrinsics.codegen() {
   ; CHECK: call i64 @llvm.readcyclecounter()
 
   call void @llvm.clear_cache(ptr null, ptr null)
-  ; CHECK: call void @llvm.clear_cache(ptr null, ptr null)
+  ; CHECK: call void @llvm.clear_cache.p0(ptr null, ptr null)
 
   call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
   ; CHECK: call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
@@ -1752,10 +2004,10 @@ define void @intrinsics.localrecover() {
 
 ; We need this function to provide `uses' for some metadata tests.
 define void @misc.metadata() {
-  call void @f1(), !srcloc !11
-  call void @f1(), !srcloc !12
-  call void @f1(), !srcloc !13
-  call void @f1(), !srcloc !14
+  call void @f1(), !srcloc !15
+  call void @f1(), !srcloc !16
+  call void @f1(), !srcloc !17
+  call void @f1(), !srcloc !18
   ret void
 }
 
@@ -1937,8 +2189,8 @@ declare void @f.speculatable() speculatable
 ;; Constant Expressions
 
 define ptr @constexpr() {
-  ; CHECK: ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, inrange i32 1, i32 2)
-  ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, inrange i32 1, i32 2)
+  ; CHECK: ret ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, i32 1, i32 2)
+  ret ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, i32 1, i32 2)
 }
 
 define void @instructions.strictfp() strictfp {
@@ -1980,6 +2232,17 @@ declare void @f.nosanitize_bounds() nosanitize_bounds
 declare void @f.allockind() allockind("alloc,uninitialized")
 ; CHECK: declare void @f.allockind() #50
 
+declare void @f.sanitize_numerical_stability() sanitize_numerical_stability
+; CHECK: declare void @f.sanitize_numerical_stability() #51
+
+declare void @f.sanitize_realtime() sanitize_realtime
+; CHECK: declare void @f.sanitize_realtime() #52
+
+declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
+; CHECK: declare void @f.sanitize_realtime_blocking() #53
+
+declare void @f.sanitize_alloc_token() sanitize_alloc_token
+; CHECK: declare void @f.sanitize_alloc_token() #54
 
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
@@ -2035,9 +2298,14 @@ declare nofpclass(sub zero) float @nofpclass_sub_zero(float nofpclass(sub zero))
 ; CHECK: declare nofpclass(inf sub) float @nofpclass_sub_inf(float nofpclass(inf sub))
 declare nofpclass(sub inf) float @nofpclass_sub_inf(float nofpclass(sub inf))
 
+; CHECK: declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+
 declare float @unknown_fpclass_func(float)
 
-define float @nofpclass_callsites(float %arg) {
+declare { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float })
+
+define float @nofpclass_callsites(float %arg, { float } %arg1) {
   ; CHECK: %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
   %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
 
@@ -2046,9 +2314,207 @@ define float @nofpclass_callsites(float %arg) {
 
   ; CHECK: %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
   %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+
+  ; CHECK: %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+  %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+
   %add0 = fadd float %call0, %call1
   %add1 = fadd float %add0, %call2
   ret float %add1
+}
+
+; CHECK: define void @denormal_fpenv__ieee_ieee() #55 {
+define void @denormal_fpenv__ieee_ieee() denormal_fpenv(ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_preservesign() #56 {
+define void @denormal_fpenv__ieee_preservesign() denormal_fpenv(ieee|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_positivezero() #57 {
+define void @denormal_fpenv__ieee_positivezero() denormal_fpenv(ieee|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_dynamic() #58 {
+define void @denormal_fpenv__ieee_dynamic() denormal_fpenv(ieee|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_ieee() #59 {
+define void @denormal_fpenv__preservesign_ieee() denormal_fpenv(preservesign|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign() #60 {
+define void @denormal_fpenv__preservesign_preservesign() denormal_fpenv(preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_positivezero() #61 {
+define void @denormal_fpenv__preservesign_positivezero() denormal_fpenv(preservesign|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_dynamic() #62 {
+define void @denormal_fpenv__preservesign_dynamic() denormal_fpenv(preservesign|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_ieee() #63 {
+define void @denormal_fpenv__positivezero_ieee() denormal_fpenv(positivezero|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_preservesign() #64 {
+define void @denormal_fpenv__positivezero_preservesign() denormal_fpenv(positivezero|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_positivezero() #65 {
+define void @denormal_fpenv__positivezero_positivezero() denormal_fpenv(positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_dynamix() #66 {
+define void @denormal_fpenv__positivezero_dynamix() denormal_fpenv(positivezero|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_ieee() #67 {
+define void @denormal_fpenv__dynamic_ieee() denormal_fpenv(dynamic|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_preservesign() #68 {
+define void @denormal_fpenv__dynamic_preservesign() denormal_fpenv(dynamic|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_positivezero() #69 {
+define void @denormal_fpenv__dynamic_positivezero() denormal_fpenv(dynamic|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_dynamic() #70 {
+define void @denormal_fpenv__dynamic_dynamic() denormal_fpenv(dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_ieee() #55 {
+define void @denormal_fpenv_float__ieee_ieee() denormal_fpenv(float: ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_preservesign() #71 {
+define void @denormal_fpenv_float__ieee_preservesign() denormal_fpenv(float: ieee|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_positivezero() #72 {
+define void @denormal_fpenv_float__ieee_positivezero() denormal_fpenv(float: ieee|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_dynamic() #73 {
+define void @denormal_fpenv_float__ieee_dynamic() denormal_fpenv(float: ieee|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_ieee() #74 {
+define void @denormal_fpenv_float__preservesign_ieee() denormal_fpenv(float: preservesign|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_preservesign() #75 {
+define void @denormal_fpenv_float__preservesign_preservesign() denormal_fpenv(float: preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_positivezero() #76 {
+define void @denormal_fpenv_float__preservesign_positivezero() denormal_fpenv(float: preservesign|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_dynamic() #77 {
+define void @denormal_fpenv_float__preservesign_dynamic() denormal_fpenv(float: preservesign|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_ieee() #78 {
+define void @denormal_fpenv_float__positivezero_ieee() denormal_fpenv(float: positivezero|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_preservesign() #79 {
+define void @denormal_fpenv_float__positivezero_preservesign() denormal_fpenv(float: positivezero|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_positivezero() #80 {
+define void @denormal_fpenv_float__positivezero_positivezero() denormal_fpenv(float: positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_dynamix() #81 {
+define void @denormal_fpenv_float__positivezero_dynamix() denormal_fpenv(float: positivezero|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_ieee() #82 {
+define void @denormal_fpenv_float__dynamic_ieee() denormal_fpenv(float: dynamic|ieee) {
+  ret void
+}
+
+; Function Attrs: denormal_fpenv(float: dynamic|preservesign)
+define void @denormal_fpenv_float__dynamic_preservesign() denormal_fpenv(float: dynamic|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_positivezero() #84 {
+define void @denormal_fpenv_float__dynamic_positivezero() denormal_fpenv(float: dynamic|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_dynamic() #85 {
+define void @denormal_fpenv_float__dynamic_dynamic() denormal_fpenv(float: dynamic|dynamic) {
+  ret void
+}
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() #55 {
+define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() denormal_fpenv(ieee|ieee, float: ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() #75 {
+define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() denormal_fpenv(ieee|ieee, float: preservesign|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() #60 {
+define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() denormal_fpenv(preservesign|preservesign, float: preservesign|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() #65 {
+define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() denormal_fpenv(positivezero|positivezero, float: positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() #70 {
+define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() denormal_fpenv(dynamic|dynamic, float: dynamic|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() #85 {
+define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() denormal_fpenv(ieee|ieee, float: dynamic|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() #86 {
+define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() denormal_fpenv(preservesign|preservesign, float: dynamic|dynamic) {
+  ret void
 }
 
 ; CHECK: attributes #0 = { alignstack=4 }
@@ -2087,12 +2553,12 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: attributes #33 = { memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #34 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #37 = { nounwind memory(argmem: read) }
-; CHECK: attributes #38 = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #39 = { nocallback nofree nosync nounwind willreturn memory(read) }
-; CHECK: attributes #40 = { nocallback nounwind }
-; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #36 = { nounwind memory(argmem: read) }
+; CHECK: attributes #37 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #38 = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #39 = { nocallback nounwind }
+; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #42 = { memory(write) }
 ; CHECK: attributes #43 = { speculatable }
 ; CHECK: attributes #44 = { strictfp }
@@ -2102,7 +2568,43 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: attributes #48 = { allocsize(1,0) }
 ; CHECK: attributes #49 = { nosanitize_bounds }
 ; CHECK: attributes #50 = { allockind("alloc,uninitialized") }
-; CHECK: attributes #51 = { builtin }
+; CHECK: attributes #51 = { sanitize_numerical_stability }
+; CHECK: attributes #52 = { sanitize_realtime }
+; CHECK: attributes #53 = { sanitize_realtime_blocking }
+; CHECK: attributes #54 = { sanitize_alloc_token }
+; CHECK: attributes #55 = { denormal_fpenv(ieee) }
+; CHECK: attributes #56 = { denormal_fpenv(ieee|preservesign) }
+; CHECK: attributes #57 = { denormal_fpenv(ieee|positivezero) }
+; CHECK: attributes #58 = { denormal_fpenv(ieee|dynamic) }
+; CHECK: attributes #59 = { denormal_fpenv(preservesign|ieee) }
+; CHECK: attributes #60 = { denormal_fpenv(preservesign) }
+; CHECK: attributes #61 = { denormal_fpenv(preservesign|positivezero) }
+; CHECK: attributes #62 = { denormal_fpenv(preservesign|dynamic) }
+; CHECK: attributes #63 = { denormal_fpenv(positivezero|ieee) }
+; CHECK: attributes #64 = { denormal_fpenv(positivezero|preservesign) }
+; CHECK: attributes #65 = { denormal_fpenv(positivezero) }
+; CHECK: attributes #66 = { denormal_fpenv(positivezero|dynamic) }
+; CHECK: attributes #67 = { denormal_fpenv(dynamic|ieee) }
+; CHECK: attributes #68 = { denormal_fpenv(dynamic|preservesign) }
+; CHECK: attributes #69 = { denormal_fpenv(dynamic|positivezero) }
+; CHECK: attributes #70 = { denormal_fpenv(dynamic) }
+; CHECK: attributes #71 = { denormal_fpenv(float: ieee|preservesign) }
+; CHECK: attributes #72 = { denormal_fpenv(float: ieee|positivezero) }
+; CHECK: attributes #73 = { denormal_fpenv(float: ieee|dynamic) }
+; CHECK: attributes #74 = { denormal_fpenv(float: preservesign|ieee) }
+; CHECK: attributes #75 = { denormal_fpenv(float: preservesign) }
+; CHECK: attributes #76 = { denormal_fpenv(float: preservesign|positivezero) }
+; CHECK: attributes #77 = { denormal_fpenv(float: preservesign|dynamic) }
+; CHECK: attributes #78 = { denormal_fpenv(float: positivezero|ieee) }
+; CHECK: attributes #79 = { denormal_fpenv(float: positivezero|preservesign) }
+; CHECK: attributes #80 = { denormal_fpenv(float: positivezero) }
+; CHECK: attributes #81 = { denormal_fpenv(float: positivezero|dynamic) }
+; CHECK: attributes #82 = { denormal_fpenv(float: dynamic|ieee) }
+; CHECK: attributes #83 = { denormal_fpenv(float: dynamic|preservesign) }
+; CHECK: attributes #84 = { denormal_fpenv(float: dynamic|positivezero) }
+; CHECK: attributes #85 = { denormal_fpenv(float: dynamic) }
+; CHECK: attributes #86 = { denormal_fpenv(preservesign, float: dynamic) }
+; CHECK: attributes #87 = { builtin }
 
 ;; Metadata
 
@@ -2126,11 +2628,11 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: !6 = !{i32 6, !"mod6", !0}
 
 ; Metadata -- Check `distinct'
-!11 = distinct !{}
-; CHECK: !11 = distinct !{}
-!12 = distinct !{}
-; CHECK: !12 = distinct !{}
-!13 = !{!11}
-; CHECK: !13 = !{!11}
-!14 = !{!12}
-; CHECK: !14 = !{!12}
+!15 = distinct !{}
+; CHECK: !15 = distinct !{}
+!16 = distinct !{}
+; CHECK: !16 = distinct !{}
+!17 = !{!15}
+; CHECK: !17 = !{!15}
+!18 = !{!16}
+; CHECK: !18 = !{!16}

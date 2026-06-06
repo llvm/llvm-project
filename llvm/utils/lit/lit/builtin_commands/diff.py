@@ -8,10 +8,23 @@ import re
 import sys
 
 import util
-from util import to_string
 
 
 class DiffFlags:
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = (
+        "ignore_all_space",
+        "ignore_space_change",
+        "ignore_matching_lines",
+        "ignore_matching_lines_regex",
+        "unified_diff",
+        "num_context_lines",
+        "recursive_diff",
+        "strip_trailing_cr",
+    )
+
     def __init__(self):
         self.ignore_all_space = False
         self.ignore_space_change = False
@@ -59,33 +72,17 @@ def compareTwoFiles(flags, filepaths):
 
 def compareTwoBinaryFiles(flags, filepaths, filelines):
     exitCode = 0
-    if hasattr(difflib, "diff_bytes"):
-        # python 3.5 or newer
-        diffs = difflib.diff_bytes(
-            difflib.unified_diff,
-            filelines[0],
-            filelines[1],
-            filepaths[0].encode(),
-            filepaths[1].encode(),
-            n=flags.num_context_lines,
-        )
-        diffs = [diff.decode(errors="backslashreplace") for diff in diffs]
-    else:
-        # python 2.7
-        if flags.unified_diff:
-            func = difflib.unified_diff
-        else:
-            func = difflib.context_diff
-        diffs = func(
-            filelines[0],
-            filelines[1],
-            filepaths[0],
-            filepaths[1],
-            n=flags.num_context_lines,
-        )
+    diffs = difflib.diff_bytes(
+        difflib.unified_diff,
+        filelines[0],
+        filelines[1],
+        filepaths[0].encode(),
+        filepaths[1].encode(),
+        n=flags.num_context_lines,
+    )
 
     for diff in diffs:
-        sys.stdout.write(to_string(diff))
+        sys.stdout.write(diff.decode(errors="backslashreplace"))
         exitCode = 1
     return exitCode
 
@@ -132,7 +129,7 @@ def compareTwoTextFiles(flags, filepaths, filelines_bin, encoding):
         filepaths[1],
         n=flags.num_context_lines,
     ):
-        sys.stdout.write(to_string(diff))
+        sys.stdout.write(diff)
         exitCode = 1
     return exitCode
 
@@ -230,14 +227,8 @@ def compareDirTrees(flags, dir_trees, base_paths=["", ""]):
 
 def main(argv):
     if sys.platform == "win32":
-        if hasattr(sys.stdout, "buffer"):
-            # python 3
-            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, newline="\n")
-        else:
-            # python 2.7
-            import msvcrt
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, newline="\n")
 
-            msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     args = argv[1:]
     try:
         opts, args = getopt.gnu_getopt(args, "wbuI:U:r", ["strip-trailing-cr"])

@@ -9,6 +9,7 @@
 #include "llvm/TableGen/Parser.h"
 #include "TGParser.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
@@ -21,6 +22,7 @@ bool llvm::TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records) {
   SrcMgr = SourceMgr();
   SrcMgr.takeSourceBuffersFrom(InputSrcMgr);
   SrcMgr.setIncludeDirs(InputSrcMgr.getIncludeDirs());
+  SrcMgr.setVirtualFileSystem(InputSrcMgr.getVirtualFileSystem());
   SrcMgr.setDiagHandler(InputSrcMgr.getDiagHandler(),
                         InputSrcMgr.getDiagContext());
 
@@ -28,7 +30,7 @@ bool llvm::TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records) {
   auto *MainFileBuffer = SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID());
   Records.saveInputFilename(MainFileBuffer->getBufferIdentifier().str());
 
-  TGParser Parser(SrcMgr, /*Macros=*/std::nullopt, Records,
+  TGParser Parser(SrcMgr, /*Macros=*/{}, Records,
                   /*NoWarnOnUnusedTemplateArgs=*/false,
                   /*TrackReferenceLocs=*/true);
   bool ParseResult = Parser.ParseFile();

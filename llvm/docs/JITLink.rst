@@ -11,7 +11,7 @@ Introduction
 This document aims to provide a high-level overview of the design and API
 of the JITLink library. It assumes some familiarity with linking and
 relocatable object files, but should not require deep expertise. If you know
-what a section, symbol, and relocation are you should find this document
+what a section, symbol, and relocation are then you should find this document
 accessible. If it is not, please submit a patch (:doc:`Contributing`) or file a
 bug (:doc:`HowToSubmitABug`).
 
@@ -56,7 +56,7 @@ and optimizations that were not possible under MCJIT or RuntimeDyld.
 ObjectLinkingLayer Plugins
 --------------------------
 
-The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
+The ``ObjectLinkingLayer::Plugin`` class provides the following methods:
 
 * ``modifyPassConfig`` is called each time a LinkGraph is about to be linked. It
   can be overridden to install JITLink *Passes* to run during the link process.
@@ -64,7 +64,7 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
   .. code-block:: c++
 
     void modifyPassConfig(MaterializationResponsibility &MR,
-                          const Triple &TT,
+                          jitlink::LinkGraph &G,
                           jitlink::PassConfiguration &Config)
 
 * ``notifyLoaded`` is called before the link begins, and can be overridden to
@@ -97,7 +97,7 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
 
   .. code-block:: c++
 
-    Error notifyRemovingResources(ResourceKey K)
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K)
 
 * ``notifyTransferringResources`` is called if/when a request is made to
   transfer tracking of any resources associated with ``ResourceKey``
@@ -105,7 +105,7 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
 
   .. code-block:: c++
 
-    void notifyTransferringResources(ResourceKey DstKey,
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                      ResourceKey SrcKey)
 
 Plugin authors are required to implement the ``notifyFailed``,
@@ -126,7 +126,7 @@ calling the ``addPlugin`` method [1]_. E.g.
 
     // Add passes to print the set of defined symbols after dead-stripping.
     void modifyPassConfig(MaterializationResponsibility &MR,
-                          const Triple &TT,
+                          jitlink::LinkGraph &G,
                           jitlink::PassConfiguration &Config) override {
       Config.PostPrunePasses.push_back([this](jitlink::LinkGraph &G) {
         return printAllSymbols(G);
@@ -137,10 +137,10 @@ calling the ``addPlugin`` method [1]_. E.g.
     Error notifyFailed(MaterializationResponsibility &MR) override {
       return Error::success();
     }
-    Error notifyRemovingResources(ResourceKey K) override {
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
       return Error::success();
     }
-    void notifyTransferringResources(ResourceKey DstKey,
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                      ResourceKey SrcKey) override {}
 
     // JITLink pass to print all defined symbols in G.
@@ -407,7 +407,7 @@ and utilities relevant to the linking process:
   * ``getPointerSize`` returns the size of a pointer (in bytes) in the executor
     process.
 
-  * ``getEndinaness`` returns the endianness of the executor process.
+  * ``getEndianness`` returns the endianness of the executor process.
 
   * ``allocateString`` copies data from a given ``llvm::Twine`` into the
     link graph's internal allocator. This can be used to ensure that content
@@ -466,7 +466,7 @@ finally transferring linked memory to the executing process.
 
       Calls the ``JITLinkContext``'s ``JITLinkMemoryManager`` to allocate both
       working and target memory for the graph. As part of this process the
-      ``JITLinkMemoryManager`` will update the the addresses of all nodes
+      ``JITLinkMemoryManager`` will update the addresses of all nodes
       defined in the graph to their assigned target address.
 
       Note: This step only updates the addresses of nodes defined in this graph.
@@ -802,7 +802,7 @@ for them by an ``ObjectLinkingLayer`` instance, but they can be created manually
    ``ObjectLinkingLayer`` usually creates ``LinkGraphs``.
 
   #. ``createLinkGraph_<Object-Format>_<Architecture>`` can be used when
-      both the object format and architecture are known ahead of time.
+     both the object format and architecture are known ahead of time.
 
   #. ``createLinkGraph_<Object-Format>`` can be used when the object format is
      known ahead of time, but the architecture is not. In this case the
@@ -1065,32 +1065,31 @@ handling of cross-process and cross-architecture use cases.
 Roadmap
 =======
 
-JITLink is under active development. Work so far has focused on the MachO
-implementation. In LLVM 12 there is limited support for ELF on x86-64.
+JITLink is under active development. The MachO and ELF backends are mature, with
+ELF support spanning x86-64, arm64, RISC-V, LoongArch, PowerPC 64, arm32,
+SystemZ, and Hexagon. A COFF backend supports x86-64 on Windows. Initial XCOFF
+support for PowerPC 64 is available but not yet usable for general JIT compilation.
 
 Major outstanding projects include:
 
-* Refactor architecture support to maximize sharing across formats.
+* Improve XCOFF support.
 
-  All formats should be able to share the bulk of the architecture specific
-  code (especially relocations) for each supported architecture.
+  The XCOFF/ppc64 backend exists but does not yet implement the relocation
+  handling needed for general JIT use. Completing this would enable JITLink on
+  AIX.
 
-* Refactor ELF link graph construction.
+* Continue improving early-stage backends.
 
-  ELF's link graph construction is currently implemented in the `ELF_x86_64.cpp`
-  file, and tied to the x86-64 relocation parsing code. The bulk of the code is
-  generic and should be split into an ELFLinkGraphBuilder base class along the
-  same lines as the existing generic MachOLinkGraphBuilder.
+  Some backends (arm32, Hexagon) support common relocations but are not yet
+  ready for general use. Contributions to extend relocation coverage are welcome.
 
-* Implement support for arm32.
-
-* Implement support for other new architectures.
+* Implement support for other new architectures and formats.
 
 JITLink Availability and Feature Status
 ---------------------------------------
 
 The following table describes the status of the JITlink backends for various
-format / architecture combinations (as of July 2023).
+format / architecture combinations (as of May 2026).
 
 Support levels:
 
@@ -1108,7 +1107,7 @@ Support levels:
 * Complete: The backend supports all relocations and object format features.
 
 .. list-table:: Availability and Status
-   :widths: 10 30 30 30
+   :widths: 10 22 22 22 22
    :header-rows: 1
    :stub-columns: 1
 
@@ -1116,34 +1115,52 @@ Support levels:
      - ELF
      - COFF
      - MachO
+     - XCOFF
    * - arm32
-     - Skeleton
+     - Basic
+     -
      -
      -
    * - arm64
      - Usable
      -
      - Good
+     -
+   * - Hexagon
+     - Basic
+     -
+     -
+     -
    * - LoongArch
      - Good
+     -
      -
      -
    * - PowerPC 64
      - Usable
      -
      -
+     - Skeleton
    * - RISC-V
      - Good
+     -
+     -
+     -
+   * - SystemZ
+     - Usable
+     -
      -
      -
    * - x86-32
      - Basic
      -
      -
+     -
    * - x86-64
      - Good
      - Usable
      - Good
+     -
 
 .. [1] See ``llvm/examples/OrcV2Examples/LLJITWithObjectLinkingLayerPlugin`` for
        a full worked example.

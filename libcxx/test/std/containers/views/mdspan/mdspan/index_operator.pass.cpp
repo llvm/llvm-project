@@ -32,35 +32,12 @@
 #include <mdspan>
 #include <cassert>
 #include <cstdint>
+#include <span> // dynamic_extent
 
 #include "test_macros.h"
 
 #include "../ConvertibleToIntegral.h"
-#include "CustomTestLayouts.h"
-
-// Clang 16 does not support argument packs as input to operator []
-#if defined(__clang_major__) && __clang_major__ < 17
-template <class MDS>
-constexpr auto& access(MDS mds) {
-  return mds[];
-}
-template <class MDS>
-constexpr auto& access(MDS mds, int64_t i0) {
-  return mds[i0];
-}
-template <class MDS>
-constexpr auto& access(MDS mds, int64_t i0, int64_t i1) {
-  return mds[i0, i1];
-}
-template <class MDS>
-constexpr auto& access(MDS mds, int64_t i0, int64_t i1, int64_t i2) {
-  return mds[i0, i1, i2];
-}
-template <class MDS>
-constexpr auto& access(MDS mds, int64_t i0, int64_t i1, int64_t i2, int64_t i3) {
-  return mds[i0, i1, i2, i3];
-}
-#endif
+#include "../CustomTestLayouts.h"
 
 template <class MDS, class... Indices>
 concept operator_constraints = requires(MDS m, Indices... idxs) {
@@ -83,11 +60,7 @@ template <class MDS, class... Args>
 constexpr void iterate(MDS mds, Args... args) {
   constexpr int r = static_cast<int>(MDS::extents_type::rank()) - 1 - static_cast<int>(sizeof...(Args));
   if constexpr (-1 == r) {
-#if defined(__clang_major__) && __clang_major__ < 17
-    int* ptr1 = &access(mds, args...);
-#else
     int* ptr1 = &mds[args...];
-#endif
     int* ptr2 = &(mds.accessor().access(mds.data_handle(), mds.mapping()(args...)));
     assert(ptr1 == ptr2);
 
@@ -120,10 +93,8 @@ constexpr void test_layout() {
   test_iteration(construct_mapping(Layout(), std::extents<unsigned, D>(7)));
   test_iteration(construct_mapping(Layout(), std::extents<unsigned, 7>()));
   test_iteration(construct_mapping(Layout(), std::extents<unsigned, 7, 8>()));
-  test_iteration(construct_mapping(Layout(), std::extents<char, D, D, D, D>(1, 1, 1, 1)));
+  test_iteration(construct_mapping(Layout(), std::extents<signed char, D, D, D, D>(1, 1, 1, 1)));
 
-// TODO enable for GCC 13, when the CI pipeline is switched, doesn't work with GCC 12
-#if defined(__clang_major__) && __clang_major__ >= 17
   int data[1];
   // Check operator constraint for number of arguments
   static_assert(check_operator_constraints(std::mdspan(data, construct_mapping(Layout(), std::extents<int, D>(1))), 0));
@@ -216,7 +187,6 @@ constexpr void test_layout() {
       assert(!check_operator_constraints(std::mdspan(data, construct_mapping(Layout(), std::extents<int, D>(1))), s));
     }
   }
-#endif
 }
 
 template <class Layout>
@@ -226,14 +196,44 @@ constexpr void test_layout_large() {
   test_iteration(construct_mapping(Layout(), std::extents<int64_t, D, 4, 1, D>(3, 6)));
 }
 
+struct NoCopyIndex {
+  int val = 0;
+  constexpr NoCopyIndex(int v) : val(v) {}
+  constexpr NoCopyIndex(const NoCopyIndex&) = delete;
+  constexpr operator int() const noexcept { return val; }
+};
+
 // mdspan::operator[] casts to index_type before calling mapping
 // mapping requirements only require the index operator to mixed integer types not anything convertible to index_type
-constexpr void test_index_cast_happens() {}
+constexpr void test_index_cast() {
+  std::array data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  const std::mdspan m{data.data(), std::dextents<int, 1>{10}};
+
+  std::array indices{NoCopyIndex{3}};
+
+  assert(&m[NoCopyIndex{3}] == &data[3]);
+  assert(&m[indices] == &data[3]);
+  assert(&m[std::span{indices}] == &data[3]);
+
+  // LWG3995: Issue with custom index conversion in <mdspan>
+  // NoCopyIndex index(3);
+  // assert(&m[index] == &data[3]);
+}
+
+struct RValueInt {
+  constexpr operator int() && noexcept { return 0; }
+};
 
 constexpr bool test() {
   test_layout<std::layout_left>();
   test_layout<std::layout_right>();
   test_layout<layout_wrapping_integral<4>>();
+
+  int data[1]{};
+  std::mdspan m(data, std::extents<int, 1>{1});
+  TEST_IGNORE_NODISCARD m[RValueInt{}];
+
+  test_index_cast();
   return true;
 }
 

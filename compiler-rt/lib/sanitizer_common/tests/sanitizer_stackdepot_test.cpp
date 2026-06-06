@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#include <algorithm>
 #include <atomic>
 #include <numeric>
 #include <regex>
@@ -99,11 +100,11 @@ TEST_F(StackDepotTest, Print) {
   };
   EXPECT_EXIT(
       (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
-      fix_regex("Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x7.*"));
-  EXPECT_EXIT(
-      (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
       fix_regex(
-          "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*"));
+          "Stack for id .*#0 0x0*1.*#1 0x0*2.*#2 0x0*3.*#3 0x0*4.*#4 0x0*7.*"));
+  EXPECT_EXIT((StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
+              fix_regex("Stack for id .*#0 0x0*1.*#1 0x0*2.*#2 0x0*3.*#3 "
+                        "0x0*4.*#4 0x0*8.*#5 0x0*9.*"));
 }
 
 TEST_F(StackDepotTest, PrintNoLock) {
@@ -148,6 +149,10 @@ static struct StackDepotBenchmarkParams {
     {500000, 10, 16, true, false},
     {1500000, 10, 4, true, true},
     {800000, 10, 16, true, true},
+    // Go crazy, and create too many unique stacks, such that StackStore runs
+    // out of space.
+    {1000000, 1, 128, true, true},
+    {100000000, 1, 1, true, true},
 };
 
 static std::string PrintStackDepotBenchmarkParams(
@@ -169,11 +174,11 @@ class StackDepotBenchmark
 //   '--gtest_filter=*Benchmark*'
 TEST_P(StackDepotBenchmark, DISABLED_Benchmark) {
   auto Param = GetParam();
-  std::atomic<unsigned int> here = {};
+  std::atomic<int> here = {};
 
   auto thread = [&](int idx) {
     here++;
-    while (here < Param.UniqueThreads) std::this_thread::yield();
+    while (here < Param.Threads) std::this_thread::yield();
 
     std::vector<uptr> frames(64);
     for (int r = 0; r < Param.RepeatPerThread; ++r) {

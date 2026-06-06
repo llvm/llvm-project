@@ -1,0 +1,35 @@
+REQUIRES: lld, python
+
+RUN: split-file %s %t
+RUN: %clang --target=x86_64-pc-linux -g -gpubnames -c %t/file1.c -o %t-1.o
+RUN: %clang --target=x86_64-pc-linux -g -gno-pubnames -c %t/file2.c -o %t-2.o
+RUN: llvm-dwarfdump %t-1.o --debug-names | FileCheck %s --check-prefix=PUBNAMES
+RUN: llvm-dwarfdump %t-2.o --debug-names | FileCheck %s --check-prefix=NOPUBNAMES
+RUN: ld.lld %t-1.o %t-2.o -o %t.out
+RUN: %lldb %t.out -s %t/commands -o exit | FileCheck %s
+
+// Precondition check: The first file should contain a debug_names index, but no
+// entries for MYSTRUCT.
+PUBNAMES: Name Index @ 0x0 {
+PUBNAMES-NOT: MYSTRUCT
+
+// The second file should not contain an index.
+NOPUBNAMES-NOT: Name Index
+
+// Starting from the variable in the first file, we should be able to find the
+// declaration of the type in the first unit, and then match that with the
+// definition in the second unit.
+CHECK:      (lldb) script
+CHECK:      struct MYSTRUCT {
+CHECK-NEXT:   int x;
+CHECK-NEXT: }
+
+#--- commands
+script lldb.target.FindFirstGlobalVariable("struct_ptr").GetType().GetPointeeType()
+#--- file1.c
+struct MYSTRUCT *struct_ptr;
+#--- file2.c
+struct MYSTRUCT {
+  int x;
+};
+struct MYSTRUCT struct_;

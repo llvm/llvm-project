@@ -1,7 +1,7 @@
 ; RUN: llc -relocation-model=pic < %s -mtriple=ve-unknown-unknown | FileCheck %s
 
 @dst = external global i32, align 4
-@ptr = external global i32*, align 8
+@ptr = external global ptr, align 8
 @src = external global i32, align 4
 
 define i32 @func() {
@@ -33,8 +33,8 @@ define i32 @func() {
 ; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
 
-  store i32* @dst, i32** @ptr, align 8
-  %1 = load i32, i32* @src, align 4
-  store i32 %1, i32* @dst, align 4
+  store ptr @dst, ptr @ptr, align 8
+  %1 = load i32, ptr @src, align 4
+  store i32 %1, ptr @dst, align 4
   ret i32 1
 }

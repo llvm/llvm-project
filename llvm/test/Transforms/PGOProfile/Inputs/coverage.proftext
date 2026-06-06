@@ -1,0 +1,54 @@
+:ir
+:single_byte_coverage
+
+foo
+# Func Hash:
+848064302753700500
+# Num Counters:
+2
+# Counter Values:
+3
+4
+
+
+bar
+# Func Hash:
+848064302952419074
+# Num Counters:
+2
+# Counter Values:
+2
+0
+
+
+goo
+# Func Hash:
+1106497858086895615
+# Num Counters:
+1
+# Counter Values:
+5
+
+
+loop
+# Func Hash:
+92940490389974880
+# Num Counters:
+2
+# Counter Values:
+1
+1
+
+
+hoo
+# Func Hash:
+1073332642652768409
+# Num Counters:
+6
+# Counter Values:
+1
+0
+1
+1
+0
+0

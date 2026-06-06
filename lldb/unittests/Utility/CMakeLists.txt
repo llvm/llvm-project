@@ -1,9 +1,11 @@
 add_lldb_unittest(UtilityTests
+  AcceleratorGDBRemotePacketsTest.cpp
   AnsiTerminalTest.cpp
   ArgsTest.cpp
   OptionsWithRawTest.cpp
   ArchSpecTest.cpp
   BroadcasterTest.cpp
+  ChecksumTest.cpp
   ConstStringTest.cpp
   CompletionRequestTest.cpp
   DataBufferTest.cpp
@@ -11,16 +13,21 @@ add_lldb_unittest(UtilityTests
   DataExtractorTest.cpp
   EnvironmentTest.cpp
   EventTest.cpp
+  FileSpecListTest.cpp
   FileSpecTest.cpp
   FlagsTest.cpp
   ListenerTest.cpp
+  LockedTest.cpp
   LogTest.cpp
   NameMatchesTest.cpp
+  NonNullSharedPtrTest.cpp
+  PolicyTest.cpp
   PredicateTest.cpp
   ProcessInfoTest.cpp
   ProcessInstanceInfoTest.cpp
   RangeMapTest.cpp
   RangeTest.cpp
+  RealpathPrefixesTest.cpp
   RegisterValueTest.cpp
   RegularExpressionTest.cpp
   ScalarTest.cpp
@@ -31,10 +38,10 @@ add_lldb_unittest(UtilityTests
   StreamTest.cpp
   StringExtractorGDBRemoteTest.cpp
   StringExtractorTest.cpp
-  StringLexerTest.cpp
   StringListTest.cpp
   StructuredDataTest.cpp
   SubsystemRAIITest.cpp
+  SupportFileTest.cpp
   TildeExpressionResolverTest.cpp
   TimeoutTest.cpp
   TimerTest.cpp
@@ -43,16 +50,16 @@ add_lldb_unittest(UtilityTests
   UserIDResolverTest.cpp
   UUIDTest.cpp
   VASprintfTest.cpp
-  VMRangeTest.cpp
+  VirtualDataExtractorTest.cpp
   XcodeSDKTest.cpp
 
+  LINK_COMPONENTS
+    Support
+    TargetParser
   LINK_LIBS
       lldbUtility
       lldbUtilityHelpers
       LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
-    TargetParser
   )
 
 set(test_inputs

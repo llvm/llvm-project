@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple mipsel-unknown-linux -O3 -S -o - -emit-llvm %s | FileCheck %s -check-prefix=O32
-// RUN: %clang_cc1 -triple mips64el-unknown-linux -O3 -S -target-abi n64 -o - -emit-llvm %s | FileCheck %s -check-prefix=N64
+// RUN: %clang_cc1 -triple mipsel-unknown-linux -O3 -o - -emit-llvm %s | FileCheck %s -check-prefix=O32
+// RUN: %clang_cc1 -triple mips64el-unknown-linux -O3 -target-abi n64 -o - -emit-llvm %s | FileCheck %s -check-prefix=N64
 
 typedef struct {
   float f[3];

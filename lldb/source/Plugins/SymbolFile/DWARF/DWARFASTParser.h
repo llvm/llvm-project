@@ -29,6 +29,9 @@ class SymbolFileDWARF;
 
 class DWARFASTParser {
 public:
+  enum class Kind { DWARFASTParserClang };
+  DWARFASTParser(Kind kind) : m_kind(kind) {}
+
   virtual ~DWARFASTParser() = default;
 
   virtual lldb::TypeSP ParseTypeFromDWARF(const SymbolContext &sc,
@@ -39,10 +42,10 @@ public:
 
   virtual Function *ParseFunctionFromDWARF(CompileUnit &comp_unit,
                                            const DWARFDIE &die,
-                                           const AddressRange &range) = 0;
+                                           AddressRanges ranges) = 0;
 
   virtual bool CompleteTypeFromDWARF(const DWARFDIE &die, Type *type,
-                                     CompilerType &compiler_type) = 0;
+                                     const CompilerType &compiler_type) = 0;
 
   virtual CompilerDecl GetDeclForUIDFromDWARF(const DWARFDIE &die) = 0;
 
@@ -55,13 +58,20 @@ public:
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(
       CompilerDeclContext decl_context) = 0;
 
-  virtual ConstString GetDIEClassTemplateParams(const DWARFDIE &die) = 0;
+  virtual std::string GetDIEClassTemplateParams(DWARFDIE die) = 0;
 
   static std::optional<SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,
                       const ExecutionContext *exe_ctx = nullptr);
 
+  lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
+
   static lldb::AccessType GetAccessTypeFromDWARF(uint32_t dwarf_accessibility);
+
+  Kind GetKind() const { return m_kind; }
+
+private:
+  const Kind m_kind;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

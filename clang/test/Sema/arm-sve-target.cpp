@@ -23,7 +23,7 @@ void test_var_target3() {
 
 __SVFloat32_t other_ret();
 __SVFloat32_t test_ret() { // expected-error {{SVE vector type '__SVFloat32_t' cannot be used in a target without sve}}
-  return other_ret();
+  return other_ret(); // expected-error {{SVE vector type '__SVFloat32_t' cannot be used in a target without sve}}
 }
 
 __attribute__((target("sve")))

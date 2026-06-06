@@ -14,7 +14,7 @@ target triple = "x86_64-pc-windows-msvc19.14.26433"
 
 define dllexport void @foo() #0 {
 entry:
-  call void asm sideeffect ".p2align        4, 0x90", "~{dirflag},~{fpsr},~{flags}"()
+  call void asm sideeffect ".p2align        4", "~{dirflag},~{fpsr},~{flags}"()
   ret void
 }
 

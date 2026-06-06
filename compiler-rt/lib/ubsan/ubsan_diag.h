@@ -18,26 +18,6 @@
 
 namespace __ubsan {
 
-class SymbolizedStackHolder {
-  SymbolizedStack *Stack;
-
-  void clear() {
-    if (Stack)
-      Stack->ClearAll();
-  }
-
-public:
-  explicit SymbolizedStackHolder(SymbolizedStack *Stack = nullptr)
-      : Stack(Stack) {}
-  ~SymbolizedStackHolder() { clear(); }
-  void reset(SymbolizedStack *S) {
-    if (Stack != S)
-      clear();
-    Stack = S;
-  }
-  const SymbolizedStack *get() const { return Stack; }
-};
-
 SymbolizedStack *getSymbolizedLocation(uptr PC);
 
 inline SymbolizedStack *getCallerLocation(uptr CallerPC) {
@@ -57,10 +37,11 @@ public:
 
 private:
   LocationKind Kind;
-  // FIXME: In C++11, wrap these in an anonymous union.
-  SourceLocation SourceLoc;
-  MemoryLocation MemoryLoc;
-  const SymbolizedStack *SymbolizedLoc;  // Not owned.
+  union {
+    SourceLocation SourceLoc;
+    MemoryLocation MemoryLoc;
+    const SymbolizedStack *SymbolizedLoc; // Not owned.
+  };
 
 public:
   Location() : Kind(LK_Null) {}

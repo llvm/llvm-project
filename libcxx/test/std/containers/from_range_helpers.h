@@ -9,9 +9,11 @@
 #ifndef SUPPORT_FROM_RANGE_HELPERS_H
 #define SUPPORT_FROM_RANGE_HELPERS_H
 
+#include <array>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
+#include <vector>
 
 #include "min_allocator.h"
 #include "test_allocator.h"
@@ -34,6 +36,13 @@ constexpr auto wrap_input(Range&& input) {
   return std::ranges::subrange(std::move(b), std::move(e));
 }
 
+template <class Iter, class Sent, class T, std::size_t N>
+constexpr auto wrap_input(std::array<T, N>& input) {
+  auto b = Iter(input.data());
+  auto e = Sent(Iter(input.data() + input.size()));
+  return std::ranges::subrange(std::move(b), std::move(e));
+}
+
 template <class Iter, class Sent, class T>
 constexpr auto wrap_input(std::vector<T>& input) {
   auto b = Iter(input.data());
@@ -42,7 +51,7 @@ constexpr auto wrap_input(std::vector<T>& input) {
 }
 
 struct KeyValue {
-  int key; // Only the key is considered for equality comparison.
+  int key;    // Only the key is considered for equality comparison.
   char value; // Allows distinguishing equivalent instances.
 
   bool operator<(const KeyValue& other) const { return key < other.key; }
@@ -51,17 +60,15 @@ struct KeyValue {
 
 template <>
 struct std::hash<KeyValue> {
-  std::size_t operator()(const KeyValue& kv) const {
-    return kv.key;
-  }
+  std::size_t operator()(const KeyValue& kv) const { return kv.key; }
 };
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
 
 template <class T>
 struct ThrowingAllocator {
-  using value_type = T;
-  using char_type = T;
+  using value_type      = T;
+  using char_type       = T;
   using is_always_equal = std::false_type;
 
   ThrowingAllocator() = default;
@@ -81,14 +88,13 @@ struct ThrowingAllocator {
 
 template <class T, class Func>
 constexpr void for_all_iterators_and_allocators(Func f) {
-  using Iterators = types::type_list<
-    cpp20_input_iterator<T*>,
-    forward_iterator<T*>,
-    bidirectional_iterator<T*>,
-    random_access_iterator<T*>,
-    contiguous_iterator<T*>,
-    T*
-  >;
+  using Iterators =
+      types::type_list< cpp20_input_iterator<T*>,
+                        forward_iterator<T*>,
+                        bidirectional_iterator<T*>,
+                        random_access_iterator<T*>,
+                        contiguous_iterator<T*>,
+                        T* >;
 
   types::for_each(Iterators{}, [=]<class Iter>() {
     f.template operator()<Iter, sentinel_wrapper<Iter>, std::allocator<T>>();

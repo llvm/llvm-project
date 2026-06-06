@@ -25,11 +25,12 @@ ORC_RT_INTERFACE void __orc_rt_elfnix_cxa_finalize(void *dso_handle);
 // dlfcn functions.
 ORC_RT_INTERFACE const char *__orc_rt_elfnix_jit_dlerror();
 ORC_RT_INTERFACE void *__orc_rt_elfnix_jit_dlopen(const char *path, int mode);
+ORC_RT_INTERFACE int __orc_rt_elfnix_jit_dlupdate(void *dso_handle);
 ORC_RT_INTERFACE int __orc_rt_elfnix_jit_dlclose(void *dso_handle);
 ORC_RT_INTERFACE void *__orc_rt_elfnix_jit_dlsym(void *dso_handle,
                                                  const char *symbol);
 
-namespace __orc_rt {
+namespace orc_rt {
 namespace elfnix {
 
 struct ELFNixPerObjectSectionsToRegister {
@@ -37,26 +38,10 @@ struct ELFNixPerObjectSectionsToRegister {
   ExecutorAddrRange ThreadDataSection;
 };
 
-struct ELFNixJITDylibInitializers {
-  using SectionList = std::vector<ExecutorAddrRange>;
+using ELFNixJITDylibDepInfo = std::vector<ExecutorAddr>;
 
-  ELFNixJITDylibInitializers() = default;
-  ELFNixJITDylibInitializers(std::string Name, ExecutorAddr DSOHandleAddress)
-      : Name(std::move(Name)), DSOHandleAddress(std::move(DSOHandleAddress)) {}
-
-  std::string Name;
-  ExecutorAddr DSOHandleAddress;
-
-  std::vector<std::pair<std::string, SectionList>> InitSections;
-};
-
-class ELFNixJITDylibDeinitializers {};
-
-using ELFNixJITDylibInitializerSequence =
-    std::vector<ELFNixJITDylibInitializers>;
-
-using ELFNixJITDylibDeinitializerSequence =
-    std::vector<ELFNixJITDylibDeinitializers>;
+using ELFNixJITDylibDepInfoMap =
+    std::unordered_map<ExecutorAddr, ELFNixJITDylibDepInfo>;
 
 enum dlopen_mode : int {
   ORC_RT_RTLD_LAZY = 0x1,
@@ -65,7 +50,7 @@ enum dlopen_mode : int {
   ORC_RT_RTLD_GLOBAL = 0x8
 };
 
-} // end namespace elfnix
+} // namespace elfnix
 
 using SPSELFNixPerObjectSectionsToRegister =
     SPSTuple<SPSExecutorAddrRange, SPSExecutorAddrRange>;
@@ -94,38 +79,10 @@ public:
   }
 };
 
-using SPSNamedExecutorAddrRangeSequenceMap =
-    SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRangeSequence>>;
+using SPSELFNixJITDylibDepInfo = SPSSequence<SPSExecutorAddr>;
+using SPSELFNixJITDylibDepInfoMap =
+    SPSSequence<SPSTuple<SPSExecutorAddr, SPSELFNixJITDylibDepInfo>>;
 
-using SPSELFNixJITDylibInitializers =
-    SPSTuple<SPSString, SPSExecutorAddr, SPSNamedExecutorAddrRangeSequenceMap>;
-
-using SPSELFNixJITDylibInitializerSequence =
-    SPSSequence<SPSELFNixJITDylibInitializers>;
-
-/// Serialization traits for ELFNixJITDylibInitializers.
-template <>
-class SPSSerializationTraits<SPSELFNixJITDylibInitializers,
-                             elfnix::ELFNixJITDylibInitializers> {
-public:
-  static size_t size(const elfnix::ELFNixJITDylibInitializers &MOJDIs) {
-    return SPSELFNixJITDylibInitializers::AsArgList::size(
-        MOJDIs.Name, MOJDIs.DSOHandleAddress, MOJDIs.InitSections);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const elfnix::ELFNixJITDylibInitializers &MOJDIs) {
-    return SPSELFNixJITDylibInitializers::AsArgList::serialize(
-        OB, MOJDIs.Name, MOJDIs.DSOHandleAddress, MOJDIs.InitSections);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          elfnix::ELFNixJITDylibInitializers &MOJDIs) {
-    return SPSELFNixJITDylibInitializers::AsArgList::deserialize(
-        IB, MOJDIs.Name, MOJDIs.DSOHandleAddress, MOJDIs.InitSections);
-  }
-};
-
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_ELFNIX_PLATFORM_H

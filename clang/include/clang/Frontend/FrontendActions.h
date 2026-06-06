@@ -96,6 +96,8 @@ protected:
 
   bool shouldEraseOutputFiles() override;
 
+  bool SetOnlyIfDifferent;
+
 public:
   /// Compute the AST consumer arguments that will be used to
   /// create the PCHGenerator instance returned by CreateASTConsumer.
@@ -108,21 +110,36 @@ public:
   /// into. On error, returns null.
   static std::unique_ptr<llvm::raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile,
-                   std::string &OutputFile);
+                   std::string &OutputFile, bool SetOnlyIfDifferent = false);
 
   bool BeginSourceFileAction(CompilerInstance &CI) override;
+
+  GeneratePCHAction(bool SetOnlyIfDifferent = false)
+      : SetOnlyIfDifferent(SetOnlyIfDifferent) {}
 };
 
 class GenerateModuleAction : public ASTFrontendAction {
+public:
+  /// When \c OS is non-null, uses it for outputting the PCM file instead of
+  /// automatically creating an output file.
+  explicit GenerateModuleAction(std::unique_ptr<raw_pwrite_stream> OS = nullptr)
+      : OS(std::move(OS)) {}
+
+private:
+  std::unique_ptr<raw_pwrite_stream> OS;
+
   virtual std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) = 0;
 
 protected:
+  std::vector<std::unique_ptr<ASTConsumer>>
+  CreateMultiplexConsumer(CompilerInstance &CI, StringRef InFile);
+
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
   TranslationUnitKind getTranslationUnitKind() override {
-    return TU_Module;
+    return TU_ClangModule;
   }
 
   bool hasASTFileSupport() const override { return false; }
@@ -135,24 +152,51 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
-  TranslationUnitKind getTranslationUnitKind() override { return TU_Module; }
+  TranslationUnitKind getTranslationUnitKind() override {
+    return TU_ClangModule;
+  }
   bool hasASTFileSupport() const override { return false; }
 };
 
 class GenerateModuleFromModuleMapAction : public GenerateModuleAction {
+public:
+  using GenerateModuleAction::GenerateModuleAction;
+
 private:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
+
+  std::unique_ptr<raw_pwrite_stream>
+  CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
+
+  bool SetOnlyIfDifferent;
+
+public:
+  GenerateModuleFromModuleMapAction(bool SetOnlyIfDifferent = false)
+      : SetOnlyIfDifferent(SetOnlyIfDifferent) {}
+};
+
+/// Generates full BMI (which contains full information to generate the object
+/// files) for C++20 Named Modules.
+class GenerateModuleInterfaceAction : public GenerateModuleAction {
+protected:
+  bool PrepareToExecuteAction(CompilerInstance &CI) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
+
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override;
+
+  TranslationUnitKind getTranslationUnitKind() override { return TU_Complete; }
 
   std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
 };
 
-class GenerateModuleInterfaceAction : public GenerateModuleAction {
+/// Only generates the reduced BMI. This action is mainly used by tests.
+class GenerateReducedModuleInterfaceAction
+    : public GenerateModuleInterfaceAction {
 private:
-  bool BeginSourceFileAction(CompilerInstance &CI) override;
-
-  std::unique_ptr<raw_pwrite_stream>
-  CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override;
 };
 
 class GenerateHeaderUnitAction : public GenerateModuleAction {
@@ -299,13 +343,16 @@ protected:
   bool hasPCHSupport() const override { return true; }
 };
 
-class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
-  StringRef ModuleName;
+//===----------------------------------------------------------------------===//
+// HLSL Specific Actions
+//===----------------------------------------------------------------------===//
+
+class HLSLFrontendAction : public WrapperFrontendAction {
+protected:
   void ExecuteAction() override;
 
 public:
-  GetDependenciesByModuleNameAction(StringRef ModuleName)
-      : ModuleName(ModuleName) {}
+  HLSLFrontendAction(std::unique_ptr<FrontendAction> WrappedAction);
 };
 
 }  // end namespace clang

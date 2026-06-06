@@ -32,6 +32,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
+#include <bitset>
 #include <memory>
 #include <string>
 
@@ -48,43 +49,9 @@ class ARMSubtarget : public ARMGenSubtargetInfo {
 protected:
   enum ARMProcFamilyEnum {
     Others,
-
-    CortexA12,
-    CortexA15,
-    CortexA17,
-    CortexA32,
-    CortexA35,
-    CortexA5,
-    CortexA53,
-    CortexA55,
-    CortexA57,
-    CortexA7,
-    CortexA72,
-    CortexA73,
-    CortexA75,
-    CortexA76,
-    CortexA77,
-    CortexA78,
-    CortexA78C,
-    CortexA710,
-    CortexA8,
-    CortexA9,
-    CortexM3,
-    CortexM7,
-    CortexR4,
-    CortexR4F,
-    CortexR5,
-    CortexR52,
-    CortexR7,
-    CortexX1,
-    CortexX1C,
-    Exynos,
-    Krait,
-    Kryo,
-    NeoverseN1,
-    NeoverseN2,
-    NeoverseV1,
-    Swift
+#define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
+#include "llvm/TargetParser/ARMTargetParserDef.inc"
+#undef ARM_PROCESSOR_FAMILY
   };
   enum ARMProcClassEnum {
     None,
@@ -94,42 +61,9 @@ protected:
     RClass
   };
   enum ARMArchEnum {
-    ARMv4,
-    ARMv4t,
-    ARMv5,
-    ARMv5t,
-    ARMv5te,
-    ARMv5tej,
-    ARMv6,
-    ARMv6k,
-    ARMv6kz,
-    ARMv6m,
-    ARMv6sm,
-    ARMv6t2,
-    ARMv7a,
-    ARMv7em,
-    ARMv7m,
-    ARMv7r,
-    ARMv7ve,
-    ARMv81a,
-    ARMv82a,
-    ARMv83a,
-    ARMv84a,
-    ARMv85a,
-    ARMv86a,
-    ARMv87a,
-    ARMv88a,
-    ARMv89a,
-    ARMv8a,
-    ARMv8mBaseline,
-    ARMv8mMainline,
-    ARMv8r,
-    ARMv81mMainline,
-    ARMv9a,
-    ARMv91a,
-    ARMv92a,
-    ARMv93a,
-    ARMv94a,
+#define ARM_ARCHITECTURE(ENUM) ENUM,
+#include "llvm/TargetParser/ARMTargetParserDef.inc"
+#undef ARM_ARCHITECTURE
   };
 
 public:
@@ -145,6 +79,48 @@ public:
     /// Can load/store 1 register/cycle, but needs an extra cycle for address
     /// computation and potentially also for register writeback.
     SingleIssuePlusExtras,
+  };
+
+  /// How the push and pop instructions of callee saved general-purpose
+  /// registers should be split.
+  enum PushPopSplitVariation {
+    /// All GPRs can be pushed in a single instruction.
+    /// push {r0-r12, lr}
+    /// vpush {d8-d15}
+    NoSplit,
+
+    /// R7 and LR must be adjacent, because R7 is the frame pointer, and must
+    /// point to a frame record consisting of the previous frame pointer and the
+    /// return address.
+    /// push {r0-r7, lr}
+    /// push {r8-r12}
+    /// vpush {d8-d15}
+    /// Note that Thumb1 changes this layout when the frame pointer is R11,
+    /// using a longer sequence of instructions because R11 can't be used by a
+    /// Thumb1 push instruction. This doesn't currently have a separate enum
+    /// value, and is handled entriely within Thumb1FrameLowering::emitPrologue.
+    SplitR7,
+
+    /// When the stack frame size is not known (because of variable-sized
+    /// objects or realignment), Windows SEH requires the callee-saved registers
+    /// to be stored in three regions, with R11 and LR below the floating-point
+    /// registers.
+    /// push {r0-r10, r12}
+    /// vpush {d8-d15}
+    /// push {r11, lr}
+    SplitR11WindowsSEH,
+
+    /// When generating AAPCS-compilant frame chains, R11 is the frame pointer,
+    /// and must be pushed adjacent to the return address (LR). Normally this
+    /// isn't a problem, because the only register between them is r12, which is
+    /// the intra-procedure-call scratch register, so doesn't need to be saved.
+    /// However, when PACBTI is in use, r12 contains the authentication code, so
+    /// does need to be saved. This means that we need a separate push for R11
+    /// and LR.
+    /// push {r0-r10, r12}
+    /// push {r11, lr}
+    /// vpush {d8-d15}
+    SplitR11AAPCSSignRA,
   };
 
 protected:
@@ -175,9 +151,6 @@ protected:
   ///  blocks.
   bool RestrictIT = false;
 
-  /// UseSjLjEH - If true, the target uses SjLj exception handling (e.g. iOS).
-  bool UseSjLjEH = false;
-
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
@@ -199,7 +172,7 @@ protected:
   int PreISelOperandLatencyAdjustment = 2;
 
   /// What alignment is preferred for loop bodies and functions, in log2(bytes).
-  unsigned PrefLoopLogAlignment = 0;
+  unsigned PreferBranchLogAlignment = 0;
 
   /// The cost factor for MVE instructions, representing the multiple beats an
   // instruction can take. The default is 2, (set in initSubtargetFeatures so
@@ -212,6 +185,12 @@ protected:
 
   /// IsLittle - The target is Little Endian
   bool IsLittle;
+
+  /// DM - Denormal mode
+  /// NEON and VFP RunFast mode are not IEEE 754 compliant,
+  /// use this field to determine whether to generate NEON/VFP
+  /// instructions in related function.
+  DenormalMode DM;
 
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
@@ -233,7 +212,7 @@ public:
   ///
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const ARMBaseTargetMachine &TM, bool IsLittle,
-               bool MinSize = false);
+               bool MinSize = false, DenormalMode DM = DenormalMode::getIEEE());
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
@@ -279,6 +258,7 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
 
 private:
   ARMSelectionDAGInfo TSInfo;
@@ -294,7 +274,6 @@ private:
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
-  void initializeEnvironment();
   void initSubtargetFeatures(StringRef CPU, StringRef FS);
   ARMFrameLowering *initializeFrameLowering(StringRef CPU, StringRef FS);
 
@@ -315,7 +294,9 @@ public:
   bool isCortexA15() const { return ARMProcFamily == CortexA15; }
   bool isSwift()    const { return ARMProcFamily == Swift; }
   bool isCortexM3() const { return ARMProcFamily == CortexM3; }
+  bool isCortexM55() const { return ARMProcFamily == CortexM55; }
   bool isCortexM7() const { return ARMProcFamily == CortexM7; }
+  bool isCortexM85() const { return ARMProcFamily == CortexM85; }
   bool isLikeA9() const { return isCortexA9() || isCortexA15() || isKrait(); }
   bool isCortexR5() const { return ARMProcFamily == CortexR5; }
   bool isKrait() const { return ARMProcFamily == Krait; }
@@ -343,7 +324,6 @@ public:
   }
   bool useFPVFMx16() const { return useFPVFMx() && hasFullFP16(); }
   bool useFPVFMx64() const { return useFPVFMx() && hasFP64(); }
-  bool useSjLjEH() const { return UseSjLjEH; }
   bool hasBaseDSP() const {
     if (isThumb())
       return hasThumb2() && hasDSP();
@@ -356,13 +336,16 @@ public:
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
+  /// @{
+  /// These properties are per-module, please use the TargetMachine
+  /// TargetTriple.
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
   bool isTargetWatchABI() const { return TargetTriple.isWatchABI(); }
   bool isTargetDriverKit() const { return TargetTriple.isDriverKit(); }
+  bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
-  bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetNetBSD() const { return TargetTriple.isOSNetBSD(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
 
@@ -370,37 +353,18 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
-  // ARM EABI is the bare-metal EABI described in ARM ABI documents and
-  // can be accessed via -target arm-none-eabi. This is NOT GNUEABI.
-  // FIXME: Add a flag for bare-metal for that target and set Triple::EABI
-  // even for GNUEABI, so we can make a distinction here and still conform to
-  // the EABI on GNU (and Android) mode. This requires change in Clang, too.
-  // FIXME: The Darwin exception is temporary, while we move users to
-  // "*-*-*-macho" triples as quickly as possible.
-  bool isTargetAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::EABI ||
-            TargetTriple.getEnvironment() == Triple::EABIHF) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
-  bool isTargetGNUAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::GNUEABI ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHF) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
-  bool isTargetMuslAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::MuslEABI ||
-            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-            TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
+  bool isTargetAEABI() const { return TargetTriple.isTargetAEABI(); }
+
+  bool isTargetGNUAEABI() const { return TargetTriple.isTargetGNUAEABI(); }
+
+  bool isTargetMuslAEABI() const { return TargetTriple.isTargetMuslAEABI(); }
 
   // ARM Targets that support EHABI exception handling standard
   // Darwin uses SjLj. Other targets might need more checks.
   bool isTargetEHABICompatible() const {
     return TargetTriple.isTargetEHABICompatible();
   }
-
-  bool isTargetHardFloat() const;
+  /// @}
 
   bool isReadTPSoft() const {
     return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());
@@ -409,10 +373,6 @@ public:
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
 
   bool isXRaySupported() const override;
-
-  bool isAPCS_ABI() const;
-  bool isAAPCS_ABI() const;
-  bool isAAPCS16_ABI() const;
 
   bool isROPI() const;
   bool isRWPI() const;
@@ -437,19 +397,8 @@ public:
     return ARM::R11;
   }
 
-  /// Returns true if the frame setup is split into two separate pushes (first
-  /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
-  /// to lr. This is always required on Thumb1-only targets, as the push and
-  /// pop instructions can't access the high registers.
-  bool splitFramePushPop(const MachineFunction &MF) const {
-    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress())
-      return true;
-    return (getFramePointerReg() == ARM::R7 &&
-            MF.getTarget().Options.DisableFramePointerElim(MF)) ||
-           isThumb1Only();
-  }
-
-  bool splitFramePointerPush(const MachineFunction &MF) const;
+  enum PushPopSplitVariation
+  getPushPopSplitVariation(const MachineFunction &MF) const;
 
   bool useStride4VFPs() const;
 
@@ -542,7 +491,9 @@ public:
     return isROPI() || !isTargetELF();
   }
 
-  unsigned getPrefLoopLogAlignment() const { return PrefLoopLogAlignment; }
+  unsigned getPreferBranchLogAlignment() const {
+    return PreferBranchLogAlignment;
+  }
 
   unsigned
   getMVEVectorCostFactor(TargetTransformInfo::TargetCostKind CostKind) const {
@@ -552,7 +503,7 @@ public:
   }
 
   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                   unsigned PhysReg) const override;
+                                   MCRegister PhysReg) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 

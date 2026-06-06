@@ -19,8 +19,7 @@
 ; NO-FMA:      <_foo>:
 ; NO-FMA-NEXT: vrcpss %xmm0, %xmm0, %xmm1
 ; NO-FMA-NEXT: vmulss %xmm1, %xmm0, %xmm0
-; NO-FMA-NEXT: vmovss [[#]](%rip), %xmm2  ## xmm2 =
-; NO-FMA-NEXT:                            ## 0x
+; NO-FMA-NEXT: vmovss [[#]](%rip), %xmm2  ## 0x
 ; NO-FMA-NEXT: vsubss %xmm0, %xmm2, %xmm0
 ; NO-FMA-NEXT: vmulss %xmm0, %xmm1, %xmm0
 ; NO-FMA-NEXT: vaddss %xmm0, %xmm1, %xmm0
@@ -34,4 +33,4 @@ define float @foo(float %x) #0 {
   ret float %div
 }
 
-attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="divf,vec-divf" }
+attributes #0 = { "reciprocal-estimates"="divf,vec-divf" }

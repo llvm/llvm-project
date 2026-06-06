@@ -8,7 +8,7 @@
 
 // <valarray>
 
-// class glice;
+// class gslice;
 
 // gslice(size_t start, const valarray<size_t>& size,
 //                      const valarray<size_t>& stride);

@@ -1,9 +1,9 @@
 // Test this without pch.
-// RUN: %clang_cc1 -std=c++11 -fopenmp -fsyntax-only -verify %s -ast-dump-all | FileCheck %s -implicit-check-not=openmp_structured_block
+// RUN: %clang_cc1 -std=c++11 -fopenmp -verify %s -ast-dump-all | FileCheck %s -implicit-check-not=openmp_structured_block
 
 // Test with pch. Use '-ast-dump' to force deserialization of function bodies.
 // RUN: %clang_cc1 -std=c++11 -fopenmp -emit-pch -o %t %s
-// RUN: echo "// expected-no-diagnostics" | %clang_cc1 -x c++ -std=c++11 -include-pch %t -fopenmp -fsyntax-only -verify - -ast-dump-all | FileCheck %s -implicit-check-not=openmp_structured_block
+// RUN: echo "// expected-no-diagnostics" | %clang_cc1 -x c++ -std=c++11 -include-pch %t -fopenmp -verify - -ast-dump-all | FileCheck %s -implicit-check-not=openmp_structured_block
 
 void test() {
 #pragma omp parallel

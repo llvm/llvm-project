@@ -6,15 +6,15 @@
 
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[INT:.*]] = {{.*}} c"'int'\00" }
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[UNSIGNED_SHORT:.*]] = {{.*}} c"'unsigned short'\00" }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_100:.*]] = {{.*}}, i32 100, i32 11 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 11 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 3 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_100:.*]] = {{.*}}, i32 100, i32 11 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 11 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 3, i32 0 }
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[SHORT:.*]] = {{.*}} c"'short'\00" }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 11 }, ptr @[[INT]], ptr @[[SHORT]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 11 }, ptr @[[INT]], ptr @[[SHORT]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 10 }, ptr @[[INT]], ptr @[[SHORT]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 10 }, ptr @[[INT]], ptr @[[SHORT]], i8 3 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 11 }, ptr @[[INT]], ptr @[[SHORT]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 11 }, ptr @[[INT]], ptr @[[SHORT]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 10 }, ptr @[[INT]], ptr @[[SHORT]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-DAG: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 10 }, ptr @[[INT]], ptr @[[SHORT]], i8 3, i32 0 }
 
 unsigned short t0(unsigned short x) {
 // CHECK-NOSANITIZE-LABEL: @t0(
@@ -34,7 +34,7 @@ unsigned short t0(unsigned short x) {
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED:%.*]] = zext i16 [[X_RELOADED]] to i32
 // CHECK-SANITIZE-NEXT:               [[INC:%.*]] = add i32 [[X_PROMOTED]], 1
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED_DEMOTED:%.*]] = trunc i32 [[INC]] to i16
-// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !2
+// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !1
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], false, !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
@@ -69,7 +69,7 @@ unsigned short t1(unsigned short x) {
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED:%.*]] = zext i16 [[X_RELOADED]] to i32
 // CHECK-SANITIZE-NEXT:               [[INC:%.*]] = add i32 [[X_PROMOTED]], -1
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED_DEMOTED:%.*]] = trunc i32 [[INC]] to i16
-// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !2
+// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !1
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], false, !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
@@ -105,7 +105,7 @@ unsigned short t2(unsigned short x) {
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED:%.*]] = zext i16 [[X_RELOADED]] to i32
 // CHECK-SANITIZE-NEXT:               [[INC:%.*]] = add i32 [[X_PROMOTED]], 1
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED_DEMOTED:%.*]] = trunc i32 [[INC]] to i16
-// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !2
+// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !1
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], false, !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
@@ -141,7 +141,7 @@ unsigned short t3(unsigned short x) {
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED:%.*]] = zext i16 [[X_RELOADED]] to i32
 // CHECK-SANITIZE-NEXT:               [[INC:%.*]] = add i32 [[X_PROMOTED]], -1
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED_DEMOTED:%.*]] = trunc i32 [[INC]] to i16
-// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !2
+// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !1
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], false, !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
@@ -177,8 +177,8 @@ signed short t4(signed short x) {
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED:%.*]] = sext i16 [[X_RELOADED]] to i32
 // CHECK-SANITIZE-NEXT:               [[INC:%.*]] = add i32 [[X_PROMOTED]], 1
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED_DEMOTED:%.*]] = trunc i32 [[INC]] to i16
-// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !2
-// CHECK-SANITIZE-NEXT:               [[DST_NEGATIVITYCHECK:%.*]] = icmp slt i16 [[X_PROMOTED_DEMOTED]], 0, !nosanitize !2
+// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !1
+// CHECK-SANITIZE-NEXT:               [[DST_NEGATIVITYCHECK:%.*]] = icmp slt i16 [[X_PROMOTED_DEMOTED]], 0, !nosanitize !1
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], [[DST_NEGATIVITYCHECK]], !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
@@ -213,8 +213,8 @@ signed short t5(signed short x) {
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED:%.*]] = sext i16 [[X_RELOADED]] to i32
 // CHECK-SANITIZE-NEXT:               [[INC:%.*]] = add i32 [[X_PROMOTED]], -1
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED_DEMOTED:%.*]] = trunc i32 [[INC]] to i16
-// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !2
-// CHECK-SANITIZE-NEXT:               [[DST_NEGATIVITYCHECK:%.*]] = icmp slt i16 [[X_PROMOTED_DEMOTED]], 0, !nosanitize !2
+// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !1
+// CHECK-SANITIZE-NEXT:               [[DST_NEGATIVITYCHECK:%.*]] = icmp slt i16 [[X_PROMOTED_DEMOTED]], 0, !nosanitize !1
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], [[DST_NEGATIVITYCHECK]], !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
@@ -250,8 +250,8 @@ signed short t6(signed short x) {
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED:%.*]] = sext i16 [[X_RELOADED]] to i32
 // CHECK-SANITIZE-NEXT:               [[INC:%.*]] = add i32 [[X_PROMOTED]], 1
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED_DEMOTED:%.*]] = trunc i32 [[INC]] to i16
-// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !2
-// CHECK-SANITIZE-NEXT:               [[DST_NEGATIVITYCHECK:%.*]] = icmp slt i16 [[X_PROMOTED_DEMOTED]], 0, !nosanitize !2
+// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !1
+// CHECK-SANITIZE-NEXT:               [[DST_NEGATIVITYCHECK:%.*]] = icmp slt i16 [[X_PROMOTED_DEMOTED]], 0, !nosanitize !1
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], [[DST_NEGATIVITYCHECK]], !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
@@ -287,8 +287,8 @@ signed short t7(signed short x) {
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED:%.*]] = sext i16 [[X_RELOADED]] to i32
 // CHECK-SANITIZE-NEXT:               [[INC:%.*]] = add i32 [[X_PROMOTED]], -1
 // CHECK-SANITIZE-NEXT:               [[X_PROMOTED_DEMOTED:%.*]] = trunc i32 [[INC]] to i16
-// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !2
-// CHECK-SANITIZE-NEXT:               [[DST_NEGATIVITYCHECK:%.*]] = icmp slt i16 [[X_PROMOTED_DEMOTED]], 0, !nosanitize !2
+// CHECK-SANITIZE-NEXT:               [[SRC_INC_NEGATIVITYCHECK:%.*]] = icmp slt i32 [[INC]], 0, !nosanitize !1
+// CHECK-SANITIZE-NEXT:               [[DST_NEGATIVITYCHECK:%.*]] = icmp slt i16 [[X_PROMOTED_DEMOTED]], 0, !nosanitize !1
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], [[DST_NEGATIVITYCHECK]], !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:

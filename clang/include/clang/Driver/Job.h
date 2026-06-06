@@ -150,6 +150,10 @@ class Command {
   /// Information on executable run provided by OS.
   mutable std::optional<llvm::sys::ProcessStatistics> ProcStat;
 
+  /// The bound architecture for this command (e.g. "arm64", "x86_64").
+  /// Non-empty only for Darwin multi-arch builds.
+  std::string BoundArch;
+
   /// When a response file is needed, we try to put most arguments in an
   /// exclusive file, while others remains as regular command line arguments.
   /// This functions fills a vector with the regular command line arguments,
@@ -172,8 +176,7 @@ public:
   Command(const Action &Source, const Tool &Creator,
           ResponseFileSupport ResponseSupport, const char *Executable,
           const llvm::opt::ArgStringList &Arguments, ArrayRef<InputInfo> Inputs,
-          ArrayRef<InputInfo> Outputs = std::nullopt,
-          const char *PrependArg = nullptr);
+          ArrayRef<InputInfo> Outputs = {}, const char *PrependArg = nullptr);
   // FIXME: This really shouldn't be copyable, but is currently copied in some
   // error handling in Driver::generateCompilationDiagnostics.
   Command(const Command &) = default;
@@ -190,6 +193,10 @@ public:
 
   /// getCreator - Return the Tool which caused the creation of this job.
   const Tool &getCreator() const { return Creator; }
+
+  /// Return the bound architecture for this command, if any.
+  StringRef getBoundArch() const { return BoundArch; }
+  void setBoundArch(StringRef Arch) { BoundArch = std::string(Arch); }
 
   /// Returns the kind of response file supported by the current invocation.
   const ResponseFileSupport &getResponseFileSupport() {
@@ -245,8 +252,7 @@ public:
   CC1Command(const Action &Source, const Tool &Creator,
              ResponseFileSupport ResponseSupport, const char *Executable,
              const llvm::opt::ArgStringList &Arguments,
-             ArrayRef<InputInfo> Inputs,
-             ArrayRef<InputInfo> Outputs = std::nullopt,
+             ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs = {},
              const char *PrependArg = nullptr);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
@@ -280,6 +286,9 @@ public:
   void clear();
 
   const list_type &getJobs() const { return Jobs; }
+
+  // Returns and transfers ownership of all jobs, leaving this list empty.
+  list_type takeJobs() { return std::exchange(Jobs, {}); };
 
   bool empty() const { return Jobs.empty(); }
   size_type size() const { return Jobs.size(); }

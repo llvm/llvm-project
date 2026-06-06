@@ -1,5 +1,8 @@
 # RUN: llc -run-pass=mir-strip-debug -o - %s | FileCheck %s
 # RUN: llc -run-pass=mir-strip-debug,mir-debugify,mir-strip-debug -o - %s | FileCheck %s
+
+# RUN: llc -passes=mir-strip-debug -o - %s | FileCheck %s
+# RUN: llc -passes=mir-strip-debug,mir-debugify,mir-strip-debug -o - %s | FileCheck %s
 --- |
   ; ModuleID = 'loc-only.ll'
   source_filename = "loc-only.ll"
@@ -21,7 +24,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { nounwind readnone speculatable willreturn }
   attributes #1 = { nounwind }

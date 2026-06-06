@@ -12,10 +12,17 @@ tablegen("SystemZGenDAGISel") {
   td_file = "SystemZ.td"
 }
 
+tablegen("SystemZGenSDNodeInfo") {
+  visibility = [ ":LLVMSystemZCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "SystemZ.td"
+}
+
 static_library("LLVMSystemZCodeGen") {
   deps = [
     ":SystemZGenCallingConv",
     ":SystemZGenDAGISel",
+    ":SystemZGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -54,6 +61,7 @@ static_library("LLVMSystemZCodeGen") {
     "SystemZSubtarget.cpp",
     "SystemZTDC.cpp",
     "SystemZTargetMachine.cpp",
+    "SystemZTargetObjectFile.cpp",
     "SystemZTargetTransformInfo.cpp",
   ]
 }

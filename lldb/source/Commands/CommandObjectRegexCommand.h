@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H
-#define LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H
+#ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTREGEXCOMMAND_H
+#define LLDB_SOURCE_COMMANDS_COMMANDOBJECTREGEXCOMMAND_H
 
 #include <list>
 
@@ -37,7 +37,7 @@ public:
   void HandleCompletion(CompletionRequest &request) override;
 
 protected:
-  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
+  void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
   /// Substitute variables of the format %\d+ in the input string.
   static llvm::Expected<std::string> SubstituteVariables(
@@ -62,4 +62,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_COMMANDOBJECTREGEXCOMMAND_H
+#endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTREGEXCOMMAND_H

@@ -5,22 +5,28 @@
 ; REQUIRES: asserts
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Runtime Library Function Analysis
 ; CHECK-NEXT: Target Pass Configuration
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Assumption Cache Tracker
+; CHECK-NEXT: Library Function Lowering Analysis
 ; CHECK-NEXT: Type-Based Alias Analysis
 ; CHECK-NEXT: Scoped NoAlias Alias Analysis
-; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
+; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT: Default Regalloc Eviction Advisor
 ; CHECK-NEXT: Default Regalloc Priority Advisor
 ; CHECK-NEXT:   ModulePass Manager
+; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:       Function Alias Analysis Results
+; CHECK-NEXT:       ObjC ARC contraction
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Expand large div/rem
-; CHECK-NEXT:       Expand large fp convert
+; CHECK-NEXT:       Expand IR instructions
 ; CHECK-NEXT:       Convert i1 constants to i32/i64 if they are returned
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:     PPC Lower MASS Entries
@@ -45,16 +51,8 @@
 ; CHECK-NEXT:         Canonicalize Freeze Instructions in Loops
 ; CHECK-NEXT:         Induction Variable Users
 ; CHECK-NEXT:         Loop Strength Reduction
-; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
-; CHECK-NEXT:       Function Alias Analysis Results
-; CHECK-NEXT:       Merge contiguous icmps into a memcmp
-; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       Lazy Branch Probability Analysis
-; CHECK-NEXT:       Lazy Block Frequency Analysis
-; CHECK-NEXT:       Expand memcmp() to load/stores
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
-; CHECK-NEXT:       Lower constant intrinsics
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Post-Dominator Tree Construction
@@ -62,18 +60,21 @@
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Constant Hoisting
 ; CHECK-NEXT:       Replace intrinsics with calls to vector library
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Partially inline calls to library functions
-; CHECK-NEXT:       Expand vector predication intrinsics
+; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       TLS Variable Hoist
+; CHECK-NEXT:       Post-Dominator Tree Construction
+; CHECK-NEXT:       Branch Probability Analysis
+; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
-; CHECK-NEXT:       PPC Merge String Pool
-; CHECK-NEXT:       FunctionPass Manager
-; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Merge internal globals
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Prepare loop for ppc preferred instruction forms
@@ -82,7 +83,7 @@
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Hardware Loop Insertion
-; CHECK-NEXT:       Prepare callbr
+; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
@@ -149,6 +150,7 @@
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Modulo Software Pipelining
 ; CHECK-NEXT:       Detect Dead Lanes
+; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
 ; CHECK-NEXT:       Live Variable Analysis
@@ -160,12 +162,12 @@
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
+; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Instruction Scheduler
 ; CHECK-NEXT:       PowerPC VSX FMA Mutation
-; CHECK-NEXT:       Machine Natural Loop Construction
-; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Debug Variable Analysis
 ; CHECK-NEXT:       Live Stack Slot Analysis
+; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Virtual Register Map
 ; CHECK-NEXT:       Live Register Matrix
 ; CHECK-NEXT:       Bundle Machine CFG Edges
@@ -209,9 +211,9 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       PowerPC Pre-Emit Peephole
-; CHECK-NEXT:       PowerPC Expand ISEL Generation
 ; CHECK-NEXT:       PowerPC Early-Return Creation
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
+; CHECK-NEXT:       Remove Loads Into Fake Uses
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata

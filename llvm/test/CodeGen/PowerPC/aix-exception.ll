@@ -2,7 +2,7 @@
 ; RUN:     -mattr=-altivec -simplifycfg-require-and-preserve-domtree=1 < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMNFS,ASM32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -simplifycfg-require-and-preserve-domtree=1 < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMNFS,ASM64 %s
 
@@ -11,7 +11,7 @@
 ; RUN:     -function-sections < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMFS,ASM32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -simplifycfg-require-and-preserve-domtree=1 \
 ; RUN:     -function-sections < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMFS,ASM64 %s
@@ -113,7 +113,7 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:    .vbyte  4, 0x00000000                   # Traceback table begin
 ; ASM:    .byte   0x00                            # Version = 0
 ; ASM:    .byte   0x09                            # Language = CPlusPlus
-; ASM:    .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM:    .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; ASM:                                    # +HasTraceBackTableOffset, -IsInternalProcedure
 ; ASM:                                    # -HasControlledStorage, -IsTOCless
 ; ASM:                                    # -IsFloatingPointPresent
@@ -180,7 +180,7 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:  L..C0:
 ; ASM:    .tc _ZTIi[TC],_ZTIi[UA]
 ; ASM:  L..C1:
-; ASM:    .tc __ehinfo.1[TC],__ehinfo.1
+; ASM:    .tc __ehinfo.1[TE],__ehinfo.1
 
 declare ptr @__cxa_allocate_exception(i32)
 declare void @__cxa_throw(ptr, ptr, ptr)

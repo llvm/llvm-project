@@ -3,17 +3,21 @@
 ; RUN: llc -mtriple aarch64-apple-macosx %s -filetype asm -o - | FileCheck %s
 ; Regression test for https://github.com/llvm/llvm-project/issues/59751
 
-define void @"func"(i32** swifterror %0) #0 {
+define void @"func"(ptr swifterror %0) #0 {
 ; CHECK-LABEL: func:
-; CHECK:       {{.*}}%bb.0:
-; CHECK-NEXT:    b {{\.?}}LBB0_2
-; CHECK-NEXT:  {{\.?}}LBB0_1:{{.*}}%thirtythree
-; CHECK-NEXT:  {{.*}}=>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    b {{\.?}}LBB0_1
-; CHECK-NEXT:  {{\.?}}LBB0_2:{{.*}}%thirtyeight
-; CHECK-NEXT:    b {{\.?}}LBB0_3
-; CHECK-NEXT:  {{\.?}}LBB0_3:{{.*}}%thirtythree.preheader
-; CHECK-NEXT:    b {{\.?}}LBB0_1
+; CHECK:  {{.*}}%bb.0:
+; CHECK:    b {{.*}}LBB0_5
+; CHECK:  {{.*}}LBB0_1:{{.*}}%common.ret
+; CHECK:  {{.*}}LBB0_2:
+; CHECK:    b {{.*}}LBB0_1
+; CHECK:  {{.*}}LBB0_4:{{.*}}%thirtythree
+; CHECK:    {{.*}}=>This Inner Loop Header: Depth=1
+; CHECK:    b {{.*}}LBB0_4
+; CHECK:  {{.*}}LBB0_5:{{.*}}%thirtyeight
+; CHECK:    {{.*}}=>This Inner Loop Header: Depth=1
+; CHECK:    b {{.*}}LBB0_6
+; CHECK:  {{.*}}LBB0_6:{{.*}}%thirtythree.preheader
+; CHECK:    b {{.*}}LBB0_4
   br label %thirtyeight
 
 five:
@@ -23,9 +27,9 @@ common.ret:
   ret void
 
 UelOc2l.exit:
-  %a = getelementptr inbounds [754 x i8*], [754 x i8*]* undef, i32 undef, i32 undef
-  %b = load i8*, i8** %a, align 8
-  %c = bitcast i8* %b to void ()*
+  %a = getelementptr inbounds [754 x ptr], ptr undef, i32 undef, i32 undef
+  %b = load ptr, ptr %a, align 8
+  %c = bitcast ptr %b to ptr
   call void %c()
   br label %common.ret
 
@@ -33,7 +37,7 @@ thirtythree:
   br i1 false, label %UelOc2l.exit, label %thirtythree
 
 thirtyeight:
-  br i1 undef, label %thirtyeight, label %thirtythree
+  br i1 poison, label %thirtyeight, label %thirtythree
 }
 
 attributes #0 = { noinline optnone }

@@ -1,5 +1,5 @@
 ! Test lowering of derived type temporary creation and init
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 program derived_temp_init
   type t1
@@ -13,7 +13,9 @@ program derived_temp_init
   y = t2(x)
 end
 
-! CHECK: %[[temp:.*]] = fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
-! CHECK: %[[box:.*]] = fir.embox %[[temp]] : (!fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
-! CHECK: %[[box_none:.*]] = fir.convert %[[box]] : (!fir.box<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAInitialize(%[[box_none]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: %[[ALLOC:.*]] =  fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
+! CHECK: %[[x:.*]]:2 = hlfir.declare %[[ALLOC]] {{.*}}
+! CHECK: %[[COOR:.*]] = fir.coordinate_of %[[x]]#0, i : (!fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<i32>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK: fir.store %[[EMBOX]] to %[[COOR]] : !fir.ref<!fir.box<!fir.heap<i32>>>

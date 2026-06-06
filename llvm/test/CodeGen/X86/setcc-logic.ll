@@ -132,15 +132,12 @@ return:
 define i32 @all_sign_bits_clear_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_clear_branch:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    js .LBB9_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    js .LBB9_3
-; CHECK-NEXT:  # %bb.2: # %bb1
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    js .LBB9_2
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB9_3: # %return
+; CHECK-NEXT:  .LBB9_2: # %return
 ; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -159,15 +156,13 @@ return:
 define i32 @all_bits_set_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_bits_set_branch:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    cmpl $-1, %edi
-; CHECK-NEXT:    jne .LBB10_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    cmpl $-1, %esi
-; CHECK-NEXT:    jne .LBB10_3
-; CHECK-NEXT:  # %bb.2: # %bb1
+; CHECK-NEXT:    jne .LBB10_2
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB10_3: # %return
+; CHECK-NEXT:  .LBB10_2: # %return
 ; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -186,15 +181,12 @@ return:
 define i32 @all_sign_bits_set_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_set_branch:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jns .LBB11_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    jns .LBB11_3
-; CHECK-NEXT:  # %bb.2: # %bb1
+; CHECK-NEXT:    testl %esi, %edi
+; CHECK-NEXT:    jns .LBB11_2
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB11_3: # %return
+; CHECK-NEXT:  .LBB11_2: # %return
 ; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -238,16 +230,13 @@ return:
 define i32 @any_sign_bits_set_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_set_branch:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    js .LBB13_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    js .LBB13_2
-; CHECK-NEXT:  # %bb.3: # %return
-; CHECK-NEXT:    movl $192, %eax
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB13_2: # %bb1
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    jns .LBB13_2
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB13_2: # %return
+; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 entry:
   %a = icmp slt i32 %P, 0
@@ -265,16 +254,14 @@ return:
 define i32 @any_bits_clear_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_bits_clear_branch:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    cmpl $-1, %edi
-; CHECK-NEXT:    jne .LBB14_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    cmpl $-1, %esi
-; CHECK-NEXT:    jne .LBB14_2
-; CHECK-NEXT:  # %bb.3: # %return
-; CHECK-NEXT:    movl $192, %eax
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB14_2: # %bb1
+; CHECK-NEXT:    je .LBB14_2
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB14_2: # %return
+; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 entry:
   %a = icmp ne i32 %P, -1
@@ -292,16 +279,13 @@ return:
 define i32 @any_sign_bits_clear_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_clear_branch:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jns .LBB15_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    jns .LBB15_2
-; CHECK-NEXT:  # %bb.3: # %return
-; CHECK-NEXT:    movl $192, %eax
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB15_2: # %bb1
+; CHECK-NEXT:    testl %esi, %edi
+; CHECK-NEXT:    js .LBB15_2
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB15_2: # %return
+; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 entry:
   %a = icmp sgt i32 %P, -1
@@ -641,11 +625,34 @@ define i1 @and_icmps_const_1bit_diff_common_op(i32 %x, i32 %y) {
 
 ; PR44136 - fold cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
 
+define i1 @or_cmp_eq_i128(i128 %x, i128 %y) {
+; NOBMI-LABEL: or_cmp_eq_i128:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    notq %rdi
+; NOBMI-NEXT:    notq %rsi
+; NOBMI-NEXT:    andq %rcx, %rsi
+; NOBMI-NEXT:    andq %rdx, %rdi
+; NOBMI-NEXT:    orq %rsi, %rdi
+; NOBMI-NEXT:    sete %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: or_cmp_eq_i128:
+; BMI:       # %bb.0:
+; BMI-NEXT:    andnq %rcx, %rsi, %rax
+; BMI-NEXT:    andnq %rdx, %rdi, %rcx
+; BMI-NEXT:    orq %rax, %rcx
+; BMI-NEXT:    sete %al
+; BMI-NEXT:    retq
+  %o = or i128 %x, %y
+  %c = icmp eq i128 %o, %x
+  ret i1 %c
+}
+
 define i1 @or_cmp_eq_i64(i64 %x, i64 %y) {
 ; NOBMI-LABEL: or_cmp_eq_i64:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notq %rdi
-; NOBMI-NEXT:    testq %rsi, %rdi
+; NOBMI-NEXT:    testq %rdi, %rsi
 ; NOBMI-NEXT:    sete %al
 ; NOBMI-NEXT:    retq
 ;
@@ -663,7 +670,7 @@ define i1 @or_cmp_ne_i32(i32 %x, i32 %y) {
 ; NOBMI-LABEL: or_cmp_ne_i32:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notl %esi
-; NOBMI-NEXT:    testl %edi, %esi
+; NOBMI-NEXT:    testl %esi, %edi
 ; NOBMI-NEXT:    setne %al
 ; NOBMI-NEXT:    retq
 ;
@@ -681,7 +688,7 @@ define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
 ; NOBMI-LABEL: or_cmp_eq_i16:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notl %edi
-; NOBMI-NEXT:    testl %esi, %edi
+; NOBMI-NEXT:    testl %edi, %esi
 ; NOBMI-NEXT:    sete %al
 ; NOBMI-NEXT:    retq
 ;
@@ -699,7 +706,7 @@ define i1 @or_cmp_ne_i8(i8 zeroext %x, i8 zeroext %y) {
 ; CHECK-LABEL: or_cmp_ne_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    testb %dil, %sil
+; CHECK-NEXT:    testb %sil, %dil
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %o = or i8 %x, %y

@@ -11,8 +11,11 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class TestCase(PExpectTest):
+    SHARED_BUILD_TESTCASE = False
+
+    @skipIf(macos_version=["<", "14.0"], asan=True)
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test(self):
         self.build(dictionary={"CXX_SOURCES": "cat.cpp"})
         self.launch(executable=self.getBuildArtifact())
@@ -39,4 +42,3 @@ class TestCase(PExpectTest):
         self.child.expect("Process .* exited")
         self.expect_prompt()
 
-        self.quit()

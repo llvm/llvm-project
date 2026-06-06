@@ -3,8 +3,6 @@
 ; opposed to the operand of a [s|z]ext).
 ; RUN: opt -S -passes='sroa' %s | FileCheck %s
 
-target datalayout = "i64:64"
-
 ; Built from:
 ; struct foo { bool b; long i; };
 ; void f(bool b, bool expr, foo g) {
@@ -14,22 +12,22 @@ target datalayout = "i64:64"
 
 ; Expect two fragments:
 ; * first starting at bit 0, 8 bits (for the bool)
-; * second starting at bit 64, 64 bits (for the long)
-; (this happens to create/demonstrate a gap from bits [7, 64))
+; * second starting at bit 32, 32 bits (for the long)
+; (this happens to create/demonstrate a gap from bits [7, 32))
 
 ; But also check that a complex expression is not used for a lone bool
 ; parameter. It can reference the register it's in directly without masking off
 ; high bits or anything
 
-; CHECK: call void @llvm.dbg.value(metadata i8 %g.coerce0, metadata ![[VAR_STRUCT:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 8))
-; CHECK: call void @llvm.dbg.value(metadata i64 %g.coerce1, metadata ![[VAR_STRUCT]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
-; CHECK: call void @llvm.dbg.value(metadata i8 %frombool, metadata ![[VAR_BOOL:[0-9]+]], metadata !DIExpression())
-; CHECK: call void @llvm.dbg.value(metadata i8 %frombool1, metadata ![[VAR_FRAG:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 4))
+; CHECK: #dbg_value(i8 %g.coerce0, ![[VAR_STRUCT:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 8),
+; CHECK: #dbg_value(i64 %g.coerce1, ![[VAR_STRUCT]], !DIExpression(DW_OP_LLVM_fragment, 32, 64),
+; CHECK: #dbg_value(i8 %frombool, ![[VAR_BOOL:[0-9]+]], !DIExpression(),
+; CHECK: #dbg_value(i8 %frombool1, ![[VAR_FRAG:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 4),
 
 %struct.foo = type { i8, i64 }
 
 ; Function Attrs: noinline nounwind uwtable
-define void @_Z1fbb3foo(i1 zeroext %b, i1 zeroext %frag, i8 %g.coerce0, i64 %g.coerce1) #0 !dbg !6 {
+define void @_Z1fbb3foo(i1 zeroext %b, i1 zeroext %frag, i8 %g.coerce0, i64 %g.coerce1) !dbg !6 {
 entry:
   %g = alloca %struct.foo, align 8
   %b.addr = alloca i8, align 1
@@ -53,10 +51,7 @@ entry:
 ; CHECK: ![[VAR_FRAG]] = !DILocalVariable(name: "frag"
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable }
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

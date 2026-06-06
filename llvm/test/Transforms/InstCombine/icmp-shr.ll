@@ -17,7 +17,7 @@ define i1 @lshr_eq_msb_low_last_zero(i8 %a) {
 
 define <2 x i1> @lshr_eq_msb_low_last_zero_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @lshr_eq_msb_low_last_zero_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[A:%.*]], <i8 6, i8 6>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[A:%.*]], splat (i8 6)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shr = lshr <2 x i8> <i8 127, i8 127>, %a
@@ -576,6 +576,19 @@ define i1 @ashr_ugt_0(i4 %x) {
   ret i1 %r
 }
 
+define i1 @ashr_ugt_0_multiuse(i4 %x, ptr %p) {
+; CHECK-LABEL: @ashr_ugt_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i4 [[S]], 0
+; CHECK-NEXT:    store i4 [[S]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = ashr i4 %x, 1
+  %r = icmp ugt i4 %s, 0 ; 0b0000
+  store i4 %s, ptr %p
+  ret i1 %r
+}
+
 define i1 @ashr_ugt_1(i4 %x) {
 ; CHECK-LABEL: @ashr_ugt_1(
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[X:%.*]], 3
@@ -764,6 +777,19 @@ define i1 @ashr_ult_2(i4 %x) {
   ret i1 %r
 }
 
+define i1 @ashr_ult_2_multiuse(i4 %x, ptr %p) {
+; CHECK-LABEL: @ashr_ult_2_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[S]], 2
+; CHECK-NEXT:    store i4 [[S]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = ashr i4 %x, 1
+  %r = icmp ult i4 %s, 2 ; 0b0010
+  store i4 %s, ptr %p
+  ret i1 %r
+}
+
 ; negative test
 
 define i1 @ashr_ult_3(i4 %x) {
@@ -908,7 +934,7 @@ define i1 @lshr_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @lshr_eq_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[S]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = lshr i8 %x, 2
@@ -921,7 +947,7 @@ define i1 @lshr_ne_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @lshr_ne_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[S]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = lshr i8 %x, 2
@@ -934,7 +960,7 @@ define i1 @ashr_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @ashr_eq_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[S]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i8 %x, 2
@@ -947,11 +973,51 @@ define i1 @ashr_ne_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @ashr_ne_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[S]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i8 %x, 2
   call void @use(i8 %s)
+  %c = icmp ne i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @lshr_eq_0(i8 %x) {
+; CHECK-LABEL: @lshr_eq_0(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = lshr i8 %x, 2
+  %c = icmp eq i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @lshr_ne_0(i8 %x) {
+; CHECK-LABEL: @lshr_ne_0(
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = lshr i8 %x, 2
+  %c = icmp ne i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @ashr_eq_0(i8 %x) {
+; CHECK-LABEL: @ashr_eq_0(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 2
+  %c = icmp eq i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @ashr_ne_0(i8 %x) {
+; CHECK-LABEL: @ashr_ne_0(
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 2
   %c = icmp ne i8 %s, 0
   ret i1 %c
 }
@@ -1020,7 +1086,7 @@ define i1 @lshr_pow2_ugt(i8 %x) {
 
 define i1 @lshr_pow2_ugt_use(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_ugt_use(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X]], 5
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -1046,7 +1112,7 @@ define <2 x i1> @lshr_pow2_ugt_vec(<2 x i8> %x) {
 define i1 @lshr_not_pow2_ugt(i8 %x) {
 ; CHECK-LABEL: @lshr_not_pow2_ugt(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 3, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[S]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i8 [[S]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 3, %x
@@ -1068,8 +1134,8 @@ define i1 @lshr_pow2_ugt1(i8 %x) {
 
 define i1 @ashr_pow2_ugt(i8 %x) {
 ; CHECK-LABEL: @ashr_pow2_ugt(
-; CHECK-NEXT:    [[S:%.*]] = ashr i8 -128, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[S]], -96
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i8 [[S]], -96
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i8 128, %x
@@ -1081,7 +1147,7 @@ define i1 @ashr_pow2_ugt(i8 %x) {
 
 define i1 @lshr_pow2_sgt(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_sgt(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[S]], 3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1102,7 +1168,7 @@ define i1 @lshr_pow2_ult(i8 %x) {
 
 define i1 @lshr_pow2_ult_use(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_ult_use(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], 4
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -1128,7 +1194,7 @@ define <2 x i1> @lshr_pow2_ult_vec(<2 x i8> %x) {
 define i1 @lshr_not_pow2_ult(i8 %x) {
 ; CHECK-LABEL: @lshr_not_pow2_ult(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 3, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult i8 [[S]], 2
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 3, %x
@@ -1160,8 +1226,8 @@ define i1 @lshr_pow2_ult_smin(i8 %x) {
 
 define i1 @ashr_pow2_ult(i8 %x) {
 ; CHECK-LABEL: @ashr_pow2_ult(
-; CHECK-NEXT:    [[S:%.*]] = ashr i8 -128, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], -96
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult i8 [[S]], -96
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i8 128, %x
@@ -1173,7 +1239,7 @@ define i1 @ashr_pow2_ult(i8 %x) {
 
 define i1 @lshr_pow2_slt(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_slt(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[S]], 3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1332,7 +1398,7 @@ define i1 @exactly_one_set_signbit_use1(i8 %x, i8 %y) {
 define <2 x i1> @same_signbit(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @same_signbit(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[R1]]
 ;
   %xsign = lshr <2 x i8> %x, <i8 7, i8 7>
@@ -1493,7 +1559,7 @@ define i1 @exactly_one_set_signbit_use1_signed(i8 %x, i8 %y) {
 define <2 x i1> @same_signbit_signed(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @same_signbit_signed(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[R1]]
 ;
   %xsign = ashr <2 x i8> %x, <i8 7, i8 7>
@@ -1605,7 +1671,7 @@ define i1 @slt_zero_ult_i1_fail1(i32 %a, i1 %b) {
 ; CHECK-LABEL: @slt_zero_ult_i1_fail1(
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A:%.*]], 30
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[CMP1]], [[CONV]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[CMP1]], [[CONV]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %conv = zext i1 %b to i32

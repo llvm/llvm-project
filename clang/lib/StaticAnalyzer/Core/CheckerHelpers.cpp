@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include <optional>
 
 namespace clang {
@@ -128,24 +129,38 @@ std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP) {
 
   // Parse an integer at the end of the macro definition.
   const Token &T = FilteredTokens.back();
-  // FIXME: EOF macro token coming from a PCH file on macOS while marked as
-  //        literal, doesn't contain any literal data
-  if (!T.isLiteral() || !T.getLiteralData())
+
+  if (!T.isLiteral())
     return std::nullopt;
-  StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
-  llvm::APInt IntValue;
+
+  bool InvalidSpelling = false;
+  SmallVector<char> Buffer(T.getLength());
+  // `Preprocessor::getSpelling` can get the spelling of the token regardless of
+  // whether the macro is defined in a PCH or not:
+  StringRef ValueStr = PP.getSpelling(T, Buffer, &InvalidSpelling);
+
+  if (InvalidSpelling)
+    return std::nullopt;
+
+  llvm::APSInt IntValue(/*BitWidth=*/0, /*isUnsigned=*/true);
   constexpr unsigned AutoSenseRadix = 0;
-  if (ValueStr.getAsInteger(AutoSenseRadix, IntValue))
+  if (ValueStr.getAsInteger(AutoSenseRadix,
+                            static_cast<llvm::APInt &>(IntValue)))
     return std::nullopt;
 
   // Parse an optional minus sign.
   size_t Size = FilteredTokens.size();
   if (Size >= 2) {
-    if (FilteredTokens[Size - 2].is(tok::minus))
+    if (FilteredTokens[Size - 2].is(tok::minus)) {
+      // Make sure there's space for a sign bit
+      if (IntValue.isSignBitSet())
+        IntValue = IntValue.extend(IntValue.getBitWidth() + 1);
+      IntValue.setIsUnsigned(false);
       IntValue = -IntValue;
+    }
   }
 
-  return IntValue.getSExtValue();
+  return IntValue.getExtValue();
 }
 
 OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
@@ -180,6 +195,24 @@ OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
   default:
     llvm_unreachable("unexpected operator kind");
   }
+}
+
+std::optional<SVal> getPointeeVal(SVal PtrSVal, ProgramStateRef State) {
+  if (const auto *Ptr = PtrSVal.getAsRegion()) {
+    return State->getSVal(Ptr);
+  }
+  return std::nullopt;
+}
+
+bool isWithinStdNamespace(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  while (DC) {
+    if (const auto *NS = dyn_cast<NamespaceDecl>(DC);
+        NS && NS->isStdNamespace())
+      return true;
+    DC = DC->getParent();
+  }
+  return false;
 }
 
 } // namespace ento

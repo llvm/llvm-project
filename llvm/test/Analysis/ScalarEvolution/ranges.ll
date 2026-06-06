@@ -116,7 +116,6 @@ define i32 @phi_div() {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -136,11 +135,9 @@ define void @add_6(i32 %n) {
 ; CHECK-NEXT:    --> {6,+,6}<nuw><%loop> U: [6,-3) S: [-2147483648,2147483647) Exits: (6 + (6 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_6
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 715827882
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 715827882
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -163,11 +160,9 @@ define void @add_7(i32 %n) {
 ; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_7
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 613566756
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 613566756
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -190,11 +185,9 @@ define void @add_8(i32 %n) {
 ; CHECK-NEXT:    --> {8,+,8}<nuw><%loop> U: [8,-7) S: [-2147483648,2147483641) Exits: (8 + (8 * ((7 + %n) /u 8))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_8
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((7 + %n) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 536870911
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 536870911
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((7 + %n) /u 8)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((7 + %n) /u 8)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -218,11 +211,9 @@ define void @add_9(i32 %n) {
 ; CHECK-NEXT:    --> {9,+,9}<nuw><%loop> U: [9,-3) S: [9,0) Exits: (9 + (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_9
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 477218588
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 477218588
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -246,11 +237,9 @@ define void @add_10(i32 %n) {
 ; CHECK-NEXT:    --> {10,+,10}<nuw><%loop> U: [10,-5) S: [-2147483648,2147483647) Exits: (10 + (10 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_10
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 429496729
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 429496729
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -276,7 +265,6 @@ define void @add_8_wrap(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -302,7 +290,6 @@ define void @add_10_wrap(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -321,14 +308,13 @@ define void @mul_6(i32 %n) {
 ; CHECK-LABEL: 'mul_6'
 ; CHECK-NEXT:  Classifying expressions for: @mul_6
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul nuw i32 %iv, 6
 ; CHECK-NEXT:    --> (6 * %iv) U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_6
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -354,7 +340,6 @@ define void @mul_7(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -373,14 +358,13 @@ define void @mul_8(i32 %n) {
 ; CHECK-LABEL: 'mul_8'
 ; CHECK-NEXT:  Classifying expressions for: @mul_8
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-7) S: [-2147483648,2147483585) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-7) S: [-2147483648,2147483641) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul nuw i32 %iv, 8
 ; CHECK-NEXT:    --> (8 * %iv) U: [0,-63) S: [-2147483648,2147483585) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_8
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -406,7 +390,6 @@ define void @mul_9(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -425,14 +408,13 @@ define void @mul_10(i32 %n) {
 ; CHECK-LABEL: 'mul_10'
 ; CHECK-NEXT:  Classifying expressions for: @mul_10
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul nuw i32 %iv, 10
 ; CHECK-NEXT:    --> (10 * %iv) U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_10
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -451,14 +433,13 @@ define void @mul_8_wrap(i32 %n) {
 ; CHECK-LABEL: 'mul_8_wrap'
 ; CHECK-NEXT:  Classifying expressions for: @mul_8_wrap
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-7) S: [-2147483648,2147483585) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-7) S: [-2147483648,2147483641) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul i32 %iv, 8
 ; CHECK-NEXT:    --> (8 * %iv) U: [0,-63) S: [-2147483648,2147483585) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_8_wrap
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -477,14 +458,13 @@ define void @mul_10_wrap(i32 %n) {
 ; CHECK-LABEL: 'mul_10_wrap'
 ; CHECK-NEXT:  Classifying expressions for: @mul_10_wrap
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul i32 %iv, 10
 ; CHECK-NEXT:    --> (10 * %iv) U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_10_wrap
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -511,11 +491,9 @@ define void @truncate(i16 %n) {
 ; CHECK-NEXT:    --> {9,+,9}<%loop> U: full-set S: full-set Exits: (9 + (9 * (trunc i16 ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n)) to i8))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @truncate
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 7281
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 7281
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop

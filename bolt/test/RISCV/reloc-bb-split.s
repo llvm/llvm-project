@@ -1,5 +1,5 @@
-// RUN: %clang %cflags -o %t %s
-// RUN: llvm-bolt --print-cfg --print-only=_start -o /dev/null %t \
+// RUN: %clang %cflags64 -o %t %s
+// RUN: llvm-bolt --print-cfg --print-only=_start -o %t.null %t \
 // RUN:    | FileCheck %s
 
   .data

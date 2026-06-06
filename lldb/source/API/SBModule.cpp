@@ -15,8 +15,6 @@
 #include "lldb/API/SBSymbolContextList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectList.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Symtab.h"
@@ -25,6 +23,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectList.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -37,8 +37,8 @@ SBModule::SBModule(const SBModuleSpec &module_spec) {
   LLDB_INSTRUMENT_VA(this, module_spec);
 
   ModuleSP module_sp;
-  Status error = ModuleList::GetSharedModule(
-      *module_spec.m_opaque_up, module_sp, nullptr, nullptr, nullptr);
+  Status error = ModuleList::GetSharedModule(*module_spec.m_opaque_up,
+                                             module_sp, nullptr, nullptr);
   if (module_sp)
     SetSP(module_sp);
 }
@@ -52,7 +52,14 @@ SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
 
   ProcessSP process_sp(process.GetSP());
   if (process_sp) {
-    m_opaque_sp = process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    llvm::Expected<ModuleSP> module_sp_or_err =
+        process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    if (auto err = module_sp_or_err.takeError()) {
+      llvm::consumeError(std::move(err));
+      return;
+    }
+
+    m_opaque_sp = *module_sp_or_err;
     if (m_opaque_sp) {
       Target &target = process_sp->GetTarget();
       bool changed = false;
@@ -437,26 +444,25 @@ lldb::SBType SBModule::FindFirstType(const char *name_cstr) {
   LLDB_INSTRUMENT_VA(this, name_cstr);
 
   ModuleSP module_sp(GetSP());
-  if (!name_cstr || !module_sp)
-    return {};
-  SymbolContext sc;
-  const bool exact_match = false;
-  ConstString name(name_cstr);
+  if (name_cstr && module_sp) {
+    ConstString name(name_cstr);
+    TypeQuery query(name.GetStringRef(), TypeQueryOptions::e_find_one);
+    TypeResults results;
+    module_sp->FindTypes(query, results);
+    TypeSP type_sp = results.GetFirstType();
+    if (type_sp)
+      return SBType(type_sp);
 
-  SBType sb_type = SBType(module_sp->FindFirstType(sc, name, exact_match));
+    auto type_system_or_err =
+        module_sp->GetTypeSystemForLanguage(eLanguageTypeC);
+    if (auto err = type_system_or_err.takeError()) {
+      llvm::consumeError(std::move(err));
+      return {};
+    }
 
-  if (sb_type.IsValid())
-    return sb_type;
-
-  auto type_system_or_err = module_sp->GetTypeSystemForLanguage(eLanguageTypeC);
-  if (auto err = type_system_or_err.takeError()) {
-    llvm::consumeError(std::move(err));
-    return {};
+    if (auto ts = *type_system_or_err)
+      return SBType(ts->GetBuiltinTypeByName(name));
   }
-
-  if (auto ts = *type_system_or_err)
-    return SBType(ts->GetBuiltinTypeByName(name));
-
   return {};
 }
 
@@ -471,7 +477,7 @@ lldb::SBType SBModule::GetBasicType(lldb::BasicType type) {
       llvm::consumeError(std::move(err));
     } else {
       if (auto ts = *type_system_or_err)
-        return SBType(ts->GetBasicTypeFromAST(type));              
+        return SBType(ts->GetBasicTypeFromAST(type));
     }
   }
   return SBType();
@@ -485,13 +491,11 @@ lldb::SBTypeList SBModule::FindTypes(const char *type) {
   ModuleSP module_sp(GetSP());
   if (type && module_sp) {
     TypeList type_list;
-    const bool exact_match = false;
-    ConstString name(type);
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    module_sp->FindTypes(name, exact_match, UINT32_MAX, searched_symbol_files,
-                         type_list);
-
-    if (type_list.Empty()) {
+    TypeQuery query(type);
+    TypeResults results;
+    module_sp->FindTypes(query, results);
+    if (results.GetTypeMap().Empty()) {
+      ConstString name(type);
       auto type_system_or_err =
           module_sp->GetTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
@@ -502,11 +506,8 @@ lldb::SBTypeList SBModule::FindTypes(const char *type) {
             retval.Append(SBType(compiler_type));
       }
     } else {
-      for (size_t idx = 0; idx < type_list.GetSize(); idx++) {
-        TypeSP type_sp(type_list.GetTypeAtIndex(idx));
-        if (type_sp)
-          retval.Append(SBType(type_sp));
-      }
+      for (const TypeSP &type_sp : results.GetTypeMap().Types())
+        retval.Append(SBType(type_sp));
     }
   }
   return retval;
@@ -586,7 +587,7 @@ const char *SBModule::GetTriple() {
   // Unique the string so we don't run into ownership issues since the const
   // strings put the string into the string pool once and the strings never
   // comes out
-  ConstString const_triple(triple.c_str());
+  ConstString const_triple(triple);
   return const_triple.GetCString();
 }
 
@@ -676,4 +677,12 @@ void SBModule::GarbageCollectAllocatedModules() {
 
   const bool mandatory = false;
   ModuleList::RemoveOrphanSharedModules(mandatory);
+}
+
+const char *SBModule::GetObjectName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_sp)
+    return nullptr;
+  return m_opaque_sp->GetObjectName().AsCString(nullptr);
 }

@@ -20,22 +20,21 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-namespace chrono
-{
+namespace chrono {
 
-class _LIBCPP_EXPORTED_FROM_ABI system_clock
-{
+class _LIBCPP_EXPORTED_FROM_ABI system_clock {
 public:
-    typedef microseconds                     duration;
-    typedef duration::rep                    rep;
-    typedef duration::period                 period;
-    typedef chrono::time_point<system_clock> time_point;
-    static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = false;
+  typedef microseconds duration;
+  typedef duration::rep rep;
+  typedef duration::period period;
+  typedef chrono::time_point<system_clock> time_point;
+  static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = false;
 
-    static time_point now() _NOEXCEPT;
-    static time_t     to_time_t  (const time_point& __t) _NOEXCEPT;
-    static time_point from_time_t(time_t __t) _NOEXCEPT;
+  [[__nodiscard__]] static time_point now() _NOEXCEPT;
+  [[__nodiscard__]] static time_t to_time_t(const time_point& __t) _NOEXCEPT;
+  [[__nodiscard__]] static time_point from_time_t(time_t __t) _NOEXCEPT;
 };
 
 #if _LIBCPP_STD_VER >= 20
@@ -49,6 +48,7 @@ using sys_days    = sys_time<days>;
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CHRONO_SYSTEM_CLOCK_H

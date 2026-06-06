@@ -81,6 +81,14 @@ public:
   SBThreadCollection
   GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type);
 
+  /// Gets a human-readable description of why the thread stopped.
+  ///
+  /// \param stream Output stream to receive the stop description text
+  /// \return
+  ///   true if obtained and written to the stream,
+  //    false if there was an error retrieving the description.
+  bool GetStopDescription(lldb::SBStream &stream) const;
+
   size_t GetStopDescription(char *dst_or_null, size_t dst_len);
 
   SBValue GetStopReturnValue();
@@ -178,6 +186,8 @@ public:
 
   lldb::SBFrame GetFrameAtIndex(uint32_t idx);
 
+  lldb::SBFrameList GetFrames() const;
+
   lldb::SBFrame GetSelectedFrame();
 
   lldb::SBFrame SetSelectedFrame(uint32_t frame_idx);
@@ -200,6 +210,21 @@ public:
 
   bool GetDescription(lldb::SBStream &description, bool stop_format) const;
 
+  /// Similar to \a GetDescription() but the format of the description can be
+  /// configured via the \p format parameter. See
+  /// https://lldb.llvm.org/use/formatting.html for more information on format
+  /// strings.
+  ///
+  /// \param[in] format
+  ///   The format to use for generating the description.
+  ///
+  /// \param[out] output
+  ///   The stream where the description will be written to.
+  ///
+  /// \return
+  ///   An error object with an error message in case of failures.
+  SBError GetDescriptionWithFormat(const SBFormat &format, SBStream &output);
+
   bool GetStatus(lldb::SBStream &status) const;
 
   SBThread GetExtendedBacktraceThread(const char *type);
@@ -218,8 +243,10 @@ private:
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
   friend class SBBreakpointCallbackBaton;
+  friend class SBSaveCoreOptions;
   friend class SBExecutionContext;
   friend class SBFrame;
+  friend class SBFrameList;
   friend class SBProcess;
   friend class SBDebugger;
   friend class SBValue;
@@ -229,14 +256,14 @@ private:
   friend class SBThreadPlan;
   friend class SBTrace;
 
+  friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
 
   SBThread(const lldb::ThreadSP &lldb_object_sp);
 
   void SetThread(const lldb::ThreadSP &lldb_object_sp);
 
-  SBError ResumeNewPlan(lldb_private::ExecutionContext &exe_ctx,
-                        lldb_private::ThreadPlan *new_plan);
+  lldb::ThreadSP GetSP() const;
 
   lldb::ExecutionContextRefSP m_opaque_sp;
 

@@ -11,7 +11,9 @@
 
 #include "Cuda.h"
 #include "Gnu.h"
-#include "ROCm.h"
+#include "clang/Driver/CudaInstallationDetector.h"
+#include "clang/Driver/LazyDetector.h"
+#include "clang/Driver/RocmInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Support/ErrorOr.h"
@@ -20,7 +22,7 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-/// MinGW -- Directly call GNU Binutils assembler and linker
+/// Directly call GNU Binutils assembler and linker
 namespace MinGW {
 class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
@@ -34,7 +36,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("MinGW::Linker", "linker", TC) {}
 
@@ -71,7 +73,9 @@ public:
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefaultForced() const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   llvm::ExceptionHandling GetExceptionModel(
       const llvm::opt::ArgList &Args) const override;
@@ -102,8 +106,8 @@ protected:
   Tool *buildAssembler() const override;
 
 private:
-  CudaInstallationDetector CudaInstallation;
-  RocmInstallationDetector RocmInstallation;
+  LazyDetector<CudaInstallationDetector> CudaInstallation;
+  LazyDetector<RocmInstallationDetector> RocmInstallation;
 
   std::string Base;
   std::string GccLibDir;

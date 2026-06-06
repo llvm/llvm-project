@@ -16,6 +16,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/Support/CommandLine.h"
 #include <optional>
+#include <regex>
 
 static llvm::cl::opt<std::string> mainEntryName(
     "main-entry-name",
@@ -59,7 +60,11 @@ convertToStringRef(const std::optional<std::string> &from) {
 
 static std::string readName(llvm::StringRef uniq, std::size_t &i,
                             std::size_t init, std::size_t end) {
-  for (i = init; i < end && (uniq[i] < 'A' || uniq[i] > 'Z'); ++i) {
+  // Allow 'X' to be part of the mangled name, which
+  // can happen after the special symbols are replaced
+  // in the mangled names by CompilerGeneratedNamesConversionPass.
+  for (i = init; i < end && (uniq[i] < 'A' || uniq[i] > 'Z' || uniq[i] == 'X');
+       ++i) {
     // do nothing
   }
   return uniq.substr(init, i - init).str();
@@ -240,7 +245,8 @@ llvm::StringRef fir::NameUniquer::doProgramEntry() {
 
 std::pair<fir::NameUniquer::NameKind, fir::NameUniquer::DeconstructedName>
 fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
-  if (uniq.startswith("_Q")) {
+  uniq = fir::NameUniquer::dropTypeConversionMarkers(uniq);
+  if (uniq.starts_with("_Q")) {
     llvm::SmallVector<std::string> modules;
     llvm::SmallVector<std::string> procs;
     std::int64_t blockId = 0;
@@ -341,20 +347,46 @@ bool fir::NameUniquer::belongsToModule(llvm::StringRef uniquedName,
          result.second.modules[0] == moduleName;
 }
 
+/// Flang records the lexical module/submodule nesting of a symbol in the
+/// uniqued root produced by \c fir::NameUniquer; \c deconstruct exposes that
+/// as \c parts.modules. A non-empty module path means the symbol was declared
+/// under a module or submodule, not only at program or internal unit scope.
+/// Procedure nesting is encoded as \c F<proc> ancestors in \c parts.procs;
+/// those must be empty so we do not classify locals inside module procedures
+/// (including \c SAVE locals) as module-scope data.
+/// We then require \c VARIABLE, \c CONSTANT, or \c COMMON so we match
+/// module-level data (including common), not procedures or other name kinds
+/// that can also carry a module prefix.
+bool fir::NameUniquer::isModuleScopeDataUniquedName(
+    llvm::StringRef uniquedName) {
+  auto [kind, parts] = fir::NameUniquer::deconstruct(uniquedName);
+  if (parts.modules.empty() || !parts.procs.empty())
+    return false;
+
+  switch (kind) {
+  case fir::NameUniquer::NameKind::VARIABLE:
+  case fir::NameUniquer::NameKind::CONSTANT:
+  case fir::NameUniquer::NameKind::COMMON:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static std::string
 mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
   if (kinds.empty())
     return "";
   std::string result;
   for (std::int64_t kind : kinds)
-    result += "." + std::to_string(kind);
+    result += (fir::kNameSeparator + std::to_string(kind)).str();
   return result;
 }
 
 static std::string getDerivedTypeObjectName(llvm::StringRef mangledTypeName,
                                             const llvm::StringRef separator) {
-  if (mangledTypeName.ends_with(boxprocSuffix))
-    mangledTypeName = mangledTypeName.drop_back(boxprocSuffix.size());
+  mangledTypeName =
+      fir::NameUniquer::dropTypeConversionMarkers(mangledTypeName);
   auto result = fir::NameUniquer::deconstruct(mangledTypeName);
   if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return "";
@@ -372,10 +404,40 @@ static std::string getDerivedTypeObjectName(llvm::StringRef mangledTypeName,
 
 std::string
 fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
-  return getDerivedTypeObjectName(mangledTypeName, typeDescriptorSeparator);
+  return getDerivedTypeObjectName(mangledTypeName,
+                                  fir::kTypeDescriptorSeparator);
+}
+
+std::string fir::NameUniquer::getTypeDescriptorAssemblyName(
+    llvm::StringRef mangledTypeName) {
+  return replaceSpecialSymbols(getTypeDescriptorName(mangledTypeName));
 }
 
 std::string fir::NameUniquer::getTypeDescriptorBindingTableName(
     llvm::StringRef mangledTypeName) {
-  return getDerivedTypeObjectName(mangledTypeName, bindingTableSeparator);
+  return getDerivedTypeObjectName(mangledTypeName, fir::kBindingTableSeparator);
+}
+
+std::string
+fir::NameUniquer::getComponentInitName(llvm::StringRef mangledTypeName,
+                                       llvm::StringRef componentName) {
+
+  std::string prefix =
+      getDerivedTypeObjectName(mangledTypeName, fir::kComponentInitSeparator);
+  return (prefix + fir::kNameSeparator + componentName).str();
+}
+
+llvm::StringRef
+fir::NameUniquer::dropTypeConversionMarkers(llvm::StringRef mangledTypeName) {
+  if (mangledTypeName.ends_with(fir::boxprocSuffix))
+    return mangledTypeName.drop_back(fir::boxprocSuffix.size());
+  return mangledTypeName;
+}
+
+std::string fir::NameUniquer::replaceSpecialSymbols(const std::string &name) {
+  return std::regex_replace(name, std::regex{"\\."}, "X");
+}
+
+bool fir::NameUniquer::isSpecialSymbol(llvm::StringRef name) {
+  return !name.empty() && (name[0] == '.' || name[0] == 'X');
 }

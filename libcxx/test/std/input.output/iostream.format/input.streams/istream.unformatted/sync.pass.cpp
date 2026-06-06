@@ -10,8 +10,14 @@
 
 // int sync();
 
+// The fix for bug 51497 and bug 51499 require and updated dylib due to
+// explicit instantiations. That means Apple backdeployment targets remain
+// broken.
+// XFAIL: using-built-library-before-llvm-19
+
 #include <istream>
 #include <cassert>
+#include <streambuf>
 
 #include "test_macros.h"
 
@@ -47,6 +53,18 @@ protected:
         return 5;
     }
 };
+
+template <class CharT>
+struct testbuf_pubsync_error
+    : public std::basic_streambuf<CharT>
+{
+public:
+
+    testbuf_pubsync_error() {}
+protected:
+    virtual int sync() { return -1; }
+};
+
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct testbuf_exception { };
@@ -86,20 +104,61 @@ protected:
 int main(int, char**)
 {
     {
+        std::istream is(nullptr);
+        assert(is.sync() == -1);
+    }
+    {
         testbuf<char> sb(" 123456789");
         std::istream is(&sb);
         assert(is.sync() == 0);
         assert(sync_called == 1);
     }
+    {
+        testbuf_pubsync_error<char> sb;
+        std::istream is(&sb);
+        is.exceptions(std::ios_base::failbit | std::ios_base::eofbit);
+        assert(is.sync() == -1);
+        assert( is.bad());
+        assert(!is.eof());
+        assert( is.fail());
+    }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    {
+        std::wistream is(nullptr);
+        assert(is.sync() == -1);
+    }
     {
         testbuf<wchar_t> sb(L" 123456789");
         std::wistream is(&sb);
         assert(is.sync() == 0);
         assert(sync_called == 2);
     }
+    {
+        testbuf_pubsync_error<wchar_t> sb;
+        std::wistream is(&sb);
+        is.exceptions(std::ios_base::failbit | std::ios_base::eofbit);
+        assert(is.sync() == -1);
+        assert( is.bad());
+        assert(!is.eof());
+        assert( is.fail());
+    }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        testbuf_pubsync_error<char> sb;
+        std::istream is(&sb);
+        is.exceptions(std::ios_base::badbit);
+        bool threw = false;
+        try {
+            is.sync();
+        } catch (std::ios_base::failure const&) {
+            threw = true;
+        }
+        assert( is.bad());
+        assert(!is.eof());
+        assert( is.fail());
+        assert(threw);
+    }
     {
         throwing_testbuf<char> sb(" 123456789");
         std::basic_istream<char> is(&sb);
@@ -117,6 +176,21 @@ int main(int, char**)
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
+        testbuf_pubsync_error<wchar_t> sb;
+        std::wistream is(&sb);
+        is.exceptions(std::ios_base::badbit);
+        bool threw = false;
+        try {
+            is.sync();
+        } catch (std::ios_base::failure const&) {
+            threw = true;
+        }
+        assert( is.bad());
+        assert(!is.eof());
+        assert( is.fail());
+        assert(threw);
+    }
+    {
         throwing_testbuf<wchar_t> sb(L" 123456789");
         std::basic_istream<wchar_t> is(&sb);
         is.exceptions(std::ios_base::badbit);
@@ -131,7 +205,7 @@ int main(int, char**)
         assert( is.fail());
         assert(threw);
     }
-#endif
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 #endif // TEST_HAS_NO_EXCEPTIONS
 
     return 0;

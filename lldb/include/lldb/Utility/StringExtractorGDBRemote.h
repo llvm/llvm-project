@@ -119,6 +119,7 @@ public:
     eServerPacketType_qRegisterInfo,
     eServerPacketType_qShlibInfoAddr,
     eServerPacketType_qStepPacketSupported,
+    eServerPacketType_qStructuredDataPlugins,
     eServerPacketType_qSupported,
     eServerPacketType_qSyncThreadStateSupported,
     eServerPacketType_qThreadExtraInfo,
@@ -171,6 +172,9 @@ public:
     eServerPacketType_jLLDBTraceStop,
     eServerPacketType_jLLDBTraceGetState,
     eServerPacketType_jLLDBTraceGetBinaryData,
+    eServerPacketType_jMultiBreakpoint,
+    eServerPacketType_jAcceleratorPluginInitialize,
+    eServerPacketType_jAcceleratorPluginBreakpointHit,
 
     eServerPacketType_qMemTags, // read memory tags
     eServerPacketType_QMemTags, // write memory tags

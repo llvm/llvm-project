@@ -25,7 +25,6 @@ using llvm::yaml::Hex8;
 using llvm::yaml::Input;
 using llvm::yaml::isNumeric;
 using llvm::yaml::MappingNormalization;
-using llvm::yaml::MappingTraits;
 using llvm::yaml::Output;
 using llvm::yaml::ScalarTraits;
 using ::testing::StartsWith;
@@ -79,7 +78,7 @@ namespace yaml {
 TEST(YAMLIO, TestMapRead) {
   FooBar doc;
   {
-    Input yin("---\nfoo:  3\nbar:  5\n...\n");
+    Input yin("---\nfoo:  3\nbar:  5\n...");
     yin >> doc;
 
     EXPECT_FALSE(yin.error());
@@ -1239,7 +1238,8 @@ TEST(YAMLIO, TestReadWriteBlockScalarDocuments) {
 
     // Verify that the block scalar header was written out on the same line
     // as the document marker.
-    EXPECT_NE(llvm::StringRef::npos, llvm::StringRef(ostr.str()).find("--- |"));
+    EXPECT_NE(llvm::StringRef::npos,
+              llvm::StringRef(intermediate).find("--- |"));
   }
   {
     Input yin(intermediate);
@@ -1270,6 +1270,36 @@ TEST(YAMLIO, TestReadWriteBlockScalarValue) {
     EXPECT_FALSE(yin.error());
     EXPECT_EQ(doc.str, "Just a block\nscalar doc\n");
   }
+}
+
+struct V {
+  MultilineStringType doc;
+  std::string str;
+};
+template <> struct llvm::yaml::MappingTraits<V> {
+  static void mapping(IO &io, V &v) {
+    io.mapRequired("block_scalac", v.doc);
+    io.mapRequired("scalar", v.str);
+  }
+};
+template <> struct llvm::yaml::SequenceElementTraits<V> {
+  static const bool flow = false;
+};
+TEST(YAMLIO, TestScalarAfterBlockScalar) {
+  std::vector<V> v{V{}};
+  v[0].doc.str = "AA\nBB";
+  v[0].str = "a";
+  std::string output;
+  llvm::raw_string_ostream ostr(output);
+  Output yout(ostr);
+  yout << v;
+  EXPECT_EQ(output, R"(---
+- block_scalac:     |
+    AA
+    BB
+  scalar:          a
+...
+)");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1377,7 +1407,6 @@ TEST(YAMLIO, TestReadWriteMyFlowSequence) {
     yout << map;
 
     // Verify sequences were written in flow style
-    ostr.flush();
     llvm::StringRef flowOut(intermediate);
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("one, two"));
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("10, -30, 1024"));
@@ -1389,10 +1418,10 @@ TEST(YAMLIO, TestReadWriteMyFlowSequence) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_TRUE(map2.name.equals("hello"));
+    EXPECT_TRUE(map2.name == "hello");
     EXPECT_EQ(map2.strings.size(), 2UL);
-    EXPECT_TRUE(map2.strings[0].value.equals("one"));
-    EXPECT_TRUE(map2.strings[1].value.equals("two"));
+    EXPECT_TRUE(map2.strings[0].value == "one");
+    EXPECT_TRUE(map2.strings[1].value == "two");
     EXPECT_EQ(map2.single.size(), 1UL);
     EXPECT_EQ(1,       map2.single[0]);
     EXPECT_EQ(map2.numbers.size(), 3UL);
@@ -1423,7 +1452,6 @@ TEST(YAMLIO, TestReadWriteSequenceOfMyFlowSequence) {
 
     // Verify sequences were written in flow style
     // and that the parent sequence used '-'.
-    ostr.flush();
     llvm::StringRef flowOut(intermediate);
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("- [ 0 ]"));
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("- [ 12, 1, -512 ]"));
@@ -1436,7 +1464,7 @@ TEST(YAMLIO, TestReadWriteSequenceOfMyFlowSequence) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_TRUE(map2.name.equals("hello"));
+    EXPECT_TRUE(map2.name == "hello");
     EXPECT_EQ(map2.sequenceOfNumbers.size(), 3UL);
     EXPECT_EQ(map2.sequenceOfNumbers[0].size(), 1UL);
     EXPECT_EQ(0,    map2.sequenceOfNumbers[0][0]);
@@ -1538,6 +1566,93 @@ TEST(YAMLIO, TestReadWriteMySecondsSequence) {
   }
 }
 
+//===----------------------------------------------------------------------===//
+//  Test nested sequence
+//===----------------------------------------------------------------------===//
+using NestedStringSeq1 = llvm::SmallVector<std::string, 2>;
+using NestedStringSeq2 = std::array<NestedStringSeq1, 2>;
+using NestedStringSeq3 = std::vector<NestedStringSeq2>;
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(NestedStringSeq1)
+LLVM_YAML_IS_SEQUENCE_VECTOR(NestedStringSeq2)
+
+struct MappedStringSeq3 {
+  NestedStringSeq3 Seq3;
+};
+
+template <> struct llvm::yaml::MappingTraits<MappedStringSeq3> {
+  static void mapping(IO &io, MappedStringSeq3 &seq) {
+    io.mapRequired("Seq3", seq.Seq3);
+  }
+};
+
+using NestedIntSeq1 = std::array<int, 2>;
+using NestedIntSeq2 = std::array<NestedIntSeq1, 2>;
+using NestedIntSeq3 = std::array<NestedIntSeq2, 2>;
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(NestedIntSeq1)
+LLVM_YAML_IS_SEQUENCE_VECTOR(NestedIntSeq2)
+
+template <typename Ty> std::string ParseAndEmit(llvm::StringRef YAML) {
+  Ty seq3;
+  Input yin(YAML);
+  yin >> seq3;
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output yout(ostr);
+  yout << seq3;
+  return out;
+}
+
+TEST(YAMLIO, TestNestedSequence) {
+  {
+    llvm::StringRef Seq3YAML(R"YAML(---
+- - [ 1000, 1001 ]
+  - [ 1010, 1011 ]
+- - [ 1100, 1101 ]
+  - [ 1110, 1111 ]
+...
+)YAML");
+
+    std::string out = ParseAndEmit<NestedIntSeq3>(Seq3YAML);
+    EXPECT_EQ(out, Seq3YAML);
+  }
+
+  {
+    llvm::StringRef Seq3YAML(R"YAML(---
+- - - '000'
+    - '001'
+  - - '010'
+    - '011'
+- - - '100'
+    - '101'
+  - - '110'
+    - '111'
+...
+)YAML");
+
+    std::string out = ParseAndEmit<NestedStringSeq3>(Seq3YAML);
+    EXPECT_EQ(out, Seq3YAML);
+  }
+
+  {
+    llvm::StringRef Seq3YAML(R"YAML(---
+Seq3:
+  - - - '000'
+      - '001'
+    - - '010'
+      - '011'
+  - - - '100'
+      - '101'
+    - - '110'
+      - '111'
+...
+)YAML");
+
+    std::string out = ParseAndEmit<MappedStringSeq3>(Seq3YAML);
+    EXPECT_EQ(out, Seq3YAML);
+  }
+}
 
 //===----------------------------------------------------------------------===//
 //  Test dynamic typing
@@ -1934,7 +2049,6 @@ TEST(YAMLIO, TestReadWriteMyFlowMapping) {
     yout << doc;
 
     // Verify that mappings were written in flow style
-    ostr.flush();
     llvm::StringRef flowOut(intermediate);
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("{ foo: 42, bar: 907 }"));
     EXPECT_NE(llvm::StringRef::npos, flowOut.find("- { foo: 1, bar: 2 }"));
@@ -2392,6 +2506,7 @@ TEST(YAMLIO, TestMalformedMapFailsGracefully) {
 
 struct OptionalTest {
   std::vector<int> Numbers;
+  std::optional<int> MaybeNumber;
 };
 
 struct OptionalTestSeq {
@@ -2405,6 +2520,7 @@ namespace yaml {
   struct MappingTraits<OptionalTest> {
     static void mapping(IO& IO, OptionalTest &OT) {
       IO.mapOptional("Numbers", OT.Numbers);
+      IO.mapOptional("MaybeNumber", OT.MaybeNumber);
     }
   };
 
@@ -2466,6 +2582,7 @@ TEST(YAMLIO, TestEmptyStringSucceedsForMapWithOptionalFields) {
   Input yin("");
   yin >> doc;
   EXPECT_FALSE(yin.error());
+  EXPECT_FALSE(doc.MaybeNumber.has_value());
 }
 
 TEST(YAMLIO, TestEmptyStringSucceedsForSequence) {
@@ -2534,7 +2651,6 @@ TEST(YAMLIO, TestWrapFlow) {
     Output yout(ostr, nullptr, 15);
 
     yout << Map;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "{ str1: This is str1, \n"
@@ -2544,7 +2660,6 @@ TEST(YAMLIO, TestWrapFlow) {
     out.clear();
 
     yout << Seq;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "[ This is str1, \n"
@@ -2558,7 +2673,6 @@ TEST(YAMLIO, TestWrapFlow) {
     Output yout(ostr, nullptr, 25);
 
     yout << Map;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "{ str1: This is str1, str2: This is str2, \n"
@@ -2567,7 +2681,6 @@ TEST(YAMLIO, TestWrapFlow) {
     out.clear();
 
     yout << Seq;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "[ This is str1, This is str2, \n"
@@ -2580,7 +2693,6 @@ TEST(YAMLIO, TestWrapFlow) {
     Output yout(ostr, nullptr, 0);
 
     yout << Map;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "{ str1: This is str1, str2: This is str2, str3: This is str3 }\n"
@@ -2588,7 +2700,6 @@ TEST(YAMLIO, TestWrapFlow) {
     out.clear();
 
     yout << Seq;
-    ostr.flush();
     EXPECT_EQ(out,
               "---\n"
               "[ This is str1, This is str2, This is str3 ]\n"
@@ -2620,6 +2731,9 @@ template <> struct MappingContextTraits<SimpleMap, MappingContext> {
     ++Context.A;
     io.mapRequired("Context", Context.A);
   }
+  static std::string validate(IO &io, SimpleMap &sm, MappingContext &Context) {
+    return "";
+  }
 };
 
 template <> struct MappingTraits<NestedMap> {
@@ -2639,7 +2753,6 @@ TEST(YAMLIO, TestMapWithContext) {
   Output yout(ostr, nullptr, 15);
 
   yout << Nested;
-  ostr.flush();
   EXPECT_EQ(1, Context.A);
   EXPECT_EQ("---\n"
             "Simple:\n"
@@ -2654,7 +2767,6 @@ TEST(YAMLIO, TestMapWithContext) {
   Nested.Simple.B = 2;
   Nested.Simple.C = 3;
   yout << Nested;
-  ostr.flush();
   EXPECT_EQ(2, Context.A);
   EXPECT_EQ("---\n"
             "Simple:\n"
@@ -2676,7 +2788,6 @@ TEST(YAMLIO, TestCustomMapping) {
   Output xout(ostr, nullptr, 0);
 
   xout << x;
-  ostr.flush();
   EXPECT_EQ("---\n"
             "{}\n"
             "...\n",
@@ -2687,7 +2798,6 @@ TEST(YAMLIO, TestCustomMapping) {
 
   out.clear();
   xout << x;
-  ostr.flush();
   EXPECT_EQ("---\n"
             "bar:             2\n"
             "foo:             1\n"
@@ -2716,7 +2826,6 @@ TEST(YAMLIO, TestCustomMappingStruct) {
   Output xout(ostr, nullptr, 0);
 
   xout << x;
-  ostr.flush();
   EXPECT_EQ("---\n"
             "bar:\n"
             "  foo:             3\n"
@@ -2757,7 +2866,7 @@ TEST(YAMLIO, TestEmptyMapWrite) {
   llvm::raw_string_ostream OS(str);
   Output yout(OS);
   yout << cont;
-  EXPECT_EQ(OS.str(), "---\nfbm:             {}\n...\n");
+  EXPECT_EQ(str, "---\nfbm:             {}\n...\n");
 }
 
 TEST(YAMLIO, TestEmptySequenceWrite) {
@@ -2767,7 +2876,7 @@ TEST(YAMLIO, TestEmptySequenceWrite) {
     llvm::raw_string_ostream OS(str);
     Output yout(OS);
     yout << cont;
-    EXPECT_EQ(OS.str(), "---\nfbs:             []\n...\n");
+    EXPECT_EQ(str, "---\nfbs:             []\n...\n");
   }
 
   {
@@ -2776,7 +2885,108 @@ TEST(YAMLIO, TestEmptySequenceWrite) {
     llvm::raw_string_ostream OS(str);
     Output yout(OS);
     yout << seq;
-    EXPECT_EQ(OS.str(), "---\n[]\n...\n");
+    EXPECT_EQ(str, "---\n[]\n...\n");
+  }
+}
+
+TEST(YAMLIO, TestScalarAlias) {
+  FooBar doc;
+  {
+    Input yin("---\nfoo: &three 3\nbar: *three\n...\n");
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(doc.foo, 3);
+    EXPECT_EQ(doc.bar, 3);
+  }
+
+  {
+    auto testDiagnostic = [](const llvm::SMDiagnostic &Error, void *) {
+      EXPECT_EQ(Error.getMessage(), "undefined alias 'unknown'");
+    };
+    Input yin("---\nfoo: &anchor 3\nbar: *unknown\n...\n", nullptr,
+              testDiagnostic);
+    yin >> doc;
+    EXPECT_TRUE(!!yin.error());
+  }
+}
+
+TEST(YAMLIO, TestBlockScalarAliases) {
+  std::vector<std::string> doc;
+  {
+    Input yin(R"(---
+      - &alias |
+        some
+        multi
+        line
+        string
+      - *alias
+    ...
+    )");
+
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    ASSERT_EQ(doc.size(), 2ul);
+    EXPECT_EQ(doc[0], "some\nmulti\nline\nstring\n");
+    EXPECT_EQ(doc[1], doc[0]);
+  }
+}
+
+TEST(YAMLIO, TestMapAlias) {
+  {
+    FooBarContainer cont;
+
+    Input yin(R"(---
+      fbs:
+        - foo: 13
+          bar: &anchor 42
+        - &seq_elmt
+          foo: &anchor 19
+          bar: *anchor
+        - *seq_elmt
+    ...
+    )");
+    yin >> cont;
+    EXPECT_FALSE(yin.error());
+
+    auto &fbs = cont.fbs;
+    EXPECT_EQ(fbs.size(), 3ul);
+    EXPECT_EQ(fbs[0].foo, 13);
+    EXPECT_EQ(fbs[0].bar, 42);
+    EXPECT_EQ(fbs[1].foo, 19);
+    EXPECT_EQ(fbs[1].bar, 19);
+    EXPECT_EQ(fbs[2].foo, fbs[1].foo);
+    EXPECT_EQ(fbs[2].bar, fbs[1].bar);
+  }
+
+  {
+    FooBarMapMap cont;
+    Input yin(R"(---
+      fbm:
+        one: &forty_two
+          foo: 42
+          bar: 42
+        forty_two: *forty_two
+        precedence: &forty_two
+          foo: 13
+          bar: 42
+        not_forty_two: *forty_two
+    ...
+    )");
+    auto &fbm = cont.fbm;
+    yin >> cont;
+    EXPECT_FALSE(yin.error());
+
+    EXPECT_EQ(fbm.size(), 4ul);
+    EXPECT_EQ(fbm["one"].foo, 42);
+    EXPECT_EQ(fbm["one"].bar, 42);
+    EXPECT_EQ(fbm["forty_two"].foo, 42);
+    EXPECT_EQ(fbm["forty_two"].bar, 42);
+    EXPECT_EQ(fbm["precedence"].foo, 13);
+    EXPECT_EQ(fbm["precedence"].bar, 42);
+    EXPECT_EQ(fbm["not_forty_two"].foo, 13);
+    EXPECT_EQ(fbm["not_forty_two"].bar, 42);
   }
 }
 
@@ -2787,8 +2997,6 @@ static void TestEscaped(llvm::StringRef Input, llvm::StringRef Expected) {
 
   llvm::yaml::EmptyContext Ctx;
   yamlize(xout, Input, true, Ctx);
-
-  ostr.flush();
 
   // Make a separate StringRef so we get nice byte-by-byte output.
   llvm::StringRef Got(out);
@@ -2897,6 +3105,87 @@ TEST(YAMLIO, Numeric) {
   EXPECT_FALSE(isNumeric("+12,345"));
   EXPECT_FALSE(isNumeric("-inf"));
   EXPECT_FALSE(isNumeric("1,230.15"));
+}
+
+//===----------------------------------------------------------------------===//
+//  Test writing and reading escaped keys
+//===----------------------------------------------------------------------===//
+
+// Struct with dynamic string key
+struct QuotedKeyStruct {
+  int unquoted_bool;
+  int unquoted_null;
+  int unquoted_numeric;
+  int unquoted_str;
+  int colon;
+  int just_space;
+  int unprintable;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<QuotedKeyStruct> {
+  static void mapping(IO &io, QuotedKeyStruct &map) {
+    io.mapRequired("true", map.unquoted_bool);
+    io.mapRequired("null", map.unquoted_null);
+    io.mapRequired("42", map.unquoted_numeric);
+    io.mapRequired("unquoted", map.unquoted_str);
+    io.mapRequired(":", map.colon);
+    io.mapRequired(" ", map.just_space);
+    char unprintableKey[] = {/* \f, form-feed */ 0xC, 0};
+    io.mapRequired(unprintableKey, map.unprintable);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+TEST(YAMLIO, TestQuotedKeyRead) {
+  QuotedKeyStruct map = {};
+  Input yin("---\ntrue:  1\nnull:  2\n42:  3\nunquoted:  4\n':':  5\n' ':  "
+            "6\n\"\\f\":  7\n...\n");
+  yin >> map;
+
+  EXPECT_FALSE(yin.error());
+  EXPECT_EQ(map.unquoted_bool, 1);
+  EXPECT_EQ(map.unquoted_null, 2);
+  EXPECT_EQ(map.unquoted_numeric, 3);
+  EXPECT_EQ(map.unquoted_str, 4);
+  EXPECT_EQ(map.colon, 5);
+  EXPECT_EQ(map.just_space, 6);
+  EXPECT_EQ(map.unprintable, 7);
+}
+
+TEST(YAMLIO, TestQuotedKeyWriteRead) {
+  std::string intermediate;
+  {
+    QuotedKeyStruct map = {1, 2, 3, 4, 5, 6, 7};
+    llvm::raw_string_ostream ostr(intermediate);
+    Output yout(ostr);
+    yout << map;
+  }
+
+  EXPECT_NE(std::string::npos, intermediate.find("true:"));
+  EXPECT_NE(std::string::npos, intermediate.find("null:"));
+  EXPECT_NE(std::string::npos, intermediate.find("42:"));
+  EXPECT_NE(std::string::npos, intermediate.find("unquoted:"));
+  EXPECT_NE(std::string::npos, intermediate.find("':':"));
+  EXPECT_NE(std::string::npos, intermediate.find("' '"));
+  EXPECT_NE(std::string::npos, intermediate.find("\"\\f\":"));
+
+  {
+    Input yin(intermediate);
+    QuotedKeyStruct map;
+    yin >> map;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(map.unquoted_bool, 1);
+    EXPECT_EQ(map.unquoted_null, 2);
+    EXPECT_EQ(map.unquoted_numeric, 3);
+    EXPECT_EQ(map.unquoted_str, 4);
+    EXPECT_EQ(map.colon, 5);
+    EXPECT_EQ(map.just_space, 6);
+    EXPECT_EQ(map.unprintable, 7);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3033,12 +3322,12 @@ template <> struct TaggedScalarTraits<Scalar> {
 
 template <> struct CustomMappingTraits<Map> {
   static void inputOne(IO &IO, StringRef Key, Map &M) {
-    IO.mapRequired(Key.str().c_str(), M[Key]);
+    IO.mapRequired(Key, M[Key]);
   }
 
   static void output(IO &IO, Map &M) {
     for (auto &N : M)
-      IO.mapRequired(N.getKey().str().c_str(), N.getValue());
+      IO.mapRequired(N.getKey(), N.getValue());
   }
 };
 
@@ -3153,7 +3442,7 @@ TEST(YAMLIO, TestFlowSequenceTokenErrors) {
 
 TEST(YAMLIO, TestDirectiveMappingNoValue) {
   Input yin("%YAML\n{5:");
-  EXPECT_FALSE(yin.setCurrentDocument());
+  yin.setCurrentDocument();
   EXPECT_TRUE(yin.error());
 
   Input yin2("%TAG\n'\x98!< :\n");
@@ -3294,20 +3583,38 @@ struct FixedArray {
   int values[4];
 };
 
+struct StdArray {
+  StdArray() {
+    // Initialize to int max as a sentinel value.
+    for (auto &v : values)
+      v = std::numeric_limits<int>::max();
+  }
+  std::array<int, 4> values;
+};
+
 namespace llvm {
 namespace yaml {
-  template <>
-  struct MappingTraits<FixedArray> {
-    static void mapping(IO &io, FixedArray& st) {
-      MutableArrayRef<int> array = st.values;
-      io.mapRequired("Values", array);
-    }
-  };
-}
-}
+template <> struct MappingTraits<FixedArray> {
+  static void mapping(IO &io, FixedArray &st) {
+    MutableArrayRef<int> array = st.values;
+    io.mapRequired("Values", array);
+  }
+};
+template <> struct MappingTraits<StdArray> {
+  static void mapping(IO &io, StdArray &st) {
+    io.mapRequired("Values", st.values);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
-TEST(YAMLIO, FixedSizeArray) {
-  FixedArray faval;
+using TestTypes = ::testing::Types<FixedArray, StdArray>;
+
+template <typename T> class YAMLIO : public testing::Test {};
+TYPED_TEST_SUITE(YAMLIO, TestTypes, );
+
+TYPED_TEST(YAMLIO, FixedSizeArray) {
+  TypeParam faval;
   Input yin("---\nValues:  [ 1, 2, 3, 4 ]\n...\n");
   yin >> faval;
 
@@ -3329,9 +3636,9 @@ TEST(YAMLIO, FixedSizeArray) {
   ASSERT_EQ(serialized, expected);
 }
 
-TEST(YAMLIO, FixedSizeArrayMismatch) {
+TYPED_TEST(YAMLIO, FixedSizeArrayMismatch) {
   {
-    FixedArray faval;
+    TypeParam faval;
     Input yin("---\nValues:  [ 1, 2, 3 ]\n...\n");
     yin >> faval;
 
@@ -3344,12 +3651,11 @@ TEST(YAMLIO, FixedSizeArrayMismatch) {
   }
 
   {
-    FixedArray faval;
+    TypeParam faval;
     Input yin("---\nValues:  [ 1, 2, 3, 4, 5 ]\n...\n");
     yin >> faval;
 
     // Error for too many elements.
     EXPECT_TRUE(!!yin.error());
   }
-
 }

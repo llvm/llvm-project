@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
 
 ; The generation of a constant vector in the selection step resulted in
 ; a VSPLAT, which, deeper in the expression tree had an unrelated BITCAST.

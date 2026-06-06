@@ -42,7 +42,7 @@ PrivateHeaders directory as well, though it does not need an additional
 "_private" suffix on its name.
 
 Clang will search for API notes files next to module maps only when passed the
-``-fapi-notes-modules`` option.
+``-fapinotes-modules`` option.
 
 
 Limitations
@@ -80,11 +80,12 @@ entries:
 
     Name: MyFramework
 
-:Classes, Protocols, Tags, Typedefs, Globals, Enumerators, Functions:
+:Classes, Protocols, Tags, Typedefs, Globals, Enumerators, Functions, Namespaces:
 
   Arrays of top-level declarations. Each entry in the array must have a
-  'Name' key with its Objective-C name. "Tags" refers to structs, enums, and
-  unions; "Enumerators" refers to enum cases.
+  'Name' key with its Objective-C or C++ name. "Tags" refers to structs,
+  C++ classes, enums, and unions; "Classes" refers to Objective-C classes;
+  "Enumerators" refers to enum cases.
 
   ::
 
@@ -140,6 +141,47 @@ Each entry under 'Classes' and 'Protocols' can contain "Methods" and
         PropertyKind: Instance
         …
 
+Each entry under "Tags" can contain "Methods", "Fields", and nested "Tags"
+arrays. Methods under Tags are C++ methods identified by 'Name' (rather than
+'Selector' and 'MethodKind' as used for Objective-C methods).
+
+:Methods (under Tags):
+
+  Identified by 'Name'.
+
+  ::
+
+    Tags:
+    - Name: MyClass
+      Methods:
+      - Name: doSomething
+        …
+
+:Fields:
+
+  Identified by 'Name'.
+
+  ::
+
+    Tags:
+    - Name: MyStruct
+      Fields:
+      - Name: value
+        Nullability: O
+        …
+
+:Tags (nested):
+
+  Nested tags follow the same schema as top-level Tags entries.
+
+  ::
+
+    Tags:
+    - Name: OuterClass
+      Tags:
+      - Name: InnerClass
+        …
+
 Each declaration supports the following annotations (if relevant to that
 declaration kind), all of which are optional:
 
@@ -156,6 +198,91 @@ declaration kind), all of which are optional:
 
     - Class: NSBundle
       SwiftName: Bundle
+
+:SwiftImportAs:
+
+  For a class, possible values are ``owned`` (equivalent to
+  ``SWIFT_SELF_CONTAINED``) or ``reference`` (equivalent to
+  ``SWIFT_SHARED_REFERENCE``, also requires specifying ``SwiftReleaseOp`` and
+  ``SwiftRetainOp``).
+
+  For a method, possible values are ``unsafe`` (equivalent
+  to ``SWIFT_RETURNS_INDEPENDENT_VALUE``) or ``computed_property`` (equivalent to
+  ``SWIFT_COMPUTED_PROPERTY``).
+
+  ::
+
+    Tags:
+    - Name: OwnedStorage
+      SwiftImportAs: owned
+
+:SwiftRetainOp, SwiftReleaseOp:
+
+  Controls the lifetime operations of a class which uses custom reference
+  counting. The class must be annotated as a reference type using
+  ``SwiftImportAs: reference``. The values are either names of global functions,
+  each taking a single parameter of a pointer type, or ``immortal`` for a type
+  that is considered alive for the duration of the program.
+
+  ::
+
+    Tags:
+    - Name: RefCountedStorage
+      SwiftImportAs: reference
+      SwiftReleaseOp: RCRelease
+      SwiftRetainOp: RCRetain
+    - Name: ImmortalSingleton
+      SwiftImportAs: reference
+      SwiftReleaseOp: immortal
+      SwiftRetainOp: immortal
+
+:SwiftCopyable:
+
+  Allows annotating a C++ class as non-copyable in Swift. Equivalent to
+  ``SWIFT_NONCOPYABLE``, or to an explicit conformance ``: ~Copyable``.
+
+  ::
+
+    Tags:
+    - Name: tzdb
+      SwiftCopyable: false
+
+  A non-copyable type can have a "destroy" operation, specified with
+  `SwiftDestroyOp`, which will be invoked on the instance when it is no
+  longer in use to free up resources.
+
+  ::
+
+    Tags:
+    - Name: WGPUAdapterInfo
+      SwiftCopyable: false
+      SwiftDestroyOp: wgpuAdapterInfoFreeMembers
+
+:SwiftConformsTo:
+
+  Allows annotating a C++ class as conforming to a Swift protocol. Equivalent
+  to ``SWIFT_CONFORMS_TO_PROTOCOL``. The value is a module-qualified name of a
+  Swift protocol.
+
+  ::
+
+    Tags:
+    - Name: vector
+      SwiftConformsTo: Cxx.CxxSequence
+
+:SwiftSafety:
+
+  Import a declaration as ``@safe`` or ``@unsafe`` to Swift.
+
+  ::
+
+    Tags:
+    - Name: UnsafeType
+      SwiftSafety: unsafe
+    - Name: span
+      Methods:
+        - Name: size
+          SwiftSafety: safe
 
 :Availability, AvailabilityMsg:
 
@@ -351,6 +478,31 @@ declaration kind), all of which are optional:
 
     - Name: NSIndexSet
       SwiftBridge: IndexSet
+
+:SwiftReturnOwnership:
+
+  Used for methods and functions. Specifies the ownership convention for the
+  return value when it is a foreign reference type (a type imported as
+  ``SwiftImportAs: reference``). Possible values are:
+
+  - ``retained`` --- the caller receives an owned reference
+    (equivalent to ``__attribute__((swift_attr("returns_retained")))``).
+  - ``unretained`` --- the caller receives an unowned reference
+    (equivalent to ``__attribute__((swift_attr("returns_unretained")))``).
+
+  ::
+
+    Functions:
+    - Name: createRefCounted
+      SwiftReturnOwnership: retained
+    - Name: getSharedRefCounted
+      SwiftReturnOwnership: unretained
+    Tags:
+    - Name: ImmortalRefType
+      SwiftImportAs: reference
+      Methods:
+      - Name: createChild
+        SwiftReturnOwnership: retained
 
 :DesignatedInit:
 

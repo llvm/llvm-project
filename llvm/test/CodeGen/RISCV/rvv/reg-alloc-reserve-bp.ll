@@ -26,7 +26,7 @@ define void @foo(ptr nocapture noundef %p1) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, s1, 160
-; CHECK-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    addi t0, s1, 64
 ; CHECK-NEXT:    li a0, 1
@@ -38,20 +38,26 @@ define void @foo(ptr nocapture noundef %p1) {
 ; CHECK-NEXT:    li a6, 7
 ; CHECK-NEXT:    li a7, 8
 ; CHECK-NEXT:    sd t0, 0(sp)
-; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (s2)
 ; CHECK-NEXT:    addi a0, s1, 160
-; CHECK-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl2r.v v10, (a0) # vscale x 16-byte Folded Reload
 ; CHECK-NEXT:    vfadd.vv v8, v10, v8
 ; CHECK-NEXT:    vse32.v v8, (s2)
 ; CHECK-NEXT:    addi sp, s0, -192
+; CHECK-NEXT:    .cfi_def_cfa sp, 192
 ; CHECK-NEXT:    ld ra, 184(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 176(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 168(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s2, 160(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore s1
+; CHECK-NEXT:    .cfi_restore s2
 ; CHECK-NEXT:    addi sp, sp, 192
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %vla = alloca [10 x i32], align 64
@@ -65,10 +71,5 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
-
 declare void @bar(i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, ptr noundef)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
-
-attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -disable-output < %s
 ;
 ;
 ;    void f(int *A) {

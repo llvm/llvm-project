@@ -17,6 +17,9 @@ function(libomp_get_architecture return_arch)
   set(detect_arch_src_txt "
     #if defined(__KNC__)
       #error ARCHITECTURE=mic
+    // arm64ec also defines _M_AMD64 so this needs to be checked before that
+    #elif defined(_M_ARM64EC) || defined(__arm64ec__)
+      #error ARCHITECTURE=arm64ec
     #elif defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
       #error ARCHITECTURE=x86_64
     #elif defined(__i386) || defined(__i386__) || defined(__IA32__) || defined(_M_I86) || defined(_M_IX86) || defined(__X86__) || defined(_X86_)
@@ -35,12 +38,16 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=arm
     #elif defined(__arm__) || defined(_M_ARM) || defined(_ARM)
       #error ARCHITECTURE=arm
+    #elif defined(__ARM64_ARCH_8_32__)
+      #error ARCHITECTURE=aarch64_32
     #elif defined(__aarch64__) || defined(_M_ARM64)
       #error ARCHITECTURE=aarch64
     #elif defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
       #error ARCHITECTURE=ppc64le
     #elif defined(__powerpc64__)
       #error ARCHITECTURE=ppc64
+    #elif defined(__powerpc__) && !defined(__powerpc64__)
+      #error ARCHITECTURE=ppc
     #elif defined(__mips__) && defined(__mips64)
       #error ARCHITECTURE=mips64
     #elif defined(__mips__) && !defined(__mips64)
@@ -51,6 +58,14 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=loongarch64
     #elif defined(__ve__)
       #error ARCHITECTURE=ve
+    #elif defined(__s390x__)
+      #error ARCHITECTURE=s390x
+    #elif defined(__wasm32__)
+      #error ARCHITECTURE=wasm32
+    #elif defined(__sparcv9)
+      #error ARCHITECTURE=sparcv9
+    #elif defined(__sparc)
+      #error ARCHITECTURE=sparc
     #else
       #error ARCHITECTURE=UnknownArchitecture
     #endif

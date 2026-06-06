@@ -83,8 +83,10 @@ export namespace std {
     // [range.dangling], dangling iterator handling
     using std::ranges::dangling;
 
+#if _LIBCPP_STD_VER >= 23
     // [range.elementsof], class template elements_­of
-    // using std::ranges::elements_of;
+    using std::ranges::elements_of;
+#endif
 
     using std::ranges::borrowed_iterator_t;
 
@@ -114,6 +116,9 @@ export namespace std {
 
     namespace views {
       using std::ranges::views::iota;
+#if _LIBCPP_STD_VER >= 26
+      using std::ranges::views::indices;
+#endif
     } // namespace views
 
 #if _LIBCPP_STD_VER >= 23
@@ -125,21 +130,35 @@ export namespace std {
     } // namespace views
 #endif // _LIBCPP_STD_VER >= 23
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
     // [range.istream], istream view
     using std::ranges::basic_istream_view;
     using std::ranges::istream_view;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
     using std::ranges::wistream_view;
 #  endif
 
     namespace views {
       using std::ranges::views::istream;
     }
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 
+    // Note: This declaration not in the synopsis or explicitly in the wording.
+    // However it is needed for the range adaptors.
+    // [range.adaptor.object]/3
+    //   The template parameter D for range_adaptor_closure may be an
+    //   incomplete type. If an expression of type cv D is used as an operand
+    //   to the | operator, D shall be complete and model
+    //   derived_from<range_adaptor_closure<D>>. The behavior of an expression
+    //   involving an object of type cv D as an operand to the | operator is
+    //   undefined if overload resolution selects a program-defined operator|
+    //   function.
+    // This is used internally in C++20 mode.
+    using std::ranges::operator|;
+#if _LIBCPP_STD_VER >= 23
     // [range.adaptor.object], range adaptor objects
-    // using std::ranges::range_adaptor_closure;
+    using std::ranges::range_adaptor_closure;
+#endif
 
     // [range.all], all view
     namespace views {
@@ -161,6 +180,15 @@ export namespace std {
       using std::ranges::views::as_rvalue;
     } // namespace views
 #endif // _LIBCPP_STD_VER >= 23
+
+#if _LIBCPP_STD_VER >= 26
+    // [range.concat.view], concat_view
+    using std::ranges::concat_view;
+
+    namespace views {
+      using std::ranges::views::concat;
+    } // namespace views
+#endif // _LIBCPP_STD_VER >= 26
 
     // [range.filter], filter view
     using std::ranges::filter_view;
@@ -204,20 +232,21 @@ export namespace std {
       using std::ranges::views::drop_while;
     } // namespace views
 
-#ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     using std::ranges::join_view;
 
     namespace views {
       using std::ranges::views::join;
     } // namespace views
-#endif // _LIBCPP_ENABLE_EXPERIMENTAL
-#if 0
+
+#if _LIBCPP_STD_VER >= 23
+    // [range.join.with]
     using std::ranges::join_with_view;
 
     namespace views {
       using std::ranges::views::join_with;
     } // namespace views
-#endif
+#endif // _LIBCPP_STD_VER >= 23
+
     using std::ranges::lazy_split_view;
 
     // [range.split], split view
@@ -274,16 +303,13 @@ export namespace std {
     namespace views {
       using std::ranges::views::zip;
     } // namespace views
-#endif // _LIBCPP_STD_VER >= 23
 
-#if 0
     // [range.zip.transform], zip transform view
     using std::ranges::zip_transform_view;
 
     namespace views {
       using std::ranges::views::zip_transform;
     }
-
     using std::ranges::adjacent_view;
 
     namespace views {
@@ -298,6 +324,9 @@ export namespace std {
       using std::ranges::views::pairwise_transform;
     } // namespace views
 
+#endif // _LIBCPP_STD_VER >= 23
+
+#if 0
     using std::ranges::chunk_view;
 
     using std::ranges::chunk_view<V>;
@@ -320,9 +349,7 @@ export namespace std {
     namespace views {
       using std::ranges::views::chunk_by;
     }
-#endif // _LIBCPP_STD_VER >= 23
 
-#if 0
     // [range.stride], stride view
     using std::ranges::stride_view;
 
@@ -330,12 +357,21 @@ export namespace std {
       using std::ranges::views::stride;
     }
 
+#  if 0
     using std::ranges::cartesian_product_view;
 
     namespace views {
       using std::ranges::views::cartesian_product;
     }
-#endif
+#  endif
+
+    // [range.enumerate]
+    using std::ranges::enumerate_view;
+
+    namespace views {
+      using std::ranges::views::enumerate;
+    }
+#endif // _LIBCPP_STD_VER >= 23
   } // namespace ranges
 
   namespace views = ranges::views;

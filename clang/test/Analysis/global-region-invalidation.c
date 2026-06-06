@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -disable-free -verify %s \
-// RUN:   -analyzer-checker=core,deadcode,alpha.security.taint,debug.TaintTest,debug.ExprInspection
+// RUN:   -analyzer-checker=core,deadcode,optin.taint,debug.TaintTest,debug.ExprInspection
 
 void clang_analyzer_eval(int);
 

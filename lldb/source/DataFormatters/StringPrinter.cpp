@@ -9,11 +9,11 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -183,7 +183,7 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
       &buffer_for_conversion, buffer_end, &codepoint, llvm::strictConversion);
   assert(result == llvm::conversionOK &&
          "Failed to convert legal utf8 sequence");
-  (void)result;
+  UNUSED_IF_ASSERT_DISABLED(result);
 
   // The UTF8 helper always advances by the utf8 encoded length.
   const unsigned utf8_encoded_len = buffer_for_conversion - buffer;
@@ -279,9 +279,11 @@ static bool DumpEncodedBufferToStream(
         (const SourceDataType *)data.GetDataStart();
     const SourceDataType *data_end_ptr = data_ptr + source_size;
 
-    const bool zero_is_terminator = dump_options.GetBinaryZeroIsTerminator();
+    switch (dump_options.GetZeroTermination()) {
+    case StringPrinter::ZeroTermination::Ignore:
+      break;
 
-    if (zero_is_terminator) {
+    case StringPrinter::ZeroTermination::ZeroTerminate: {
       while (data_ptr < data_end_ptr) {
         if (!*data_ptr) {
           data_end_ptr = data_ptr;
@@ -291,7 +293,19 @@ static bool DumpEncodedBufferToStream(
       }
 
       data_ptr = (const SourceDataType *)data.GetDataStart();
+    } break;
+
+    case StringPrinter::ZeroTermination::TrimTrailingZeros: {
+      while (data_end_ptr != data_ptr) {
+        if (*(data_end_ptr - 1))
+          break;
+        data_end_ptr--;
+      }
+    } break;
     }
+    const bool zero_is_terminator =
+        dump_options.GetZeroTermination() ==
+        StringPrinter::ZeroTermination::ZeroTerminate;
 
     lldb::WritableDataBufferSP utf8_data_buffer_sp;
     llvm::UTF8 *utf8_data_ptr = nullptr;
@@ -384,7 +398,7 @@ lldb_private::formatters::StringPrinter::ReadBufferAndDumpToStreamOptions::
   SetSuffixToken(options.GetSuffixToken());
   SetQuote(options.GetQuote());
   SetEscapeNonPrintables(options.GetEscapeNonPrintables());
-  SetBinaryZeroIsTerminator(options.GetBinaryZeroIsTerminator());
+  SetZeroTermination(options.GetZeroTermination());
   SetEscapeStyle(options.GetEscapeStyle());
 }
 
@@ -404,8 +418,7 @@ static bool ReadEncodedBufferAndDumpToStream(
   if (!options.GetStream())
     return false;
 
-  if (options.GetLocation() == 0 ||
-      options.GetLocation() == LLDB_INVALID_ADDRESS)
+  if (options.GetLocation() == Address(0) || options.GetLocation() == Address())
     return false;
 
   lldb::TargetSP target_sp = options.GetTargetSP();
@@ -420,7 +433,8 @@ static bool ReadEncodedBufferAndDumpToStream(
   if (origin_encoding != 8 && !ConvertFunction)
     return false;
 
-  bool needs_zero_terminator = options.GetNeedsZeroTermination();
+  bool needs_zero_terminator = options.GetZeroTermination() ==
+                               StringPrinter::ZeroTermination::ZeroTerminate;
 
   bool is_truncated = false;
   const auto max_size = target_sp->GetMaximumSizeOfStringSummary();
@@ -428,8 +442,8 @@ static bool ReadEncodedBufferAndDumpToStream(
   uint32_t sourceSize;
   if (elem_type == StringElementType::ASCII && !options.GetSourceSize()) {
     // FIXME: The NSString formatter sets HasSourceSize(true) when the size is
-    // actually unknown, as well as SetBinaryZeroIsTerminator(false). IIUC the
-    // C++ formatter also sets SetBinaryZeroIsTerminator(false) when it doesn't
+    // actually unknown, as well as SetZeroTermination(Ignore). IIUC the
+    // C++ formatter also sets SetZeroTermination(Ignore) when it doesn't
     // mean to. I don't see how this makes sense: we should fix the formatters.
     //
     // Until then, the behavior that's expected for ASCII strings with unknown
@@ -480,9 +494,10 @@ static bool ReadEncodedBufferAndDumpToStream(
                     target_sp->GetArchitecture().GetAddressByteSize()));
   dump_options.SetSourceSize(sourceSize);
   dump_options.SetIsTruncated(is_truncated);
-  dump_options.SetNeedsZeroTermination(needs_zero_terminator);
-  if (needs_zero_terminator)
-    dump_options.SetBinaryZeroIsTerminator(true);
+  if (needs_zero_terminator) {
+    dump_options.SetZeroTermination(
+        StringPrinter::ZeroTermination::ZeroTerminate);
+  }
 
   GetPrintableElementType print_style = (elem_type == StringElementType::ASCII)
                                             ? GetPrintableElementType::ASCII

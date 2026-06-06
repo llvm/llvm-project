@@ -14,10 +14,8 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
-// The symbol is called __local_hwasan_preinit, because it's not intended to
-// be exported.
-// This code linked into the main executable when -fsanitize=hwaddress is in
-// the link flags. It can only use exported interface functions.
-__attribute__((section(".preinit_array"), used)) static void (
-    *__local_hwasan_preinit)(void) = __hwasan_init;
+// This section is linked into the main executable when -fsanitize=hwaddress is
+// specified to perform initialization at a very early stage.
+__attribute__((section(".preinit_array"), used)) static auto preinit =
+    __hwasan_init;
 #endif

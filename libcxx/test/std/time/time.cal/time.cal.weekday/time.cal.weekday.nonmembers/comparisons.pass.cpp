@@ -17,9 +17,12 @@
 #include <chrono>
 #include <type_traits>
 #include <cassert>
+#include <concepts>
 
 #include "test_macros.h"
 #include "test_comparisons.h"
+
+static_assert(!std::totally_ordered<std::chrono::weekday>);
 
 int main(int, char**)
 {

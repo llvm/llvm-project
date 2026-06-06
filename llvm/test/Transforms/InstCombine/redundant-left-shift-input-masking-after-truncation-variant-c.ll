@@ -51,8 +51,8 @@ declare void @use8xi64(<8 x i64>)
 define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t1_vec_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>, [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], <i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 -32>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <8 x i64> splat (i64 -1), [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], splat (i32 -32)
 ; CHECK-NEXT:    [[T3:%.*]] = and <8 x i64> [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T1]])
@@ -77,11 +77,11 @@ define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
   ret <8 x i32> %t5
 }
 
-define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
-; CHECK-LABEL: @t2_vec_splat_undef(
+define <8 x i32> @t2_vec_splat_poison(<8 x i64> %x, <8 x i32> %nbits) {
+; CHECK-LABEL: @t2_vec_splat_poison(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>, [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], <i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 undef, i32 -32>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 poison, i64 -1>, [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], <i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 poison, i32 -32>
 ; CHECK-NEXT:    [[T3:%.*]] = and <8 x i64> [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T1]])
@@ -92,8 +92,8 @@ define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    ret <8 x i32> [[T5]]
 ;
   %t0 = zext <8 x i32> %nbits to <8 x i64>
-  %t1 = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>, %t0
-  %t2 = add <8 x i32> %nbits, <i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 undef, i32 -32>
+  %t1 = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 poison, i64 -1>, %t0
+  %t2 = add <8 x i32> %nbits, <i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 -32, i32 poison, i32 -32>
   %t3 = and <8 x i64> %t1, %x
 
   call void @use8xi64(<8 x i64> %t0)
@@ -109,8 +109,8 @@ define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
 define <8 x i32> @t3_vec_nonsplat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t3_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>, [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], <i32 -32, i32 -1, i32 0, i32 1, i32 31, i32 32, i32 undef, i32 64>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 poison, i64 -1>, [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], <i32 -32, i32 -1, i32 0, i32 1, i32 31, i32 32, i32 poison, i32 64>
 ; CHECK-NEXT:    [[T3:%.*]] = and <8 x i64> [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T1]])
@@ -121,8 +121,8 @@ define <8 x i32> @t3_vec_nonsplat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    ret <8 x i32> [[T5]]
 ;
   %t0 = zext <8 x i32> %nbits to <8 x i64>
-  %t1 = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>, %t0
-  %t2 = add <8 x i32> %nbits, <i32 -32, i32 -1, i32 0, i32 1, i32 31, i32 32, i32 undef, i32 64>
+  %t1 = lshr <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 poison, i64 -1>, %t0
+  %t2 = add <8 x i32> %nbits, <i32 -32, i32 -1, i32 0, i32 1, i32 31, i32 32, i32 poison, i32 64>
   %t3 = and <8 x i64> %t1, %x
 
   call void @use8xi64(<8 x i64> %t0)

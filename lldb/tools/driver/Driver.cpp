@@ -18,8 +18,14 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
-
+#include "lldb/Host/Config.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
+#include "lldb/Utility/Status.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
@@ -27,11 +33,22 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef _WIN32
+#include "lldb/Host/Config.h"
+#if LLDB_ENABLE_PYTHON
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
+#endif
+#endif
+
 #include <algorithm>
 #include <atomic>
 #include <bitset>
 #include <clocale>
 #include <csignal>
+#include <future>
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 #include <string>
 #include <thread>
 #include <utility>
@@ -48,6 +65,9 @@
 
 using namespace lldb;
 using namespace llvm;
+using lldb_private::MainLoop;
+using lldb_private::MainLoopBase;
+using lldb_private::Status;
 
 namespace {
 using namespace llvm::opt;
@@ -59,12 +79,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -74,7 +95,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class LLDBOptTable : public opt::GenericOptTable {
 public:
-  LLDBOptTable() : opt::GenericOptTable(InfoTable) {}
+  LLDBOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // namespace
 
@@ -187,7 +209,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   if (args.hasArg(OPT_no_use_colors)) {
     m_debugger.SetUseColor(false);
     WithColor::setAutoDetectFunction(disable_color);
-    m_option_data.m_debug_mode = true;
   }
 
   if (args.hasArg(OPT_version)) {
@@ -272,6 +293,12 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (args.hasArg(OPT_wait_for)) {
+    if (!args.hasArg(OPT_attach_name)) {
+      error.SetErrorStringWithFormat(
+          "--wait-for requires a name (--attach-name)");
+      return error;
+    }
+
     m_option_data.m_wait_for = true;
   }
 
@@ -379,7 +406,8 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (m_option_data.m_print_python_path) {
-    SBFileSpec python_file_spec = SBHostOS::GetLLDBPythonPath();
+    SBFileSpec python_file_spec =
+        SBHostOS::GetScriptPath(lldb::eScriptLanguagePython);
     if (python_file_spec.IsValid()) {
       char python_path[PATH_MAX];
       size_t num_chars = python_file_spec.GetPath(python_path, PATH_MAX);
@@ -427,12 +455,7 @@ int Driver::MainLoop() {
     atexit(reset_stdin_termios);
   }
 
-#ifndef _MSC_VER
-  // Disabling stdin buffering with MSVC's 2015 CRT exposes a bug in fgets
-  // which causes it to miss newlines depending on whether there have been an
-  // odd or even number of characters.  Bug has been reported to MS via Connect.
   ::setbuf(stdin, nullptr);
-#endif
   ::setbuf(stdout, nullptr);
 
   m_debugger.SetErrorFileHandle(stderr, false);
@@ -441,29 +464,17 @@ int Driver::MainLoop() {
   m_debugger.SetInputFileHandle(stdin, false);
 
   m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
+  m_debugger.SetShowInlineDiagnostics(true);
 
-  struct winsize window_size;
-  if ((isatty(STDIN_FILENO) != 0) &&
-      ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if (window_size.ws_col > 0)
-      m_debugger.SetTerminalWidth(window_size.ws_col);
-  }
+  // Set the terminal dimensions.
+  UpdateWindowSize();
 
   SBCommandInterpreter sb_interpreter = m_debugger.GetCommandInterpreter();
 
   // Process lldbinit files before handling any options from the command line.
   SBCommandReturnObject result;
   sb_interpreter.SourceInitFileInGlobalDirectory(result);
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
-  }
-
   sb_interpreter.SourceInitFileInHomeDirectory(result, m_option_data.m_repl);
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
-  }
 
   // Source the local .lldbinit file if it exists and we're allowed to source.
   // Here we want to always print the return object because it contains the
@@ -535,18 +546,13 @@ int Driver::MainLoop() {
                             "or -s) are ignored in REPL mode.\n";
   }
 
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
-  }
-
   const bool handle_events = true;
   const bool spawn_thread = false;
 
   // Check if we have any data in the commands stream, and if so, save it to a
   // temp file
   // so we can then run the command interpreter using the file contents.
-  bool go_interactive = true;
+  bool go_interactive = !m_option_data.m_batch;
   if ((commands_stream.GetData() != nullptr) &&
       (commands_stream.GetSize() != 0u)) {
     SBError error = m_debugger.SetInputString(commands_stream.GetData());
@@ -584,6 +590,7 @@ int Driver::MainLoop() {
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
         !m_option_data.m_after_crash_commands.empty()) {
+      go_interactive = true;
       SBStream crash_commands_stream;
       WriteCommandsForSourcing(eCommandPlacementAfterCrash,
                                crash_commands_stream);
@@ -637,24 +644,24 @@ int Driver::MainLoop() {
   return sb_interpreter.GetQuitStatus();
 }
 
-void Driver::ResizeWindow(unsigned short col) {
-  GetDebugger().SetTerminalWidth(col);
-}
-
-void sigwinch_handler(int signo) {
+void Driver::UpdateWindowSize() {
   struct winsize window_size;
   if ((isatty(STDIN_FILENO) != 0) &&
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if ((window_size.ws_col > 0) && g_driver != nullptr) {
-      g_driver->ResizeWindow(window_size.ws_col);
-    }
+    if (window_size.ws_col > 0)
+      m_debugger.SetTerminalWidth(window_size.ws_col);
+#ifndef _WIN32
+    if (window_size.ws_row > 0)
+      m_debugger.SetTerminalHeight(window_size.ws_row);
+#endif
   }
 }
 
+#ifdef _WIN32
 void sigint_handler(int signo) {
-#ifdef _WIN32 // Restore handler as it is not persistent on Windows
+  // Restore handler as it is not persistent on Windows.
   signal(SIGINT, sigint_handler);
-#endif
+
   static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
   if (g_driver != nullptr) {
     if (!g_interrupt_sent.test_and_set()) {
@@ -665,30 +672,6 @@ void sigint_handler(int signo) {
   }
 
   _exit(signo);
-}
-
-#ifndef _WIN32
-static void sigtstp_handler(int signo) {
-  if (g_driver != nullptr)
-    g_driver->GetDebugger().SaveInputTerminalState();
-
-  // Unblock the signal and remove our handler.
-  sigset_t set;
-  sigemptyset(&set);
-  sigaddset(&set, signo);
-  pthread_sigmask(SIG_UNBLOCK, &set, nullptr);
-  signal(signo, SIG_DFL);
-
-  // Now re-raise the signal. We will immediately suspend...
-  raise(signo);
-  // ... and resume after a SIGCONT.
-
-  // Now undo the modifications.
-  pthread_sigmask(SIG_BLOCK, &set, nullptr);
-  signal(signo, sigtstp_handler);
-
-  if (g_driver != nullptr)
-    g_driver->GetDebugger().RestoreInputTerminalState();
 }
 #endif
 
@@ -746,6 +729,14 @@ int main(int argc, char const *argv[]) {
   // Setup LLVM signal handlers and make sure we call llvm_shutdown() on
   // destruction.
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
+#if !defined(__APPLE__)
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash backtrace.\n");
+#else
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash report from "
+                        "~/Library/Logs/DiagnosticReports/.\n");
+#endif
 
   // Parse arguments.
   LLDBOptTable T;
@@ -779,6 +770,21 @@ int main(int argc, char const *argv[]) {
     return 1;
   }
 
+#if defined(_WIN32) && LLDB_ENABLE_PYTHON
+  // liblldb.dll has direct imports from python3xx.dll (the script interpreter
+  // plugin is statically linked into liblldb), so the loader needs to find
+  // python3xx.dll before lldb.exe's delay-load thunk for liblldb fires on the
+  // first SB call below. The runtime loader is statically linked into lldb.exe
+  // via lldbHost (it has no LLDB_API export), so this call does not itself
+  // trigger the liblldb.dll load.
+  llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> python_loader =
+      lldb_private::ScriptInterpreterRuntimeLoader::Get(eScriptLanguagePython);
+  if (!python_loader)
+    WithColor::warning() << llvm::toString(python_loader.takeError()) << '\n';
+  else if (llvm::Error err = python_loader->Load())
+    WithColor::warning() << llvm::toString(std::move(err)) << '\n';
+#endif
+
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
     WithColor::error() << "initialization failed: " << error.GetCString()
@@ -789,11 +795,102 @@ int main(int argc, char const *argv[]) {
   // Setup LLDB signal handlers once the debugger has been initialized.
   SBDebugger::PrintDiagnosticsOnError();
 
+#ifdef _WIN32
   signal(SIGINT, sigint_handler);
-#if !defined(_WIN32)
+#else
   signal(SIGPIPE, SIG_IGN);
-  signal(SIGWINCH, sigwinch_handler);
-  signal(SIGTSTP, sigtstp_handler);
+
+  // Capture the main thread's id so the signal thread can target it.
+  pthread_t main_thread = pthread_self();
+
+  // Set when the signal thread sends itself a SIGINT to wake the main thread.
+  // The next callback invocation observes this flag and skips the work. A
+  // plain bool is sufficient because the callback only ever runs on the
+  // signal thread; it lives outside the lambda because MainLoopPosix copies
+  // the callback on every dispatch, which would discard in-lambda state.
+  bool skip_next_sigint = false;
+
+  // Handle signals in a MainLoop running on a separate thread.
+  MainLoop signal_loop;
+  Status signal_status;
+
+  auto sigint_handler = signal_loop.RegisterSignal(
+      SIGINT,
+      [&, main_thread](MainLoopBase &) {
+        // Skip the self-sent wakeup SIGINT queued at the end of the previous
+        // invocation.
+        if (std::exchange(skip_next_sigint, false))
+          return;
+
+        // Temporarily restore the default disposition so that a second SIGINT
+        // delivered while DispatchInputInterrupt is running hard-terminates
+        // the process. This preserves the "double Ctrl-C to force exit"
+        // escape hatch users rely on when the debugger is unresponsive.
+        struct sigaction old_action;
+        struct sigaction new_action = {};
+        new_action.sa_handler = SIG_DFL;
+        sigemptyset(&new_action.sa_mask);
+
+        int ret = sigaction(SIGINT, &new_action, &old_action);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        if (g_driver)
+          g_driver->GetDebugger().DispatchInputInterrupt();
+
+        ret = sigaction(SIGINT, &old_action, nullptr);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        // Wake the main thread so any blocking syscall (e.g. the Python REPL
+        // waiting on input or sleeping) returns with EINTR. This lets Python
+        // observe the pending interrupt queued by DispatchInputInterrupt and
+        // raise KeyboardInterrupt. Flag the resulting callback invocation so
+        // it's skipped rather than re-running DispatchInputInterrupt.
+        skip_next_sigint = true;
+        pthread_kill(main_thread, SIGINT);
+      },
+      signal_status);
+  assert(sigint_handler && signal_status.Success());
+
+  auto sigwinch_handler = signal_loop.RegisterSignal(
+      SIGWINCH,
+      [&](MainLoopBase &) {
+        if (g_driver)
+          g_driver->UpdateWindowSize();
+      },
+      signal_status);
+  assert(sigwinch_handler && signal_status.Success());
+
+  auto sigtstp_handler = signal_loop.RegisterSignal(
+      SIGTSTP,
+      [&](MainLoopBase &) {
+        if (g_driver)
+          g_driver->GetDebugger().SaveInputTerminalState();
+
+        struct sigaction old_action;
+        struct sigaction new_action = {};
+        new_action.sa_handler = SIG_DFL;
+        sigemptyset(&new_action.sa_mask);
+        sigaddset(&new_action.sa_mask, SIGTSTP);
+
+        int ret = sigaction(SIGTSTP, &new_action, &old_action);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        raise(SIGTSTP);
+
+        ret = sigaction(SIGTSTP, &old_action, nullptr);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        if (g_driver)
+          g_driver->GetDebugger().RestoreInputTerminalState();
+      },
+      signal_status);
+  assert(sigtstp_handler && signal_status.Success());
+
+  std::thread signal_thread([&] { signal_loop.Run(); });
 #endif
 
   int exit_code = 0;
@@ -813,6 +910,25 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-  SBDebugger::Terminate();
+  // When terminating the debugger we have to wait on all the background tasks
+  // to complete, which can take a while. Print a message when this takes longer
+  // than 1 second.
+  {
+    std::future<void> future =
+        std::async(std::launch::async, []() { SBDebugger::Terminate(); });
+
+    if (future.wait_for(std::chrono::seconds(1)) == std::future_status::timeout)
+      fprintf(stderr, "Waiting for background tasks to complete...\n");
+
+    future.wait();
+  }
+
+#if !defined(_WIN32)
+  // Try to interrupt the signal thread.  If that succeeds, wait for it to exit.
+  if (signal_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    signal_thread.join();
+#endif
+
   return exit_code;
 }

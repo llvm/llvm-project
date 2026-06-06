@@ -94,9 +94,9 @@ Status OptionGroupPythonClassWithDict::SetOptionValue(
       if (m_current_key.empty())
         m_current_key.assign(std::string(option_arg));
       else
-        error.SetErrorStringWithFormat("Key: \"%s\" missing value.",
-                                        m_current_key.c_str());
-    
+        return Status::FromErrorStringWithFormatv("Key: \"{0}\" missing value.",
+                                                  m_current_key);
+
   } break;
   case 2: {
       if (!m_dict_sp)
@@ -124,8 +124,8 @@ Status OptionGroupPythonClassWithDict::SetOptionValue(
         m_current_key.clear();
       }
       else
-        error.SetErrorStringWithFormat("Value: \"%s\" missing matching key.",
-                                       option_arg.str().c_str());
+        return Status::FromErrorStringWithFormatv(
+            "Value: \"{0}\" missing matching key.", option_arg);
   } break;
   default:
     llvm_unreachable("Unimplemented option");
@@ -149,8 +149,8 @@ Status OptionGroupPythonClassWithDict::OptionParsingFinished(
   // If we get here and there's contents in the m_current_key, somebody must
   // have provided a key but no value.
   if (!m_current_key.empty())
-      error.SetErrorStringWithFormat("Key: \"%s\" missing value.",
-                                     m_current_key.c_str());
+    error = Status::FromErrorStringWithFormat("Key: \"%s\" missing value.",
+                                              m_current_key.c_str());
   return error;
 }
 

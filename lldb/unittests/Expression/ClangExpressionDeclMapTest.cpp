@@ -23,7 +23,7 @@ namespace {
 struct FakeClangExpressionDeclMap : public ClangExpressionDeclMap {
   FakeClangExpressionDeclMap(const std::shared_ptr<ClangASTImporter> &importer)
       : ClangExpressionDeclMap(false, nullptr, lldb::TargetSP(), importer,
-                               nullptr) {
+                               nullptr, /*ignore_context_qualifiers=*/false) {
     m_holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
     m_scratch_context = m_holder->GetAST();
   }
@@ -35,7 +35,7 @@ struct FakeClangExpressionDeclMap : public ClangExpressionDeclMap {
     // The declaration needs to have '$' prefix in its name like every
     // persistent declaration and must be inside the scratch AST context.
     assert(d);
-    assert(d->getName().startswith("$"));
+    assert(d->getName().starts_with("$"));
     assert(&d->getASTContext() == &m_scratch_context->getASTContext());
     m_persistent_decls[d->getName()] = d;
   }

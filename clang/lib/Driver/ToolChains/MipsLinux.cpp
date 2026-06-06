@@ -8,10 +8,8 @@
 
 #include "MipsLinux.h"
 #include "Arch/Mips.h"
-#include "CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -40,7 +38,7 @@ MipsLLVMToolChain::MipsLLVMToolChain(const Driver &D,
 
 void MipsLLVMToolChain::AddClangSystemIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   const Driver &D = getDriver();
@@ -57,8 +55,7 @@ void MipsLLVMToolChain::AddClangSystemIncludeArgs(
   const auto &Callback = Multilibs.includeDirsCallback();
   if (Callback) {
     for (const auto &Path : Callback(SelectedMultilibs.back()))
-      addExternCSystemIncludeIfExists(DriverArgs, CC1Args,
-                                      D.getInstalledDir() + Path);
+      addExternCSystemIncludeIfExists(DriverArgs, CC1Args, D.Dir + Path);
   }
 }
 
@@ -70,7 +67,7 @@ std::string MipsLLVMToolChain::computeSysRoot() const {
   if (!getDriver().SysRoot.empty())
     return getDriver().SysRoot + SelectedMultilibs.back().osSuffix();
 
-  const std::string InstalledDir(getDriver().getInstalledDir());
+  const std::string InstalledDir(getDriver().Dir);
   std::string SysRootPath =
       InstalledDir + "/../sysroot" + SelectedMultilibs.back().osSuffix();
   if (llvm::sys::fs::exists(SysRootPath))
@@ -97,7 +94,7 @@ void MipsLLVMToolChain::addLibCxxIncludePaths(
     llvm::opt::ArgStringList &CC1Args) const {
   if (const auto &Callback = Multilibs.includeDirsCallback()) {
     for (std::string Path : Callback(SelectedMultilibs.back())) {
-      Path = getDriver().getInstalledDir() + Path + "/c++/v1";
+      Path = getDriver().Dir + Path + "/c++/v1";
       if (llvm::sys::fs::exists(Path)) {
         addSystemInclude(DriverArgs, CC1Args, Path);
         return;
@@ -119,8 +116,8 @@ void MipsLLVMToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
-                                             StringRef Component,
-                                             FileType Type) const {
+                                             StringRef Component, FileType Type,
+                                             bool IsFortran) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, SelectedMultilibs.back().osSuffix(), "lib" + LibSuffix,
                           getOS());
@@ -138,5 +135,5 @@ std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
   }
   llvm::sys::path::append(
       Path, Twine("libclang_rt." + Component + "-" + "mips" + Suffix));
-  return std::string(Path.str());
+  return std::string(Path);
 }

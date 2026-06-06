@@ -11,7 +11,7 @@
 declare void @llvm.assume(i1 noundef) #0
 
 ;.
-; CHECK: @[[_ZN4OMPX5STATE9TEAMSTATEE:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global %"struct.ompx::state::TeamStateTy" undef
+; CHECK: @_ZN4ompx5state9TeamStateE = internal addrspace(3) global %"struct.ompx::state::TeamStateTy" undef
 ;.
 define weak_odr amdgpu_kernel void @__omp_offloading_16_19bc70bc_main_l44() {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_16_19bc70bc_main_l44() {

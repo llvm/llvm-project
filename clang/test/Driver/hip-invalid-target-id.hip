@@ -1,13 +1,10 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx908xnack \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOPLUS %s
 
-// NOPLUS: error: invalid target ID 'gfx908xnack'
+// NOPLUS: error: unsupported HIP gpu architecture: gfx908xnack 
 
 // RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx900 \
@@ -25,7 +22,7 @@
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=UNK %s
 
-// UNK: error: invalid target ID 'gfx908:unknown+'
+// UNK: error: unsupported HIP gpu architecture: gfx900+xnack 
 
 // RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
@@ -34,7 +31,7 @@
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=MIXED %s
 
-// MIXED: error: invalid target ID 'gfx908:sramecc+:unknown+'
+// MIXED: error: unsupported HIP gpu architecture: gfx900+xnack 
 
 // RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
@@ -58,7 +55,7 @@
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOCOLON %s
 
-// NOCOLON: error: invalid target ID 'gfx900+xnack'
+// NOCOLON: error: unsupported HIP gpu architecture: gfx900+xnack
 
 // RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \

@@ -5,7 +5,7 @@
 // RUN: %check_clang_tidy %s bugprone-implicit-widening-of-multiplication-result %t -- -- -target x86_64-unknown-unknown -x c++ -fsigned-char
 
 // RUN: %check_clang_tidy -std=c99 %s bugprone-implicit-widening-of-multiplication-result %t -- -- -target x86_64-unknown-unknown -x c -funsigned-char
-// RUN: %check_clang_tidy %s bugprone-implicit-widening-of-multiplication-result %t -- -- -target x86_64-unknown-unknown-x c++ -funsigned-char
+// RUN: %check_clang_tidy %s bugprone-implicit-widening-of-multiplication-result %t -- -- -target x86_64 c++ -funsigned-char
 
 long t0(char a, char b) {
   return a * b;

@@ -1,14 +1,6 @@
 # Needed for lit support in standalone builds.
 include(AddLLVM)
 
-option(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS
-  "When set to ON and testing in a standalone build, test the runtime \
-  libraries built by this standalone build rather than the runtime libraries \
-  shipped with the compiler (used for testing). When set to OFF and testing \
-  in a standalone build, test the runtime libraries shipped with the compiler \
-  (used for testing). This option has no effect if the compiler and this \
-  build are configured to use the same runtime library path."
-  ON)
 pythonize_bool(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
 
 pythonize_bool(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -17,6 +9,19 @@ pythonize_bool(ZLIB_FOUND)
 pythonize_bool(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
 
 pythonize_bool(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+
+pythonize_bool(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+
+pythonize_bool(COMPILER_RT_HAS_AARCH64_SME)
+
+pythonize_bool(COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
+
+if(LLVM_TREE_AVAILABLE OR NOT COMPILER_RT_STANDALONE_BUILD)
+  set(COMPILER_RT_BUILT_WITH_LLVM TRUE)
+else()
+  set(COMPILER_RT_BUILT_WITH_LLVM FALSE)
+endif()
+pythonize_bool(COMPILER_RT_BUILT_WITH_LLVM)
 
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
@@ -37,8 +42,9 @@ if(NOT ANDROID)
   if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT LLVM_RUNTIMES_BUILD)
     # Use LLVM utils and Clang from the same build tree.
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS
-      clang clang-resource-headers FileCheck count not llvm-config llvm-nm llvm-objdump
-      llvm-readelf llvm-readobj llvm-size llvm-symbolizer compiler-rt-headers sancov split-file)
+      clang clang-resource-headers FileCheck count not llvm-config llvm-nm 
+      llvm-objdump llvm-readelf llvm-readobj llvm-size llvm-symbolizer 
+      compiler-rt-headers sancov split-file llvm-strip)
     if (WIN32)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS KillTheDoctor)
     endif()
@@ -51,51 +57,106 @@ endif()
 
 umbrella_lit_testsuite_begin(check-compiler-rt)
 
-function(compiler_rt_test_runtime runtime)
-  string(TOUPPER ${runtime} runtime_uppercase)
-  if(COMPILER_RT_HAS_${runtime_uppercase})
-    if (${runtime} STREQUAL scudo_standalone)
-      add_subdirectory(scudo/standalone)
-    else()
-      add_subdirectory(${runtime})
+set(COMPILER_RT_KNOWN_TEST_SUITES
+    builtins;ctx_profile;fuzzer;interception;lsan;memprof;metadata
+    ;orc;profile;sanitizer_common;shadowcallstack
+    ;ubsan;xray)
+list(APPEND COMPILER_RT_KNOWN_TEST_SUITES ${ALL_SANITIZERS})
+list(REMOVE_DUPLICATES COMPILER_RT_KNOWN_TEST_SUITES)
+# Sort the list so that's easier to read when emitting errors.
+list(SORT COMPILER_RT_KNOWN_TEST_SUITES)
+
+set(COMPILER_RT_ENABLE_TEST_SUITES "all" CACHE STRING
+    "List of test suites to enable (semicolon-separated), or \"all\" to enable all test suites. Known test suites: ${COMPILER_RT_KNOWN_TEST_SUITES}")
+
+# Validate COMPILER_RT_ENABLE_TEST_SUITES values.
+if(NOT "${COMPILER_RT_ENABLE_TEST_SUITES}" STREQUAL "all")
+  foreach(suite ${COMPILER_RT_ENABLE_TEST_SUITES})
+    if(NOT "${suite}" IN_LIST COMPILER_RT_KNOWN_TEST_SUITES)
+      message(FATAL_ERROR "Unknown test suite '${suite}' in COMPILER_RT_ENABLE_TEST_SUITES. Known test suites are: ${COMPILER_RT_KNOWN_TEST_SUITES}")
     endif()
-    foreach(directory ${ARGN})
-      add_subdirectory(${directory})
-    endforeach()
+  endforeach()
+endif()
+
+function(compiler_rt_test_runtime runtime)
+  cmake_parse_arguments(ARG "NO_COMPILER_RT_HAS_GUARD" "" "" ${ARGN})
+
+  # Validate that the test suite name is known.
+  if(NOT "${runtime}" IN_LIST COMPILER_RT_KNOWN_TEST_SUITES)
+    message(FATAL_ERROR "'${runtime}' is not a known test suite. Known test suites are: ${COMPILER_RT_KNOWN_TEST_SUITES}")
+  endif()
+
+  # If COMPILER_RT_ENABLE_TEST_SUITES is not "all", check that this runtime
+  # is in the enabled list.
+  if(NOT "${COMPILER_RT_ENABLE_TEST_SUITES}" STREQUAL "all")
+    if(NOT "${runtime}" IN_LIST COMPILER_RT_ENABLE_TEST_SUITES)
+      message(STATUS "Skipping compiler-rt ${runtime} test directory")
+      return()
+    endif()
+  endif()
+
+  # FIXME: The old code had this but we should probably remove it
+  # because it's unreachable because `compiler-rt/test` is guarded
+  # by `if(COMPILER_RT_INCLUDE_TESTS)`.
+  if(NOT COMPILER_RT_INCLUDE_TESTS)
+    message(STATUS "Skipping compiler-rt ${runtime} test directory")
+    return()
+  endif()
+
+  if(NOT ARG_NO_COMPILER_RT_HAS_GUARD)
+    string(TOUPPER ${runtime} runtime_uppercase)
+    if(NOT COMPILER_RT_HAS_${runtime_uppercase})
+      message(STATUS "Skipping compiler-rt ${runtime} test directory")
+      return()
+    endif()
+  endif()
+
+  if(${runtime} STREQUAL cfi AND NOT COMPILER_RT_HAS_UBSAN)
+    # CFI tests require diagnostic mode, which is implemented in UBSan.
+    message(STATUS "Skipping ${runtime} test directory")
+  elseif(${runtime} STREQUAL scudo_standalone)
+    message(STATUS "Adding scudo/standalone test directory")
+    add_subdirectory(scudo/standalone)
+  else()
+    message(STATUS "Adding compiler-rt ${runtime} test directory")
+    add_subdirectory(${runtime})
   endif()
 endfunction()
 
 # Run sanitizer tests only if we're sure that clang would produce
 # working binaries.
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
-  if(COMPILER_RT_BUILD_BUILTINS)
-    add_subdirectory(builtins)
+  # COMPILER_RT_TEST_EXTERNAL_BUILTINS allows running tests against builtins built
+  # in an independent build. This option is only indended to be used by
+  # LLVM_ENABLE_RUNTIMES-based builds.
+  if(COMPILER_RT_BUILD_BUILTINS OR COMPILER_RT_TEST_EXTERNAL_BUILTINS)
+    compiler_rt_test_runtime(builtins NO_COMPILER_RT_HAS_GUARD)
   endif()
   if(COMPILER_RT_BUILD_SANITIZERS)
     compiler_rt_test_runtime(interception)
 
     compiler_rt_test_runtime(lsan)
-    # CFI tests require diagnostic mode, which is implemented in UBSan.
-    compiler_rt_test_runtime(ubsan cfi)
+    compiler_rt_test_runtime(ubsan)
     compiler_rt_test_runtime(sanitizer_common)
 
-    # OpenBSD not supporting asan, cannot run the tests
-    if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD" AND NOT ANDROID)
+    # GNU/Hurd and OpenBSD not supporting asan, cannot run the tests
+    if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "GNU" AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD" AND NOT ANDROID)
       compiler_rt_test_runtime(fuzzer)
 
       # These tests don't need an additional runtime but use asan runtime.
-      add_subdirectory(metadata)
+      compiler_rt_test_runtime(metadata NO_COMPILER_RT_HAS_GUARD)
     endif()
 
     foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
-      # cfi testing is gated on ubsan
-      if(NOT ${sanitizer} STREQUAL cfi)
-        compiler_rt_test_runtime(${sanitizer})
-      endif()
+      compiler_rt_test_runtime(${sanitizer})
     endforeach()
   endif()
-  if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
+  if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE
+     AND NOT COMPILER_RT_GPU_BUILD)
     compiler_rt_test_runtime(profile)
+  endif()
+  if(COMPILER_RT_BUILD_CTX_PROFILE)
+    compiler_rt_test_runtime(ctx_profile)
   endif()
   if(COMPILER_RT_BUILD_MEMPROF)
     compiler_rt_test_runtime(memprof)
@@ -104,16 +165,21 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     compiler_rt_test_runtime(xray)
   endif()
   if(COMPILER_RT_BUILD_ORC)
-    compiler_rt_Test_runtime(orc)
+    compiler_rt_test_runtime(orc)
   endif()
   # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests
   # include their own minimal runtime
-  add_subdirectory(shadowcallstack)
+  compiler_rt_test_runtime(shadowcallstack NO_COMPILER_RT_HAS_GUARD)
 endif()
 
 # Now that we've traversed all the directories and know all the lit testsuites,
 # introduce a rule to run to run all of them.
-add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
+get_property(LLVM_COMPILER_RT_LIT_DEPENDS GLOBAL PROPERTY LLVM_COMPILER_RT_LIT_DEPENDS)
+add_custom_target(compiler-rt-test-depends)
+set_target_properties(compiler-rt-test-depends PROPERTIES FOLDER "Compiler-RT/Tests")
+if(LLVM_COMPILER_RT_LIT_DEPENDS)
+  add_dependencies(compiler-rt-test-depends ${LLVM_COMPILER_RT_LIT_DEPENDS})
+endif()
 umbrella_lit_testsuite_end(check-compiler-rt)
 
 if(COMPILER_RT_STANDALONE_BUILD)

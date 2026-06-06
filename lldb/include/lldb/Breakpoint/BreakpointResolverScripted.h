@@ -1,4 +1,4 @@
-//===-- BreakpointResolverScripted.h -----------------------------*- C++ -*-===//
+//===-- BreakpointResolverScripted.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/lldb-forward.h"
 
 namespace lldb_private {
@@ -30,9 +31,8 @@ public:
 
   ~BreakpointResolverScripted() override = default;
 
-  static BreakpointResolver *
-  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
-                           const StructuredData::Dictionary &options_dict,
+  static lldb::BreakpointResolverSP
+  CreateFromStructuredData(const StructuredData::Dictionary &options_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
@@ -45,6 +45,13 @@ public:
 
   void GetDescription(Stream *s) override;
 
+  lldb::BreakpointLocationSP WasHit(lldb::StackFrameSP frame_sp,
+                                    lldb::BreakpointLocationSP bp_loc_sp);
+
+  std::optional<std::string>
+  GetLocationDescription(lldb::BreakpointLocationSP bp_loc_sp,
+                         lldb::DescriptionLevel level);
+
   void Dump(Stream *s) const override;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -56,16 +63,26 @@ public:
   lldb::BreakpointResolverSP
   CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
 
+  // OverridesResolver will get called before this resolver has been assigned a
+  // breakpoint.  You should only need to see the resolver to know whether you
+  // want to override it, but you may need to check something about the target,
+  // which you would normally get to from the breakpoint, so we pass it in here.
+  bool OverridesResolver(Target &target,
+                         lldb::BreakpointResolverSP original_sp) override;
+
 protected:
   void NotifyBreakpointSet() override;
 private:
   void CreateImplementationIfNeeded(lldb::BreakpointSP bkpt);
+  void CreateImplementationIfNeeded(Target &target, lldb::BreakpointSP bkpt);
   ScriptInterpreter *GetScriptInterpreter();
-  
+
   std::string m_class_name;
   lldb::SearchDepth m_depth;
   StructuredDataImpl m_args;
-  StructuredData::GenericSP m_implementation_sp;
+  Status m_error;
+  lldb::ScriptedBreakpointInterfaceSP m_interface_sp;
+  bool m_breakpoint_sent = false;
 
   BreakpointResolverScripted(const BreakpointResolverScripted &) = delete;
   const BreakpointResolverScripted &

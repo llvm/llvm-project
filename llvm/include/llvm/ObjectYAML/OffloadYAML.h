@@ -15,7 +15,6 @@
 #ifndef LLVM_OBJECTYAML_OFFLOADYAML_H
 #define LLVM_OBJECTYAML_OFFLOADYAML_H
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -40,8 +39,8 @@ struct Binary {
 
   std::optional<uint32_t> Version;
   std::optional<uint64_t> Size;
-  std::optional<uint64_t> EntryOffset;
-  std::optional<uint64_t> EntrySize;
+  std::optional<uint64_t> EntriesOffset;
+  std::optional<uint64_t> EntriesCount;
   std::vector<Member> Members;
 };
 

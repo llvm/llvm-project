@@ -22,6 +22,8 @@ class AssumptionCache;
 class StringRef;
 class Value;
 class CallInst;
+class DominatorTree;
+class DomConditionCache;
 class DataLayout;
 class Instruction;
 class IRBuilderBase;
@@ -42,14 +44,14 @@ private:
   bool OnlyLowerUnknownSize;
 
 public:
-  FortifiedLibCallSimplifier(const TargetLibraryInfo *TLI,
-                             bool OnlyLowerUnknownSize = false);
+  LLVM_ABI FortifiedLibCallSimplifier(const TargetLibraryInfo *TLI,
+                                      bool OnlyLowerUnknownSize = false);
 
   /// Take the given call instruction and return a more
   /// optimal value to replace the instruction with or 0 if a more
   /// optimal form can't be found.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
+  LLVM_ABI Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   Value *optimizeMemCpyChk(CallInst *CI, IRBuilderBase &B);
@@ -103,6 +105,8 @@ private:
   FortifiedLibCallSimplifier FortifiedSimplifier;
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
+  DominatorTree *DT;
+  DomConditionCache *DC;
   AssumptionCache *AC;
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
@@ -123,10 +127,10 @@ private:
   static void eraseFromParentDefault(Instruction *I) { I->eraseFromParent(); }
 
   /// Replace an instruction's uses with a value using our replacer.
-  void replaceAllUsesWith(Instruction *I, Value *With);
+  LLVM_ABI void replaceAllUsesWith(Instruction *I, Value *With);
 
   /// Erase an instruction from its parent with our eraser.
-  void eraseFromParent(Instruction *I);
+  LLVM_ABI void eraseFromParent(Instruction *I);
 
   /// Replace an instruction with a value and erase it from its parent.
   void substituteInParent(Instruction *I, Value *With) {
@@ -135,8 +139,9 @@ private:
   }
 
 public:
-  LibCallSimplifier(
-      const DataLayout &DL, const TargetLibraryInfo *TLI, AssumptionCache *AC,
+  LLVM_ABI LibCallSimplifier(
+      const DataLayout &DL, const TargetLibraryInfo *TLI, DominatorTree *DT,
+      DomConditionCache *DC, AssumptionCache *AC,
       OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI,
       function_ref<void(Instruction *, Value *)> Replacer =
@@ -150,7 +155,7 @@ public:
   /// other instructions that use the given instruction were modified
   /// and the given instruction is dead.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
+  LLVM_ABI Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   // String and Memory Library Call Optimizations
@@ -184,6 +189,7 @@ private:
   Value *optimizeMemSet(CallInst *CI, IRBuilderBase &B);
   Value *optimizeRealloc(CallInst *CI, IRBuilderBase &B);
   Value *optimizeNew(CallInst *CI, IRBuilderBase &B, LibFunc &Func);
+  Value *maybeOptimizeNoBuiltinOperatorNew(CallInst *CI, IRBuilderBase &B);
   Value *optimizeWcslen(CallInst *CI, IRBuilderBase &B);
   Value *optimizeBCopy(CallInst *CI, IRBuilderBase &B);
 
@@ -198,11 +204,16 @@ private:
   Value *replacePowWithExp(CallInst *Pow, IRBuilderBase &B);
   Value *replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B);
   Value *optimizeExp2(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeFMinFMax(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFMinFMax(CallInst *CI, IRBuilderBase &B, Intrinsic::ID IID);
   Value *optimizeLog(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSqrt(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFMod(CallInst *CI, IRBuilderBase &B);
+  Value *mergeSqrtToExp(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B);
-  Value *optimizeTan(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeTrigInversionPairs(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeSymmetric(CallInst *CI, LibFunc Func, IRBuilderBase &B);
+  Value *optimizeRemquo(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFdim(CallInst *CI, IRBuilderBase &B);
   // Wrapper for all floating point library call optimizations
   Value *optimizeFloatingPointLibCall(CallInst *CI, LibFunc Func,
                                       IRBuilderBase &B);
@@ -241,6 +252,9 @@ private:
   Value *optimizeSPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSnPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFPrintFString(CallInst *CI, IRBuilderBase &B);
+
+  /// Exit functions
+  Value *optimizeExit(CallInst *CI);
 
   /// hasFloatVersion - Checks if there is a float version of the specified
   /// function by checking for an existing function with name FuncName + f

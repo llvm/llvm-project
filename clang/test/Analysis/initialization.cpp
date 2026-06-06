@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -triple i386-apple-darwin10 -analyze -analyzer-config eagerly-assume=false -analyzer-checker=core.uninitialized.Assign,core.builtin,debug.ExprInspection,core.uninitialized.UndefReturn -verify %s
+// RUN: %clang_analyze_cc1 -std=c++14 -triple i386-apple-darwin10 -analyzer-config eagerly-assume=false -analyzer-checker=core.uninitialized.Assign,core.builtin,debug.ExprInspection,core.uninitialized.UndefReturn -verify %s
 
 template <typename T>
 void clang_analyzer_dump(T x);
@@ -24,7 +24,7 @@ void glob_array_index1() {
 void glob_invalid_index1() {
   const int *ptr = glob_arr1;
   int idx = -42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 void glob_symbolic_index1(int idx) {
@@ -44,13 +44,13 @@ void glob_ptr_index1() {
 void glob_invalid_index2() {
   const int *ptr = glob_arr2;
   int idx = 42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 const float glob_arr3[] = {
     0.0000, 0.0235, 0.0470, 0.0706, 0.0941, 0.1176};
 float no_warn_garbage_value() {
-  return glob_arr3[0]; // no-warning (garbage or undefined)
+  return glob_arr3[0]; // no-warning (not meaningful)
 }
 
 int const glob_arr4[4][2] = {};
@@ -62,13 +62,13 @@ void glob_array_index2() {
 
 void glob_invalid_index3() {
   int idx = -42;
-  auto x = glob_arr4[1][idx]; // expected-warning{{garbage or undefined}}
+  auto x = glob_arr4[1][idx]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index4() {
   const int *ptr = glob_arr4[1];
   int idx = -42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 int const glob_arr5[4][2] = {{1}, 3, 4, 5};
@@ -87,20 +87,20 @@ void glob_ptr_index2() {
   int const *ptr = glob_arr5[1];
   clang_analyzer_eval(ptr[0] == 3); // expected-warning{{TRUE}}
   clang_analyzer_eval(ptr[1] == 4); // expected-warning{{TRUE}}
-  clang_analyzer_eval(ptr[2] == 5); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(ptr[3] == 0); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(ptr[4] == 0); // expected-warning{{UNDEFINED}}
+  clang_analyzer_eval(ptr[2] == 5); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr[3] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr[4] == 0); // expected-warning{{TRUE}}
 }
 
 void glob_invalid_index5() {
   int idx = -42;
-  auto x = glob_arr5[1][idx]; // expected-warning{{garbage or undefined}}
+  auto x = glob_arr5[1][idx]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index6() {
   int const *ptr = &glob_arr5[1][0];
   int idx = 42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 extern const int glob_arr_no_init[10];
@@ -138,13 +138,13 @@ void glob_ptr_index3() {
 
 void glob_invalid_index7() {
   int idx = -42;
-  auto x = glob_arr6[idx]; // expected-warning{{garbage or undefined}}
+  auto x = glob_arr6[idx]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index8() {
   const char *ptr = glob_arr6;
   int idx = 42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 char const glob_arr7[5] = {"123"};
@@ -158,13 +158,13 @@ void glob_array_index6() {
 
 void glob_invalid_index9() {
   int idx = -42;
-  auto x = glob_arr7[idx]; // expected-warning{{garbage or undefined}}
+  auto x = glob_arr7[idx]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index10() {
   const char *ptr = glob_arr7;
   int idx = 42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 char const *const glob_ptr8 = "123";
@@ -180,12 +180,12 @@ void glob_ptr_index4() {
 
 void glob_invalid_index11() {
   int idx = -42;
-  auto x = glob_ptr8[idx]; // expected-warning{{garbage or undefined}}
+  auto x = glob_ptr8[idx]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index12() {
   int idx = 42;
-  // FIXME: Should warn {{garbage or undefined}}
+  // FIXME: Should warn {{uninitialized}}
   // We should take into account a declaration in which the literal is used.
   auto x = glob_ptr8[idx]; // no-warning
 }
@@ -255,4 +255,87 @@ const E glob[] = {{}};
 void initlistWithinInitlist() {
   // no-crash
   clang_analyzer_dump(glob[0]); // expected-warning-re {{reg_${{[0-9]+}}<enum E Element{glob,0 S64b,enum E}>}}
+}
+
+const int glob_arr_cross[4][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
+void glob_array_cross_subarray_boundary() {
+  const int *p = &glob_arr_cross[0][0];
+  clang_analyzer_eval(p[4] == 5);   // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[7] == 8);   // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[11] == 12); // expected-warning{{TRUE}}
+}
+
+const int glob_arr_sparse[4][3] = {{1, 2}, {0, 0, 7}};
+void glob_array_sparse_cross_boundary() {
+  const int *p = &glob_arr_sparse[0][0];
+  clang_analyzer_eval(p[0] == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[1] == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[2] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[3] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[5] == 7); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[6] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[11] == 0); // expected-warning{{TRUE}}
+}
+
+const int glob_arr_3d[2][3][4] = {
+    {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}},
+    {{13, 14, 15, 16}, {17, 18, 19, 20}, {21, 22, 23, 24}}};
+void glob_array_3d_cross_boundary() {
+  const int *p = &glob_arr_3d[0][0][0];
+  clang_analyzer_eval(p[0] == 1);   // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[5] == 6);   // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[11] == 12); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[12] == 13); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[23] == 24); // expected-warning{{TRUE}}
+}
+
+// Limitation: type-punned access through incompatible pointer type.
+const int glob_arr_pun[2][3] = {{1, 2, 3}, {4, 5, 6}};
+void glob_array_type_pun_unresolved() {
+  const unsigned *p = (const unsigned *)&glob_arr_pun[0][0];
+  clang_analyzer_dump(p[0]); // expected-warning-re{{reg_${{[0-9]+}}<unsigned int Element{glob_arr_pun,0 S64b,unsigned int}>}}
+}
+
+const int glob_arr_recast[4][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
+void glob_array_recast_resolves_against_declared_type() {
+  const int (*q)[6] = (const int (*)[6])&glob_arr_recast[0][0];
+  clang_analyzer_eval(q[0][4] == 5); // expected-warning{{TRUE}}
+  clang_analyzer_eval(q[1][0] == 4); // expected-warning{{TRUE}}
+}
+
+void glob_array_write_then_read_cross_boundary() {
+  int arr[4][3];
+  arr[0][0] = 10;
+  arr[1][1] = 42;
+  arr[2][2] = 99;
+  arr[3][2] = 77;
+
+  int *p = &arr[0][0];
+  clang_analyzer_eval(p[0] == 10); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[4] == 42); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[8] == 99); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[11] == 77); // expected-warning{{TRUE}}
+}
+
+void glob_array_write_then_read_before_start() {
+  int arr[4][3];
+  arr[0][0] = 10;
+  int *p = &arr[0][0];
+  int x = p[-1]; // expected-warning{{Assigned value is uninitialized}}
+  (void)x;
+}
+
+// Negative inner index from a non-zero outer base lands within the allocation.
+const int glob_arr_neg[4][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
+void glob_array_negative_inner_index() {
+  const int *p = &glob_arr_neg[2][0];
+  clang_analyzer_eval(p[-1] == 6); // expected-warning{{TRUE}}
+}
+
+void glob_array_write_then_read_past_end() {
+  int arr[4][3];
+  arr[3][2] = 77;
+  int *p = &arr[0][0];
+  int x = p[12]; // expected-warning{{Assigned value is uninitialized}}
+  (void)x;
 }

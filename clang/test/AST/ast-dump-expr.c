@@ -222,15 +222,15 @@ void UnaryOperators(int a, int *b) {
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'int' lvalue ParmVar 0x{{[^ ]*}} 'a' 'int'
 
   sizeof a;
-  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:10> 'unsigned long' sizeof
+  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:10> '__size_t':'unsigned long' sizeof
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'int' lvalue ParmVar 0x{{[^ ]*}} 'a' 'int'
 
   sizeof(int);
-  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> 'unsigned long' sizeof 'int'
+  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> '__size_t':'unsigned long' sizeof 'int'
 
   _Alignof(int);
   // FIXME: Uses C++ spelling for alignof in C mode.
-  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-2]]:3, col:15> 'unsigned long' alignof 'int'
+  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-2]]:3, col:15> '__size_t':'unsigned long' alignof 'int'
 }
 
 struct S {
@@ -259,7 +259,7 @@ void PostfixOperators(int *a, struct S b, struct S *c) {
   b.a;
   // CHECK: ImplicitCastExpr
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:5> 'int' lvalue .a 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'struct S':'struct S' lvalue ParmVar 0x{{[^ ]*}} 'b' 'struct S':'struct S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'struct S' lvalue ParmVar 0x{{[^ ]*}} 'b' 'struct S'
 
   c->a;
   // CHECK: ImplicitCastExpr
@@ -280,8 +280,8 @@ void PostfixOperators(int *a, struct S b, struct S *c) {
 
   (struct S){1};
   // CHECK: ImplicitCastExpr
-  // CHECK-NEXT: CompoundLiteralExpr 0x{{[^ ]*}} <col:3, col:15> 'struct S':'struct S' lvalue
-  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:13, col:15> 'struct S':'struct S'
+  // CHECK-NEXT: CompoundLiteralExpr 0x{{[^ ]*}} <col:3, col:15> 'struct S' lvalue
+  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:13, col:15> 'struct S'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:14> 'int' 1
 }
 

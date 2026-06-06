@@ -60,6 +60,10 @@ private:
     NoConvergence
   } ConvergenceKind = NoConvergence;
 
+  /// The control token operation performed by a convergence control Intrinsic
+  /// in LLVM IR, or by a CONVERGENCECTRL* instruction in MIR
+  enum ConvOpKind { CONV_ANCHOR, CONV_ENTRY, CONV_LOOP, CONV_NONE };
+
   // Cache token uses found so far. Note that we track the unique definitions
   // and not the token values.
   DenseMap<const InstructionT *, const InstructionT *> Tokens;
@@ -68,6 +72,8 @@ private:
 
   static bool isInsideConvergentFunction(const InstructionT &I);
   static bool isConvergent(const InstructionT &I);
+  static ConvOpKind getConvOp(const InstructionT &I);
+  void checkConvergenceTokenProduced(const InstructionT &I);
   const InstructionT *findAndCheckConvergenceTokenUsed(const InstructionT &I);
 
   void reportFailure(const Twine &Message, ArrayRef<Printable> Values);

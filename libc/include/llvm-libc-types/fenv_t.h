@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_FENV_T_H__
-#define __LLVM_LIBC_TYPES_FENV_T_H__
+#ifndef LLVM_LIBC_TYPES_FENV_T_H
+#define LLVM_LIBC_TYPES_FENV_T_H
 
 #ifdef __aarch64__
 typedef struct {
@@ -25,7 +25,7 @@ typedef struct {
 } fenv_t;
 #elif defined(__riscv)
 typedef unsigned int fenv_t;
-#elif defined(__AMDGPU__) || defined(__NVPTX__)
+#elif defined(__AMDGPU__) || defined(__NVPTX__) || defined(__SPIRV__)
 typedef struct {
   unsigned int __fpc;
 } fenv_t;
@@ -33,4 +33,4 @@ typedef struct {
 #error "fenv_t not defined for your platform"
 #endif
 
-#endif // __LLVM_LIBC_TYPES_FENV_T_H__
+#endif // LLVM_LIBC_TYPES_FENV_T_H

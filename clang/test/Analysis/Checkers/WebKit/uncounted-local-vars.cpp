@@ -1,18 +1,34 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedLocalVarsChecker -verify %s
 
 #include "mock-types.h"
+#include "mock-system-header.h"
+
+void someFunction();
 
 namespace raw_ptr {
 void foo() {
-  RefCountable *bar;
-  // FIXME: later on we might warn on uninitialized vars too
+  RefCountable *bar; // A local variable in a trivial context is ignored.
 }
 
 void bar(RefCountable *) {}
+
+void baz() {
+  RefCountable *bar;
+  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+}
 } // namespace raw_ptr
 
 namespace reference {
 void foo_ref() {
+  RefCountable automatic;
+  RefCountable &bar = automatic;
+  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  bar.method();
+}
+
+void foo_ref_trivial() {
   RefCountable automatic;
   RefCountable &bar = automatic;
   // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
@@ -32,6 +48,8 @@ void foo2() {
   // missing embedded scope here
   RefCountable *bar = foo.get();
   // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  bar->method();
 }
 
 void foo3() {
@@ -47,11 +65,160 @@ void foo4() {
     { RefCountable *bar = foo.get(); }
   }
 }
+
+void foo5() {
+  RefPtr<RefCountable> foo;
+  auto* bar = foo.get();
+  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  bar->trivial();
+  {
+    auto* baz = foo.get();
+    baz->trivial();
+  }
+}
+
+void foo6() {
+  RefPtr<RefCountable> foo;
+  auto* bar = foo.get();
+  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  bar->method();
+}
+
+struct SelfReferencingStruct {
+  SelfReferencingStruct* ptr;
+  RefCountable* obj { nullptr };
+};
+
+void foo7(RefCountable* obj) {
+  SelfReferencingStruct bar = { &bar, obj };
+  bar.obj->method();
+}
+
+void foo8(RefCountable* obj) {
+  RefPtr<RefCountable> foo;
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    foo = nullptr;
+    bar->method();
+  }
+  RefPtr<RefCountable> baz;
+  {
+    RefCountable *bar = baz.get();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    baz = obj;
+    bar->method();
+  }
+  foo = nullptr;
+  {
+    RefCountable *bar = foo.get();
+    // No warning. It's okay to mutate RefPtr in an outer scope.
+    bar->method();
+  }
+  foo = obj;
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    foo.releaseNonNull();
+    bar->method();
+  }
+  {
+    RefCountable *bar = foo.get();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    foo = obj ? obj : nullptr;
+    bar->method();
+  }
+  {
+    RefCountable *bar = foo->trivial() ? foo.get() : nullptr;
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    foo = nullptr;
+    foo = (RefCountable *)0;
+    bar->method();
+  }
+}
+
+void consumeRef(Ref<RefCountable>&);
+struct Consumer {
+  Consumer();
+  Consumer(Ref<RefCountable>&);
+  void mutate(Ref<RefCountable>&);
+};
+Consumer operator<<(Consumer, Ref<RefCountable>&);
+
+void foo9(RefCountable& o) {
+  Ref<RefCountable> guardian(o);
+  {
+    RefCountable &bar = guardian.get();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    guardian = o; // We don't detect that we're setting it to the same value.
+    bar.method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    Ref<RefCountable> other(*bar); // We don't detect other has the same value as guardian.
+    guardian.swap(other);
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    Ref<RefCountable> other(static_cast<Ref<RefCountable>&&>(guardian));
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    guardian.leakRef();
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    guardian = o.trivial() ? o : *bar;
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    {
+      Ref<RefCountable> oldGuardian = std::exchange(guardian, nullptr);
+    }
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    consumeRef(guardian);
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    Consumer consumer(guardian);
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    Consumer consumer;
+    consumer.mutate(guardian);
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    Consumer consumer;
+    consumer << guardian;
+    bar->method();
+  }
+}
+
 } // namespace guardian_scopes
 
 namespace auto_keyword {
 class Foo {
-  RefCountable *provide_ref_ctnbl() { return nullptr; }
+  RefCountable *provide_ref_ctnbl();
 
   void evil_func() {
     RefCountable *bar = provide_ref_ctnbl();
@@ -60,6 +227,14 @@ class Foo {
     // expected-warning@-1{{Local variable 'baz' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
     auto *baz2 = this->provide_ref_ctnbl();
     // expected-warning@-1{{Local variable 'baz2' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    [[clang::suppress]] auto *baz_suppressed = provide_ref_ctnbl(); // no-warning
+  }
+
+  void func() {
+    RefCountable *bar = provide_ref_ctnbl();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    if (bar)
+      bar->method();
   }
 };
 } // namespace auto_keyword
@@ -67,7 +242,11 @@ class Foo {
 namespace guardian_casts {
 void foo1() {
   RefPtr<RefCountable> foo;
-  { RefCountable *bar = downcast<RefCountable>(foo.get()); }
+  {
+    RefCountable *bar = downcast<RefCountable>(foo.get());
+    bar->method();
+  }
+  foo->method();
 }
 
 void foo2() {
@@ -75,14 +254,33 @@ void foo2() {
   {
     RefCountable *bar =
         static_cast<RefCountable *>(downcast<RefCountable>(foo.get()));
+    someFunction();
   }
 }
 } // namespace guardian_casts
 
+namespace casts {
+
+RefCountable* provide() { return nullptr; }
+RefCountable* downcast(RefCountable*);
+template<class T> T* bitwise_cast(T*);
+template<class T> T* bit_cast(T*);
+
+  void foo() {
+    auto* cast1 = downcast(provide());
+    auto* cast2 = bitwise_cast(provide());
+    auto* cast3 = bit_cast(provide());
+   }
+} // namespace casts
+
 namespace guardian_ref_conversion_operator {
 void foo() {
   Ref<RefCountable> rc;
-  { RefCountable &rr = rc; }
+  {
+    RefCountable &rr = rc;
+    rr.method();
+    someFunction();
+  }
 }
 } // namespace guardian_ref_conversion_operator
 
@@ -91,9 +289,420 @@ RefCountable *provide_ref_ctnbl() { return nullptr; }
 
 void foo() {
   // no warnings
-  if (RefCountable *a = provide_ref_ctnbl()) { }
-  for (RefCountable *a = provide_ref_ctnbl(); a != nullptr;) { }
+  if (RefCountable *a = provide_ref_ctnbl())
+    a->trivial();
+  for (RefCountable *b = provide_ref_ctnbl(); b != nullptr;)
+    b->trivial();
   RefCountable *array[1];
-  for (RefCountable *a : array) { }
+  for (RefCountable *c : array)
+    c->trivial();
+  while (RefCountable *d = provide_ref_ctnbl())
+    d->trivial();
+  do {
+    RefCountable *e = provide_ref_ctnbl();
+    e->trivial();
+  } while (1);
+  someFunction();
 }
+
+void bar() {
+  if (RefCountable *a = provide_ref_ctnbl()) {
+    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();    
+  }
+  for (RefCountable *b = provide_ref_ctnbl(); b != nullptr;) {
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    b->method();
+  }
+  RefCountable *array[1];
+  for (RefCountable *c : array) {
+    // expected-warning@-1{{Local variable 'c' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    c->method();
+  }
+
+  while (RefCountable *d = provide_ref_ctnbl()) {
+    // expected-warning@-1{{Local variable 'd' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    d->method();
+  }
+  do {
+    RefCountable *e = provide_ref_ctnbl();
+    // expected-warning@-1{{Local variable 'e' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    e->method();
+  } while (1);
+  someFunction();
+}
+
 } // namespace ignore_for_if
+
+namespace ignore_system_headers {
+
+RefCountable *provide_ref_ctnbl();
+
+void system_header() {
+  localVar<RefCountable>(provide_ref_ctnbl);
+}
+
+} // ignore_system_headers
+
+namespace conditional_op {
+RefCountable *provide_ref_ctnbl();
+bool bar();
+
+void foo() {
+  RefCountable *a = bar() ? nullptr : provide_ref_ctnbl();
+  // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  RefPtr<RefCountable> b = provide_ref_ctnbl();
+  {
+    RefCountable* c = bar() ? nullptr : b.get();
+    c->method();
+    RefCountable* d = bar() ? b.get() : nullptr;
+    d->method();
+  }
+}
+
+} // namespace conditional_op
+
+namespace local_assignment_basic {
+
+RefCountable *provide_ref_cntbl();
+
+void foo(RefCountable* a) {
+  RefCountable* b = a;
+  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  if (b->trivial())
+    b = provide_ref_cntbl();
+}
+
+void bar(RefCountable* a) {
+  RefCountable* b;
+  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  b = provide_ref_cntbl();
+}
+
+void baz() {
+  RefPtr a = provide_ref_cntbl();
+  {
+    RefCountable* b = a.get();
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    b = provide_ref_cntbl();
+  }
+}
+
+} // namespace local_assignment_basic
+
+namespace local_assignment_to_guardian_parameter {
+
+RefCountable *provide_ref_cntbl();
+
+void foo(RefPtr<RefCountable>& arg) {
+  RefCountable* ptr = arg.get();
+  // expected-warning@-1{{Local variable 'ptr' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  arg = nullptr;
+  ptr->method();
+}
+
+} // namespace local_assignment_to_guardian
+
+namespace local_assignment_to_parameter {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+void foo(RefCountable* a) {
+  a = provide_ref_cntbl();
+  // expected-warning@-1{{Assignment to an uncounted parameter 'a' is unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  a->method();
+}
+
+} // namespace local_assignment_to_parameter
+
+namespace local_assignment_to_static_local {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+void foo() {
+  static RefCountable* a = nullptr;
+  // expected-warning@-1{{Static local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_ref_cntbl();
+  someFunction();
+  a->method();
+}
+
+} // namespace local_assignment_to_static_local
+
+namespace local_assignment_to_global {
+
+RefCountable *provide_ref_cntbl();
+void someFunction();
+
+RefCountable* g_a = nullptr;
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+
+void foo() {
+  g_a = provide_ref_cntbl();
+  someFunction();
+  g_a->method();
+}
+
+} // namespace local_assignment_to_global
+
+namespace local_refcountable_checkable_object {
+
+RefCountableAndCheckable* provide_obj();
+
+void local_raw_ptr() {
+  RefCountableAndCheckable* a = nullptr;
+  // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_obj();
+  a->method();
+}
+
+void local_checked_ptr() {
+  CheckedPtr<RefCountableAndCheckable> a = nullptr;
+  a = provide_obj();
+  a->method();
+}
+
+void local_var_with_guardian_checked_ptr() {
+  CheckedPtr<RefCountableAndCheckable> a = provide_obj();
+  {
+    auto* b = a.get();
+    b->method();
+  }
+}
+
+void local_var_with_guardian_checked_ptr_with_assignment() {
+  CheckedPtr<RefCountableAndCheckable> a = provide_obj();
+  {
+    RefCountableAndCheckable* b = a.get();
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    b = provide_obj();
+    b->method();
+  }
+}
+
+void local_var_with_guardian_checked_ref() {
+  CheckedRef<RefCountableAndCheckable> a = *provide_obj();
+  {
+    RefCountableAndCheckable& b = a;
+    b.method();
+  }
+}
+
+void static_var() {
+  static RefCountableAndCheckable* a = nullptr;
+  // expected-warning@-1{{Static local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  a = provide_obj();
+}
+
+} // namespace local_refcountable_checkable_object
+
+namespace local_var_in_recursive_function {
+
+struct TreeNode {
+  Ref<TreeNode> create() { return Ref(*new TreeNode); }
+
+  void ref() const { ++refCount; }
+  void deref() const {
+    if (!--refCount)
+      delete this;
+  }
+
+  int recursiveCost();
+  int recursiveWeight();
+  int weight();
+
+  int cost { 0 };
+  mutable unsigned refCount { 0 };
+  TreeNode* nextSibling { nullptr };
+  TreeNode* firstChild { nullptr };
+};
+
+int TreeNode::recursiveCost() {
+  // no warnings
+  unsigned totalCost = cost;
+  for (TreeNode* node = firstChild; node; node = node->nextSibling)
+    totalCost += recursiveCost();
+  return totalCost;
+}
+
+int TreeNode::recursiveWeight() {
+  unsigned totalCost = weight();
+  for (TreeNode* node = firstChild; node; node = node->nextSibling)
+    // expected-warning@-1{{Local variable 'node' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    totalCost += recursiveWeight();
+  return totalCost;
+}
+
+} // namespace local_var_in_recursive_function
+
+namespace local_var_for_singleton {
+  RefCountable *singleton();
+  RefCountable *otherSingleton();
+  void foo() {
+    RefCountable* bar = singleton();
+    RefCountable* baz = otherSingleton();
+  }
+}
+
+namespace virtual_function {
+  struct SomeObject {
+    virtual RefCountable* provide() { return nullptr; }
+    virtual RefCountable* operator&() { return nullptr; }
+  };
+  void foo(SomeObject* obj) {
+    auto* bar = obj->provide();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    auto* baz = &*obj;
+    // expected-warning@-1{{Local variable 'baz' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  }
+}
+
+namespace vardecl_in_if_condition {
+  RefCountable* provide();
+
+  RefCountable* get() {
+    if (auto* obj = provide())
+      return obj; // no warning
+    return nullptr;
+  }
+
+  RefCountable* get_non_trivial_then() {
+    if (auto* obj = provide()) // expected-warning{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+      return obj->next();
+    return nullptr;
+  }
+
+  RefCountable* get_non_trivial_else() {
+    if (auto* obj = provide())
+      return obj;
+    else
+      return provide()->next();
+    return nullptr;
+  }
+
+  RefCountable& get_ref() {
+    if (auto* obj = provide())
+      return *obj; // no warning
+    static Ref<RefCountable> empty = RefCountable::create();
+    return empty.get();
+  }
+
+  RefCountable* get_non_trivial_condition() {
+    if (auto* obj = provide(); obj && obj->next())
+      return obj; // expected-warning@-1{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    return nullptr;
+  }
+
+  RefCountable* get_non_trivial_else2() {
+    if (auto* obj = provide(); !obj) // expected-warning{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+      return nullptr;
+    else
+      return obj->next();
+  }
+
+}
+
+namespace delete_unresolved_type {
+
+  template <class T>
+  struct Foo {
+    static void bar(T& obj) {
+      delete &obj;
+    }
+  };
+
+  template <class T>
+  struct helper {
+    static void f(typename T::inner __sp) { }
+  };
+
+  template <class T> struct traits;
+  template <> struct traits<char> {
+    using inner = struct inner;
+  };
+
+  template <typename T>
+  void g(typename T::inner __sp) {
+    helper<traits<char>>::f(__sp);
+  }
+
+}
+
+namespace binding_raw_ptr {
+
+  template <class A, class B> struct pair {
+    A a;
+    B b;
+  };
+
+  namespace std {
+    template <class> struct tuple_size;
+    template <unsigned, class> struct tuple_element;
+    template <class A, class B> struct tuple_size<pair<A, B>> { static constexpr int value = 2; };
+    template <class A, class B> struct tuple_element<0, pair<A, B>> { using type = A; };
+    template <class A, class B> struct tuple_element<1, pair<A, B>> { using type = B; };
+  }
+
+  RefCountable* [[clang::annotate_type("webkit.nodelete")]] provide();
+  pair<RefCountable*, RefCountable*> [[clang::annotate_type("webkit.nodelete")]] providePair();
+
+  void bind_return_value() {
+    auto [a, b] = providePair();
+    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
+  void bind_return_value_trivial() {
+    auto [a, b] = providePair();
+    a->trivial();
+  }
+
+  void bind_temp() {
+    auto [a, b] = pair<RefCountable*, RefCountable*> { provide(), provide() };
+    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
+  void bind_temp_trivial() {
+    auto [a, b] = pair<RefCountable*, RefCountable*> { provide(), provide() };
+    a->trivial();
+  }
+
+  void bind_arg_with_trivial(RefCountable* first, RefCountable* second) {
+    auto [a, b] = pair<RefCountable*, RefCountable*> { first, second };
+    a->trivial();
+  }
+
+  void bind_local_vars() {
+    RefCountable* s[] = { provide(), provide(), provide() };
+    auto [a, b, c] = s;
+    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-3{{Local variable 'c' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
+  void bind_temp_with_safe_ptr() {
+    auto [a, b] = pair<RefCountable*, RefPtr<RefCountable>> { provide(), provide() };
+    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
+  struct ptr_container {
+    RefPtr<RefCountable> a;
+    RefCountable* b;
+  };
+  ptr_container provide_ptr_container();
+
+  void bind_temp_struct() {
+    auto [a, b] = provide_ptr_container();
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
+}

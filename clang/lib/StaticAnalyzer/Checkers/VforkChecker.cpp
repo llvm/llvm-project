@@ -44,8 +44,8 @@ namespace {
 
 class VforkChecker : public Checker<check::PreCall, check::PostCall,
                                     check::Bind, check::PreStmt<ReturnStmt>> {
-  mutable std::unique_ptr<BugType> BT;
-  mutable llvm::SmallSet<const IdentifierInfo *, 10> VforkAllowlist;
+  const BugType BT{this, "Dangerous construct in a vforked process"};
+  mutable llvm::SmallPtrSet<const IdentifierInfo *, 10> VforkAllowlist;
   mutable const IdentifierInfo *II_vfork = nullptr;
 
   static bool isChildProcess(const ProgramStateRef State);
@@ -62,7 +62,8 @@ public:
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void checkBind(SVal L, SVal V, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
 };
 
@@ -123,9 +124,6 @@ bool VforkChecker::isCallExplicitelyAllowed(const IdentifierInfo *II,
 void VforkChecker::reportBug(const char *What, CheckerContext &C,
                              const char *Details) const {
   if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
-    if (!BT)
-      BT.reset(new BugType(this, "Dangerous construct in a vforked process"));
-
     SmallString<256> buf;
     llvm::raw_svector_ostream os(buf);
 
@@ -134,7 +132,7 @@ void VforkChecker::reportBug(const char *What, CheckerContext &C,
     if (Details)
       os << "; " << Details;
 
-    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
     // TODO: mark vfork call in BugReportVisitor
     C.emitReport(std::move(Report));
   }
@@ -160,17 +158,16 @@ void VforkChecker::checkPostCall(const CallEvent &Call,
     return;
 
   // Get assigned variable.
-  const ParentMap &PM = C.getLocationContext()->getParentMap();
+  const ParentMap &PM = C.getStackFrame()->getParentMap();
   const Stmt *P = PM.getParentIgnoreParenCasts(Call.getOriginExpr());
   const VarDecl *LhsDecl;
   std::tie(LhsDecl, std::ignore) = parseAssignment(P);
 
   // Get assigned memory region.
   MemRegionManager &M = C.getStoreManager().getRegionManager();
-  const MemRegion *LhsDeclReg =
-    LhsDecl
-      ? M.getVarRegion(LhsDecl, C.getLocationContext())
-      : (const MemRegion *)VFORK_RESULT_NONE;
+  const MemRegion *LhsDeclReg = LhsDecl
+                                    ? M.getVarRegion(LhsDecl, C.getStackFrame())
+                                    : (const MemRegion *)VFORK_RESULT_NONE;
 
   // Parent branch gets nonzero return value (according to manpage).
   ProgramStateRef ParentState, ChildState;
@@ -191,7 +188,7 @@ void VforkChecker::checkPreCall(const CallEvent &Call,
 }
 
 // Prohibit writes in child process (except for vfork's lhs).
-void VforkChecker::checkBind(SVal L, SVal V, const Stmt *S,
+void VforkChecker::checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   if (!isChildProcess(State))

@@ -276,6 +276,10 @@ clang-tblgen Options
 
   Generate ARM NEON tests for Clang.
 
+.. option:: -gen-arm-immcheck-types
+
+  Generate ``arm_immcheck_types.inc`` for Clang.
+
 .. option:: -gen-arm-sve-header
 
   Generate ``arm_sve.h`` for Clang.

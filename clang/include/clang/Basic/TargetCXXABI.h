@@ -40,7 +40,7 @@ private:
   Kind TheKind;
 
   static const auto &getABIMap() {
-    static llvm::StringMap<Kind> ABIMap = {
+    static const llvm::StringMap<Kind> ABIMap = {
 #define CXXABI(Name, Str) {Str, Name},
 #include "TargetCXXABI.def"
     };
@@ -48,7 +48,7 @@ private:
   }
 
   static const auto &getSpellingMap() {
-    static std::map<Kind, std::string> SpellingMap = {
+    static const std::map<Kind, std::string> SpellingMap = {
 #define CXXABI(Name, Str) {Name, Str},
 #include "TargetCXXABI.def"
     };
@@ -116,7 +116,7 @@ public:
       return T.isKnownWindowsMSVCEnvironment();
     }
     llvm_unreachable("invalid CXXABI kind");
-  };
+  }
 
   /// Does this ABI generally fall into the Itanium family of ABIs?
   bool isItaniumFamily() const {

@@ -1,4 +1,4 @@
-# Allow the source files to find headers in src/
+#Allow the source files to find headers in src /
 include(GNUInstallDirs)
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
@@ -25,12 +25,28 @@ set_target_properties(benchmark PROPERTIES
   SOVERSION ${GENERIC_LIB_SOVERSION}
 )
 target_include_directories(benchmark PUBLIC
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+)
+
+set_property(
+  SOURCE benchmark.cc
+  APPEND
+  PROPERTY COMPILE_DEFINITIONS
+  BENCHMARK_VERSION="${VERSION}"
+)
 
 # libpfm, if available
-if (HAVE_LIBPFM)
-  target_link_libraries(benchmark PRIVATE pfm)
-  add_definitions(-DHAVE_LIBPFM)
+if (PFM_FOUND)
+  target_link_libraries(benchmark PRIVATE PFM::libpfm)
+  target_compile_definitions(benchmark PRIVATE -DHAVE_LIBPFM)
+  install(
+      FILES "${PROJECT_SOURCE_DIR}/cmake/Modules/FindPFM.cmake"
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+endif()
+
+# pthread affinity, if available
+if(HAVE_PTHREAD_AFFINITY)
+  target_compile_definitions(benchmark PRIVATE -DBENCHMARK_HAS_PTHREAD_AFFINITY)
 endif()
 
 # Link threads.
@@ -44,13 +60,17 @@ endif(HAVE_LIB_RT)
 
 
 # We need extra libraries on Windows
-if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
   target_link_libraries(benchmark PRIVATE shlwapi)
 endif()
 
 # We need extra libraries on Solaris
-if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
   target_link_libraries(benchmark PRIVATE kstat)
+endif()
+
+if (NOT BUILD_SHARED_LIBS)
+  target_compile_definitions(benchmark PUBLIC -DBENCHMARK_STATIC_DEFINE)
 endif()
 
 # Benchmark main library
@@ -60,15 +80,16 @@ set_target_properties(benchmark_main PROPERTIES
   OUTPUT_NAME "benchmark_main"
   VERSION ${GENERIC_LIB_VERSION}
   SOVERSION ${GENERIC_LIB_SOVERSION}
+  DEFINE_SYMBOL benchmark_EXPORTS
 )
 target_link_libraries(benchmark_main PUBLIC benchmark::benchmark)
-
 
 set(generated_dir "${PROJECT_BINARY_DIR}")
 
 set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
 set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
 set(pkg_config "${generated_dir}/${PROJECT_NAME}.pc")
+set(pkg_config_main "${generated_dir}/${PROJECT_NAME}_main.pc")
 set(targets_to_export benchmark benchmark_main)
 set(targets_export_name "${PROJECT_NAME}Targets")
 
@@ -87,7 +108,22 @@ write_basic_package_version_file(
   "${version_config}" VERSION ${GENERIC_LIB_VERSION} COMPATIBILITY SameMajorVersion
 )
 
+# Derive private link libraries from target
+if(NOT BUILD_SHARED_LIBS)
+  get_target_property(LINK_LIBS benchmark LINK_LIBRARIES)
+  if(LINK_LIBS)
+    set(BENCHMARK_PRIVATE_LINK_LIBRARIES "")
+    foreach(LIB IN LISTS LINK_LIBS)
+      if(NOT TARGET "${LIB}" AND LIB MATCHES "^[a-zA-Z0-9_.-]+$")
+        list(APPEND BENCHMARK_PRIVATE_LINK_LIBRARIES "-l${LIB}")
+      endif()
+    endforeach()
+    string(JOIN " " BENCHMARK_PRIVATE_LINK_LIBRARIES ${BENCHMARK_PRIVATE_LINK_LIBRARIES})
+  endif()
+endif()
+
 configure_file("${PROJECT_SOURCE_DIR}/cmake/benchmark.pc.in" "${pkg_config}" @ONLY)
+configure_file("${PROJECT_SOURCE_DIR}/cmake/benchmark_main.pc.in" "${pkg_config_main}" @ONLY)
 
 export (
   TARGETS ${targets_to_export}
@@ -107,6 +143,7 @@ if (BENCHMARK_ENABLE_INSTALL)
 
   install(
     DIRECTORY "${PROJECT_SOURCE_DIR}/include/benchmark"
+              "${PROJECT_BINARY_DIR}/include/benchmark"
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.*h")
 
@@ -115,7 +152,7 @@ if (BENCHMARK_ENABLE_INSTALL)
       DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
   install(
-      FILES "${pkg_config}"
+      FILES "${pkg_config}" "${pkg_config_main}"
       DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
   install(
@@ -156,4 +193,12 @@ else()
       DIRECTORY "${PROJECT_SOURCE_DIR}/docs/"
       DESTINATION ${CMAKE_INSTALL_DOCDIR})
   endif()
+endif()
+
+set(CMAKE_INSTALL_PYTOOLSDIR "${CMAKE_INSTALL_DATADIR}/googlebenchmark/tools" CACHE PATH "")
+
+if (BENCHMARK_ENABLE_INSTALL AND BENCHMARK_INSTALL_TOOLS)
+  install(
+    DIRECTORY "${PROJECT_SOURCE_DIR}/tools/"
+    DESTINATION ${CMAKE_INSTALL_PYTOOLSDIR})
 endif()

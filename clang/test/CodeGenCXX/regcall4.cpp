@@ -25,6 +25,30 @@ int __regcall foo (int i){
 // CHECK-WIN64: define dso_local x86_regcallcc noundef {{.+}}@"?foo@@YxHH@Z"
 // CHECK-WIN32: define dso_local x86_regcallcc noundef {{.+}}@"?foo@@YxHH@Z"
 
+struct DynBase { int x; virtual void v() = 0; };
+struct Dyn : public DynBase { double a; void v() {} };
+void __regcall f1(Dyn a) { a.x = 42; }
+// CHECK-LIN64: define dso_local x86_regcallcc void @_Z14__regcall4__f13Dyn(ptr noundef byval(%struct.Dyn) align 8 %a)
+// CHECK-LIN32: define dso_local x86_regcallcc void @_Z14__regcall4__f13Dyn(ptr inreg noundef dead_on_return %a)
+// CHECK-WIN64: define dso_local x86_regcallcc void @"?f1@@YxXUDyn@@@Z"(ptr noundef dead_on_return %a)
+// CHECK-WIN32: define dso_local x86_regcallcc void @"?f1@@YxXUDyn@@@Z"(ptr inalloca(<{ %struct.Dyn }>) %0)
+
+struct Base { int x; };
+struct Derived : public Base { double a; };
+void __regcall f2(Derived a) { a.x = 42; }
+// CHECK-LIN64: define dso_local x86_regcallcc void @_Z14__regcall4__f27Derived(i32 %a.coerce0, double %a.coerce1)
+// CHECK-LIN32: define dso_local x86_regcallcc void @_Z14__regcall4__f27Derived(ptr noundef byval(%struct.Derived) align 4 %a)
+// CHECK-WIN64: define dso_local x86_regcallcc void @"?f2@@YxXUDerived@@@Z"(ptr noundef dead_on_return %a)
+// CHECK-WIN32: define dso_local x86_regcallcc void @"?f2@@YxXUDerived@@@Z"(ptr noundef byval(%struct.Derived) align 4 %0)
+
+struct Empty {};
+struct NestedEmpty : public Empty { int x; };
+void __regcall f3(NestedEmpty a) { a.x = 42; }
+// CHECK-LIN64: define dso_local x86_regcallcc void @_Z14__regcall4__f311NestedEmpty(i32 %a.coerce)
+// CHECK-LIN32: define dso_local x86_regcallcc void @_Z14__regcall4__f311NestedEmpty(ptr noundef byval(%struct.NestedEmpty) align 4 %a)
+// CHECK-WIN64: define dso_local x86_regcallcc void @"?f3@@YxXUNestedEmpty@@@Z"(i32 %a.coerce)
+// CHECK-WIN32: define dso_local x86_regcallcc void @"?f3@@YxXUNestedEmpty@@@Z"(i32 %a.0)
+
 // used to give a body to test_class functions
 static int x = 0;
 class test_class {
@@ -74,8 +98,8 @@ bool __regcall operator ==(const test_class&, const test_class&){ --x; return fa
 // CHECK-WIN32-DAG: define dso_local x86_regcallcc noundef zeroext i1 @"??8@Yx_NABVtest_class@@0@Z"
 
 test_class __regcall operator""_test_class (unsigned long long) { ++x; return test_class{};}
-// CHECK-LIN64-DAG: define{{.*}} x86_regcallcc void @_Zli11_test_classy(ptr noalias sret(%class.test_class) align 4 %agg.result, i64 noundef %0)
-// CHECK-LIN32-DAG: define{{.*}} x86_regcallcc void @_Zli11_test_classy(ptr inreg noalias sret(%class.test_class) align 4 %agg.result, i64 noundef %0)
+// CHECK-LIN64-DAG: define{{.*}} x86_regcallcc void @_Zli11_test_classy(ptr dead_on_unwind noalias writable sret(%class.test_class) align 4 %agg.result, i64 noundef %0)
+// CHECK-LIN32-DAG: define{{.*}} x86_regcallcc void @_Zli11_test_classy(ptr dead_on_unwind inreg noalias writable sret(%class.test_class) align 4 %agg.result, i64 noundef %0)
 // CHECK-WIN64-DAG: ??__K_test_class@@Yx?AVtest_class@@_K@Z"
 // CHECK-WIN32-DAG: ??__K_test_class@@Yx?AVtest_class@@_K@Z"
 
@@ -99,8 +123,8 @@ void force_gen() {
 long double _Complex __regcall foo(long double _Complex f) {
   return f;
 }
-// CHECK-LIN64-DAG: define{{.*}} x86_regcallcc void @_Z15__regcall4__fooCe(ptr noalias sret({ x86_fp80, x86_fp80 }) align 16 %agg.result, ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %f)
-// CHECK-LIN32-DAG: define{{.*}} x86_regcallcc void @_Z15__regcall4__fooCe(ptr inreg noalias sret({ x86_fp80, x86_fp80 }) align 4 %agg.result, ptr noundef byval({ x86_fp80, x86_fp80 }) align 4 %f)
+// CHECK-LIN64-DAG: define{{.*}} x86_regcallcc void @_Z15__regcall4__fooCe(ptr dead_on_unwind noalias writable sret({ x86_fp80, x86_fp80 }) align 16 %agg.result, ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %f)
+// CHECK-LIN32-DAG: define{{.*}} x86_regcallcc void @_Z15__regcall4__fooCe(ptr dead_on_unwind inreg noalias writable sret({ x86_fp80, x86_fp80 }) align 4 %agg.result, ptr noundef byval({ x86_fp80, x86_fp80 }) align 4 %f)
 // CHECK-WIN64-DAG: define dso_local x86_regcallcc noundef { double, double } @"?foo@@YxU?$_Complex@O@__clang@@U12@@Z"(double noundef %f.0, double noundef %f.1)
 // CHECK-WIN32-DAG: define dso_local x86_regcallcc noundef { double, double } @"?foo@@YxU?$_Complex@O@__clang@@U12@@Z"(double noundef %f.0, double noundef %f.1)
 

@@ -11,14 +11,14 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ;     5	  }
 ;     6	}
 
-; CHECK: remark: /tmp/kk.c:3:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: /tmp/kk.c:3:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 
 define void @success(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) !dbg !6 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !8
   br i1 %cmp28, label %for.body, label %for.cond.cleanup, !dbg !9
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !11
   %0 = load i8, ptr %arrayidx, align 1, !dbg !11, !tbaa !12
@@ -39,20 +39,18 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !9
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !9
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void, !dbg !10
 }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
-!llvm.ident = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !2)
 !1 = !DIFile(filename: "/tmp/kk.c", directory: "/tmp")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"PIC Level", i32 2}
-!5 = !{!"clang version 3.9.0 "}
 !6 = distinct !DISubprogram(name: "success", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !2)
 !8 = !DILocation(line: 2, column: 20, scope: !6)

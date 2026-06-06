@@ -3,7 +3,7 @@
 
 ; Check that numbered variables in a nonzero program address space 200 can be used in a call instruction
 
-define i8 @test_unnamed(ptr, ptr addrspace(42) %0) {
+define i8 @test_unnamed(ptr, ptr addrspace(42) %1) {
   ; Calls with explicit address spaces are fine:
   call addrspace(0) i8 %0(i32 0)
   call addrspace(42) i8 %1(i32 0)

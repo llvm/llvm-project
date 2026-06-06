@@ -12,12 +12,13 @@
 
 #include "mlir/Transforms/Passes.h"
 
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LOOPINVARIANTCODEMOTION
+#define GEN_PASS_DEF_LOOPINVARIANTCODEMOTIONPASS
+#define GEN_PASS_DEF_LOOPINVARIANTSUBSETHOISTINGPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -26,7 +27,13 @@ using namespace mlir;
 namespace {
 /// Loop invariant code motion (LICM) pass.
 struct LoopInvariantCodeMotion
-    : public impl::LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
+    : public impl::LoopInvariantCodeMotionPassBase<LoopInvariantCodeMotion> {
+  void runOnOperation() override;
+};
+
+struct LoopInvariantSubsetHoisting
+    : public impl::LoopInvariantSubsetHoistingPassBase<
+          LoopInvariantSubsetHoisting> {
   void runOnOperation() override;
 };
 } // namespace
@@ -39,6 +46,12 @@ void LoopInvariantCodeMotion::runOnOperation() {
       [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 }
 
-std::unique_ptr<Pass> mlir::createLoopInvariantCodeMotionPass() {
-  return std::make_unique<LoopInvariantCodeMotion>();
+void LoopInvariantSubsetHoisting::runOnOperation() {
+  IRRewriter rewriter(getOperation()->getContext());
+  // Walk through all loops in a function in innermost-loop-first order. This
+  // way, we first hoist from the inner loop, and place the ops in the outer
+  // loop, which in turn can be further hoisted from.
+  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+    (void)hoistLoopInvariantSubsets(rewriter, loopLike);
+  });
 }

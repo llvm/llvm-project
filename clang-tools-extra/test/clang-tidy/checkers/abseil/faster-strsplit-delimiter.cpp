@@ -14,7 +14,7 @@ struct MaxSplitsImpl {
   MaxSplitsImpl();
   ~MaxSplitsImpl();
 };
-} //namespace strings_internal
+} // namespace strings_internal
 
 template <typename Delim>
 strings_internal::Splitter StrSplit(absl::string_view, Delim) {
@@ -36,7 +36,7 @@ strings_internal::MaxSplitsImpl MaxSplits(Delim, int) {
   return {};
 }
 
-} //namespace absl
+} // namespace absl
 
 void SplitDelimiters() {
   absl::StrSplit("ABC", "A");
@@ -77,7 +77,7 @@ void SplitDelimiters() {
   // CHECK-MESSAGES: [[@LINE-1]]:25: warning: absl::StrSplit()
   // CHECK-FIXES: absl::StrSplit("ABC", 'A', [](absl::string_view) { return true; });
 
-  // Doesn't do anything with other strings lenghts.
+  // Doesn't do anything with other strings lengths.
   absl::StrSplit("ABC", "AB");
   absl::StrSplit("ABC", absl::ByAnyChar(""));
   absl::StrSplit("ABC", absl::ByAnyChar(" \t"));

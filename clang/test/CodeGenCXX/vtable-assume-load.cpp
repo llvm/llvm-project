@@ -27,7 +27,7 @@ void g(A *a) { a->foo(); }
 // CHECK1-LABEL: define{{.*}} void @_ZN5test14fooAEv()
 // CHECK1: call void @_ZN5test11AC1Ev(ptr
 // CHECK1: %[[VTABLE:.*]] = load ptr, ptr %{{.*}}
-// CHECK1: %[[CMP:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN5test11AE, i32 0, inrange i32 0, i32 2)
+// CHECK1: %[[CMP:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test11AE, i32 0, i32 0, i32 2)
 // CHECK1: call void @llvm.assume(i1 %[[CMP]])
 // CHECK1-LABEL: {{^}}}
 
@@ -39,7 +39,7 @@ void fooA() {
 // CHECK1-LABEL: define{{.*}} void @_ZN5test14fooBEv()
 // CHECK1: call void @_ZN5test11BC1Ev(ptr {{[^,]*}} %{{.*}})
 // CHECK1: %[[VTABLE:.*]] = load ptr, ptr %{{.*}}
-// CHECK1: %[[CMP:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN5test11BE, i32 0, inrange i32 0, i32 2)
+// CHECK1: %[[CMP:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test11BE, i32 0, i32 0, i32 2)
 // CHECK1: call void @llvm.assume(i1 %[[CMP]])
 // CHECK1-LABEL: {{^}}}
 
@@ -73,12 +73,12 @@ void h(B *b) { b->bar(); }
 // CHECK2-LABEL: define{{.*}} void @_ZN5test24testEv()
 // CHECK2: call void @_ZN5test21CC1Ev(ptr
 // CHECK2: %[[VTABLE:.*]] = load ptr, ptr {{.*}}
-// CHECK2: %[[CMP:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds ({ [3 x ptr], [3 x ptr] }, ptr @_ZTVN5test21CE, i32 0, inrange i32 0, i32 2)
+// CHECK2: %[[CMP:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr], [3 x ptr] }, ptr @_ZTVN5test21CE, i32 0, i32 0, i32 2)
 // CHECK2: call void @llvm.assume(i1 %[[CMP]])
 
 // CHECK2: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i64 8
 // CHECK2: %[[VTABLE2:.*]] = load ptr, ptr %[[ADD_PTR]]
-// CHECK2: %[[CMP2:.*]] = icmp eq ptr %[[VTABLE2]], getelementptr inbounds ({ [3 x ptr], [3 x ptr] }, ptr @_ZTVN5test21CE, i32 0, inrange i32 1, i32 2)
+// CHECK2: %[[CMP2:.*]] = icmp eq ptr %[[VTABLE2]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr], [3 x ptr] }, ptr @_ZTVN5test21CE, i32 0, i32 1, i32 2)
 // CHECK2: call void @llvm.assume(i1 %[[CMP2]])
 
 // CHECK2: call void @_ZN5test21gEPNS_1AE(
@@ -109,9 +109,9 @@ void g(B *a) { a->foo(); }
 
 // CHECK3-LABEL: define{{.*}} void @_ZN5test34testEv()
 // CHECK3: call void @_ZN5test31CC1Ev(ptr
-// CHECK3: %[[CMP:.*]] = icmp eq ptr %{{.*}}, getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTVN5test31CE, i32 0, inrange i32 0, i32 3)
+// CHECK3: %[[CMP:.*]] = icmp eq ptr %{{.*}}, getelementptr inbounds inrange(-24, 8) ({ [4 x ptr] }, ptr @_ZTVN5test31CE, i32 0, i32 0, i32 3)
 // CHECK3: call void @llvm.assume(i1 %[[CMP]])
-// CHECK3-LABLEL: }
+// CHECK3-LABEL: {{^}}}
 void test() {
   C c;
   g(&c);
@@ -138,11 +138,11 @@ void g(C *c) { c->foo(); }
 // CHECK4-LABEL: define{{.*}} void @_ZN5test44testEv()
 // CHECK4: call void @_ZN5test41CC1Ev(ptr
 // CHECK4: %[[VTABLE:.*]] = load ptr, ptr %{{.*}}
-// CHECK4: %[[CMP:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTVN5test41CE, i32 0, inrange i32 0, i32 4)
+// CHECK4: %[[CMP:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTVN5test41CE, i32 0, i32 0, i32 4)
 // CHECK4: call void @llvm.assume(i1 %[[CMP]]
 
 // CHECK4: %[[VTABLE2:.*]] = load ptr, ptr %{{.*}}
-// CHECK4: %[[CMP2:.*]] = icmp eq ptr %[[VTABLE2]], getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTVN5test41CE, i32 0, inrange i32 0, i32 4)
+// CHECK4: %[[CMP2:.*]] = icmp eq ptr %[[VTABLE2]], getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTVN5test41CE, i32 0, i32 0, i32 4)
 // CHECK4: call void @llvm.assume(i1 %[[CMP2]])
 // CHECK4-LABEL: {{^}}}
 
@@ -203,7 +203,7 @@ void g() {
 
 namespace test7 {
 // Because A's key function is defined here, vtable is generated in this TU
-// CHECK7: @_ZTVN5test71AE ={{.*}} unnamed_addr constant
+// CHECK7: @_ZTVN5test71AE ={{.*}}constant
 struct A {
   A();
   virtual void foo();
@@ -228,14 +228,14 @@ struct A {
   virtual void bar();
 };
 
-// CHECK8-DAG: @_ZTVN5test81BE = available_externally unnamed_addr constant
+// CHECK8-DAG: @_ZTVN5test81BE = available_externally constant
 struct B : A {
   B();
   void foo();
   void bar();
 };
 
-// CHECK8-DAG: @_ZTVN5test81CE = linkonce_odr unnamed_addr constant
+// CHECK8-DAG: @_ZTVN5test81CE = linkonce_odr constant
 struct C : A {
   C();
   void bar();
@@ -250,7 +250,7 @@ struct D : A {
 };
 void D::bar() {}
 
-// CHECK8-DAG: @_ZTVN5test81EE = linkonce_odr unnamed_addr constant
+// CHECK8-DAG: @_ZTVN5test81EE = linkonce_odr constant
 struct E : A {
   E();
 };

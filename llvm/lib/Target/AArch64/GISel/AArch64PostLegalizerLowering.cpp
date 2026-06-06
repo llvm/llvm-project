@@ -19,12 +19,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64GlobalISelUtils.h"
+#include "AArch64PerfectShuffle.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "GISel/AArch64LegalizerInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -36,14 +37,14 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
@@ -57,11 +58,11 @@ using namespace llvm;
 using namespace MIPatternMatch;
 using namespace AArch64GISelUtils;
 
-namespace {
-
 #define GET_GICOMBINER_TYPES
 #include "AArch64GenPostLegalizeGILowering.inc"
 #undef GET_GICOMBINER_TYPES
+
+namespace {
 
 /// Represents a pseudo instruction which replaces a G_SHUFFLE_VECTOR.
 ///
@@ -76,50 +77,6 @@ struct ShuffleVectorPseudo {
   ShuffleVectorPseudo() = default;
 };
 
-/// Check if a vector shuffle corresponds to a REV instruction with the
-/// specified blocksize.
-bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
-               unsigned BlockSize) {
-  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64) &&
-         "Only possible block sizes for REV are: 16, 32, 64");
-  assert(EltSize != 64 && "EltSize cannot be 64 for REV mask.");
-
-  unsigned BlockElts = M[0] + 1;
-
-  // If the first shuffle index is UNDEF, be optimistic.
-  if (M[0] < 0)
-    BlockElts = BlockSize / EltSize;
-
-  if (BlockSize <= EltSize || BlockSize != BlockElts * EltSize)
-    return false;
-
-  for (unsigned i = 0; i < NumElts; ++i) {
-    // Ignore undef indices.
-    if (M[i] < 0)
-      continue;
-    if (static_cast<unsigned>(M[i]) !=
-        (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
-      return false;
-  }
-
-  return true;
-}
-
-/// Determines if \p M is a shuffle vector mask for a TRN of \p NumElts.
-/// Whether or not G_TRN1 or G_TRN2 should be used is stored in \p WhichResult.
-bool isTRNMask(ArrayRef<int> M, unsigned NumElts, unsigned &WhichResult) {
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    if ((M[i] >= 0 && static_cast<unsigned>(M[i]) != i + WhichResult) ||
-        (M[i + 1] >= 0 &&
-         static_cast<unsigned>(M[i + 1]) != i + NumElts + WhichResult))
-      return false;
-  }
-  return true;
-}
-
 /// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
 /// sources of the shuffle are different.
 std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
@@ -131,7 +88,7 @@ std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
 
   // Use APInt to handle overflow when calculating expected element.
   unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
-  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1);
+  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, false, true);
 
   // The following shuffle indices must be the successive elements after the
   // first real element.
@@ -160,38 +117,6 @@ std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
   else
     Imm -= NumElts;
   return std::make_pair(ReverseExt, Imm);
-}
-
-/// Determines if \p M is a shuffle vector mask for a UZP of \p NumElts.
-/// Whether or not G_UZP1 or G_UZP2 should be used is stored in \p WhichResult.
-bool isUZPMask(ArrayRef<int> M, unsigned NumElts, unsigned &WhichResult) {
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i != NumElts; ++i) {
-    // Skip undef indices.
-    if (M[i] < 0)
-      continue;
-    if (static_cast<unsigned>(M[i]) != 2 * i + WhichResult)
-      return false;
-  }
-  return true;
-}
-
-/// \return true if \p M is a zip mask for a shuffle vector of \p NumElts.
-/// Whether or not G_ZIP1 or G_ZIP2 should be used is stored in \p WhichResult.
-bool isZipMask(ArrayRef<int> M, unsigned NumElts, unsigned &WhichResult) {
-  if (NumElts % 2 != 0)
-    return false;
-
-  // 0 means use ZIP1, 1 means use ZIP2.
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  unsigned Idx = WhichResult * NumElts / 2;
-  for (unsigned i = 0; i != NumElts; i += 2) {
-    if ((M[i] >= 0 && static_cast<unsigned>(M[i]) != Idx) ||
-        (M[i + 1] >= 0 && static_cast<unsigned>(M[i + 1]) != Idx + NumElts))
-      return false;
-    Idx += 1;
-  }
-  return true;
 }
 
 /// Helper function for matchINS.
@@ -242,15 +167,22 @@ bool matchREV(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   unsigned NumElts = Ty.getNumElements();
 
-  // Try to produce G_REV64
-  if (isREVMask(ShuffleMask, EltSize, NumElts, 64)) {
-    MatchInfo = ShuffleVectorPseudo(AArch64::G_REV64, Dst, {Src});
-    return true;
+  // Try to produce a G_REV instruction
+  for (unsigned LaneSize : {64U, 32U, 16U}) {
+    if (isREVMask(ShuffleMask, EltSize, NumElts, LaneSize)) {
+      unsigned Opcode;
+      if (LaneSize == 64U)
+        Opcode = AArch64::G_REV64;
+      else if (LaneSize == 32U)
+        Opcode = AArch64::G_REV32;
+      else
+        Opcode = AArch64::G_BSWAP;
+
+      MatchInfo = ShuffleVectorPseudo(Opcode, Dst, {Src});
+      return true;
+    }
   }
 
-  // TODO: Produce G_REV32 and G_REV16 once we have proper legalization support.
-  // This should be identical to above, but with a constant 32 and constant
-  // 16.
   return false;
 }
 
@@ -260,14 +192,15 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
+  unsigned OperandOrder;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isTRNMask(ShuffleMask, NumElts, WhichResult))
+  if (!isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_TRN1 : AArch64::G_TRN2;
-  Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -297,14 +230,15 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
+  unsigned OperandOrder;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isZipMask(ShuffleMask, NumElts, WhichResult))
+  if (!isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
-  Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -354,10 +288,16 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
                              MachineRegisterInfo &MRI,
                              ShuffleVectorPseudo &MatchInfo) {
   assert(Lane >= 0 && "Expected positive lane?");
+  int NumElements = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
   // Test if the LHS is a BUILD_VECTOR. If it is, then we can just reference the
   // lane's definition directly.
-  auto *BuildVecMI = getOpcodeDef(TargetOpcode::G_BUILD_VECTOR,
-                                  MI.getOperand(1).getReg(), MRI);
+  auto *BuildVecMI =
+      getOpcodeDef(TargetOpcode::G_BUILD_VECTOR,
+                   MI.getOperand(Lane < NumElements ? 1 : 2).getReg(), MRI);
+  // If Lane >= NumElements then it is point to RHS, just check from RHS
+  if (NumElements <= Lane)
+    Lane -= NumElements;
+
   if (!BuildVecMI)
     return false;
   Register Reg = BuildVecMI->getOperand(Lane + 1).getReg();
@@ -444,10 +384,24 @@ bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 /// Replace a G_SHUFFLE_VECTOR instruction with a pseudo.
 /// \p Opc is the opcode to use. \p MI is the G_SHUFFLE_VECTOR.
-void applyShuffleVectorPseudo(MachineInstr &MI,
+void applyShuffleVectorPseudo(MachineInstr &MI, MachineRegisterInfo &MRI,
                               ShuffleVectorPseudo &MatchInfo) {
   MachineIRBuilder MIRBuilder(MI);
-  MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst}, MatchInfo.SrcOps);
+  if (MatchInfo.Opc == TargetOpcode::G_BSWAP) {
+    assert(MatchInfo.SrcOps.size() == 1);
+    LLT DstTy = MRI.getType(MatchInfo.Dst);
+    assert(DstTy == LLT::fixed_vector(8, 8) ||
+           DstTy == LLT::fixed_vector(16, 8));
+    LLT BSTy = DstTy == LLT::fixed_vector(8, 8)
+                   ? LLT::fixed_vector(4, LLT::integer(16))
+                   : LLT::fixed_vector(8, LLT::integer(16));
+    // FIXME: NVCAST
+    auto BS1 = MIRBuilder.buildInstr(TargetOpcode::G_BITCAST, {BSTy},
+                                     MatchInfo.SrcOps[0]);
+    auto BS2 = MIRBuilder.buildInstr(MatchInfo.Opc, {BSTy}, {BS1});
+    MIRBuilder.buildInstr(TargetOpcode::G_BITCAST, {MatchInfo.Dst}, {BS2});
+  } else
+    MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst}, MatchInfo.SrcOps);
   MI.eraseFromParent();
 }
 
@@ -460,12 +414,77 @@ void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
     MIRBuilder.buildCopy(MatchInfo.Dst, MatchInfo.SrcOps[0]);
   else {
     // Tablegen patterns expect an i32 G_CONSTANT as the final op.
-    auto Cst =
-        MIRBuilder.buildConstant(LLT::scalar(32), MatchInfo.SrcOps[2].getImm());
+    auto Cst = MIRBuilder.buildConstant(LLT::integer(32),
+                                        MatchInfo.SrcOps[2].getImm());
     MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst},
                           {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
   }
   MI.eraseFromParent();
+}
+
+void applyFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  assert(DstTy.getSizeInBits() == 128 &&
+         "Expected 128bit vector in applyFullRev");
+  MachineIRBuilder MIRBuilder(MI);
+  auto Cst = MIRBuilder.buildConstant(LLT::integer(32), 8);
+  auto Rev = MIRBuilder.buildInstr(AArch64::G_REV64, {DstTy}, {Src});
+  MIRBuilder.buildInstr(AArch64::G_EXT, {Dst}, {Rev, Rev, Cst});
+  MI.eraseFromParent();
+}
+
+bool matchNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
+
+  auto ValAndVReg =
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  return !ValAndVReg;
+}
+
+void applyNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &Builder) {
+  auto &Insert = cast<GInsertVectorElement>(MI);
+  Builder.setInstrAndDebugLoc(Insert);
+
+  Register Offset = Insert.getIndexReg();
+  LLT VecTy = MRI.getType(Insert.getReg(0));
+  LLT EltTy = MRI.getType(Insert.getElementReg());
+  LLT IdxTy = MRI.getType(Insert.getIndexReg());
+
+  if (VecTy.isScalableVector())
+    return;
+
+  // Create a stack slot and store the vector into it
+  MachineFunction &MF = Builder.getMF();
+  Align Alignment(
+      std::min<uint64_t>(VecTy.getSizeInBytes().getKnownMinValue(), 16));
+  int FrameIdx = MF.getFrameInfo().CreateStackObject(VecTy.getSizeInBytes(),
+                                                     Alignment, false);
+  LLT FramePtrTy = LLT::pointer(0, 64);
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIdx);
+  auto StackTemp = Builder.buildFrameIndex(FramePtrTy, FrameIdx);
+
+  Builder.buildStore(Insert.getOperand(1), StackTemp, PtrInfo, Align(8));
+
+  // Get the pointer to the element, and be sure not to hit undefined behavior
+  // if the index is out of bounds.
+  assert(isPowerOf2_64(VecTy.getNumElements()) &&
+         "Expected a power-2 vector size");
+  auto Mask = Builder.buildConstant(IdxTy, VecTy.getNumElements() - 1);
+  Register And = Builder.buildAnd(IdxTy, Offset, Mask).getReg(0);
+  auto EltSize = Builder.buildConstant(IdxTy, EltTy.getSizeInBytes());
+  Register Mul = Builder.buildMul(IdxTy, And, EltSize).getReg(0);
+  Register EltPtr =
+      Builder.buildPtrAdd(MRI.getType(StackTemp.getReg(0)), StackTemp, Mul)
+          .getReg(0);
+
+  // Write the inserted element
+  Builder.buildStore(Insert.getElementReg(), EltPtr, PtrInfo, Align(1));
+  // Reload the whole vector.
+  Builder.buildLoad(Insert.getReg(0), StackTemp, PtrInfo, Align(8));
+  Insert.eraseFromParent();
 }
 
 /// Match a G_SHUFFLE_VECTOR with a mask which corresponds to a
@@ -515,9 +534,9 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DstVec, SrcVec;
   int DstLane, SrcLane;
   std::tie(DstVec, DstLane, SrcVec, SrcLane) = MatchInfo;
-  auto SrcCst = Builder.buildConstant(LLT::scalar(64), SrcLane);
+  auto SrcCst = Builder.buildConstant(LLT::integer(64), SrcLane);
   auto Extract = Builder.buildExtractVectorElement(ScalarTy, SrcVec, SrcCst);
-  auto DstCst = Builder.buildConstant(LLT::scalar(64), DstLane);
+  auto DstCst = Builder.buildConstant(LLT::integer(64), DstLane);
   Builder.buildInsertVectorElement(Dst, DstVec, Extract, DstCst);
   MI.eraseFromParent();
 }
@@ -555,9 +574,61 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NewOpc =
       Opc == TargetOpcode::G_ASHR ? AArch64::G_VASHR : AArch64::G_VLSHR;
   MachineIRBuilder MIB(MI);
-  auto ImmDef = MIB.buildConstant(LLT::scalar(32), Imm);
-  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1), ImmDef});
+  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1)}).addImm(Imm);
   MI.eraseFromParent();
+}
+
+bool isLegalCmpImmed(const APInt &C) {
+  // Works for negative immediates too, as it can be written as an ADDS
+  // instruction with a negated immediate.
+  return isLegalArithImmed(C.abs().getZExtValue());
+}
+
+/// Determine whether an integer G_ICMP against 1 or -1 can compare
+/// against 0 instead.
+///
+/// AArch64 can fold a compare-with-zero more cheaply than some non-arithmetic
+/// immediates (SUBS/ADDS, or TST when the LHS is an AND). When the predicate
+/// can be adjusted without changing semantics, the RHS may become 0.
+///
+/// Supported transforms (signed predicates only):
+///   (and X, Y) slt  1  =>  (and X, Y) sle 0
+///   (and X, Y) sge  1  =>  (and X, Y) sgt 0
+///        X   sle -1  =>        X   slt 0
+///        X   sgt -1  =>        X   sge 0
+///
+/// The compare-against-1 cases require the LHS to be G_AND because the
+/// compare-with-zero path enables ANDS (TST) selection, and ANDS flags are
+/// only reliable for those signed comparisons. This mirrors SelectionDAG
+/// emitComparison().
+///
+/// For compare-against--1 on a non-AND LHS, \p LHS must have a single
+/// non-debug use so other users are not left with a different immediate.
+///
+/// \param LHS The compare LHS register.
+/// \param C   The constant RHS (only 1 or all-ones are considered).
+/// \param P   In/out predicate; updated when a transform applies.
+/// \param MRI Used to inspect the LHS definition and use count.
+/// \returns true if \p P was updated and comparing against 0 is equivalent.
+static bool shouldBeAdjustedToZero(Register LHS, const APInt &C,
+                                   CmpInst::Predicate &P,
+                                   const MachineRegisterInfo &MRI) {
+  const bool IsAndLHS = getOpcodeDef<GAnd>(LHS, MRI) != nullptr;
+
+  if (C.isOne() && (P == CmpInst::ICMP_SLT || P == CmpInst::ICMP_SGE) &&
+      IsAndLHS) {
+    P = (P == CmpInst::ICMP_SLT) ? CmpInst::ICMP_SLE : CmpInst::ICMP_SGT;
+    return true;
+  }
+
+  if (!IsAndLHS && !MRI.hasOneNonDBGUse(LHS))
+    return false;
+
+  if (C.isAllOnes() && (P == CmpInst::ICMP_SLE || P == CmpInst::ICMP_SGT)) {
+    P = (P == CmpInst::ICMP_SLE) ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE;
+    return true;
+  }
+  return false;
 }
 
 /// Determine if it is possible to modify the \p RHS and predicate \p P of a
@@ -568,22 +639,27 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
 ///
 /// \note This assumes that the comparison has been legalized.
 std::optional<std::pair<uint64_t, CmpInst::Predicate>>
-tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
+tryAdjustICmpImmAndPred(Register LHS, Register RHS, CmpInst::Predicate P,
                         const MachineRegisterInfo &MRI) {
   const auto &Ty = MRI.getType(RHS);
   if (Ty.isVector())
     return std::nullopt;
-  unsigned Size = Ty.getSizeInBits();
-  assert((Size == 32 || Size == 64) && "Expected 32 or 64 bit compare only?");
+  assert((Ty.getSizeInBits() == 32 || Ty.getSizeInBits() == 64) &&
+         "Expected 32 or 64 bit compare only?");
 
   // If the RHS is not a constant, or the RHS is already a valid arithmetic
   // immediate, then there is nothing to change.
   auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!ValAndVReg)
     return std::nullopt;
-  uint64_t C = ValAndVReg->Value.getZExtValue();
-  if (isLegalArithImmed(C))
+  APInt C = ValAndVReg->Value;
+  if (shouldBeAdjustedToZero(LHS, C, P, MRI))
+    return {{0, P}};
+
+  if (isLegalCmpImmed(C))
     return std::nullopt;
+
+  uint64_t OriginalC = C.getZExtValue();
 
   // We have a non-arithmetic immediate. Check if adjusting the immediate and
   // adjusting the predicate will result in a legal arithmetic immediate.
@@ -598,11 +674,10 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x sge c => x sgt c - 1
     //
     // When c is not the smallest possible negative number.
-    if ((Size == 64 && static_cast<int64_t>(C) == INT64_MIN) ||
-        (Size == 32 && static_cast<int32_t>(C) == INT32_MIN))
+    if (C.isMinSignedValue())
       return std::nullopt;
     P = (P == CmpInst::ICMP_SLT) ? CmpInst::ICMP_SLE : CmpInst::ICMP_SGT;
-    C -= 1;
+    C = C - 1;
     break;
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_UGE:
@@ -612,10 +687,9 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x uge c => x ugt c - 1
     //
     // When c is not zero.
-    if (C == 0)
-      return std::nullopt;
+    assert(!C.isZero() && "C should not be zero here!");
     P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
-    C -= 1;
+    C = C - 1;
     break;
   case CmpInst::ICMP_SLE:
   case CmpInst::ICMP_SGT:
@@ -625,11 +699,10 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x sgt c => s sge c + 1
     //
     // When c is not the largest possible signed integer.
-    if ((Size == 32 && static_cast<int32_t>(C) == INT32_MAX) ||
-        (Size == 64 && static_cast<int64_t>(C) == INT64_MAX))
+    if (C.isMaxSignedValue())
       return std::nullopt;
     P = (P == CmpInst::ICMP_SLE) ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE;
-    C += 1;
+    C = C + 1;
     break;
   case CmpInst::ICMP_ULE:
   case CmpInst::ICMP_UGT:
@@ -639,21 +712,29 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x ugt c => s uge c + 1
     //
     // When c is not the largest possible unsigned integer.
-    if ((Size == 32 && static_cast<uint32_t>(C) == UINT32_MAX) ||
-        (Size == 64 && C == UINT64_MAX))
+    if (C.isAllOnes())
       return std::nullopt;
     P = (P == CmpInst::ICMP_ULE) ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
-    C += 1;
+    C = C + 1;
     break;
   }
 
   // Check if the new constant is valid, and return the updated constant and
   // predicate if it is.
-  if (Size == 32)
-    C = static_cast<uint32_t>(C);
-  if (!isLegalArithImmed(C))
-    return std::nullopt;
-  return {{C, P}};
+  uint64_t NewC = C.getZExtValue();
+  if (isLegalCmpImmed(C))
+    return {{NewC, P}};
+
+  auto NumberOfInstrToLoadImm = [=](uint64_t Imm) {
+    SmallVector<AArch64_IMM::ImmInsnModel> Insn;
+    AArch64_IMM::expandMOVImm(Imm, 32, Insn);
+    return Insn.size();
+  };
+
+  if (NumberOfInstrToLoadImm(OriginalC) > NumberOfInstrToLoadImm(NewC))
+    return {{NewC, P}};
+
+  return std::nullopt;
 }
 
 /// Determine whether or not it is possible to update the RHS and predicate of
@@ -668,9 +749,10 @@ bool matchAdjustICmpImmAndPred(
     MachineInstr &MI, const MachineRegisterInfo &MRI,
     std::pair<uint64_t, CmpInst::Predicate> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+  Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
   auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
-  if (auto MaybeNewImmAndPred = tryAdjustICmpImmAndPred(RHS, Pred, MRI)) {
+  if (auto MaybeNewImmAndPred = tryAdjustICmpImmAndPred(LHS, RHS, Pred, MRI)) {
     MatchInfo = *MaybeNewImmAndPred;
     return true;
   }
@@ -754,7 +836,7 @@ void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   const LLT SrcTy = MRI.getType(Src1Reg);
 
   B.setInstrAndDebugLoc(MI);
-  auto Lane = B.buildConstant(LLT::scalar(64), MatchInfo.second);
+  auto Lane = B.buildConstant(LLT::integer(64), MatchInfo.second);
 
   Register DupSrc = MI.getOperand(1).getReg();
   // For types like <2 x s32>, we can use G_DUPLANE32, with a <4 x s32> source.
@@ -769,79 +851,127 @@ void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
-  auto Splat = getAArch64VectorSplat(MI, MRI);
-  if (!Splat)
+bool matchScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  if (SrcTy.getSizeInBits() != 128 && SrcTy.getSizeInBits() != 64)
     return false;
-  if (Splat->isReg())
-    return true;
+  return SrcTy.isVector() && !SrcTy.isScalable() &&
+         (Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1 ||
+          (Unmerge.getNumDefs() == 2 && SrcTy.getSizeInBits() == 128 &&
+           MRI.getType(Unmerge.getReg(0)).getSizeInBits() == 64));
+}
+
+void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  const LLT DstTy = MRI.getType(Unmerge.getReg(0));
+  assert((SrcTy.isVector() && !SrcTy.isScalable()) &&
+         "Expected a fixed length vector");
+
+  if (DstTy.isVector()) {
+    assert(Unmerge.getNumDefs() == 2);
+    if (!MRI.use_nodbg_empty(Unmerge.getReg(0)))
+      B.buildExtractSubvector(Unmerge.getReg(0), Src1Reg, 0);
+    if (!MRI.use_nodbg_empty(Unmerge.getReg(1)))
+      B.buildExtractSubvector(Unmerge.getReg(1), Src1Reg,
+                              SrcTy.getNumElements() / 2);
+  } else {
+    for (int I = 0; I < SrcTy.getNumElements(); ++I)
+      if (!MRI.use_nodbg_empty(Unmerge.getReg(I)))
+        B.buildExtractVectorElementConstant(Unmerge.getReg(I), Src1Reg, I);
+  }
+  MI.eraseFromParent();
+}
+
+bool matchBuildVectorToDup(MachineInstr &MI, Register &Src,
+                           MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+
   // Later, during selection, we'll try to match imported patterns using
   // immAllOnesV and immAllZerosV. These require G_BUILD_VECTOR. Don't lower
   // G_BUILD_VECTORs which could match those patterns.
-  int64_t Cst = Splat->getCst();
-  return (Cst != 0 && Cst != -1);
+  if (isBuildVectorAllZeros(MI, MRI) || isBuildVectorAllOnes(MI, MRI))
+    return false;
+
+  // Find buildvector which always uses the same register or undef. Return true
+  // so long as at least 2 registers were found (not all-undef or only 1
+  // non-undef entry).
+  Register Reg = 0;
+  unsigned NumNonUndef = 0;
+  for (const MachineOperand &Op : drop_begin(MI.operands())) {
+    if (getOpcodeDef<GImplicitDef>(Op.getReg(), MRI))
+      continue;
+
+    if (!Reg)
+      Reg = Op.getReg();
+    else if (Op.getReg() != Reg)
+      return false;
+    NumNonUndef++;
+  }
+
+  Src = Reg;
+  return Reg && NumNonUndef > 1;
 }
 
-void applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) {
+void applyBuildVectorToDup(MachineInstr &MI, Register Src,
+                           MachineRegisterInfo &MRI, MachineIRBuilder &B) {
   B.setInstrAndDebugLoc(MI);
-  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()},
-               {MI.getOperand(1).getReg()});
+  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()}, {Src});
   MI.eraseFromParent();
 }
 
 /// \returns how many instructions would be saved by folding a G_ICMP's shift
 /// and/or extension operations.
-unsigned getCmpOperandFoldingProfit(Register CmpOp, MachineRegisterInfo &MRI) {
-  // No instructions to save if there's more than one use or no uses.
-  if (!MRI.hasOneNonDBGUse(CmpOp))
-    return 0;
-
+static unsigned getCmpOperandFoldingProfit(Register CmpOp,
+                                           MachineRegisterInfo &MRI) {
   // FIXME: This is duplicated with the selector. (See: selectShiftedRegister)
   auto IsSupportedExtend = [&](const MachineInstr &MI) {
     if (MI.getOpcode() == TargetOpcode::G_SEXT_INREG)
       return true;
-    if (MI.getOpcode() != TargetOpcode::G_AND)
-      return false;
-    auto ValAndVReg =
-        getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
-    if (!ValAndVReg)
-      return false;
-    uint64_t Mask = ValAndVReg->Value.getZExtValue();
-    return (Mask == 0xFF || Mask == 0xFFFF || Mask == 0xFFFFFFFF);
+    if (MI.getOpcode() == TargetOpcode::G_AND) {
+      auto ValAndVReg =
+          getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+      if (ValAndVReg) {
+        uint64_t Mask = ValAndVReg->Value.getZExtValue();
+        return (Mask == 0xFF || Mask == 0xFFFF || Mask == 0xFFFFFFFF);
+      }
+    }
+    return false;
   };
+
+  // No instructions to save if there's more than one use or no uses.
+  if (!MRI.hasOneNonDBGUse(CmpOp))
+    return 0;
 
   MachineInstr *Def = getDefIgnoringCopies(CmpOp, MRI);
   if (IsSupportedExtend(*Def))
     return 1;
 
   unsigned Opc = Def->getOpcode();
-  if (Opc != TargetOpcode::G_SHL && Opc != TargetOpcode::G_ASHR &&
-      Opc != TargetOpcode::G_LSHR)
-    return 0;
+  if (Opc == TargetOpcode::G_SHL || Opc == TargetOpcode::G_LSHR ||
+      Opc == TargetOpcode::G_ASHR) {
+    auto MaybeShiftAmt =
+        getIConstantVRegValWithLookThrough(Def->getOperand(2).getReg(), MRI);
+    if (MaybeShiftAmt) {
+      uint64_t ShiftAmt = MaybeShiftAmt->Value.getZExtValue();
+      MachineInstr *ShiftLHS =
+          getDefIgnoringCopies(Def->getOperand(1).getReg(), MRI);
+      if (IsSupportedExtend(*ShiftLHS))
+        return (ShiftAmt <= 4) ? 2 : 1;
+      LLT Ty = MRI.getType(Def->getOperand(0).getReg());
+      if (Ty.isVector())
+        return 0;
+      unsigned ShiftSize = Ty.getSizeInBits();
+      if ((ShiftSize == 32 && ShiftAmt <= 31) ||
+          (ShiftSize == 64 && ShiftAmt <= 63))
+        return 1;
+    }
+  }
 
-  auto MaybeShiftAmt =
-      getIConstantVRegValWithLookThrough(Def->getOperand(2).getReg(), MRI);
-  if (!MaybeShiftAmt)
-    return 0;
-  uint64_t ShiftAmt = MaybeShiftAmt->Value.getZExtValue();
-  MachineInstr *ShiftLHS =
-      getDefIgnoringCopies(Def->getOperand(1).getReg(), MRI);
-
-  // Check if we can fold an extend and a shift.
-  // FIXME: This is duplicated with the selector. (See:
-  // selectArithExtendedRegister)
-  if (IsSupportedExtend(*ShiftLHS))
-    return (ShiftAmt <= 4) ? 2 : 1;
-
-  LLT Ty = MRI.getType(Def->getOperand(0).getReg());
-  if (Ty.isVector())
-    return 0;
-  unsigned ShiftSize = Ty.getSizeInBits();
-  if ((ShiftSize == 32 && ShiftAmt <= 31) ||
-      (ShiftSize == 64 && ShiftAmt <= 63))
-    return 1;
   return 0;
 }
 
@@ -858,11 +988,11 @@ bool trySwapICmpOperands(MachineInstr &MI, MachineRegisterInfo &MRI) {
   // can be turned into:
   //    cmp     w12, w11, lsl #1
 
-  // Don't swap if there's a constant on the RHS, because we know we can fold
-  // that.
+  // Don't swap if there's a constant on the RHS and it is a legal compare
+  // immediate, because we know we can fold that.
   Register RHS = MI.getOperand(3).getReg();
   auto RHSCst = getIConstantVRegValWithLookThrough(RHS, MRI);
-  if (RHSCst && isLegalArithImmed(RHSCst->Value.getSExtValue()))
+  if (RHSCst && isLegalCmpImmed(RHSCst->Value))
     return false;
 
   Register LHS = MI.getOperand(2).getReg();
@@ -896,58 +1026,41 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 
 /// \returns a function which builds a vector floating point compare instruction
 /// for a condition code \p CC.
-/// \param [in] IsZero - True if the comparison is against 0.
-/// \param [in] NoNans - True if the target has NoNansFPMath.
+/// \param [in] NoNans - True if the instruction has nnan flag.
 std::function<Register(MachineIRBuilder &)>
-getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool IsZero,
-              bool NoNans, MachineRegisterInfo &MRI) {
-  LLT DstTy = MRI.getType(LHS);
+getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
+              MachineRegisterInfo &MRI) {
+  LLT OldTy = MRI.getType(LHS);
+  LLT DstTy = LLT::fixed_vector(OldTy.getNumElements(),
+                                LLT::integer(OldTy.getScalarSizeInBits()));
   assert(DstTy.isVector() && "Expected vector types only?");
-  assert(DstTy == MRI.getType(RHS) && "Src and Dst types must match!");
   switch (CC) {
   default:
     llvm_unreachable("Unexpected condition code!");
   case AArch64CC::NE:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      auto FCmp = IsZero
-                      ? MIB.buildInstr(AArch64::G_FCMEQZ, {DstTy}, {LHS})
-                      : MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS});
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      auto FCmp = MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS});
       return MIB.buildNot(DstTy, FCmp).getReg(0);
     };
   case AArch64CC::EQ:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMEQZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS}).getReg(0);
     };
   case AArch64CC::GE:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMGEZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {LHS, RHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {LHS, RHS}).getReg(0);
     };
   case AArch64CC::GT:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMGTZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {LHS, RHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {LHS, RHS}).getReg(0);
     };
   case AArch64CC::LS:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMLEZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {RHS, LHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {RHS, LHS}).getReg(0);
     };
   case AArch64CC::MI:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMLTZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {RHS, LHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {RHS, LHS}).getReg(0);
     };
   }
 }
@@ -976,7 +1089,6 @@ bool matchLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &MIB) {
   assert(MI.getOpcode() == TargetOpcode::G_FCMP);
-  const auto &ST = MI.getMF()->getSubtarget<AArch64Subtarget>();
 
   const auto &CmpMI = cast<GFCmp>(MI);
 
@@ -987,35 +1099,33 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   LLT DstTy = MRI.getType(Dst);
 
-  auto Splat = getAArch64VectorSplat(*MRI.getVRegDef(RHS), MRI);
-
-  // Compares against 0 have special target-specific pseudos.
-  bool IsZero = Splat && Splat->isCst() && Splat->getCst() == 0;
-
   bool Invert = false;
   AArch64CC::CondCode CC, CC2 = AArch64CC::AL;
-  if (Pred == CmpInst::Predicate::FCMP_ORD && IsZero) {
+  if ((Pred == CmpInst::Predicate::FCMP_ORD ||
+       Pred == CmpInst::Predicate::FCMP_UNO) &&
+      isBuildVectorAllZeros(*MRI.getVRegDef(RHS), MRI)) {
     // The special case "fcmp ord %a, 0" is the canonical check that LHS isn't
     // NaN, so equivalent to a == a and doesn't need the two comparisons an
     // "ord" normally would.
+    // Similarly, "fcmp uno %a, 0" is the canonical check that LHS is NaN and is
+    // thus equivalent to a != a.
     RHS = LHS;
-    IsZero = false;
-    CC = AArch64CC::EQ;
+    CC = Pred == CmpInst::Predicate::FCMP_ORD ? AArch64CC::EQ : AArch64CC::NE;
   } else
     changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
 
   // Instead of having an apply function, just build here to simplify things.
   MIB.setInstrAndDebugLoc(MI);
 
-  const bool NoNans =
-      ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
+  // TODO: Also consider GISelValueTracking result if eligible.
+  const bool NoNans = MI.getFlag(MachineInstr::FmNoNans);
 
-  auto Cmp = getVectorFCMP(CC, LHS, RHS, IsZero, NoNans, MRI);
+  auto Cmp = getVectorFCMP(CC, LHS, RHS, NoNans, MRI);
   Register CmpRes;
   if (CC2 == AArch64CC::AL)
     CmpRes = Cmp(MIB);
   else {
-    auto Cmp2 = getVectorFCMP(CC2, LHS, RHS, IsZero, NoNans, MRI);
+    auto Cmp2 = getVectorFCMP(CC2, LHS, RHS, NoNans, MRI);
     auto Cmp2Dst = Cmp2(MIB);
     auto Cmp1Dst = Cmp(MIB);
     CmpRes = MIB.buildOr(DstTy, Cmp1Dst, Cmp2Dst).getReg(0);
@@ -1024,6 +1134,40 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
     CmpRes = MIB.buildNot(DstTy, CmpRes).getReg(0);
   MRI.replaceRegWith(Dst, CmpRes);
   MI.eraseFromParent();
+}
+
+// Matches G_BUILD_VECTOR where at least one source operand is not a constant
+bool matchLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto *GBuildVec = cast<GBuildVector>(&MI);
+
+  // Check if the values are all constants
+  for (unsigned I = 0; I < GBuildVec->getNumSources(); ++I) {
+    auto ConstVal =
+        getAnyConstantVRegValWithLookThrough(GBuildVec->getSourceReg(I), MRI);
+
+    if (!ConstVal.has_value())
+      return true;
+  }
+
+  return false;
+}
+
+void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B) {
+  auto *GBuildVec = cast<GBuildVector>(&MI);
+  LLT DstTy = MRI.getType(GBuildVec->getReg(0));
+  Register DstReg = B.buildUndef(DstTy).getReg(0);
+
+  for (unsigned I = 0; I < GBuildVec->getNumSources(); ++I) {
+    Register SrcReg = GBuildVec->getSourceReg(I);
+    if (mi_match(SrcReg, MRI, m_GImplicitDef()))
+      continue;
+    auto IdxReg = B.buildConstant(LLT::integer(64), I);
+    DstReg =
+        B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
+  }
+  B.buildCopy(GBuildVec->getReg(0), DstReg);
+  GBuildVec->eraseFromParent();
 }
 
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -1115,81 +1259,35 @@ void applyUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
 // Doing these two matches in one function to ensure that the order of matching
 // will always be the same.
 // Try lowering MUL to MULL before trying to scalarize if needed.
-bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI) {
+bool matchMulv2s64(MachineInstr &MI, MachineRegisterInfo &MRI) {
   // Get the instructions that defined the source operand
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
-  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
-
-  if (DstTy.isVector()) {
-    // If the source operands were EXTENDED before, then {U/S}MULL can be used
-    unsigned I1Opc = I1->getOpcode();
-    unsigned I2Opc = I2->getOpcode();
-    if (((I1Opc == TargetOpcode::G_ZEXT && I2Opc == TargetOpcode::G_ZEXT) ||
-         (I1Opc == TargetOpcode::G_SEXT && I2Opc == TargetOpcode::G_SEXT)) &&
-        (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
-         MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
-        (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
-         MRI.getType(I2->getOperand(1).getReg()).getScalarSizeInBits() * 2)) {
-      return true;
-    }
-    // If result type is v2s64, scalarise the instruction
-    else if (DstTy == LLT::fixed_vector(2, 64)) {
-      return true;
-    }
-  }
-  return false;
+  return DstTy == LLT::fixed_vector(2, 64);
 }
 
-void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
-                       MachineIRBuilder &B, GISelChangeObserver &Observer) {
+void applyMulv2s64(MachineInstr &MI, MachineRegisterInfo &MRI,
+                   MachineIRBuilder &B, GISelChangeObserver &Observer) {
   assert(MI.getOpcode() == TargetOpcode::G_MUL &&
          "Expected a G_MUL instruction");
 
   // Get the instructions that defined the source operand
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
-  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
-
-  // If the source operands were EXTENDED before, then {U/S}MULL can be used
-  unsigned I1Opc = I1->getOpcode();
-  unsigned I2Opc = I2->getOpcode();
-  if (((I1Opc == TargetOpcode::G_ZEXT && I2Opc == TargetOpcode::G_ZEXT) ||
-       (I1Opc == TargetOpcode::G_SEXT && I2Opc == TargetOpcode::G_SEXT)) &&
-      (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
-       MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
-      (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
-       MRI.getType(I2->getOperand(1).getReg()).getScalarSizeInBits() * 2)) {
-
-    B.setInstrAndDebugLoc(MI);
-    B.buildInstr(I1->getOpcode() == TargetOpcode::G_ZEXT ? AArch64::G_UMULL
-                                                         : AArch64::G_SMULL,
-                 {MI.getOperand(0).getReg()},
-                 {I1->getOperand(1).getReg(), I2->getOperand(1).getReg()});
-    MI.eraseFromParent();
-  }
-  // If result type is v2s64, scalarise the instruction
-  else if (DstTy == LLT::fixed_vector(2, 64)) {
-    LegalizerHelper Helper(*MI.getMF(), Observer, B);
-    B.setInstrAndDebugLoc(MI);
-    Helper.fewerElementsVector(
-        MI, 0,
-        DstTy.changeElementCount(
-            DstTy.getElementCount().divideCoefficientBy(2)));
-  }
+  assert(DstTy == LLT::fixed_vector(2, 64) && "Expected v2s64 Mul");
+  LegalizerHelper Helper(*MI.getMF(), Observer, B);
+  Helper.fewerElementsVector(
+      MI, 0,
+      DstTy.changeElementCount(DstTy.getElementCount().divideCoefficientBy(2)));
 }
 
 class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
   const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 
 public:
   AArch64PostLegalizerLoweringImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI);
 
@@ -1208,11 +1306,10 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI)
-    : Combiner(MF, CInfo, TPC, /*KB*/ nullptr, CSEInfo),
+    : Combiner(MF, CInfo, /*VT*/ nullptr, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true), RuleConfig(RuleConfig),
       STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -1221,11 +1318,32 @@ AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
 {
 }
 
-class AArch64PostLegalizerLowering : public MachineFunctionPass {
+bool runPostLegalizerLowering(
+    MachineFunction &MF,
+    const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig) {
+  if (MF.getProperties().hasFailedISel())
+    return false;
+  const Function &F = MF.getFunction();
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
+                     /*LegalizerInfo=*/nullptr, /*OptEnabled=*/true,
+                     F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // PostLegalizerCombiner performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
+  AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, /*CSEInfo=*/nullptr,
+                                        RuleConfig, ST);
+  return Impl.combineMachineInstrs();
+}
+
+class AArch64PostLegalizerLoweringLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AArch64PostLegalizerLowering();
+  AArch64PostLegalizerLoweringLegacy();
 
   StringRef getPassName() const override {
     return "AArch64PostLegalizerLowering";
@@ -1239,51 +1357,61 @@ private:
 };
 } // end anonymous namespace
 
-void AArch64PostLegalizerLowering::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
+void AArch64PostLegalizerLoweringLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-AArch64PostLegalizerLowering::AArch64PostLegalizerLowering()
+AArch64PostLegalizerLoweringLegacy::AArch64PostLegalizerLoweringLegacy()
     : MachineFunctionPass(ID) {
-  initializeAArch64PostLegalizerLoweringPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
-bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
-    return false;
-  assert(MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::Legalized) &&
-         "Expected a legalized function?");
-  auto *TPC = &getAnalysis<TargetPassConfig>();
-  const Function &F = MF.getFunction();
-
-  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
-  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, /*OptEnabled=*/true,
-                     F.hasOptSize(), F.hasMinSize());
-  AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, TPC, /*CSEInfo*/ nullptr,
-                                        RuleConfig, ST);
-  return Impl.combineMachineInstrs();
+bool AArch64PostLegalizerLoweringLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
+  return runPostLegalizerLowering(MF, RuleConfig);
 }
 
-char AArch64PostLegalizerLowering::ID = 0;
-INITIALIZE_PASS_BEGIN(AArch64PostLegalizerLowering, DEBUG_TYPE,
+char AArch64PostLegalizerLoweringLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(AArch64PostLegalizerLoweringLegacy, DEBUG_TYPE,
                       "Lower AArch64 MachineInstrs after legalization", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(AArch64PostLegalizerLowering, DEBUG_TYPE,
+INITIALIZE_PASS_END(AArch64PostLegalizerLoweringLegacy, DEBUG_TYPE,
                     "Lower AArch64 MachineInstrs after legalization", false,
                     false)
 
+AArch64PostLegalizerLoweringPass::AArch64PostLegalizerLoweringPass()
+    : RuleConfig(
+          std::make_unique<AArch64PostLegalizerLoweringImplRuleConfig>()) {
+  if (!RuleConfig->parseCommandLineOption())
+    reportFatalUsageError("invalid rule identifier");
+}
+
+AArch64PostLegalizerLoweringPass::AArch64PostLegalizerLoweringPass(
+    AArch64PostLegalizerLoweringPass &&) = default;
+
+AArch64PostLegalizerLoweringPass::~AArch64PostLegalizerLoweringPass() = default;
+
+PreservedAnalyses
+AArch64PostLegalizerLoweringPass::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  const bool Changed = runPostLegalizerLowering(MF, *RuleConfig);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 namespace llvm {
 FunctionPass *createAArch64PostLegalizerLowering() {
-  return new AArch64PostLegalizerLowering();
+  return new AArch64PostLegalizerLoweringLegacy();
 }
 } // end namespace llvm

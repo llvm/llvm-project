@@ -36,7 +36,7 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_addr");
   if (!DebugAbbrev.empty())
     SecNames.insert("debug_abbrev");
-  if (!CompileUnits.empty())
+  if (!Units.empty())
     SecNames.insert("debug_info");
   if (PubNames)
     SecNames.insert("debug_pubnames");
@@ -52,6 +52,8 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_rnglists");
   if (DebugLoclists)
     SecNames.insert("debug_loclists");
+  if (DebugNames)
+    SecNames.insert("debug_names");
   return SecNames;
 }
 
@@ -99,12 +101,13 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   DWARFCtx.IsGNUPubSec = true;
   IO.mapOptional("debug_gnu_pubnames", DWARF.GNUPubNames);
   IO.mapOptional("debug_gnu_pubtypes", DWARF.GNUPubTypes);
-  IO.mapOptional("debug_info", DWARF.CompileUnits);
+  IO.mapOptional("debug_info", DWARF.Units);
   IO.mapOptional("debug_line", DWARF.DebugLines);
   IO.mapOptional("debug_addr", DWARF.DebugAddr);
   IO.mapOptional("debug_str_offsets", DWARF.DebugStrOffsets);
   IO.mapOptional("debug_rnglists", DWARF.DebugRnglists);
   IO.mapOptional("debug_loclists", DWARF.DebugLoclists);
+  IO.mapOptional("debug_names", DWARF.DebugNames);
   IO.setContext(OldContext);
 }
 
@@ -120,6 +123,32 @@ void MappingTraits<DWARFYAML::Abbrev>::mapping(IO &IO,
   IO.mapRequired("Tag", Abbrev.Tag);
   IO.mapRequired("Children", Abbrev.Children);
   IO.mapOptional("Attributes", Abbrev.Attributes);
+}
+
+void MappingTraits<DWARFYAML::IdxForm>::mapping(IO &IO,
+                                                DWARFYAML::IdxForm &IdxForm) {
+  IO.mapRequired("Idx", IdxForm.Idx);
+  IO.mapRequired("Form", IdxForm.Form);
+}
+
+void MappingTraits<DWARFYAML::DebugNameAbbreviation>::mapping(
+    IO &IO, DWARFYAML::DebugNameAbbreviation &DebugNameAbbreviation) {
+  IO.mapRequired("Code", DebugNameAbbreviation.Code);
+  IO.mapRequired("Tag", DebugNameAbbreviation.Tag);
+  IO.mapRequired("Indices", DebugNameAbbreviation.Indices);
+}
+
+void MappingTraits<DWARFYAML::DebugNameEntry>::mapping(
+    IO &IO, DWARFYAML::DebugNameEntry &DebugNameEntry) {
+  IO.mapRequired("Name", DebugNameEntry.NameStrp);
+  IO.mapRequired("Code", DebugNameEntry.Code);
+  IO.mapOptional("Values", DebugNameEntry.Values);
+}
+
+void MappingTraits<DWARFYAML::DebugNamesSection>::mapping(
+    IO &IO, DWARFYAML::DebugNamesSection &DebugNames) {
+  IO.mapRequired("Abbreviations", DebugNames.Abbrevs);
+  IO.mapRequired("Entries", DebugNames.Entries);
 }
 
 void MappingTraits<DWARFYAML::AttributeAbbrev>::mapping(
@@ -187,6 +216,22 @@ void MappingTraits<DWARFYAML::Unit>::mapping(IO &IO, DWARFYAML::Unit &Unit) {
   IO.mapOptional("AbbrevTableID", Unit.AbbrevTableID);
   IO.mapOptional("AbbrOffset", Unit.AbbrOffset);
   IO.mapOptional("AddrSize", Unit.AddrSize);
+  if (Unit.Version >= 5) {
+    switch (Unit.Type) {
+    case dwarf::DW_UT_compile:
+    case dwarf::DW_UT_partial:
+    default:
+      break;
+    case dwarf::DW_UT_type:
+    case dwarf::DW_UT_split_type:
+      IO.mapRequired("TypeSignature", Unit.TypeSignatureOrDwoID);
+      IO.mapRequired("TypeOffset", Unit.TypeOffset);
+      break;
+    case dwarf::DW_UT_skeleton:
+    case dwarf::DW_UT_split_compile:
+      IO.mapRequired("DwoID", Unit.TypeSignatureOrDwoID);
+    }
+  }
   IO.mapOptional("Entries", Unit.Entries);
 }
 
@@ -209,6 +254,12 @@ void MappingTraits<DWARFYAML::File>::mapping(IO &IO, DWARFYAML::File &File) {
   IO.mapRequired("DirIdx", File.DirIdx);
   IO.mapRequired("ModTime", File.ModTime);
   IO.mapRequired("Length", File.Length);
+}
+
+void MappingTraits<DWARFYAML::LnctForm>::mapping(
+    IO &IO, DWARFYAML::LnctForm &LnctForm) {
+  IO.mapRequired("ContentType", LnctForm.ContentType);
+  IO.mapRequired("Form", LnctForm.Form);
 }
 
 void MappingTraits<DWARFYAML::LineTableOpcode>::mapping(
@@ -235,6 +286,10 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapOptional("Format", LineTable.Format, dwarf::DWARF32);
   IO.mapOptional("Length", LineTable.Length);
   IO.mapRequired("Version", LineTable.Version);
+  if (LineTable.Version >= 5) {
+    IO.mapRequired("AddressSize", LineTable.AddressSize);
+    IO.mapOptional("SegmentSelectorSize", LineTable.SegmentSelectorSize, 0);
+  }
   IO.mapOptional("PrologueLength", LineTable.PrologueLength);
   IO.mapRequired("MinInstLength", LineTable.MinInstLength);
   if(LineTable.Version >= 4)
@@ -244,8 +299,26 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapRequired("LineRange", LineTable.LineRange);
   IO.mapOptional("OpcodeBase", LineTable.OpcodeBase);
   IO.mapOptional("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
-  IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
-  IO.mapOptional("Files", LineTable.Files);
+  if (LineTable.Version >= 5) {
+    IO.mapOptional("DirectoryEntryFormat", LineTable.DirectoryEntryFormat);
+    IO.mapOptional("DirectoryEntryFormatCount",
+                   LineTable.DirectoryEntryFormatCount,
+                   LineTable.DirectoryEntryFormat.size());
+    IO.mapOptional("Directories", LineTable.Directories);
+    IO.mapOptional("DirectoriesCount", LineTable.DirectoriesCount,
+                   LineTable.Directories.size());
+
+    IO.mapOptional("FileNameEntryFormat", LineTable.FileNameEntryFormat);
+    IO.mapOptional("FileNameEntryFormatCount",
+                   LineTable.FileNameEntryFormatCount,
+                   LineTable.FileNameEntryFormat.size());
+    IO.mapOptional("FileNames", LineTable.FileNames);
+    IO.mapOptional("FileNamesCount", LineTable.FileNamesCount,
+                   LineTable.FileNames.size());
+  } else {
+    IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
+    IO.mapOptional("Files", LineTable.Files);
+  }
   IO.mapOptional("Opcodes", LineTable.Opcodes);
 }
 

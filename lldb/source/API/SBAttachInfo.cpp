@@ -266,13 +266,7 @@ SBListener SBAttachInfo::GetShadowListener() {
 void SBAttachInfo::SetShadowListener(SBListener &listener) {
   LLDB_INSTRUMENT_VA(this, listener);
 
-  ListenerSP listener_sp = listener.GetSP();
-  if (listener_sp && listener.IsValid())
-    listener_sp->SetShadow(true);
-  else
-    listener_sp = nullptr;
-
-  m_opaque_sp->SetShadowListener(listener_sp);
+  m_opaque_sp->SetShadowListener(listener.GetSP());
 }
 
 const char *SBAttachInfo::GetScriptedProcessClassName() const {
@@ -285,8 +279,8 @@ const char *SBAttachInfo::GetScriptedProcessClassName() const {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString class_name(metadata_sp->GetClassName().data());
-  return class_name.AsCString();
+  ConstString class_name(metadata_sp->GetClassName());
+  return class_name.AsCString(nullptr);
 }
 
 void SBAttachInfo::SetScriptedProcessClassName(const char *class_name) {

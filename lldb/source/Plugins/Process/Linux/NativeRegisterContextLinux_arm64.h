@@ -83,55 +83,65 @@ private:
   bool m_fpu_is_valid;
   bool m_sve_buffer_is_valid;
   bool m_mte_ctrl_is_valid;
+  bool m_zt_buffer_is_valid;
+  bool m_fpmr_is_valid;
 
   bool m_sve_header_is_valid;
   bool m_za_buffer_is_valid;
   bool m_za_header_is_valid;
   bool m_pac_mask_is_valid;
   bool m_tls_is_valid;
-  size_t m_tls_size;
+  size_t m_tls_size = 0;
+  bool m_gcs_is_valid;
+  bool m_poe_is_valid;
 
-  struct user_pt_regs m_gpr_arm64; // 64-bit general purpose registers.
+  /// 64-bit general purpose registers.
+  struct user_pt_regs m_gpr_arm64{};
 
-  RegisterInfoPOSIX_arm64::FPU
-      m_fpr; // floating-point registers including extended register sets.
+  /// Floating-point registers including extended register sets.
+  RegisterInfoPOSIX_arm64::FPU m_fpr{};
 
   SVEState m_sve_state = SVEState::Unknown;
-  struct sve::user_sve_header m_sve_header;
+  struct sve::user_sve_header m_sve_header{};
   std::vector<uint8_t> m_sve_ptrace_payload;
 
   sve::user_za_header m_za_header;
   std::vector<uint8_t> m_za_ptrace_payload;
 
-  bool m_refresh_hwdebug_info;
+  bool m_refresh_hwdebug_info = true;
 
   struct user_pac_mask {
-    uint64_t data_mask;
-    uint64_t insn_mask;
-  };
+    uint64_t data_mask = 0;
+    uint64_t insn_mask = 0;
+  } m_pac_mask;
 
-  struct user_pac_mask m_pac_mask;
-
-  uint64_t m_mte_ctrl_reg;
+  uint64_t m_mte_ctrl_reg = 0;
 
   struct sme_pseudo_regs {
-    uint64_t ctrl_reg;
-    uint64_t svg_reg;
-  };
-
-  struct sme_pseudo_regs m_sme_pseudo_regs;
+    uint64_t ctrl_reg = 0;
+    uint64_t svg_reg = 0;
+  } m_sme_pseudo_regs;
 
   struct tls_regs {
-    uint64_t tpidr_reg;
+    uint64_t tpidr_reg = 0;
     // Only valid when SME is present.
-    uint64_t tpidr2_reg;
-  };
+    uint64_t tpidr2_reg = 0;
+  } m_tls_regs;
 
-  struct tls_regs m_tls_regs;
+  // SME2's ZT is a 512 bit register.
+  std::array<uint8_t, 64> m_zt_reg{};
 
-  bool IsGPR(unsigned reg) const;
+  uint64_t m_fpmr_reg = 0;
 
-  bool IsFPR(unsigned reg) const;
+  struct poe_regs {
+    uint64_t por_el0_reg = 0;
+  } m_poe_regs;
+
+  struct gcs_regs {
+    uint64_t features_enabled = 0;
+    uint64_t features_locked = 0;
+    uint64_t gcspr_e0 = 0;
+  } m_gcs_regs;
 
   Status ReadAllSVE();
 
@@ -159,18 +169,28 @@ private:
 
   Status WriteZA();
 
+  Status ReadGCS();
+
+  Status WriteGCS();
+
   // No WriteZAHeader because writing only the header will disable ZA.
   // Instead use WriteZA and ensure you have the correct ZA buffer size set
   // beforehand if you wish to disable it.
 
+  Status ReadZT();
+
+  Status WriteZT();
+
   // SVCR is a pseudo register and we do not allow writes to it.
   Status ReadSMEControl();
 
-  bool IsSVE(unsigned reg) const;
-  bool IsSME(unsigned reg) const;
-  bool IsPAuth(unsigned reg) const;
-  bool IsMTE(unsigned reg) const;
-  bool IsTLS(unsigned reg) const;
+  Status ReadFPMR();
+
+  Status WriteFPMR();
+
+  Status ReadPOE();
+
+  Status WritePOE();
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 
@@ -190,7 +210,15 @@ private:
 
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
+  void *GetZTBuffer() { return m_zt_reg.data(); }
+
   void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); }
+
+  void *GetFPMRBuffer() { return &m_fpmr_reg; }
+
+  void *GetGCSBuffer() { return &m_gcs_regs; }
+
+  void *GetPOEBuffer() { return &m_poe_regs; }
 
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
 
@@ -210,11 +238,20 @@ private:
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
+  size_t GetZTBufferSize() { return m_zt_reg.size(); }
+
+  size_t GetFPMRBufferSize() { return sizeof(m_fpmr_reg); }
+
+  size_t GetGCSBufferSize() { return sizeof(m_gcs_regs); }
+
+  size_t GetPOEBufferSize() { return sizeof(m_poe_regs); }
+
   llvm::Error ReadHardwareDebugInfo() override;
 
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
-  uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
+  uint32_t CalculateFprOffset(const RegisterInfo *reg_info,
+                              bool streaming_fpsimd) const;
 
   RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
 

@@ -7,6 +7,8 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
+@skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
     ENABLE_THREADS_IN_STOP_REPLY_ENTRIES = [
         "read packet: $QListThreadsInStopReply#21",
@@ -58,7 +60,7 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
         pcs_text = results["thread-pcs"]
         thread_ids = threads_text.split(",")
         pcs = pcs_text.split(",")
-        self.assertEquals(len(thread_ids), len(pcs))
+        self.assertEqual(len(thread_ids), len(pcs))
 
         thread_pcs = dict()
         for i in range(0, len(pcs)):

@@ -25,10 +25,48 @@ using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
 
+/// Parses optional memory access (a.k.a. memory operand) attributes attached to
+/// a memory access operand/pointer. Specifically, parses the following syntax:
+///     (`[` memory-access `]`)?
+/// where:
+///     memory-access ::= `"None"` | `"Volatile"` | `"Aligned", `
+///         integer-literal | `"NonTemporal"`
+template <typename MemoryOpTy>
+ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
+                                        OperationState &state) {
+  // Parse an optional list of attributes staring with '['
+  if (parser.parseOptionalLSquare()) {
+    // Nothing to do
+    return success();
+  }
+
+  spirv::MemoryAccess memoryAccessAttr;
+  StringAttr memoryAccessAttrName =
+      MemoryOpTy::getMemoryAccessAttrName(state.name);
+  if (spirv::parseEnumStrAttr<spirv::MemoryAccessAttr>(
+          memoryAccessAttr, parser, state, memoryAccessAttrName))
+    return failure();
+
+  if (spirv::bitEnumContainsAll(memoryAccessAttr,
+                                spirv::MemoryAccess::Aligned)) {
+    // Parse integer attribute for alignment.
+    Attribute alignmentAttr;
+    StringAttr alignmentAttrName = MemoryOpTy::getAlignmentAttrName(state.name);
+    Type i32Type = parser.getBuilder().getIntegerType(32);
+    if (parser.parseComma() ||
+        parser.parseAttribute(alignmentAttr, i32Type, alignmentAttrName,
+                              state.attributes)) {
+      return failure();
+    }
+  }
+  return parser.parseRSquare();
+}
+
 // TODO Make sure to merge this and the previous function into one template
 // parameterized by memory access attribute name and alignment. Doing so now
 // results in VS2017 in producing an internal error (at the call site) that's
 // not detailed enough to understand what is happening.
+template <typename MemoryOpTy>
 static ParseResult parseSourceMemoryAccessAttributes(OpAsmParser &parser,
                                                      OperationState &state) {
   // Parse an optional list of attributes staring with '['
@@ -38,17 +76,21 @@ static ParseResult parseSourceMemoryAccessAttributes(OpAsmParser &parser,
   }
 
   spirv::MemoryAccess memoryAccessAttr;
+  StringRef memoryAccessAttrName =
+      MemoryOpTy::getSourceMemoryAccessAttrName(state.name);
   if (spirv::parseEnumStrAttr<spirv::MemoryAccessAttr>(
-          memoryAccessAttr, parser, state, kSourceMemoryAccessAttrName))
+          memoryAccessAttr, parser, state, memoryAccessAttrName))
     return failure();
 
   if (spirv::bitEnumContainsAll(memoryAccessAttr,
                                 spirv::MemoryAccess::Aligned)) {
     // Parse integer attribute for alignment.
     Attribute alignmentAttr;
+    StringAttr alignmentAttrName =
+        MemoryOpTy::getSourceAlignmentAttrName(state.name);
     Type i32Type = parser.getBuilder().getIntegerType(32);
     if (parser.parseComma() ||
-        parser.parseAttribute(alignmentAttr, i32Type, kSourceAlignmentAttrName,
+        parser.parseAttribute(alignmentAttr, i32Type, alignmentAttrName,
                               state.attributes)) {
       return failure();
     }
@@ -72,7 +114,7 @@ static void printSourceMemoryAccessAttribute(
   // Print optional memory access attribute.
   if (auto memAccess = (memoryAccessAtrrValue ? memoryAccessAtrrValue
                                               : memoryOp.getMemoryAccess())) {
-    elidedAttrs.push_back(kSourceMemoryAccessAttrName);
+    elidedAttrs.push_back(memoryOp.getSourceMemoryAccessAttrName());
 
     printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
@@ -80,7 +122,7 @@ static void printSourceMemoryAccessAttribute(
       // Print integer alignment attribute.
       if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
                                                : memoryOp.getAlignment())) {
-        elidedAttrs.push_back(kSourceAlignmentAttrName);
+        elidedAttrs.push_back(memoryOp.getSourceAlignmentAttrName());
         printer << ", " << *alignment;
       }
     }
@@ -98,7 +140,7 @@ static void printMemoryAccessAttribute(
   // Print optional memory access attribute.
   if (auto memAccess = (memoryAccessAtrrValue ? memoryAccessAtrrValue
                                               : memoryOp.getMemoryAccess())) {
-    elidedAttrs.push_back(kMemoryAccessAttrName);
+    elidedAttrs.push_back(memoryOp.getMemoryAccessAttrName());
 
     printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
@@ -106,7 +148,7 @@ static void printMemoryAccessAttribute(
       // Print integer alignment attribute.
       if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
                                                : memoryOp.getAlignment())) {
-        elidedAttrs.push_back(kAlignmentAttrName);
+        elidedAttrs.push_back(memoryOp.getAlignmentAttrName());
         printer << ", " << *alignment;
       }
     }
@@ -124,7 +166,7 @@ static LogicalResult verifyLoadStorePtrAndValTypes(LoadStoreOpTy op, Value ptr,
   // TODO: Check that the value type satisfies restrictions of
   // SPIR-V OpLoad/OpStore operations
   if (val.getType() !=
-      llvm::cast<spirv::PointerType>(ptr.getType()).getPointeeType()) {
+      cast<spirv::PointerType>(ptr.getType()).getPointeeType()) {
     return op.emitOpError("mismatch in result type and pointer type");
   }
   return success();
@@ -136,11 +178,11 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
   // memory-access attribute is Aligned, then the alignment attribute must be
   // present.
   auto *op = memoryOp.getOperation();
-  auto memAccessAttr = op->getAttr(kMemoryAccessAttrName);
+  auto memAccessAttr = op->getAttr(memoryOp.getMemoryAccessAttrName());
   if (!memAccessAttr) {
     // Alignment attribute shouldn't be present if memory access attribute is
     // not present.
-    if (op->getAttr(kAlignmentAttrName)) {
+    if (op->getAttr(memoryOp.getAlignmentAttrName())) {
       return memoryOp.emitOpError(
           "invalid alignment specification without aligned memory access "
           "specification");
@@ -148,7 +190,7 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
     return success();
   }
 
-  auto memAccess = llvm::cast<spirv::MemoryAccessAttr>(memAccessAttr);
+  auto memAccess = cast<spirv::MemoryAccessAttr>(memAccessAttr);
 
   if (!memAccess) {
     return memoryOp.emitOpError("invalid memory access specifier: ")
@@ -157,11 +199,11 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
 
   if (spirv::bitEnumContainsAll(memAccess.getValue(),
                                 spirv::MemoryAccess::Aligned)) {
-    if (!op->getAttr(kAlignmentAttrName)) {
+    if (!op->getAttr(memoryOp.getAlignmentAttrName())) {
       return memoryOp.emitOpError("missing alignment value");
     }
   } else {
-    if (op->getAttr(kAlignmentAttrName)) {
+    if (op->getAttr(memoryOp.getAlignmentAttrName())) {
       return memoryOp.emitOpError(
           "invalid alignment specification with non-aligned memory access "
           "specification");
@@ -180,11 +222,11 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
   // memory-access attribute is Aligned, then the alignment attribute must be
   // present.
   auto *op = memoryOp.getOperation();
-  auto memAccessAttr = op->getAttr(kSourceMemoryAccessAttrName);
+  auto memAccessAttr = op->getAttr(memoryOp.getSourceMemoryAccessAttrName());
   if (!memAccessAttr) {
     // Alignment attribute shouldn't be present if memory access attribute is
     // not present.
-    if (op->getAttr(kSourceAlignmentAttrName)) {
+    if (op->getAttr(memoryOp.getSourceAlignmentAttrName())) {
       return memoryOp.emitOpError(
           "invalid alignment specification without aligned memory access "
           "specification");
@@ -192,7 +234,7 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
     return success();
   }
 
-  auto memAccess = llvm::cast<spirv::MemoryAccessAttr>(memAccessAttr);
+  auto memAccess = cast<spirv::MemoryAccessAttr>(memAccessAttr);
 
   if (!memAccess) {
     return memoryOp.emitOpError("invalid memory access specifier: ")
@@ -201,11 +243,11 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
 
   if (spirv::bitEnumContainsAll(memAccess.getValue(),
                                 spirv::MemoryAccess::Aligned)) {
-    if (!op->getAttr(kSourceAlignmentAttrName)) {
+    if (!op->getAttr(memoryOp.getSourceAlignmentAttrName())) {
       return memoryOp.emitOpError("missing alignment value");
     }
   } else {
-    if (op->getAttr(kSourceAlignmentAttrName)) {
+    if (op->getAttr(memoryOp.getSourceAlignmentAttrName())) {
       return memoryOp.emitOpError(
           "invalid alignment specification with non-aligned memory access "
           "specification");
@@ -219,7 +261,7 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
 //===----------------------------------------------------------------------===//
 
 static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
-  auto ptrType = llvm::dyn_cast<spirv::PointerType>(type);
+  auto ptrType = dyn_cast<spirv::PointerType>(type);
   if (!ptrType) {
     emitError(baseLoc, "'spirv.AccessChain' op expected a pointer "
                        "to composite type, but provided ")
@@ -232,7 +274,7 @@ static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
   int32_t index = 0;
 
   for (auto indexSSA : indices) {
-    auto cType = llvm::dyn_cast<spirv::CompositeType>(resultType);
+    auto cType = dyn_cast<spirv::CompositeType>(resultType);
     if (!cType) {
       emitError(
           baseLoc,
@@ -241,7 +283,7 @@ static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
       return nullptr;
     }
     index = 0;
-    if (llvm::isa<spirv::StructType>(resultType)) {
+    if (isa<spirv::StructType>(resultType)) {
       Operation *op = indexSSA.getDefiningOp();
       if (!op) {
         emitError(baseLoc, "'spirv.AccessChain' op index must be an "
@@ -278,60 +320,10 @@ void AccessChainOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, type, basePtr, indices);
 }
 
-ParseResult AccessChainOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::UnresolvedOperand ptrInfo;
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> indicesInfo;
-  Type type;
-  auto loc = parser.getCurrentLocation();
-  SmallVector<Type, 4> indicesTypes;
-
-  if (parser.parseOperand(ptrInfo) ||
-      parser.parseOperandList(indicesInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseColonType(type) ||
-      parser.resolveOperand(ptrInfo, type, result.operands)) {
-    return failure();
-  }
-
-  // Check that the provided indices list is not empty before parsing their
-  // type list.
-  if (indicesInfo.empty()) {
-    return mlir::emitError(result.location,
-                           "'spirv.AccessChain' op expected at "
-                           "least one index ");
-  }
-
-  if (parser.parseComma() || parser.parseTypeList(indicesTypes))
-    return failure();
-
-  // Check that the indices types list is not empty and that it has a one-to-one
-  // mapping to the provided indices.
-  if (indicesTypes.size() != indicesInfo.size()) {
-    return mlir::emitError(
-        result.location, "'spirv.AccessChain' op indices types' count must be "
-                         "equal to indices info count");
-  }
-
-  if (parser.resolveOperands(indicesInfo, indicesTypes, loc, result.operands))
-    return failure();
-
-  auto resultType = getElementPtrType(
-      type, llvm::ArrayRef(result.operands).drop_front(), result.location);
-  if (!resultType) {
-    return failure();
-  }
-
-  result.addTypes(resultType);
-  return success();
-}
-
 template <typename Op>
 static void printAccessChain(Op op, ValueRange indices, OpAsmPrinter &printer) {
   printer << ' ' << op.getBasePtr() << '[' << indices
           << "] : " << op.getBasePtr().getType() << ", " << indices.getTypes();
-}
-
-void spirv::AccessChainOp::print(OpAsmPrinter &printer) {
-  printAccessChain(*this, getIndices(), printer);
 }
 
 template <typename Op>
@@ -342,7 +334,7 @@ static LogicalResult verifyAccessChain(Op accessChainOp, ValueRange indices) {
     return failure();
 
   auto providedResultType =
-      llvm::dyn_cast<spirv::PointerType>(accessChainOp.getType());
+      dyn_cast<spirv::PointerType>(accessChainOp.getType());
   if (!providedResultType)
     return accessChainOp.emitOpError(
                "result type must be a pointer, but provided")
@@ -365,7 +357,7 @@ LogicalResult AccessChainOp::verify() {
 
 void LoadOp::build(OpBuilder &builder, OperationState &state, Value basePtr,
                    MemoryAccessAttr memoryAccess, IntegerAttr alignment) {
-  auto ptrType = llvm::cast<spirv::PointerType>(basePtr.getType());
+  auto ptrType = cast<spirv::PointerType>(basePtr.getType());
   build(builder, state, ptrType.getPointeeType(), basePtr, memoryAccess,
         alignment);
 }
@@ -376,7 +368,7 @@ ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::UnresolvedOperand ptrInfo;
   Type elementType;
   if (parseEnumStrAttr(storageClass, parser) || parser.parseOperand(ptrInfo) ||
-      parseMemoryAccessAttributes(parser, result) ||
+      parseMemoryAccessAttributes<LoadOp>(parser, result) ||
       parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
       parser.parseType(elementType)) {
     return failure();
@@ -394,7 +386,7 @@ ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
 void LoadOp::print(OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs;
   StringRef sc = stringifyStorageClass(
-      llvm::cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
+      cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
   printer << " \"" << sc << "\" " << getPtr();
 
   printMemoryAccessAttribute(*this, printer, elidedAttrs);
@@ -425,8 +417,8 @@ ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
   Type elementType;
   if (parseEnumStrAttr(storageClass, parser) ||
       parser.parseOperandList(operandInfo, 2) ||
-      parseMemoryAccessAttributes(parser, result) || parser.parseColon() ||
-      parser.parseType(elementType)) {
+      parseMemoryAccessAttributes<StoreOp>(parser, result) ||
+      parser.parseColon() || parser.parseType(elementType)) {
     return failure();
   }
 
@@ -441,7 +433,7 @@ ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
 void StoreOp::print(OpAsmPrinter &printer) {
   SmallVector<StringRef, 4> elidedAttrs;
   StringRef sc = stringifyStorageClass(
-      llvm::cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
+      cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
   printer << " \"" << sc << "\" " << getPtr() << ", " << getValue();
 
   printMemoryAccessAttribute(*this, printer, elidedAttrs);
@@ -466,11 +458,11 @@ void CopyMemoryOp::print(OpAsmPrinter &printer) {
   printer << ' ';
 
   StringRef targetStorageClass = stringifyStorageClass(
-      llvm::cast<spirv::PointerType>(getTarget().getType()).getStorageClass());
+      cast<spirv::PointerType>(getTarget().getType()).getStorageClass());
   printer << " \"" << targetStorageClass << "\" " << getTarget() << ", ";
 
   StringRef sourceStorageClass = stringifyStorageClass(
-      llvm::cast<spirv::PointerType>(getSource().getType()).getStorageClass());
+      cast<spirv::PointerType>(getSource().getType()).getStorageClass());
   printer << " \"" << sourceStorageClass << "\" " << getSource();
 
   SmallVector<StringRef, 4> elidedAttrs;
@@ -482,7 +474,7 @@ void CopyMemoryOp::print(OpAsmPrinter &printer) {
   printer.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
 
   Type pointeeType =
-      llvm::cast<spirv::PointerType>(getTarget().getType()).getPointeeType();
+      cast<spirv::PointerType>(getTarget().getType()).getPointeeType();
   printer << " : " << pointeeType;
 }
 
@@ -499,13 +491,13 @@ ParseResult CopyMemoryOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.parseOperand(targetPtrInfo) || parser.parseComma() ||
       parseEnumStrAttr(sourceStorageClass, parser) ||
       parser.parseOperand(sourcePtrInfo) ||
-      parseMemoryAccessAttributes(parser, result)) {
+      parseMemoryAccessAttributes<CopyMemoryOp>(parser, result)) {
     return failure();
   }
 
   if (!parser.parseOptionalComma()) {
     // Parse 2nd memory access attributes.
-    if (parseSourceMemoryAccessAttributes(parser, result)) {
+    if (parseSourceMemoryAccessAttributes<CopyMemoryOp>(parser, result)) {
       return failure();
     }
   }
@@ -529,10 +521,10 @@ ParseResult CopyMemoryOp::parse(OpAsmParser &parser, OperationState &result) {
 
 LogicalResult CopyMemoryOp::verify() {
   Type targetType =
-      llvm::cast<spirv::PointerType>(getTarget().getType()).getPointeeType();
+      cast<spirv::PointerType>(getTarget().getType()).getPointeeType();
 
   Type sourceType =
-      llvm::cast<spirv::PointerType>(getSource().getType()).getPointeeType();
+      cast<spirv::PointerType>(getSource().getType()).getPointeeType();
 
   if (targetType != sourceType)
     return emitOpError("both operands must be pointers to the same type");
@@ -551,56 +543,6 @@ LogicalResult CopyMemoryOp::verify() {
   return verifySourceMemoryAccessAttribute(*this);
 }
 
-static ParseResult parsePtrAccessChainOpImpl(StringRef opName,
-                                             OpAsmParser &parser,
-                                             OperationState &state) {
-  OpAsmParser::UnresolvedOperand ptrInfo;
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> indicesInfo;
-  Type type;
-  auto loc = parser.getCurrentLocation();
-  SmallVector<Type, 4> indicesTypes;
-
-  if (parser.parseOperand(ptrInfo) ||
-      parser.parseOperandList(indicesInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseColonType(type) ||
-      parser.resolveOperand(ptrInfo, type, state.operands))
-    return failure();
-
-  // Check that the provided indices list is not empty before parsing their
-  // type list.
-  if (indicesInfo.empty())
-    return emitError(state.location) << opName << " expected element";
-
-  if (parser.parseComma() || parser.parseTypeList(indicesTypes))
-    return failure();
-
-  // Check that the indices types list is not empty and that it has a one-to-one
-  // mapping to the provided indices.
-  if (indicesTypes.size() != indicesInfo.size())
-    return emitError(state.location)
-           << opName
-           << " indices types' count must be equal to indices info count";
-
-  if (parser.resolveOperands(indicesInfo, indicesTypes, loc, state.operands))
-    return failure();
-
-  auto resultType = getElementPtrType(
-      type, llvm::ArrayRef(state.operands).drop_front(2), state.location);
-  if (!resultType)
-    return failure();
-
-  state.addTypes(resultType);
-  return success();
-}
-
-template <typename Op>
-static auto concatElemAndIndices(Op op) {
-  SmallVector<Value> ret(op.getIndices().size() + 1);
-  ret[0] = op.getElement();
-  llvm::copy(op.getIndices(), ret.begin() + 1);
-  return ret;
-}
-
 //===----------------------------------------------------------------------===//
 // spirv.InBoundsPtrAccessChainOp
 //===----------------------------------------------------------------------===//
@@ -611,16 +553,6 @@ void InBoundsPtrAccessChainOp::build(OpBuilder &builder, OperationState &state,
   auto type = getElementPtrType(basePtr.getType(), indices, state.location);
   assert(type && "Unable to deduce return type based on basePtr and indices");
   build(builder, state, type, basePtr, element, indices);
-}
-
-ParseResult InBoundsPtrAccessChainOp::parse(OpAsmParser &parser,
-                                            OperationState &result) {
-  return parsePtrAccessChainOpImpl(
-      spirv::InBoundsPtrAccessChainOp::getOperationName(), parser, result);
-}
-
-void InBoundsPtrAccessChainOp::print(OpAsmPrinter &printer) {
-  printAccessChain(*this, concatElemAndIndices(*this), printer);
 }
 
 LogicalResult InBoundsPtrAccessChainOp::verify() {
@@ -636,16 +568,6 @@ void PtrAccessChainOp::build(OpBuilder &builder, OperationState &state,
   auto type = getElementPtrType(basePtr.getType(), indices, state.location);
   assert(type && "Unable to deduce return type based on basePtr and indices");
   build(builder, state, type, basePtr, element, indices);
-}
-
-ParseResult PtrAccessChainOp::parse(OpAsmParser &parser,
-                                    OperationState &result) {
-  return parsePtrAccessChainOpImpl(spirv::PtrAccessChainOp::getOperationName(),
-                                   parser, result);
-}
-
-void PtrAccessChainOp::print(OpAsmPrinter &printer) {
-  printAccessChain(*this, concatElemAndIndices(*this), printer);
 }
 
 LogicalResult PtrAccessChainOp::verify() {
@@ -678,7 +600,7 @@ ParseResult VariableOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseType(type))
     return failure();
 
-  auto ptrType = llvm::dyn_cast<spirv::PointerType>(type);
+  auto ptrType = dyn_cast<spirv::PointerType>(type);
   if (!ptrType)
     return parser.emitError(loc, "expected spirv.ptr type");
   result.addTypes(ptrType);
@@ -718,7 +640,7 @@ LogicalResult VariableOp::verify() {
         "spirv.GlobalVariable for module-level variables.");
   }
 
-  auto pointerType = llvm::cast<spirv::PointerType>(getPointer().getType());
+  auto pointerType = cast<spirv::PointerType>(getPointer().getType());
   if (getStorageClass() != pointerType.getStorageClass())
     return emitOpError(
         "storage class must match result pointer's storage class");
@@ -735,8 +657,7 @@ LogicalResult VariableOp::verify() {
   }
 
   auto getDecorationAttr = [op = getOperation()](spirv::Decoration decoration) {
-    return op->getAttr(
-        llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration)));
+    return op->getAttr(spirv::getDecorationString(decoration));
   };
 
   // TODO: generate these strings using ODS.
@@ -745,8 +666,7 @@ LogicalResult VariableOp::verify() {
         spirv::Decoration::BuiltIn}) {
     if (auto attr = getDecorationAttr(decoration))
       return emitOpError("cannot have '")
-             << llvm::convertToSnakeFromCamelCase(
-                    stringifyDecoration(decoration))
+             << spirv::getDecorationString(decoration)
              << "' attribute (only allowed in spirv.GlobalVariable)";
   }
 

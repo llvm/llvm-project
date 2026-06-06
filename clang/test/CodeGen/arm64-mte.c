@@ -1,6 +1,6 @@
 // Test memory tagging extension intrinsics
-// RUN: %clang_cc1 -triple aarch64-none-linux-eabi -target-feature +mte -O3 -S -emit-llvm -o - %s  | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-eabi -DMTE -O3 -S -emit-llvm -o - %s  | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +mte -O3 -emit-llvm -o - %s  | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -DMTE -O3 -emit-llvm -o - %s  | FileCheck %s
 #include <stddef.h>
 #include <arm_acle.h>
 
@@ -13,7 +13,7 @@
 // CHECK-LABEL: define{{.*}} ptr @create_tag1
 attribute
 int *create_tag1(int *a, unsigned b) {
-// CHECK: [[T1:%[0-9]+]] = zext i32 %b to i64
+// CHECK: [[T1:%[a-z0-9]+]] = zext i32 %b to i64
 // CHECK: [[T2:%[0-9]+]] = tail call ptr @llvm.aarch64.irg(ptr %a, i64 [[T1]])
         return __arm_mte_create_random_tag(a,b);
 }
@@ -21,7 +21,7 @@ int *create_tag1(int *a, unsigned b) {
 // CHECK-LABEL: define{{.*}} ptr @create_tag2
 attribute
 short *create_tag2(short *a, unsigned b) {
-// CHECK: [[T1:%[0-9]+]] = zext i32 %b to i64
+// CHECK: [[T1:%[a-z0-9]+]] = zext i32 %b to i64
 // CHECK: [[T2:%[0-9]+]] = tail call ptr @llvm.aarch64.irg(ptr %a, i64 [[T1]])
         return __arm_mte_create_random_tag(a,b);
 }
@@ -29,7 +29,16 @@ short *create_tag2(short *a, unsigned b) {
 // CHECK-LABEL: define{{.*}} ptr @create_tag3
 attribute
 char *create_tag3(char *a, unsigned b) {
-// CHECK: [[T1:%[0-9]+]] = zext i32 %b to i64
+// CHECK: [[T1:%[a-z0-9]+]] = zext i32 %b to i64
+// CHECK: [[T2:%[0-9]+]] = tail call ptr @llvm.aarch64.irg(ptr %a, i64 [[T1]])
+// CHECK: ret ptr [[T2:%[0-9]+]]
+        return __arm_mte_create_random_tag(a,b);
+}
+
+// CHECK-LABEL: define{{.*}} ptr @create_tag4
+attribute
+char *create_tag4(char *a, unsigned __int128 b) {
+// CHECK: [[T1:%[a-z0-9]+]] = trunc i128 %b to i64
 // CHECK: [[T2:%[0-9]+]] = tail call ptr @llvm.aarch64.irg(ptr %a, i64 [[T1]])
 // CHECK: ret ptr [[T2:%[0-9]+]]
         return __arm_mte_create_random_tag(a,b);
@@ -49,12 +58,30 @@ short *increment_tag2(short *a) {
         return __arm_mte_increment_tag(a,3);
 }
 
-// CHECK-LABEL: define{{.*}} i32 @exclude_tag
+// CHECK-LABEL: define{{.*}} i32 @exclude_tag1
 attribute
-unsigned exclude_tag(int *a, unsigned m) {
-// CHECK: [[T0:%[0-9]+]] = zext i32 %m to i64
+unsigned exclude_tag1(int *a, unsigned m) {
+// CHECK: [[T0:%[a-z0-9]+]] = zext i32 %m to i64
 // CHECK: [[T2:%[0-9]+]] = tail call i64 @llvm.aarch64.gmi(ptr %a, i64 [[T0]])
 // CHECK: trunc i64 [[T2]] to i32
+  return __arm_mte_exclude_tag(a, m);
+}
+
+// CHECK-LABEL: define{{.*}} i32 @exclude_tag2
+attribute
+int exclude_tag2(int *a, unsigned m) {
+// CHECK: [[T0:%[a-z0-9]+]] = zext i32 %m to i64
+// CHECK: [[T2:%[0-9]+]] = tail call i64 @llvm.aarch64.gmi(ptr %a, i64 [[T0]])
+// CHECK: trunc i64 [[T2]] to i32
+  return __arm_mte_exclude_tag(a, m);
+}
+
+// CHECK-LABEL: define{{.*}} i128 @exclude_tag3
+attribute
+unsigned __int128 exclude_tag3(int *a, unsigned __int128 m) {
+// CHECK: [[T0:%[a-z0-9]+]] = trunc i128 %m to i64
+// CHECK: [[T2:%[0-9]+]] = tail call i64 @llvm.aarch64.gmi(ptr %a, i64 [[T0]])
+// CHECK: zext i64 [[T2]] to i128
   return __arm_mte_exclude_tag(a, m);
 }
 

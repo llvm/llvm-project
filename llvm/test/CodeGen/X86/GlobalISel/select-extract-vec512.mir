@@ -1,7 +1,5 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
 
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
-
 --- |
   define void @test_extract_128_idx0() {
     ret void
@@ -27,8 +25,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -53,13 +51,13 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
 # ALL:          %0:vr512 = COPY $zmm1
-# ALL-NEXT:     %1:vr128x = VEXTRACTF32x4Zrr %0, 1
+# ALL-NEXT:     %1:vr128x = VEXTRACTF32X4Zrri %0, 1
 # ALL-NEXT:     $xmm0 = COPY %1
 # ALL-NEXT:     RET 0, implicit $xmm0
 body:             |
@@ -79,8 +77,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -105,13 +103,13 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '', flags: [   ] }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
 # ALL:          %0:vr512 = COPY $zmm1
-# ALL-NEXT:     %1:vr256x = VEXTRACTF64x4Zrr %0, 1
+# ALL-NEXT:     %1:vr256x = VEXTRACTF64X4Zrri %0, 1
 # ALL-NEXT:     $ymm0 = COPY %1
 # ALL-NEXT:     RET 0, implicit $ymm0
 body:             |

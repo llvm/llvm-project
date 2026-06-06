@@ -11,15 +11,28 @@
 #ifndef LLVM_TRANSFORMS_CFGUARD_H
 #define LLVM_TRANSFORMS_CFGUARD_H
 
+#include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
+class CallBase;
 class FunctionPass;
+class GlobalValue;
 
-/// Insert Control FLow Guard checks on indirect function calls.
-FunctionPass *createCFGuardCheckPass();
+class CFGuardPass : public OptionalPassInfoMixin<CFGuardPass> {
+public:
+  enum class Mechanism { Check, Dispatch };
 
-/// Insert Control FLow Guard dispatches on indirect function calls.
-FunctionPass *createCFGuardDispatchPass();
+  CFGuardPass() {}
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+/// Insert Control Flow Guard checks on indirect function calls.
+LLVM_ABI FunctionPass *createCFGuardPass();
+
+LLVM_ABI bool isCFGuardCall(const CallBase *CB);
+LLVM_ABI bool isCFGuardFunction(const GlobalValue *GV);
 
 } // namespace llvm
 

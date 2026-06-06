@@ -6,6 +6,10 @@ void test() {
 
 // C, C++
 void __attribute((ownership_returns(malloc))) *user_malloc(size_t);
+void __attribute((ownership_takes(malloc, 1))) *user_free(void *);
+
+void __attribute((ownership_returns(malloc1))) *user_malloc1(size_t);
+void __attribute((ownership_takes(malloc1, 1))) *user_free1(void *);
 
 void test() {
   int *p = (int *)user_malloc(sizeof(int));
@@ -22,6 +26,12 @@ void test() {
 void test() {
   int *p = new int[1];
   realloc(p, sizeof(long)); // warn
+}
+
+// C, C++
+void test() {
+  int *p = user_malloc(10);
+  user_free1(p); // warn
 }
 
 // C, C++

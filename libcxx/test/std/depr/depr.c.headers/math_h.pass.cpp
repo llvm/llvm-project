@@ -6,7 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 // <math.h>
+
+// GCC warns about signbit comparing `bool_v < 0`, which we're testing
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 
 #include <math.h>
 #include <type_traits>
@@ -99,7 +105,7 @@ Ambiguous scalbn(Ambiguous, Ambiguous){ return Ambiguous(); }
 Ambiguous tgamma(Ambiguous){ return Ambiguous(); }
 Ambiguous trunc(Ambiguous){ return Ambiguous(); }
 
-template <class T, class = decltype(::abs(std::declval<T>()))>
+template <class T, class = decltype(::abs(T()))>
 std::true_type has_abs_imp(int);
 template <class T>
 std::false_type has_abs_imp(...);

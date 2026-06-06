@@ -18,10 +18,10 @@ namespace clang {
 namespace format {
 namespace {
 
-class DefinitionBlockSeparatorTest : public ::testing::Test {
+class DefinitionBlockSeparatorTest : public testing::Test {
 protected:
   static std::string
-  separateDefinitionBlocks(llvm::StringRef Code,
+  separateDefinitionBlocks(StringRef Code,
                            const std::vector<tooling::Range> &Ranges,
                            const FormatStyle &Style = getLLVMStyle()) {
     LLVM_DEBUG(llvm::errs() << "---\n");
@@ -34,18 +34,17 @@ protected:
   }
 
   static std::string
-  separateDefinitionBlocks(llvm::StringRef Code,
+  separateDefinitionBlocks(StringRef Code,
                            const FormatStyle &Style = getLLVMStyle()) {
     return separateDefinitionBlocks(
         Code,
         /*Ranges=*/{1, tooling::Range(0, Code.size())}, Style);
   }
 
-  static void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
+  static void _verifyFormat(const char *File, int Line, StringRef Code,
                             const FormatStyle &Style = getLLVMStyle(),
-                            llvm::StringRef ExpectedCode = "",
-                            bool Inverse = true) {
-    ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
+                            StringRef ExpectedCode = "", bool Inverse = true) {
+    testing::ScopedTrace t(File, Line, testing::Message() << Code.str());
     bool HasOriginalCode = true;
     if (ExpectedCode == "") {
       ExpectedCode = Code;
@@ -70,7 +69,7 @@ protected:
     EXPECT_EQ(ExpectedCode, Result) << "Test failed. Formatted:\n" << Result;
   }
 
-  static std::string removeEmptyLines(llvm::StringRef Code) {
+  static std::string removeEmptyLines(StringRef Code) {
     std::string Result = "";
     for (auto Char : Code.str()) {
       if (Result.size()) {
@@ -140,11 +139,11 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
 
   verifyFormat("enum Foo { FOO, BAR };\n"
                "\n"
-               "enum Bar { FOOBAR, BARFOO };\n",
+               "enum Bar { FOOBAR, BARFOO };",
                Style);
 
   FormatStyle BreakAfterReturnTypeStyle = Style;
-  BreakAfterReturnTypeStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
+  BreakAfterReturnTypeStyle.BreakAfterReturnType = FormatStyle::RTBS_All;
   // Test uppercased long typename
   verifyFormat("class Foo {\n"
                "  void\n"
@@ -158,20 +157,20 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "    int r = t * p;\n"
                "    return r;\n"
                "  }\n"
-               "}\n",
+               "}",
                BreakAfterReturnTypeStyle);
 }
 
 TEST_F(DefinitionBlockSeparatorTest, FormatConflict) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  llvm::StringRef Code = "class Test {\n"
-                         "public:\n"
-                         "  static void foo() {\n"
-                         "    int t;\n"
-                         "    return 1;\n"
-                         "  }\n"
-                         "};";
+  StringRef Code = "class Test {\n"
+                   "public:\n"
+                   "  static void foo() {\n"
+                   "    int t;\n"
+                   "    return 1;\n"
+                   "  }\n"
+                   "};";
   std::vector<tooling::Range> Ranges = {1, tooling::Range(0, Code.size())};
   EXPECT_EQ(reformat(Style, Code, Ranges, "<stdin>").size(), 0u);
 }
@@ -291,6 +290,22 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                "\n"
                "struct E {};",
                Style);
+
+  constexpr StringRef Code("// NOLINTBEGIN\n"
+                           "int x = 1;\n"
+                           "int y = 2;\n"
+                           "// NOLINTEND\n"
+                           "\n"
+                           "void some_function() {}");
+  verifyFormat(Code, Style, Code);
+
+  constexpr StringRef Code2("int x = 0;\n"
+                            "int y = 0;\n"
+                            "// trailing comment 1\n"
+                            "// trailing comment 2\n"
+                            "\n"
+                            "void some_function() {}");
+  verifyFormat(Code2, Style, Code2);
 
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"
@@ -463,8 +478,24 @@ TEST_F(DefinitionBlockSeparatorTest, OpeningBracketOwnsLine) {
 
 TEST_F(DefinitionBlockSeparatorTest, TryBlocks) {
   FormatStyle Style = getLLVMStyle();
-  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  verifyFormat("void foo() try {\n"
+               "  // do something\n"
+               "} catch (const std::exception &) {\n"
+               "  // handle exception\n"
+               "}",
+               Style, "", /*Inverse=*/false);
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("void foo()\n"
+               "try\n"
+               "{\n"
+               "  // do something\n"
+               "}\n"
+               "catch (const std::exception &)\n"
+               "{\n"
+               "  // handle exception\n"
+               "}",
+               Style, "", /*Inverse=*/false);
   verifyFormat("void FunctionWithInternalTry()\n"
                "{\n"
                "  try\n"
@@ -541,7 +572,7 @@ TEST_F(DefinitionBlockSeparatorTest, Leave) {
 TEST_F(DefinitionBlockSeparatorTest, CSharp) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("namespace {\r\n"
                "public class SomeTinyClass {\r\n"
@@ -575,6 +606,11 @@ TEST_F(DefinitionBlockSeparatorTest, CSharp) {
                "\r\n"
                "public class FoobarClass {\r\n"
                "  int foobar;\r\n"
+               "}\r\n"
+               "\r\n"
+               "public class LogFactory<TLogger>\r\n"
+               "    where TLogger : class, new() {\r\n"
+               "  int i;\r\n"
                "}",
                Style);
 }
@@ -582,7 +618,7 @@ TEST_F(DefinitionBlockSeparatorTest, CSharp) {
 TEST_F(DefinitionBlockSeparatorTest, JavaScript) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_JavaScript);
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("export const enum Foo {\n"
                "  A = 1,\n"

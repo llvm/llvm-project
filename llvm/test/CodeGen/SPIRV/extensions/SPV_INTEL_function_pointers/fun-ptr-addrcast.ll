@@ -1,0 +1,37 @@
+; The goal of this test case is to check that cases covered by pointers/PtrCast-in-OpSpecConstantOp.ll and
+; pointers/PtrCast-null-in-OpSpecConstantOp.ll (that is OpSpecConstantOp with ptr-cast operation) correctly
+; work also for function pointers.
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
+; Fails with:
+;   Invalid use of function type result id '7[%7]'.
+;   %_ptr_Generic_7 = OpTypePointer Generic %7
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj --spirv-ext=+SPV_INTEL_function_pointers | spirv-val %}
+
+; CHECK-DAG: %[[#GENPTR:]] = OpTypePointer Generic %[[#]]
+; CHECK-DAG: %[[#]] = OpConstantNull %[[#GENPTR]]
+; CHECK-COUNT-2: %[[#]] = OpSpecConstantOp %[[#]] PtrCastToGeneric %[[#]]
+; CHECK-COUNT-2: OpPtrCastToGeneric
+
+@G1 = addrspace(1) constant { [3 x ptr addrspace(4)] } { [3 x ptr addrspace(4)] [ptr addrspace(4) null, ptr addrspace(4) addrspacecast (ptr @foo to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @bar to ptr addrspace(4))] }
+@G2 = addrspace(1) constant { [3 x ptr addrspace(4)] } { [3 x ptr addrspace(4)] [ptr addrspace(4) addrspacecast (ptr null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @bar to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @foo to ptr addrspace(4))] }
+
+@G_r1_foo = global ptr addrspace(4) null
+@G_r2_foo = global ptr addrspace(4) null
+@G_r1_bar = global ptr addrspace(4) null
+
+define void @foo(ptr addrspace(4) %p) {
+entry:
+  %r1 = addrspacecast ptr @foo to ptr addrspace(4)
+  store ptr addrspace(4) %r1, ptr @G_r1_foo
+  %r2 = addrspacecast ptr null to ptr addrspace(4)
+  store ptr addrspace(4) %r2, ptr @G_r2_foo
+  ret void
+}
+
+define void @bar(ptr addrspace(4) %p) {
+entry:
+  %r1 = addrspacecast ptr @bar to ptr addrspace(4)
+  store ptr addrspace(4) %r1, ptr @G_r1_bar
+  ret void
+}

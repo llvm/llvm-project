@@ -35,7 +35,7 @@ The Basics
 ^^^^^^^^^^^
 
 #. Make sure that your Modules contain both a data layout specification and
-   target triple. Without these pieces, non of the target specific optimization
+   target triple. Without these pieces, non of the target-specific optimization
    will be enabled.  This can have a major effect on the generated code quality.
 
 #. For each function or global emitted, use the most private linkage type
@@ -64,16 +64,53 @@ SSA is the canonical form expected by much of the optimizer; if allocas can
 not be eliminated by Mem2Reg or SROA, the optimizer is likely to be less
 effective than it could be.
 
-Avoid loads and stores of large aggregate type
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Avoid creating values of aggregate type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-LLVM currently does not optimize well loads and stores of large :ref:`aggregate
-types <t_aggregate>` (i.e. structs and arrays).  As an alternative, consider
-loading individual fields from memory.
+Avoid creating values of :ref:`aggregate types <t_aggregate>` (i.e. structs and
+arrays). In particular, avoid loading and storing them, or manipulating them
+with insertvalue and extractvalue instructions. Instead, only load and store
+individual fields of the aggregate.
 
-Aggregates that are smaller than the largest (performant) load or store
-instruction supported by the targeted hardware are well supported.  These can
-be an effective way to represent collections of small packed fields.
+There are some exceptions to this rule:
+
+* It is fine to use values of aggregate type in global variable initializers.
+* It is fine to return structs, if this is done to represent the return of
+  multiple values in registers.
+* It is fine to work with structs returned by LLVM intrinsics, such as the
+  ``with.overflow`` family of intrinsics.
+* It is fine to use aggregate *types* without creating values. For example,
+  they are commonly used in ``getelementptr`` instructions or attributes like
+  ``sret``.
+
+Avoid loads and stores of non-byte-sized types
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Avoid loading or storing non-byte-sized types like ``i1``. Instead,
+appropriately extend them to the next byte-sized type.
+
+For example, when working with boolean values, store them by zero-extending
+``i1`` to ``i8`` and load them by loading ``i8`` and truncating to ``i1``.
+
+If you do use loads/stores on non-byte-sized types, make sure that you *always*
+use those types. For example, do not first store ``i8`` and then load ``i1``.
+
+Use byte types when manipulating raw memory
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The byte type represents raw memory values in SSA registers. Loads and stores of
+byte types should be used when performing raw memory copies (such as ``memmove``
+and ``memcpy``). Using integer types to represent raw memory introduces type
+punning, which discards the provenance of pointers being copied.
+
+Use a byte type if a value may hold either a pointer or any other type at run
+time (and you don't know which one), or if the value may contain uninitialized
+data. For instance, if a union may hold a pointer or another type, use byte
+types to load and store the value. Otherwise, use the specific type.
+
+Byte types are supported by both SelectionDAG and GlobalISel; at the
+IR-to-MIR boundary they are lowered as the equi-sized integer scalar, so the
+type's mid-end bit-level semantics are not preserved through codegen.
 
 Prefer zext over sext when legal
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -123,6 +160,10 @@ As a result, alignment is mandatory for atomic loads and stores.
 
 Other Things to Consider
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+#. Avoid emitting extremely wide integer types. The optimizer is not designed
+   for types exceeding a few thousand bits; several passes have super-linear
+   complexity, and the generated code is often sub-par as well.
 
 #. Use ptrtoint/inttoptr sparingly (they interfere with pointer aliasing
    analysis), prefer GEPs
@@ -186,7 +227,9 @@ Other Things to Consider
    that fact is critical for optimization purposes.  Assumes are a great
    prototyping mechanism, but they can have negative effects on both compile
    time and optimization effectiveness.  The former is fixable with enough
-   effort, but the later is fairly fundamental to their designed purpose.
+   effort, but the later is fairly fundamental to their designed purpose.  If
+   you are creating a non-terminator unreachable instruction or passing a false
+   value, use the ``store i1 true, ptr poison, align 1`` canonical form.
 
 
 Describing Language Specific Properties

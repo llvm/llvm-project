@@ -9,11 +9,12 @@
 #include "pthread_attr_init.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h" // For thread::DEFAULT_*
 
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_init, (pthread_attr_t * attr)) {
   *attr = pthread_attr_t{
@@ -25,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_init, (pthread_attr_t * attr)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

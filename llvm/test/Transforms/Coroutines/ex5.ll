@@ -1,4 +1,4 @@
-; Fifth example from Doc/Coroutines.rst (final suspend)
+; Fifth example from Doc/Coroutines.md (final suspend)
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
 define ptr @f(i32 %n) presplitcoroutine {
@@ -31,7 +31,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret ptr %hdl
 }
 
@@ -46,7 +46,7 @@ declare ptr @llvm.coro.begin(token, ptr)
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 ; CHECK-LABEL: @main
 define i32 @main() {

@@ -36,8 +36,7 @@ static LogicalResult verifyCastOp(Operation *op,
   using TypePair = std::pair<Type, Type>;
   auto [operandElemTy, resultElemTy] =
       TypeSwitch<Type, TypePair>(operandType)
-          .Case<VectorType, spirv::CooperativeMatrixType,
-                spirv::CooperativeMatrixNVType, spirv::JointMatrixINTELType>(
+          .Case<VectorType, spirv::CooperativeMatrixType>(
               [resultType](auto concreteOperandTy) -> TypePair {
                 if (auto concreteResultTy =
                         dyn_cast<decltype(concreteOperandTy)>(resultType)) {
@@ -88,13 +87,43 @@ LogicalResult BitcastOp::verify() {
   if (operandType == resultType) {
     return emitError("result type must be different from operand type");
   }
-  if (llvm::isa<spirv::PointerType>(operandType) &&
-      !llvm::isa<spirv::PointerType>(resultType)) {
+
+  auto operandCoopMatrixType =
+      dyn_cast<spirv::CooperativeMatrixType>(operandType);
+  auto resultCoopMatrixType =
+      dyn_cast<spirv::CooperativeMatrixType>(resultType);
+  if (operandCoopMatrixType || resultCoopMatrixType) {
+    if (!operandCoopMatrixType || !resultCoopMatrixType)
+      return emitError("unhandled bit cast conversion from cooperative matrix "
+                       "type to non-cooperative matrix type");
+
+    if (operandCoopMatrixType.getRows() != resultCoopMatrixType.getRows() ||
+        operandCoopMatrixType.getColumns() != resultCoopMatrixType.getColumns())
+      return emitError("cooperative matrix dimensions must match");
+
+    if (operandCoopMatrixType.getScope() != resultCoopMatrixType.getScope())
+      return emitError("cooperative matrix scope must match");
+
+    if (operandCoopMatrixType.getUse() != resultCoopMatrixType.getUse())
+      return emitError("cooperative matrix use must match");
+
+    unsigned operandBitWidth =
+        getBitWidth(operandCoopMatrixType.getElementType());
+    unsigned resultBitWidth =
+        getBitWidth(resultCoopMatrixType.getElementType());
+    if (operandBitWidth != resultBitWidth)
+      return emitOpError("mismatch in result and operand type bitwidth");
+
+    return success();
+  }
+
+  if (isa<spirv::PointerType>(operandType) &&
+      !isa<spirv::PointerType>(resultType)) {
     return emitError(
         "unhandled bit cast conversion from pointer type to non-pointer type");
   }
-  if (!llvm::isa<spirv::PointerType>(operandType) &&
-      llvm::isa<spirv::PointerType>(resultType)) {
+  if (!isa<spirv::PointerType>(operandType) &&
+      isa<spirv::PointerType>(resultType)) {
     return emitError(
         "unhandled bit cast conversion from non-pointer type to pointer type");
   }
@@ -113,8 +142,8 @@ LogicalResult BitcastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ConvertPtrToUOp::verify() {
-  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
-  auto resultType = llvm::cast<spirv::ScalarType>(getResult().getType());
+  auto operandType = cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = cast<spirv::ScalarType>(getResult().getType());
   if (!resultType || !resultType.isSignlessInteger())
     return emitError("result must be a scalar type of unsigned integer");
   auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
@@ -134,8 +163,8 @@ LogicalResult ConvertPtrToUOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ConvertUToPtrOp::verify() {
-  auto operandType = llvm::cast<spirv::ScalarType>(getOperand().getType());
-  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
+  auto operandType = cast<spirv::ScalarType>(getOperand().getType());
+  auto resultType = cast<spirv::PointerType>(getResult().getType());
   if (!operandType || !operandType.isSignlessInteger())
     return emitError("result must be a scalar type of unsigned integer");
   auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
@@ -155,8 +184,8 @@ LogicalResult ConvertUToPtrOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult PtrCastToGenericOp::verify() {
-  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
-  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
+  auto operandType = cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = cast<spirv::PointerType>(getResult().getType());
 
   spirv::StorageClass operandStorage = operandType.getStorageClass();
   if (operandStorage != spirv::StorageClass::Workgroup &&
@@ -183,8 +212,8 @@ LogicalResult PtrCastToGenericOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GenericCastToPtrOp::verify() {
-  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
-  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
+  auto operandType = cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = cast<spirv::PointerType>(getResult().getType());
 
   spirv::StorageClass operandStorage = operandType.getStorageClass();
   if (operandStorage != spirv::StorageClass::Generic)
@@ -211,8 +240,8 @@ LogicalResult GenericCastToPtrOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GenericCastToPtrExplicitOp::verify() {
-  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
-  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
+  auto operandType = cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = cast<spirv::PointerType>(getResult().getType());
 
   spirv::StorageClass operandStorage = operandType.getStorageClass();
   if (operandStorage != spirv::StorageClass::Generic)
@@ -268,48 +297,6 @@ LogicalResult ConvertSToFOp::verify() {
 LogicalResult ConvertUToFOp::verify() {
   return verifyCastOp(*this, /*requireSameBitWidth=*/false,
                       /*skipBitWidthCheck=*/true);
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.INTELConvertBF16ToFOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult INTELConvertBF16ToFOp::verify() {
-  auto operandType = getOperand().getType();
-  auto resultType = getResult().getType();
-  // ODS checks that vector result type and vector operand type have the same
-  // shape.
-  if (auto vectorType = llvm::dyn_cast<VectorType>(operandType)) {
-    unsigned operandNumElements = vectorType.getNumElements();
-    unsigned resultNumElements =
-        llvm::cast<VectorType>(resultType).getNumElements();
-    if (operandNumElements != resultNumElements) {
-      return emitOpError(
-          "operand and result must have same number of elements");
-    }
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.INTELConvertFToBF16Op
-//===----------------------------------------------------------------------===//
-
-LogicalResult INTELConvertFToBF16Op::verify() {
-  auto operandType = getOperand().getType();
-  auto resultType = getResult().getType();
-  // ODS checks that vector result type and vector operand type have the same
-  // shape.
-  if (auto vectorType = llvm::dyn_cast<VectorType>(operandType)) {
-    unsigned operandNumElements = vectorType.getNumElements();
-    unsigned resultNumElements =
-        llvm::cast<VectorType>(resultType).getNumElements();
-    if (operandNumElements != resultNumElements) {
-      return emitOpError(
-          "operand and result must have same number of elements");
-    }
-  }
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

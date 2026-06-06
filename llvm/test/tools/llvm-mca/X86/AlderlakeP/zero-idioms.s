@@ -227,14 +227,14 @@ vpxor  %ymm3, %ymm3, %ymm5
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 27.00  26.00   -      -      -     27.00  1.00    -      -      -     2.00    -      -
+# CHECK-NEXT: 27.00  26.00   -      -      -     27.00  1.00    -      -      -      -     2.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     subl	%eax, %eax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     subl	%eax, %eax
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     subq	%rax, %rax
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     xorl	%eax, %eax
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     xorq	%rax, %rax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     xorq	%rax, %rax
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     pcmpgtb	%mm2, %mm2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     pcmpgtd	%mm2, %mm2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     pcmpgtw	%mm2, %mm2
@@ -493,4 +493,4 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 80.    1     9.0    0.0    9.0       vxorpd	%ymm1, %ymm1, %ymm3
 # CHECK-NEXT: 81.    1     11.0   1.0    7.0       vpxor	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 82.    1     12.0   2.0    6.0       vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:        1     9.4    1.0    5.0       <total>
+# CHECK-NEXT:        83    9.4    1.0    5.0       <total>

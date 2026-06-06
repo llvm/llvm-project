@@ -38,8 +38,8 @@
   define dso_local i32 @_Z3funi(i32 %p) !dbg !11 {
   entry:
     call void @llvm.dbg.value(metadata i32 %p, metadata !15, metadata !DIExpression()), !dbg !16
-    store i32 %p, i32* @glob, align 4, !dbg !17
-    %0 = load i32, i32* @glob, align 4, !dbg !22
+    store i32 %p, ptr @glob, align 4, !dbg !17
+    %0 = load i32, ptr @glob, align 4, !dbg !22
     call void @llvm.dbg.value(metadata i32 %0, metadata !27, metadata !DIExpression()), !dbg !30
     call void @llvm.dbg.value(metadata i32 0, metadata !28, metadata !DIExpression()), !dbg !30
     %tobool.i = icmp ne i32 %0, 0, !dbg !31
@@ -59,7 +59,7 @@
     %r.0.i = phi i32 [ %call.i, %if.then.i ], [ %call1.i, %if.else.i ], !dbg !37
     call void @llvm.dbg.value(metadata i32 %r.0.i, metadata !28, metadata !DIExpression()), !dbg !30
     %mul.i = mul nsw i32 %r.0.i, %0, !dbg !38
-    store i32 %mul.i, i32* @glob, align 4, !dbg !39
+    store i32 %mul.i, ptr @glob, align 4, !dbg !39
     ret i32 0, !dbg !40
   }
 

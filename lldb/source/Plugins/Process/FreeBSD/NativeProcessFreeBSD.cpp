@@ -36,16 +36,32 @@ static Status EnsureFDFlags(int fd, int flags) {
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
   return error;
+}
+
+static Status CanTrace() {
+  int proc_debug, ret;
+  size_t len = sizeof(proc_debug);
+  ret = ::sysctlbyname("security.bsd.unprivileged_proc_debug", &proc_debug,
+                       &len, nullptr, 0);
+  if (ret != 0)
+    return Status::FromErrorString(
+        "sysctlbyname() security.bsd.unprivileged_proc_debug failed");
+
+  if (proc_debug < 1)
+    return Status::FromErrorString(
+        "process debug disabled by security.bsd.unprivileged_proc_debug oid");
+
+  return {};
 }
 
 // Public Static Methods
@@ -54,14 +70,17 @@ llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
                                       NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
-
   Status status;
+
   ::pid_t pid = ProcessLauncherPosixFork()
                     .LaunchProcess(launch_info, status)
                     .GetProcessId();
   LLDB_LOG(log, "pid = {0:x}", pid);
   if (status.Fail()) {
     LLDB_LOG(log, "failed to launch process: {0}", status);
+    auto error = CanTrace();
+    if (error.Fail())
+      return error.ToError();
     return status.ToError();
   }
 
@@ -69,19 +88,17 @@ NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   int wstatus;
   ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &wstatus, 0);
   assert(wpid == pid);
-  (void)wpid;
+  UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::make_error<StringError>("Could not sync with inferior process",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("cannot get process architecture");
   }
 
   // Set the architecture to the exe architecture.
@@ -112,8 +129,7 @@ NativeProcessFreeBSD::Manager::Attach(
   // Retrieve the architecture for the running process.
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("cannot get process architecture");
   }
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
@@ -300,17 +316,7 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
                info.pl_siginfo.si_addr);
 
       if (thread) {
-        auto thread_info =
-            m_threads_stepping_with_breakpoint.find(thread->GetID());
-        if (thread_info != m_threads_stepping_with_breakpoint.end()) {
-          thread->SetStoppedByTrace();
-          Status brkpt_error = RemoveBreakpoint(thread_info->second);
-          if (brkpt_error.Fail())
-            LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
-                     thread_info->first, brkpt_error);
-          m_threads_stepping_with_breakpoint.erase(thread_info);
-        } else
-          thread->SetStoppedByBreakpoint();
+        thread->SetStoppedByBreakpoint();
         FixupBreakpointPCAsNeeded(*thread);
         SetCurrentThreadID(thread->GetID());
       }
@@ -392,8 +398,11 @@ Status NativeProcessFreeBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   ret =
       ptrace(req, static_cast<::pid_t>(pid), static_cast<caddr_t>(addr), data);
 
-  if (ret == -1)
-    error.SetErrorToErrno();
+  if (ret == -1) {
+    error = CanTrace();
+    if (error.Success())
+      error = Status::FromErrno();
+  }
 
   if (result)
     *result = ret;
@@ -467,13 +476,14 @@ Status NativeProcessFreeBSD::Resume(const ResumeActionList &resume_actions) {
     case eStateSuspended:
     case eStateStopped:
       if (action->signal != LLDB_INVALID_SIGNAL_NUMBER)
-        return Status("Passing signal to suspended thread unsupported");
+        return Status::FromErrorString(
+            "Passing signal to suspended thread unsupported");
 
       ret = thread.Suspend();
       break;
 
     default:
-      return Status(
+      return Status::FromErrorStringWithFormat(
           "NativeProcessFreeBSD::%s (): unexpected state %s specified "
           "for pid %" PRIu64 ", tid %" PRIu64,
           __FUNCTION__, StateAsCString(action->state), GetID(), thread.GetID());
@@ -500,7 +510,7 @@ Status NativeProcessFreeBSD::Halt() {
   if (StateIsStoppedState(m_state, false))
     return error;
   if (kill(GetID(), SIGSTOP) != 0)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
   return error;
 }
 
@@ -521,7 +531,7 @@ Status NativeProcessFreeBSD::Signal(int signo) {
   Status error;
 
   if (kill(GetID(), signo))
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -564,7 +574,7 @@ Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
 
   if (m_supports_mem_region == LazyBool::eLazyBoolNo) {
     // We're done.
-    return Status("unsupported");
+    return Status::FromErrorString("unsupported");
   }
 
   Status error = PopulateMemoryRegionCache();
@@ -590,10 +600,10 @@ Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
       range_info.GetRange().SetRangeBase(load_addr);
       range_info.GetRange().SetByteSize(
           proc_entry_info.GetRange().GetRangeBase() - load_addr);
-      range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-      range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+      range_info.SetReadable(eLazyBoolNo);
+      range_info.SetWritable(eLazyBoolNo);
+      range_info.SetExecutable(eLazyBoolNo);
+      range_info.SetMapped(eLazyBoolNo);
       return error;
     } else if (proc_entry_info.GetRange().Contains(load_addr)) {
       // The target address is within the memory region we're processing here.
@@ -608,10 +618,10 @@ Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
   // load address and the end of the memory as size.
   range_info.GetRange().SetRangeBase(load_addr);
   range_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  range_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-  range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
+  range_info.SetReadable(eLazyBoolNo);
+  range_info.SetWritable(eLazyBoolNo);
+  range_info.SetExecutable(eLazyBoolNo);
+  range_info.SetMapped(eLazyBoolNo);
   return error;
 }
 
@@ -632,7 +642,7 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
   ret = ::sysctl(mib, 4, nullptr, &len, nullptr, 0);
   if (ret != 0) {
     m_supports_mem_region = LazyBool::eLazyBoolNo;
-    return Status("sysctl() for KERN_PROC_VMMAP failed");
+    return Status::FromErrorString("sysctl() for KERN_PROC_VMMAP failed");
   }
 
   std::unique_ptr<WritableMemoryBuffer> buf =
@@ -640,7 +650,7 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
   ret = ::sysctl(mib, 4, buf->getBufferStart(), &len, nullptr, 0);
   if (ret != 0) {
     m_supports_mem_region = LazyBool::eLazyBoolNo;
-    return Status("sysctl() for KERN_PROC_VMMAP failed");
+    return Status::FromErrorString("sysctl() for KERN_PROC_VMMAP failed");
   }
 
   char *bp = buf->getBufferStart();
@@ -655,22 +665,22 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
     info.Clear();
     info.GetRange().SetRangeBase(kv->kve_start);
     info.GetRange().SetRangeEnd(kv->kve_end);
-    info.SetMapped(MemoryRegionInfo::OptionalBool::eYes);
+    info.SetMapped(eLazyBoolYes);
 
     if (kv->kve_protection & VM_PROT_READ)
-      info.SetReadable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetReadable(eLazyBoolYes);
     else
-      info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetReadable(eLazyBoolNo);
 
     if (kv->kve_protection & VM_PROT_WRITE)
-      info.SetWritable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetWritable(eLazyBoolYes);
     else
-      info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetWritable(eLazyBoolNo);
 
     if (kv->kve_protection & VM_PROT_EXECUTE)
-      info.SetExecutable(MemoryRegionInfo::OptionalBool::eYes);
+      info.SetExecutable(eLazyBoolYes);
     else
-      info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
+      info.SetExecutable(eLazyBoolNo);
 
     if (kv->kve_path[0])
       info.SetName(kv->kve_path);
@@ -685,7 +695,7 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
     LLDB_LOG(log, "failed to find any vmmap entries, assuming no support "
                   "for memory region metadata retrieval");
     m_supports_mem_region = LazyBool::eLazyBoolNo;
-    return Status("not supported");
+    return Status::FromErrorString("not supported");
   }
   LLDB_LOG(log, "read {0} memory region entries from process {1}",
            m_mem_region_cache.size(), GetID());
@@ -707,8 +717,12 @@ Status NativeProcessFreeBSD::SetBreakpoint(lldb::addr_t addr, uint32_t size,
 Status NativeProcessFreeBSD::GetLoadedModuleFileSpec(const char *module_path,
                                                      FileSpec &file_spec) {
   Status error = PopulateMemoryRegionCache();
-  if (error.Fail())
+  if (error.Fail()) {
+    auto status = CanTrace();
+    if (status.Fail())
+      return status;
     return error;
+  }
 
   FileSpec module_file_spec(module_path);
   FileSystem::Instance().Resolve(module_file_spec);
@@ -720,8 +734,9 @@ Status NativeProcessFreeBSD::GetLoadedModuleFileSpec(const char *module_path,
       return Status();
     }
   }
-  return Status("Module file (%s) not found in process' memory map!",
-                module_file_spec.GetFilename().AsCString());
+  return Status::FromErrorStringWithFormatv(
+      "Module file ({0}) not found in process' memory map!",
+      module_file_spec.GetFilename());
 }
 
 Status
@@ -729,8 +744,12 @@ NativeProcessFreeBSD::GetFileLoadAddress(const llvm::StringRef &file_name,
                                          lldb::addr_t &load_addr) {
   load_addr = LLDB_INVALID_ADDRESS;
   Status error = PopulateMemoryRegionCache();
-  if (error.Fail())
+  if (error.Fail()) {
+    auto status = CanTrace();
+    if (status.Fail())
+      return status;
     return error;
+  }
 
   FileSpec file(file_name);
   for (const auto &it : m_mem_region_cache) {
@@ -739,7 +758,8 @@ NativeProcessFreeBSD::GetFileLoadAddress(const llvm::StringRef &file_name,
       return Status();
     }
   }
-  return Status("No load address found for file %s.", file_name.str().c_str());
+  return Status::FromErrorStringWithFormat("No load address found for file %s.",
+                                           file_name.str().c_str());
 }
 
 void NativeProcessFreeBSD::SigchldHandler() {
@@ -958,10 +978,6 @@ Status NativeProcessFreeBSD::ReinitializeThreads() {
   return error;
 }
 
-bool NativeProcessFreeBSD::SupportHardwareSingleStepping() const {
-  return !m_arch.IsMIPS();
-}
-
 void NativeProcessFreeBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
                                         NativeThreadFreeBSD &parent_thread) {
   Log *log = GetLog(POSIXLog::Process);
@@ -986,7 +1002,8 @@ void NativeProcessFreeBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
   }
 
   struct ptrace_lwpinfo info;
-  const auto siginfo_err = PtraceWrapper(PT_LWPINFO, child_pid, &info, sizeof(info));
+  const auto siginfo_err =
+      PtraceWrapper(PT_LWPINFO, child_pid, &info, sizeof(info));
   if (siginfo_err.Fail()) {
     LLDB_LOG(log, "PT_LWPINFO failed {0}", siginfo_err);
     return;
@@ -1040,7 +1057,7 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
       openFile(path, pc.pc_fd, CD_CreateNew, FA_Write, OF_None)) {
     if (std::error_code errc =
             createTemporaryFile("lldb", "core", pc.pc_fd, path))
-      return llvm::createStringError(errc, "Unable to create a temporary file");
+      return llvm::createStringError(errc, "unable to create a temporary file");
   }
   error = PtraceWrapper(PT_COREDUMP, GetID(), &pc, sizeof(pc));
 

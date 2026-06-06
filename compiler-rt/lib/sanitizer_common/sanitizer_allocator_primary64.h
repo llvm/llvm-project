@@ -113,6 +113,24 @@ class SizeClassAllocator64 {
   // ~(uptr)0.
   void Init(s32 release_to_os_interval_ms, uptr heap_start = 0) {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
+
+    uptr MaxAddr = GetMaxUserVirtualAddress();
+    // VReport does not call the sanitizer allocator.
+    VReport(3, "Max user virtual address: 0x%zx\n", MaxAddr);
+    VReport(3, "Total space size for primary allocator: 0x%zx\n",
+            TotalSpaceSize);
+    // TODO: revise the check if we ever configure sanitizers to deliberately
+    //       map beyond the 2**48 barrier (note that Linux pretends the VMA is
+    //       limited to 48-bit for backwards compatibility, but allows apps to
+    //       explicitly specify an address beyond that).
+    if (heap_start + TotalSpaceSize >= MaxAddr) {
+      // We can't easily adjust the requested heap size, because kSpaceSize is
+      // const (for optimization) and used throughout the code.
+      VReport(0, "Error: heap size %zx exceeds max user virtual address %zx\n",
+              TotalSpaceSize, MaxAddr);
+      VReport(
+          0, "Try using a kernel that allows a larger virtual address space\n");
+    }
     PremappedHeap = heap_start != 0;
     if (PremappedHeap) {
       CHECK(!kUsingConstantSpaceBeg);
@@ -185,9 +203,10 @@ class SizeClassAllocator64 {
     // recoverable.
     if (UNLIKELY(!EnsureFreeArraySpace(region, region_beg,
                                        new_num_freed_chunks))) {
-      Report("FATAL: Internal error: %s's allocator exhausted the free list "
-             "space for size class %zd (%zd bytes).\n", SanitizerToolName,
-             class_id, ClassIdToSize(class_id));
+      Report(
+          "FATAL: Internal error: %s's allocator exhausted the free list "
+          "space for size class %zu (%zu bytes).\n",
+          SanitizerToolName, class_id, ClassIdToSize(class_id));
       Die();
     }
     for (uptr i = 0; i < n_chunks; i++)
@@ -316,13 +335,13 @@ class SizeClassAllocator64 {
     Printf(
         "%s %02zd (%6zd): mapped: %6zdK allocs: %7zd frees: %7zd inuse: %6zd "
         "num_freed_chunks %7zd avail: %6zd rss: %6zdK releases: %6zd "
-        "last released: %6lldK region: 0x%zx\n",
+        "last released: %6lldK region: %p\n",
         region->exhausted ? "F" : " ", class_id, ClassIdToSize(class_id),
         region->mapped_user >> 10, region->stats.n_allocated,
         region->stats.n_freed, in_use, region->num_freed_chunks, avail_chunks,
         rss >> 10, region->rtoi.num_releases,
         region->rtoi.last_released_bytes >> 10,
-        SpaceBeg() + kRegionSize * class_id);
+        (void *)(SpaceBeg() + kRegionSize * class_id));
   }
 
   void PrintStats() {
@@ -639,13 +658,14 @@ class SizeClassAllocator64 {
   static_assert(kRegionSize >= SizeClassMap::kMaxSize,
                 "Region size exceed largest size");
   // kRegionSize must be <= 2^36, see CompactPtrT.
-  COMPILER_CHECK((kRegionSize) <= (1ULL << (SANITIZER_WORDSIZE / 2 + 4)));
+  COMPILER_CHECK((kRegionSize) <=
+                 (1ULL << (sizeof(CompactPtrT) * 8 + kCompactPtrScale)));
   // Call mmap for user memory with at least this size.
-  static const uptr kUserMapSize = 1 << 16;
+  static const uptr kUserMapSize = 1 << 18;
   // Call mmap for metadata memory with at least this size.
   static const uptr kMetaMapSize = 1 << 16;
   // Call mmap for free array memory with at least this size.
-  static const uptr kFreeArrayMapSize = 1 << 16;
+  static const uptr kFreeArrayMapSize = 1 << 18;
 
   atomic_sint32_t release_to_os_interval_ms_;
 
@@ -666,7 +686,7 @@ class SizeClassAllocator64 {
     u64 last_released_bytes;
   };
 
-  struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) RegionInfo {
+  struct alignas(SANITIZER_CACHE_LINE_SIZE) RegionInfo {
     Mutex mutex;
     uptr num_freed_chunks;  // Number of elements in the freearray.
     uptr mapped_free_array;  // Bytes mapped for freearray.
@@ -762,8 +782,9 @@ class SizeClassAllocator64 {
     if (!region->exhausted) {
       region->exhausted = true;
       Printf("%s: Out of memory. ", SanitizerToolName);
-      Printf("The process has exhausted %zuMB for size class %zu.\n",
-             kRegionSize >> 20, ClassIdToSize(class_id));
+      Printf(
+          "The process has exhausted %zu MB for size class %zu (%zu bytes).\n",
+          kRegionSize >> 20, class_id, ClassIdToSize(class_id));
     }
     return true;
   }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter %s | FileCheck %s
+// RUN: mlir-opt --transform-interpreter %s | FileCheck %s
 
 // CHECK-LABEL: func.func @matmul_split
 func.func @matmul_split(%A : tensor<?x256xf32>, %B: tensor<256x32xf32>, %C: tensor<?x32xf32>) -> tensor<?x32xf32> {
@@ -18,10 +18,12 @@ func.func @matmul_split(%A : tensor<?x256xf32>, %B: tensor<256x32xf32>, %C: tens
   return %0: tensor<?x32xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:4 = transform.structured.split_reduction %0
-    { split_factor = 4, insert_split_dimension = 2, use_scaling_algorithm, use_alloc}
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.split_reduction %0
+      { split_factor = 4, insert_split_dimension = 2, use_scaling_algorithm, use_alloc}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
 }

@@ -9,10 +9,12 @@
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/OpDefinition.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::bytecode::detail;
@@ -22,7 +24,10 @@ using namespace mlir::bytecode::detail;
 //===----------------------------------------------------------------------===//
 
 struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
-  NumberingDialectWriter(IRNumberingState &state) : state(state) {}
+  NumberingDialectWriter(
+      IRNumberingState &state,
+      llvm::StringMap<std::unique_ptr<DialectVersion>> &dialectVersionMap)
+      : state(state), dialectVersionMap(dialectVersionMap) {}
 
   void writeAttribute(Attribute attr) override { state.number(attr); }
   void writeOptionalAttribute(Attribute attr) override {
@@ -46,13 +51,25 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
   }
   void writeOwnedBlob(ArrayRef<char> blob) override {}
   void writeOwnedBool(bool value) override {}
+  void writeUnownedBlob(ArrayRef<char> blob) override {}
 
   int64_t getBytecodeVersion() const override {
     return state.getDesiredBytecodeVersion();
   }
 
+  FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const override {
+    auto dialectEntry = dialectVersionMap.find(dialectName);
+    if (dialectEntry == dialectVersionMap.end())
+      return failure();
+    return dialectEntry->getValue().get();
+  }
+
   /// The parent numbering state that is populated by this writer.
   IRNumberingState &state;
+
+  /// A map containing dialect version information for each dialect to emit.
+  llvm::StringMap<std::unique_ptr<DialectVersion>> &dialectVersionMap;
 };
 
 //===----------------------------------------------------------------------===//
@@ -182,6 +199,13 @@ IRNumberingState::IRNumberingState(Operation *op,
   finalizeDialectResourceNumberings(op);
 }
 
+unsigned IRNumberingState::getNumber(Location loc) {
+  if (config.shouldElideLocations()) {
+    return getNumber(Attribute(UnknownLoc::get(loc.getContext())));
+  }
+  return getNumber(Attribute(loc));
+}
+
 void IRNumberingState::computeGlobalNumberingState(Operation *rootOp) {
   // A simple state struct tracking data used when walking operations.
   struct StackState {
@@ -292,8 +316,16 @@ void IRNumberingState::computeGlobalNumberingState(Operation *rootOp) {
   });
 }
 
+void IRNumberingState::number(Location loc) {
+  if (config.shouldElideLocations()) {
+    number(Attribute(UnknownLoc::get(loc.getContext())));
+  } else {
+    number(Attribute(loc));
+  }
+}
+
 void IRNumberingState::number(Attribute attr) {
-  auto it = attrs.insert({attr, nullptr});
+  auto it = attrs.try_emplace(attr);
   if (!it.second) {
     ++it.first->second->refCount;
     return;
@@ -318,7 +350,7 @@ void IRNumberingState::number(Attribute attr) {
   if (!attr.hasTrait<AttributeTrait::IsMutable>()) {
     // Try overriding emission with callbacks.
     for (const auto &callback : config.getAttributeWriterCallbacks()) {
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       // The client has the ability to override the group name through the
       // callback.
       std::optional<StringRef> groupNameOverride;
@@ -330,7 +362,7 @@ void IRNumberingState::number(Attribute attr) {
     }
 
     if (const auto *interface = numbering->dialect->interface) {
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       if (succeeded(interface->writeAttribute(attr, writer)))
         return;
     }
@@ -410,23 +442,27 @@ void IRNumberingState::number(Operation &op) {
     number(result.getType());
   }
 
-  // Only number the operation's dictionary if it isn't empty.
-  DictionaryAttr dictAttr = op.getDiscardableAttrDictionary();
-  // Prior to version 5 we need to number also the merged dictionnary
-  // containing both the inherent and discardable attribute.
-  if (config.getDesiredBytecodeVersion() < 5)
+  // Prior to a version with native property encoding, or when properties are
+  // not used, we need to number also the merged dictionary containing both the
+  // inherent and discardable attribute.
+  DictionaryAttr dictAttr;
+  if (config.getDesiredBytecodeVersion() >= bytecode::kNativePropertiesEncoding)
+    dictAttr = op.getRawDictionaryAttrs();
+  else
     dictAttr = op.getAttrDictionary();
+  // Only number the operation's dictionary if it isn't empty.
   if (!dictAttr.empty())
     number(dictAttr);
 
   // Visit the operation properties (if any) to make sure referenced attributes
   // are numbered.
-  if (config.getDesiredBytecodeVersion() >= 5 &&
+  if (config.getDesiredBytecodeVersion() >=
+          bytecode::kNativePropertiesEncoding &&
       op.getPropertiesStorageSize()) {
     if (op.isRegistered()) {
       // Operation that have properties *must* implement this interface.
       auto iface = cast<BytecodeOpInterface>(op);
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       iface.writeProperties(writer);
     } else {
       // Unregistered op are storing properties as an optional attribute.
@@ -456,7 +492,7 @@ void IRNumberingState::number(OperationName opName) {
 }
 
 void IRNumberingState::number(Type type) {
-  auto it = types.insert({type, nullptr});
+  auto it = types.try_emplace(type);
   if (!it.second) {
     ++it.first->second->refCount;
     return;
@@ -481,7 +517,7 @@ void IRNumberingState::number(Type type) {
   if (!type.hasTrait<TypeTrait::IsMutable>()) {
     // Try overriding emission with callbacks.
     for (const auto &callback : config.getTypeWriterCallbacks()) {
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       // The client has the ability to override the group name through the
       // callback.
       std::optional<StringRef> groupNameOverride;
@@ -495,7 +531,7 @@ void IRNumberingState::number(Type type) {
     // If this attribute will be emitted using the bytecode format, perform a
     // dummy writing to number any nested components.
     if (const auto *interface = numbering->dialect->interface) {
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       if (succeeded(interface->writeType(type, writer)))
         return;
     }
@@ -557,7 +593,7 @@ struct NumberingResourceBuilder : public AsmResourceBuilder {
   void numberEntry(StringRef key) {
     // TODO: We could pre-number resource key strings here as well.
 
-    auto it = dialect->resourceMap.find(key);
+    auto *it = dialect->resourceMap.find(key);
     if (it != dialect->resourceMap.end()) {
       it->second->number = nextResourceID++;
       it->second->isDeclaration = false;

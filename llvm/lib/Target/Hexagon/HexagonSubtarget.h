@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/Alignment.h"
+#include <bitset>
 #include <memory>
 #include <string>
 #include <vector>
@@ -54,7 +55,6 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueJumps = false;
   bool UseNewValueStores = false;
   bool UseSmallData = false;
-  bool UseUnsafeMath = false;
   bool UseZRegOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
@@ -64,7 +64,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool HasPreV65 = false;
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
-  bool ReservedR19 = false;
+  std::bitset<Hexagon::NUM_TARGET_REGS> UserReservedRegister;
   bool NoreturnStackElim = false;
 
 public:
@@ -101,7 +101,6 @@ private:
   // The following objects can use the TargetTriple, so they must be
   // declared after it.
   HexagonInstrInfo InstrInfo;
-  HexagonRegisterInfo RegInfo;
   HexagonTargetLowering TLInfo;
   HexagonSelectionDAGInfo TSInfo;
   HexagonFrameLowering FrameLowering;
@@ -123,7 +122,7 @@ public:
   }
   const HexagonInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const HexagonRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const HexagonTargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -210,6 +209,30 @@ public:
   bool hasV73OpsOnly() const {
     return getHexagonArchVersion() == Hexagon::ArchEnum::V73;
   }
+  bool hasV75Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V75;
+  }
+  bool hasV75OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V75;
+  }
+  bool hasV79Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V79;
+  }
+  bool hasV79OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V79;
+  }
+  bool useHVXV79Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V79;
+  }
+  bool hasV81Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V81;
+  }
+  bool hasV81OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V81;
+  }
+  bool useHVXV81Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V81;
+  }
 
   bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
@@ -219,7 +242,6 @@ public:
   bool useNewValueJumps() const { return UseNewValueJumps; }
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
-  bool useUnsafeMath() const { return UseUnsafeMath; }
   bool useZRegOps() const { return UseZRegOps; }
   bool useCabac() const { return UseCabac; }
 
@@ -265,7 +287,10 @@ public:
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
 
   bool hasMemNoShuf() const { return HasMemNoShuf; }
-  bool hasReservedR19() const { return ReservedR19; }
+  bool isRegisterReservedByUser(Register i) const override {
+    assert(i.id() < Hexagon::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[i.id()];
+  }
   bool usePredicatedCalls() const;
 
   bool noreturnStackElim() const { return NoreturnStackElim; }
@@ -308,7 +333,8 @@ public:
   /// Perform target specific adjustments to the latency of a schedule
   /// dependency.
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
-                             SDep &Dep) const override;
+                             SDep &Dep,
+                             const TargetSchedModel *SchedModel) const override;
 
   unsigned getVectorLength() const {
     assert(useHVXOps());
@@ -322,7 +348,11 @@ public:
   ArrayRef<MVT> getHVXElementTypes() const {
     static MVT Types[] = {MVT::i8, MVT::i16, MVT::i32};
     static MVT TypesV68[] = {MVT::i8, MVT::i16, MVT::i32, MVT::f16, MVT::f32};
+    static MVT TypesV81[] = {MVT::i8,  MVT::i16,  MVT::i32,
+                             MVT::f16, MVT::bf16, MVT::f32};
 
+    if (useHVXV81Ops() && useHVXFloatingPoint())
+      return ArrayRef(TypesV81);
     if (useHVXV68Ops() && useHVXFloatingPoint())
       return ArrayRef(TypesV68);
     return ArrayRef(Types);
@@ -350,7 +380,8 @@ private:
   void restoreLatency(SUnit *Src, SUnit *Dst) const;
   void changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat) const;
   bool isBestZeroLatency(SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII,
-      SmallSet<SUnit*, 4> &ExclSrc, SmallSet<SUnit*, 4> &ExclDst) const;
+                         SmallPtrSet<SUnit *, 4> &ExclSrc,
+                         SmallPtrSet<SUnit *, 4> &ExclDst) const;
 };
 
 } // end namespace llvm

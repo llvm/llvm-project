@@ -911,7 +911,6 @@ void f(void) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "T",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "id",
 // CHECK-NEXT:     "qualType": "id",
 // CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:    }

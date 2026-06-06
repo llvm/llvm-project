@@ -5,6 +5,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_attach_with_vAttach(self):
         self.build()
@@ -17,7 +18,7 @@ class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
         # Make sure the target process has been launched.
         inferior = procs.get("inferior")
         self.assertIsNotNone(inferior)
-        self.assertTrue(inferior.pid > 0)
+        self.assertGreater(inferior.pid, 0)
         self.assertTrue(lldbgdbserverutils.process_is_running(inferior.pid, True))
 
         # Add attach packets.

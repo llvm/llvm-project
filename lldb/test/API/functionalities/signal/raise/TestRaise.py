@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWindows  # signals do not exist on Windows
+@skipIfNoSignals
 class RaiseTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -88,8 +88,8 @@ class RaiseTestCase(TestBase):
         self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
         self.assertTrue(thread.IsValid(), "Thread should be stopped due to a signal")
-        self.assertTrue(
-            thread.GetStopReasonDataCount() >= 1, "There was data in the event."
+        self.assertGreaterEqual(
+            thread.GetStopReasonDataCount(), 1, "There was data in the event."
         )
         self.assertEqual(
             thread.GetStopReasonDataAtIndex(0), signo, "The stop signal was %s" % signal
@@ -137,8 +137,8 @@ class RaiseTestCase(TestBase):
         self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
         self.assertTrue(thread.IsValid(), "Thread should be stopped due to a signal")
-        self.assertTrue(
-            thread.GetStopReasonDataCount() >= 1, "There was data in the event."
+        self.assertGreaterEqual(
+            thread.GetStopReasonDataCount(), 1, "There was data in the event."
         )
         self.assertEqual(
             thread.GetStopReasonDataAtIndex(0),

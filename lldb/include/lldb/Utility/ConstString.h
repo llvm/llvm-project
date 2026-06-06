@@ -167,19 +167,20 @@ public:
 
   // Implicitly convert \class ConstString instances to \class StringRef.
   operator llvm::StringRef() const { return GetStringRef(); }
-  // Implicitly convert \class ConstString instances to \calss std::string_view.
-  operator std::string_view() const { return std::string_view(m_string, GetLength()); }
+
+  // Explicitly convert \class ConstString instances to \class std::string_view.
+  explicit operator std::string_view() const {
+    return std::string_view(m_string, GetLength());
+  }
+
+  // Explicitly convert \class ConstString instances to \class std::string.
+  explicit operator std::string() const { return GetString(); }
 
   /// Get the string value as a C string.
   ///
-  /// Get the value of the contained string as a NULL terminated C string
-  /// value.
-  ///
-  /// If \a value_if_empty is nullptr, then nullptr will be returned.
-  ///
   /// \return Returns \a value_if_empty if the string is empty, otherwise
   ///     the C string value contained in this object.
-  const char *AsCString(const char *value_if_empty = nullptr) const {
+  const char *AsCString(const char *value_if_empty) const {
     return (IsEmpty() ? value_if_empty : m_string);
   }
 
@@ -190,6 +191,11 @@ public:
   ///     needed data.
   llvm::StringRef GetStringRef() const {
     return llvm::StringRef(m_string, GetLength());
+  }
+
+  /// Get the string value as a std::string
+  std::string GetString() const {
+    return std::string(AsCString(""), GetLength());
   }
 
   /// Get the string value as a C string.
@@ -424,10 +430,6 @@ template <> struct DenseMapInfo<lldb_private::ConstString> {
   static inline lldb_private::ConstString getEmptyKey() {
     return lldb_private::ConstString::FromStringPoolPointer(
         DenseMapInfo<const char *>::getEmptyKey());
-  }
-  static inline lldb_private::ConstString getTombstoneKey() {
-    return lldb_private::ConstString::FromStringPoolPointer(
-        DenseMapInfo<const char *>::getTombstoneKey());
   }
   static unsigned getHashValue(lldb_private::ConstString val) {
     return DenseMapInfo<const char *>::getHashValue(val.m_string);

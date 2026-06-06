@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,SIGNED
-// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -S -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point | FileCheck %s --check-prefixes=CHECK,UNSIGNED
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,SIGNED
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point | FileCheck %s --check-prefixes=CHECK,UNSIGNED
+
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,SIGNED
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,UNSIGNED
 
 // Between different fixed point types
 short _Accum sa_const = 2.5hk;
@@ -49,7 +52,7 @@ float fl_const = 1.0hk;
 float fl_const2 = -128.0k;
 // CHECK-DAG: @fl_const2 = {{.*}}global float -1.280000e+02, align 4
 float fl_const3 = 0.0872802734375k;
-// CHECK-DAG: @fl_const3 = {{.*}}global float 0x3FB6580000000000, align 4
+// CHECK-DAG: @fl_const3 = {{.*}}global float f0x3DB2C000, align 4
 float fl_const4 = 192.5k;
 // CHECK-DAG: @fl_const4 = {{.*}}global float 1.925000e+02, align 4
 float fl_const5 = -192.5k;

@@ -23,12 +23,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <concepts>
 #include <functional>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -184,28 +184,10 @@ constexpr bool test() {
     }
   }
 
-  { // The comparator can return any type that's convertible to `bool`.
-    {
-      std::array in = {2, 1, 3};
-      auto last = std::ranges::sort(in.begin(), in.end(), [](int i, int j) { return BooleanTestable{i < j}; });
-      assert((in == std::array{1, 2, 3}));
-      assert(last == in.end());
-    }
-
-    {
-      std::array in = {2, 1, 3};
-      auto last = std::ranges::sort(in, [](int i, int j) { return BooleanTestable{i < j}; });
-      assert((in == std::array{1, 2, 3}));
-      assert(last == in.end());
-    }
-  }
-
   { // `std::ranges::dangling` is returned.
     [[maybe_unused]] std::same_as<std::ranges::dangling> decltype(auto) result = std::ranges::sort(std::array{1, 2, 3});
   }
 
-  // TODO: Enable the tests once the implementation switched to use iter_move/iter_swap
-  /*
   { // ProxyIterator
     {
       std::array in = {2, 1, 3};
@@ -222,7 +204,6 @@ constexpr bool test() {
       assert((in == std::array{1, 2, 3}));
     }
   }
-  */
 
   return true;
 }

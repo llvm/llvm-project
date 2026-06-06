@@ -18,7 +18,8 @@
 // -----
 
 def SPIRV_GroupFMulKHROp : SPIRV_KhrVendorOp<"GroupFMul", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A floating-point multiplication group operation specified for all values of
     'X' specified by invocations in the group.
@@ -39,15 +40,6 @@ def SPIRV_GroupFMulKHROp : SPIRV_KhrVendorOp<"GroupFMul", [Pure,
 
     The type of 'X' must be the same as 'Result Type'.
 
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.KHR.GroupFMul` scope operation ssa-use
-                            `:` float-type
-    ```
 
     #### Example:
 
@@ -76,13 +68,16 @@ def SPIRV_GroupFMulKHROp : SPIRV_KhrVendorOp<"GroupFMul", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
                               [Pure,
-                               AllTypesMatch<["value", "result"]>]> {
+                               AllTypesMatch<["value", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     Broadcast the Value of the invocation identified by the local id LocalId
     to the result of all invocations in the group.
@@ -100,24 +95,11 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
 
     Execution must be Workgroup or Subgroup Scope.
 
-     The type of Value must be the same as Result Type.
+    The type of Value must be the same as Result Type.
 
     LocalId must be an integer datatype. It can be a scalar, or a vector
     with 2 components or a vector with 3 components. LocalId must be the
     same for all invocations in the group.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    integer-float-scalar-vector-type ::= integer-type | float-type |
-                               `vector<` integer-literal `x` integer-type `>` |
-                               `vector<` integer-literal `x` float-type `>`
-    localid-type ::= integer-type |
-                   `vector<` integer-literal `x` integer-type `>`
-    group-broadcast-op ::= ssa-id `=` `spirv.GroupBroadcast` scope ssa_use,
-                   ssa_use `:` integer-float-scalar-vector-type `,` localid-type
-    ```
 
     #### Example:
 
@@ -126,8 +108,8 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
     %vector_value = ... : vector<4xf32>
     %scalar_localid = ... : i32
     %vector_localid = ... : vector<3xi32>
-    %0 = spirv.GroupBroadcast "Subgroup" %scalar_value, %scalar_localid : f32, i32
-    %1 = spirv.GroupBroadcast "Workgroup" %vector_value, %vector_localid :
+    %0 = spirv.GroupBroadcast <Subgroup> %scalar_value, %scalar_localid : f32, i32
+    %1 = spirv.GroupBroadcast <Workgroup> %vector_value, %vector_localid :
       vector<4xf32>, vector<3xi32>
     ```
   }];
@@ -141,12 +123,12 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    SPIRV_Type:$value,
+    SPIRV_ScalarOrVector:$value,
     SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$localid
   );
 
   let results = (outs
-    SPIRV_Type:$result
+    SPIRV_ScalarOrVector:$result
   );
 
   let assemblyFormat = [{
@@ -157,7 +139,8 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
 // -----
 
 def SPIRV_GroupFAddOp : SPIRV_Op<"GroupFAdd", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A floating-point add group operation specified for all values of X
     specified by invocations in the group.
@@ -176,16 +159,7 @@ def SPIRV_GroupFAddOp : SPIRV_Op<"GroupFAdd", [Pure,
 
     The identity I for Operation is 0.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupFAdd` scope operation ssa-use
-                            `:` float-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -214,12 +188,15 @@ def SPIRV_GroupFAddOp : SPIRV_Op<"GroupFAdd", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupFMaxOp : SPIRV_Op<"GroupFMax", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A floating-point maximum group operation specified for all values of X
     specified by invocations in the group.
@@ -238,16 +215,7 @@ def SPIRV_GroupFMaxOp : SPIRV_Op<"GroupFMax", [Pure,
 
     The identity I for Operation is -INF.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupFMax` scope operation ssa-use
-                            `:` float-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -276,12 +244,15 @@ def SPIRV_GroupFMaxOp : SPIRV_Op<"GroupFMax", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupFMinOp : SPIRV_Op<"GroupFMin", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A floating-point minimum group operation specified for all values of X
     specified by invocations in the group.
@@ -300,16 +271,7 @@ def SPIRV_GroupFMinOp : SPIRV_Op<"GroupFMin", [Pure,
 
     The identity I for Operation is +INF.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupFMin` scope operation ssa-use
-                            `:` float-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -338,12 +300,15 @@ def SPIRV_GroupFMinOp : SPIRV_Op<"GroupFMin", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupIAddOp : SPIRV_Op<"GroupIAdd", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     An integer add group operation specified for all values of X specified
     by invocations in the group.
@@ -362,16 +327,7 @@ def SPIRV_GroupIAddOp : SPIRV_Op<"GroupIAdd", [Pure,
 
     The identity I for Operation is 0.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupIAdd` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -400,12 +356,15 @@ def SPIRV_GroupIAddOp : SPIRV_Op<"GroupIAdd", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupIMulKHROp : SPIRV_KhrVendorOp<"GroupIMul", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     An integer multiplication group operation specified for all values of 'X'
     specified by invocations in the group.
@@ -425,16 +384,6 @@ def SPIRV_GroupIMulKHROp : SPIRV_KhrVendorOp<"GroupIMul", [Pure,
     The identity I for 'Operation' is 1.
 
     The type of 'X' must be the same as 'Result Type'.
-
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.KHR.GroupIMul` scope operation ssa-use
-                            `:` integer-type
-    ```
 
     #### Example:
 
@@ -463,12 +412,15 @@ def SPIRV_GroupIMulKHROp : SPIRV_KhrVendorOp<"GroupIMul", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupSMaxOp : SPIRV_Op<"GroupSMax", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A signed integer maximum group operation specified for all values of X
     specified by invocations in the group.
@@ -488,16 +440,7 @@ def SPIRV_GroupSMaxOp : SPIRV_Op<"GroupSMax", [Pure,
     The identity I for Operation is INT_MIN when X is 32 bits wide and
     LONG_MIN when X is 64 bits wide.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupSMax` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -526,12 +469,15 @@ def SPIRV_GroupSMaxOp : SPIRV_Op<"GroupSMax", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupSMinOp : SPIRV_Op<"GroupSMin", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     A signed integer minimum group operation specified for all values of X
     specified by invocations in the group.
@@ -551,16 +497,7 @@ def SPIRV_GroupSMinOp : SPIRV_Op<"GroupSMin", [Pure,
     The identity I for Operation is INT_MAX when X is 32 bits wide and
     LONG_MAX when X is 64 bits wide.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupSMin` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -589,12 +526,15 @@ def SPIRV_GroupSMinOp : SPIRV_Op<"GroupSMin", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupUMaxOp : SPIRV_Op<"GroupUMax", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     An unsigned integer maximum group operation specified for all values of
     X specified by invocations in the group.
@@ -613,16 +553,7 @@ def SPIRV_GroupUMaxOp : SPIRV_Op<"GroupUMax", [Pure,
 
     The identity I for Operation is 0.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupUMax` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -651,12 +582,15 @@ def SPIRV_GroupUMaxOp : SPIRV_Op<"GroupUMax", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_GroupUMinOp : SPIRV_Op<"GroupUMin", [Pure,
-                               AllTypesMatch<["x", "result"]>]> {
+                               AllTypesMatch<["x", "result"]>,
+                               SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
   let summary = [{
     An unsigned integer minimum group operation specified for all values of
     X specified by invocations in the group.
@@ -676,16 +610,7 @@ def SPIRV_GroupUMinOp : SPIRV_Op<"GroupUMin", [Pure,
     The identity I for Operation is UINT_MAX when X is 32 bits wide and
     ULONG_MAX when X is 64 bits wide.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupUMin` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -714,6 +639,8 @@ def SPIRV_GroupUMinOp : SPIRV_Op<"GroupUMin", [Pure,
   let assemblyFormat = [{
     $execution_scope $group_operation operands attr-dict `:` type($x)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
@@ -765,6 +692,12 @@ def SPIRV_INTELSubgroupBlockReadOp : SPIRV_IntelVendorOp<"SubgroupBlockRead", []
   let results = (outs
     SPIRV_Type:$value
   );
+
+  let hasCustomAssemblyFormat = 0;
+
+  let assemblyFormat = [{
+    $ptr attr-dict `:` type($ptr) `->` type($value)
+  }];
 }
 
 // -----

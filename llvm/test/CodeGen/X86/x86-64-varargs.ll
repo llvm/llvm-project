@@ -579,9 +579,9 @@ define i32 @main() nounwind {
 ; CHECK-X32:       # %bb.0: # %entry
 ; CHECK-X32-NEXT:    pushq %rax
 ; CHECK-X32-NEXT:    movl $12, (%esp)
-; CHECK-X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-X32-NEXT:    movsd {{.*#+}} xmm0 = [4.5E+15,0.0E+0]
 ; CHECK-X32-NEXT:    movabsq $123456677890, %r8 # imm = 0x1CBE976802
-; CHECK-X32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-X32-NEXT:    movsd {{.*#+}} xmm1 = [1.2450000047683716E+0,0.0E+0]
 ; CHECK-X32-NEXT:    movl $1, %edi
 ; CHECK-X32-NEXT:    movl $2, %esi
 ; CHECK-X32-NEXT:    movl $3, %edx

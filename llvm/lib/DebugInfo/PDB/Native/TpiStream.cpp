@@ -23,7 +23,6 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include <algorithm>
 #include <cstdint>
 #include <vector>
 
@@ -221,6 +220,20 @@ TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
 codeview::CVType TpiStream::getType(codeview::TypeIndex Index) {
   assert(!Index.isSimple());
   return Types->getType(Index);
+}
+
+codeview::CVType TpiStream::getTypeOrEmpty(codeview::TypeIndex Index) {
+  return Types->tryGetType(Index).value_or<CVType>({});
+}
+
+std::optional<codeview::CVType>
+TpiStream::tryGetType(codeview::TypeIndex Index) {
+  return Types->tryGetType(Index);
+}
+
+Expected<codeview::CVType>
+TpiStream::getTypeOrError(codeview::TypeIndex Index) {
+  return Types->getTypeOrError(Index);
 }
 
 BinarySubstreamRef TpiStream::getTypeRecordsSubstream() const {

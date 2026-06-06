@@ -3,7 +3,7 @@
 ; RUN:     -mattr=+altivec -vec-extabi -xcoff-traceback-table=true < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK-ASM32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:     -mattr=+altivec -vec-extabi -xcoff-traceback-table=true < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK-ASM64 %s
 
@@ -31,7 +31,7 @@ define i32 @varalloca() local_unnamed_addr {
 ; CHECK-ASM32-NEXT:    	.vbyte	4, 0x00000000                   # Traceback table begin
 ; CHECK-ASM32-NEXT:    	.byte	0x00                            # Version = 0
 ; CHECK-ASM32-NEXT:    	.byte	0x09                            # Language = CPlusPlus
-; CHECK-ASM32-NEXT:    	.byte	0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; CHECK-ASM32-NEXT:    	.byte	0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; CHECK-ASM32-NEXT:                                            # +HasTraceBackTableOffset, -IsInternalProcedure
 ; CHECK-ASM32-NEXT:                                            # -HasControlledStorage, -IsTOCless
 ; CHECK-ASM32-NEXT:                                            # -IsFloatingPointPresent
@@ -70,7 +70,7 @@ define i32 @varalloca() local_unnamed_addr {
 ; CHECK-ASM64-NEXT:    	.vbyte	4, 0x00000000                   # Traceback table begin
 ; CHECK-ASM64-NEXT:    	.byte	0x00                            # Version = 0
 ; CHECK-ASM64-NEXT:    	.byte	0x09                            # Language = CPlusPlus
-; CHECK-ASM64-NEXT:    	.byte	0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; CHECK-ASM64-NEXT:    	.byte	0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; CHECK-ASM64-NEXT:                                            # +HasTraceBackTableOffset, -IsInternalProcedure
 ; CHECK-ASM64-NEXT:                                            # -HasControlledStorage, -IsTOCless
 ; CHECK-ASM64-NEXT:                                            # -IsFloatingPointPresent

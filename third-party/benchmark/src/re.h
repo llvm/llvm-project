@@ -15,6 +15,8 @@
 #ifndef BENCHMARK_RE_H_
 #define BENCHMARK_RE_H_
 
+#include <vector>
+
 #include "internal_macros.h"
 
 // clang-format off
@@ -33,7 +35,7 @@
 // Prefer C regex libraries when compiling w/o exceptions so that we can
 // correctly report errors.
 #if defined(BENCHMARK_HAS_NO_EXCEPTIONS) && \
-    defined(BENCHMARK_HAVE_STD_REGEX) && \
+    defined(HAVE_STD_REGEX) && \
     (defined(HAVE_GNU_POSIX_REGEX) || defined(HAVE_POSIX_REGEX))
   #undef HAVE_STD_REGEX
 #endif
@@ -121,15 +123,13 @@ inline bool Regex::Init(const std::string& spec, std::string* error) {
   if (ec != 0) {
     if (error) {
       size_t needed = regerror(ec, &re_, nullptr, 0);
-      char* errbuf = new char[needed];
-      regerror(ec, &re_, errbuf, needed);
+      std::vector<char> errbuf(needed);
+      regerror(ec, &re_, errbuf.data(), needed);
 
       // regerror returns the number of bytes necessary to null terminate
       // the string, so we move that when assigning to error.
       BM_CHECK_NE(needed, 0);
-      error->assign(errbuf, needed - 1);
-
-      delete[] errbuf;
+      error->assign(errbuf.data(), needed - 1);
     }
 
     return false;

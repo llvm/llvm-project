@@ -19,7 +19,7 @@ Sections:
 # CHECK:      Section {
 # CHECK-NEXT:     Type: DATA (0xB)
 # CHECK-NEXT:     Size: 7
-# CHECK-NEXT:     Offset: 8
+# CHECK-NEXT:     Offset: 14
 # CHECK-NEXT:     Segments [
 # CHECK-NEXT:       Segment {
 # CHECK-NEXT:         Size: 1

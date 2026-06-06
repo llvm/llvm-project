@@ -11,7 +11,7 @@ spirv.module Logical GLSL450 {
     // CHECK: [[VAR1:%.*]] = spirv.mlir.addressof @var1 : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4 x f32>)>, Input>
     // CHECK-NEXT: spirv.AccessChain [[VAR1]][{{.*}}, {{.*}}] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4 x f32>)>, Input>
     %1 = spirv.mlir.addressof @var1 : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Input>
-    %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Input>, i32, i32
+    %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Input>, i32, i32 -> !spirv.ptr<f32, Input>
     spirv.Return
   }
 }
@@ -62,6 +62,12 @@ func.func @const() -> () {
   // CHECK: spirv.Constant dense<1.000000e+00> : tensor<2x3xf32> : !spirv.array<2 x !spirv.array<3 x f32>>
   // CHECK: spirv.Constant dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spirv.array<2 x !spirv.array<3 x i32>>
   // CHECK: spirv.Constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32> : !spirv.array<2 x !spirv.array<3 x f32>>
+  // CHECK: spirv.Constant dense<0.000000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant [1 : i32, 2.000000e+00 : f32] : !spirv.struct<(i32, f32)>
+  // CHECK: spirv.Constant [1 : i32, [dense<2> : vector<2xi32>]] : !spirv.struct<(i32, !spirv.array<1 x vector<2xi32>>)>
 
   %0 = spirv.Constant true
   %1 = spirv.Constant 42 : i32
@@ -73,6 +79,12 @@ func.func @const() -> () {
   %7 = spirv.Constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spirv.array<2 x !spirv.array<3 x i32>>
   %8 = spirv.Constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32> : !spirv.array<2 x !spirv.array<3 x f32>>
   %9 = spirv.Constant [[dense<3.0> : vector<2xf32>]] : !spirv.array<1 x !spirv.array<1xvector<2xf32>>>
+  %10 = spirv.Constant dense<0.000000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  %11 = spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  %12 = spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  %13 = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  %14 = spirv.Constant [1 : i32, 2.0 : f32] : !spirv.struct<(i32, f32)>
+  %15 = spirv.Constant [1 : i32, [dense<2> : vector<2xi32>]] : !spirv.struct<(i32, !spirv.array<1 x vector<2xi32>>)>
   return
 }
 
@@ -95,7 +107,7 @@ func.func @array_constant() -> () {
 // -----
 
 func.func @array_constant() -> () {
-  // expected-error @+1 {{must have spirv.array result type for array value}}
+  // expected-error @+1 {{must have spirv.array or spirv.struct result type for array value}}
   %0 = spirv.Constant [dense<3.0> : vector<2xf32>] : !spirv.rtarray<vector<2xf32>>
   return
 }
@@ -129,6 +141,100 @@ func.func @value_result_num_elements_mismatch() -> () {
   %0 = spirv.Constant dense<1.0> : tensor<2x2xf32> : !spirv.array<2 x !spirv.array<3 x f32>>
   return
 }
+
+// -----
+
+func.func @coop_matrix_const_non_splat() -> () {
+    // expected-error @+1 {{expected a splat dense attribute for cooperative matrix constant, but found}}
+    %0 = spirv.Constant dense<[[1.0, 2.0], [3.0, 4.0]]> : !spirv.coopmatrix<2x2xf32, Subgroup, MatrixAcc>
+    return
+}
+
+// -----
+
+func.func @struct_constant_wrong_member_count() -> () {
+  // expected-error @+1 {{number of constituents (1) does not match number of struct members (2)}}
+  %0 = spirv.Constant [1 : i32] : !spirv.struct<(i32, f32)>
+  return
+}
+
+// -----
+
+func.func @struct_constant_wrong_member_type() -> () {
+  // expected-error @+1 {{result type ('f32') does not match value type ('i32')}}
+  %0 = spirv.Constant [1 : i32, 2 : i32] : !spirv.struct<(i32, f32)>
+  return
+}
+
+// -----
+
+func.func @struct_constant_identified() -> () {
+  // expected-error @+1 {{cannot have an identified struct as a constant type}}
+  %0 = spirv.Constant [1 : i32] : !spirv.struct<S, (i32)>
+  return
+}
+
+// -----
+
+func.func @coop_matrix_const_non_dense() -> () {
+    // expected-error @+2 {{floating point value not valid for specified type}}
+    %0 = spirv.Constant 0.000000e+00 : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+    return
+}
+
+// -----
+
+func.func @coop_matrix_const_wrong_type() -> () {
+    // expected-error @below {{unexpected decimal integer literal for a floating point value}}
+    // expected-note @+1 {{add a trailing dot to make the literal a float}}
+    %0 = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+    return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.EXT.ConstantCompositeReplicate
+//===----------------------------------------------------------------------===//
+
+func.func @ccr_result_not_composite() -> () {
+  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or vector of BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : i32
+  return
+}
+
+// -----
+
+func.func @ccr_wrong_splat_type() -> () {
+  // expected-error @+1 {{expected value attribute type 'f32', but got: 'i32'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xf32>
+  return
+}
+
+// -----
+
+func.func @ccr_wrong_splat_type() -> () {
+  // expected-error @+1 {{expected value attribute type '!spirv.array<3 x i32>' or 'i32', but got: 'vector<2xi32>'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x !spirv.array<3 x i32>>
+  return
+}
+
+// -----
+
+func.func @ccr_wrong_splat_type() -> () {
+  // expected-error @+1 {{expected value attribute type 'f32', but got: 'i32'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : !spirv.arm.tensor<2x3xf32>
+  return
+}
+
+// -----
+
+func.func @ccr_wrong_splat_type() -> () {
+  // expected-error @+1 {{expected value attribute type 'vector<3xi32>' or 'i32', but got: 'vector<2xi32>'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x vector<3xi32>>
+  return
+}
+
 
 // -----
 
@@ -250,6 +356,74 @@ spirv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.ExecutionModeId
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.SpecConstant @z = 5 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spirv.ExecutionModeId {{@.*}} "LocalSizeHintId" @x, @y, @z
+   spirv.ExecutionModeId @do_nothing "LocalSizeHintId" @x, @y, @z
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{expected attribute value}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId"
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+    spirv.SpecConstant @x = 3 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected ExecutionMode that takes extra operands that are <id> operands, got: ContractionOff}}
+   spirv.ExecutionModeId @do_nothing "ContractionOff" @x
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.SpecConstant @z = 5 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{custom op 'spirv.ExecutionModeId' invalid execution_mode attribute specification: "GLCompute"}}
+   spirv.ExecutionModeId @do_nothing "GLCompute" @x, @y, @z
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{custom op 'spirv.ExecutionModeId' invalid kind of attribute specified}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y, 2
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.func
 //===----------------------------------------------------------------------===//
 
@@ -271,7 +445,7 @@ spirv.func @baz(%arg: i32) "DontInline" attributes {
 // -----
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
-    // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = outside.func, linkage_type = <Import>>
+    // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outside.func", linkage_type = <Import>>
     spirv.func @outside.func.with.linkage(%arg0 : i8) -> () "Pure" attributes {
       linkage_attributes=#spirv.linkage_attributes<
         linkage_name="outside.func",
@@ -282,7 +456,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 }
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> { 
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   // expected-error @+1 {{'spirv.module' cannot contain external functions without 'Import' linkage_attributes (LinkageAttributes)}}
   spirv.func @outside.func.without.linkage(%arg0 : i8) -> () "Pure"
   spirv.func @inside.func() -> () "Pure" attributes {} {spirv.Return}
@@ -330,7 +504,7 @@ spirv.module Logical GLSL450 {
 // TODO: Fix test case after initialization with normal constant is addressed
 // spirv.module Logical GLSL450 {
 //   %0 = spirv.Constant 4.0 : f32
-//   // CHECK1: spirv.Variable init(%0) : !spirv.ptr<f32, Private>
+//   COM: CHECK: spirv.Variable init(%0) : !spirv.ptr<f32, Private>
 //   spirv.GlobalVariable @var1 init(%0) : !spirv.ptr<f32, Private>
 // }
 
@@ -349,6 +523,19 @@ spirv.SpecConstant @sc = 4.0 : f32
 // CHECK: spirv.GlobalVariable @var initializer(@sc)
 spirv.GlobalVariable @var initializer(@sc) : !spirv.ptr<f32, Private>
 
+
+// -----
+// Allow SpecConstantComposite as initializer
+  spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1 : i8
+  spirv.SpecConstant @sc2 = 2 : i8
+  spirv.SpecConstant @sc3 = 3 : i8
+  spirv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : !spirv.array<3 x i8>
+
+  // CHECK: spirv.GlobalVariable @var initializer(@scc) : !spirv.ptr<!spirv.array<3 x i8>, Private>
+  spirv.GlobalVariable @var initializer(@scc) : !spirv.ptr<!spirv.array<3 x i8>, Private>
+}
+
 // -----
 
 spirv.module Logical GLSL450 {
@@ -359,7 +546,7 @@ spirv.module Logical GLSL450 {
 // TODO: Fix test case after initialization with constant is addressed
 // spirv.module Logical GLSL450 {
 //   %0 = spirv.Constant 4.0 : f32
-//   // CHECK1: spirv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spirv.ptr<f32, Private>
+//   COM: CHECK: spirv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spirv.ptr<f32, Private>
 //   spirv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spirv.ptr<f32, Private>
 // }
 
@@ -383,10 +570,10 @@ module {
 // -----
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
-  // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = outSideGlobalVar1, linkage_type = <Import>>
+  // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outSideGlobalVar1", linkage_type = <Import>>
   spirv.GlobalVariable @var1 {
     linkage_attributes=#spirv.linkage_attributes<
-      linkage_name="outSideGlobalVar1", 
+      linkage_name="outSideGlobalVar1",
       linkage_type=<Import>
     >
   } : !spirv.ptr<f32, Private>
@@ -410,7 +597,7 @@ spirv.module Logical GLSL450 {
 // -----
 
 spirv.module Logical GLSL450 {
-  // expected-error @+1 {{op initializer must be result of a spirv.SpecConstant or spirv.GlobalVariable op}}
+  // expected-error @+1 {{op initializer must be result of a spirv.SpecConstant or spirv.SpecConstantCompositeOp op}}
   spirv.GlobalVariable @var0 initializer(@var1) : !spirv.ptr<f32, Private>
 }
 
@@ -426,6 +613,19 @@ spirv.module Logical GLSL450 {
 spirv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Function'}}
   spirv.GlobalVariable @var0 : !spirv.ptr<f32, Function>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.SpecConstant @sc = 1.0 : f32
+  // expected-error @+1 {{op with Import linkage type must not have an initializer}}
+  spirv.GlobalVariable @var0 initializer(@sc) {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "importedVar",
+      linkage_type = <Import>
+    >
+  } : !spirv.ptr<f32, Private>
 }
 
 // -----
@@ -796,8 +996,59 @@ spirv.module Logical GLSL450 {
   spirv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3xf32>
 }
 
+// -----
+
+// Nested composite: array of arrays
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1.5 : f32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstantComposite @scc_inner (@sc1, @sc2) : !spirv.array<2 x f32>
+  // CHECK: spirv.SpecConstantComposite @scc_nested (@scc_inner, @scc_inner) : !spirv.array<2 x !spirv.array<2 x f32>>
+  spirv.SpecConstantComposite @scc_nested (@scc_inner, @scc_inner) : !spirv.array<2 x !spirv.array<2 x f32>>
+}
+
+// -----
+
+// Struct with composite and scalar constituents
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1 : i32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstant @sc3 = 3.5 : f32
+  spirv.SpecConstantComposite @scc_vec (@sc2, @sc3) : vector<2xf32>
+  // CHECK: spirv.SpecConstantComposite @scc_struct (@sc1, @scc_vec) : !spirv.struct<(i32, vector<2xf32>)>
+  spirv.SpecConstantComposite @scc_struct (@sc1, @scc_vec) : !spirv.struct<(i32, vector<2xf32>)>
+}
+
+// -----
+
+// Type mismatch with composite constituent
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1.5 : f32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstantComposite @scc_inner (@sc1, @sc2) : !spirv.array<2 x f32>
+  // expected-error @+1 {{has incorrect types of operands: expected '!spirv.array<3 x f32>', but provided '!spirv.array<2 x f32>'}}
+  spirv.SpecConstantComposite @scc_bad (@scc_inner) : !spirv.array<1 x !spirv.array<3 x f32>>
+}
+
+// -----
+
+// Unsupported constituent (not a SpecConstant or SpecConstantComposite)
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @gv : !spirv.ptr<f32, Private>
+  // expected-error @+1 {{unsupported constituent "gv": must reference a spirv.SpecConstant or spirv.SpecConstantComposite}}
+  spirv.SpecConstantComposite @scc (@gv) : !spirv.array<1 x f32>
+}
+
+// -----
+
+// Unknown constituent symbol
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{unknown constituent symbol "does_not_exist"}}
+  spirv.SpecConstantComposite @scc (@does_not_exist) : !spirv.array<1 x f32>
+}
+
 //===----------------------------------------------------------------------===//
-// spirv.SpecConstantComposite (spirv.NV.coopmatrix)
+// spirv.SpecConstantComposite (spirv.KHR.coopmatrix)
 //===----------------------------------------------------------------------===//
 
 // -----
@@ -805,7 +1056,49 @@ spirv.module Logical GLSL450 {
 spirv.module Logical GLSL450 {
   spirv.SpecConstant @sc1 = 1.5 : f32
   // expected-error @+1 {{unsupported composite type}}
-  spirv.SpecConstantComposite @scc (@sc1) : !spirv.NV.coopmatrix<8x16xf32, Device>
+  spirv.SpecConstantComposite @scc (@sc1) : !spirv.coopmatrix<8x16xf32, Device, MatrixA>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.EXT.SpecConstantCompositeReplicate
+//===----------------------------------------------------------------------===//
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{result type must be a composite type, but provided 'i32'}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_i32_1) : i32
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{splat spec constant reference defining constituent not found}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.array<3 x i32>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc_f32_1 = 1.0 : f32
+  // expected-error @+1 {{constituent has incorrect type: expected 'i32', but provided 'f32'}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.array<3 x i32>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc_f32_1 = 1.0 : f32
+  // expected-error @+1 {{constituent has incorrect type: expected 'i32', but provided 'f32'}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.struct<(i32, i32, i32)>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc_f32_1 = 1.0 : f32
+  // expected-error @+1 {{constituent has incorrect type: expected 'i32', but provided 'f32'}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.arm.tensor<2x3xi32>
 }
 
 //===----------------------------------------------------------------------===//

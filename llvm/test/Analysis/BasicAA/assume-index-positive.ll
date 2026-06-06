@@ -105,9 +105,9 @@ define void @shl_of_non_negative(ptr %ptr, i64 %a) {
   %ptr.a = getelementptr i8, ptr %ptr, i64 %a
   %shl = shl i64 %a, 1
   %ptr.shl = getelementptr i8, ptr %ptr, i64 %shl
-  load i8, i8* %ptr.a
-  load i8, i8* %ptr.neg
-  load i8, i8* %ptr.shl
+  load i8, ptr %ptr.a
+  load i8, ptr %ptr.neg
+  load i8, ptr %ptr.shl
   ret void
 }
 

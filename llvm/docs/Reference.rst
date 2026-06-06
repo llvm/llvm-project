@@ -9,52 +9,63 @@ LLVM and API reference documentation.
 .. toctree::
    :hidden:
 
-   Atomics
-   BitCodeFormat
-   BlockFrequencyTerminology
-   BranchWeightMetadata
-   Bugpoint
-   CommandGuide/index
-   ConvergenceAndUniformity
-   ConvergentOperations
-   Coroutines
-   DependenceGraphs/index
-   ExceptionHandling
-   Extensions
-   FaultMaps
-   FuzzingLLVM
-   GarbageCollection
-   GetElementPtr
-   GlobalISel/index
-   GwpAsan
-   HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
-   InAlloca
-   LangRef
-   LibFuzzer
-   MarkedUpDisassembly
-   MIRLangRef
+   CommandGuide/index
+   CommandGuide/llvm-reduce
    OptBisect
-   PCSectionsMetadata
-   PDB/index
-   PointerAuth
-   ScudoHardenedAllocator
-   MemTagSanitizer
-   Security
-   SecurityTransparencyReports
-   SegmentedStacks
-   StackMaps
-   SpeculativeLoadHardening
-   Statepoints
    SymbolizerMarkupFormat
-   SystemLibrary
+   PDB/index
+   GarbageCollection
+   Statepoints
+   LibFuzzer
+   FuzzingLLVM
+   LangRef
+   UndefinedBehavior
+   InAlloca
+   BitCodeFormat
+   MIRLangRef
+   GlobalISel/index
+   ConvergentOperations
    TestingGuide
-   TransformMetadata
-   TypeMetadata
+   TestSuiteGuide
+   GwpAsan
    XRay
    XRayExample
-   XRayFDRFormat
+   FaultMaps
+   Atomics
+   ExceptionHandling
+   Extensions
+   HowToSetUpLLVMStyleRTTI
+   BlockFrequencyTerminology
+   BranchWeightMetadata
+   GetElementPtr
+   ScudoHardenedAllocator
+   MemoryModelRelaxationAnnotations
+   MemTagSanitizer
+   DependenceGraphs/index
+   SpeculativeLoadHardening
+   SegmentedStacks
+   MarkedUpDisassembly
+   StackMaps
+   Coroutines
+   PointerAuth
    YamlIO
+   ConvergenceAndUniformity
+   MLGO
+   ContentAddressableStorage
+   CIBestPractices
+   AIToolPolicy
+   CalleeTypeMetadata
+   CallGraphSection
+   InterfaceExportAnnotations
+   PCSectionsMetadata
+   QualGroup
+   Security
+   SecurityTransparencyReports
+   SystemLibrary
+   TransformMetadata
+   TypeMetadata
+   XRayFDRFormat
 
 API Reference
 -------------
@@ -76,7 +87,7 @@ Command Line Utilities
    A reference manual for the LLVM command line utilities ("man" pages for LLVM
    tools).
 
-:doc:`Bugpoint`
+:doc:`llvm-reduce <CommandGuide/llvm-reduce>`
    Automatic bug finder and test-case reducer description and usage
    information.
 
@@ -118,6 +129,9 @@ LLVM IR
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
   different nodes.
+
+:doc:`Undefined Behavior (UB) <UndefinedBehavior>`
+  A guide on what UB/undef/poison are and when to use each one.
 
 :doc:`InAlloca`
   Description of the ``inalloca`` argument attribute.
@@ -194,6 +208,9 @@ Additional Topics
 :doc:`ScudoHardenedAllocator`
   A library that implements a security-hardened `malloc()`.
 
+:doc:`MemoryModelRelaxationAnnotations`
+  Target-defined relaxation to LLVM's concurrency model.
+
 :doc:`MemTagSanitizer`
   Security hardening for production code aiming to mitigate memory
   related vulnerabilities. Based on the Armv8.5-A Memory Tagging Extension.
@@ -228,3 +245,14 @@ Additional Topics
 :doc:`ConvergenceAndUniformity`
    A description of uniformity analysis in the presence of irreducible
    control flow, and its implementation.
+
+:doc:`MLGO`
+   Facilities for ML-Guided Optimization, such as collecting IR corpora from a
+   build, interfacing with ML models, an exposing features for training.
+
+:doc:`ContentAddressableStorage`
+   A reference guide for using LLVM's CAS library.
+
+:doc:`CIBestPractices`
+   A list of guidelines and best practices to use when working on LLVM's
+   CI systems.

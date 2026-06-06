@@ -31,6 +31,14 @@ DiagnosticInfoMIROptimization::MachineArgument::MachineArgument(
            /*SkipDebugLoc=*/true);
 }
 
+bool MachineOptimizationRemarkEmitter::invalidate(
+    MachineFunction &MF, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &Inv) {
+  // This analysis has no state and so can be trivially preserved but it needs
+  // a fresh view of BFI if it was constructed with one.
+  return MBFI && Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA);
+}
+
 std::optional<uint64_t>
 MachineOptimizationRemarkEmitter::computeHotness(const MachineBasicBlock &MBB) {
   if (!MBFI)
@@ -61,10 +69,7 @@ void MachineOptimizationRemarkEmitter::emit(
 }
 
 MachineOptimizationRemarkEmitterPass::MachineOptimizationRemarkEmitterPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineOptimizationRemarkEmitterPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 bool MachineOptimizationRemarkEmitterPass::runOnMachineFunction(
     MachineFunction &MF) {
@@ -84,6 +89,18 @@ void MachineOptimizationRemarkEmitterPass::getAnalysisUsage(
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+AnalysisKey MachineOptimizationRemarkEmitterAnalysis::Key;
+
+MachineOptimizationRemarkEmitterAnalysis::Result
+MachineOptimizationRemarkEmitterAnalysis::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  MachineBlockFrequencyInfo *MBFI =
+      MF.getFunction().getContext().getDiagnosticsHotnessRequested()
+          ? &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF)
+          : nullptr;
+  return Result(MF, MBFI);
 }
 
 char MachineOptimizationRemarkEmitterPass::ID = 0;

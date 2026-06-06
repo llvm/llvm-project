@@ -16,12 +16,13 @@
 #define CONCAT2(x, y) x##y
 #define CONCAT(x, y) CONCAT2(x, y)
 
-#define ADD_CASES(...) int CONCAT(dummy, __LINE__) = ::AddCases(__VA_ARGS__)
+#define ADD_CASES(...) \
+  const int CONCAT(dummy, __LINE__) = ::AddCases(__VA_ARGS__)
 
 #define SET_SUBSTITUTIONS(...) \
-  int CONCAT(dummy, __LINE__) = ::SetSubstitutions(__VA_ARGS__)
+  const int CONCAT(dummy, __LINE__) = ::SetSubstitutions(__VA_ARGS__)
 
-enum MatchRules {
+enum MatchRules : uint8_t {
   MR_Default,  // Skip non-matching lines until a match is found.
   MR_Next,     // Match must occur on the next line.
   MR_Not  // No line between the current position and the next match matches
@@ -37,7 +38,7 @@ struct TestCase {
   std::shared_ptr<benchmark::Regex> regex;
 };
 
-enum TestCaseID {
+enum TestCaseID : uint8_t {
   TC_ConsoleOut,
   TC_ConsoleErr,
   TC_JSONOut,
@@ -80,12 +81,13 @@ std::string GetFileReporterOutput(int argc, char* argv[]);
 //                  will be the subject of a call to checker_function
 // checker_function: should be of type ResultsCheckFn (see below)
 #define CHECK_BENCHMARK_RESULTS(bm_name_pattern, checker_function) \
-  size_t CONCAT(dummy, __LINE__) = AddChecker(bm_name_pattern, checker_function)
+  const size_t CONCAT(dummy, __LINE__) =                           \
+      AddChecker(bm_name_pattern, checker_function)
 
 struct Results;
 typedef std::function<void(Results const&)> ResultsCheckFn;
 
-size_t AddChecker(const char* bm_name_pattern, const ResultsCheckFn& fn);
+size_t AddChecker(const std::string& bm_name_pattern, const ResultsCheckFn& fn);
 
 // Class holding the results of a benchmark.
 // It is passed in calls to checker functions.
@@ -101,7 +103,7 @@ struct Results {
 
   double NumIterations() const;
 
-  typedef enum { kCpuTime, kRealTime } BenchmarkTime;
+  typedef enum : uint8_t { kCpuTime, kRealTime } BenchmarkTime;
 
   // get cpu_time or real_time in seconds
   double GetTime(BenchmarkTime which) const;
@@ -117,7 +119,7 @@ struct Results {
 
   // get the string for a result by name, or nullptr if the name
   // is not found
-  const std::string* Get(const char* entry_name) const {
+  const std::string* Get(const std::string& entry_name) const {
     auto it = values.find(entry_name);
     if (it == values.end()) return nullptr;
     return &it->second;
@@ -126,12 +128,12 @@ struct Results {
   // get a result by name, parsed as a specific type.
   // NOTE: for counters, use GetCounterAs instead.
   template <class T>
-  T GetAs(const char* entry_name) const;
+  T GetAs(const std::string& entry_name) const;
 
   // counters are written as doubles, so they have to be read first
   // as a double, and only then converted to the asked type.
   template <class T>
-  T GetCounterAs(const char* entry_name) const {
+  T GetCounterAs(const std::string& entry_name) const {
     double dval = GetAs<double>(entry_name);
     T tval = static_cast<T>(dval);
     return tval;
@@ -139,7 +141,7 @@ struct Results {
 };
 
 template <class T>
-T Results::GetAs(const char* entry_name) const {
+T Results::GetAs(const std::string& entry_name) const {
   auto* sv = Get(entry_name);
   BM_CHECK(sv != nullptr && !sv->empty());
   std::stringstream ss;

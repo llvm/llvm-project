@@ -2,12 +2,11 @@
 
 [![build-and-test](https://github.com/google/benchmark/workflows/build-and-test/badge.svg)](https://github.com/google/benchmark/actions?query=workflow%3Abuild-and-test)
 [![bazel](https://github.com/google/benchmark/actions/workflows/bazel.yml/badge.svg)](https://github.com/google/benchmark/actions/workflows/bazel.yml)
-[![pylint](https://github.com/google/benchmark/workflows/pylint/badge.svg)](https://github.com/google/benchmark/actions?query=workflow%3Apylint)
 [![test-bindings](https://github.com/google/benchmark/workflows/test-bindings/badge.svg)](https://github.com/google/benchmark/actions?query=workflow%3Atest-bindings)
-
-[![Build Status](https://travis-ci.org/google/benchmark.svg?branch=master)](https://travis-ci.org/google/benchmark)
 [![Coverage Status](https://coveralls.io/repos/google/benchmark/badge.svg)](https://coveralls.io/r/google/benchmark)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/google/benchmark/badge)](https://securityscorecards.dev/viewer/?uri=github.com/google/benchmark)
 
+[![Discord](https://discordapp.com/api/guilds/1125694995928719494/widget.png?style=shield)](https://discord.gg/cz7UX7wKC2)
 
 A library to benchmark code snippets, similar to unit tests. Example:
 
@@ -33,7 +32,7 @@ To get started, see [Requirements](#requirements) and
 [Installation](#installation). See [Usage](#usage) for a full example and the
 [User Guide](docs/user_guide.md) for a more comprehensive feature overview.
 
-It may also help to read the [Google Test documentation](https://github.com/google/googletest/blob/master/docs/primer.md)
+It may also help to read the [Google Test documentation](https://github.com/google/googletest/blob/main/docs/primer.md)
 as some of the structural aspects of the APIs are similar.
 
 ## Resources
@@ -47,17 +46,17 @@ IRC channels:
 
 [Assembly Testing Documentation](docs/AssemblyTests.md)
 
+[Building and installing Python bindings](docs/python_bindings.md)
+
 ## Requirements
 
-The library can be used with C++03. However, it requires C++11 to build,
+The library can be used with C++11. However, it requires C++17 to build,
 including compiler and standard library support.
 
-The following minimum versions are required to build the library:
+_See [dependencies.md](docs/dependencies.md) for more details regarding supported
+compilers and standards._
 
-* GCC 4.8
-* Clang 3.4
-* Visual Studio 14 2015
-* Intel 2015 Update 1
+If you have need for a particular compiler to be supported, patches are very welcome.
 
 See [Platform-Specific Build Instructions](docs/platform_specific_build_instructions.md).
 
@@ -79,7 +78,7 @@ $ cmake -E make_directory "build"
 # Generate build system files with cmake, and download any dependencies.
 $ cmake -E chdir "build" cmake -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on -DCMAKE_BUILD_TYPE=Release ../
 # or, starting with CMake 3.13, use a simpler form:
-# cmake -DCMAKE_BUILD_TYPE=Release -S . -B "build"
+# cmake -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on -DCMAKE_BUILD_TYPE=Release -S . -B "build"
 # Build the library.
 $ cmake --build "build" --config Release
 ```
@@ -136,6 +135,12 @@ cache variables, if autodetection fails.
 
 If you are using clang, you may need to set `LLVMAR_EXECUTABLE`,
 `LLVMNM_EXECUTABLE` and `LLVMRANLIB_EXECUTABLE` cmake cache variables.
+
+To enable sanitizer checks (eg., `asan` and `tsan`), add:
+```
+ -DCMAKE_C_FLAGS="-g -O2 -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fno-sanitize-recover=all"
+ -DCMAKE_CXX_FLAGS="-g -O2 -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fno-sanitize-recover=all "  
+```
 
 ### Stable and Experimental Library Versions
 

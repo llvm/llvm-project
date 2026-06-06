@@ -1,11 +1,13 @@
-"""util.py - General utilities for running, loading, and processing benchmarks
+"""util.py - General utilities for running, loading, and processing
+benchmarks
 """
+
 import json
 import os
-import tempfile
+import re
 import subprocess
 import sys
-import functools
+import tempfile
 
 # Input file type enumeration
 IT_Invalid = 0
@@ -37,7 +39,7 @@ def is_executable_file(filename):
     elif sys.platform.startswith("win"):
         return magic_bytes == b"MZ"
     else:
-        return magic_bytes == b"\x7FELF"
+        return magic_bytes == b"\x7fELF"
 
 
 def is_json_file(filename):
@@ -46,7 +48,7 @@ def is_json_file(filename):
     'False' otherwise.
     """
     try:
-        with open(filename, "r") as f:
+        with open(filename) as f:
             json.load(f)
         return True
     except BaseException:
@@ -58,7 +60,7 @@ def classify_input_file(filename):
     """
     Return a tuple (type, msg) where 'type' specifies the classified type
     of 'filename'. If 'type' is 'IT_Invalid' then 'msg' is a human readable
-    string represeting the error.
+    string representing the error.
     """
     ftype = IT_Invalid
     err_msg = None
@@ -72,7 +74,8 @@ def classify_input_file(filename):
         ftype = IT_JSON
     else:
         err_msg = (
-            "'%s' does not name a valid benchmark executable or JSON file" % filename
+            "'%s' does not name a valid benchmark executable or JSON file"
+            % filename
         )
     return ftype, err_msg
 
@@ -96,7 +99,8 @@ def find_benchmark_flag(prefix, benchmark_flags):
     if it is found return the arg it specifies. If specified more than once the
     last value is returned. If the flag is not found None is returned.
     """
-    assert prefix.startswith("--") and prefix.endswith("=")
+    assert prefix.startswith("--")
+    assert prefix.endswith("=")
     result = None
     for f in benchmark_flags:
         if f.startswith(prefix):
@@ -109,17 +113,45 @@ def remove_benchmark_flags(prefix, benchmark_flags):
     Return a new list containing the specified benchmark_flags except those
     with the specified prefix.
     """
-    assert prefix.startswith("--") and prefix.endswith("=")
+    assert prefix.startswith("--")
+    assert prefix.endswith("=")
     return [f for f in benchmark_flags if not f.startswith(prefix)]
 
 
-def load_benchmark_results(fname):
+def load_benchmark_results(fname, benchmark_filter):
     """
     Read benchmark output from a file and return the JSON object.
+
+    Apply benchmark_filter, a regular expression, with nearly the same
+    semantics of the --benchmark_filter argument.  May be None.
+    Note: the Python regular expression engine is used instead of the
+    one used by the C++ code, which may produce different results
+    in complex cases.
+
     REQUIRES: 'fname' names a file containing JSON benchmark output.
     """
-    with open(fname, "r") as f:
-        return json.load(f)
+
+    def benchmark_wanted(benchmark):
+        if benchmark_filter is None:
+            return True
+        name = benchmark.get("run_name", None) or benchmark["name"]
+        return re.search(benchmark_filter, name) is not None
+
+    with open(fname) as f:
+        results = json.load(f)
+        if "json_schema_version" in results.get("context", {}):
+            json_schema_version = results["context"]["json_schema_version"]
+            if json_schema_version != 1:
+                print(
+                    f"In {fname}, got unnsupported JSON schema version:"
+                    f" {json_schema_version}, expected 1"
+                )
+                sys.exit(1)
+        if "benchmarks" in results:
+            results["benchmarks"] = list(
+                filter(benchmark_wanted, results["benchmarks"])
+            )
+        return results
 
 
 def sort_benchmark_results(result):
@@ -128,9 +160,7 @@ def sort_benchmark_results(result):
     # From inner key to the outer key!
     benchmarks = sorted(
         benchmarks,
-        key=lambda benchmark: benchmark["repetition_index"]
-        if "repetition_index" in benchmark
-        else -1,
+        key=lambda benchmark: benchmark.get("repetition_index", -1),
     )
     benchmarks = sorted(
         benchmarks,
@@ -140,15 +170,11 @@ def sort_benchmark_results(result):
     )
     benchmarks = sorted(
         benchmarks,
-        key=lambda benchmark: benchmark["per_family_instance_index"]
-        if "per_family_instance_index" in benchmark
-        else -1,
+        key=lambda benchmark: benchmark.get("per_family_instance_index", -1),
     )
     benchmarks = sorted(
         benchmarks,
-        key=lambda benchmark: benchmark["family_index"]
-        if "family_index" in benchmark
-        else -1,
+        key=lambda benchmark: benchmark.get("family_index", -1),
     )
 
     result["benchmarks"] = benchmarks
@@ -168,15 +194,18 @@ def run_benchmark(exe_name, benchmark_flags):
         is_temp_output = True
         thandle, output_name = tempfile.mkstemp()
         os.close(thandle)
-        benchmark_flags = list(benchmark_flags) + ["--benchmark_out=%s" % output_name]
+        benchmark_flags = [
+            *list(benchmark_flags),
+            "--benchmark_out=%s" % output_name,
+        ]
 
-    cmd = [exe_name] + benchmark_flags
+    cmd = [exe_name, *benchmark_flags]
     print("RUNNING: %s" % " ".join(cmd))
     exitCode = subprocess.call(cmd)
     if exitCode != 0:
         print("TEST FAILED...")
         sys.exit(exitCode)
-    json_res = load_benchmark_results(output_name)
+    json_res = load_benchmark_results(output_name, None)
     if is_temp_output:
         os.unlink(output_name)
     return json_res
@@ -191,7 +220,10 @@ def run_or_load_benchmark(filename, benchmark_flags):
     """
     ftype = check_input_file(filename)
     if ftype == IT_JSON:
-        return load_benchmark_results(filename)
+        benchmark_filter = find_benchmark_flag(
+            "--benchmark_filter=", benchmark_flags
+        )
+        return load_benchmark_results(filename, benchmark_filter)
     if ftype == IT_Executable:
         return run_benchmark(filename, benchmark_flags)
     raise ValueError("Unknown file type %s" % ftype)

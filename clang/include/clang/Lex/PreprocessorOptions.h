@@ -76,6 +76,9 @@ public:
   /// predefines.
   bool UsePredefines = true;
 
+  /// Indicates whether to predefine target OS macros.
+  bool DefineTargetOSMacros = false;
+
   /// Whether we should maintain a detailed record of all macro
   /// definitions and expansions.
   bool DetailedRecord = false;
@@ -149,6 +152,13 @@ public:
   /// that the client can get the maximum amount of information from the parser.
   bool SingleFileParseMode = false;
 
+  /// When enabled, preprocessor is in a mode for parsing a single module only.
+  ///
+  /// Disables imports of other modules and if there are any unresolved
+  /// identifiers in preprocessor directive conditions it causes all blocks to
+  /// be skipped so that the client can get a strict subset of the contents.
+  bool SingleModuleParseMode = false;
+
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
@@ -167,6 +177,9 @@ public:
   /// of the specified memory buffer (the second part of each pair).
   std::vector<std::pair<std::string, llvm::MemoryBuffer *>> RemappedFileBuffers;
 
+  /// User specified embed entries.
+  std::vector<std::string> EmbedEntries;
+
   /// Whether the compiler instance should retain (i.e., not free)
   /// the buffers associated with remapped files.
   ///
@@ -183,41 +196,6 @@ public:
   /// with support for lifetime-qualified pointers.
   ObjCXXARCStandardLibraryKind ObjCXXARCStandardLibrary = ARCXX_nolib;
 
-  /// Records the set of modules
-  class FailedModulesSet {
-    llvm::StringSet<> Failed;
-
-  public:
-    bool hasAlreadyFailed(StringRef module) {
-      return Failed.count(module) > 0;
-    }
-
-    void addFailed(StringRef module) {
-      Failed.insert(module);
-    }
-  };
-
-  /// The set of modules that failed to build.
-  ///
-  /// This pointer will be shared among all of the compiler instances created
-  /// to (re)build modules, so that once a module fails to build anywhere,
-  /// other instances will see that the module has failed and won't try to
-  /// build it again.
-  std::shared_ptr<FailedModulesSet> FailedModules;
-
-  /// Function for getting the dependency preprocessor directives of a file.
-  ///
-  /// These are directives derived from a special form of lexing where the
-  /// source input is scanned for the preprocessor directives that might have an
-  /// effect on the dependencies for a compilation unit.
-  ///
-  /// Enables a client to cache the directives for a file and provide them
-  /// across multiple compiler invocations.
-  /// FIXME: Allow returning an error.
-  std::function<std::optional<ArrayRef<dependency_directives_scan::Directive>>(
-      FileEntryRef)>
-      DependencyDirectivesForFile;
-
   /// Set up preprocessor for RunAnalysis action.
   bool SetUpStaticAnalyzer = false;
 
@@ -226,6 +204,10 @@ public:
 
   /// If set, the UNIX timestamp specified by SOURCE_DATE_EPOCH.
   std::optional<uint64_t> SourceDateEpoch;
+
+  /// The initial value for __COUNTER__; typically is zero but can be set via a
+  /// -cc1 flag for testing purposes.
+  uint32_t InitialCounterValue = 0;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}

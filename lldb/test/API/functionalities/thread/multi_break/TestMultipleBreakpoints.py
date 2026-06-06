@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class MultipleBreakpointTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -60,8 +61,9 @@ class MultipleBreakpointTestCase(TestBase):
         num_threads = process.GetNumThreads()
 
         # Make sure we see all three threads
-        self.assertTrue(
-            num_threads >= 3,
+        self.assertGreaterEqual(
+            num_threads,
+            3,
             "Number of expected threads and actual threads do not match.",
         )
 

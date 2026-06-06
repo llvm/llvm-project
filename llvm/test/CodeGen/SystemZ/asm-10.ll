@@ -2,6 +2,15 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -no-integrated-as | FileCheck %s
 
+define half @f0() {
+; CHECK-LABEL: f0:
+; CHECK: lzer %f1
+; CHECK: blah %f0 %f1
+; CHECK: br %r14
+  %val = call half asm "blah $0 $1", "=&f,f" (half 0.0)
+  ret half %val
+}
+
 define float @f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: lzer %f1

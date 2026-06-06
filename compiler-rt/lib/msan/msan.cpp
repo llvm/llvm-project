@@ -56,15 +56,14 @@ THREADLOCAL u64 __msan_retval_tls[kMsanRetvalTlsSize / sizeof(u64)];
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u32 __msan_retval_origin_tls;
 
-SANITIZER_INTERFACE_ATTRIBUTE
-ALIGNED(16) THREADLOCAL u64 __msan_va_arg_tls[kMsanParamTlsSize / sizeof(u64)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u64
+    __msan_va_arg_tls[kMsanParamTlsSize / sizeof(u64)];
+
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32
+    __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
 
 SANITIZER_INTERFACE_ATTRIBUTE
-ALIGNED(16)
-THREADLOCAL u32 __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
-
-SANITIZER_INTERFACE_ATTRIBUTE
-THREADLOCAL u64 __msan_va_arg_overflow_size_tls;
+THREADLOCAL uptr __msan_va_arg_overflow_size_tls;
 
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u32 __msan_origin_tls;
@@ -100,7 +99,17 @@ int msan_report_count = 0;
 
 // Array of stack origins.
 // FIXME: make it resizable.
-static const uptr kNumStackOriginDescrs = 1024 * 1024;
+// Although BSS memory doesn't cost anything until used, it is limited to 2GB
+// in some configurations (e.g., "relocation R_X86_64_PC32 out of range:
+// ... is not in [-2147483648, 2147483647]; references section '.bss'").
+// We use kNumStackOriginDescrs * (sizeof(char*) + sizeof(uptr)) == 64MB.
+#if SANITIZER_PPC
+// soft_rss_limit test (release_origin.c) fails on PPC if kNumStackOriginDescrs
+// is too high
+static const uptr kNumStackOriginDescrs = 1 * 1024 * 1024;
+#else
+static const uptr kNumStackOriginDescrs = 4 * 1024 * 1024;
+#endif  // SANITIZER_PPC
 static const char *StackOriginDescr[kNumStackOriginDescrs];
 static uptr StackOriginPC[kNumStackOriginDescrs];
 static atomic_uint32_t NumStackOriginDescrs;
@@ -343,22 +352,68 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
 
 using namespace __msan;
 
-#define MSAN_MAYBE_WARNING(type, size)              \
-  void __msan_maybe_warning_##size(type s, u32 o) { \
-    GET_CALLER_PC_BP;                               \
-    if (UNLIKELY(s)) {                              \
-      PrintWarningWithOrigin(pc, bp, o);            \
-      if (__msan::flags()->halt_on_error) {         \
-        Printf("Exiting\n");                        \
-        Die();                                      \
-      }                                             \
-    }                                               \
+// N.B. Only [shadow, shadow+size) is defined. shadow is *not* a pointer into
+// an MSan shadow region.
+static void print_shadow_value(void *shadow, u64 size) {
+  Printf("Shadow value (%llu byte%s):", size, size == 1 ? "" : "s");
+  for (unsigned int i = 0; i < size; i++) {
+    if (i % 4 == 0)
+      Printf(" ");
+
+    unsigned char x = ((unsigned char *)shadow)[i];
+    Printf("%x%x", x >> 4, x & 0xf);
+  }
+  Printf("\n");
+  Printf(
+      "Caveat: the shadow value does not necessarily directly correspond to a "
+      "single user variable. The correspondence is stronger, but not always "
+      "perfect, when origin tracking is enabled.\n");
+  Printf("\n");
+}
+
+#define MSAN_MAYBE_WARNING(type, size)               \
+  void __msan_maybe_warning_##size(type s, u32 o) {  \
+    GET_CALLER_PC_BP;                                \
+                                                     \
+    if (UNLIKELY(s)) {                               \
+      if (Verbosity() >= 1)                          \
+        print_shadow_value((void *)(&s), sizeof(s)); \
+      PrintWarningWithOrigin(pc, bp, o);             \
+      if (__msan::flags()->halt_on_error) {          \
+        Printf("Exiting\n");                         \
+        Die();                                       \
+      }                                              \
+    }                                                \
   }
 
 MSAN_MAYBE_WARNING(u8, 1)
 MSAN_MAYBE_WARNING(u16, 2)
 MSAN_MAYBE_WARNING(u32, 4)
 MSAN_MAYBE_WARNING(u64, 8)
+
+// N.B. Only [shadow, shadow+size) is defined. shadow is *not* a pointer into
+// an MSan shadow region.
+void __msan_maybe_warning_N(void *shadow, u64 size, u32 o) {
+  GET_CALLER_PC_BP;
+
+  bool allZero = true;
+  for (unsigned int i = 0; i < size; i++) {
+    if (((char *)shadow)[i]) {
+      allZero = false;
+      break;
+    }
+  }
+
+  if (UNLIKELY(!allZero)) {
+    if (Verbosity() >= 1)
+      print_shadow_value(shadow, size);
+    PrintWarningWithOrigin(pc, bp, o);
+    if (__msan::flags()->halt_on_error) {
+      Printf("Exiting\n");
+      Die();
+    }
+  }
+}
 
 #define MSAN_MAYBE_STORE_ORIGIN(type, size)                       \
   void __msan_maybe_store_origin_##size(type s, void *p, u32 o) { \
@@ -448,9 +503,11 @@ void __msan_init() {
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
+  InitializePlatformEarly();
+
   InitializeInterceptors();
+  InstallAtForkHandler();
   CheckASLR();
-  InitTlsSize();
   InstallDeadlySignalHandlers(MsanOnDeadlySignal);
   InstallAtExitHandler(); // Needs __cxa_atexit interceptor.
 
@@ -466,7 +523,7 @@ void __msan_init() {
   __msan_clear_on_return();
   if (__msan_get_track_origins())
     VPrintf(1, "msan_track_origins\n");
-  if (!InitShadow(__msan_get_track_origins())) {
+  if (!InitShadowWithReExec(__msan_get_track_origins())) {
     Printf("FATAL: MemorySanitizer can not mmap the shadow memory.\n");
     Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
     Printf("FATAL: Disabling ASLR is known to cause this error.\n");

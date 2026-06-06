@@ -29,12 +29,12 @@ int main() {
   // CHECK: [[AFFS_0_ADDR:%.+]] = getelementptr %struct.kmp_task_affinity_info_t, ptr [[AFFINE_LST_ADDR]], i64 0
 
   // affs[0].base = p;
-  // CHECK: [[AFFS_0_BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_task_affinity_info_t, ptr [[AFFS_0_ADDR]], i32 0, i32 0
+  // CHECK: [[AFFS_0_BASE_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_task_affinity_info_t, ptr [[AFFS_0_ADDR]], i32 0, i32 0
   // CHECK: [[P_INTPTR:%.+]] = ptrtoint ptr [[P]] to i64
   // CHECK: store i64 [[P_INTPTR]], ptr [[AFFS_0_BASE_ADDR]],
 
   // affs[0].size = sizeof(*p) * a * 10 * a;
-  // CHECK: [[AFFS_0_SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_task_affinity_info_t, ptr [[AFFS_0_ADDR]], i32 0, i32 1
+  // CHECK: [[AFFS_0_SIZE_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_task_affinity_info_t, ptr [[AFFS_0_ADDR]], i32 0, i32 1
   // CHECK: store i64 [[SIZE]], ptr [[AFFS_0_SIZE_ADDR]],
   // CHECK: call i32 @__kmpc_omp_reg_task_with_affinity(ptr @{{.+}}, i32 [[GTID]], ptr [[TD]], i32 1, ptr [[AFFINE_LST_ADDR]])
 #pragma omp task affinity(([a][10][a])p)
@@ -56,12 +56,12 @@ int main() {
   // CHECK: [[AFFS_0_ADDR:%.+]] = getelementptr %struct.kmp_task_affinity_info_t, ptr [[AFFS_ADDR]], i64 0
 
   // affs[0].base = &a;
-  // CHECK: [[AFFS_0_BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_task_affinity_info_t, ptr [[AFFS_0_ADDR]], i32 0, i32 0
+  // CHECK: [[AFFS_0_BASE_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_task_affinity_info_t, ptr [[AFFS_0_ADDR]], i32 0, i32 0
   // CHECK: [[A_INTPTR:%.+]] = ptrtoint ptr [[A_ADDR]] to i64
   // CHECK: store i64 [[A_INTPTR]], ptr [[AFFS_0_BASE_ADDR]],
 
   // affs[0].size = sizeof(a);
-  // CHECK: [[AFFS_0_SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_task_affinity_info_t, ptr [[AFFS_0_ADDR]], i32 0, i32 1
+  // CHECK: [[AFFS_0_SIZE_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_task_affinity_info_t, ptr [[AFFS_0_ADDR]], i32 0, i32 1
   // CHECK: store i64 4, ptr [[AFFS_0_SIZE_ADDR]],
 
   // affs_cnt = 1;
@@ -100,12 +100,12 @@ int main() {
   // CHECK: [[AFFS_ELEM_ADDR:%.+]] = getelementptr %struct.kmp_task_affinity_info_t, ptr [[AFFS_ADDR]], i64 [[AFFS_CNT]]
 
   // affs[affs_cnt].base = &p[i];
-  // CHECK: [[AFFS_ELEM_BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_task_affinity_info_t, ptr [[AFFS_ELEM_ADDR]], i32 0, i32 0
+  // CHECK: [[AFFS_ELEM_BASE_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_task_affinity_info_t, ptr [[AFFS_ELEM_ADDR]], i32 0, i32 0
   // CHECK: [[CAST:%.+]] = ptrtoint ptr [[P_I_ADDR]] to i64
   // CHECK: store i64 [[CAST]], ptr [[AFFS_ELEM_BASE_ADDR]],
 
   // affs[affs_cnt].size = sizeof(p[i]);
-  // CHECK: [[AFFS_ELEM_SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_task_affinity_info_t, ptr [[AFFS_ELEM_ADDR]], i32 0, i32 1
+  // CHECK: [[AFFS_ELEM_SIZE_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_task_affinity_info_t, ptr [[AFFS_ELEM_ADDR]], i32 0, i32 1
   // CHECK: store i64 4, ptr [[AFFS_ELEM_SIZE_ADDR]],
 
   // ++affs_cnt;

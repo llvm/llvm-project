@@ -15,6 +15,8 @@ from lldbsuite.test import lldbutil
 # Note: Simply applying the @skipIf decorator here confuses the test harness
 # and gives a spurious failure.
 class Rdar12408181TestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -49,11 +51,12 @@ class Rdar12408181TestCase(TestBase):
         ):
             window = self.frame().FindVariable("window")
             window_dynamic = window.GetDynamicValue(lldb.eDynamicCanRunTarget)
-            self.assertTrue(
-                window.GetNumChildren() > 1, "NSWindow (static) only has 1 child!"
+            self.assertGreater(
+                window.GetNumChildren(), 1, "NSWindow (static) only has 1 child!"
             )
-            self.assertTrue(
-                window_dynamic.GetNumChildren() > 1,
+            self.assertGreater(
+                window_dynamic.GetNumChildren(),
+                1,
                 "NSWindow (dynamic) only has 1 child!",
             )
             self.assertTrue(

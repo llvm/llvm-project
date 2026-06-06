@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -dot-scops -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s
 ;
 ; Check that the ScopPrinter does not crash.
 ; ScopPrinter needs the ScopDetection pass, which should depend on

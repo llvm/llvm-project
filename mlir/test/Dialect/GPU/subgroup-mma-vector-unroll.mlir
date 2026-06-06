@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 func.func @matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %out: memref<32x32xf32>) {
   %c8 = arith.constant 8 : index
@@ -7,8 +7,8 @@ func.func @matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %out: memref
   %c16 = arith.constant 16 : index
   %c32 = arith.constant 32 : index
   %cst_0 = arith.constant 0.000000e+00 : f32
-  %3 = gpu.thread_id  x
-  %4 = gpu.thread_id  y
+  %3 = gpu.thread_id x
+  %4 = gpu.thread_id y
   %5 = affine.apply affine_map<()[s0] -> (s0 * 16)>()[%4]
   %6 = affine.apply affine_map<()[s0] -> ((s0 floordiv 32) * 16)>()[%3]
   // CHECK:         scf.for {{.*}} -> (vector<16x16xf32>) {
@@ -33,11 +33,14 @@ func.func @matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %out: memref
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.gpu.unroll_vectors_subgroup_mma [16, 16, 8]
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.gpu.unroll_vectors_subgroup_mma [16, 16, 8]
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -55,8 +58,8 @@ func.func @gathered_matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %ou
   %cst_1 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
   %cst_2 = arith.constant dense<1> : vector<4x4xindex>
   %alloc = memref.alloc() {alignment = 64 : i64} : memref<32x32xf32>
-  %3 = gpu.thread_id  x
-  %4 = gpu.thread_id  y
+  %3 = gpu.thread_id x
+  %4 = gpu.thread_id y
   %5 = affine.apply affine_map<()[s0] -> (s0 * 16)>()[%4]
   %6 = affine.apply affine_map<()[s0] -> ((s0 floordiv 32) * 16)>()[%3]
   // CHECK:         scf.for {{.*}} -> (vector<16x16xf32>) {
@@ -90,9 +93,12 @@ func.func @gathered_matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %ou
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.gpu.unroll_vectors_subgroup_mma [8, 16, 4]
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.gpu.unroll_vectors_subgroup_mma [8, 16, 4]
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }

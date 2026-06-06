@@ -1,9 +1,9 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
-llvm.func @testenterdataop(%arg0: !llvm.ptr<f32>, %arg1 : !llvm.ptr<f32>) {
-  %0 = acc.create varPtr(%arg0 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  %1 = acc.copyin varPtr(%arg1 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data dataOperands(%0, %1 : !llvm.ptr<f32>, !llvm.ptr<f32>)
+llvm.func @testenterdataop(%arg0: !llvm.ptr, %arg1 : !llvm.ptr) {
+  %0 = acc.create varPtr(%arg0 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  %1 = acc.copyin varPtr(%arg1 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  acc.enter_data dataOperands(%0, %1 : !llvm.ptr, !llvm.ptr)
   llvm.return
 }
 
@@ -11,8 +11,8 @@ llvm.func @testenterdataop(%arg0: !llvm.ptr<f32>, %arg1 : !llvm.ptr<f32>) {
 
 // CHECK: @[[LOCSTR:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testenterdataop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: @[[LOCGLOBAL:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr @[[LOCSTR]] }, align 8
-// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: @[[MAPTYPES:.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 0, i64 1]
 // CHECK: @[[MAPNAMES:.*]] = private constant [{{[0-9]*}} x ptr] [ptr @[[MAPNAME1]], ptr @[[MAPNAME2]]]
 
@@ -47,12 +47,12 @@ llvm.func @testenterdataop(%arg0: !llvm.ptr<f32>, %arg1 : !llvm.ptr<f32>) {
 // -----
 
 
-llvm.func @testexitdataop(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
-  %arg0_devptr = acc.getdeviceptr varPtr(%arg0 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  %1 = acc.getdeviceptr varPtr(%arg1 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data dataOperands(%arg0_devptr, %1 : !llvm.ptr<f32>, !llvm.ptr<f32>)
-  acc.delete accPtr(%arg0_devptr : !llvm.ptr<f32>)
-  acc.copyout accPtr(%1 : !llvm.ptr<f32>) to varPtr(%arg1 : !llvm.ptr<f32>)
+llvm.func @testexitdataop(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %arg0_devptr = acc.getdeviceptr varPtr(%arg0 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  %1 = acc.getdeviceptr varPtr(%arg1 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  acc.exit_data dataOperands(%arg0_devptr, %1 : !llvm.ptr, !llvm.ptr)
+  acc.delete accPtr(%arg0_devptr : !llvm.ptr)
+  acc.copyout accPtr(%1 : !llvm.ptr) to varPtr(%arg1 : !llvm.ptr) varType(f32)
   llvm.return
 }
 
@@ -60,8 +60,8 @@ llvm.func @testexitdataop(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
 
 // CHECK: @[[LOCSTR:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testexitdataop;{{[0-9]*}};{{[0-9]*}};;\00"
 // CHECK: @[[LOCGLOBAL:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr @[[LOCSTR]] }
-// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00"
-// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00"
+// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00"
+// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00"
 // CHECK: @[[MAPTYPES:.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 8, i64 2]
 // CHECK: @[[MAPNAMES:.*]] = private constant [{{[0-9]*}} x ptr] [ptr @[[MAPNAME1]], ptr @[[MAPNAME2]]]
 
@@ -94,9 +94,9 @@ llvm.func @testexitdataop(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
 
 // -----
 
-llvm.func @testupdateop(%arg1: !llvm.ptr<f32>) {
-  %0 = acc.update_device varPtr(%arg1 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.update dataOperands(%0 : !llvm.ptr<f32>)
+llvm.func @testupdateop(%arg1: !llvm.ptr) {
+  %0 = acc.update_device varPtr(%arg1 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  acc.update dataOperands(%0 : !llvm.ptr)
   llvm.return
 }
 
@@ -104,7 +104,7 @@ llvm.func @testupdateop(%arg1: !llvm.ptr<f32>) {
 
 // CHECK: [[LOCSTR:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testupdateop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr [[LOCSTR]] }, align 8
-// CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPTYPES:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 1]
 // CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x ptr] [ptr [[MAPNAME1]]]
 
@@ -130,25 +130,25 @@ llvm.func @testupdateop(%arg1: !llvm.ptr<f32>) {
 
 // -----
 
-llvm.func @testdataop(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>, %arg2: !llvm.ptr<i32>) {
+llvm.func @testdataop(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
   
-  %0 = acc.copyin varPtr(%arg0 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  %1 = acc.create varPtr(%arg1 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.data dataOperands(%0, %1 : !llvm.ptr<f32>, !llvm.ptr<f32>) {
+  %0 = acc.copyin varPtr(%arg0 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  %1 = acc.create varPtr(%arg1 : !llvm.ptr) varType(f32) -> !llvm.ptr
+  acc.data dataOperands(%0, %1 : !llvm.ptr, !llvm.ptr) {
     %9 = llvm.mlir.constant(2 : i32) : i32
-    llvm.store %9, %arg2 : !llvm.ptr<i32>
+    llvm.store %9, %arg2 : i32, !llvm.ptr
     acc.terminator
   }
-  acc.copyout accPtr(%0 : !llvm.ptr<f32>) to varPtr(%arg0 : !llvm.ptr<f32>)
-  acc.copyout accPtr(%1 : !llvm.ptr<f32>) to varPtr(%arg1 : !llvm.ptr<f32>)
+  acc.copyout accPtr(%0 : !llvm.ptr) to varPtr(%arg0 : !llvm.ptr) varType(f32)
+  acc.copyout accPtr(%1 : !llvm.ptr) to varPtr(%arg1 : !llvm.ptr) varType(f32)
   llvm.return
 }
 
 // CHECK: %struct.ident_t = type { i32, i32, i32, i32, ptr }
 // CHECK: @[[LOCSTR:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testdataop;{{[0-9]*}};{{[0-9]*}};;\00"
 // CHECK: @[[LOCGLOBAL:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr @[[LOCSTR]] }
-// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00"
-// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00"
+// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00"
+// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00"
 // CHECK: @[[MAPTYPES:.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 8193, i64 8192]
 // CHECK: @[[MAPNAMES:.*]] = private constant [{{[0-9]*}} x ptr] [ptr @[[MAPNAME1]], ptr @[[MAPNAME2]]]
 

@@ -4,7 +4,7 @@
 define float @fadd_fpext_op0(float %x, double %y) {
 ; CHECK-LABEL: @fadd_fpext_op0(
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    [[BO:%.*]] = fadd reassoc double [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[BO:%.*]] = fadd reassoc double [[Y:%.*]], [[EXT]]
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc double [[BO]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -40,7 +40,7 @@ define <2 x float> @fdiv_constant_op0(<2 x double> %x) {
 
 define <2 x half> @fmul_constant_op1(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_constant_op1(
-; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float 0x47EFFFFFE0000000, float 5.000000e-01>
+; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float f0x7F7FFFFF, float 5.000000e-01>
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc <2 x float> [[BO]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[R]]
 ;
@@ -52,7 +52,7 @@ define <2 x half> @fmul_constant_op1(<2 x float> %x) {
 define float @fptrunc_select_true_val(float %x, double %y, i1 %cond) {
 ; CHECK-LABEL: @fptrunc_select_true_val(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[Y:%.*]] to float
-; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select fast i1 [[COND:%.*]], float [[TMP1]], float [[X:%.*]]
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[COND:%.*]], float [[TMP1]], float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[NARROW_SEL]]
 ;
   %e = fpext float %x to double
@@ -61,15 +61,39 @@ define float @fptrunc_select_true_val(float %x, double %y, i1 %cond) {
   ret float %r
 }
 
+define float @fptrunc_fast_select_true_val(float %x, double %y, i1 %cond) {
+; CHECK-LABEL: @fptrunc_fast_select_true_val(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc fast double [[Y:%.*]] to float
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[COND:%.*]], float [[TMP1]], float [[X:%.*]]
+; CHECK-NEXT:    ret float [[NARROW_SEL]]
+;
+  %e = fpext float %x to double
+  %sel = select fast i1 %cond, double %y, double %e
+  %r = fptrunc fast double %sel to float
+  ret float %r
+}
+
 define <2 x float> @fptrunc_select_false_val(<2 x float> %x, <2 x double> %y, <2 x i1> %cond) {
 ; CHECK-LABEL: @fptrunc_select_false_val(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x double> [[Y:%.*]] to <2 x float>
-; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select nnan <2 x i1> [[COND:%.*]], <2 x float> [[X:%.*]], <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[X:%.*]], <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[NARROW_SEL]]
 ;
   %e = fpext <2 x float> %x to <2 x double>
   %sel = select nnan <2 x i1> %cond, <2 x double> %e, <2 x double> %y
   %r = fptrunc <2 x double> %sel to <2 x float>
+  ret <2 x float> %r
+}
+
+define <2 x float> @fptrunc_nnan_select_false_val(<2 x float> %x, <2 x double> %y, <2 x i1> %cond) {
+; CHECK-LABEL: @fptrunc_nnan_select_false_val(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc nnan <2 x double> [[Y:%.*]] to <2 x float>
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[X:%.*]], <2 x float> [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[NARROW_SEL]]
+;
+  %e = fpext <2 x float> %x to <2 x double>
+  %sel = select nnan <2 x i1> %cond, <2 x double> %e, <2 x double> %y
+  %r = fptrunc nnan <2 x double> %sel to <2 x float>
   ret <2 x float> %r
 }
 
@@ -80,7 +104,7 @@ define half @fptrunc_select_true_val_extra_use(half %x, float %y, i1 %cond) {
 ; CHECK-NEXT:    [[E:%.*]] = fpext half [[X:%.*]] to float
 ; CHECK-NEXT:    call void @use(float [[E]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[Y:%.*]] to half
-; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select ninf i1 [[COND:%.*]], half [[TMP1]], half [[X]]
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[COND:%.*]], half [[TMP1]], half [[X]]
 ; CHECK-NEXT:    ret half [[NARROW_SEL]]
 ;
   %e = fpext half %x to float
@@ -88,6 +112,19 @@ define half @fptrunc_select_true_val_extra_use(half %x, float %y, i1 %cond) {
   %sel = select ninf i1 %cond, float %y, float %e
   %r = fptrunc float %sel to half
   ret half %r
+}
+
+define half @fptrunc_max(half %arg) {
+; CHECK-LABEL: @fptrunc_max(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt half [[ARG:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[CMP]], half 0.000000e+00, half [[ARG]]
+; CHECK-NEXT:    ret half [[NARROW_SEL]]
+;
+  %ext = fpext half %arg to double
+  %cmp = fcmp olt double %ext, 0.000000e+00
+  %max = select i1 %cmp, double 0.000000e+00, double %ext
+  %trunc = fptrunc double %max to half
+  ret half %trunc
 }
 
 ; Negative test - this would require an extra instruction.
@@ -189,4 +226,65 @@ define half @ItoFtoF_u25_f32_f16(i25 %i) {
   %x = uitofp i25 %i to float
   %r = fptrunc float %x to half
   ret half %r
+}
+
+; Negative test - bitcast bfloat to half is not optimized
+
+define half @fptrunc_to_bfloat_bitcast_to_half(float %src) {
+; CHECK-LABEL: @fptrunc_to_bfloat_bitcast_to_half(
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[SRC:%.*]] to bfloat
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast bfloat [[TRUNC]] to half
+; CHECK-NEXT:    ret half [[CAST]]
+;
+  %trunc = fptrunc float %src to bfloat
+  %cast = bitcast bfloat %trunc to half
+  ret half %cast
+}
+
+; Convert from integer is exact, so cast to float even if fpext is simplified.
+
+define float @fptrunc_narrow_sitofp_with_fpext(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_sitofp_with_fpext(
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[X:%.*]], 74383
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i64 [[TMP1]] to float
+; CHECK-NEXT:    [[CONV4:%.*]] = fdiv float [[TMP2]], 7.438300e+04
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %1 = urem i64 %x, 74383
+  %conv  = sitofp i64 %1 to float
+  %conv2 = fpext float %conv to double
+  %div3  = fdiv double %conv2, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
+
+; Convert from integer is exact, so cast to float.
+
+define float @fptrunc_narrow_urem_within_float_range(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_urem_within_float_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[X:%.*]], 74383
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i64 [[TMP1]] to float
+; CHECK-NEXT:    [[CONV4:%.*]] = fdiv float [[TMP2]], 7.438300e+04
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %1 = urem i64 %x,74383
+  %conv = sitofp i64 %1 to double
+  %div3 = fdiv double %conv, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
+
+; Negative test - input is not known, so cast cannot be narrowed to float.
+
+define float @fptrunc_narrow_outside_float_range(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_outside_float_range(
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i64 [[X:%.*]] to double
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[CONV]], 7.438300e+04
+; CHECK-NEXT:    [[CONV4:%.*]] = fptrunc double [[DIV3]] to float
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %conv = sitofp i64 %x to double
+  %div3 = fdiv double %conv, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
 }

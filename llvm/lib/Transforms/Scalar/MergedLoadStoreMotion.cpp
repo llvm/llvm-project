@@ -80,11 +80,11 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -101,7 +101,7 @@ class MergedLoadStoreMotion {
   // where Size0 and Size1 are the #instructions on the two sides of
   // the diamond. The constant chosen here is arbitrary. Compiler Time
   // Control is enforced by the check Size0 * Size1 < MagicCompileTimeControl.
-  const int MagicCompileTimeControl = 250;
+  const unsigned MagicCompileTimeControl = 250;
 
   const bool SplitFooterBB;
 public:
@@ -137,8 +137,8 @@ BasicBlock *MergedLoadStoreMotion::getDiamondTail(BasicBlock *BB) {
 bool MergedLoadStoreMotion::isDiamondHead(BasicBlock *BB) {
   if (!BB)
     return false;
-  auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
 
   BasicBlock *Succ0 = BI->getSuccessor(0);
@@ -200,7 +200,7 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
         CastInst::isBitOrNoopPointerCastable(
             Store0->getValueOperand()->getType(),
             Store1->getValueOperand()->getType(),
-            Store0->getModule()->getDataLayout()))
+            Store0->getDataLayout()))
       return Store1;
   }
   return nullptr;
@@ -256,7 +256,8 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
   BasicBlock::iterator InsertPt = BB->getFirstInsertionPt();
   // Intersect optional metadata.
   S0->andIRFlags(S1);
-  S0->dropUnknownNonDebugMetadata();
+
+  combineMetadataForCSE(S0, S1, true);
   S0->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   S0->mergeDIAssignID(S1);
 
@@ -280,7 +281,7 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
     auto *GEP0 = cast<GetElementPtrInst>(Ptr0);
     auto *GEP1 = cast<GetElementPtrInst>(Ptr1);
     Instruction *GEPNew = GEP0->clone();
-    GEPNew->insertBefore(SNew);
+    GEPNew->insertBefore(SNew->getIterator());
     GEPNew->applyMergedLocation(GEP0->getDebugLoc(), GEP1->getDebugLoc());
     SNew->setOperand(1, GEPNew);
     GEP0->replaceAllUsesWith(GEPNew);
@@ -316,9 +317,8 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *HeadBB) {
   if (!SplitFooterBB && TailBB->hasNPredecessorsOrMore(3))
     return false;
   // #Instructions in Pred1 for Compile Time Control
-  auto InstsNoDbg = Pred1->instructionsWithoutDebug();
-  int Size1 = std::distance(InstsNoDbg.begin(), InstsNoDbg.end());
-  int NStores = 0;
+  unsigned Size1 = Pred1->size();
+  unsigned NStores = 0;
 
   for (BasicBlock::reverse_iterator RBI = Pred0->rbegin(), RBE = Pred0->rend();
        RBI != RBE;) {
@@ -377,52 +377,6 @@ bool MergedLoadStoreMotion::run(Function &F, AliasAnalysis &AA) {
       Changed |= mergeStores(&BB);
   return Changed;
 }
-
-namespace {
-class MergedLoadStoreMotionLegacyPass : public FunctionPass {
-  const bool SplitFooterBB;
-public:
-  static char ID; // Pass identification, replacement for typeid
-  MergedLoadStoreMotionLegacyPass(bool SplitFooterBB = false)
-      : FunctionPass(ID), SplitFooterBB(SplitFooterBB) {
-    initializeMergedLoadStoreMotionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  ///
-  /// Run the transformation for each function
-  ///
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    MergedLoadStoreMotion Impl(SplitFooterBB);
-    return Impl.run(F, getAnalysis<AAResultsWrapperPass>().getAAResults());
-  }
-
-private:
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    if (!SplitFooterBB)
-      AU.setPreservesCFG();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-
-char MergedLoadStoreMotionLegacyPass::ID = 0;
-} // anonymous namespace
-
-///
-/// createMergedLoadStoreMotionPass - The public interface to this file.
-///
-FunctionPass *llvm::createMergedLoadStoreMotionPass(bool SplitFooterBB) {
-  return new MergedLoadStoreMotionLegacyPass(SplitFooterBB);
-}
-
-INITIALIZE_PASS_BEGIN(MergedLoadStoreMotionLegacyPass, "mldst-motion",
-                      "MergedLoadStoreMotion", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(MergedLoadStoreMotionLegacyPass, "mldst-motion",
-                    "MergedLoadStoreMotion", false, false)
 
 PreservedAnalyses
 MergedLoadStoreMotionPass::run(Function &F, FunctionAnalysisManager &AM) {

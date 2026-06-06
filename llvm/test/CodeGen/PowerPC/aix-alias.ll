@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
 
@@ -55,7 +55,7 @@ entry:
 ; ASM-NEXT:    .csect fun[DS]
 ; ASM-NEXT:  fun_weak:                               # @fun
 ; ASM-NEXT:  fun_hidden:
-; ASM:         .csect [PR],5
+; ASM:         .csect ..text..[PR],5
 ; ASM-NEXT:  .fun:
 ; ASM-NEXT:  .fun_weak:
 ; ASM-NEXT:  .fun_hidden:
@@ -63,7 +63,7 @@ entry:
 ; ASM-NEXT:    li 3, 0
 ; ASM-NEXT:    blr
 ; ASM-NEXT:                                          # -- End function
-; ASM:       .csect [PR],5
+; ASM:       .csect ..text..[PR],5
 ; ASM-NEXT:  .test:
 ; ASM-NEXT:  # %bb.0:                                # %entry
 ; ASM:         bl .fun

@@ -63,7 +63,7 @@ class Value;
 // the information from the LLVM IR.
 // The idea is that ultimately we would be able to free up the memory used
 // by the LLVM IR as soon as the translation is over.
-class IRTranslator : public MachineFunctionPass {
+class LLVM_ABI IRTranslator : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -146,11 +146,6 @@ private:
   /// virtual registers and offsets.
   ValueToVRegInfo VMap;
 
-  // N.b. it's not completely obvious that this will be sufficient for every
-  // LLVM IR construct (with "invoke" being the obvious candidate to mess up our
-  // lives.
-  DenseMap<const BasicBlock *, MachineBasicBlock *> BBToMBB;
-
   // One BasicBlock can be translated to multiple MachineBasicBlocks.  For such
   // BasicBlocks translated to multiple MachineBasicBlocks, MachinePreds retains
   // a mapping between the edges arriving at the BasicBlock to the corresponding
@@ -204,6 +199,27 @@ private:
   /// \return true if the materialization succeeded.
   bool translate(const Constant &C, Register Reg);
 
+  /// Examine any debug-info attached to the instruction (in the form of
+  /// DbgRecords) and translate it.
+  void translateDbgInfo(const Instruction &Inst,
+                          MachineIRBuilder &MIRBuilder);
+
+  /// Translate a debug-info record of a dbg.value into a DBG_* instruction.
+  /// Pass in all the contents of the record, rather than relying on how it's
+  /// stored.
+  void translateDbgValueRecord(Value *V, bool HasArgList,
+                         const DILocalVariable *Variable,
+                         const DIExpression *Expression, const DebugLoc &DL,
+                         MachineIRBuilder &MIRBuilder);
+
+  /// Translate a debug-info record of a dbg.declare into an indirect DBG_*
+  /// instruction. Pass in all the contents of the record, rather than relying
+  /// on how it's stored.
+  void translateDbgDeclareRecord(Value *Address, bool HasArgList,
+                         const DILocalVariable *Variable,
+                         const DIExpression *Expression, const DebugLoc &DL,
+                         MachineIRBuilder &MIRBuilder);
+
   // Translate U as a copy of V.
   bool translateCopy(const User &U, const Value &V,
                      MachineIRBuilder &MIRBuilder);
@@ -221,6 +237,18 @@ private:
   /// Translate an LLVM string intrinsic (memcpy, memset, ...).
   bool translateMemFunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
                         unsigned Opcode);
+
+  /// Translate an LLVM trap intrinsic (trap, debugtrap, ubsantrap).
+  bool translateTrap(const CallInst &U, MachineIRBuilder &MIRBuilder,
+                     unsigned Opcode);
+
+  // Translate @llvm.vector.interleave2 and
+  // @llvm.vector.deinterleave2 intrinsics for fixed-width vector
+  // types into vector shuffles.
+  bool translateVectorInterleave2Intrinsic(const CallInst &CI,
+                                           MachineIRBuilder &MIRBuilder);
+  bool translateVectorDeinterleave2Intrinsic(const CallInst &CI,
+                                             MachineIRBuilder &MIRBuilder);
 
   void getStackGuard(Register DstReg, MachineIRBuilder &MIRBuilder);
 
@@ -250,14 +278,14 @@ private:
   /// possible.
   std::optional<MCRegister> getArgPhysReg(Argument &Arg);
 
-  /// If DebugInst targets an Argument and its expression is an EntryValue,
-  /// lower it as an entry in the MF debug table.
-  bool translateIfEntryValueArgument(const DbgDeclareInst &DebugInst);
-
-  /// If DebugInst targets an Argument and its expression is an EntryValue,
-  /// lower as a DBG_VALUE targeting the corresponding livein register for that
-  /// Argument.
-  bool translateIfEntryValueArgument(const DbgValueInst &DebugInst,
+  /// If debug-info targets an Argument and its expression is an EntryValue,
+  /// lower it as either an entry in the MF debug table (dbg.declare), or a
+  /// DBG_VALUE targeting the corresponding livein register for that Argument
+  /// (dbg.value).
+  bool translateIfEntryValueArgument(bool isDeclare, Value *Arg,
+                                     const DILocalVariable *Var,
+                                     const DIExpression *Expr,
+                                     const DebugLoc &DL,
                                      MachineIRBuilder &MIRBuilder);
 
   bool translateInlineAsm(const CallBase &CB, MachineIRBuilder &MIRBuilder);
@@ -268,6 +296,10 @@ private:
   /// Translate call instruction.
   /// \pre \p U is a call instruction.
   bool translateCall(const User &U, MachineIRBuilder &MIRBuilder);
+
+  bool translateIntrinsic(
+      const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
+      ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos = {});
 
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind
@@ -285,6 +317,8 @@ private:
   bool translateInvoke(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateCallBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateCallBrIntrinsic(const CallBrInst &I,
+                                MachineIRBuilder &MIRBuilder);
 
   bool translateLandingPad(const User &U, MachineIRBuilder &MIRBuilder);
 
@@ -346,7 +380,8 @@ private:
 
   /// Translate branch (br) instruction.
   /// \pre \p U is a branch instruction.
-  bool translateBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateUncondBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateCondBr(const User &U, MachineIRBuilder &MIRBuilder);
 
   // Begin switch lowering functions.
   bool emitJumpTableHeader(SwitchCG::JumpTable &JT,
@@ -365,6 +400,10 @@ private:
   void emitBitTestCase(SwitchCG::BitTestBlock &BB, MachineBasicBlock *NextMBB,
                        BranchProbability BranchProbToNext, Register Reg,
                        SwitchCG::BitTestCase &B, MachineBasicBlock *SwitchBB);
+
+  void splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
+                     const SwitchCG::SwitchWorkListItem &W, Value *Cond,
+                     MachineBasicBlock *SwitchMBB, MachineIRBuilder &MIB);
 
   bool lowerJumpTableWorkItem(
       SwitchCG::SwitchWorkListItem W, MachineBasicBlock *SwitchMBB,
@@ -454,6 +493,10 @@ private:
   bool translatePtrToInt(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
   }
+  bool translatePtrToAddr(const User &U, MachineIRBuilder &MIRBuilder) {
+    // FIXME: this is not correct for pointers with addr width != pointer width
+    return translatePtrToInt(U, MIRBuilder);
+  }
   bool translateTrunc(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_TRUNC, U, MIRBuilder);
   }
@@ -514,8 +557,10 @@ private:
   bool translateVAArg(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateInsertElement(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateInsertVector(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateExtractElement(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateExtractVector(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateShuffleVector(const User &U, MachineIRBuilder &MIRBuilder);
 
@@ -554,6 +599,10 @@ private:
     return false;
   }
 
+  bool translateConvergenceControlIntrinsic(const CallInst &CI,
+                                            Intrinsic::ID ID,
+                                            MachineIRBuilder &MIRBuilder);
+
   /// @}
 
   // Builder for machine instruction a la IRBuilder.
@@ -587,6 +636,8 @@ private:
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const LibcallLoweringInfo *Libcalls = nullptr;
+  const TargetLowering *TLI = nullptr;
   FunctionLoweringInfo FuncInfo;
 
   // True when either the Target Machine specifies no optimizations or the
@@ -598,6 +649,8 @@ private:
   bool HasTailCall = false;
 
   StackProtectorDescriptor SPDescriptor;
+
+  bool mayTranslateUserTypes(const User &U) const;
 
   /// Switch analysis and optimization.
   class GISelSwitchLowering : public SwitchCG::SwitchLowering {
@@ -613,7 +666,7 @@ private:
       IRT->addSuccessorWithProb(Src, Dst, Prob);
     }
 
-    virtual ~GISelSwitchLowering() = default;
+    ~GISelSwitchLowering() override = default;
 
   private:
     IRTranslator *IRT;
@@ -669,6 +722,23 @@ private:
     assert(Regs.size() == 1 &&
            "attempt to get single VReg for aggregate or void");
     return Regs[0];
+  }
+
+  Register getOrCreateConvergenceTokenVReg(const Value &Token) {
+    assert(Token.getType()->isTokenTy());
+    auto &Regs = *VMap.getVRegs(Token);
+    if (!Regs.empty()) {
+      assert(Regs.size() == 1 &&
+             "Expected a single register for convergence tokens.");
+      return Regs[0];
+    }
+
+    auto Reg = MRI->createGenericVirtualRegister(LLT::token());
+    Regs.push_back(Reg);
+    auto &Offsets = *VMap.getOffsets(Token);
+    if (Offsets.empty())
+      Offsets.push_back(0);
+    return Reg;
   }
 
   /// Allocate some vregs and offsets in the VMap. Then populate just the

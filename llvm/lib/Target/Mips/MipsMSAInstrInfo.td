@@ -30,26 +30,38 @@ def SDT_INSVE : SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                      SDTCisVT<2, i32>, SDTCisSameAs<0, 3>,
                                      SDTCisVT<4, i32>]>;
 
+// Vector comparisons.
+// These take a vector and return a boolean.
 def MipsVAllNonZero : SDNode<"MipsISD::VALL_NONZERO", SDT_MipsVecCond>;
 def MipsVAnyNonZero : SDNode<"MipsISD::VANY_NONZERO", SDT_MipsVecCond>;
 def MipsVAllZero : SDNode<"MipsISD::VALL_ZERO", SDT_MipsVecCond>;
 def MipsVAnyZero : SDNode<"MipsISD::VANY_ZERO", SDT_MipsVecCond>;
+
+// Combined (XOR (OR $a, $b), -1)
 def MipsVNOR : SDNode<"MipsISD::VNOR", SDTIntBinOp,
                       [SDNPCommutative, SDNPAssociative]>;
-def MipsVSHF : SDNode<"MipsISD::VSHF", SDT_VSHF>;
-def MipsSHF : SDNode<"MipsISD::SHF", SDT_SHF>;
-def MipsILVEV : SDNode<"MipsISD::ILVEV", SDT_ILV>;
-def MipsILVOD : SDNode<"MipsISD::ILVOD", SDT_ILV>;
-def MipsILVL  : SDNode<"MipsISD::ILVL",  SDT_ILV>;
-def MipsILVR  : SDNode<"MipsISD::ILVR",  SDT_ILV>;
-def MipsPCKEV : SDNode<"MipsISD::PCKEV", SDT_ILV>;
-def MipsPCKOD : SDNode<"MipsISD::PCKOD", SDT_ILV>;
+
+// Vector Shuffle with mask as an operand
+def MipsVSHF : SDNode<"MipsISD::VSHF", SDT_VSHF>;  // Generic shuffle
+def MipsSHF : SDNode<"MipsISD::SHF", SDT_SHF>;     // 4-element set shuffle.
+def MipsILVEV : SDNode<"MipsISD::ILVEV", SDT_ILV>; // Interleave even elements
+def MipsILVOD : SDNode<"MipsISD::ILVOD", SDT_ILV>; // Interleave odd elements
+def MipsILVL  : SDNode<"MipsISD::ILVL",  SDT_ILV>; // Interleave left elements
+def MipsILVR  : SDNode<"MipsISD::ILVR",  SDT_ILV>; // Interleave right elements
+def MipsPCKEV : SDNode<"MipsISD::PCKEV", SDT_ILV>; // Pack even elements
+def MipsPCKOD : SDNode<"MipsISD::PCKOD", SDT_ILV>; // Pack odd elements
+
+// Vector Lane Copy
+// Copy element from one vector to another
 def MipsINSVE : SDNode<"MipsISD::INSVE", SDT_INSVE>;
+
+// Vector Floating Point Multiply and Subtract
 def MipsFMS   : SDNode<"MipsISD::FMS", SDTFPTernaryOp>;
 
 def vsetcc : SDNode<"ISD::SETCC", SDT_VSetCC>;
 def vfsetcc : SDNode<"ISD::SETCC", SDT_VFSetCC>;
 
+// Extended vector element extraction
 def MipsVExtractSExt : SDNode<"MipsISD::VEXTRACT_SEXT_ELT",
     SDTypeProfile<1, 3, [SDTCisPtrTy<2>]>, []>;
 def MipsVExtractZExt : SDNode<"MipsISD::VEXTRACT_ZEXT_ELT",
@@ -198,14 +210,8 @@ def vsplati32 : PatFrag<(ops node:$e0),
                         (v4i32 (build_vector node:$e0, node:$e0,
                                              node:$e0, node:$e0))>;
 
-def vsplati64_imm_eq_1 : PatLeaf<(bitconvert (v4i32 (build_vector))), [{
-  APInt Imm;
-  SDNode *BV = N->getOperand(0).getNode();
-  EVT EltTy = N->getValueType(0).getVectorElementType();
-
-  return selectVSplat(BV, Imm, EltTy.getSizeInBits()) &&
-         Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 1;
-}]>;
+// Any build_vector that is a constant splat with a value that equals 1
+def vsplat_imm_eq_1 : ComplexPattern<vAny, 0, "selectVSplatImmEq1">;
 
 def vsplati64 : PatFrag<(ops node:$e0),
                         (v2i64 (build_vector node:$e0, node:$e0))>;
@@ -217,7 +223,7 @@ def vsplati64_splat_d : PatFrag<(ops node:$e0),
                                                                 node:$e0,
                                                                 node:$e0,
                                                                 node:$e0)),
-                                           vsplati64_imm_eq_1))))>;
+                                           (vsplat_imm_eq_1)))))>;
 
 def vsplatf32 : PatFrag<(ops node:$e0),
                         (v4f32 (build_vector node:$e0, node:$e0,
@@ -235,12 +241,6 @@ def vsplati64_elt : PatFrag<(ops node:$v, node:$i),
                             (MipsVSHF (vsplati64_splat_d node:$i),
                                       node:$v, node:$v)>;
 
-class SplatPatLeaf<Operand opclass, dag frag, code pred = [{}],
-                   SDNodeXForm xform = NOOP_SDNodeXForm>
-  : PatLeaf<frag, pred, xform> {
-  Operand OpClass = opclass;
-}
-
 class SplatComplexPattern<Operand opclass, ValueType ty, int numops, string fn,
                           list<SDNode> roots = [],
                           list<SDNodeProperty> props = []> :
@@ -249,150 +249,92 @@ class SplatComplexPattern<Operand opclass, ValueType ty, int numops, string fn,
 }
 
 def vsplati8_uimm3 : SplatComplexPattern<vsplat_uimm3, v16i8, 1,
-                                         "selectVSplatUimm3",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatUimm<3>">;
 
 def vsplati8_uimm4 : SplatComplexPattern<vsplat_uimm4, v16i8, 1,
-                                         "selectVSplatUimm4",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatUimm<4>">;
 
 def vsplati8_uimm5 : SplatComplexPattern<vsplat_uimm5, v16i8, 1,
-                                         "selectVSplatUimm5",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatUimm<5>">;
 
 def vsplati8_uimm8 : SplatComplexPattern<vsplat_uimm8, v16i8, 1,
-                                         "selectVSplatUimm8",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatUimm<8>">;
 
 def vsplati8_simm5 : SplatComplexPattern<vsplat_simm5, v16i8, 1,
-                                         "selectVSplatSimm5",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatSimm<5>">;
 
 def vsplati16_uimm3 : SplatComplexPattern<vsplat_uimm3, v8i16, 1,
-                                          "selectVSplatUimm3",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<3>">;
 
 def vsplati16_uimm4 : SplatComplexPattern<vsplat_uimm4, v8i16, 1,
-                                          "selectVSplatUimm4",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<4>">;
 
 def vsplati16_uimm5 : SplatComplexPattern<vsplat_uimm5, v8i16, 1,
-                                          "selectVSplatUimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<5>">;
 
 def vsplati16_simm5 : SplatComplexPattern<vsplat_simm5, v8i16, 1,
-                                          "selectVSplatSimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatSimm<5>">;
 
 def vsplati32_uimm2 : SplatComplexPattern<vsplat_uimm2, v4i32, 1,
-                                          "selectVSplatUimm2",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<2>">;
 
 def vsplati32_uimm5 : SplatComplexPattern<vsplat_uimm5, v4i32, 1,
-                                          "selectVSplatUimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<5>">;
 
 def vsplati32_simm5 : SplatComplexPattern<vsplat_simm5, v4i32, 1,
-                                          "selectVSplatSimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatSimm<5>">;
 
 def vsplati64_uimm1 : SplatComplexPattern<vsplat_uimm1, v2i64, 1,
-                                          "selectVSplatUimm1",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<1>">;
 
 def vsplati64_uimm5 : SplatComplexPattern<vsplat_uimm5, v2i64, 1,
-                                          "selectVSplatUimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<5>">;
 
 def vsplati64_uimm6 : SplatComplexPattern<vsplat_uimm6, v2i64, 1,
-                                          "selectVSplatUimm6",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<6>">;
 
 def vsplati64_simm5 : SplatComplexPattern<vsplat_simm5, v2i64, 1,
-                                          "selectVSplatSimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatSimm<5>">;
 
 // Any build_vector that is a constant splat with a value that is an exact
 // power of 2
-def vsplat_uimm_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmPow2",
-                                      [build_vector, bitconvert]>;
+def vsplat_uimm_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmPow2">;
 
 // Any build_vector that is a constant splat with a value that is the bitwise
 // inverse of an exact power of 2
-def vsplat_uimm_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2",
-                                          [build_vector, bitconvert]>;
+def vsplat_uimm_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2">;
 
 // Any build_vector that is a constant splat with only a consecutive sequence
 // of left-most bits set.
 def vsplat_maskl_bits_uimm3
-    : SplatComplexPattern<vsplat_uimm3, vAny, 1, "selectVSplatMaskL",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm3, vAny, 1, "selectVSplatMaskL">;
 def vsplat_maskl_bits_uimm4
-    : SplatComplexPattern<vsplat_uimm4, vAny, 1, "selectVSplatMaskL",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm4, vAny, 1, "selectVSplatMaskL">;
 def vsplat_maskl_bits_uimm5
-    : SplatComplexPattern<vsplat_uimm5, vAny, 1, "selectVSplatMaskL",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm5, vAny, 1, "selectVSplatMaskL">;
 def vsplat_maskl_bits_uimm6
-    : SplatComplexPattern<vsplat_uimm6, vAny, 1, "selectVSplatMaskL",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm6, vAny, 1, "selectVSplatMaskL">;
 
 // Any build_vector that is a constant splat with only a consecutive sequence
 // of right-most bits set.
 def vsplat_maskr_bits_uimm3
-    : SplatComplexPattern<vsplat_uimm3, vAny, 1, "selectVSplatMaskR",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm3, vAny, 1, "selectVSplatMaskR">;
 def vsplat_maskr_bits_uimm4
-    : SplatComplexPattern<vsplat_uimm4, vAny, 1, "selectVSplatMaskR",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm4, vAny, 1, "selectVSplatMaskR">;
 def vsplat_maskr_bits_uimm5
-    : SplatComplexPattern<vsplat_uimm5, vAny, 1, "selectVSplatMaskR",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm5, vAny, 1, "selectVSplatMaskR">;
 def vsplat_maskr_bits_uimm6
-    : SplatComplexPattern<vsplat_uimm6, vAny, 1, "selectVSplatMaskR",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm6, vAny, 1, "selectVSplatMaskR">;
 
-// Any build_vector that is a constant splat with a value that equals 1
-// FIXME: These should be a ComplexPattern but we can't use them because the
-//        ISel generator requires the uses to have a name, but providing a name
-//        causes other errors ("used in pattern but not operand list")
-def vsplat_imm_eq_1 : PatLeaf<(build_vector), [{
-  APInt Imm;
-  EVT EltTy = N->getValueType(0).getVectorElementType();
 
-  return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
-         Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 1;
-}]>;
+def vbclr : PatFrag<(ops node:$ws, node:$wt),
+                    (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
 
-def vbclr_b : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
-def vbclr_h : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
-def vbclr_w : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
-def vbclr_d : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl (v2i64 vsplati64_imm_eq_1),
-                                               node:$wt)))>;
+def vbneg : PatFrag<(ops node:$ws, node:$wt),
+                    (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 
-def vbneg_b : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbneg_h : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbneg_w : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbneg_d : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl (v2i64 vsplati64_imm_eq_1),
-                                          node:$wt))>;
-
-def vbset_b : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbset_h : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbset_w : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbset_d : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl (v2i64 vsplati64_imm_eq_1),
-                                         node:$wt))>;
+def vbset : PatFrag<(ops node:$ws, node:$wt),
+                    (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 
 def muladd : PatFrag<(ops node:$wd, node:$ws, node:$wt),
                      (add node:$wd, (mul node:$ws, node:$wt))>;
@@ -1117,63 +1059,52 @@ class XORI_B_ENC : MSA_I8_FMT<0b11, 0b000000>;
 // Instruction desc.
 class MSA_BIT_B_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                           ComplexPattern Imm, RegisterOperand ROWD,
-                          RegisterOperand ROWS = ROWD,
-                          InstrItinClass itin = NoItinerary> {
+                          RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, vsplat_uimm3:$m);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $m");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, Imm:$m))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_BIT_H_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                           ComplexPattern Imm, RegisterOperand ROWD,
-                          RegisterOperand ROWS = ROWD,
-                          InstrItinClass itin = NoItinerary> {
+                          RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, vsplat_uimm4:$m);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $m");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, Imm:$m))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_BIT_W_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                           ComplexPattern Imm, RegisterOperand ROWD,
-                          RegisterOperand ROWS = ROWD,
-                          InstrItinClass itin = NoItinerary> {
+                          RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, vsplat_uimm5:$m);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $m");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, Imm:$m))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_BIT_D_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                           ComplexPattern Imm, RegisterOperand ROWD,
-                          RegisterOperand ROWS = ROWD,
-                          InstrItinClass itin = NoItinerary> {
+                          RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, vsplat_uimm6:$m);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $m");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, Imm:$m))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_BIT_X_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                           Operand ImmOp, ImmLeaf Imm, RegisterOperand ROWD,
-                          RegisterOperand ROWS = ROWD,
-                          InstrItinClass itin = NoItinerary> {
+                          RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, ImmOp:$m);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $m");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, Imm:$m))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_BIT_BINSXI_DESC_BASE<string instr_asm, ValueType Ty,
                                SplatComplexPattern Mask, RegisterOperand ROWD,
-                               RegisterOperand ROWS = ROWD,
-                               InstrItinClass itin = NoItinerary> {
+                               RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWD:$wd_in, ROWS:$ws, Mask.OpClass:$m);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $m");
@@ -1183,55 +1114,46 @@ class MSA_BIT_BINSXI_DESC_BASE<string instr_asm, ValueType Ty,
   //   (BSEL_V cond, if_clear, if_set)
   list<dag> Pattern = [(set ROWD:$wd, (vselect (Ty Mask:$m), (Ty ROWD:$ws),
                                                ROWS:$wd_in))];
-  InstrItinClass Itinerary = itin;
   string Constraints = "$wd = $wd_in";
 }
 
 class MSA_BIT_BINSLI_DESC_BASE<string instr_asm, ValueType Ty,
                                SplatComplexPattern ImmOp, RegisterOperand ROWD,
-                               RegisterOperand ROWS = ROWD,
-                               InstrItinClass itin = NoItinerary> :
-  MSA_BIT_BINSXI_DESC_BASE<instr_asm, Ty, ImmOp, ROWD, ROWS, itin>;
+                               RegisterOperand ROWS = ROWD> :
+  MSA_BIT_BINSXI_DESC_BASE<instr_asm, Ty, ImmOp, ROWD, ROWS>;
 
 class MSA_BIT_BINSRI_DESC_BASE<string instr_asm, ValueType Ty,
                                SplatComplexPattern ImmOp, RegisterOperand ROWD,
-                               RegisterOperand ROWS = ROWD,
-                               InstrItinClass itin = NoItinerary> :
-  MSA_BIT_BINSXI_DESC_BASE<instr_asm, Ty, ImmOp, ROWD, ROWS, itin>;
+                               RegisterOperand ROWS = ROWD> :
+  MSA_BIT_BINSXI_DESC_BASE<instr_asm, Ty, ImmOp, ROWD, ROWS>;
 
 class MSA_BIT_SPLAT_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                               SplatComplexPattern SplatImm,
-                              RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                              InstrItinClass itin = NoItinerary> {
+                              RegisterOperand ROWD, RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, SplatImm.OpClass:$m);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $m");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, SplatImm:$m))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_COPY_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                          ValueType VecTy, Operand ImmOp, ImmLeaf Imm,
-                         RegisterOperand ROD, RegisterOperand ROWS,
-                         InstrItinClass itin = NoItinerary> {
+                         RegisterOperand ROD, RegisterOperand ROWS> {
   dag OutOperandList = (outs ROD:$rd);
   dag InOperandList = (ins ROWS:$ws, ImmOp:$n);
   string AsmString = !strconcat(instr_asm, "\t$rd, $ws[$n]");
   list<dag> Pattern = [(set ROD:$rd, (OpNode (VecTy ROWS:$ws), Imm:$n))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_ELM_SLD_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                             RegisterOperand ROWD, RegisterOperand ROWS,
-                            Operand ImmOp, ImmLeaf Imm,
-                            InstrItinClass itin = NoItinerary> {
+                            Operand ImmOp, ImmLeaf Imm> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWD:$wd_in, ROWS:$ws, ImmOp:$n);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws[$n]");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWD:$wd_in, ROWS:$ws,
                                               Imm:$n))];
   string Constraints = "$wd = $wd_in";
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_COPY_PSEUDO_BASE<SDPatternOperator OpNode, ValueType VecTy,
@@ -1245,38 +1167,31 @@ class MSA_COPY_PSEUDO_BASE<SDPatternOperator OpNode, ValueType VecTy,
 
 class MSA_I5_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                        SplatComplexPattern SplatImm, RegisterOperand ROWD,
-                       RegisterOperand ROWS = ROWD,
-                       InstrItinClass itin = NoItinerary> {
+                       RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, SplatImm.OpClass:$imm);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $imm");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, SplatImm:$imm))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_I8_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                        SplatComplexPattern SplatImm, RegisterOperand ROWD,
-                       RegisterOperand ROWS = ROWD,
-                       InstrItinClass itin = NoItinerary> {
+                       RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, SplatImm.OpClass:$u8);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $u8");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, SplatImm:$u8))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_I8_SHF_DESC_BASE<string instr_asm, RegisterOperand ROWD,
-                           RegisterOperand ROWS = ROWD,
-                           InstrItinClass itin = NoItinerary> {
+                           RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, uimm8:$u8);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $u8");
   list<dag> Pattern = [(set ROWD:$wd, (MipsSHF timmZExt8:$u8, ROWS:$ws))];
-  InstrItinClass Itinerary = itin;
 }
 
-class MSA_I10_LDI_DESC_BASE<string instr_asm, RegisterOperand ROWD,
-                            InstrItinClass itin = NoItinerary> {
+class MSA_I10_LDI_DESC_BASE<string instr_asm, RegisterOperand ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins vsplat_simm10:$s10);
   string AsmString = !strconcat(instr_asm, "\t$wd, $s10");
@@ -1284,28 +1199,23 @@ class MSA_I10_LDI_DESC_BASE<string instr_asm, RegisterOperand ROWD,
   list<dag> Pattern = [];
   bit hasSideEffects = 0;
   bit isReMaterializable = 1;
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_2R_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                       RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                       InstrItinClass itin = NoItinerary> {
+                       RegisterOperand ROWD, RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_2R_FILL_DESC_BASE<string instr_asm, ValueType VT,
                             SDPatternOperator OpNode, RegisterOperand ROWD,
-                            RegisterOperand ROS = ROWD,
-                            InstrItinClass itin = NoItinerary> {
+                            RegisterOperand ROS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROS:$rs);
   string AsmString = !strconcat(instr_asm, "\t$wd, $rs");
   list<dag> Pattern = [(set ROWD:$wd, (VT (OpNode ROS:$rs)))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_2R_FILL_PSEUDO_BASE<SDPatternOperator OpNode,
@@ -1316,105 +1226,88 @@ class MSA_2R_FILL_PSEUDO_BASE<SDPatternOperator OpNode,
 }
 
 class MSA_2RF_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                        RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                        InstrItinClass itin = NoItinerary> {
+                        RegisterOperand ROWD, RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_3R_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                        RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                       RegisterOperand ROWT = ROWD,
-                       InstrItinClass itin = NoItinerary> {
+                       RegisterOperand ROWT = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, ROWT:$wt);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $wt");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, ROWT:$wt))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_3R_BINSX_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                              RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                             RegisterOperand ROWT = ROWD,
-                             InstrItinClass itin = NoItinerary> {
+                             RegisterOperand ROWT = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWD:$wd_in, ROWS:$ws, ROWT:$wt);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $wt");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWD:$wd_in, ROWS:$ws,
                                               ROWT:$wt))];
   string Constraints = "$wd = $wd_in";
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_3R_SPLAT_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                             RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                             InstrItinClass itin = NoItinerary> {
+                             RegisterOperand ROWD, RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, GPR32Opnd:$rt);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws[$rt]");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, GPR32Opnd:$rt))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_3R_VSHF_DESC_BASE<string instr_asm, RegisterOperand ROWD,
                             RegisterOperand ROWS = ROWD,
-                            RegisterOperand ROWT = ROWD,
-                            InstrItinClass itin = NoItinerary> {
+                            RegisterOperand ROWT = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWD:$wd_in, ROWS:$ws, ROWT:$wt);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $wt");
   list<dag> Pattern = [(set ROWD:$wd, (MipsVSHF ROWD:$wd_in, ROWS:$ws,
                                                 ROWT:$wt))];
   string Constraints = "$wd = $wd_in";
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_3R_SLD_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                           RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                           InstrItinClass itin = NoItinerary> {
+                           RegisterOperand ROWD, RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWD:$wd_in, ROWS:$ws, GPR32Opnd:$rt);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws[$rt]");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWD:$wd_in, ROWS:$ws,
                                               GPR32Opnd:$rt))];
-  InstrItinClass Itinerary = itin;
   string Constraints = "$wd = $wd_in";
 }
 
 class MSA_3R_4R_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                           RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                          RegisterOperand ROWT = ROWD,
-                          InstrItinClass itin = NoItinerary> {
+                          RegisterOperand ROWT = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWD:$wd_in, ROWS:$ws, ROWT:$wt);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $wt");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWD:$wd_in, ROWS:$ws,
                                               ROWT:$wt))];
-  InstrItinClass Itinerary = itin;
   string Constraints = "$wd = $wd_in";
 }
 
 class MSA_3RF_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                         RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                        RegisterOperand ROWT = ROWD,
-                        InstrItinClass itin = NoItinerary> :
-  MSA_3R_DESC_BASE<instr_asm, OpNode, ROWD, ROWS, ROWT, itin>;
+                        RegisterOperand ROWT = ROWD> :
+  MSA_3R_DESC_BASE<instr_asm, OpNode, ROWD, ROWS, ROWT>;
 
 class MSA_3RF_4RF_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                             RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                            RegisterOperand ROWT = ROWD,
-                            InstrItinClass itin = NoItinerary> :
-  MSA_3R_4R_DESC_BASE<instr_asm, OpNode, ROWD, ROWS, ROWT, itin>;
+                            RegisterOperand ROWT = ROWD> :
+  MSA_3R_4R_DESC_BASE<instr_asm, OpNode, ROWD, ROWS, ROWT>;
 
 class MSA_CBRANCH_DESC_BASE<string instr_asm, RegisterOperand ROWD> {
   dag OutOperandList = (outs);
   dag InOperandList = (ins ROWD:$wt, brtarget:$offset);
   string AsmString = !strconcat(instr_asm, "\t$wt, $offset");
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = NoItinerary;
   bit isBranch = 1;
   bit isTerminator = 1;
   bit hasDelaySlot = 1;
@@ -1423,13 +1316,11 @@ class MSA_CBRANCH_DESC_BASE<string instr_asm, RegisterOperand ROWD> {
 
 class MSA_INSERT_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                            Operand ImmOp, ImmLeaf Imm, RegisterOperand ROWD,
-                           RegisterOperand ROS,
-                           InstrItinClass itin = NoItinerary> {
+                           RegisterOperand ROS> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWD:$wd_in, ROS:$rs, ImmOp:$n);
   string AsmString = !strconcat(instr_asm, "\t$wd[$n], $rs");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWD:$wd_in, ROS:$rs, Imm:$n))];
-  InstrItinClass Itinerary = itin;
   string Constraints = "$wd = $wd_in";
 }
 
@@ -1455,8 +1346,7 @@ class MSA_INSERT_VIDX_PSEUDO_BASE<SDPatternOperator OpNode, ValueType Ty,
 
 class MSA_INSVE_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                           Operand ImmOp, ImmLeaf Imm, RegisterOperand ROWD,
-                          RegisterOperand ROWS = ROWD,
-                          InstrItinClass itin = NoItinerary> {
+                          RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWD:$wd_in, ImmOp:$n, ROWS:$ws, uimmz:$n2);
   string AsmString = !strconcat(instr_asm, "\t$wd[$n], $ws[$n2]");
@@ -1464,31 +1354,26 @@ class MSA_INSVE_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                                               Imm:$n,
                                               ROWS:$ws,
                                               immz:$n2))];
-  InstrItinClass Itinerary = itin;
   string Constraints = "$wd = $wd_in";
 }
 
 class MSA_VEC_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                         RegisterOperand ROWD, RegisterOperand ROWS = ROWD,
-                        RegisterOperand ROWT = ROWD,
-                        InstrItinClass itin = NoItinerary> {
+                        RegisterOperand ROWT = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, ROWT:$wt);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws, $wt");
   list<dag> Pattern = [(set ROWD:$wd, (OpNode ROWS:$ws, ROWT:$wt))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_ELM_SPLAT_DESC_BASE<string instr_asm, SplatComplexPattern SplatImm,
                               RegisterOperand ROWD,
-                              RegisterOperand ROWS = ROWD,
-                              InstrItinClass itin = NoItinerary> {
+                              RegisterOperand ROWS = ROWD> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins ROWS:$ws, SplatImm.OpClass:$n);
   string AsmString = !strconcat(instr_asm, "\t$wd, $ws[$n]");
   list<dag> Pattern = [(set ROWD:$wd, (MipsVSHF SplatImm:$n, ROWS:$ws,
                                                 ROWS:$ws))];
-  InstrItinClass Itinerary = itin;
 }
 
 class MSA_VEC_PSEUDO_BASE<SDPatternOperator OpNode, RegisterOperand ROWD,
@@ -1609,10 +1494,10 @@ class AVER_U_W_DESC : MSA_3R_DESC_BASE<"aver_u.w", int_mips_aver_u_w,
 class AVER_U_D_DESC : MSA_3R_DESC_BASE<"aver_u.d", int_mips_aver_u_d,
                                        MSA128DOpnd>, IsCommutable;
 
-class BCLR_B_DESC : MSA_3R_DESC_BASE<"bclr.b", vbclr_b, MSA128BOpnd>;
-class BCLR_H_DESC : MSA_3R_DESC_BASE<"bclr.h", vbclr_h, MSA128HOpnd>;
-class BCLR_W_DESC : MSA_3R_DESC_BASE<"bclr.w", vbclr_w, MSA128WOpnd>;
-class BCLR_D_DESC : MSA_3R_DESC_BASE<"bclr.d", vbclr_d, MSA128DOpnd>;
+class BCLR_B_DESC : MSA_3R_DESC_BASE<"bclr.b", vbclr, MSA128BOpnd>;
+class BCLR_H_DESC : MSA_3R_DESC_BASE<"bclr.h", vbclr, MSA128HOpnd>;
+class BCLR_W_DESC : MSA_3R_DESC_BASE<"bclr.w", vbclr, MSA128WOpnd>;
+class BCLR_D_DESC : MSA_3R_DESC_BASE<"bclr.d", vbclr, MSA128DOpnd>;
 
 class BCLRI_B_DESC : MSA_BIT_B_DESC_BASE<"bclri.b", and, vsplat_uimm_inv_pow2,
                                          MSA128BOpnd>;
@@ -1667,7 +1552,6 @@ class BMNZ_V_DESC {
   list<dag> Pattern = [(set MSA128BOpnd:$wd, (vselect MSA128BOpnd:$wt,
                                                       MSA128BOpnd:$ws,
                                                       MSA128BOpnd:$wd_in))];
-  InstrItinClass Itinerary = NoItinerary;
   string Constraints = "$wd = $wd_in";
 }
 
@@ -1679,7 +1563,6 @@ class BMNZI_B_DESC {
   list<dag> Pattern = [(set MSA128BOpnd:$wd, (vselect vsplati8_uimm8:$u8,
                                                       MSA128BOpnd:$ws,
                                                       MSA128BOpnd:$wd_in))];
-  InstrItinClass Itinerary = NoItinerary;
   string Constraints = "$wd = $wd_in";
 }
 
@@ -1691,7 +1574,6 @@ class BMZ_V_DESC {
   list<dag> Pattern = [(set MSA128BOpnd:$wd, (vselect MSA128BOpnd:$wt,
                                                       MSA128BOpnd:$wd_in,
                                                       MSA128BOpnd:$ws))];
-  InstrItinClass Itinerary = NoItinerary;
   string Constraints = "$wd = $wd_in";
 }
 
@@ -1703,14 +1585,13 @@ class BMZI_B_DESC {
   list<dag> Pattern = [(set MSA128BOpnd:$wd, (vselect vsplati8_uimm8:$u8,
                                                       MSA128BOpnd:$wd_in,
                                                       MSA128BOpnd:$ws))];
-  InstrItinClass Itinerary = NoItinerary;
   string Constraints = "$wd = $wd_in";
 }
 
-class BNEG_B_DESC : MSA_3R_DESC_BASE<"bneg.b", vbneg_b, MSA128BOpnd>;
-class BNEG_H_DESC : MSA_3R_DESC_BASE<"bneg.h", vbneg_h, MSA128HOpnd>;
-class BNEG_W_DESC : MSA_3R_DESC_BASE<"bneg.w", vbneg_w, MSA128WOpnd>;
-class BNEG_D_DESC : MSA_3R_DESC_BASE<"bneg.d", vbneg_d, MSA128DOpnd>;
+class BNEG_B_DESC : MSA_3R_DESC_BASE<"bneg.b", vbneg, MSA128BOpnd>;
+class BNEG_H_DESC : MSA_3R_DESC_BASE<"bneg.h", vbneg, MSA128HOpnd>;
+class BNEG_W_DESC : MSA_3R_DESC_BASE<"bneg.w", vbneg, MSA128WOpnd>;
+class BNEG_D_DESC : MSA_3R_DESC_BASE<"bneg.d", vbneg, MSA128DOpnd>;
 
 class BNEGI_B_DESC : MSA_BIT_B_DESC_BASE<"bnegi.b", xor, vsplat_uimm_pow2,
                                          MSA128BOpnd>;
@@ -1740,7 +1621,6 @@ class BSEL_V_DESC {
   list<dag> Pattern = [(set MSA128BOpnd:$wd,
                         (vselect MSA128BOpnd:$wd_in, MSA128BOpnd:$wt,
                                                      MSA128BOpnd:$ws))];
-  InstrItinClass Itinerary = NoItinerary;
   string Constraints = "$wd = $wd_in";
 }
 
@@ -1756,14 +1636,13 @@ class BSELI_B_DESC {
   list<dag> Pattern = [(set MSA128BOpnd:$wd, (vselect MSA128BOpnd:$wd_in,
                                                       vsplati8_uimm8:$u8,
                                                       MSA128BOpnd:$ws))];
-  InstrItinClass Itinerary = NoItinerary;
   string Constraints = "$wd = $wd_in";
 }
 
-class BSET_B_DESC : MSA_3R_DESC_BASE<"bset.b", vbset_b, MSA128BOpnd>;
-class BSET_H_DESC : MSA_3R_DESC_BASE<"bset.h", vbset_h, MSA128HOpnd>;
-class BSET_W_DESC : MSA_3R_DESC_BASE<"bset.w", vbset_w, MSA128WOpnd>;
-class BSET_D_DESC : MSA_3R_DESC_BASE<"bset.d", vbset_d, MSA128DOpnd>;
+class BSET_B_DESC : MSA_3R_DESC_BASE<"bset.b", vbset, MSA128BOpnd>;
+class BSET_H_DESC : MSA_3R_DESC_BASE<"bset.h", vbset, MSA128HOpnd>;
+class BSET_W_DESC : MSA_3R_DESC_BASE<"bset.w", vbset, MSA128WOpnd>;
+class BSET_D_DESC : MSA_3R_DESC_BASE<"bset.d", vbset, MSA128DOpnd>;
 
 class BSETI_B_DESC : MSA_BIT_B_DESC_BASE<"bseti.b", or, vsplat_uimm_pow2,
                                          MSA128BOpnd>;
@@ -1803,7 +1682,6 @@ class CFCMSA_DESC {
   dag OutOperandList = (outs GPR32Opnd:$rd);
   dag InOperandList = (ins MSA128CROpnd:$cs);
   string AsmString = "cfcmsa\t$rd, $cs";
-  InstrItinClass Itinerary = NoItinerary;
   bit hasSideEffects = 1;
   bit isMoveReg = 1;
 }
@@ -1898,7 +1776,6 @@ class CTCMSA_DESC {
   dag OutOperandList = (outs);
   dag InOperandList = (ins MSA128CROpnd:$cd, GPR32Opnd:$rs);
   string AsmString = "ctcmsa\t$cd, $rs";
-  InstrItinClass Itinerary = NoItinerary;
   bit hasSideEffects = 1;
   bit isMoveReg = 1;
 }
@@ -2310,13 +2187,11 @@ class INSVE_D_DESC : MSA_INSVE_DESC_BASE<"insve.d", insve_v2i64, uimm1, timmZExt
 
 class LD_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                    ValueType TyNode, RegisterOperand ROWD,
-                   Operand MemOpnd, ComplexPattern Addr = addrimm10,
-                   InstrItinClass itin = NoItinerary> {
+                   Operand MemOpnd, ComplexPattern Addr = addrimm10> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins MemOpnd:$addr);
   string AsmString = !strconcat(instr_asm, "\t$wd, $addr");
   list<dag> Pattern = [(set ROWD:$wd, (TyNode (OpNode Addr:$addr)))];
-  InstrItinClass Itinerary = itin;
   string DecoderMethod = "DecodeMSA128Mem";
 }
 
@@ -2343,19 +2218,17 @@ class MSA_LOAD_PSEUDO_BASE<SDPatternOperator intrinsic, RegisterOperand RO> :
 def LDR_D : MSA_LOAD_PSEUDO_BASE<int_mips_ldr_d, MSA128DOpnd>;
 def LDR_W : MSA_LOAD_PSEUDO_BASE<int_mips_ldr_w, MSA128WOpnd>;
 
-class LSA_DESC_BASE<string instr_asm, RegisterOperand RORD,
-                    InstrItinClass itin = NoItinerary> {
+class LSA_DESC_BASE<string instr_asm, RegisterOperand RORD> {
   dag OutOperandList = (outs RORD:$rd);
   dag InOperandList = (ins RORD:$rs, RORD:$rt, uimm2_plus1:$sa);
   string AsmString = !strconcat(instr_asm, "\t$rd, $rs, $rt, $sa");
   list<dag> Pattern = [(set RORD:$rd, (add RORD:$rt,
                                                 (shl RORD:$rs,
                                                      immZExt2Lsa:$sa)))];
-  InstrItinClass Itinerary = itin;
 }
 
-class LSA_DESC : LSA_DESC_BASE<"lsa", GPR32Opnd, II_LSA>;
-class DLSA_DESC : LSA_DESC_BASE<"dlsa", GPR64Opnd, II_DLSA>;
+class LSA_DESC : LSA_DESC_BASE<"lsa", GPR32Opnd>;
+class DLSA_DESC : LSA_DESC_BASE<"dlsa", GPR64Opnd>;
 
 class MADD_Q_H_DESC : MSA_3RF_4RF_DESC_BASE<"madd_q.h", int_mips_madd_q_h,
                                             MSA128HOpnd>;
@@ -2453,7 +2326,6 @@ class MOVE_V_DESC {
   dag InOperandList = (ins MSA128BOpnd:$ws);
   string AsmString = "move.v\t$wd, $ws";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = NoItinerary;
   bit isMoveReg = 1;
 }
 
@@ -2657,13 +2529,11 @@ class SRLRI_D_DESC : MSA_BIT_X_DESC_BASE<"srlri.d", int_mips_srlri_d, uimm6,
 
 class ST_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                    ValueType TyNode, RegisterOperand ROWD,
-                   Operand MemOpnd, ComplexPattern Addr = addrimm10,
-                   InstrItinClass itin = NoItinerary> {
+                   Operand MemOpnd, ComplexPattern Addr = addrimm10> {
   dag OutOperandList = (outs);
   dag InOperandList = (ins ROWD:$wd, MemOpnd:$addr);
   string AsmString = !strconcat(instr_asm, "\t$wd, $addr");
   list<dag> Pattern = [(OpNode (TyNode ROWD:$wd), Addr:$addr)];
-  InstrItinClass Itinerary = itin;
   string DecoderMethod = "DecodeMSA128Mem";
 }
 
@@ -3589,13 +3459,11 @@ def ST_FD : MSAPat<(store (v2f64 MSA128D:$ws), addrimm10lsl3:$addr),
                    (ST_D MSA128D:$ws, addrimm10lsl3:$addr)>;
 
 class MSA_FABS_PSEUDO_DESC_BASE<RegisterOperand ROWD,
-                                RegisterOperand ROWS = ROWD,
-                                InstrItinClass itin = NoItinerary> :
+                                RegisterOperand ROWS = ROWD> :
   MSAPseudo<(outs ROWD:$wd),
             (ins ROWS:$ws),
-            [(set ROWD:$wd, (fabs ROWS:$ws))]> {
-  InstrItinClass Itinerary = itin;
-}
+            [(set ROWD:$wd, (fabs ROWS:$ws))]>;
+
 def FABS_W : MSA_FABS_PSEUDO_DESC_BASE<MSA128WOpnd>,
              PseudoInstExpansion<(FMAX_A_W MSA128WOpnd:$wd, MSA128WOpnd:$ws,
                                            MSA128WOpnd:$ws)>;
@@ -3842,7 +3710,7 @@ class MSAShiftPat<SDNode Node, ValueType VT, MSAInst Insn, dag Vec> :
          (VT (Insn VT:$ws, VT:$wt))>;
 
 class MSABitPat<SDNode Node, ValueType VT, MSAInst Insn, PatFrag Frag> :
-  MSAPat<(VT (Node VT:$ws, (shl vsplat_imm_eq_1, (Frag VT:$wt)))),
+  MSAPat<(VT (Node VT:$ws, (shl (vsplat_imm_eq_1), (Frag VT:$wt)))),
          (VT (Insn VT:$ws, VT:$wt))>;
 
 multiclass MSAShiftPats<SDNode Node, string Insn> {
@@ -3861,7 +3729,7 @@ multiclass MSABitPats<SDNode Node, string Insn> {
   def : MSABitPat<Node, v16i8, !cast<MSAInst>(Insn#_B), vsplati8imm7>;
   def : MSABitPat<Node, v8i16, !cast<MSAInst>(Insn#_H), vsplati16imm15>;
   def : MSABitPat<Node, v4i32, !cast<MSAInst>(Insn#_W), vsplati32imm31>;
-  def : MSAPat<(Node v2i64:$ws, (shl (v2i64 vsplati64_imm_eq_1),
+  def : MSAPat<(Node v2i64:$ws, (shl (vsplat_imm_eq_1),
                                      (vsplati64imm63 v2i64:$wt))),
                (v2i64 (!cast<MSAInst>(Insn#_D) v2i64:$ws, v2i64:$wt))>;
 }
@@ -3872,16 +3740,16 @@ defm : MSAShiftPats<sra, "SRA">;
 defm : MSABitPats<xor, "BNEG">;
 defm : MSABitPats<or, "BSET">;
 
-def : MSAPat<(and v16i8:$ws, (vnot (shl vsplat_imm_eq_1,
+def : MSAPat<(and v16i8:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati8imm7 v16i8:$wt)))),
              (v16i8 (BCLR_B v16i8:$ws, v16i8:$wt))>;
-def : MSAPat<(and v8i16:$ws, (vnot (shl vsplat_imm_eq_1,
+def : MSAPat<(and v8i16:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati16imm15 v8i16:$wt)))),
              (v8i16 (BCLR_H v8i16:$ws, v8i16:$wt))>;
-def : MSAPat<(and v4i32:$ws, (vnot (shl vsplat_imm_eq_1,
+def : MSAPat<(and v4i32:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati32imm31 v4i32:$wt)))),
              (v4i32 (BCLR_W v4i32:$ws, v4i32:$wt))>;
-def : MSAPat<(and v2i64:$ws, (vnot (shl (v2i64 vsplati64_imm_eq_1),
+def : MSAPat<(and v2i64:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati64imm63 v2i64:$wt)))),
              (v2i64 (BCLR_D v2i64:$ws, v2i64:$wt))>;
 

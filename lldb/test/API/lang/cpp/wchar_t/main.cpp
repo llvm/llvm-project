@@ -19,8 +19,13 @@ int main (int argc, char const *argv[])
     const wchar_t *mazeltov = L"מזל טוב";
     wchar_t *ws_NULL = nullptr;
     wchar_t *ws_empty = L"";
-  	wchar_t array[200], * array_source = L"Hey, I'm a super wchar_t string, éõñž";
+    wchar_t array[200],
+        *array_source = L"Hey, I'm a super wchar_t string, éõñž";
     wchar_t wchar_zero = (wchar_t)0;
-  	memcpy(array, array_source, 39 * sizeof(wchar_t));
+    memcpy(array, array_source, 39 * sizeof(wchar_t));
+
+    wchar_t aZero[32] = L"I\0have\0zeros";
+    const wchar_t *cZero = L"I\0have\0zeros";
+
     return 0; // break here
 }

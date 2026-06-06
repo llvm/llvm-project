@@ -22,11 +22,11 @@ class Value;
 /// Note that constants cannot be cyclic, so this test is pretty easy to
 /// implement recursively.
 ///
-bool isSafeToDestroyConstant(const Constant *C);
+LLVM_ABI bool isSafeToDestroyConstant(const Constant *C);
 
-/// As we analyze each global, keep track of some information about it.  If we
-/// find out that the address of the global is taken, none of this info will be
-/// accurate.
+/// As we analyze each global or thread-local variable, keep track of some
+/// information about it.  If we find out that the address of the global is
+/// taken, none of this info will be accurate.
 struct GlobalStatus {
   /// True if the global's address is used in a comparison.
   bool IsCompared = false;
@@ -79,12 +79,12 @@ struct GlobalStatus {
   /// Set to the strongest atomic ordering requirement.
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
 
-  GlobalStatus();
+  LLVM_ABI GlobalStatus();
 
   /// Look at all uses of the global and fill in the GlobalStatus structure.  If
   /// the global has its address taken, return true to indicate we can't do
   /// anything with it.
-  static bool analyzeGlobal(const Value *V, GlobalStatus &GS);
+  LLVM_ABI static bool analyzeGlobal(const Value *V, GlobalStatus &GS);
 };
 
 } // end namespace llvm

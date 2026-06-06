@@ -1,5 +1,3 @@
-// UNSUPPORTED: system-windows
-
 // -----------------------------------------------------------------------------
 // Passing --musl
 // -----------------------------------------------------------------------------
@@ -11,7 +9,10 @@
 // CHECK000-NOT:  {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o
 // CHECK000:      "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK000:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
-// CHECK000:      "-lclang_rt.builtins-hexagon" "-lc"
+// CHECK000:      "-lc" "-lclang_rt.builtins-hexagon"
+// CHECK000:          "-L{{.*}}/Inputs/basic_linux_libcxx_tree{{/|\\\\}}lib{{/|\\\\}}v60"
+// CHECK000:          "-L{{.*}}/Inputs/basic_linux_libcxx_tree{{/|\\\\}}lib"
+
 // -----------------------------------------------------------------------------
 // Passing --musl --shared
 // -----------------------------------------------------------------------------
@@ -21,7 +22,7 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -shared %s 2>&1 | FileCheck -check-prefix=CHECK001 %s
 // CHECK001-NOT:    -dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1
 // CHECK001:        "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o"
-// CHECK001:        "-lclang_rt.builtins-hexagon" "-lc"
+// CHECK001:        "-lc" "-lclang_rt.builtins-hexagon"
 // CHECK001-NOT:    {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
 // -----------------------------------------------------------------------------
 // Passing --musl -nostdlib
@@ -33,8 +34,8 @@
 // CHECK002:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK002-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o
 // CHECK002-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// CHECK002-NOT:   "-lclang_rt.builtins-hexagon"
 // CHECK002-NOT:   "-lc"
+// CHECK002-NOT:   "-lclang_rt.builtins-hexagon"
 // -----------------------------------------------------------------------------
 // Passing --musl -nostartfiles
 // -----------------------------------------------------------------------------
@@ -45,7 +46,7 @@
 // CHECK003:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK003-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}Scrt1.o
 // CHECK003-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// CHECK003:       "-lclang_rt.builtins-hexagon" "-lc"
+// CHECK003:       "-lc" "-lclang_rt.builtins-hexagon"
 // -----------------------------------------------------------------------------
 // Passing --musl -nodefaultlibs
 // -----------------------------------------------------------------------------
@@ -55,8 +56,8 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -nodefaultlibs %s 2>&1 | FileCheck -check-prefix=CHECK004 %s
 // CHECK004:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK004:       "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
-// CHECK004-NOT:   "-lclang_rt.builtins-hexagon"
 // CHECK004-NOT:   "-lc"
+// CHECK004-NOT:   "-lclang_rt.builtins-hexagon"
 // -----------------------------------------------------------------------------
 // Passing --musl -nolibc
 // -----------------------------------------------------------------------------
@@ -97,25 +98,131 @@
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK008 %s
-// CHECK008:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK008:   "-resource-dir" "[[RESOURCE:[^"]+]]"
-// CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
-// CHECK008-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
+// CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
+// CHECK008-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
 // RUN: %clang -### --target=hexagon-unknown-linux \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK009 %s
-// CHECK009:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
-// CHECK009-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
-// CHECK009-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
+// CHECK009-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
+// CHECK009-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
 // RUN: %clang -Werror -L/tmp \
 // RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK010 %s
-// CHECK010:   InstalledDir: [[INSTALLED_DIR:.+]]
 // CHECK010-NOT:  "-lstandalone"
 // CHECK010-NOT:  crt0_standalone.o
 // CHECK010:   crt1.o
 // CHECK010:   "-L/tmp"
 // CHECK010-NOT:  "-lstandalone"
+
+// -----------------------------------------------------------------------------
+// unwindlib
+// -----------------------------------------------------------------------------
+// RUN: %clangxx --unwindlib=none \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK011 %s
+// CHECK011:   "--eh-frame-hdr"
+// CHECK011:   crt1.o
+// CHECK011-NOT:  "-lunwind"
+// CHECK011-NOT:  "-lgcc_eh"
+// CHECK012-NOT:  "-lgcc_s"
+
+
+// RUN: %clangxx --rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK012 %s
+// RUN: %clangxx \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK012 %s
+// CHECK012:   crt1.o
+// CHECK012:  "-lunwind"
+// CHECK012-NOT:  "-lgcc_eh"
+// CHECK012-NOT:  "-lgcc_s"
+
+// RUN: not %clangxx --rtlib=compiler-rt --unwindlib=libgcc \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK013 %s
+// CHECK013:  error: unsupported unwind library 'libgcc' for platform 'hexagon-unknown-linux-musl'
+// CHECK013-NOT:  "-lgcc_eh"
+// CHECK013-NOT:  "-lgcc_s"
+// CHECK013-NOT:  "-lunwind"
+
+// -----------------------------------------------------------------------------
+// PIE is the default for linux-musl
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-DEFAULT %s
+// CHECK-PIE-DEFAULT:      "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -no-pie %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NO-PIE %s
+// CHECK-NO-PIE-NOT:  "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -shared %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-SHARED %s
+// CHECK-PIE-SHARED-NOT:  "-pie"
+
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -r %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-RELOCATABLE %s
+// CHECK-PIE-RELOCATABLE-NOT:  "-pie"
+
+// -----------------------------------------------------------------------------
+// Sanitizer library paths: -fsanitize=memory
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=memory \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-MSAN %s
+// CHECK-MSAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}msan"
+// CHECK-MSAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// Sanitizer library paths: -fsanitize=address
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=address \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-ASAN %s
+// CHECK-ASAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}asan"
+// CHECK-ASAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// No sanitizer: no msan/asan library paths
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSAN %s
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}msan"
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}asan"
+// -----------------------------------------------------------------------------
+// ThinLTO passes LTO options to the linker
+// -----------------------------------------------------------------------------
+// RUN: touch %t.o
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -flto=thin -fenable-matrix \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO %s
+// CHECK-LTO: "-plugin-opt=thinlto"
+// CHECK-LTO: "-plugin-opt=-enable-matrix"

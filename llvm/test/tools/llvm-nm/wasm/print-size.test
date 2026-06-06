@@ -43,4 +43,4 @@ Sections:
         Size:            32
 
 # CHECK: 00000000 00000020 D a_data_symbol
-# CHECK: 00000001 00000000 T a_func
+# CHECK: 00000001 0000000d T a_func

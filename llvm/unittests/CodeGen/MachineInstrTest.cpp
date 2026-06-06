@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -18,12 +19,13 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gmock/gmock.h"
@@ -35,11 +37,16 @@ namespace {
 // Include helper functions to ease the manipulation of MachineFunctions.
 #include "MFCommon.inc"
 
-std::unique_ptr<MCContext> createMCContext(MCAsmInfo *AsmInfo) {
+MCTargetOptions MCOptions;
+
+std::unique_ptr<MCContext> createMCContext(const MCAsmInfo &AsmInfo) {
   Triple TheTriple(/*ArchStr=*/"", /*VendorStr=*/"", /*OSStr=*/"",
                    /*EnvironmentStr=*/"elf");
-  return std::make_unique<MCContext>(TheTriple, AsmInfo, nullptr, nullptr,
-                                     nullptr, nullptr, false);
+  static MCRegisterInfo MRI;
+  static const MCSubtargetInfo STI(TheTriple, "", "", "", {}, {}, {}, nullptr,
+                                   nullptr, nullptr, nullptr, nullptr, nullptr);
+  return std::make_unique<MCContext>(TheTriple, AsmInfo, MRI, STI, nullptr,
+                                     false);
 }
 
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly
@@ -221,10 +228,8 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   raw_string_ostream OS(str);
   MI->print(OS, /*IsStandalone*/true, /*SkipOpers*/false, /*SkipDebugLoc*/false,
             /*AddNewLine*/false);
-  ASSERT_TRUE(
-      StringRef(OS.str()).startswith("$noreg = UNKNOWN debug-location "));
-  ASSERT_TRUE(
-      StringRef(OS.str()).endswith("filename:1:5"));
+  ASSERT_TRUE(StringRef(str).starts_with("$noreg = UNKNOWN debug-location "));
+  ASSERT_TRUE(StringRef(str).ends_with("filename:1:5"));
 }
 
 TEST(MachineInstrSpan, DistanceBegin) {
@@ -268,22 +273,24 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
-  auto MC = createMCContext(&MAI);
+  auto MAI = MCAsmInfo(MCOptions);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *HAM = MDNode::getDistinct(Ctx, {});
+  MDNode *PCS = MDNode::getDistinct(Ctx, {});
+  MDNode *MMRA = MMRAMetadata::getTagMD(Ctx, "foo", "bar");
 
   ASSERT_TRUE(MI->memoperands_empty());
   ASSERT_FALSE(MI->getPreInstrSymbol());
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setMemRefs(*MF, MMOs);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -291,6 +298,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setPreInstrSymbol(*MF, Sym1);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -298,6 +306,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setPostInstrSymbol(*MF, Sym2);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -305,6 +314,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setHeapAllocMarker(*MF, HAM);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -312,6 +322,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 
   MI->setPCSections(*MF, PCS);
   ASSERT_TRUE(MI->memoperands().size() == 1);
@@ -319,6 +330,21 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_FALSE(MI->getMMRAMetadata());
+
+  MI->setMMRAMetadata(*MF, MMRA);
+  ASSERT_TRUE(MI->memoperands().size() == 1);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
+
+  // Check with nothing but MMRAs.
+  MachineInstr *MMRAMI = MF->CreateMachineInstr(MCID, DebugLoc());
+  ASSERT_FALSE(MMRAMI->getMMRAMetadata());
+  MMRAMI->setMMRAMetadata(*MF, MMRA);
+  ASSERT_TRUE(MMRAMI->getMMRAMetadata() == MMRA);
 }
 
 TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
@@ -328,22 +354,26 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
-  auto MC = createMCContext(&MAI);
+  auto MAI = MCAsmInfo(MCOptions);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *HAM = MDNode::getDistinct(Ctx, {});
+  MDNode *PCS = MDNode::getDistinct(Ctx, {});
+
+  MDNode *MMRA1 = MMRAMetadata::getTagMD(Ctx, "foo", "bar");
+  MDNode *MMRA2 = MMRAMetadata::getTagMD(Ctx, "bar", "bux");
 
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
   MI->setPostInstrSymbol(*MF, Sym2);
   MI->setHeapAllocMarker(*MF, HAM);
   MI->setPCSections(*MF, PCS);
+  MI->setMMRAMetadata(*MF, MMRA1);
 
   MMOs.push_back(MMO);
 
@@ -353,6 +383,7 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA1);
 
   MI->setPostInstrSymbol(*MF, Sym1);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -360,6 +391,15 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym1);
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA1);
+
+  MI->setMMRAMetadata(*MF, MMRA2);
+  ASSERT_TRUE(MI->memoperands().size() == 2);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA2);
 }
 
 TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
@@ -369,8 +409,8 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
-  auto MC = createMCContext(&MAI);
+  auto MAI = MCAsmInfo(MCOptions);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
@@ -378,14 +418,17 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *HAM = MDNode::getDistinct(Ctx, {});
+  MDNode *PCS = MDNode::getDistinct(Ctx, {});
+
+  MDNode *MMRA = MDTuple::get(Ctx, {});
 
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
   MI->setPostInstrSymbol(*MF, Sym2);
   MI->setHeapAllocMarker(*MF, HAM);
   MI->setPCSections(*MF, PCS);
+  MI->setMMRAMetadata(*MF, MMRA);
 
   MI->setPostInstrSymbol(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -393,6 +436,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
 
   MI->setHeapAllocMarker(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -400,6 +444,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_TRUE(MI->getPCSections() == PCS);
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
 
   MI->setPCSections(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -407,6 +452,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
 
   MI->setPreInstrSymbol(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
@@ -414,6 +460,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
 
   MI->setMemRefs(*MF, {});
   ASSERT_TRUE(MI->memoperands_empty());
@@ -421,6 +468,15 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
   ASSERT_FALSE(MI->getPCSections());
+  ASSERT_TRUE(MI->getMMRAMetadata() == MMRA);
+
+  MI->setMMRAMetadata(*MF, nullptr);
+  ASSERT_TRUE(MI->memoperands_empty());
+  ASSERT_FALSE(MI->getPreInstrSymbol());
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
+  ASSERT_FALSE(MI->getMMRAMetadata());
 }
 
 TEST(MachineInstrDebugValue, AddDebugValueOperand) {
@@ -455,9 +511,13 @@ MATCHER_P(HasMIMetadata, MIMD, "") {
 
 TEST(MachineInstrBuilder, BuildMI) {
   LLVMContext Ctx;
-  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *DI = MDNode::getDistinct(Ctx, std::nullopt);
-  DebugLoc DL(DI);
+  MDNode *PCS = MDNode::getDistinct(Ctx, {});
+  DIFile *DIF = DIFile::getDistinct(Ctx, "filename", "");
+  DISubprogram *DIS = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", DIF, 0, nullptr, 0, nullptr, 0, 0, DINode::FlagZero,
+      DISubprogram::SPFlagZero, nullptr);
+  DILocation *DIL = DILocation::get(Ctx, 1, 5, DIS);
+  DebugLoc DL(DIL);
   MIMetadata MIMD(DL, PCS);
   EXPECT_EQ(MIMD.getDL(), DL);
   EXPECT_EQ(MIMD.getPCSections(), PCS);
@@ -477,5 +537,147 @@ TEST(MachineInstrBuilder, BuildMI) {
 }
 
 static_assert(std::is_trivially_copyable_v<MCOperand>, "trivially copyable");
+
+TEST(MachineInstrTest, SpliceOperands) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  std::unique_ptr<MachineFunction> MF = createMachineFunction(Ctx, Mod);
+  MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
+  MCInstrDesc MCID = {TargetOpcode::INLINEASM,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic),
+                      0};
+  MachineInstr *MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->begin(), MI);
+  MI->addOperand(MachineOperand::CreateImm(0));
+  MI->addOperand(MachineOperand::CreateImm(1));
+  MI->addOperand(MachineOperand::CreateImm(2));
+  MI->addOperand(MachineOperand::CreateImm(3));
+  MI->addOperand(MachineOperand::CreateImm(4));
+
+  MI->removeOperand(1);
+  EXPECT_EQ(MI->getOperand(1).getImm(), MachineOperand::CreateImm(2).getImm());
+  EXPECT_EQ(MI->getNumOperands(), 4U);
+
+  MachineOperand Ops[] = {
+      MachineOperand::CreateImm(42),   MachineOperand::CreateImm(1024),
+      MachineOperand::CreateImm(2048), MachineOperand::CreateImm(4096),
+      MachineOperand::CreateImm(8192),
+  };
+  auto *It = MI->operands_begin();
+  ++It;
+  MI->insert(It, Ops);
+
+  EXPECT_EQ(MI->getNumOperands(), 9U);
+  EXPECT_EQ(MI->getOperand(0).getImm(), MachineOperand::CreateImm(0).getImm());
+  EXPECT_EQ(MI->getOperand(1).getImm(), MachineOperand::CreateImm(42).getImm());
+  EXPECT_EQ(MI->getOperand(2).getImm(),
+            MachineOperand::CreateImm(1024).getImm());
+  EXPECT_EQ(MI->getOperand(3).getImm(),
+            MachineOperand::CreateImm(2048).getImm());
+  EXPECT_EQ(MI->getOperand(4).getImm(),
+            MachineOperand::CreateImm(4096).getImm());
+  EXPECT_EQ(MI->getOperand(5).getImm(),
+            MachineOperand::CreateImm(8192).getImm());
+  EXPECT_EQ(MI->getOperand(6).getImm(), MachineOperand::CreateImm(2).getImm());
+  EXPECT_EQ(MI->getOperand(7).getImm(), MachineOperand::CreateImm(3).getImm());
+  EXPECT_EQ(MI->getOperand(8).getImm(), MachineOperand::CreateImm(4).getImm());
+
+  // test tied operands
+  MCRegisterClass MRC{
+      0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true};
+  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
+  // MachineRegisterInfo will be very upset if these registers aren't
+  // allocatable.
+  assert(RC.isAllocatable() && "unusable TargetRegisterClass");
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  Register A = MRI.createVirtualRegister(&RC);
+  Register B = MRI.createVirtualRegister(&RC);
+  MI->getOperand(0).ChangeToRegister(A, /*isDef=*/true);
+  MI->getOperand(1).ChangeToRegister(B, /*isDef=*/false);
+  MI->tieOperands(0, 1);
+  EXPECT_TRUE(MI->getOperand(0).isTied());
+  EXPECT_TRUE(MI->getOperand(1).isTied());
+  EXPECT_EQ(MI->findTiedOperandIdx(0), 1U);
+  EXPECT_EQ(MI->findTiedOperandIdx(1), 0U);
+  MI->insert(&MI->getOperand(1), {MachineOperand::CreateImm(7)});
+  EXPECT_TRUE(MI->getOperand(0).isTied());
+  EXPECT_TRUE(MI->getOperand(1).isImm());
+  EXPECT_TRUE(MI->getOperand(2).isTied());
+  EXPECT_EQ(MI->findTiedOperandIdx(0), 2U);
+  EXPECT_EQ(MI->findTiedOperandIdx(2), 0U);
+  EXPECT_EQ(MI->getOperand(0).getReg(), A);
+  EXPECT_EQ(MI->getOperand(2).getReg(), B);
+
+  // bad inputs
+  EXPECT_EQ(MI->getNumOperands(), 10U);
+  MI->insert(MI->operands_begin(), {});
+  EXPECT_EQ(MI->getNumOperands(), 10U);
+}
+
+// Checks the iterator returned by MacineInstr::eraseFromParent().
+TEST(MachineInstr, EraseFromParentReturnedIterator) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto MBB = MF->CreateMachineBasicBlock();
+
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MachineInstr *MI1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1);
+  MachineInstr *MI2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2);
+
+  MachineBasicBlock::iterator It1 = MI1->eraseFromParent();
+  EXPECT_EQ(It1, MI2->getIterator());
+  MachineBasicBlock::iterator It2 = MI2->eraseFromParent();
+  EXPECT_EQ(It2, MBB->end());
+}
+
+// Checks the iterator returned by MacineInstr::eraseFromParent() when
+// instructions are in bundles.
+TEST(MachineInstr, EraseFromParentReturnedIteratorBundle) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto MBB = MF->CreateMachineBasicBlock();
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+  // Bundle1 {
+  //   MI1B1
+  //   MI2B1
+  // }
+  // Bundle2 {
+  //   MI1B2
+  //   MI2B2
+  // }
+  MachineInstr *MI1B1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1B1);
+  MachineInstr *MI2B1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2B1);
+  MI2B1->bundleWithPred();
+
+  MachineInstr *MI1B2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1B2);
+  MachineInstr *MI2B2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2B2);
+  MI2B2->bundleWithPred();
+
+  // MI1B1->eraseFromParent() erases the whole Bundle1.
+  // The returned iterator matches the head of Bundle2.
+  MachineBasicBlock::iterator It1 = MI1B1->eraseFromParent();
+  EXPECT_EQ(It1, MI1B2->getIterator());
+
+  // Erasing MI1B2 erases the whole Bundle2.
+  MachineBasicBlock::iterator It2 = MI1B2->eraseFromParent();
+  EXPECT_EQ(It2, MBB->end());
+}
 
 } // end namespace

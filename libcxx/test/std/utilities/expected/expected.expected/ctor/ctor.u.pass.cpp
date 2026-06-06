@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -13,6 +14,7 @@
 // Constraints:
 // - is_same_v<remove_cvref_t<U>, in_place_t> is false; and
 // - is_same_v<expected, remove_cvref_t<U>> is false; and
+// - is_same_v<remove_cvref_t<U>, unexpect_t> is false; and
 // - remove_cvref_t<U> is not a specialization of unexpected; and
 // - is_constructible_v<T, U> is true.
 //
@@ -29,6 +31,7 @@
 
 #include "MoveOnly.h"
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test Constraints:
 static_assert(std::is_constructible_v<std::expected<int, int>, int>);
@@ -43,6 +46,16 @@ static_assert(!std::is_constructible_v<std::expected<FromJustInplace, int>, std:
 // is_same_v<expected, remove_cvref_t<U>>
 // Note that result is true because it is covered by the constructors that take expected
 static_assert(std::is_constructible_v<std::expected<int, int>, std::expected<int, int>&>);
+
+struct T {
+  explicit T(auto) {}
+};
+struct E {
+  E(int) {}
+};
+
+// is_same_v<remove_cvref_t<U>, unexpect_t> is false;
+static_assert(!std::is_constructible_v<std::expected<T, E>, std::unexpect_t>);
 
 // remove_cvref_t<U> is a specialization of unexpected
 // Note that result is true because it is covered by the constructors that take unexpected
@@ -67,27 +80,38 @@ struct CopyOnly {
   friend constexpr bool operator==(const CopyOnly& mi, int ii) { return mi.i == ii; }
 };
 
+struct MoveOnly2 {
+  int j;
+  bool used_move1 = false;
+  bool used_move2 = false;
+
+  constexpr explicit MoveOnly2(int jj) : j(jj) {}
+  constexpr MoveOnly2(const MoveOnly2&) = delete;
+  constexpr MoveOnly2(MoveOnly2&& m) : j(m.j), used_move1(true) {}
+  constexpr MoveOnly2(const MoveOnly2&& m) : j(m.j), used_move2(true) {}
+};
+
 struct BaseError {};
 struct DerivedError : BaseError {};
 
-template <class T>
+template <class T, class E = int>
 constexpr void testInt() {
-  std::expected<T, int> e(5);
+  std::expected<T, E> e(5);
   assert(e.has_value());
   assert(e.value() == 5);
 }
 
-template <class T>
+template <class T, class E = int>
 constexpr void testLValue() {
   T t(5);
-  std::expected<T, int> e(t);
+  std::expected<T, E> e(t);
   assert(e.has_value());
   assert(e.value() == 5);
 }
 
-template <class T>
+template <class T, class E = int>
 constexpr void testRValue() {
-  std::expected<T, int> e(T(5));
+  std::expected<T, E> e(T(5));
   assert(e.has_value());
   assert(e.value() == 5);
 }
@@ -96,10 +120,13 @@ constexpr bool test() {
   testInt<int>();
   testInt<CopyOnly>();
   testInt<MoveOnly>();
+  testInt<TailClobberer<0>, bool>();
   testLValue<int>();
   testLValue<CopyOnly>();
+  testLValue<TailClobberer<0>, bool>();
   testRValue<int>();
   testRValue<MoveOnly>();
+  testRValue<TailClobberer<0>, bool>();
 
   // Test default template argument.
   // Without it, the template parameter cannot be deduced from an initializer list
@@ -148,13 +175,27 @@ constexpr bool test() {
     assert(e2.has_value());
     assert(!e2.value()); // yes, e2 holds "false" since LWG3836
   }
+
+  // Check move constructor selection
+  {
+    MoveOnly2 t{1};
+    std::expected<MoveOnly2, BaseError> e1(std::move(t));
+    assert(e1.has_value());
+    assert(e1.value().used_move1 == true);
+    assert(e1.value().j == 1);
+  }
+  {
+    const MoveOnly2 t2{2};
+    std::expected<MoveOnly2, BaseError> e1(std::move(t2));
+    assert(e1.has_value());
+    assert(e1.value().used_move2 == true);
+    assert(e1.value().j == 2);
+  }
   return true;
 }
 
 void testException() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  struct Except {};
-
   struct Throwing {
     Throwing(int) { throw Except{}; };
   };

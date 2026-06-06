@@ -5,7 +5,7 @@ int surrogate(int);
 struct Incomplete;  // expected-note{{forward declaration of 'Incomplete'}} \
                     // expected-note {{forward declaration of 'Incomplete'}}
 
-struct X {
+struct X { // expected-note{{defined here}}
   X() = default;  // expected-note{{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
   X(const X&) = default;  // expected-note{{candidate constructor not viable: no known conversion from 'bool' to 'const X' for 1st argument}}
   X(bool b) __attribute__((enable_if(b, "chosen when 'b' is true")));  // expected-note{{candidate disabled: chosen when 'b' is true}}
@@ -560,6 +560,54 @@ namespace IgnoreUnusedArgSideEffects {
   float &h() __attribute__((enable_if((B(), true), "")));
   float &x = h();
 #endif
+}
+
+namespace GH175895 {
+
+using int32_t = int;
+
+struct wxuin_t {
+  wxuin_t() {}
+  wxuin_t(int32_t v) __attribute__((enable_if(v == 0, "Expect only constant expressions"))) {}
+};
+
+struct wxuin64_t {
+  wxuin64_t() {}
+
+  explicit operator wxuin_t() const { return {}; }
+
+private:
+  operator int() const { return 0; }
+};
+
+struct wxuin64_t_deleted {
+  wxuin64_t_deleted() {}
+
+  explicit operator wxuin_t() const { return {}; }
+
+  operator int() = delete;
+};
+
+void main() {
+  wxuin64_t uin64{};
+  wxuin64_t_deleted deleted{};
+  auto b = static_cast<wxuin_t>(uin64);
+  auto c = static_cast<wxuin_t>(deleted);
+}
+
+namespace Regression {
+
+const int kMaxNumber = 1;
+struct Arg {
+  Arg(int);
+};
+void PlaceholderBitmask();
+void Substitute(Arg) __attribute__((enable_if(PlaceholderBitmask, ""))) {
+  (void)[] { Substitute(kMaxNumber); };
+}
+
+}
+
 }
 
 namespace DefaultArgs {

@@ -20,15 +20,16 @@
 
 namespace __asan {
 
-ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
+alignas(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;
 static const char kInterceptorName[] = "interceptor_name";
 static const char kInterceptorViaFunction[] = "interceptor_via_fun";
 static const char kInterceptorViaLibrary[] = "interceptor_via_lib";
 static const char kODRViolation[] = "odr_violation";
+static const char kAllocDeallocMismatch[] = "alloc_dealloc_mismatch";
 static const char *kSuppressionTypes[] = {
     kInterceptorName, kInterceptorViaFunction, kInterceptorViaLibrary,
-    kODRViolation};
+    kODRViolation, kAllocDeallocMismatch};
 
 SANITIZER_INTERFACE_WEAK_DEF(const char *, __asan_default_suppressions, void) {
   return "";
@@ -39,8 +40,7 @@ void InitializeSuppressions() {
   suppression_ctx = new (suppression_placeholder)
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
   suppression_ctx->ParseFromFile(flags()->suppressions);
-  if (&__asan_default_suppressions)
-    suppression_ctx->Parse(__asan_default_suppressions());
+  suppression_ctx->Parse(__asan_default_suppressions());
 }
 
 bool IsInterceptorSuppressed(const char *interceptor_name) {
@@ -63,6 +63,44 @@ bool IsODRViolationSuppressed(const char *global_var_name) {
   return suppression_ctx->Match(global_var_name, kODRViolation, &s);
 }
 
+bool IsAddrSuppressed(const char *suppression, Symbolizer *symbolizer,
+                      uptr addr) {
+  CHECK(suppression_ctx);
+  CHECK(suppression_ctx->HasSuppressionType(suppression));
+  CHECK(symbolizer);
+  SymbolizedStackHolder symbolized_stack(symbolizer->SymbolizePC(addr));
+  const SymbolizedStack *frames = symbolized_stack.get();
+  CHECK(frames);
+  for (const SymbolizedStack *cur = frames; cur; cur = cur->next) {
+    const char *function_name = cur->info.function;
+    if (!function_name) {
+      continue;
+    }
+    // Match suppressions.
+    Suppression *s;
+    if (suppression_ctx->Match(function_name, suppression, &s)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsAllocDeallocMismatchSuppressed(const StackTrace *stack) {
+  CHECK(suppression_ctx);
+  if (!suppression_ctx->HasSuppressionType(kAllocDeallocMismatch)) {
+    return false;
+  }
+  Symbolizer *symbolizer = Symbolizer::GetOrInit();
+  for (uptr i = 0; i < stack->size && stack->trace[i]; i++) {
+    uptr addr = stack->trace[i];
+    // Match "alloc_dealloc_mismatch" suppressions.
+    if (IsAddrSuppressed(kAllocDeallocMismatch, symbolizer, addr)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool IsStackTraceSuppressed(const StackTrace *stack) {
   if (!HaveStackTraceBasedSuppressions())
     return false;
@@ -81,21 +119,10 @@ bool IsStackTraceSuppressed(const StackTrace *stack) {
     }
 
     if (suppression_ctx->HasSuppressionType(kInterceptorViaFunction)) {
-      SymbolizedStack *frames = symbolizer->SymbolizePC(addr);
-      CHECK(frames);
-      for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
-        const char *function_name = cur->info.function;
-        if (!function_name) {
-          continue;
-        }
-        // Match "interceptor_via_fun" suppressions.
-        if (suppression_ctx->Match(function_name, kInterceptorViaFunction,
-                                   &s)) {
-          frames->ClearAll();
-          return true;
-        }
+      // Match "interceptor_via_func" suppressions.
+      if (IsAddrSuppressed(kInterceptorViaFunction, symbolizer, addr)) {
+        return true;
       }
-      frames->ClearAll();
     }
   }
   return false;

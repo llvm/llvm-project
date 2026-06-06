@@ -32,23 +32,43 @@
    - xxHash source repository : https://github.com/Cyan4973/xxHash
 */
 
-/* based on revision d2df04efcbef7d7f6886d345861e5dfda4edacc1 Removed
- * everything but a simple interface for computing XXh64. */
-
 #ifndef LLVM_SUPPORT_XXHASH_H
 #define LLVM_SUPPORT_XXHASH_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
-uint64_t xxHash64(llvm::StringRef Data);
-uint64_t xxHash64(llvm::ArrayRef<uint8_t> Data);
 
-uint64_t xxh3_64bits(ArrayRef<uint8_t> data);
-inline uint64_t xxh3_64bits(StringRef data) {
-  return xxh3_64bits(ArrayRef(data.bytes_begin(), data.size()));
-}
-}
+/// XXH3's 64-bit variant. Inline ArrayRef and StringRef overloads live in
+/// llvm/ADT/ArrayRef.h and llvm/ADT/StringRef.h.
+LLVM_ABI uint64_t xxh3_64bits(const uint8_t *data, size_t len);
+
+/*-**********************************************************************
+ *  XXH3 128-bit variant
+ ************************************************************************/
+
+/*!
+ * @brief The return value from 128-bit hashes.
+ *
+ * Stored in little endian order, although the fields themselves are in native
+ * endianness.
+ */
+struct XXH128_hash_t {
+  uint64_t low64;  /*!< `value & 0xFFFFFFFFFFFFFFFF` */
+  uint64_t high64; /*!< `value >> 64` */
+
+  /// Convenience equality check operator.
+  bool operator==(const XXH128_hash_t rhs) const {
+    return low64 == rhs.low64 && high64 == rhs.high64;
+  }
+};
+
+/// XXH3's 128-bit variant. Inline ArrayRef overload lives in
+/// llvm/ADT/ArrayRef.h.
+LLVM_ABI XXH128_hash_t xxh3_128bits(const uint8_t *data, size_t len);
+
+} // namespace llvm
 
 #endif

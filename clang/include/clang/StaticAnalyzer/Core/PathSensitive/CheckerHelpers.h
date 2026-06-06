@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines CheckerVisitor.
+//  This file defines various utilities used by checkers.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CHECKERHELPERS_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CHECKERHELPERS_H
 
+#include "ProgramState_Fwd.h"
+#include "SVals.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -109,6 +111,12 @@ public:
 
 OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
                                                  bool IsBinary);
+
+std::optional<SVal> getPointeeVal(SVal PtrSVal, ProgramStateRef State);
+
+/// Returns true if declaration \p D is in std namespace or any nested namespace
+/// or class scope.
+bool isWithinStdNamespace(const Decl *D);
 
 } // namespace ento
 

@@ -7,8 +7,8 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSignals
 class HandleSegvTestCase(TestBase):
-    @skipIfWindows  # signals do not exist on Windows
     @skipIfDarwin
     @expectedFailureNetBSD
     def test_inferior_handle_sigsegv(self):
@@ -29,8 +29,8 @@ class HandleSegvTestCase(TestBase):
         self.assertTrue(
             thread and thread.IsValid(), "Thread should be stopped due to a signal"
         )
-        self.assertTrue(
-            thread.GetStopReasonDataCount() >= 1, "There was data in the event."
+        self.assertGreaterEqual(
+            thread.GetStopReasonDataCount(), 1, "There was data in the event."
         )
         self.assertEqual(
             thread.GetStopReasonDataAtIndex(0), signo, "The stop signal was SIGSEGV"

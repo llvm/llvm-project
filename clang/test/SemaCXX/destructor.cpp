@@ -58,7 +58,7 @@ struct D {
 
 struct D2 {
   void ~D2() { } //                          \
-  // expected-error{{destructor cannot have a return type}}  
+  // expected-error{{destructor cannot have a return type}}
 };
 
 
@@ -86,7 +86,7 @@ struct G {
 G::~G() { }
 
 struct H {
-  ~H(void) { } 
+  ~H(void) { }
 };
 
 struct X {};
@@ -103,7 +103,7 @@ namespace PR6421 {
     template<typename U>
     void foo(T t) // expected-error{{variable has incomplete type}}
     { }
-    
+
     void disconnect()
     {
       T* t;
@@ -364,7 +364,7 @@ struct __is_destructor_wellformed {
                        decltype(_Tp1().~_Tp1())>::type);
   template <typename _Tp1>
   static __two __test (...);
-              
+
   static const bool value = sizeof(__test<_Tp>(12)) == sizeof(char);
 };
 
@@ -431,15 +431,15 @@ namespace PR9238 {
 }
 
 namespace PR7900 {
-  struct A { // expected-note 2{{type 'PR7900::A' found by destructor name lookup}}
+  struct A { // expected-note 2{{type 'A' found by destructor name lookup}}
   };
   struct B : public A {
   };
   void foo() {
     B b;
     b.~B();
-    b.~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
-    (&b)->~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
+    b.~A(); // expected-error{{destructor type 'A' in object destruction expression does not match the type 'B' of the object being destroyed}}
+    (&b)->~A(); // expected-error{{destructor type 'A' in object destruction expression does not match the type 'B' of the object being destroyed}}
   }
 }
 
@@ -553,15 +553,77 @@ namespace crash_on_invalid_base_dtor {
 struct Test {
   virtual ~Test();
 };
-struct Baz : public Test { // expected-warning {{non-virtual destructor}}
+struct Baz : public Test {
   Baz() {}
-  ~Baz() = defaul; // expected-error {{undeclared identifier 'defaul'}} \
-                   // expected-error {{initializer on function}} \
-                   // expected-note {{overridden virtual function is here}}
+  ~Baz() = defaul; // expected-error {{undeclared identifier 'defaul'}}
 };
-struct Foo : public Baz { // expected-error {{cannot override a non-deleted function}} \
-                          // expected-note {{destructor of 'Foo' is implicitly deleted}}
+struct Foo : public Baz {
   Foo() {}
+};
+}
+
+namespace GH89544 {
+class Foo {
+  ~Foo() = {}
+  // expected-error@-1 {{initializer on function does not look like a pure-specifier}}
+  // expected-error@-2 {{expected ';' at end of declaration list}}
+};
+
+static_assert(!__is_trivially_constructible(Foo), "");
+static_assert(!__is_trivially_constructible(Foo, const Foo &), "");
+static_assert(!__is_trivially_constructible(Foo, Foo &&), "");
+} // namespace GH89544
+
+namespace GH97230 {
+struct X {
+  ~X() = defaul; // expected-error {{use of undeclared identifier 'defaul'}}
+};
+struct Y : X {} y1{ };
+}
+
+namespace GH121706 {
+struct A {
+  *&~A(); // expected-error {{invalid destructor declaration}}
+};
+
+struct B {
+  *&&~B(); // expected-error {{invalid destructor declaration}}
+};
+
+struct C {
+  *const ~C(); // expected-error {{invalid destructor declaration}}
+};
+
+struct D {
+  *const * ~D(); // expected-error {{invalid destructor declaration}}
+};
+
+struct E {
+  *E::*~E(); // expected-error {{invalid destructor declaration}}
+};
+
+struct F {
+  *F::*const ~F(); // expected-error {{invalid destructor declaration}}
+};
+
+struct G {
+  ****~G(); // expected-error {{invalid destructor declaration}}
+};
+
+struct H {
+  **~H(); // expected-error {{invalid destructor declaration}}
+};
+
+struct I {
+  *~I(); // expected-error {{invalid destructor declaration}}
+};
+
+struct J {
+  *&~J(); // expected-error {{invalid destructor declaration}}
+};
+
+struct K {
+  **&&~K(); // expected-error {{invalid destructor declaration}}
 };
 }
 

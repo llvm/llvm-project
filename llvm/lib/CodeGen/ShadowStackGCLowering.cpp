@@ -15,13 +15,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -36,11 +39,12 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -50,43 +54,78 @@ using namespace llvm;
 
 namespace {
 
-class ShadowStackGCLowering : public FunctionPass {
+class ShadowStackGCLoweringImpl {
   /// RootChain - This is the global linked-list that contains the chain of GC
   /// roots.
   GlobalVariable *Head = nullptr;
 
-  /// StackEntryTy - Abstract type of a link in the shadow stack.
-  StructType *StackEntryTy = nullptr;
   StructType *FrameMapTy = nullptr;
 
   /// Roots - GC roots in the current function. Each is a pair of the
   /// intrinsic call and its corresponding alloca.
   std::vector<std::pair<CallInst *, AllocaInst *>> Roots;
 
+  /// RootOffsets - Byte offsets and sizes of each root within the frame.
+  /// Each element is a pair of (offset, size).
+  std::vector<std::pair<uint64_t, uint64_t>> RootOffsets;
+
+public:
+  ShadowStackGCLoweringImpl() = default;
+
+  bool doInitialization(Module &M);
+  bool runOnFunction(Function &F, DomTreeUpdater *DTU);
+
+private:
+  bool IsNullValue(Value *V);
+  Constant *GetFrameMap(Function &F, uint64_t FrameSizeInPtrs);
+  std::pair<uint64_t, Align> ComputeFrameLayout(Function &F);
+  void CollectRoots(Function &F);
+};
+
+class ShadowStackGCLowering : public FunctionPass {
+  ShadowStackGCLoweringImpl Impl;
+
 public:
   static char ID;
 
   ShadowStackGCLowering();
 
-  bool doInitialization(Module &M) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnFunction(Function &F) override;
-
-private:
-  bool IsNullValue(Value *V);
-  Constant *GetFrameMap(Function &F);
-  Type *GetConcreteStackEntryType(Function &F);
-  void CollectRoots(Function &F);
-
-  static GetElementPtrInst *CreateGEP(LLVMContext &Context, IRBuilder<> &B,
-                                      Type *Ty, Value *BasePtr, int Idx1,
-                                      const char *Name);
-  static GetElementPtrInst *CreateGEP(LLVMContext &Context, IRBuilder<> &B,
-                                      Type *Ty, Value *BasePtr, int Idx1, int Idx2,
-                                      const char *Name);
+  bool doInitialization(Module &M) override { return Impl.doInitialization(M); }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+  }
+  bool runOnFunction(Function &F) override {
+    std::optional<DomTreeUpdater> DTU;
+    if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+      DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
+    return Impl.runOnFunction(F, DTU ? &*DTU : nullptr);
+  }
 };
 
 } // end anonymous namespace
+
+PreservedAnalyses ShadowStackGCLoweringPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
+  auto &Map = MAM.getResult<CollectorMetadataAnalysis>(M);
+  if (!Map.contains("shadow-stack"))
+    return PreservedAnalyses::all();
+
+  ShadowStackGCLoweringImpl Impl;
+  bool Changed = Impl.doInitialization(M);
+  for (auto &F : M) {
+    auto &FAM =
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+    auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    Changed |= Impl.runOnFunction(F, DT ? &DTU : nullptr);
+  }
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
 
 char ShadowStackGCLowering::ID = 0;
 char &llvm::ShadowStackGCLoweringID = ShadowStackGCLowering::ID;
@@ -100,13 +139,12 @@ INITIALIZE_PASS_END(ShadowStackGCLowering, DEBUG_TYPE,
 
 FunctionPass *llvm::createShadowStackGCLoweringPass() { return new ShadowStackGCLowering(); }
 
-ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {
-  initializeShadowStackGCLoweringPass(*PassRegistry::getPassRegistry());
-}
+ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {}
 
-Constant *ShadowStackGCLowering::GetFrameMap(Function &F) {
+Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F,
+                                                 uint64_t FrameSizeInPtrs) {
   // doInitialization creates the abstract type of this value.
-  Type *VoidPtr = Type::getInt8PtrTy(F.getContext());
+  Type *VoidPtr = PointerType::getUnqual(F.getContext());
 
   // Truncate the ShadowStackDescriptor if some metadata is null.
   unsigned NumMeta = 0;
@@ -115,14 +153,14 @@ Constant *ShadowStackGCLowering::GetFrameMap(Function &F) {
     Constant *C = cast<Constant>(Roots[I].first->getArgOperand(1));
     if (!C->isNullValue())
       NumMeta = I + 1;
-    Metadata.push_back(ConstantExpr::getBitCast(C, VoidPtr));
+    Metadata.push_back(C);
   }
   Metadata.resize(NumMeta);
 
   Type *Int32Ty = Type::getInt32Ty(F.getContext());
 
   Constant *BaseElts[] = {
-      ConstantInt::get(Int32Ty, Roots.size(), false),
+      ConstantInt::get(Int32Ty, FrameSizeInPtrs, false),
       ConstantInt::get(Int32Ty, NumMeta, false),
   };
 
@@ -148,32 +186,57 @@ Constant *ShadowStackGCLowering::GetFrameMap(Function &F) {
   //        to be a ModulePass (which means it cannot be in the 'llc' pipeline
   //        (which uses a FunctionPassManager (which segfaults (not asserts) if
   //        provided a ModulePass))).
-  Constant *GV = new GlobalVariable(*F.getParent(), FrameMap->getType(), true,
+  return new GlobalVariable(*F.getParent(), FrameMap->getType(), true,
                                     GlobalVariable::InternalLinkage, FrameMap,
                                     "__gc_" + F.getName());
-
-  Constant *GEPIndices[2] = {
-      ConstantInt::get(Type::getInt32Ty(F.getContext()), 0),
-      ConstantInt::get(Type::getInt32Ty(F.getContext()), 0)};
-  return ConstantExpr::getGetElementPtr(FrameMap->getType(), GV, GEPIndices);
 }
 
-Type *ShadowStackGCLowering::GetConcreteStackEntryType(Function &F) {
-  // doInitialization creates the generic version of this type.
-  std::vector<Type *> EltTys;
-  EltTys.push_back(StackEntryTy);
-  for (const std::pair<CallInst *, AllocaInst *> &Root : Roots)
-    EltTys.push_back(Root.second->getAllocatedType());
+std::pair<uint64_t, Align>
+ShadowStackGCLoweringImpl::ComputeFrameLayout(Function &F) {
+  // Compute the layout of the shadow stack frame using byte offsets.
+  // Layout: [Next ptr | Map ptr | Root 0 | Root 1 | ... | Root N]
 
-  return StructType::create(EltTys, ("gc_stackentry." + F.getName()).str());
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  uint64_t PtrSize = DL.getPointerSize(0);
+  Align PtrAlign = DL.getPointerABIAlignment(0);
+
+  RootOffsets.clear();
+  Align MaxAlign = PtrAlign;
+
+  // Offset 0: Next pointer
+  // Offset PtrSize: Map pointer
+  uint64_t Offset = 2 * PtrSize;
+
+  // Compute offsets and sizes for each root
+  for (const std::pair<CallInst *, AllocaInst *> &Root : Roots) {
+    AllocaInst *AI = Root.second;
+    std::optional<TypeSize> RootSize = AI->getAllocationSize(DL);
+    if (!RootSize || !RootSize->isFixed())
+      reportFatalUsageError(
+          "Intrinsic::gcroot requires a fixed size stack object");
+    uint64_t Size = RootSize->getFixedValue();
+    Align RootAlign = AI->getAlign();
+    MaxAlign = std::max(MaxAlign, RootAlign);
+
+    // Align the offset for this root
+    uint64_t AlignedOffset = alignTo(Offset, RootAlign);
+
+    // Store both offset and size as a pair
+    RootOffsets.push_back({AlignedOffset, Size});
+    Offset = AlignedOffset + Size;
+  }
+
+  // Final frame size, aligned to maximum alignment
+  uint64_t FrameSize = alignTo(Offset, MaxAlign);
+  return {FrameSize, MaxAlign};
 }
 
 /// doInitialization - If this module uses the GC intrinsics, find them now. If
 /// not, exit fast.
-bool ShadowStackGCLowering::doInitialization(Module &M) {
+bool ShadowStackGCLoweringImpl::doInitialization(Module &M) {
   bool Active = false;
   for (Function &F : M) {
-    if (F.hasGC() && F.getGC() == std::string("shadow-stack")) {
+    if (F.hasGC() && F.getGC() == "shadow-stack") {
       Active = true;
       break;
     }
@@ -192,21 +255,10 @@ bool ShadowStackGCLowering::doInitialization(Module &M) {
   // Specifies length of variable length array.
   EltTys.push_back(Type::getInt32Ty(M.getContext()));
   FrameMapTy = StructType::create(EltTys, "gc_map");
-  PointerType *FrameMapPtrTy = PointerType::getUnqual(FrameMapTy);
 
-  // struct StackEntry {
-  //   ShadowStackEntry *Next; // Caller's stack entry.
-  //   FrameMap *Map;          // Pointer to constant FrameMap.
-  //   void *Roots[];          // Stack roots (in-place array, so we pretend).
-  // };
-
-  StackEntryTy = StructType::create(M.getContext(), "gc_stackentry");
-
-  EltTys.clear();
-  EltTys.push_back(PointerType::getUnqual(StackEntryTy));
-  EltTys.push_back(FrameMapPtrTy);
-  StackEntryTy->setBody(EltTys);
-  PointerType *StackEntryPtrTy = PointerType::getUnqual(StackEntryTy);
+  // The shadow stack linked list uses opaque pointers.
+  // Each frame is a byte array with: [Next ptr | Map ptr | Roots...]
+  PointerType *StackEntryPtrTy = PointerType::getUnqual(M.getContext());
 
   // Get the root chain if it already exists.
   Head = M.getGlobalVariable("llvm_gc_root_chain");
@@ -224,17 +276,13 @@ bool ShadowStackGCLowering::doInitialization(Module &M) {
   return true;
 }
 
-bool ShadowStackGCLowering::IsNullValue(Value *V) {
+bool ShadowStackGCLoweringImpl::IsNullValue(Value *V) {
   if (Constant *C = dyn_cast<Constant>(V))
     return C->isNullValue();
   return false;
 }
 
-void ShadowStackGCLowering::CollectRoots(Function &F) {
-  // FIXME: Account for original alignment. Could fragment the root array.
-  //   Approach 1: Null initialize empty slots at runtime. Yuck.
-  //   Approach 2: Emit a map of the array instead of just a count.
-
+void ShadowStackGCLoweringImpl::CollectRoots(Function &F) {
   assert(Roots.empty() && "Not cleaned up?");
 
   SmallVector<std::pair<CallInst *, AllocaInst *>, 16> MetaRoots;
@@ -258,45 +306,15 @@ void ShadowStackGCLowering::CollectRoots(Function &F) {
   Roots.insert(Roots.begin(), MetaRoots.begin(), MetaRoots.end());
 }
 
-GetElementPtrInst *ShadowStackGCLowering::CreateGEP(LLVMContext &Context,
-                                                    IRBuilder<> &B, Type *Ty,
-                                                    Value *BasePtr, int Idx,
-                                                    int Idx2,
-                                                    const char *Name) {
-  Value *Indices[] = {ConstantInt::get(Type::getInt32Ty(Context), 0),
-                      ConstantInt::get(Type::getInt32Ty(Context), Idx),
-                      ConstantInt::get(Type::getInt32Ty(Context), Idx2)};
-  Value *Val = B.CreateGEP(Ty, BasePtr, Indices, Name);
-
-  assert(isa<GetElementPtrInst>(Val) && "Unexpected folded constant");
-
-  return dyn_cast<GetElementPtrInst>(Val);
-}
-
-GetElementPtrInst *ShadowStackGCLowering::CreateGEP(LLVMContext &Context,
-                                            IRBuilder<> &B, Type *Ty, Value *BasePtr,
-                                            int Idx, const char *Name) {
-  Value *Indices[] = {ConstantInt::get(Type::getInt32Ty(Context), 0),
-                      ConstantInt::get(Type::getInt32Ty(Context), Idx)};
-  Value *Val = B.CreateGEP(Ty, BasePtr, Indices, Name);
-
-  assert(isa<GetElementPtrInst>(Val) && "Unexpected folded constant");
-
-  return dyn_cast<GetElementPtrInst>(Val);
-}
-
-void ShadowStackGCLowering::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<DominatorTreeWrapperPass>();
-}
-
 /// runOnFunction - Insert code to maintain the shadow stack.
-bool ShadowStackGCLowering::runOnFunction(Function &F) {
+bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
+                                              DomTreeUpdater *DTU) {
   // Quick exit for functions that do not use the shadow stack GC.
-  if (!F.hasGC() ||
-      F.getGC() != std::string("shadow-stack"))
+  if (!F.hasGC() || F.getGC() != "shadow-stack")
     return false;
 
   LLVMContext &Context = F.getContext();
+  const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Find calls to llvm.gcroot.
   CollectRoots(F);
@@ -306,41 +324,66 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   if (Roots.empty())
     return false;
 
-  std::optional<DomTreeUpdater> DTU;
-  if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
-    DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
+  // Compute frame layout using byte offsets first.
+  auto [FrameSize, FrameAlign] = ComputeFrameLayout(F);
 
-  // Build the constant map and figure the type of the shadow stack entry.
-  Value *FrameMap = GetFrameMap(F);
-  Type *ConcreteStackEntryTy = GetConcreteStackEntryType(F);
+  // Build the constant map with frame size in pointer-sized units.
+  uint64_t PtrSize = DL.getPointerSize();
+  Value *FrameMap = GetFrameMap(F, FrameSize / PtrSize - 2);
 
   // Build the shadow stack entry at the very start of the function.
   BasicBlock::iterator IP = F.getEntryBlock().begin();
   IRBuilder<> AtEntry(IP->getParent(), IP);
-
-  Instruction *StackEntry =
-      AtEntry.CreateAlloca(ConcreteStackEntryTy, nullptr, "gc_frame");
+  Type *Int8Ty = Type::getInt8Ty(Context);
+  AllocaInst *StackEntry = AtEntry.CreateAlloca(
+      ArrayType::get(Int8Ty, FrameSize), nullptr, "gc_frame");
+  StackEntry->setAlignment(FrameAlign);
 
   AtEntry.SetInsertPointPastAllocas(&F);
   IP = AtEntry.GetInsertPoint();
 
   // Initialize the map pointer and load the current head of the shadow stack.
   Instruction *CurrentHead =
-      AtEntry.CreateLoad(StackEntryTy->getPointerTo(), Head, "gc_currhead");
-  Instruction *EntryMapPtr = CreateGEP(Context, AtEntry, ConcreteStackEntryTy,
-                                       StackEntry, 0, 1, "gc_frame.map");
+      AtEntry.CreateLoad(AtEntry.getPtrTy(), Head, "gc_currhead");
+
+  // Map pointer is at offset PtrSize (after the Next pointer)
+  Value *EntryMapPtr = AtEntry.CreatePtrAdd(
+      StackEntry, AtEntry.getInt64(PtrSize), "gc_frame.map");
   AtEntry.CreateStore(FrameMap, EntryMapPtr);
 
-  // After all the allocas...
+  // Zero out any padding between roots to ensure deterministic frame contents.
+  // This includes the region after the map pointer up to the first root.
+  uint64_t LastEnd = 2 * PtrSize; // End of Map pointer field
+  assert(RootOffsets.size() == Roots.size());
   for (unsigned I = 0, E = Roots.size(); I != E; ++I) {
-    // For each root, find the corresponding slot in the aggregate...
-    Value *SlotPtr = CreateGEP(Context, AtEntry, ConcreteStackEntryTy,
-                               StackEntry, 1 + I, "gc_root");
+    auto [RootOffset, RootSize] = RootOffsets[I];
+
+    // Zero any padding before this root
+    if (RootOffset > LastEnd) {
+      Value *PaddingPtr =
+          AtEntry.CreatePtrAdd(StackEntry, AtEntry.getInt64(LastEnd));
+      AtEntry.CreateMemSet(PaddingPtr, AtEntry.getInt8(0), RootOffset - LastEnd,
+                           Align(1));
+    }
+
+    // For each root, compute pointer using precomputed offset
+    Value *SlotPtr = AtEntry.CreatePtrAdd(
+        StackEntry, AtEntry.getInt64(RootOffset), "gc_root");
 
     // And use it in lieu of the alloca.
     AllocaInst *OriginalAlloca = Roots[I].second;
     SlotPtr->takeName(OriginalAlloca);
     OriginalAlloca->replaceAllUsesWith(SlotPtr);
+
+    LastEnd = RootOffset + RootSize;
+  }
+
+  // Zero any padding at the end of the frame
+  if (FrameSize > LastEnd) {
+    Value *PaddingPtr =
+        AtEntry.CreatePtrAdd(StackEntry, AtEntry.getInt64(LastEnd));
+    AtEntry.CreateMemSet(PaddingPtr, AtEntry.getInt8(0), FrameSize - LastEnd,
+                         Align(1));
   }
 
   // Move past the original stores inserted by GCStrategy::InitRoots. This isn't
@@ -352,24 +395,20 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   AtEntry.SetInsertPoint(IP->getParent(), IP);
 
   // Push the entry onto the shadow stack.
-  Instruction *EntryNextPtr = CreateGEP(Context, AtEntry, ConcreteStackEntryTy,
-                                        StackEntry, 0, 0, "gc_frame.next");
-  Instruction *NewHeadVal = CreateGEP(Context, AtEntry, ConcreteStackEntryTy,
-                                      StackEntry, 0, "gc_newhead");
-  AtEntry.CreateStore(CurrentHead, EntryNextPtr);
-  AtEntry.CreateStore(NewHeadVal, Head);
+  // Next pointer is at offset 0, so it's just the frame pointer
+  AtEntry.CreateStore(CurrentHead, StackEntry);
+  // The new head value is also the frame pointer (the linked list links to
+  // frame base)
+  AtEntry.CreateStore(StackEntry, Head);
 
   // For each instruction that escapes...
-  EscapeEnumerator EE(F, "gc_cleanup", /*HandleExceptions=*/true,
-                      DTU ? &*DTU : nullptr);
+  EscapeEnumerator EE(F, "gc_cleanup", /*HandleExceptions=*/true, DTU);
   while (IRBuilder<> *AtExit = EE.Next()) {
     // Pop the entry from the shadow stack. Don't reuse CurrentHead from
     // AtEntry, since that would make the value live for the entire function.
-    Instruction *EntryNextPtr2 =
-        CreateGEP(Context, *AtExit, ConcreteStackEntryTy, StackEntry, 0, 0,
-                  "gc_frame.next");
-    Value *SavedHead = AtExit->CreateLoad(StackEntryTy->getPointerTo(),
-                                          EntryNextPtr2, "gc_savedhead");
+    // Next pointer is at offset 0, so load from the frame base
+    Value *SavedHead =
+        AtExit->CreateLoad(AtExit->getPtrTy(), StackEntry, "gc_savedhead");
     AtExit->CreateStore(SavedHead, Head);
   }
 
@@ -382,5 +421,6 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   }
 
   Roots.clear();
+  RootOffsets.clear();
   return true;
 }

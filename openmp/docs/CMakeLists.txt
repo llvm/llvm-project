@@ -47,14 +47,6 @@ if (LLVM_ENABLE_DOXYGEN)
     set(openmp_doxygen_qhp_cust_filter_attrs "")
   endif()
 
-  option(LLVM_DOXYGEN_SVG
-    "Use svg instead of png files for doxygen graphs." OFF)
-  if (LLVM_DOXYGEN_SVG)
-    set(DOT_IMAGE_FORMAT "svg")
-  else()
-    set(DOT_IMAGE_FORMAT "png")
-  endif()
-
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
 
@@ -72,12 +64,12 @@ if (LLVM_ENABLE_DOXYGEN)
   set(openmp_doxygen_qhelpgenerator_path)
   set(openmp_doxygen_qhp_cust_filter_name)
   set(openmp_doxygen_qhp_cust_filter_attrs)
-  set(DOT_IMAGE_FORMAT)
 
   add_custom_target(doxygen-openmp
     COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating openmp doxygen documentation." VERBATIM)
+  set_target_properties(doxygen-openmp PROPERTIES FOLDER "OpenMP/Docs")
 
   if (LLVM_BUILD_DOCS)
     add_dependencies(doxygen doxygen-openmp)
@@ -85,7 +77,8 @@ if (LLVM_ENABLE_DOXYGEN)
 
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
-      DESTINATION docs/html)
+      DESTINATION docs/html
+      COMPONENT openmp)
   endif()
 endif()
 endif()
@@ -93,10 +86,10 @@ endif()
 if (LLVM_ENABLE_SPHINX)
   include(AddSphinxTarget)
   if (SPHINX_FOUND)
-    if (${SPHINX_OUTPUT_HTML})
+    if (SPHINX_OUTPUT_HTML)
       add_sphinx_target(html openmp)
     endif()
-    if (${SPHINX_OUTPUT_MAN})
+    if (SPHINX_OUTPUT_MAN)
       add_sphinx_target(man openmp)
     endif()
   endif()

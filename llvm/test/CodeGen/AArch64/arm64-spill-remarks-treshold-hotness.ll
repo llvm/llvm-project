@@ -5,7 +5,7 @@
 ; RUN:       -pass-remarks-with-hotness -pass-remarks-hotness-threshold=1 \
 ; RUN:       2>&1 | FileCheck -check-prefix=THRESHOLD %s
 
-; CHECK: remark: /tmp/kk.c:3:20: 1 spills 3.187500e+01 total spills cost 1 reloads 3.187500e+01 total reloads cost generated in loop{{$}}
+; CHECK: remark: /tmp/kk.c:3:20: 1 spills 3.200000e+01 total spills cost 1 reloads 3.200000e+01 total reloads cost generated in loop{{$}}
 ; THRESHOLD-NOT: remark
 
 define void @fpr128(ptr %p) nounwind ssp {

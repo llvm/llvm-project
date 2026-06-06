@@ -166,6 +166,7 @@ std::unique_ptr<Module> TempFile::readBitcode(LLVMContext &Context) const {
                           "verify-uselistorder: error: ");
     return nullptr;
   }
+
   return std::move(ModuleOr.get());
 }
 
@@ -173,7 +174,7 @@ std::unique_ptr<Module> TempFile::readAssembly(LLVMContext &Context) const {
   LLVM_DEBUG(dbgs() << " - read assembly\n");
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyFile(Filename, Err, Context);
-  if (!M.get())
+  if (!M)
     Err.print("verify-uselistorder", errs());
   return M;
 }
@@ -219,8 +220,15 @@ ValueMapping::ValueMapping(const Module &M) {
         map(&I);
 
     // Constants used by instructions.
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        for (const DbgVariableRecord &DVR :
+             filterDbgVars(I.getDbgRecordRange())) {
+          for (Value *Op : DVR.location_ops())
+            map(Op);
+          if (DVR.isDbgAssign())
+            map(DVR.getAddress());
+        }
         for (const Value *Op : I.operands()) {
           // Look through a metadata wrapper.
           if (const auto *MAV = dyn_cast<MetadataAsValue>(Op))
@@ -231,10 +239,15 @@ ValueMapping::ValueMapping(const Module &M) {
               isa<InlineAsm>(Op))
             map(Op);
         }
+      }
+    }
   }
 }
 
 void ValueMapping::map(const Value *V) {
+  if (!V->hasUseList())
+    return;
+
   if (IDs.lookup(V))
     return;
 
@@ -385,6 +398,9 @@ static void verifyUseListOrder(const Module &M) {
 
 static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
                                  DenseSet<Value *> &Seen) {
+  if (!V->hasUseList())
+    return;
+
   if (!Seen.insert(V).second)
     return;
 
@@ -412,7 +428,7 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
                         << ", U = ";
                  U.getUser()->dump());
     }
-  } while (std::is_sorted(V->use_begin(), V->use_end(), compareUses));
+  } while (llvm::is_sorted(V->uses(), compareUses));
 
   LLVM_DEBUG(dbgs() << " => shuffle\n");
   V->sortUseList(compareUses);
@@ -427,6 +443,9 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
 }
 
 static void reverseValueUseLists(Value *V, DenseSet<Value *> &Seen) {
+  if (!V->hasUseList())
+    return;
+
   if (!Seen.insert(V).second)
     return;
 
@@ -542,7 +561,7 @@ int main(int argc, char **argv) {
   // Load the input module...
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
 
-  if (!M.get()) {
+  if (!M) {
     Err.print(argv[0], errs());
     return 1;
   }

@@ -1,6 +1,15 @@
 // RUN: mlir-opt %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : vector<2xi32>>, #dlti.dl_entry<i8, dense<8> : vector<2xi32>>, #dlti.dl_entry<i16, dense<16> : vector<2xi32>>, #dlti.dl_entry<i32, dense<32> : vector<2xi32>>, #dlti.dl_entry<i64, dense<[32, 64]> : vector<2xi32>>, #dlti.dl_entry<f16, dense<16> : vector<2xi32>>, #dlti.dl_entry<f64, dense<64> : vector<2xi32>>, #dlti.dl_entry<f128, dense<128> : vector<2xi32>>>} {
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i1, dense<8> : vector<2xi64>>,
+    #dlti.dl_entry<i8, dense<8> : vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16> : vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32> : vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<[32, 64]> : vector<2xi64>>,
+    #dlti.dl_entry<f16, dense<16> : vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64> : vector<2xi64>>,
+    #dlti.dl_entry<f128, dense<128> : vector<2xi64>>>} {
   // CHECK: llvm.func @foo(%[[ARG0:.+]]: !llvm.ptr, %[[ARG1:.+]]: i32)
   llvm.func @foo(%arg0: !llvm.ptr, %arg1: i32) {
     // CHECK: %[[C0:.+]] = llvm.mlir.constant(0 : i32)

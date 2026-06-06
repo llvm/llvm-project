@@ -108,6 +108,7 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
     #include "unguarded.h"
     #include "unused.h"
     #include <system_header.h>
+    #include <non_system_angled_header.h>
     void foo() {
       a();
       b();
@@ -122,6 +123,7 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
   TU.AdditionalFiles["dir/c.h"] = guard("void c();");
   TU.AdditionalFiles["unused.h"] = guard("void unused();");
   TU.AdditionalFiles["dir/unused.h"] = guard("void dirUnused();");
+  TU.AdditionalFiles["dir/non_system_angled_header.h"] = guard("");
   TU.AdditionalFiles["system/system_header.h"] = guard("");
   TU.AdditionalFiles["unguarded.h"] = "";
   TU.ExtraArgs.push_back("-I" + testPath("dir"));
@@ -133,6 +135,48 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
       Findings.UnusedIncludes,
       UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
+}
+
+TEST(IncludeCleaner, IgnoredAngledHeaders) {
+  // Currently the default behavior is to ignore unused angled includes
+  auto TU = TestTU::withCode(R"cpp(
+    #include <system_header.h>
+    #include <system_unused.h>
+    #include <non_system_angled_unused.h>
+    SystemClass x;
+  )cpp");
+  TU.AdditionalFiles["system/system_header.h"] = guard("class SystemClass {};");
+  TU.AdditionalFiles["system/system_unused.h"] = guard("");
+  TU.AdditionalFiles["dir/non_system_angled_unused.h"] = guard("");
+  TU.ExtraArgs = {
+      "-isystem" + testPath("system"),
+      "-I" + testPath("dir"),
+  };
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+}
+
+TEST(IncludeCleaner, UnusedAngledHeaders) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include <system_header.h>
+    #include <system_unused.h>
+    #include <non_system_angled_unused.h>
+    SystemClass x;
+  )cpp");
+  TU.AdditionalFiles["system/system_header.h"] = guard("class SystemClass {};");
+  TU.AdditionalFiles["system/system_unused.h"] = guard("");
+  TU.AdditionalFiles["dir/non_system_angled_unused.h"] = guard("");
+  TU.ExtraArgs = {
+      "-isystem" + testPath("system"),
+      "-I" + testPath("dir"),
+  };
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST, true);
+  EXPECT_THAT(Findings.UnusedIncludes,
+              UnorderedElementsAre(
+                  Pointee(writtenInclusion("<system_unused.h>")),
+                  Pointee(writtenInclusion("<non_system_angled_unused.h>"))));
 }
 
 TEST(IncludeCleaner, ComputeMissingHeaders) {
@@ -176,13 +220,16 @@ TEST(IncludeCleaner, ComputeMissingHeaders) {
 TEST(IncludeCleaner, GenerateMissingHeaderDiags) {
   Annotations MainFile(R"cpp(
 #include "a.h"
+#include "angled_wrapper.h"
 #include "all.h"
 $insert_b[[]]#include "baz.h"
 #include "dir/c.h"
 $insert_d[[]]$insert_foo[[]]#include "fuzz.h"
 #include "header.h"
-$insert_foobar[[]]#include <e.h>
-$insert_f[[]]$insert_vector[[]]
+$insert_foobar[[]]$insert_quoted[[]]$insert_quoted2[[]]#include "quoted_wrapper.h"
+$insert_angled[[]]#include <e.h>
+$insert_f[[]]#include <quoted2_wrapper.h>
+$insert_vector[[]]
 
 #define DEF(X) const Foo *X;
 #define BAZ(X) const X x
@@ -193,6 +240,9 @@ $insert_f[[]]$insert_vector[[]]
 
   void foo() {
     $b[[b]]();
+    $angled[[angled]]();
+    $quoted[[quoted]]();
+    $quoted2[[quoted2]]();
 
     ns::$bar[[Bar]] bar;
     bar.d();
@@ -219,12 +269,22 @@ $insert_f[[]]$insert_vector[[]]
   TU.AdditionalFiles["a.h"] = guard("#include \"b.h\"");
   TU.AdditionalFiles["b.h"] = guard("void b();");
 
+  TU.AdditionalFiles["angled_wrapper.h"] = guard("#include <angled.h>");
+  TU.AdditionalFiles["angled.h"] = guard("void angled();");
+  TU.ExtraArgs.push_back("-I" + testPath("."));
+
+  TU.AdditionalFiles["quoted_wrapper.h"] = guard("#include \"quoted.h\"");
+  TU.AdditionalFiles["quoted.h"] = guard("void quoted();");
+
   TU.AdditionalFiles["dir/c.h"] = guard("#include \"d.h\"");
   TU.AdditionalFiles["dir/d.h"] =
       guard("namespace ns { struct Bar { void d(); }; }");
 
   TU.AdditionalFiles["system/e.h"] = guard("#include <f.h>");
   TU.AdditionalFiles["system/f.h"] = guard("void f();");
+  TU.AdditionalFiles["system/quoted2_wrapper.h"] =
+      guard("#include <system/quoted2.h>");
+  TU.AdditionalFiles["system/quoted2.h"] = guard("void quoted2();");
   TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 
   TU.AdditionalFiles["fuzz.h"] = guard("#include \"buzz.h\"");
@@ -252,8 +312,16 @@ $insert_f[[]]$insert_vector[[]]
   auto Findings = computeIncludeCleanerFindings(AST);
   Findings.UnusedIncludes.clear();
   std::vector<clangd::Diag> Diags = issueIncludeCleanerDiagnostics(
-      AST, TU.Code, Findings,
-      {[](llvm::StringRef Header) { return Header.ends_with("buzz.h"); }});
+      AST, TU.Code, Findings, MockFS(),
+      /*IgnoreHeaders=*/{[](llvm::StringRef Header) {
+        return Header.ends_with("buzz.h");
+      }},
+      /*AngledHeaders=*/{[](llvm::StringRef Header) {
+        return Header.contains("angled.h");
+      }},
+      /*QuotedHeaders=*/{[](llvm::StringRef Header) {
+        return Header.contains("quoted.h") || Header.contains("quoted2.h");
+      }});
   EXPECT_THAT(
       Diags,
       UnorderedElementsAre(
@@ -262,6 +330,23 @@ $insert_f[[]]$insert_vector[[]]
                 withFix({Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
                              "#include \"b.h\""),
                          FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("angled"),
+                     "No header providing \"angled\" is directly included"),
+                withFix({Fix(MainFile.range("insert_angled"),
+                             "#include <angled.h>\n", "#include <angled.h>"),
+                         FixMessage("add all missing includes")})),
+          AllOf(
+              Diag(MainFile.range("quoted"),
+                   "No header providing \"quoted\" is directly included"),
+              withFix({Fix(MainFile.range("insert_quoted"),
+                           "#include \"quoted.h\"\n", "#include \"quoted.h\""),
+                       FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("quoted2"),
+                     "No header providing \"quoted2\" is directly included"),
+                withFix(
+                    {Fix(MainFile.range("insert_quoted2"),
+                         "#include \"quoted2.h\"\n", "#include \"quoted2.h\""),
+                     FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("bar"),
                      "No header providing \"ns::Bar\" is directly included"),
                 withFix({Fix(MainFile.range("insert_d"),
@@ -316,8 +401,10 @@ TEST(IncludeCleaner, IWYUPragmas) {
     #include "public.h"
 
     void bar() { foo(); }
+    #include "keep_main_file.h" // IWYU pragma: keep
     )cpp";
   TU.AdditionalFiles["behind_keep.h"] = guard("");
+  TU.AdditionalFiles["keep_main_file.h"] = guard("");
   TU.AdditionalFiles["exported.h"] = guard("");
   TU.AdditionalFiles["public.h"] = guard("#include \"private.h\"");
   TU.AdditionalFiles["private.h"] = guard(R"cpp(
@@ -503,8 +590,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   auto AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
@@ -518,8 +605,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
@@ -537,8 +624,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("add all missing includes"),
                                     FixMessage("fix all includes")}),
@@ -598,6 +685,28 @@ TEST(IncludeCleaner, ResourceDirIsIgnored) {
   EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
 }
 
+TEST(IncludeCleaner, DifferentHeaderSameSpelling) {
+  // `foo` is declared in foo_inner/foo.h, but there's no way to spell it
+  // directly. Make sure we don't generate unusued/missing include findings in
+  // such cases.
+  auto TU = TestTU::withCode(R"cpp(
+    #include <foo.h>
+    void baz() {
+      foo();
+    }
+  )cpp");
+  TU.AdditionalFiles["foo/foo.h"] = guard("#include_next <foo.h>");
+  TU.AdditionalFiles["foo_inner/foo.h"] = guard(R"cpp(
+    void foo();
+  )cpp");
+  TU.ExtraArgs.push_back("-Ifoo");
+  TU.ExtraArgs.push_back("-Ifoo_inner");
+
+  auto AST = TU.build();
+  auto Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

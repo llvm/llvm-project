@@ -697,42 +697,6 @@ void Interpreter::visitFCmpInst(FCmpInst &I) {
   SetValue(&I, R, SF);
 }
 
-static GenericValue executeCmpInst(unsigned predicate, GenericValue Src1,
-                                   GenericValue Src2, Type *Ty) {
-  GenericValue Result;
-  switch (predicate) {
-  case ICmpInst::ICMP_EQ:    return executeICMP_EQ(Src1, Src2, Ty);
-  case ICmpInst::ICMP_NE:    return executeICMP_NE(Src1, Src2, Ty);
-  case ICmpInst::ICMP_UGT:   return executeICMP_UGT(Src1, Src2, Ty);
-  case ICmpInst::ICMP_SGT:   return executeICMP_SGT(Src1, Src2, Ty);
-  case ICmpInst::ICMP_ULT:   return executeICMP_ULT(Src1, Src2, Ty);
-  case ICmpInst::ICMP_SLT:   return executeICMP_SLT(Src1, Src2, Ty);
-  case ICmpInst::ICMP_UGE:   return executeICMP_UGE(Src1, Src2, Ty);
-  case ICmpInst::ICMP_SGE:   return executeICMP_SGE(Src1, Src2, Ty);
-  case ICmpInst::ICMP_ULE:   return executeICMP_ULE(Src1, Src2, Ty);
-  case ICmpInst::ICMP_SLE:   return executeICMP_SLE(Src1, Src2, Ty);
-  case FCmpInst::FCMP_ORD:   return executeFCMP_ORD(Src1, Src2, Ty);
-  case FCmpInst::FCMP_UNO:   return executeFCMP_UNO(Src1, Src2, Ty);
-  case FCmpInst::FCMP_OEQ:   return executeFCMP_OEQ(Src1, Src2, Ty);
-  case FCmpInst::FCMP_UEQ:   return executeFCMP_UEQ(Src1, Src2, Ty);
-  case FCmpInst::FCMP_ONE:   return executeFCMP_ONE(Src1, Src2, Ty);
-  case FCmpInst::FCMP_UNE:   return executeFCMP_UNE(Src1, Src2, Ty);
-  case FCmpInst::FCMP_OLT:   return executeFCMP_OLT(Src1, Src2, Ty);
-  case FCmpInst::FCMP_ULT:   return executeFCMP_ULT(Src1, Src2, Ty);
-  case FCmpInst::FCMP_OGT:   return executeFCMP_OGT(Src1, Src2, Ty);
-  case FCmpInst::FCMP_UGT:   return executeFCMP_UGT(Src1, Src2, Ty);
-  case FCmpInst::FCMP_OLE:   return executeFCMP_OLE(Src1, Src2, Ty);
-  case FCmpInst::FCMP_ULE:   return executeFCMP_ULE(Src1, Src2, Ty);
-  case FCmpInst::FCMP_OGE:   return executeFCMP_OGE(Src1, Src2, Ty);
-  case FCmpInst::FCMP_UGE:   return executeFCMP_UGE(Src1, Src2, Ty);
-  case FCmpInst::FCMP_FALSE: return executeFCMP_BOOL(Src1, Src2, Ty, false);
-  case FCmpInst::FCMP_TRUE:  return executeFCMP_BOOL(Src1, Src2, Ty, true);
-  default:
-    dbgs() << "Unhandled Cmp predicate\n";
-    llvm_unreachable(nullptr);
-  }
-}
-
 void Interpreter::visitBinaryOperator(BinaryOperator &I) {
   ExecutionContext &SF = ECStack.back();
   Type *Ty    = I.getOperand(0)->getType();
@@ -896,7 +860,7 @@ void Interpreter::popStackAndReturnValueToCaller(Type *RetTy,
 
   if (ECStack.empty()) {  // Finished main.  Put result into exit code...
     if (RetTy && !RetTy->isVoidTy()) {          // Nonvoid return type?
-      ExitValue = Result;   // Capture the exit value of the program
+      ExitValue = std::move(Result); // Capture the exit value of the program
     } else {
       memset(&ExitValue.Untyped, 0, sizeof(ExitValue.Untyped));
     }
@@ -933,17 +897,15 @@ void Interpreter::visitUnreachableInst(UnreachableInst &I) {
   report_fatal_error("Program executed an 'unreachable' instruction!");
 }
 
-void Interpreter::visitBranchInst(BranchInst &I) {
+void Interpreter::visitUncondBrInst(UncondBrInst &I) {
   ExecutionContext &SF = ECStack.back();
-  BasicBlock *Dest;
+  SwitchToNewBasicBlock(I.getSuccessor(), SF);
+}
 
-  Dest = I.getSuccessor(0);          // Uncond branches have a fixed dest...
-  if (!I.isUnconditional()) {
-    Value *Cond = I.getCondition();
-    if (getOperandValue(Cond, SF).IntVal == 0) // If false cond...
-      Dest = I.getSuccessor(1);
-  }
-  SwitchToNewBasicBlock(Dest, SF);
+void Interpreter::visitCondBrInst(CondBrInst &I) {
+  ExecutionContext &SF = ECStack.back();
+  bool Cond = getOperandValue(I.getCondition(), SF).IntVal != 0;
+  SwitchToNewBasicBlock(I.getSuccessor(Cond ? 0 : 1), SF);
 }
 
 void Interpreter::visitSwitchInst(SwitchInst &I) {
@@ -1074,7 +1036,7 @@ GenericValue Interpreter::executeGEPOperation(Value *Ptr, gep_type_iterator I,
         assert(BitWidth == 64 && "Invalid index type for getelementptr");
         Idx = (int64_t)IdxGV.IntVal.getZExtValue();
       }
-      Total += getDataLayout().getTypeAllocSize(I.getIndexedType()) * Idx;
+      Total += I.getSequentialElementStride(getDataLayout()) * Idx;
     }
   }
 
@@ -1120,7 +1082,7 @@ void Interpreter::visitVAStartInst(VAStartInst &I) {
   GenericValue ArgIndex;
   ArgIndex.UIntPairVal.first = ECStack.size() - 1;
   ArgIndex.UIntPairVal.second = 0;
-  SetValue(&I, ArgIndex, SF);
+  SetValue(I.getArgList(), ArgIndex, SF);
 }
 
 void Interpreter::visitVAEndInst(VAEndInst &I) {
@@ -1767,7 +1729,8 @@ void Interpreter::visitVAArgInst(VAArgInst &I) {
 
   // Get the incoming valist parameter.  LLI treats the valist as a
   // (ec-stack-depth var-arg-index) pair.
-  GenericValue VAList = getOperandValue(I.getOperand(0), SF);
+  Value *V = I.getOperand(0);
+  GenericValue VAList = getOperandValue(V, SF);
   GenericValue Dest;
   GenericValue Src = ECStack[VAList.UIntPairVal.first]
                       .VarArgs[VAList.UIntPairVal.second];
@@ -1787,8 +1750,9 @@ void Interpreter::visitVAArgInst(VAArgInst &I) {
   // Set the Value of this Instruction.
   SetValue(&I, Dest, SF);
 
-  // Move the pointer to the next vararg.
+  // Move the pointer to the next vararg and set new value back.
   ++VAList.UIntPairVal.second;
+  SetValue(V, VAList, SF);
 }
 
 void Interpreter::visitExtractElementInst(ExtractElementInst &I) {
@@ -2019,22 +1983,6 @@ GenericValue Interpreter::getConstantExprValue (ConstantExpr *CE,
   switch (CE->getOpcode()) {
   case Instruction::Trunc:
       return executeTruncInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::ZExt:
-      return executeZExtInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::SExt:
-      return executeSExtInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::FPTrunc:
-      return executeFPTruncInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::FPExt:
-      return executeFPExtInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::UIToFP:
-      return executeUIToFPInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::SIToFP:
-      return executeSIToFPInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::FPToUI:
-      return executeFPToUIInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::FPToSI:
-      return executeFPToSIInst(CE->getOperand(0), CE->getType(), SF);
   case Instruction::PtrToInt:
       return executePtrToIntInst(CE->getOperand(0), CE->getType(), SF);
   case Instruction::IntToPtr:
@@ -2044,18 +1992,6 @@ GenericValue Interpreter::getConstantExprValue (ConstantExpr *CE,
   case Instruction::GetElementPtr:
     return executeGEPOperation(CE->getOperand(0), gep_type_begin(CE),
                                gep_type_end(CE), SF);
-  case Instruction::FCmp:
-  case Instruction::ICmp:
-    return executeCmpInst(CE->getPredicate(),
-                          getOperandValue(CE->getOperand(0), SF),
-                          getOperandValue(CE->getOperand(1), SF),
-                          CE->getOperand(0)->getType());
-  case Instruction::Select:
-    return executeSelectInst(getOperandValue(CE->getOperand(0), SF),
-                             getOperandValue(CE->getOperand(1), SF),
-                             getOperandValue(CE->getOperand(2), SF),
-                             CE->getOperand(0)->getType());
-  default :
     break;
   }
 
@@ -2064,31 +2000,13 @@ GenericValue Interpreter::getConstantExprValue (ConstantExpr *CE,
   GenericValue Op0 = getOperandValue(CE->getOperand(0), SF);
   GenericValue Op1 = getOperandValue(CE->getOperand(1), SF);
   GenericValue Dest;
-  Type * Ty = CE->getOperand(0)->getType();
   switch (CE->getOpcode()) {
   case Instruction::Add:  Dest.IntVal = Op0.IntVal + Op1.IntVal; break;
   case Instruction::Sub:  Dest.IntVal = Op0.IntVal - Op1.IntVal; break;
   case Instruction::Mul:  Dest.IntVal = Op0.IntVal * Op1.IntVal; break;
-  case Instruction::FAdd: executeFAddInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::FSub: executeFSubInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::FMul: executeFMulInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::FDiv: executeFDivInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::FRem: executeFRemInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::SDiv: Dest.IntVal = Op0.IntVal.sdiv(Op1.IntVal); break;
-  case Instruction::UDiv: Dest.IntVal = Op0.IntVal.udiv(Op1.IntVal); break;
-  case Instruction::URem: Dest.IntVal = Op0.IntVal.urem(Op1.IntVal); break;
-  case Instruction::SRem: Dest.IntVal = Op0.IntVal.srem(Op1.IntVal); break;
-  case Instruction::And:  Dest.IntVal = Op0.IntVal & Op1.IntVal; break;
-  case Instruction::Or:   Dest.IntVal = Op0.IntVal | Op1.IntVal; break;
   case Instruction::Xor:  Dest.IntVal = Op0.IntVal ^ Op1.IntVal; break;
   case Instruction::Shl:
     Dest.IntVal = Op0.IntVal.shl(Op1.IntVal.getZExtValue());
-    break;
-  case Instruction::LShr:
-    Dest.IntVal = Op0.IntVal.lshr(Op1.IntVal.getZExtValue());
-    break;
-  case Instruction::AShr:
-    Dest.IntVal = Op0.IntVal.ashr(Op1.IntVal.getZExtValue());
     break;
   default:
     dbgs() << "Unhandled ConstantExpr: " << *CE << "\n";

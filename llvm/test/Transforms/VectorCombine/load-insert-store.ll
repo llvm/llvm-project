@@ -60,7 +60,7 @@ entry:
   ret void
 }
 
-; To verify the case that index exceeds the minium number
+; To verify the case that index exceeds the minimum number
 ; of elements of a scalable vector type.
 define void @insert_store_vscale_exceeds(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_vscale_exceeds(

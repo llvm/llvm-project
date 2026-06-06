@@ -1,4 +1,4 @@
-//===-- ArchitectureMips.h ---------------------------------------*- C++ -*-===//
+//===-- ArchitectureMips.h --------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,6 +32,9 @@ public:
 
   lldb::addr_t GetOpcodeLoadAddress(lldb::addr_t load_addr,
                                     AddressClass addr_class) const override;
+
+  bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
+                              llvm::ArrayRef<uint8_t> observed) const override;
 
 private:
   Instruction *GetInstructionAtAddress(Target &target,

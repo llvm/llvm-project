@@ -7,6 +7,10 @@
 # RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=NODEBUG %s
 # RUN: lld-link /debug:symtab /out:%t.exe /entry:main %t.obj
 # RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=NODEBUG %s
+# RUN: lld-link /debug:full,nodwarf /out:%t.exe /entry:main %t.obj
+# RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=NODEBUG %s
+# RUN: lld-link /debug:full /debug:nodwarf /out:%t.exe /entry:main %t.obj
+# RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=NODEBUG %s
 
 # CHECK: Name: .text
 # CHECK: Name: .reloc

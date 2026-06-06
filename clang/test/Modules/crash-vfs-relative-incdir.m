@@ -1,4 +1,4 @@
-// REQUIRES: crash-recovery, shell, system-darwin
+// REQUIRES: crash-recovery, system-darwin
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/m
@@ -17,7 +17,7 @@
 
 #include <stdio.h>
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 
@@ -41,9 +41,9 @@
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
+// CHECKYAML-NEXT:     'name': "module.modulemap",
 // CHECKYAML-NOT:      'external-contents': "{{[^ ]*}}.cache
-// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/crash-recovery/usr/include/module.map"
+// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/crash-recovery/usr/include/module.modulemap"
 // CHECKYAML-NEXT:   },
 
 // Run the reproducer script - regular exit code is enough to test it works.
@@ -53,4 +53,4 @@
 
 // RUN: cd %t
 // RUN: chmod 755 crash-vfs-*.sh
-// RUN: ./crash-vfs-*.sh
+// RUN: bash ./crash-vfs-*.sh

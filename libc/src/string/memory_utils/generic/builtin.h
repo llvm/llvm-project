@@ -10,16 +10,18 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BUILTIN_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
-#include "src/string/memory_utils/utils.h"   // Ptr, CPtr
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
+#include "src/string/memory_utils/utils.h" // Ptr, CPtr
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-static_assert(LIBC_HAS_BUILTIN(__builtin_memcpy), "Builtin not defined");
-static_assert(LIBC_HAS_BUILTIN(__builtin_memset), "Builtin not defined");
-static_assert(LIBC_HAS_BUILTIN(__builtin_memmove), "Builtin not defined");
+#if !__has_builtin(__builtin_memcpy) || !__has_builtin(__builtin_memset) ||    \
+    !__has_builtin(__builtin_memmove) || !__has_builtin(__builtin_memcmp) ||   \
+    !__has_builtin(__builtin_bcmp)
+#error "Builtin not defined"
+#endif
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_builtin(Ptr dst, CPtr src, size_t count, size_t offset = 0) {
@@ -36,6 +38,17 @@ inline_memset_builtin(Ptr dst, uint8_t value, size_t count, size_t offset = 0) {
   __builtin_memset(dst + offset, value, count);
 }
 
-} // namespace LIBC_NAMESPACE
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
+inline_memcmp_builtin(CPtr p1, CPtr p2, size_t count) {
+  return static_cast<int32_t>(__builtin_memcmp(p1, p2, count));
+}
+
+[[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_builtin(CPtr p1,
+                                                                CPtr p2,
+                                                                size_t count) {
+  return static_cast<uint32_t>(__builtin_bcmp(p1, p2, count));
+}
+
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BUILTIN_H

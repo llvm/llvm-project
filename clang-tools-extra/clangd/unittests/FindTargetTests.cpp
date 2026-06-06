@@ -342,6 +342,90 @@ TEST_F(TargetDeclTest, DesignatedInit) {
   EXPECT_DECLS("DesignatedInitExpr", "int a");
 }
 
+TEST_F(TargetDeclTest, OffsetOf) {
+  Code = R"cpp(
+    struct Foo { int bar; };
+    int x = __builtin_offsetof(Foo, [[bar]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int bar");
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b]].c);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "Inner b");
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, b.[[c]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int c");
+
+  // Selection that spans multiple components doesn't match any single
+  // OffsetOfNode.
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b.c]]);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b.]]c);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, b[[.c]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int c");
+
+  Code = R"cpp(
+    struct Foo { int bar; };
+    int x = __builtin_[[offsetof]](Foo, bar);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  // Base-class component: the implicit Base node has no source range, so
+  // the cursor on `x` resolves precisely to the inherited field.
+  Code = R"cpp(
+    struct B { int x; };
+    struct D : B {};
+    int o = __builtin_offsetof(D, [[x]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int x");
+
+  // Dependent-type identifier component: no resolvable decl, but must not
+  // crash and must not produce spurious targets.
+  Code = R"cpp(
+    template <typename T> int f() { return __builtin_offsetof(T, [[x]]); }
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfNode"), ::testing::IsEmpty());
+
+  // C-style offsetof macro form resolves the same as __builtin_offsetof.
+  Code = R"cpp(
+    #define offsetof(t, m) __builtin_offsetof(t, m)
+    struct Foo { int bar; };
+    int x = offsetof(Foo, [[bar]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int bar");
+
+  // Array-index expression in an offsetof designator should still resolve as
+  // the expression, not as the enclosing OffsetOfNode.
+  Code = R"cpp(
+    struct Foo { int bar[4]; };
+    int i;
+    int x = __builtin_offsetof(Foo, bar[ [[i]] ]);
+  )cpp";
+  EXPECT_DECLS("DeclRefExpr", "int i");
+}
+
 TEST_F(TargetDeclTest, NestedNameSpecifier) {
   Code = R"cpp(
     namespace a { namespace b { int c; } }
@@ -427,7 +511,7 @@ TEST_F(TargetDeclTest, Types) {
     [[auto]] X = S{};
   )cpp";
   // FIXME: deduced type missing in AST. https://llvm.org/PR42914
-  EXPECT_DECLS("AutoTypeLoc");
+  EXPECT_DECLS("AutoTypeLoc", );
 
   Code = R"cpp(
     template <typename... E>
@@ -642,10 +726,7 @@ TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
     bool x = (Foo(1) [[!=]] Foo(2));
   )cpp";
   EXPECT_DECLS("CXXRewrittenBinaryOperator",
-               {"std::strong_ordering operator<=>(const Foo &) const = default",
-                Rel::TemplatePattern},
-               {"bool operator==(const Foo &) const noexcept = default",
-                Rel::TemplateInstantiation});
+               {"bool operator==(const Foo &) const noexcept = default"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
@@ -707,6 +788,39 @@ TEST_F(TargetDeclTest, TypeAliasTemplate) {
                {"class SmallVector", Rel::TemplatePattern | Rel::Underlying},
                {"using TinyVector = SmallVector<U, 1>",
                 Rel::Alias | Rel::TemplatePattern});
+}
+
+TEST_F(TargetDeclTest, BuiltinTemplates) {
+  Code = R"cpp(
+    template <class T, T... Index> struct integer_sequence {};
+    [[__make_integer_seq]]<integer_sequence, int, 3> X;
+  )cpp";
+  EXPECT_DECLS(
+      "TemplateSpecializationTypeLoc",
+      {"struct integer_sequence", Rel::TemplatePattern | Rel::Underlying},
+      {"template<> struct integer_sequence<int, <0, 1, 2>>",
+       Rel::TemplateInstantiation | Rel::Underlying});
+
+  // Dependent context.
+  Code = R"cpp(
+    template <class T, T... Index> struct integer_sequence;
+
+    template <class T, int N>
+    using make_integer_sequence = [[__make_integer_seq]]<integer_sequence, T, N>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
+
+  Code = R"cpp(
+    template <int N, class... Pack>
+    using type_pack_element = [[__type_pack_element]]<N, Pack...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
+
+  Code = R"cpp(
+    template <template <class...> class Templ, class... Types>
+    using dedup_types = Templ<[[__builtin_dedup_pack]]<Types...>...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 }
 
 TEST_F(TargetDeclTest, MemberOfTemplate) {
@@ -812,10 +926,14 @@ TEST_F(TargetDeclTest, OverloadExpr) {
       [[delete]] x;
     }
   )cpp";
-  EXPECT_DECLS("CXXDeleteExpr", "void operator delete(void *) noexcept");
+  // Sized deallocation is enabled by default in C++14 onwards.
+  EXPECT_DECLS("CXXDeleteExpr",
+               "void operator delete(void *, __size_t) noexcept");
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {
+  Flags.push_back("--std=c++20");
+
   // Heuristic resolution of method of dependent field
   Code = R"cpp(
         struct A { void foo() {} };
@@ -827,7 +945,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Similar to above but base expression involves a function call.
   Code = R"cpp(
@@ -845,7 +963,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Similar to above but uses a function pointer.
   Code = R"cpp(
@@ -864,7 +982,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Base expression involves a member access into this.
   Code = R"cpp(
@@ -935,7 +1053,22 @@ TEST_F(TargetDeclTest, DependentExprs) {
           void Foo() { this->[[find]](); }
         };
   )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void find()");
+  EXPECT_DECLS("MemberExpr", "void find()");
+
+  // Base expression is the type of a non-type template parameter
+  // which is deduced using CTAD.
+  Code = R"cpp(
+        template <int N>
+        struct Waldo {
+          const int found = N;
+        };
+
+        template <Waldo W>
+        int test() {
+          return W.[[found]];
+        }
+  )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "const int found = N");
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {
@@ -949,7 +1082,7 @@ TEST_F(TargetDeclTest, DependentTypes) {
       )cpp";
   EXPECT_DECLS("DependentNameTypeLoc", "struct B");
 
-  // Heuristic resolution of dependent type name which doesn't get a TypeLoc
+  // Heuristic resolution of dependent type name within a NestedNameSpecifierLoc
   Code = R"cpp(
         template <typename>
         struct A { struct B { struct C {}; }; };
@@ -957,7 +1090,7 @@ TEST_F(TargetDeclTest, DependentTypes) {
         template <typename T>
         void foo(typename A<T>::[[B]]::C);
       )cpp";
-  EXPECT_DECLS("NestedNameSpecifierLoc", "struct B");
+  EXPECT_DECLS("DependentNameTypeLoc", "struct B");
 
   // Heuristic resolution of dependent type name whose qualifier is also
   // dependent
@@ -980,8 +1113,34 @@ TEST_F(TargetDeclTest, DependentTypes) {
         template <typename T>
         void foo(typename A<T>::template [[B]]<int>);
       )cpp";
-  EXPECT_DECLS("DependentTemplateSpecializationTypeLoc",
-               "template <typename> struct B");
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", "template <typename> struct B");
+
+  // Dependent name with recursive definition. We don't expect a
+  // result, but we shouldn't get into a stack overflow either.
+  Code = R"cpp(
+        template <int N>
+        struct waldo {
+          typedef typename waldo<N - 1>::type::[[next]] type;
+        };
+  )cpp";
+  EXPECT_DECLS("DependentNameTypeLoc", );
+
+  // Similar to above but using mutually recursive templates.
+  Code = R"cpp(
+        template <int N>
+        struct odd;
+
+        template <int N>
+        struct even {
+          using type = typename odd<N - 1>::type::next;
+        };
+
+        template <int N>
+        struct odd {
+          using type = typename even<N - 1>::type::[[next]];
+        };
+  )cpp";
+  EXPECT_DECLS("DependentNameTypeLoc", );
 }
 
 TEST_F(TargetDeclTest, TypedefCascade) {
@@ -1209,14 +1368,14 @@ TEST_F(TargetDeclTest, ObjC) {
     + ([[id]])sharedInstance;
     @end
   )cpp";
-  EXPECT_DECLS("TypedefTypeLoc");
+  EXPECT_DECLS("TypedefTypeLoc", );
 
   Code = R"cpp(
     @interface Foo
     + ([[instancetype]])sharedInstance;
     @end
   )cpp";
-  EXPECT_DECLS("TypedefTypeLoc");
+  EXPECT_DECLS("TypedefTypeLoc", );
 }
 
 class FindExplicitReferencesTest : public ::testing::Test {
@@ -1419,7 +1578,7 @@ TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
         "4: targets = {a}\n"
         "5: targets = {a::b}, qualifier = 'a::'\n"
         "6: targets = {a::b::S}\n"
-        "7: targets = {a::b::S::type}, qualifier = 'struct S::'\n"
+        "7: targets = {a::b::S::type}, qualifier = 'S::'\n"
         "8: targets = {y}, decl\n"},
        {R"cpp(
          void foo() {
@@ -1752,7 +1911,7 @@ TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
               int (*$2^fptr)(int $3^a, int) = nullptr;
              }
            )cpp",
-           "0: targets = {(unnamed)}\n"
+           "0: targets = {(unnamed class)}\n"
            "1: targets = {x}, decl\n"
            "2: targets = {fptr}, decl\n"
            "3: targets = {a}, decl\n"},
@@ -2001,6 +2160,53 @@ TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
         "6: targets = {bar}, decl\n"
         "7: targets = {foo()::Bar::Foo}\n"
         "8: targets = {foo()::Baz::Field}\n"},
+       // offsetof
+       {R"cpp(
+            void foo() {
+              struct $0^Foo { int $1^bar; };
+              int $2^x = __builtin_offsetof($3^Foo, $4^bar);
+            }
+        )cpp",
+        "0: targets = {Foo}, decl\n"
+        "1: targets = {foo()::Foo::bar}, decl\n"
+        "2: targets = {x}, decl\n"
+        "3: targets = {Foo}\n"
+        "4: targets = {foo()::Foo::bar}\n"},
+       // offsetof with a nested field designator -- each component must
+       // resolve to its own source position, not a shared one.
+       {R"cpp(
+            void foo() {
+              struct $0^A {
+                $1^struct { int $2^c; } $3^B;
+              };
+              int $4^x = __builtin_offsetof($5^A, $6^B.$7^c);
+            }
+        )cpp",
+        "0: targets = {A}, decl\n"
+        "1: targets = {foo()::A::(unnamed struct)}\n"
+        "2: targets = {foo()::A::(unnamed struct)::c}, decl\n"
+        "3: targets = {foo()::A::B}, decl\n"
+        "4: targets = {x}, decl\n"
+        "5: targets = {A}\n"
+        "6: targets = {foo()::A::B}\n"
+        "7: targets = {foo()::A::(unnamed struct)::c}\n"},
+       // offsetof with an array-subscript component -- array indices are not
+       // emitted as offsetof references (the subscript expression is still
+       // visited independently).
+       {R"cpp(
+            void foo() {
+              struct $0^A { int $1^arr[4]; };
+              int $2^i = 0;
+              int $3^x = __builtin_offsetof($4^A, $5^arr[$6^i]);
+            }
+        )cpp",
+        "0: targets = {A}, decl\n"
+        "1: targets = {foo()::A::arr}, decl\n"
+        "2: targets = {i}, decl\n"
+        "3: targets = {x}, decl\n"
+        "4: targets = {A}\n"
+        "5: targets = {foo()::A::arr}\n"
+        "6: targets = {i}\n"},
        {R"cpp(
            template<typename T>
            void crash(T);

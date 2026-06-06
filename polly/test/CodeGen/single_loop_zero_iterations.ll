@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=SCALAR --allow-empty
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=SCALAR --allow-empty
 
 ;#define N 20
 ;

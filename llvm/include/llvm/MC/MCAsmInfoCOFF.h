@@ -15,23 +15,26 @@ namespace llvm {
 
 class MCAsmInfoCOFF : public MCAsmInfo {
   virtual void anchor();
+  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
+                            raw_ostream &) const final;
+  bool useCodeAlign(const MCSection &Sec) const final;
 
 protected:
-  explicit MCAsmInfoCOFF();
+  explicit MCAsmInfoCOFF(const MCTargetOptions &Options);
 };
 
 class MCAsmInfoMicrosoft : public MCAsmInfoCOFF {
   void anchor() override;
 
 protected:
-  explicit MCAsmInfoMicrosoft();
+  explicit MCAsmInfoMicrosoft(const MCTargetOptions &Options);
 };
 
 class MCAsmInfoGNUCOFF : public MCAsmInfoCOFF {
   void anchor() override;
 
 protected:
-  explicit MCAsmInfoGNUCOFF();
+  explicit MCAsmInfoGNUCOFF(const MCTargetOptions &Options);
 };
 
 } // end namespace llvm

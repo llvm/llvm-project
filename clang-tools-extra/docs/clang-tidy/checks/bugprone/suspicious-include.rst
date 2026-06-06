@@ -17,24 +17,8 @@ Examples:
 
 Options
 -------
-.. option:: HeaderFileExtensions
 
-   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 19. Please use the global configuration option
-   `HeaderFileExtensions`.
+.. option::  IgnoredRegex
 
-   Default value: ``";h;hh;hpp;hxx"``
-   A semicolon-separated list of filename extensions of header files (the
-   filename extensions should not contain a "." prefix). For extension-less
-   header files, use an empty string or leave an empty string between ";"
-   if there are other filename extensions.
-
-.. option:: ImplementationFileExtensions
-
-   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 19. Please use the global configuration option
-   `ImplementationFileExtensions`.
-
-   Default value: ``"c;cc;cpp;cxx"``
-   Likewise, a semicolon-separated list of filename extensions of
-   implementation files.
+   A regular expression for the file name to be ignored by the check. Default
+   is empty string.

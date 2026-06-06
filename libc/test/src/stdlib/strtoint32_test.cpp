@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdint.h>
-
+#include "hdr/stdint_proxy.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
-#include "src/errno/libc_errno.h"
 
 #include "StrtolTest.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int32_t strtoint32(const char *__restrict str, char **__restrict str_end,
                    int base) {
@@ -22,7 +22,7 @@ int32_t strtoint32(const char *__restrict str, char **__restrict str_end,
   if (result.has_error())
     libc_errno = result.error;
 
-  if (str_end != nullptr)
+  if (str_end != nullptr && result.error != EINVAL)
     *str_end = const_cast<char *>(str + result.parsed_len);
 
   return result;
@@ -34,12 +34,12 @@ uint32_t strtouint32(const char *__restrict str, char **__restrict str_end,
   if (result.has_error())
     libc_errno = result.error;
 
-  if (str_end != nullptr)
+  if (str_end != nullptr && result.error != EINVAL)
     *str_end = const_cast<char *>(str + result.parsed_len);
 
   return result;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 STRTOL_TEST(Strtoint32, LIBC_NAMESPACE::strtoint32)
 STRTOL_TEST(Strtouint32, LIBC_NAMESPACE::strtouint32)

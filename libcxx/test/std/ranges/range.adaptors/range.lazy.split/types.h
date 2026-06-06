@@ -60,17 +60,17 @@ struct ForwardDiffView : std::ranges::view_base {
   constexpr explicit ForwardDiffView() = default;
   constexpr ForwardDiffView(const char* ptr) : ForwardDiffView(std::string_view(ptr)) {}
   constexpr ForwardDiffView(std::string_view v) {
-    // Workaround https://github.com/llvm/llvm-project/issues/55867
+    // Workaround https://llvm.org/PR55867
     buffer_ = v;
   }
   constexpr ForwardDiffView(ForwardDiffView&&) = default;
   constexpr ForwardDiffView& operator=(ForwardDiffView&&) = default;
   constexpr ForwardDiffView(const ForwardDiffView&) = default;
   constexpr ForwardDiffView& operator=(const ForwardDiffView&) = default;
-  constexpr forward_iterator<char*> begin() { return forward_iterator<char*>(buffer_.begin().base()); }
-  constexpr forward_iterator<char*> end()  { return forward_iterator<char*>(buffer_.end().base()); }
-  constexpr forward_iterator<const char*> begin() const { return forward_iterator<const char*>(buffer_.begin().base()); }
-  constexpr forward_iterator<const char*> end() const { return forward_iterator<const char*>(buffer_.end().base()); }
+  constexpr forward_iterator<char*> begin() { return forward_iterator<char*>(buffer_.data()); }
+  constexpr forward_iterator<char*> end()  { return forward_iterator<char*>(buffer_.data() + buffer_.size()); }
+  constexpr forward_iterator<const char*> begin() const { return forward_iterator<const char*>(buffer_.data()); }
+  constexpr forward_iterator<const char*> end() const { return forward_iterator<const char*>(buffer_.data() + buffer_.size()); }
 };
 static_assert( std::ranges::forward_range<ForwardView>);
 static_assert( std::ranges::forward_range<const ForwardView>);
@@ -144,19 +144,19 @@ struct InputView : std::ranges::view_base {
   constexpr InputView() = default;
   constexpr InputView(const char* s) : InputView(std::string_view(s)) {}
   constexpr InputView(std::string_view v) {
-    // Workaround https://github.com/llvm/llvm-project/issues/55867
+    // Workaround https://llvm.org/PR55867
     buffer_ = v;
   }
 
-  constexpr cpp20_input_iterator<char*> begin() { return cpp20_input_iterator<char*>(buffer_.begin().base()); }
+  constexpr cpp20_input_iterator<char*> begin() { return cpp20_input_iterator<char*>(buffer_.data()); }
   constexpr sentinel_wrapper<cpp20_input_iterator<char*>> end() {
-    return sentinel_wrapper(cpp20_input_iterator<char*>(buffer_.end().base()));
+    return sentinel_wrapper(cpp20_input_iterator<char*>(buffer_.data() + buffer_.size()));
   }
   constexpr cpp20_input_iterator<const char*> begin() const {
-    return cpp20_input_iterator<const char*>(buffer_.begin().base());
+    return cpp20_input_iterator<const char*>(buffer_.data());
   }
   constexpr sentinel_wrapper<cpp20_input_iterator<const char*>> end() const {
-    return sentinel_wrapper(cpp20_input_iterator<const char*>(buffer_.end().base()));
+    return sentinel_wrapper(cpp20_input_iterator<const char*>(buffer_.data() + buffer_.size()));
   }
   friend constexpr bool operator==(const InputView& lhs, const InputView& rhs) {
     return lhs.buffer_ == rhs.buffer_;

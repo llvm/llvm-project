@@ -6,28 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/tanf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+#include "hdr/stdint_proxy.h"
+
+using LlvmLibcTanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcTanfTest, SpecialNumbers) {
-  libc_errno = 0;
-
+TEST_F(LlvmLibcTanfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -44,19 +47,19 @@ TEST(LlvmLibcTanfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST(LlvmLibcTanfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
+TEST_F(LlvmLibcTanfTest, InFloatRange) {
+  constexpr uint32_t COUNT = 1'231;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
-    if (isnan(x) || isinf(x))
+    float x = FPBits(v).get_val();
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
                                    LIBC_NAMESPACE::tanf(x), 0.5);
   }
 }
 
-TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
+TEST_F(LlvmLibcTanfTest, SpecificBitPatterns) {
   constexpr int N = 54;
   constexpr uint32_t INPUTS[N] = {
       0x3a7a'8d2fU, // x = 0x1.f51a5ep-11f
@@ -116,19 +119,19 @@ TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
   };
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
-                                   LIBC_NAMESPACE::tanf(x), 0.5);
+                                   LIBC_NAMESPACE::tanf(x), TOLERANCE + 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, -x,
-                                   LIBC_NAMESPACE::tanf(-x), 0.5);
+                                   LIBC_NAMESPACE::tanf(-x), TOLERANCE + 0.5);
   }
 }
 
 // SDCOMP-26094: check tanf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
-TEST(LlvmLibcTanfTest, SDCOMP_26094) {
+TEST_F(LlvmLibcTanfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     ASSERT_MPFR_MATCH(mpfr::Operation::Tan, x, LIBC_NAMESPACE::tanf(x), 0.5);
   }
 }

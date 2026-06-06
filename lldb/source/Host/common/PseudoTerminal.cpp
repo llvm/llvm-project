@@ -27,10 +27,6 @@
 #include <Availability.h>
 #endif
 
-#if defined(__ANDROID__)
-int posix_openpt(int flags);
-#endif
-
 using namespace lldb_private;
 
 // PseudoTerminal constructor
@@ -42,10 +38,7 @@ PseudoTerminal::PseudoTerminal() = default;
 // are valid and ownership has not been released using the
 // ReleasePrimaryFileDescriptor() or the ReleaseSaveFileDescriptor() member
 // functions.
-PseudoTerminal::~PseudoTerminal() {
-  ClosePrimaryFileDescriptor();
-  CloseSecondaryFileDescriptor();
-}
+PseudoTerminal::~PseudoTerminal() { Reset(); }
 
 // Close the primary file descriptor if it is valid.
 void PseudoTerminal::ClosePrimaryFileDescriptor() {
@@ -63,7 +56,13 @@ void PseudoTerminal::CloseSecondaryFileDescriptor() {
   }
 }
 
+void PseudoTerminal::Reset() {
+  ClosePrimaryFileDescriptor();
+  CloseSecondaryFileDescriptor();
+}
+
 llvm::Error PseudoTerminal::OpenFirstAvailablePrimary(int oflag) {
+  Reset();
 #if LLDB_ENABLE_POSIX
   // Open the primary side of a pseudo terminal
   m_primary_fd = ::posix_openpt(oflag);
@@ -123,7 +122,7 @@ std::string PseudoTerminal::GetSecondaryName() const {
     char buf[PATH_MAX];
     buf[0] = '\0';
     int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
-    (void)r;
+    UNUSED_IF_ASSERT_DISABLED(r);
     assert(r == 0);
     return buf;
 #if defined(__APPLE__)

@@ -105,12 +105,14 @@
       <item> noimplicitfloat </item>
       <item> noinline </item>
       <item> nomerge </item>
+      <item> nooutline </item>
       <item> noprofile </item>
       <item> noredzone </item>
       <item> noreturn </item>
       <item> nosync </item>
       <item> nounwind </item>
       <item> null_pointer_is_valid </item>
+      <item> optdebug </item>
       <item> optforfuzzing </item>
       <item> optnone </item>
       <item> optsize </item>

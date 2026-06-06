@@ -40,7 +40,7 @@ class ArrayAttr;
 /// Assuming `sizes` is `[s0, .. sn]`, return the vector<int64_t>
 ///   `[s1 * ... * sn, s2 * ... * sn, ..., sn, 1]`.
 ///
-/// `sizes` elements are asserted to be non-negative.
+/// `sizes` elements `s1` to `sn` are asserted to be non-negative.
 ///
 /// Return an empty vector if `sizes` is empty.
 SmallVector<int64_t> computeSuffixProduct(ArrayRef<int64_t> sizes);
@@ -63,7 +63,7 @@ int64_t computeProduct(ArrayRef<int64_t> basis);
 /// Return the number of elements of basis (i.e. the max linear index).
 /// Return `0` if `basis` is empty.
 ///
-/// `basis` elements are asserted to be non-negative.
+/// `basis` elements are asserted to be positive.
 ///
 /// Return `0` if `basis` is empty.
 inline int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis) {
@@ -72,16 +72,16 @@ inline int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis) {
 
 /// Return the linearized index of 'offsets' w.r.t. 'basis'.
 ///
-/// `basis` elements are asserted to be non-negative.
+/// `basis` elements are asserted to be positive.
 int64_t linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis);
 
 /// Given the strides together with a linear index in the dimension space,
 /// return the vector-space offsets in each dimension for a de-linearized index.
-/// `strides` elements are asserted to be non-negative.
+/// `strides` elements are asserted to be positive.
 ///
 /// Let `li = linearIndex`, assuming `strides` are `[s0, .. sn]`, return the
 /// vector of int64_t
-///   `[li % s0, (li / s0) % s1, ..., (li / s0 / .. / sn-1) % sn]`
+///   `[li / s0, (li % s0) / s1, ..., (li % s0 % .. % sn-1) / sn]`
 SmallVector<int64_t> delinearize(int64_t linearIndex,
                                  ArrayRef<int64_t> strides);
 
@@ -89,7 +89,7 @@ SmallVector<int64_t> delinearize(int64_t linearIndex,
 /// dimensions of `shape`. This represents how many times `subShape` fits
 /// within `shape`. If integral division is not possible, return std::nullopt.
 /// The trailing `subShape.size()` entries of both shapes are assumed (and
-/// enforced) to only contain non-negative values.
+/// enforced) to only contain positive values.
 ///
 /// Examples:
 ///   - shapeRatio({3, 5, 8}, {2, 5, 2}) returns {3, 2, 1}.
@@ -181,7 +181,7 @@ AffineExpr linearize(MLIRContext *ctx, ArrayRef<AffineExpr> offsets,
 ///
 /// Let `li = linearIndex`, assuming `strides` are `[s0, .. sn]`, return the
 /// vector of AffineExpr
-///   `[li % s0, (li / s0) % s1, ..., (li / s0 / .. / sn-1) % sn]`
+///   `[li / s0, (li % s0) / s1, ..., (li % s0 % .. % sn-1) / sn]`
 ///
 /// It is the caller's responsibility to pass proper AffineExpr kind that result
 /// in valid AffineExpr (i.e. cannot multiply 2 AffineDimExpr or divide by an
@@ -202,6 +202,9 @@ SmallVector<T> applyPermutation(ArrayRef<T> input,
                                 ArrayRef<int64_t> permutation) {
   assert(input.size() == permutation.size() &&
          "expected input rank to equal permutation rank");
+  assert(
+      llvm::all_of(permutation, [&](size_t s) { return s < input.size(); }) &&
+      "permutation must be within input bounds");
   auto permutationRange = llvm::map_range(
       llvm::seq<unsigned>(0, input.size()),
       [&](int64_t idx) -> T { return input[permutation[idx]]; });
@@ -228,6 +231,9 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
 /// Helper method to apply to inverse a permutation.
 SmallVector<int64_t> invertPermutationVector(ArrayRef<int64_t> permutation);
 
+/// Returns true if `permutation` is an identity permutation.
+bool isIdentityPermutation(ArrayRef<int64_t> permutation);
+
 /// Method to check if an interchange vector is a permutation.
 bool isPermutationVector(ArrayRef<int64_t> interchange);
 
@@ -239,6 +245,14 @@ bool isPermutationVector(ArrayRef<int64_t> interchange);
 SmallVector<int64_t>
 computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
                          ArrayRef<int64_t> desiredPositions);
+
+/// Returns a permutation vector that drop the input dims in
+/// dropPositions from inputPerm.
+///
+/// For example, inputPerm = {2, 4, 0, 1, 3} and dropPositions= {1, 2} would
+/// result in a {2, 0, 1} permutation vector.
+SmallVector<int64_t> dropDims(ArrayRef<int64_t> inputPerm,
+                              ArrayRef<int64_t> dropPositions);
 
 /// Helper to return a subset of `arrayAttr` as a vector of int64_t.
 // TODO: Port everything relevant to DenseArrayAttr and drop this util.
@@ -254,6 +268,9 @@ SmallVector<int64_t> getI64SubArray(ArrayAttr arrayAttr, unsigned dropFront = 0,
 std::pair<AffineExpr, SmallVector<OpFoldResult>>
 computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<OpFoldResult> strides,
                    ArrayRef<OpFoldResult> indices);
+std::pair<AffineExpr, SmallVector<OpFoldResult>>
+computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<int64_t> strides,
+                   ArrayRef<Value> indices);
 
 //===----------------------------------------------------------------------===//
 // Utilities for decomposing larger shapes
@@ -280,6 +297,8 @@ public:
     else
       return getDynamicTileOffsets(linearIndex);
   }
+
+  size_t getRank() const { return tileShape.size(); }
 
 private:
   /// The sub-shape that divides the larger outer shape (which is provided to
@@ -381,6 +400,9 @@ public:
 
   /// Returns the total number of tiles that fit in the larger shape.
   size_t size() const { return params.getMaxLinearIndex(); }
+
+  /// Returns rank of the iterator's shape.
+  size_t getRank() const { return params.getRank(); }
 
 private:
   const ParamsTy params;

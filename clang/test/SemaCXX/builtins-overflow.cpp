@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s -fexperimental-new-constant-interpreter
 // expected-no-diagnostics
 
 #include <limits.h>
@@ -41,6 +42,31 @@ static_assert(add<int>(static_cast<unsigned int>(INT_MAX), 1u) == Result<int>{tr
 static_assert(add<int>(17, 22) == Result<int>{false, 39});
 static_assert(add<int>(INT_MAX - 22, 24) == Result<int>{true, INT_MIN + 1});
 static_assert(add<int>(INT_MIN + 22, -23) == Result<int>{true, INT_MAX});
+static_assert(add<_BitInt(31)>((_BitInt(31))1073741823, (_BitInt(31))1) ==
+              Result<_BitInt(31)>{true, (_BitInt(31))(-1073741824)});
+static_assert(add<bool>(1u, 1u) == Result<bool>{true, false});
+static_assert(add<bool>(1u, 0u) == Result<bool>{false, true});
+static_assert(add<bool>(255u, 1u) == Result<bool>{true, false});
+
+constexpr Result<unsigned> uadd(unsigned lhs, unsigned rhs) {
+  unsigned sum{};
+  return {__builtin_uadd_overflow(lhs, rhs, &sum), sum};
+}
+
+constexpr Result<unsigned> usub(unsigned lhs, unsigned rhs) {
+  unsigned sum{};
+  return {__builtin_usub_overflow(lhs, rhs, &sum), sum};
+}
+
+constexpr Result<unsigned> umul(unsigned lhs, unsigned rhs) {
+  unsigned sum{};
+  return {__builtin_umul_overflow(lhs, rhs, &sum), sum};
+}
+
+static_assert(uadd(1u, 2u) == Result<unsigned>{false, 3u});
+static_assert(uadd(UINT_MAX, 1u) == Result<unsigned>{true, 0u});
+static_assert(usub(0u, 1u) == Result<unsigned>{true, UINT_MAX});
+static_assert(umul(UINT_MAX, 2u) == Result<unsigned>{true, UINT_MAX - 1u});
 
 template <typename RET, typename LHS, typename RHS>
 constexpr Result<RET> sub(LHS &&lhs, RHS &&rhs) {
@@ -56,6 +82,9 @@ static_assert(sub<uint8_t>(static_cast<uint8_t>(255),static_cast<int>(100)) == R
 static_assert(sub<int>(17,22) == Result<int>{false, -5});
 static_assert(sub<int>(INT_MAX - 22, -23) == Result<int>{true, INT_MIN});
 static_assert(sub<int>(INT_MIN + 22, 23) == Result<int>{true, INT_MAX});
+static_assert(sub<_BitInt(31)>((_BitInt(31))(-1073741824), (_BitInt(31))1) ==
+              Result<_BitInt(31)>{true, (_BitInt(31))1073741823});
+static_assert(sub<bool>(0u, 1u) == Result<bool>{true, true});
 
 template <typename RET, typename LHS, typename RHS>
 constexpr Result<RET> mul(LHS &&lhs, RHS &&rhs) {
@@ -66,6 +95,10 @@ constexpr Result<RET> mul(LHS &&lhs, RHS &&rhs) {
 static_assert(mul<int>(17,22) == Result<int>{false, 374});
 static_assert(mul<int>(INT_MAX / 22, 23) == Result<int>{true, -2049870757});
 static_assert(mul<int>(INT_MIN / 22, -23) == Result<int>{true, -2049870757});
+static_assert(mul<_BitInt(31)>((_BitInt(31))1073741823, (_BitInt(31))2) ==
+              Result<_BitInt(31)>{true, (_BitInt(31))(-2)});
+static_assert(mul<bool>(1u, 1u) == Result<bool>{false, true});
+static_assert(mul<bool>(1u, 2u) == Result<bool>{true, false});
 
 constexpr Result<int> sadd(int lhs, int rhs) {
   int sum{};
@@ -94,3 +127,52 @@ static_assert(smul(17,22) == Result<int>{false, 374});
 static_assert(smul(INT_MAX / 22, 23) == Result<int>{true, -2049870757});
 static_assert(smul(INT_MIN / 22, -23) == Result<int>{true, -2049870757});
 
+template<typename T>
+struct CarryResult {
+  T CarryOut;
+  T Value;
+  constexpr bool operator==(const CarryResult<T> &Other) {
+    return CarryOut == Other.CarryOut && Value == Other.Value;
+  }
+};
+
+constexpr CarryResult<unsigned char> addcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+  unsigned char carry_out{};
+  unsigned char sum{};
+  sum = __builtin_addcb(lhs, rhs, carry, &carry_out);
+  return {carry_out, sum};
+}
+
+static_assert(addcb(120, 10, 0) == CarryResult<unsigned char>{0, 130});
+static_assert(addcb(250, 10, 0) == CarryResult<unsigned char>{1, 4});
+static_assert(addcb(255, 255, 0) == CarryResult<unsigned char>{1, 254});
+static_assert(addcb(255, 255, 1) == CarryResult<unsigned char>{1, 255});
+static_assert(addcb(255, 0, 1) == CarryResult<unsigned char>{1, 0});
+static_assert(addcb(255, 1, 0) == CarryResult<unsigned char>{1, 0});
+static_assert(addcb(255, 1, 1) == CarryResult<unsigned char>{1, 1});
+// This is currently supported with the carry still producing a value of 1.
+// If support for carry outside of 0-1 is removed, change this test to check
+// that it is not supported.
+static_assert(addcb(255, 255, 2) == CarryResult<unsigned char>{1, 0});
+
+constexpr CarryResult<unsigned char> subcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+  unsigned char carry_out{};
+  unsigned char sum{};
+  sum = __builtin_subcb(lhs, rhs, carry, &carry_out);
+  return {carry_out, sum};
+}
+
+static_assert(subcb(20, 10, 0) == CarryResult<unsigned char>{0, 10});
+static_assert(subcb(10, 10, 0) == CarryResult<unsigned char>{0, 0});
+static_assert(subcb(10, 15, 0) == CarryResult<unsigned char>{1, 251});
+// The carry is subtracted from the result
+static_assert(subcb(10, 15, 1) == CarryResult<unsigned char>{1, 250});
+static_assert(subcb(0, 0, 1) == CarryResult<unsigned char>{1, 255});
+static_assert(subcb(0, 1, 0) == CarryResult<unsigned char>{1, 255});
+static_assert(subcb(0, 1, 1) == CarryResult<unsigned char>{1, 254});
+static_assert(subcb(0, 255, 0) == CarryResult<unsigned char>{1, 1});
+static_assert(subcb(0, 255, 1) == CarryResult<unsigned char>{1, 0});
+// This is currently supported with the carry still producing a value of 1.
+// If support for carry outside of 0-1 is removed, change this test to check
+// that it is not supported.
+static_assert(subcb(0, 255, 2) == CarryResult<unsigned char>{1, 255});

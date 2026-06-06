@@ -30,7 +30,7 @@ static bool isThumbFunc(object::symbol_iterator Symbol,
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(SymTypeOrErr.takeError(), OS);
-    report_fatal_error(Twine(OS.str()));
+    report_fatal_error(Twine(Buf));
   }
 
   if (*SymTypeOrErr != object::SymbolRef::ST_Function)
@@ -129,7 +129,7 @@ public:
     unsigned TargetSectionID = -1;
     uint64_t TargetOffset = -1;
 
-    if (TargetName.startswith(getImportSymbolPrefix())) {
+    if (TargetName.starts_with(getImportSymbolPrefix())) {
       TargetSectionID = SectionID;
       TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName, true);
       TargetName = StringRef();

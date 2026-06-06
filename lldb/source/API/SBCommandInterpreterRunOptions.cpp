@@ -164,6 +164,18 @@ void SBCommandInterpreterRunOptions::SetSpawnThread(bool spawn_thread) {
   m_opaque_up->SetSpawnThread(spawn_thread);
 }
 
+bool SBCommandInterpreterRunOptions::GetAllowRepeats() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetAllowRepeats();
+}
+
+void SBCommandInterpreterRunOptions::SetAllowRepeats(bool allow_repeats) {
+  LLDB_INSTRUMENT_VA(this, allow_repeats);
+
+  m_opaque_up->SetAllowRepeats(allow_repeats);
+}
+
 lldb_private::CommandInterpreterRunOptions *
 SBCommandInterpreterRunOptions::get() const {
   return m_opaque_up.get();

@@ -10,9 +10,11 @@ unittest("VectorizeTests") {
   ]
   sources = [
     "VPDomTreeTest.cpp",
+    "VPPostDomFrontierTest.cpp",
     "VPlanHCFGTest.cpp",
-    "VPlanSlpTest.cpp",
+    "VPlanPatternMatchTest.cpp",
     "VPlanTest.cpp",
+    "VPlanUncountableExitTest.cpp",
     "VPlanVerifierTest.cpp",
   ]
 }

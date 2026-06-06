@@ -2,11 +2,10 @@
 Test breakpoint names.
 """
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbtest import TestBase, VALID_BREAKPOINT, VALID_TARGET
 from lldbsuite.test import lldbutil
 
 
@@ -50,6 +49,14 @@ class BreakpointNames(TestBase):
         self.build()
         self.setup_target()
         self.do_check_configuring_permissions_cli()
+
+    def test_breakpointname_enabled(self):
+        """Use Commands and Python APIs to test that enabling and disabling a
+        breakpoint name is propagated to all breakpoints with that name.
+        """
+        self.build()
+        self.setup_target()
+        self.do_check_breakpointname_enabled()
 
     def setup_target(self):
         exe = self.getBuildArtifact("a.out")
@@ -130,12 +137,12 @@ class BreakpointNames(TestBase):
         name_list = lldb.SBStringList()
         bkpt.GetNames(name_list)
         num_names = name_list.GetSize()
-        self.assertEquals(
+        self.assertEqual(
             num_names, 1, "Name list has %d items, expected 1." % (num_names)
         )
 
         name = name_list.GetStringAtIndex(0)
-        self.assertEquals(
+        self.assertEqual(
             name,
             other_bkpt_name,
             "Remaining name was: %s expected %s." % (name, other_bkpt_name),
@@ -190,10 +197,12 @@ class BreakpointNames(TestBase):
         bkpts = lldb.SBBreakpointList(self.target)
         self.target.FindBreakpointsByName(bkpt_name, bkpts)
 
-        self.assertEquals(bkpts.GetSize(), 1, "One breakpoint matched.")
+        self.assertEqual(bkpts.GetSize(), 1, "One breakpoint matched.")
         found_bkpt = bkpts.GetBreakpointAtIndex(0)
-        self.assertEquals(bkpt.GetID(), found_bkpt.GetID(), "The right breakpoint.")
-        self.assertEquals(bkpt.GetID(), bkpt_id, "With the same ID as before.")
+        self.assertEqual(bkpt.GetID(), found_bkpt.GetID(), "The right breakpoint.")
+        self.assertEqual(bkpt.GetID(), bkpt_id, "With the same ID as before.")
+        self.assertEqual(bkpts[0].GetID(), bkpt.GetID(), "subscript [0] matches")
+        self.assertEqual(bkpts[-1].GetID(), bkpt.GetID(), "subscript [-1] matches")
 
         retval = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand(
@@ -216,16 +225,14 @@ class BreakpointNames(TestBase):
         )
 
     def check_option_values(self, bp_object):
-        self.assertEqual(bp_object.IsOneShot(), self.is_one_shot, "IsOneShot")
-        self.assertEqual(bp_object.GetIgnoreCount(), self.ignore_count, "IgnoreCount")
-        self.assertEqual(bp_object.GetCondition(), self.condition, "Condition")
-        self.assertEqual(
-            bp_object.GetAutoContinue(), self.auto_continue, "AutoContinue"
-        )
-        self.assertEqual(bp_object.GetThreadID(), self.tid, "Thread ID")
-        self.assertEqual(bp_object.GetThreadIndex(), self.tidx, "Thread Index")
-        self.assertEqual(bp_object.GetThreadName(), self.thread_name, "Thread Name")
-        self.assertEqual(bp_object.GetQueueName(), self.queue_name, "Queue Name")
+        self.assertEqual(bp_object.one_shot, self.is_one_shot, "IsOneShot")
+        self.assertEqual(bp_object.ignore_count, self.ignore_count, "IgnoreCount")
+        self.assertEqual(bp_object.condition, self.condition, "Condition")
+        self.assertEqual(bp_object.auto_continue, self.auto_continue, "AutoContinue")
+        self.assertEqual(bp_object.thread_id, self.tid, "Thread ID")
+        self.assertEqual(bp_object.thread_index, self.tidx, "Thread Index")
+        self.assertEqual(bp_object.thread_name, self.thread_name, "Thread Name")
+        self.assertEqual(bp_object.queue_name, self.queue_name, "Queue Name")
         set_cmds = lldb.SBStringList()
         bp_object.GetCommandLineCommands(set_cmds)
         self.assertEqual(
@@ -389,7 +396,7 @@ class BreakpointNames(TestBase):
         )
 
     def check_permission_results(self, bp_name):
-        self.assertEqual(bp_name.GetAllowDelete(), False, "Didn't set allow delete.")
+        self.assertFalse(bp_name.GetAllowDelete(), "Didn't set allow delete.")
         protected_bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
         protected_id = protected_bkpt.GetID()
 
@@ -402,14 +409,11 @@ class BreakpointNames(TestBase):
         self.assertSuccess(success, "Couldn't add this name to the breakpoint")
 
         self.target.DisableAllBreakpoints()
-        self.assertEqual(
-            protected_bkpt.IsEnabled(),
-            True,
-            "Didnt' keep breakpoint from being disabled",
+        self.assertTrue(
+            protected_bkpt.IsEnabled(), "Didnt' keep breakpoint from being disabled"
         )
-        self.assertEqual(
+        self.assertFalse(
             unprotected_bkpt.IsEnabled(),
-            False,
             "Protected too many breakpoints from disabling.",
         )
 
@@ -418,14 +422,11 @@ class BreakpointNames(TestBase):
         result = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand("break disable", result)
         self.assertTrue(result.Succeeded())
-        self.assertEqual(
-            protected_bkpt.IsEnabled(),
-            True,
-            "Didnt' keep breakpoint from being disabled",
+        self.assertTrue(
+            protected_bkpt.IsEnabled(), "Didnt' keep breakpoint from being disabled"
         )
-        self.assertEqual(
+        self.assertFalse(
             unprotected_bkpt.IsEnabled(),
-            False,
             "Protected too many breakpoints from disabling.",
         )
 
@@ -482,3 +483,60 @@ class BreakpointNames(TestBase):
             bp_name.IsValid(), "Didn't make a breakpoint name we could find."
         )
         self.check_permission_results(bp_name)
+
+    def do_check_breakpointname_enabled(self):
+        target: lldb.SBTarget = self.target
+        self.assertTrue(target.IsValid(), "Target name must be valid.")
+        bp_name: lldb.SBBreakpointName = lldb.SBBreakpointName(
+            target, self.bp_name_string
+        )
+        self.assertTrue(bp_name.IsValid(), "Breakpoint name must be valid.")
+
+        # Create two function breakpoints a and b.
+        a_breakpoint: lldb.SBBreakpoint = target.BreakpointCreateByName("a")
+        self.assertTrue(a_breakpoint and a_breakpoint.IsValid(), VALID_BREAKPOINT)
+        self.assertEqual(a_breakpoint.GetNumLocations(), 1)
+        self.assertTrue(a_breakpoint.IsEnabled())
+        self.assertTrue(a_breakpoint.AddNameWithErrorHandling(self.bp_name_string))
+
+        b_breakpoint = target.BreakpointCreateByName("b")
+        self.assertTrue(b_breakpoint and b_breakpoint.IsValid(), VALID_BREAKPOINT)
+        self.assertEqual(b_breakpoint.GetNumLocations(), 1)
+        self.assertTrue(b_breakpoint.IsEnabled())
+        self.assertTrue(b_breakpoint.AddNameWithErrorHandling(self.bp_name_string))
+
+        # enabled and disable the function breakpoints with the breakpoint name.
+        # With API.
+        bp_name.SetEnabled(False)
+        self.assertFalse(bp_name.IsEnabled())
+        self.assertFalse(a_breakpoint.IsEnabled())
+        self.assertFalse(b_breakpoint.IsEnabled())
+        bp_name.SetEnabled(True)
+        self.assertTrue(a_breakpoint.IsEnabled())
+        self.assertTrue(b_breakpoint.IsEnabled())
+        self.assertTrue(bp_name.IsEnabled())
+
+        # With cli.
+        self.runCmd(f"breakpoint name configure {self.bp_name_string} --disable")
+        self.assertFalse(bp_name.IsEnabled())
+        self.assertFalse(a_breakpoint.IsEnabled())
+        self.assertFalse(b_breakpoint.IsEnabled())
+        self.runCmd(f"breakpoint name configure {self.bp_name_string} --enable")
+        self.assertTrue(a_breakpoint.IsEnabled())
+        self.assertTrue(b_breakpoint.IsEnabled())
+        self.assertTrue(bp_name.IsEnabled())
+
+        # Disabling all the Breakpoints in a BreakpointName
+        # does not disable the BreakpointName.
+        a_breakpoint.SetEnabled(False)
+        b_breakpoint.SetEnabled(False)
+        self.assertFalse(a_breakpoint.IsEnabled())
+        self.assertFalse(b_breakpoint.IsEnabled())
+        self.assertTrue(bp_name.IsEnabled())
+
+        # BreakpointName should enable all disabled breakpoints with the name.
+        b_breakpoint.SetEnabled(True)
+        bp_name.SetEnabled(True)
+        self.assertTrue(a_breakpoint.IsEnabled())
+        self.assertTrue(b_breakpoint.IsEnabled())
+        self.assertTrue(bp_name.IsEnabled())

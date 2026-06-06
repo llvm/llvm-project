@@ -7,25 +7,37 @@
 // Limit this test to Linux since we're relying on allocator internal
 // limits (shadow memory size, allocation limits etc.)
 
+// TODO(boomanaiden154): Switch back to using env options instead of explicitly
+// exporting when the underlying bug causing ulimits to not apply to run lines
+// that use env options is fixed.
+
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: ulimit -v 22024290304
 // RUN: not %run %t malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-MALLOC,CHECK-CRASH
-// RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t malloc 2>&1 \
+// RUN: %export_asan_opts=allocator_may_return_null=0
+// RUN: not %run %t malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-MALLOC,CHECK-CRASH
-// RUN: %env_asan_opts=allocator_may_return_null=1     %run %t malloc 2>&1 \
+// RUN: %export_asan_opts=allocator_may_return_null=1
+// RUN: %run %t malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-MALLOC,CHECK-NULL
-// RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t calloc 2>&1 \
+// RUN: %export_asan_opts=allocator_may_return_null=0
+// RUN: not %run %t calloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-CALLOC,CHECK-CRASH
-// RUN: %env_asan_opts=allocator_may_return_null=1     %run %t calloc 2>&1 \
+// RUN: %export_asan_opts=allocator_may_return_null=1
+// RUN: %run %t calloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-CALLOC,CHECK-NULL
-// RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t realloc 2>&1 \
+// RUN: %export_asan_opts=allocator_may_return_null=0
+// RUN: not %run %t realloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-REALLOC,CHECK-CRASH
-// RUN: %env_asan_opts=allocator_may_return_null=1     %run %t realloc 2>&1 \
+// RUN: %export_asan_opts=allocator_may_return_null=1
+// RUN: %run %t realloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-REALLOC,CHECK-NULL
-// RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t realloc-after-malloc 2>&1 \
+// RUN: %export_asan_opts=allocator_may_return_null=0
+// RUN: not %run %t realloc-after-malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-MALLOC-REALLOC,CHECK-CRASH
-// RUN: %env_asan_opts=allocator_may_return_null=1     %run %t realloc-after-malloc 2>&1 \
+// RUN: %export_asan_opts=allocator_may_return_null=1
+// RUN: %run %t realloc-after-malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-MALLOC-REALLOC,CHECK-NULL
 
 // ASan shadow memory on s390 is too large for this test.

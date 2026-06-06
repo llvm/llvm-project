@@ -20,19 +20,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/StripSymbols.h"
+
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
@@ -79,7 +80,7 @@ static void StripSymtab(ValueSymbolTable &ST, bool PreserveDbgInfo) {
     Value *V = VI->getValue();
     ++VI;
     if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage()) {
-      if (!PreserveDbgInfo || !V->getName().startswith("llvm.dbg"))
+      if (!PreserveDbgInfo || !V->getName().starts_with("llvm.dbg"))
         // Set name to "", removing from symbol table!
         V->setName("");
     }
@@ -94,7 +95,7 @@ static void StripTypeNames(Module &M, bool PreserveDbgInfo) {
   for (StructType *STy : StructTypes) {
     if (STy->isLiteral() || STy->getName().empty()) continue;
 
-    if (PreserveDbgInfo && STy->getName().startswith("llvm.dbg"))
+    if (PreserveDbgInfo && STy->getName().starts_with("llvm.dbg"))
       continue;
 
     STy->setName("");
@@ -124,13 +125,13 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
 
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasLocalLinkage() && !llvmUsedValues.contains(&GV))
-      if (!PreserveDbgInfo || !GV.getName().startswith("llvm.dbg"))
+      if (!PreserveDbgInfo || !GV.getName().starts_with("llvm.dbg"))
         GV.setName(""); // Internal symbols can't participate in linkage
   }
 
   for (Function &I : M) {
     if (I.hasLocalLinkage() && !llvmUsedValues.contains(&I))
-      if (!PreserveDbgInfo || !I.getName().startswith("llvm.dbg"))
+      if (!PreserveDbgInfo || !I.getName().starts_with("llvm.dbg"))
         I.setName(""); // Internal symbols can't participate in linkage
     if (auto *Symtab = I.getValueSymbolTable())
       StripSymtab(*Symtab, PreserveDbgInfo);
@@ -143,8 +144,8 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
 }
 
 static bool stripDebugDeclareImpl(Module &M) {
-
-  Function *Declare = M.getFunction("llvm.dbg.declare");
+  Function *Declare =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::dbg_declare);
   std::vector<Constant*> DeadConstants;
 
   if (Declare) {
@@ -297,4 +298,21 @@ PreservedAnalyses StripDeadDebugInfoPass::run(Module &M,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
+}
+
+PreservedAnalyses StripDeadCGProfilePass::run(Module &M,
+                                              ModuleAnalysisManager &AM) {
+  auto *CGProf = dyn_cast_or_null<MDTuple>(M.getModuleFlag("CG Profile"));
+  if (!CGProf)
+    return PreservedAnalyses::all();
+
+  SmallVector<Metadata *, 16> ValidCGEdges;
+  for (Metadata *Edge : CGProf->operands()) {
+    if (auto *EdgeAsNode = dyn_cast_or_null<MDNode>(Edge))
+      if (!llvm::is_contained(EdgeAsNode->operands(), nullptr))
+        ValidCGEdges.push_back(Edge);
+  }
+  M.setModuleFlag(Module::Append, "CG Profile",
+                  MDTuple::getDistinct(M.getContext(), ValidCGEdges));
+  return PreservedAnalyses::none();
 }

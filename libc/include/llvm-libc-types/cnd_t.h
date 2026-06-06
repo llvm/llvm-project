@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_CND_T_H__
-#define __LLVM_LIBC_TYPES_CND_T_H__
+#ifndef LLVM_LIBC_TYPES_CND_T_H
+#define LLVM_LIBC_TYPES_CND_T_H
 
-#include "mtx_t.h"
+#include "__futex_word.h"
 
 typedef struct {
   void *__qfront;
   void *__qback;
-  mtx_t __qmtx;
+  __futex_word __qmtx;
+  char __padding[4];
 } cnd_t;
 
-#endif // __LLVM_LIBC_TYPES_CND_T_H__
+#endif // LLVM_LIBC_TYPES_CND_T_H

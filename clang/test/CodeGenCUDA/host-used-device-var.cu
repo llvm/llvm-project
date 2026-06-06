@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
-// RUN:   | FileCheck -check-prefix=DEV %s
+// RUN:   -cuid=123 | FileCheck -check-prefix=DEV %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip %s \
-// RUN:   -std=c++17 -O3 -emit-llvm -o - | FileCheck -check-prefix=HOST %s
+// RUN:   -std=c++17 -O3 -emit-llvm -o - -cuid=123 | FileCheck -check-prefix=HOST %s
 
 // Negative tests.
 
@@ -74,8 +74,8 @@ inline constexpr int constexpr_var1b = 1;
 
 // Check constant constexpr variables ODR-used by host code only.
 // Device-side constexpr variables accessed by host code should be externalized and kept.
-// DEV-DAG: @_ZL15constexpr_var2a = addrspace(4) externally_initialized constant i32 2
-// DEV-DAG: @constexpr_var2b = linkonce_odr addrspace(4) externally_initialized constant i32 2
+// DEV-DAG: @_ZL15constexpr_var2a = addrspace(4) constant i32 2
+// DEV-DAG: @constexpr_var2b = linkonce_odr addrspace(4) constant i32 2
 __constant__ constexpr int constexpr_var2a = 2;
 inline __constant__ constexpr int constexpr_var2b = 2;
 
@@ -187,6 +187,7 @@ public:
 // DEV-SAME: {{^[^@]*}} @_ZL2u3
 // DEV-SAME: {{^[^@]*}} @_ZZ4fun1vE11static_var1
 // DEV-SAME: {{^[^@]*}} @_ZZZN21TestStaticVarInLambda3funEvENKUlPcE_clES0_E4var2
+// DEV-SAME: {{^[^@]*}} @__hip_cuid_{{[0-9a-f]+}}
 // DEV-SAME: {{^[^@]*}} @constexpr_var2b
 // DEV-SAME: {{^[^@]*}} @inline_var
 // DEV-SAME: {{^[^@]*}} @u1

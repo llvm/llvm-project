@@ -22,6 +22,7 @@ static constexpr Log::Category g_categories[] = {
     {{"map"},
      {"log insertions of object files into DWARF debug maps"},
      DWARFLog::DebugMap},
+    {{"split"}, {"log split DWARF related activities"}, DWARFLog::SplitDwarf},
 };
 
 static Log::Channel g_channel(g_categories, DWARFLog::DebugInfo);

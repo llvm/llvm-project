@@ -40,6 +40,14 @@ TEST(CodeLayout, HotChain) {
     const std::vector<uint64_t> CallOffsets(std::size(Edges), 5);
     auto Order = computeCacheDirectedLayout(Sizes, Counts, Edges, CallOffsets);
     EXPECT_THAT(Order, ElementsAreArray({0, 3, 4, 2, 1}));
+
+    // -cdsort-max-chain-size disables forming a larger chain and therefore may
+    // change the result.
+    CDSortConfig Config;
+    Config.MaxChainSize = 3;
+    Order =
+        computeCacheDirectedLayout(Config, Sizes, Counts, Edges, CallOffsets);
+    EXPECT_THAT(Order, ElementsAreArray({0, 3, 4, 1, 2}));
   }
 }
 

@@ -12,6 +12,7 @@
 #ifndef __COMPACT_UNWINDER_HPP__
 #define __COMPACT_UNWINDER_HPP__
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -335,8 +336,8 @@ int CompactUnwinder_x86_64<A>::stepWithCompactEncodingRBPFrame(
     default:
       (void)functionStart;
       _LIBUNWIND_DEBUG_LOG("bad register for RBP frame, encoding=%08X for "
-                           "function starting at 0x%llX",
-                            compactEncoding, functionStart);
+                           "function starting at 0x%" PRIu64 "X",
+                           compactEncoding, functionStart);
       _LIBUNWIND_ABORT("invalid compact unwind encoding");
     }
     savedRegisters += 8;
@@ -454,8 +455,8 @@ int CompactUnwinder_x86_64<A>::stepWithCompactEncodingFrameless(
       break;
     default:
       _LIBUNWIND_DEBUG_LOG("bad register for frameless, encoding=%08X for "
-                           "function starting at 0x%llX",
-                            encoding, functionStart);
+                           "function starting at 0x%" PRIu64 "X",
+                           encoding, functionStart);
       _LIBUNWIND_ABORT("invalid compact unwind encoding");
     }
     savedRegisters += 8;
@@ -601,11 +602,17 @@ int CompactUnwinder_arm64<A>::stepWithCompactEncodingFrameless(
     savedRegisterLoc -= 8;
   }
 
+  // We load the link register prior to setting the new SP as the authentication
+  // schema for LR entangles the SP of the old frame into the diversifier.
+  Registers_arm64::reg_t linkRegister = registers.getRegister(UNW_AARCH64_LR);
+
   // subtract stack size off of sp
   registers.setSP(savedRegisterLoc);
 
-  // set pc to be value in lr
-  registers.setIP(registers.getRegister(UNW_AARCH64_LR));
+  // Set pc to be value in lr. This needs to be performed after the new SP has
+  // been set, as the PC authentication schema entangles the SP of the new
+  // frame.
+  registers.setIP(linkRegister);
 
   return UNW_STEP_SUCCESS;
 }
@@ -614,7 +621,7 @@ template <typename A>
 int CompactUnwinder_arm64<A>::stepWithCompactEncodingFrame(
     compact_unwind_encoding_t encoding, uint64_t, A &addressSpace,
     Registers_arm64 &registers) {
-  uint64_t savedRegisterLoc = registers.getFP() - 8;
+  Registers_arm64::reg_t savedRegisterLoc = registers.getFP() - 8;
 
   if (encoding & UNWIND_ARM64_FRAME_X19_X20_PAIR) {
     registers.setRegister(UNW_AARCH64_X19, addressSpace.get64(savedRegisterLoc));
@@ -680,11 +687,16 @@ int CompactUnwinder_arm64<A>::stepWithCompactEncodingFrame(
     savedRegisterLoc -= 8;
   }
 
-  uint64_t fp = registers.getFP();
+  Registers_arm64::reg_t fp = registers.getFP();
+
   // fp points to old fp
   registers.setFP(addressSpace.get64(fp));
-  // old sp is fp less saved fp and lr
+
+  // Old sp is fp less saved fp and lr. We need to set this prior to setting
+  // the lr as the pointer authentication schema for the lr incorporates the
+  // sp as part of the diversifier.
   registers.setSP(fp + 16);
+
   // pop return address into pc
   registers.setIP(addressSpace.get64(fp + 8));
 

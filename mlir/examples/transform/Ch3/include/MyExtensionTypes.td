@@ -16,7 +16,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
 // Transform dialect allows additional types to be defined and injected.
 def CallOpInterfaceHandle

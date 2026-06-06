@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
-func.func @invalid_new_dense(%arg0: !llvm.ptr<i8>) -> tensor<32xf32> {
-  // expected-error@+1 {{'sparse_tensor.new' op result #0 must be sparse tensor of any type values, but got 'tensor<32xf32>'}}
-  %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<32xf32>
+func.func @invalid_new_dense(%arg0: !llvm.ptr) -> tensor<32xf32> {
+  // expected-error@+1 {{'sparse_tensor.new' op result #0 must be sparse tensor of any non-token type values, but got 'tensor<32xf32>'}}
+  %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<32xf32>
   return %0 : tensor<32xf32>
 }
 
@@ -13,8 +13,8 @@ func.func @invalid_new_dense(%arg0: !llvm.ptr<i8>) -> tensor<32xf32> {
 func.func @non_static_pack_ret(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x1xi32>)
                             -> tensor<?xf64, #SparseVector> {
   // expected-error@+1 {{the sparse-tensor must have static shape}}
-  %0 = sparse_tensor.assemble %values, %pos, %coordinates
-     : tensor<6xf64>, tensor<2xi32>, tensor<6x1xi32> to tensor<?xf64, #SparseVector>
+  %0 = sparse_tensor.assemble (%pos, %coordinates), %values
+     : (tensor<2xi32>, tensor<6x1xi32>), tensor<6xf64> to tensor<?xf64, #SparseVector>
   return %0 : tensor<?xf64, #SparseVector>
 }
 
@@ -25,8 +25,8 @@ func.func @non_static_pack_ret(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coo
 func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x1xi32>)
                             -> tensor<100xf32, #SparseVector> {
   // expected-error@+1 {{input/output element-types don't match}}
-  %0 = sparse_tensor.assemble %values, %pos, %coordinates
-     : tensor<6xf64>, tensor<2xi32>, tensor<6x1xi32> to tensor<100xf32, #SparseVector>
+  %0 = sparse_tensor.assemble (%pos, %coordinates), %values
+     : (tensor<2xi32>, tensor<6x1xi32>), tensor<6xf64> to tensor<100xf32, #SparseVector>
   return %0 : tensor<100xf32, #SparseVector>
 }
 
@@ -37,8 +37,8 @@ func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coord
 func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>)
                             -> tensor<100x2xf64, #SparseVector> {
   // expected-error@+1 {{input/output trailing COO level-ranks don't match}}
-  %0 = sparse_tensor.assemble %values, %pos, %coordinates
-     : tensor<6xf64>, tensor<2xi32>, tensor<6x3xi32> to tensor<100x2xf64, #SparseVector>
+  %0 = sparse_tensor.assemble (%pos, %coordinates), %values
+     : (tensor<2xi32>, tensor<6x3xi32>), tensor<6xf64> to tensor<100x2xf64, #SparseVector>
   return %0 : tensor<100x2xf64, #SparseVector>
 }
 
@@ -49,8 +49,8 @@ func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coord
 func.func @invalid_pack_mis_position(%values: tensor<6xf64>, %coordinates: tensor<6xi32>)
                                      -> tensor<2x100xf64, #CSR> {
   // expected-error@+1 {{inconsistent number of fields between input/output}}
-  %0 = sparse_tensor.assemble %values, %coordinates
-     : tensor<6xf64>, tensor<6xi32> to tensor<2x100xf64, #CSR>
+  %0 = sparse_tensor.assemble (%coordinates), %values
+     : (tensor<6xi32>), tensor<6xf64> to tensor<2x100xf64, #CSR>
   return %0 : tensor<2x100xf64, #CSR>
 }
 
@@ -60,9 +60,10 @@ func.func @invalid_pack_mis_position(%values: tensor<6xf64>, %coordinates: tenso
 
 func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>, %values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x1xi32>) {
   // expected-error@+1 {{input/output element-types don't match}}
-  %rv, %rp, %rc, %vl, %pl, %cl = sparse_tensor.disassemble %sp : tensor<100xf32, #SparseVector>
-                  outs(%values, %pos, %coordinates : tensor<6xf64>, tensor<2xi32>, tensor<6x1xi32>)
-                  -> tensor<6xf64>, (tensor<2xi32>, tensor<6x1xi32>), index, (index, index)
+  %rp, %rc, %rv, %pl, %cl, %vl = sparse_tensor.disassemble %sp : tensor<100xf32, #SparseVector>
+                  out_lvls(%pos, %coordinates : tensor<2xi32>, tensor<6x1xi32>)
+                  out_vals(%values : tensor<6xf64>)
+                  -> (tensor<2xi32>, tensor<6x1xi32>), tensor<6xf64>, (index, index), index
   return
 }
 
@@ -72,9 +73,10 @@ func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>, %values: ten
 
 func.func @invalid_unpack_type(%sp: tensor<100x2xf64, #SparseVector>, %values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>) {
   // expected-error@+1 {{input/output trailing COO level-ranks don't match}}
-  %rv, %rp, %rc, %vl, %pl, %cl = sparse_tensor.disassemble %sp : tensor<100x2xf64, #SparseVector>
-                  outs(%values, %pos, %coordinates : tensor<6xf64>, tensor<2xi32>, tensor<6x3xi32>)
-                  -> tensor<6xf64>, (tensor<2xi32>, tensor<6x3xi32>), index, (index, index)
+  %rp, %rc, %rv, %pl, %cl, %vl = sparse_tensor.disassemble %sp : tensor<100x2xf64, #SparseVector>
+                  out_lvls(%pos, %coordinates : tensor<2xi32>, tensor<6x3xi32> )
+                  out_vals(%values : tensor<6xf64>)
+                  -> (tensor<2xi32>, tensor<6x3xi32>), tensor<6xf64>, (index, index), index
   return
 }
 
@@ -84,16 +86,17 @@ func.func @invalid_unpack_type(%sp: tensor<100x2xf64, #SparseVector>, %values: t
 
 func.func @invalid_unpack_mis_position(%sp: tensor<2x100xf64, #CSR>, %values: tensor<6xf64>, %coordinates: tensor<6xi32>) {
   // expected-error@+1 {{inconsistent number of fields between input/output}}
-  %rv, %rc, %vl, %pl = sparse_tensor.disassemble %sp : tensor<2x100xf64, #CSR>
-             outs(%values, %coordinates : tensor<6xf64>, tensor<6xi32>)
-             -> tensor<6xf64>, (tensor<6xi32>), index, (index)
+  %rc, %rv, %cl, %vl = sparse_tensor.disassemble %sp : tensor<2x100xf64, #CSR>
+             out_lvls(%coordinates : tensor<6xi32>)
+             out_vals(%values : tensor<6xf64>)
+             -> (tensor<6xi32>), tensor<6xf64>, (index), index
   return
 }
 
 // -----
 
 func.func @invalid_positions_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
-  // expected-error@+1 {{'sparse_tensor.positions' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
+  // expected-error@+1 {{'sparse_tensor.positions' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<128xf64>'}}
   %0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<128xf64> to memref<?xindex>
   return %0 : memref<?xindex>
 }
@@ -101,8 +104,8 @@ func.func @invalid_positions_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
 // -----
 
 func.func @invalid_positions_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
-  // expected-error@+1 {{'sparse_tensor.positions' op operand #0 must be sparse tensor of any type values, but got 'tensor<*xf64>'}}
-  %0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<*xf64> to memref<?xindex>
+  // expected-error@+1 {{'sparse_tensor.positions' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<*xf64>'}}
+  %0 = "sparse_tensor.positions"(%arg0) { level = 0 : index } : (tensor<*xf64>) -> (memref<?xindex>)
   return %0 : memref<?xindex>
 }
 
@@ -129,7 +132,7 @@ func.func @positions_oob(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xinde
 // -----
 
 func.func @invalid_indices_dense(%arg0: tensor<10x10xi32>) -> memref<?xindex> {
-  // expected-error@+1 {{'sparse_tensor.coordinates' op operand #0 must be sparse tensor of any type values, but got 'tensor<10x10xi32>'}}
+  // expected-error@+1 {{'sparse_tensor.coordinates' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<10x10xi32>'}}
   %0 = sparse_tensor.coordinates %arg0 { level = 1 : index } : tensor<10x10xi32> to memref<?xindex>
   return %0 : memref<?xindex>
 }
@@ -137,8 +140,8 @@ func.func @invalid_indices_dense(%arg0: tensor<10x10xi32>) -> memref<?xindex> {
 // -----
 
 func.func @invalid_indices_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
-  // expected-error@+1 {{'sparse_tensor.coordinates' op operand #0 must be sparse tensor of any type values, but got 'tensor<*xf64>'}}
-  %0 = sparse_tensor.coordinates %arg0 { level = 0 : index } : tensor<*xf64> to memref<?xindex>
+  // expected-error@+1 {{'sparse_tensor.coordinates' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<*xf64>'}}
+  %0 = "sparse_tensor.coordinates"(%arg0) { level = 0 : index } : (tensor<*xf64>) -> (memref<?xindex>)
   return %0 : memref<?xindex>
 }
 
@@ -165,7 +168,7 @@ func.func @indices_oob(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex>
 // -----
 
 func.func @invalid_values_dense(%arg0: tensor<1024xf32>) -> memref<?xf32> {
-  // expected-error@+1 {{'sparse_tensor.values' op operand #0 must be sparse tensor of any type values, but got 'tensor<1024xf32>'}}
+  // expected-error@+1 {{'sparse_tensor.values' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<1024xf32>'}}
   %0 = sparse_tensor.values %arg0 : tensor<1024xf32> to memref<?xf32>
   return %0 : memref<?xf32>
 }
@@ -183,7 +186,7 @@ func.func @indices_buffer_noncoo(%arg0: tensor<128xf64, #SparseVector>) -> memre
 // -----
 
 func.func @indices_buffer_dense(%arg0: tensor<1024xf32>) -> memref<?xindex> {
-  // expected-error@+1 {{must be sparse tensor of any type values}}
+  // expected-error@+1 {{must be sparse tensor of any non-token type values}}
   %0 = sparse_tensor.coordinates_buffer %arg0 : tensor<1024xf32> to memref<?xindex>
   return %0 : memref<?xindex>
 }
@@ -237,7 +240,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
-func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> index {
   // expected-error@+1 {{requested slice data on non-slice tensor}}
   %0 = sparse_tensor.storage_specifier.get %arg0 dim_offset at 0
        : !sparse_tensor.storage_specifier<#SparseVector>
@@ -280,27 +283,9 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#COO>) -> index
 // -----
 
 func.func @sparse_unannotated_load(%arg0: tensor<16x32xf64>) -> tensor<16x32xf64> {
-  // expected-error@+1 {{'sparse_tensor.load' op operand #0 must be sparse tensor of any type values, but got 'tensor<16x32xf64>'}}
+  // expected-error@+1 {{'sparse_tensor.load' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<16x32xf64>'}}
   %0 = sparse_tensor.load %arg0 : tensor<16x32xf64>
   return %0 : tensor<16x32xf64>
-}
-
-// -----
-
-func.func @sparse_unannotated_insert(%arg0: tensor<128xf64>, %arg1: index, %arg2: f64) {
-  // expected-error@+1 {{'sparse_tensor.insert' 'tensor' must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
-  sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf64>
-  return
-}
-
-// -----
-
-#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
-
-func.func @sparse_wrong_arity_insert(%arg0: tensor<128x64xf64, #CSR>, %arg1: index, %arg2: f64) {
-  // expected-error@+1 {{'sparse_tensor.insert' op incorrect number of coordinates}}
-  sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128x64xf64, #CSR>
-  return
 }
 
 // -----
@@ -323,7 +308,7 @@ func.func @sparse_push_back_n(%arg0: index, %arg1: memref<?xf32>, %arg2: f32) ->
 // -----
 
 func.func @sparse_unannotated_expansion(%arg0: tensor<128xf64>) {
-  // expected-error@+1 {{'sparse_tensor.expand' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
+  // expected-error@+1 {{'sparse_tensor.expand' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<128xf64>'}}
   %values, %filled, %added, %count = sparse_tensor.expand %arg0
     : tensor<128xf64> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return
@@ -337,7 +322,7 @@ func.func @sparse_unannotated_compression(%arg0: memref<?xf64>,
                                           %arg3: index,
                                           %arg4: tensor<8x8xf64>,
                                           %arg5: index) {
-  // expected-error@+1 {{'sparse_tensor.compress' op operand #4 must be sparse tensor of any type values, but got 'tensor<8x8xf64>'}}
+  // expected-error@+1 {{'sparse_tensor.compress' op operand #4 must be sparse tensor of any non-token type values, but got 'tensor<8x8xf64>'}}
   sparse_tensor.compress %arg0, %arg1, %arg2, %arg3 into %arg4[%arg5]
     : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64>
   return
@@ -362,7 +347,7 @@ func.func @sparse_wrong_arity_compression(%arg0: memref<?xf64>,
 // -----
 
 func.func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
-  // expected-error@+1 {{unexpected type in convert}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xf32>'}}
   %0 = sparse_tensor.convert %arg0 : tensor<*xf32> to tensor<10xf32>
   return %0 : tensor<10xf32>
 }
@@ -389,9 +374,9 @@ func.func @sparse_convert_dim_mismatch(%arg0: tensor<10x?xf32>) -> tensor<10x10x
 
 // -----
 
-func.func @invalid_out_dense(%arg0: tensor<10xf64>, %arg1: !llvm.ptr<i8>) {
-  // expected-error@+1 {{'sparse_tensor.out' op operand #0 must be sparse tensor of any type values, but got 'tensor<10xf64>'}}
-  sparse_tensor.out %arg0, %arg1 : tensor<10xf64>, !llvm.ptr<i8>
+func.func @invalid_out_dense(%arg0: tensor<10xf64>, %arg1: !llvm.ptr) {
+  // expected-error@+1 {{'sparse_tensor.out' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<10xf64>'}}
+  sparse_tensor.out %arg0, %arg1 : tensor<10xf64>, !llvm.ptr
   return
 }
 
@@ -544,6 +529,57 @@ func.func @invalid_unary_wrong_yield(%arg0: f64) -> f64 {
 
 // -----
 
+
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+
+#trait = {
+  indexing_maps = [ affine_map<(i) -> (i)>, affine_map<(i) -> (i)> ],
+  iterator_types = ["parallel"]
+}
+
+func.func @invalid_absent_value(%arg0 : tensor<100xf64, #SparseVector>) -> tensor<100xf64, #SparseVector> {
+  %C = tensor.empty() : tensor<100xf64, #SparseVector>
+  %0 = linalg.generic #trait
+    ins(%arg0: tensor<100xf64, #SparseVector>)
+    outs(%C: tensor<100xf64, #SparseVector>) {
+     ^bb0(%a: f64, %c: f64) :
+        // expected-error@+1 {{absent region cannot yield linalg argument}}
+        %result = sparse_tensor.unary %a : f64 to f64
+           present={}
+           absent={ sparse_tensor.yield %a : f64 }
+        linalg.yield %result : f64
+    } -> tensor<100xf64, #SparseVector>
+  return %0 : tensor<100xf64, #SparseVector>
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+
+#trait = {
+  indexing_maps = [ affine_map<(i) -> (i)>, affine_map<(i) -> (i)> ],
+  iterator_types = ["parallel"]
+}
+
+func.func @invalid_absent_computation(%arg0 : tensor<100xf64, #SparseVector>) -> tensor<100xf64, #SparseVector> {
+  %f0 = arith.constant 0.0 : f64
+  %C = tensor.empty() : tensor<100xf64, #SparseVector>
+  %0 = linalg.generic #trait
+    ins(%arg0: tensor<100xf64, #SparseVector>)
+    outs(%C: tensor<100xf64, #SparseVector>) {
+     ^bb0(%a: f64, %c: f64) :
+        %v = arith.addf %a, %f0 : f64
+        // expected-error@+1 {{absent region cannot yield locally computed value}}
+        %result = sparse_tensor.unary %a : f64 to f64
+           present={}
+           absent={ sparse_tensor.yield %v : f64 }
+        linalg.yield %result : f64
+    } -> tensor<100xf64, #SparseVector>
+  return %0 : tensor<100xf64, #SparseVector>
+}
+
+// -----
+
 func.func @invalid_reduce_num_args_mismatch(%arg0: f64, %arg1: f64) -> f64 {
   %cf1 = arith.constant 1.0 : f64
   // expected-error@+1 {{reduce region must have exactly 2 arguments}}
@@ -590,6 +626,20 @@ func.func @invalid_reduce_wrong_yield(%arg0: f64, %arg1: f64) -> f64 {
         %cst = arith.constant 2 : i64
         tensor.yield %cst : i64
     }
+  return %r : f64
+}
+
+// -----
+
+func.func @invalid_reduce_wrong_terminator(%arg0: f64, %arg1: f64) -> f64 {
+  %cf1 = arith.constant 1.0 : f64
+  // expected-error@+1 {{reduce region must end with a terminator}}
+  %r = sparse_tensor.reduce %arg0, %arg1, %cf1 : f64 {
+  ^bb0(%arg2: f64, %arg3: f64):
+    %0 = arith.addf %arg2, %arg3 : f64
+    sparse_tensor.yield %0 : f64
+    %1 = arith.fptosi %0 : f64 to i32
+  }
   return %r : f64
 }
 
@@ -832,16 +882,6 @@ func.func @sparse_sort_coo_no_perm(%arg0: index, %arg1: memref<?xindex>) -> (mem
 
 // -----
 
-#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
-
-func.func @sparse_alloc_escapes(%arg0: index) -> tensor<10x?xf64, #CSR> {
-  // expected-error@+1 {{sparse tensor allocation should not escape function}}
-  %0 = bufferization.alloc_tensor(%arg0) : tensor<10x?xf64, #CSR>
-  return %0: tensor<10x?xf64, #CSR>
-}
-
-// -----
-
 #UnorderedCOO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique, nonordered), d1 : singleton(nonordered))}>
 #OrderedCOOPerm = #sparse_tensor.encoding<{map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton)}>
 
@@ -860,4 +900,383 @@ func.func @sparse_permuted_reorder_coo(%arg0 : tensor<?x?xf32, #UnorderedCOO>) -
   // expected-error@+1 {{Unmatched storage format between input and result COO}}
   %ret = sparse_tensor.reorder_coo quick_sort %arg0 : tensor<?x?xf32, #UnorderedCOO> to tensor<?x?xf64, #OrderedCOO>
   return %ret : tensor<?x?xf64, #OrderedCOO>
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv 2 : dense,
+    j floordiv 3 : compressed,
+    i mod 2      : dense,
+    j mod 3      : dense
+  )
+}>
+
+func.func @sparse_crd_translate(%arg0: index, %arg1: index) -> (index, index, index) {
+  // expected-error@+1 {{Coordinate rank mismatch with encoding}}
+  %l0, %l1, %l2 = sparse_tensor.crd_translate dim_to_lvl [%arg0, %arg1] as #BSR : index, index, index
+  return  %l0, %l1, %l2 : index, index, index
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv 2 : dense,
+    j floordiv 3 : compressed,
+    i mod 2      : dense,
+    j mod 3      : dense
+  )
+}>
+
+func.func @sparse_crd_translate(%arg0: index, %arg1: index, %arg2: index) -> (index, index, index, index) {
+  // expected-error@+1 {{Coordinate rank mismatch with encoding}}
+  %l0, %l1, %l2, %l3 = sparse_tensor.crd_translate dim_to_lvl [%arg0, %arg1, %arg2] as #BSR : index, index, index, index
+  return  %l0, %l1, %l2, %l3 : index, index, index, index
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv 2 : dense,
+    j floordiv 3 : compressed,
+    i mod 2      : dense,
+    j mod 3      : dense
+  )
+}>
+
+func.func @sparse_lvl(%t : tensor<?x?xi32, #BSR>) -> index {
+  %lvl = arith.constant 5 : index
+  // expected-error@+1 {{Level index exceeds the rank of the input sparse tensor}}
+  %l0 = sparse_tensor.lvl %t, %lvl : tensor<?x?xi32, #BSR>
+  return  %l0 : index
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i floordiv 2 : dense,
+                      j floordiv 3 : compressed,
+                      i mod 2      : dense,
+                      j mod 3      : dense
+  )
+}>
+
+#DSDC = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: compressed)
+}>
+
+func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x3xf32, #DSDC> {
+  // expected-error@+1 {{Level type mismatch between source/dest tensors}}
+  %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
+                                         to tensor<3x4x2x3xf32, #DSDC>
+  return %t1 : tensor<3x4x2x3xf32, #DSDC>
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i floordiv 2 : dense,
+                      j floordiv 3 : compressed,
+                      i mod 2      : dense,
+                      j mod 3      : dense
+  )
+}>
+
+#DSDD = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
+}>
+
+func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x3xf32, #DSDD> {
+  // expected-error@+1 {{Element type mismatch between source/dest tensors}}
+  %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
+                                         to tensor<3x4x2x3xf32, #DSDD>
+  return %t1 : tensor<3x4x2x3xf32, #DSDD>
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i floordiv 2 : dense,
+                      j floordiv 3 : compressed,
+                      i mod 2      : dense,
+                      j mod 3      : dense
+  )
+}>
+
+#DSDD = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
+}>
+
+func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x4xi32, #DSDD> {
+  // expected-error@+1 {{Level size mismatch between source/dest tensors}}
+  %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
+                                         to tensor<3x4x2x4xi32, #DSDD>
+  return %t1 : tensor<3x4x2x4xi32, #DSDD>
+}
+
+// -----
+
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
+
+func.func @sparse_print(%arg0: tensor<10x10xf64>) {
+  // expected-error@+1 {{'sparse_tensor.print' op operand #0 must be sparse tensor of any non-token type values}}
+  sparse_tensor.print %arg0 : tensor<10x10xf64>
+  return
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+func.func @sparse_extract_iter_space(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#COO, lvls = 2>) {
+  // expected-error@+1 {{'sparse_tensor.extract_iteration_space' expect larger level upper bound than lower bound}}
+  %l1 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 2 to 0 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 2>
+                                                                       -> !sparse_tensor.iter_space<#COO, lvls = 0 to 2>
+  return
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+func.func @sparse_extract_iter_space(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#COO, lvls = 0>) {
+  // expected-error@+1 {{'sparse_tensor.extract_iteration_space' op parent iterator should be specified iff level lower bound equals 0}}
+  %l1 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 0 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+                                                                  -> !sparse_tensor.iter_space<#COO, lvls = 1>
+  return
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+func.func @sparse_extract_iter_space(%sp : tensor<4x8xf32, #COO>) {
+  // expected-error@+1 {{'sparse_tensor.extract_iteration_space' op parent iterator should be specified iff level lower bound equals 0}}
+  %l1 = sparse_tensor.extract_iteration_space %sp lvls = 1 : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 1>
+  return
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+#CSR = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : dense,
+    j : compressed
+  )
+}>
+
+func.func @sparse_extract_iter_space(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#CSR, lvls = 0>) {
+  // expected-error@+1 {{'sparse_tensor.extract_iteration_space' op mismatch in parent iterator encoding and iteration space encoding.}}
+  %l1 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 1 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#CSR, lvls = 0>
+                                                                 -> !sparse_tensor.iter_space<#COO, lvls = 1>
+  return
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+func.func @sparse_extract_iter_space(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#COO, lvls = 0>) {
+  // expected-error@+1 {{'sparse_tensor.extract_iteration_space' op parent iterator should be used to extract an iteration space from a consecutive level.}}
+  %l1 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 2 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+                                                                  -> !sparse_tensor.iter_space<#COO, lvls = 2>
+  return
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+#CSR = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : dense,
+    j : compressed
+  )
+}>
+
+func.func @sparse_extract_value(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#CSR, lvls = 1>) -> f32 {
+  // expected-error@+1 {{'sparse_tensor.extract_value' op mismatch in tensor encoding and iterator encoding.}}
+  %f = sparse_tensor.extract_value %sp at %it1 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#CSR, lvls = 1>
+  return %f : f32
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+func.func @sparse_extract_value(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#COO, lvls = 0>) -> f32 {
+  // expected-error@+1 {{'sparse_tensor.extract_value' op must use last-level iterator to extract values.}}
+  %f = sparse_tensor.extract_value %sp at %it1 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+  return %f : f32
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+func.func @sparse_iterate(%sp : tensor<4x8xf32, #COO>, %i : index, %j : index) -> index {
+  %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0>
+  // expected-error @+1 {{'sparse_tensor.iterate' op different number of region iter_args and yielded values: 2 != 1}}
+  %r1, %r2 = sparse_tensor.iterate %it1 in %l1 at (%crd) iter_args(%si = %i, %sj = %j): !sparse_tensor.iter_space<#COO, lvls = 0> -> (index, index) {
+    sparse_tensor.yield %si : index
+  }
+  return %r1 : index
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+// expected-note@+1 {{prior use here}}
+func.func @sparse_iterate(%sp : tensor<4x8xf32, #COO>, %i : index) -> f32 {
+  %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0>
+  // expected-error @+1 {{use of value '%i' expects different type than prior uses: 'f32' vs 'index'}}
+  %r1 = sparse_tensor.iterate %it1 in %l1 at (%crd) iter_args(%outer = %i): !sparse_tensor.iter_space<#COO, lvls = 0> -> f32 {
+    sparse_tensor.yield %outer : f32
+  }
+  return %r1 : f32
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+func.func @sparse_iterate(%sp : tensor<4x8xf32, #COO>, %i : index, %j : index) -> index {
+  %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0>
+  // expected-error @+1 {{'sparse_tensor.iterate' op types mismatch between 0th yield value and defined value}}
+  %r1 = sparse_tensor.iterate %it1 in %l1 at (%crd) iter_args(%si = %i): !sparse_tensor.iter_space<#COO, lvls = 0> -> index {
+    %y = arith.constant 1.0 :  f32
+    sparse_tensor.yield %y : f32
+  }
+  return %r1 : index
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+
+func.func @sparse_coiteration(%sp1 : !sparse_tensor.iter_space<#COO, lvls = 0>,
+                              %sp2 : !sparse_tensor.iter_space<#COO, lvls = 1>) -> index {
+  %init = arith.constant 0 : index
+  // expected-error @+1 {{'sparse_tensor.coiterate' op contains duplicated cases.}}
+  %ret = sparse_tensor.coiterate (%sp1, %sp2) at (%coord) iter_args(%arg = %init)
+       : (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>)
+       -> index
+  case %it1, _ {
+    sparse_tensor.yield %arg : index
+  }
+  case %it1, _ {
+    sparse_tensor.yield %arg : index
+  }
+  return %ret : index
+}
+
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+
+func.func @sparse_coiteration(%sp1 : !sparse_tensor.iter_space<#COO, lvls = 0>,
+                              %sp2 : !sparse_tensor.iter_space<#COO, lvls = 1>) -> index {
+  %init = arith.constant 0 : index
+  // expected-error @+1 {{'sparse_tensor.coiterate' op types mismatch between 0th yield value and defined value on 0th region}}
+  %ret = sparse_tensor.coiterate (%sp1, %sp2) at (%coord) iter_args(%arg = %init)
+       : (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>)
+       -> index
+  case %it1, _ {
+    %i = arith.constant 1 : i32
+    sparse_tensor.yield %i : i32
+  }
+  return %ret : index
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+
+func.func @sparse_coiteration(%sp1 : !sparse_tensor.iter_space<#COO, lvls = 0>,
+                              %sp2 : !sparse_tensor.iter_space<#COO, lvls = 1>) -> index {
+  %init = arith.constant 0 : index
+  // expected-error @+1 {{'sparse_tensor.coiterate' op required out-of-bound coordinates}}
+  %ret = sparse_tensor.coiterate (%sp1, %sp2) at (%coord1, %coord2) iter_args(%arg = %init)
+       : (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>)
+       -> index
+  case %it1, _ {
+    %i = arith.constant 1 : i32
+    sparse_tensor.yield %i : i32
+  }
+  return %ret : index
 }

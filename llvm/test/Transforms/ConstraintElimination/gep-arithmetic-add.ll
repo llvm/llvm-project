@@ -289,8 +289,7 @@ define i4 @ptr_N_step_zext_n_zext(ptr %src, ptr %lower, ptr %upper, i16 %N, i16 
 ; CHECK-NEXT:    br i1 [[STEP_ULT_N]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 [[STEP_ADD_1_EXT]]
-; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult ptr [[SRC_STEP]], [[LOWER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], false
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3
@@ -344,9 +343,8 @@ define i4 @ptr_N_step_zext_n_zext_out_of_bounds(ptr %src, ptr %lower, ptr %upper
 ; CHECK-NEXT:    br i1 [[STEP_ULT_N]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 [[STEP_ADD_2_EXT]]
-; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult ptr [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge ptr [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3
@@ -391,8 +389,7 @@ define i1 @gep_count_add_1_sge_known_ult_1(i32 %count, ptr %p) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[COUNT]], -1
 ; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[GEP_SUB:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[SUB_EXT]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_SUB]], [[GEP_COUNT]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %sge = icmp sge i32 %count, 1
@@ -417,8 +414,7 @@ define i1 @gep_count_add_1_sge_known_uge_1(i32 %count, ptr %p) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[COUNT]], -1
 ; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[GEP_SUB:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[SUB_EXT]]
-; CHECK-NEXT:    [[C:%.*]] = icmp uge ptr [[GEP_SUB]], [[P]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %sge = icmp sge i32 %count, 1

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
+
 // <string>
 
 // size_type max_size() const; // constexpr since C++20
@@ -46,7 +47,7 @@ TEST_CONSTEXPR_CXX20 void test_resize_max_size(const S& s) {
   } catch (const std::bad_alloc&) {
     return;
   }
-  assert(s.size() == sz);
+  assert(s2.size() == sz);
 }
 
 template <class S>
@@ -84,7 +85,15 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+  test_string<std::basic_string<char, std::char_traits<char>, tiny_size_allocator<64, char> > >();
 #endif
+
+  { // Test resizing where we can assume that the allocation succeeds
+    std::basic_string<char, std::char_traits<char>, tiny_size_allocator<32, char> > str;
+    auto max_size = str.max_size();
+    str.resize(max_size);
+    assert(str.size() == max_size);
+  }
 
   return true;
 }

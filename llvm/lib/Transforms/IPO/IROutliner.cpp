@@ -24,6 +24,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <vector>
 
@@ -154,8 +155,7 @@ struct OutlinableGroup {
 /// \param SourceBB - the BasicBlock to pull Instructions from.
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
-  for (Instruction &I : llvm::make_early_inc_range(SourceBB))
-    I.moveBeforePreserving(TargetBB, TargetBB.end());
+  TargetBB.splice(TargetBB.end(), &SourceBB);
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant
@@ -198,7 +198,7 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
 BasicBlock *
 OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
                                            BasicBlock *BB) {
-  Instruction *FirstNonPHI = BB->getFirstNonPHI();
+  Instruction *FirstNonPHI = &*BB->getFirstNonPHIOrDbg();
   assert(FirstNonPHI && "block is empty?");
   Value *CorrespondingVal = findCorrespondingValueIn(Other, FirstNonPHI);
   if (!CorrespondingVal)
@@ -221,28 +221,12 @@ OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
 static void replaceTargetsFromPHINode(BasicBlock *PHIBlock, BasicBlock *Find,
                                       BasicBlock *Replace,
                                       DenseSet<BasicBlock *> &Included) {
-  for (PHINode &PN : PHIBlock->phis()) {
-    for (unsigned Idx = 0, PNEnd = PN.getNumIncomingValues(); Idx != PNEnd;
-         ++Idx) {
+  for (PHINode &PN : PHIBlock->phis())
+    for (BasicBlock *Incoming : PN.blocks())
       // Check if the incoming block is included in the set of blocks being
       // outlined.
-      BasicBlock *Incoming = PN.getIncomingBlock(Idx);
-      if (!Included.contains(Incoming))
-        continue;
-
-      BranchInst *BI = dyn_cast<BranchInst>(Incoming->getTerminator());
-      assert(BI && "Not a branch instruction?");
-      // Look over the branching instructions into this block to see if we
-      // used to branch to Find in this outlined block.
-      for (unsigned Succ = 0, End = BI->getNumSuccessors(); Succ != End;
-           Succ++) {
-        // If we have found the block to replace, we do so here.
-        if (BI->getSuccessor(Succ) != Find)
-          continue;
-        BI->setSuccessor(Succ, Replace);
-      }
-    }
-  }
+      if (Included.contains(Incoming))
+        Incoming->getTerminator()->replaceSuccessorWith(Find, Replace);
 }
 
 
@@ -267,8 +251,7 @@ void OutlinableRegion::splitCandidate() {
   // region is the same as the recorded instruction following the last
   // instruction. If they do not match, there could be problems in rewriting
   // the program after outlining, so we ignore it.
-  if (!BackInst->isTerminator() &&
-      EndInst != BackInst->getNextNonDebugInstruction())
+  if (!BackInst->isTerminator() && EndInst != BackInst->getNextNode())
     return;
 
   Instruction *StartInst = (*Candidate->begin()).Inst;
@@ -530,8 +513,7 @@ InstructionCost OutlinableRegion::getBenefit(TargetTransformInfo &TTI) {
 /// not.
 static Value *findOutputMapping(const DenseMap<Value *, Value *> OutputMappings,
                                 Value *Input) {
-  DenseMap<Value *, Value *>::const_iterator OutputMapping =
-      OutputMappings.find(Input);
+  auto OutputMapping = OutputMappings.find(Input);
   if (OutputMapping != OutputMappings.end())
     return OutputMapping->second;
   return Input;
@@ -679,18 +661,13 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), MangledNameStream.str(),
-        Unit /* File */,
+        Unit /* Context */, F->getName(), Dummy, Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
-        DB.createSubroutineType(
-            DB.getOrCreateTypeArray(std::nullopt)), /* void type */
+        DB.createSubroutineType(DB.getOrCreateTypeArray({})), /* void type */
         0, /* Line 0 is reserved for compiler-generated code. */
         DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
         /* Outlined code is optimized code by definition. */
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
-
-    // Don't add any new variables to the subprogram.
-    DB.finalizeSubprogram(OutlinedSP);
 
     // Attach subprogram to the function.
     F->setSubprogram(OutlinedSP);
@@ -719,14 +696,18 @@ static void moveFunctionData(Function &Old, Function &New,
     if (ReturnInst *RI = dyn_cast<ReturnInst>(I))
       NewEnds.insert(std::make_pair(RI->getReturnValue(), &CurrBB));
 
-    std::vector<Instruction *> DebugInsts;
-
     for (Instruction &Val : CurrBB) {
+      // Since debug-info originates from many different locations in the
+      // program, it will cause incorrect reporting from a debugger if we keep
+      // the same debug instructions. Drop non-intrinsic DbgVariableRecords
+      // here, collect intrinsics for removal later.
+      Val.dropDbgRecords();
+
       // We must handle the scoping of called functions differently than
       // other outlined instructions.
       if (!isa<CallInst>(&Val)) {
         // Remove the debug information for outlined functions.
-        Val.setDebugLoc(DebugLoc());
+        Val.setDebugLoc(DebugLoc::getDropped());
 
         // Loop info metadata may contain line locations. Update them to have no
         // value in the new subprogram since the outlined code could be from
@@ -742,27 +723,12 @@ static void moveFunctionData(Function &Old, Function &New,
         continue;
       }
 
-      // From this point we are only handling call instructions.
-      CallInst *CI = cast<CallInst>(&Val);
-
-      // We add any debug statements here, to be removed after.  Since the
-      // instructions originate from many different locations in the program,
-      // it will cause incorrect reporting from a debugger if we keep the
-      // same debug instructions.
-      if (isa<DbgInfoIntrinsic>(CI)) {
-        DebugInsts.push_back(&Val);
-        continue;
-      }
-
       // Edit the scope of called functions inside of outlined functions.
       if (DISubprogram *SP = New.getSubprogram()) {
         DILocation *DI = DILocation::get(New.getContext(), 0, 0, SP);
         Val.setDebugLoc(DI);
       }
     }
-
-    for (Instruction *I : DebugInsts)
-      I->eraseFromParent();
   }
 }
 
@@ -787,10 +753,8 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // global value numbering.
       unsigned GVN = *C.getGVN(V);
       if (isa<Constant>(V))
-        if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
+        if (NotSame.contains(GVN) && Seen.insert(GVN).second)
           Inputs.push_back(GVN);
-          Seen.insert(GVN);
-        }
     }
   }
 }
@@ -814,8 +778,9 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
   // replacement.
   for (Value *Input : CurrentInputs) {
     assert(Input && "Have a nullptr as an input");
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     assert(C.getGVN(Input) && "Could not find a numbering for the given input");
     EndInputNumbers.push_back(*C.getGVN(Input));
   }
@@ -836,8 +801,9 @@ remapExtractedInputs(const ArrayRef<Value *> ArgInputs,
   // Get the global value number for each input that will be extracted as an
   // argument by the code extractor, remapping if needed for reloaded values.
   for (Value *Input : ArgInputs) {
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     RemappedArgInputs.insert(Input);
   }
 }
@@ -962,8 +928,7 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     assert(InputOpt && "Global value number not found?");
     Value *Input = *InputOpt;
 
-    DenseMap<unsigned, unsigned>::iterator AggArgIt =
-        Group.CanonicalNumberToAggArg.find(CanonicalNumber);
+    auto AggArgIt = Group.CanonicalNumberToAggArg.find(CanonicalNumber);
 
     if (!Group.InputTypesSet) {
       Group.ArgumentTypes.push_back(Input->getType());
@@ -1125,7 +1090,8 @@ static void analyzeExitPHIsForOutputUses(
     // outside of the single PHINode we should not skip over it.
     for (unsigned Idx : IncomingVals) {
       Value *V = PN.getIncomingValue(Idx);
-      if (outputHasNonPHI(V, Idx, PN, PotentialExitsFromRegion, RegionBlocks)) {
+      if (!isa<Constant>(V) &&
+          outputHasNonPHI(V, Idx, PN, PotentialExitsFromRegion, RegionBlocks)) {
         OutputsWithNonPhiUses.insert(V);
         OutputsReplacedByPHINode.erase(V);
         continue;
@@ -1152,9 +1118,9 @@ using PHINodeData = std::pair<ArgLocWithBBCanon, CanonList>;
 /// \param PND - The data to hash.
 /// \returns The hash code of \p PND.
 static hash_code encodePHINodeData(PHINodeData &PND) {
-  return llvm::hash_combine(
-      llvm::hash_value(PND.first.first), llvm::hash_value(PND.first.second),
-      llvm::hash_combine_range(PND.second.begin(), PND.second.end()));
+  return llvm::hash_combine(llvm::hash_value(PND.first.first),
+                            llvm::hash_value(PND.first.second),
+                            llvm::hash_combine_range(PND.second));
 }
 
 /// Create a special GVN for PHINodes that will be used outside of
@@ -1184,21 +1150,21 @@ static std::optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
   for (unsigned Idx = 0, EIdx = PN->getNumIncomingValues(); Idx < EIdx; Idx++) {
     Incoming = PN->getIncomingValue(Idx);
     IncomingBlock = PN->getIncomingBlock(Idx);
+    // If the incoming block isn't in the region, we don't have to worry about
+    // this incoming value.
+    if (!Blocks.contains(IncomingBlock))
+      continue;
+
     // If we cannot find a GVN, and the incoming block is included in the region
     // this means that the input to the PHINode is not included in the region we
     // are trying to analyze, meaning, that if it was outlined, we would be
     // adding an extra input.  We ignore this case for now, and so ignore the
     // region.
     std::optional<unsigned> OGVN = Cand.getGVN(Incoming);
-    if (!OGVN && Blocks.contains(IncomingBlock)) {
+    if (!OGVN) {
       Region.IgnoreRegion = true;
       return std::nullopt;
     }
-
-    // If the incoming block isn't in the region, we don't have to worry about
-    // this incoming value.
-    if (!Blocks.contains(IncomingBlock))
-      continue;
 
     // Collect the canonical numbers of the values in the PHINode.
     unsigned GVN = *OGVN;
@@ -1331,11 +1297,10 @@ findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
       if (!isa<PointerType>(Group.ArgumentTypes[Jdx]))
         continue;
 
-      if (AggArgsUsed.contains(Jdx))
+      if (!AggArgsUsed.insert(Jdx).second)
         continue;
 
       TypeFound = true;
-      AggArgsUsed.insert(Jdx);
       Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, Jdx));
       Region.AggArgToExtracted.insert(std::make_pair(Jdx, OriginalIndex));
       AggArgIdx = Jdx;
@@ -1479,8 +1444,9 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
     }
 
     // If it is a constant, we simply add it to the argument list as a value.
-    if (Region.AggArgToConstant.contains(AggArgIdx)) {
-      Constant *CST = Region.AggArgToConstant.find(AggArgIdx)->second;
+    if (auto It = Region.AggArgToConstant.find(AggArgIdx);
+        It != Region.AggArgToConstant.end()) {
+      Constant *CST = It->second;
       LLVM_DEBUG(dbgs() << "Setting argument " << AggArgIdx << " to value "
                         << *CST << "\n");
       NewCallArgs.push_back(CST);
@@ -1499,7 +1465,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
                     << *AggFunc << " with new set of arguments\n");
   // Create the new call instruction and erase the old one.
   Call = CallInst::Create(AggFunc->getFunctionType(), AggFunc, NewCallArgs, "",
-                          Call);
+                          Call->getIterator());
 
   // It is possible that the call to the outlined function is either the first
   // instruction is in the new block, the last instruction, or both.  If either
@@ -1514,7 +1480,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // Transfer any debug information.
   Call->setDebugLoc(Region.Call->getDebugLoc());
   // Since our output may determine which branch we go to, we make sure to
-  // propogate this new call value through the module.
+  // propagate this new call value through the module.
   OldCall->replaceAllUsesWith(Call);
 
   // Remove the old instruction.
@@ -1539,45 +1505,28 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
 /// \returns The found or newly created BasicBlock to contain the needed
 /// PHINodes to be used as outputs.
 static BasicBlock *findOrCreatePHIBlock(OutlinableGroup &Group, Value *RetVal) {
-  DenseMap<Value *, BasicBlock *>::iterator PhiBlockForRetVal,
-      ReturnBlockForRetVal;
-  PhiBlockForRetVal = Group.PHIBlocks.find(RetVal);
-  ReturnBlockForRetVal = Group.EndBBs.find(RetVal);
+  // Find if a PHIBlock exists for this return value already.  If it is
+  // the first time we are analyzing this, we will not, so we record it.
+  auto [PhiBlockForRetVal, Inserted] = Group.PHIBlocks.try_emplace(RetVal);
+  if (!Inserted)
+    return PhiBlockForRetVal->second;
+
+  auto ReturnBlockForRetVal = Group.EndBBs.find(RetVal);
   assert(ReturnBlockForRetVal != Group.EndBBs.end() &&
          "Could not find output value!");
   BasicBlock *ReturnBB = ReturnBlockForRetVal->second;
 
-  // Find if a PHIBlock exists for this return value already.  If it is
-  // the first time we are analyzing this, we will not, so we record it.
-  PhiBlockForRetVal = Group.PHIBlocks.find(RetVal);
-  if (PhiBlockForRetVal != Group.PHIBlocks.end())
-    return PhiBlockForRetVal->second;
-  
   // If we did not find a block, we create one, and insert it into the
   // overall function and record it.
-  bool Inserted = false;
   BasicBlock *PHIBlock = BasicBlock::Create(ReturnBB->getContext(), "phi_block",
                                             ReturnBB->getParent());
-  std::tie(PhiBlockForRetVal, Inserted) =
-      Group.PHIBlocks.insert(std::make_pair(RetVal, PHIBlock));
+  PhiBlockForRetVal->second = PHIBlock;
 
-  // We find the predecessors of the return block in the newly created outlined
-  // function in order to point them to the new PHIBlock rather than the already
-  // existing return block.
-  SmallVector<BranchInst *, 2> BranchesToChange;
-  for (BasicBlock *Pred : predecessors(ReturnBB))
-    BranchesToChange.push_back(cast<BranchInst>(Pred->getTerminator()));
+  // We replace all branches to the return block in the newly created outlined
+  // function to point to the new PHIBlock.
+  ReturnBB->replaceAllUsesWith(PHIBlock);
 
-  // Now we mark the branch instructions found, and change the references of the
-  // return block to the newly created PHIBlock.
-  for (BranchInst *BI : BranchesToChange)
-    for (unsigned Succ = 0, End = BI->getNumSuccessors(); Succ < End; Succ++) {
-      if (BI->getSuccessor(Succ) != ReturnBB)
-        continue;
-      BI->setSuccessor(Succ, PHIBlock);
-    }
-
-  BranchInst::Create(ReturnBB, PHIBlock);
+  UncondBrInst::Create(ReturnBB, PHIBlock);
 
   return PhiBlockForRetVal->second;
 }
@@ -1613,9 +1562,10 @@ getPassedArgumentAndAdjustArgumentLocation(const Argument *A,
   
   // If it is a constant, we can look at our mapping from when we created
   // the outputs to figure out what the constant value is.
-  if (Region.AggArgToConstant.count(ArgNum))
-    return Region.AggArgToConstant.find(ArgNum)->second;
-  
+  if (auto It = Region.AggArgToConstant.find(ArgNum);
+      It != Region.AggArgToConstant.end())
+    return It->second;
+
   // If it is not a constant, and we are not looking at the overall function, we
   // need to adjust which argument we are looking at.
   ArgNum = Region.AggArgToExtracted.find(ArgNum)->second;
@@ -1755,7 +1705,7 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
   // If we've made it here, it means we weren't able to replace the PHINode, so
   // we must insert it ourselves.
   PHINode *NewPN = cast<PHINode>(PN.clone());
-  NewPN->insertBefore(&*OverallPhiBlock->begin());
+  NewPN->insertBefore(OverallPhiBlock->begin());
   for (unsigned Idx = 0, Edx = NewPN->getNumIncomingValues(); Idx < Edx;
        Idx++) {
     Value *IncomingVal = NewPN->getIncomingValue(Idx);
@@ -1779,8 +1729,7 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
     IncomingVal = findOutputMapping(OutputMappings, IncomingVal);
     Value *Val = Region.findCorrespondingValueIn(*FirstRegion, IncomingVal);
     assert(Val && "Value is nullptr?");
-    DenseMap<Value *, Value *>::iterator RemappedIt =
-        FirstRegion->RemappedArguments.find(Val);
+    auto RemappedIt = FirstRegion->RemappedArguments.find(Val);
     if (RemappedIt != FirstRegion->RemappedArguments.end())
       Val = RemappedIt->second;
     NewPN->setIncomingValue(Idx, Val);
@@ -1866,7 +1815,7 @@ replaceArgumentUses(OutlinableRegion &Region,
       Value *ValueOperand = SI->getValueOperand();
 
       StoreInst *NewI = cast<StoreInst>(I->clone());
-      NewI->setDebugLoc(DebugLoc());
+      NewI->setDebugLoc(DebugLoc::getDropped());
       BasicBlock *OutputBB = VBBIt->second;
       NewI->insertInto(OutputBB, OutputBB->end());
       LLVM_DEBUG(dbgs() << "Move store for instruction " << *I << " to "
@@ -1934,29 +1883,25 @@ replaceArgumentUses(OutlinableRegion &Region,
 /// \param Region [in] - The region of extracted code to be changed.
 void replaceConstants(OutlinableRegion &Region) {
   OutlinableGroup &Group = *Region.Parent;
+  Function *OutlinedFunction = Group.OutlinedFunction;
+  ValueToValueMapTy VMap;
+
   // Iterate over the constants that need to be elevated into arguments
   for (std::pair<unsigned, Constant *> &Const : Region.AggArgToConstant) {
     unsigned AggArgIdx = Const.first;
-    Function *OutlinedFunction = Group.OutlinedFunction;
     assert(OutlinedFunction && "Overall Function is not defined?");
     Constant *CST = Const.second;
     Argument *Arg = Group.OutlinedFunction->getArg(AggArgIdx);
     // Identify the argument it will be elevated to, and replace instances of
     // that constant in the function.
-
-    // TODO: If in the future constants do not have one global value number,
-    // i.e. a constant 1 could be mapped to several values, this check will
-    // have to be more strict.  It cannot be using only replaceUsesWithIf.
-
+    VMap[CST] = Arg;
     LLVM_DEBUG(dbgs() << "Replacing uses of constant " << *CST
                       << " in function " << *OutlinedFunction << " with "
-                      << *Arg << "\n");
-    CST->replaceUsesWithIf(Arg, [OutlinedFunction](Use &U) {
-      if (Instruction *I = dyn_cast<Instruction>(U.getUser()))
-        return I->getFunction() == OutlinedFunction;
-      return false;
-    });
+                      << *Arg << '\n');
   }
+
+  RemapFunction(*OutlinedFunction, VMap,
+                RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 }
 
 /// It is possible that there is a basic block that already performs the same
@@ -1977,8 +1922,7 @@ std::optional<unsigned> findDuplicateOutputBlock(
   for (DenseMap<Value *, BasicBlock *> &CompBBs : OutputStoreBBs) {
     Mismatch = false;
     for (std::pair<Value *, BasicBlock *> &VToB : CompBBs) {
-      DenseMap<Value *, BasicBlock *>::iterator OutputBBIt =
-          OutputBBs.find(VToB.first);
+      auto OutputBBIt = OutputBBs.find(VToB.first);
       if (OutputBBIt == OutputBBs.end()) {
         Mismatch = true;
         break;
@@ -1993,7 +1937,7 @@ std::optional<unsigned> findDuplicateOutputBlock(
 
       BasicBlock::iterator NIt = OutputBB->begin();
       for (Instruction &I : *CompBB) {
-        if (isa<BranchInst>(&I))
+        if (isa<UncondBrInst, CondBrInst>(&I))
           continue;
 
         if (!I.isIdenticalTo(&(*NIt))) {
@@ -2103,12 +2047,11 @@ static void alignOutputBlockWithAggFunc(
   for (std::pair<Value *, BasicBlock *> &VtoBB : OutputBBs) {
     RetValueForBB = VtoBB.first;
     NewBB = VtoBB.second;
-    DenseMap<Value *, BasicBlock *>::iterator VBBIt =
-        EndBBs.find(RetValueForBB);
+    auto VBBIt = EndBBs.find(RetValueForBB);
     LLVM_DEBUG(dbgs() << "Create output block for region in"
                       << Region.ExtractedFunction << " to "
                       << *NewBB);
-    BranchInst::Create(VBBIt->second, NewBB);
+    UncondBrInst::Create(VBBIt->second, NewBB);
     OutputStoreBBs.back().insert(std::make_pair(RetValueForBB, NewBB));
   }
 }
@@ -2132,8 +2075,7 @@ static void createAndInsertBasicBlocks(DenseMap<Value *, BasicBlock *> &OldMap,
 
   for (Value *RetVal : SortedKeys) {
     BasicBlock *NewBB = BasicBlock::Create(
-        ParentFunc->getContext(),
-        Twine(BaseName) + Twine("_") + Twine(static_cast<unsigned>(Idx++)),
+        ParentFunc->getContext(), Twine(BaseName) + Twine("_") + Twine(Idx++),
         ParentFunc);
     NewMap.insert(std::make_pair(RetVal, NewBB));
   }
@@ -2183,8 +2125,7 @@ void createSwitchStatement(
 
       unsigned Idx = 0;
       for (DenseMap<Value *, BasicBlock *> &OutputStoreBB : OutputStoreBBs) {
-        DenseMap<Value *, BasicBlock *>::iterator OSBBIt =
-            OutputStoreBB.find(OutputBlock.first);
+        auto OSBBIt = OutputStoreBB.find(OutputBlock.first);
 
         if (OSBBIt == OutputStoreBB.end())
           continue;
@@ -2213,8 +2154,7 @@ void createSwitchStatement(
                       << *OG.OutlinedFunction << "\n");
     DenseMap<Value *, BasicBlock *> OutputBlocks = OutputStoreBBs[0];
     for (std::pair<Value *, BasicBlock *> &VBPair : OutputBlocks) {
-      DenseMap<Value *, BasicBlock *>::iterator EndBBIt =
-          EndBBs.find(VBPair.first);
+      auto EndBBIt = EndBBs.find(VBPair.first);
       assert(EndBBIt != EndBBs.end() && "Could not find end block");
       BasicBlock *EndBB = EndBBIt->second;
       BasicBlock *OutputBB = VBPair.second;
@@ -2228,25 +2168,13 @@ void createSwitchStatement(
   }
 }
 
-/// Fill the new function that will serve as the replacement function for all of
-/// the extracted regions of a certain structure from the first region in the
-/// list of regions.  Replace this first region's extracted function with the
-/// new overall function.
-///
-/// \param [in] M - The module we are outlining from.
-/// \param [in] CurrentGroup - The group of regions to be outlined.
-/// \param [in,out] OutputStoreBBs - The output blocks for each different
-/// set of stores needed for the different functions.
-/// \param [in,out] FuncsToRemove - Extracted functions to erase from module
-/// once outlining is complete.
-/// \param [in] OutputMappings - Extracted functions to erase from module
-/// once outlining is complete.
-static void fillOverallFunction(
+void IROutliner::fillOverallFunction(
     Module &M, OutlinableGroup &CurrentGroup,
     std::vector<DenseMap<Value *, BasicBlock *>> &OutputStoreBBs,
-    std::vector<Function *> &FuncsToRemove,
-    const DenseMap<Value *, Value *> &OutputMappings) {
+    std::vector<Function *> &FuncsToRemove) {
   OutlinableRegion *CurrentOS = CurrentGroup.Regions[0];
+
+  TargetTransformInfo &TTI = getTTI(*CurrentOS->StartBB->getParent());
 
   // Move first extracted function's instructions into new function.
   LLVM_DEBUG(dbgs() << "Move instructions from "
@@ -2256,8 +2184,14 @@ static void fillOverallFunction(
                    *CurrentGroup.OutlinedFunction, CurrentGroup.EndBBs);
 
   // Transfer the attributes from the function to the new function.
-  for (Attribute A : CurrentOS->ExtractedFunction->getAttributes().getFnAttrs())
+  for (Attribute A :
+       CurrentOS->ExtractedFunction->getAttributes().getFnAttrs()) {
+    if (!TTI.shouldCopyAttributeWhenOutliningFrom(CurrentOS->ExtractedFunction,
+                                                  A))
+      continue;
+
     CurrentGroup.OutlinedFunction->addFnAttr(A);
+  }
 
   // Create a new set of output blocks for the first extracted function.
   DenseMap<Value *, BasicBlock *> NewBBs;
@@ -2274,10 +2208,9 @@ static void fillOverallFunction(
   if (!analyzeAndPruneOutputBlocks(NewBBs, *CurrentOS)) {
     OutputStoreBBs.push_back(DenseMap<Value *, BasicBlock *>());
     for (std::pair<Value *, BasicBlock *> &VToBB : NewBBs) {
-      DenseMap<Value *, BasicBlock *>::iterator VBBIt =
-          CurrentGroup.EndBBs.find(VToBB.first);
+      auto VBBIt = CurrentGroup.EndBBs.find(VToBB.first);
       BasicBlock *EndBB = VBBIt->second;
-      BranchInst::Create(EndBB, VToBB.second);
+      UncondBrInst::Create(EndBB, VToBB.second);
       OutputStoreBBs.back().insert(VToBB);
     }
   }
@@ -2299,10 +2232,8 @@ void IROutliner::deduplicateExtractedSections(
 
   OutlinableRegion *CurrentOS;
 
-  fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove,
-                      OutputMappings);
+  fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove);
 
-  std::vector<Value *> SortedKeys;
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
     AttributeFuncs::mergeAttributesForOutlining(*CurrentGroup.OutlinedFunction,
@@ -2311,9 +2242,9 @@ void IROutliner::deduplicateExtractedSections(
     // Create a set of BasicBlocks, one for each return block, to hold the
     // needed store instructions.
     DenseMap<Value *, BasicBlock *> NewBBs;
-    createAndInsertBasicBlocks(
-        CurrentGroup.EndBBs, NewBBs, CurrentGroup.OutlinedFunction,
-        "output_block_" + Twine(static_cast<unsigned>(Idx)));
+    createAndInsertBasicBlocks(CurrentGroup.EndBBs, NewBBs,
+                               CurrentGroup.OutlinedFunction,
+                               "output_block_" + Twine(Idx));
     replaceArgumentUses(*CurrentOS, NewBBs, OutputMappings);
     alignOutputBlockWithAggFunc(CurrentGroup, *CurrentOS, NewBBs,
                                 CurrentGroup.EndBBs, OutputMappings,
@@ -2347,10 +2278,9 @@ static bool nextIRInstructionDataMatchesNextInst(IRInstructionData &ID) {
   Instruction *NextIDLInst = NextIDIt->Inst;
   Instruction *NextModuleInst = nullptr;
   if (!ID.Inst->isTerminator())
-    NextModuleInst = ID.Inst->getNextNonDebugInstruction();
+    NextModuleInst = ID.Inst->getNextNode();
   else if (NextIDLInst != nullptr)
-    NextModuleInst =
-        &*NextIDIt->Inst->getParent()->instructionsWithoutDebug().begin();
+    NextModuleInst = &*NextIDIt->Inst->getParent()->begin();
 
   if (NextIDLInst && NextIDLInst != NextModuleInst)
     return false;
@@ -2374,7 +2304,7 @@ bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
   // if it does not, we fix it in the InstructionDataList.
   if (!Region.Candidate->backInstruction()->isTerminator()) {
     Instruction *NewEndInst =
-        Region.Candidate->backInstruction()->getNextNonDebugInstruction();
+        Region.Candidate->backInstruction()->getNextNode();
     assert(NewEndInst && "Next instruction is a nullptr?");
     if (Region.Candidate->end()->Inst != NewEndInst) {
       IRInstructionDataList *IDL = Region.Candidate->front()->IDL;
@@ -2412,7 +2342,7 @@ void IROutliner::pruneIncompatibleRegions(
   // outlinining a call instruction, we ignore it as a space saving.
   if (FirstCandidate.getLength() == 2) {
     if (isa<CallInst>(FirstCandidate.front()->Inst) &&
-        isa<BranchInst>(FirstCandidate.back()->Inst))
+        isa<UncondBrInst, CondBrInst>(FirstCandidate.back()->Inst))
       return;
   }
 
@@ -2444,7 +2374,7 @@ void IROutliner::pruneIncompatibleRegions(
     if (FnForCurrCand.hasOptNone())
       continue;
 
-    if (FnForCurrCand.hasFnAttribute("nooutline")) {
+    if (FnForCurrCand.hasFnAttribute(Attribute::NoOutline)) {
       LLVM_DEBUG({
         dbgs() << "... Skipping function with nooutline attribute: "
                << FnForCurrCand.getName() << "\n";
@@ -2569,7 +2499,7 @@ static InstructionCost findCostForOutputBlocks(Module &M,
   // of the region.
   DenseSet<BasicBlock *> FoundBlocks;
   for (IRInstructionData &ID : Candidate) {
-    if (!isa<BranchInst>(ID.Inst))
+    if (!isa<UncondBrInst, CondBrInst>(ID.Inst))
       continue;
 
     for (Value *V : ID.OperVals) {
@@ -2598,8 +2528,8 @@ static InstructionCost findCostForOutputBlocks(Module &M,
       OutputCost += StoreCost * NumOutputBranches;
     }
 
-    InstructionCost BranchCost =
-        TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
+    InstructionCost BranchCost = TTI.getCFInstrCost(
+        Instruction::UncondBr, TargetTransformInfo::TCK_CodeSize);
     LLVM_DEBUG(dbgs() << "Adding " << BranchCost << " to the current cost for"
                       << " a branch instruction\n");
     OutputCost += BranchCost * NumOutputBranches;
@@ -2612,8 +2542,8 @@ static InstructionCost findCostForOutputBlocks(Module &M,
         Instruction::ICmp, Type::getInt32Ty(M.getContext()),
         Type::getInt32Ty(M.getContext()), CmpInst::BAD_ICMP_PREDICATE,
         TargetTransformInfo::TCK_CodeSize);
-    InstructionCost BranchCost =
-        TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
+    InstructionCost BranchCost = TTI.getCFInstrCost(
+        Instruction::CondBr, TargetTransformInfo::TCK_CodeSize);
 
     unsigned DifferentBlocks = CurrentGroup.OutputGVNCombinations.size();
     InstructionCost TotalCost = ComparisonCost * BranchCost * DifferentBlocks;
@@ -2694,12 +2624,13 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
   if (!OutputIdx)
     return;
 
-  if (!OutputMappings.contains(Outputs[*OutputIdx])) {
+  auto It = OutputMappings.find(Outputs[*OutputIdx]);
+  if (It == OutputMappings.end()) {
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *LI << " to "
                       << *Outputs[*OutputIdx] << "\n");
     OutputMappings.insert(std::make_pair(LI, Outputs[*OutputIdx]));
   } else {
-    Value *Orig = OutputMappings.find(Outputs[*OutputIdx])->second;
+    Value *Orig = It->second;
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *Orig << " to "
                       << *Outputs[*OutputIdx] << "\n");
     OutputMappings.insert(std::make_pair(LI, Orig));
@@ -2707,7 +2638,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
 }
 
 bool IROutliner::extractSection(OutlinableRegion &Region) {
-  SetVector<Value *> ArgInputs, Outputs, SinkCands;
+  SetVector<Value *> ArgInputs, Outputs;
   assert(Region.StartBB && "StartBB for the OutlinableRegion is nullptr!");
   BasicBlock *InitialStart = Region.StartBB;
   Function *OrigF = Region.StartBB->getParent();
@@ -2850,7 +2781,7 @@ unsigned IROutliner::doOutline(Module &M) {
       OS->Candidate->getBasicBlocks(BlocksInRegion, BE);
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
-                        false, nullptr, "outlined");
+                        false, nullptr, {}, "outlined");
       findAddInputsOutputs(M, *OS, NotSame);
       if (!OS->IgnoreRegion)
         OutlinedRegions.push_back(OS);
@@ -2961,7 +2892,7 @@ unsigned IROutliner::doOutline(Module &M) {
       OS->Candidate->getBasicBlocks(BlocksInRegion, BE);
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
-                        false, nullptr, "outlined");
+                        false, nullptr, {}, "outlined");
       bool FunctionOutlined = extractSection(*OS);
       if (FunctionOutlined) {
         unsigned StartIdx = OS->Candidate->getStartIdx();

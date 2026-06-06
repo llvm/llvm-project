@@ -24,7 +24,6 @@
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -47,9 +46,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -234,7 +231,7 @@ namespace {
 
     /// NewWaterList - The subset of WaterList that was created since the
     /// previous iteration by inserting unconditional branches.
-    SmallSet<MachineBasicBlock*, 4> NewWaterList;
+    SmallPtrSet<MachineBasicBlock *, 4> NewWaterList;
 
     using water_iterator = std::vector<MachineBasicBlock *>::iterator;
 
@@ -323,7 +320,8 @@ namespace {
   struct ImmBranch {
     MachineInstr *MI;
     unsigned MaxDisp : 31;
-    bool isCond : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned isCond : 1;
     int UncondBr;
 
     ImmBranch(MachineInstr *mi, unsigned maxdisp, bool cond, int ubr)
@@ -365,8 +363,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &F) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     void doInitialPlacement(std::vector<MachineInstr*> &CPEMIs);
@@ -1630,38 +1627,31 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
 }
 
 void MipsConstantIslands::prescanForConstants() {
-  unsigned J = 0;
-  (void)J;
   for (MachineBasicBlock &B : *MF) {
-    for (MachineBasicBlock::instr_iterator I = B.instr_begin(),
-                                           EB = B.instr_end();
-         I != EB; ++I) {
-      switch(I->getDesc().getOpcode()) {
-        case Mips::LwConstant32: {
-          PrescannedForConstants = true;
-          LLVM_DEBUG(dbgs() << "constant island constant " << *I << "\n");
-          J = I->getNumOperands();
-          LLVM_DEBUG(dbgs() << "num operands " << J << "\n");
-          MachineOperand& Literal = I->getOperand(1);
-          if (Literal.isImm()) {
-            int64_t V = Literal.getImm();
-            LLVM_DEBUG(dbgs() << "literal " << V << "\n");
-            Type *Int32Ty =
-              Type::getInt32Ty(MF->getFunction().getContext());
-            const Constant *C = ConstantInt::get(Int32Ty, V);
-            unsigned index = MCP->getConstantPoolIndex(C, Align(4));
-            I->getOperand(2).ChangeToImmediate(index);
-            LLVM_DEBUG(dbgs() << "constant island constant " << *I << "\n");
-            I->setDesc(TII->get(Mips::LwRxPcTcp16));
-            I->removeOperand(1);
-            I->removeOperand(1);
-            I->addOperand(MachineOperand::CreateCPI(index, 0));
-            I->addOperand(MachineOperand::CreateImm(4));
-          }
-          break;
+    for (MachineInstr &MI : B) {
+      switch (MI.getDesc().getOpcode()) {
+      case Mips::LwConstant32: {
+        PrescannedForConstants = true;
+        LLVM_DEBUG(dbgs() << "constant island constant " << MI << "\n");
+        LLVM_DEBUG(dbgs() << "num operands " << MI.getNumOperands() << "\n");
+        MachineOperand &Literal = MI.getOperand(1);
+        if (Literal.isImm()) {
+          int64_t V = Literal.getImm();
+          LLVM_DEBUG(dbgs() << "literal " << V << "\n");
+          Type *Int32Ty = Type::getInt32Ty(MF->getFunction().getContext());
+          const Constant *C = ConstantInt::getSigned(Int32Ty, V);
+          unsigned index = MCP->getConstantPoolIndex(C, Align(4));
+          MI.getOperand(2).ChangeToImmediate(index);
+          LLVM_DEBUG(dbgs() << "constant island constant " << MI << "\n");
+          MI.setDesc(TII->get(Mips::LwRxPcTcp16));
+          MI.removeOperand(1);
+          MI.removeOperand(1);
+          MI.addOperand(MachineOperand::CreateCPI(index, 0));
         }
-        default:
-          break;
+        break;
+      }
+      default:
+        break;
       }
     }
   }

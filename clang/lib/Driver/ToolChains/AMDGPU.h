@@ -10,13 +10,12 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPU_H
 
 #include "Gnu.h"
-#include "ROCm.h"
 #include "clang/Basic/TargetID.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <map>
 
@@ -26,7 +25,7 @@ namespace driver {
 namespace tools {
 namespace amdgpu {
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("amdgpu::Linker", "ld.lld", TC) {}
   bool isLinkJob() const override { return true; }
@@ -41,6 +40,8 @@ void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
                              std::vector<StringRef> &Features);
 
+void addFullLTOPartitionOption(const Driver &D, const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs);
 } // end namespace amdgpu
 } // end namespace tools
 
@@ -78,6 +79,9 @@ public:
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
 
   /// Return whether denormals should be flushed, and treated as 0 by default
   /// for the subtarget.
@@ -96,6 +100,9 @@ public:
 
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
+
+  StringRef getSanitizerRequirement(SanitizerMask Kinds,
+                                    StringRef BoundArch) const override;
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
@@ -121,6 +128,13 @@ protected:
   /// Get GPU arch from -mcpu without checking.
   StringRef getGPUArch(const llvm::opt::ArgList &DriverArgs) const;
 
+  /// Common warning options shared by AMDGPU HIP, OpenCL and OpenMP toolchains.
+  /// Language specific warning options should go to derived classes.
+  void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
+
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
@@ -133,10 +147,35 @@ public:
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   // Returns a list of device library names shared by different languages
-  llvm::SmallVector<std::string, 12>
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                          const std::string &GPUArch,
-                          bool isOpenMP = false) const;
+                          llvm::StringRef TargetID, llvm::StringRef GPUArch,
+                          Action::OffloadKind DeviceOffloadingKind) const;
+
+  bool diagnoseUnsupportedOption(const llvm::opt::Arg *A,
+                                 const llvm::opt::DerivedArgList &DAL,
+                                 const llvm::opt::ArgList &DriverArgs,
+                                 const char *Value = nullptr) const {
+    auto &Diags = getDriver().getDiags();
+    bool IsExplicitDevice =
+        A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
+
+    if (Value) {
+      unsigned DiagID =
+          IsExplicitDevice
+              ? clang::diag::err_drv_unsupported_option_part_for_target
+              : clang::diag::warn_drv_unsupported_option_part_for_target;
+      Diags.Report(DiagID) << Value << A->getAsString(DriverArgs)
+                           << getTriple().str();
+    } else {
+      unsigned DiagID =
+          IsExplicitDevice
+              ? clang::diag::err_drv_unsupported_option_for_target
+              : clang::diag::warn_drv_unsupported_option_for_target;
+      Diags.Report(DiagID) << A->getAsString(DAL) << getTriple().str();
+    }
+    return true;
+  }
 };
 
 } // end namespace toolchains

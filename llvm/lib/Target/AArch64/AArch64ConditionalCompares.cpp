@@ -18,7 +18,6 @@
 
 #include "AArch64.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -26,6 +25,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/Passes.h"
@@ -210,6 +210,17 @@ public:
 };
 } // end anonymous namespace
 
+static Register lookThroughCopies(Register Reg, MachineRegisterInfo *MRI) {
+  MachineInstr *MI;
+  while ((MI = MRI->getUniqueVRegDef(Reg)) &&
+         MI->getOpcode() == TargetOpcode::COPY) {
+    if (MI->getOperand(1).getReg().isPhysical())
+      break;
+    Reg = MI->getOperand(1).getReg();
+  }
+  return Reg;
+}
+
 // Check that all PHIs in Tail are selecting the same value from Head and CmpBB.
 // This means that no if-conversion is required when merging CmpBB into Head.
 bool SSACCmpConv::trivialTailPHIs() {
@@ -220,7 +231,7 @@ bool SSACCmpConv::trivialTailPHIs() {
     // PHI operands come in (VReg, MBB) pairs.
     for (unsigned oi = 1, oe = I.getNumOperands(); oi != oe; oi += 2) {
       MachineBasicBlock *MBB = I.getOperand(oi + 1).getMBB();
-      Register Reg = I.getOperand(oi).getReg();
+      Register Reg = lookThroughCopies(I.getOperand(oi).getReg(), MRI);
       if (MBB == Head) {
         assert((!HeadReg || HeadReg == Reg) && "Inconsistent PHI operands");
         HeadReg = Reg;
@@ -300,7 +311,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
   if (I == MBB->end())
     return nullptr;
   // The terminator must be controlled by the flags.
-  if (!I->readsRegister(AArch64::NZCV)) {
+  if (!I->readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
     switch (I->getOpcode()) {
     case AArch64::CBZW:
     case AArch64::CBZX:
@@ -417,7 +428,7 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
 
     // We never speculate stores, so an AA pointer isn't necessary.
     bool DontMoveAcrossStore = true;
-    if (!I.isSafeToMove(nullptr, DontMoveAcrossStore)) {
+    if (!I.isSafeToMove(DontMoveAcrossStore)) {
       LLVM_DEBUG(dbgs() << "Can't speculate: " << I);
       return false;
     }
@@ -574,7 +585,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   // Update the CFG first.
   updateTailPHIs();
 
-  // Save successor probabilties before removing CmpBB and Tail from their
+  // Save successor probabilities before removing CmpBB and Tail from their
   // parents.
   BranchProbability Head2CmpBB = MBPI->getEdgeProbability(Head, CmpBB);
   BranchProbability CmpBB2Tail = MBPI->getEdgeProbability(CmpBB, Tail);
@@ -582,7 +593,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   Head->removeSuccessor(CmpBB);
   CmpBB->removeSuccessor(Tail);
 
-  // If Head and CmpBB had successor probabilties, udpate the probabilities to
+  // If Head and CmpBB had successor probabilities, update the probabilities to
   // reflect the ccmp-conversion.
   if (Head->hasSuccessorProbabilities() && CmpBB->hasSuccessorProbabilities()) {
 
@@ -597,7 +608,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
                              Head2Tail + Head2CmpBB * CmpBB2Tail);
 
     // We will transfer successors of CmpBB to Head in a moment without
-    // normalizing the successor probabilities. Set the successor probabilites
+    // normalizing the successor probabilities. Set the successor probabilities
     // before doing so.
     //
     // Pr(I|Head) = Pr(CmpBB|Head) * Pr(I|CmpBB).
@@ -630,8 +641,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
     }
     const MCInstrDesc &MCID = TII->get(Opc);
     // Create a dummy virtual register for the SUBS def.
-    Register DestReg =
-        MRI->createVirtualRegister(TII->getRegClass(MCID, 0, TRI, *MF));
+    Register DestReg = MRI->createVirtualRegister(TII->getRegClass(MCID, 0));
     // Insert a SUBS Rn, #0 instruction instead of the cbz / cbnz.
     BuildMI(*Head, Head->end(), TermDL, MCID)
         .addReg(DestReg, RegState::Define | RegState::Dead)
@@ -639,8 +649,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
         .addImm(0)
         .addImm(0);
     // SUBS uses the GPR*sp register classes.
-    MRI->constrainRegClass(HeadCond[2].getReg(),
-                           TII->getRegClass(MCID, 1, TRI, *MF));
+    MRI->constrainRegClass(HeadCond[2].getReg(), TII->getRegClass(MCID, 1));
   }
 
   Head->splice(Head->end(), CmpBB, CmpBB->begin(), CmpBB->end());
@@ -687,10 +696,10 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CmpBBTailCC);
   const MCInstrDesc &MCID = TII->get(Opc);
   MRI->constrainRegClass(CmpMI->getOperand(FirstOp).getReg(),
-                         TII->getRegClass(MCID, 0, TRI, *MF));
+                         TII->getRegClass(MCID, 0));
   if (CmpMI->getOperand(FirstOp + 1).isReg())
     MRI->constrainRegClass(CmpMI->getOperand(FirstOp + 1).getReg(),
-                           TII->getRegClass(MCID, 1, TRI, *MF));
+                           TII->getRegClass(MCID, 1));
   MachineInstrBuilder MIB = BuildMI(*Head, CmpMI, CmpMI->getDebugLoc(), MCID)
                                 .add(CmpMI->getOperand(FirstOp)); // Register Rn
   if (isZBranch)
@@ -712,7 +721,6 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   Head->updateTerminator(CmpBB->getNextNode());
 
   RemovedBlocks.push_back(CmpBB);
-  CmpBB->eraseFromParent();
   LLVM_DEBUG(dbgs() << "Result:\n" << *Head);
   ++NumConverted;
 }
@@ -757,7 +765,7 @@ int SSACCmpConv::expectedCodeSizeDelta() const {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class AArch64ConditionalCompares : public MachineFunctionPass {
+class AArch64ConditionalComparesImpl {
   const MachineBranchProbabilityInfo *MBPI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -772,15 +780,13 @@ class AArch64ConditionalCompares : public MachineFunctionPass {
   SSACCmpConv CmpConv;
 
 public:
-  static char ID;
-  AArch64ConditionalCompares() : MachineFunctionPass(ID) {
-    initializeAArch64ConditionalComparesPass(*PassRegistry::getPassRegistry());
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  StringRef getPassName() const override {
-    return "AArch64 Conditional Compares";
-  }
+  AArch64ConditionalComparesImpl(const MachineBranchProbabilityInfo *MBPI,
+                                 MachineDominatorTree *DomTree,
+                                 MachineLoopInfo *Loops,
+                                 MachineTraceMetrics *Traces)
+      : MBPI(MBPI), DomTree(DomTree), Loops(Loops), Traces(Traces) {}
+
+  bool run(MachineFunction &MF);
 
 private:
   bool tryConvert(MachineBasicBlock *);
@@ -789,35 +795,50 @@ private:
   void invalidateTraces();
   bool shouldConvert();
 };
+
+class AArch64ConditionalComparesLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  AArch64ConditionalComparesLegacy() : MachineFunctionPass(ID) {
+    initializeAArch64ConditionalComparesLegacyPass(
+        *PassRegistry::getPassRegistry());
+  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override {
+    return "AArch64 Conditional Compares";
+  }
+};
 } // end anonymous namespace
 
-char AArch64ConditionalCompares::ID = 0;
+char AArch64ConditionalComparesLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
+INITIALIZE_PASS_BEGIN(AArch64ConditionalComparesLegacy, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
-INITIALIZE_PASS_END(AArch64ConditionalCompares, "aarch64-ccmp",
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
+INITIALIZE_PASS_END(AArch64ConditionalComparesLegacy, "aarch64-ccmp",
                     "AArch64 CCMP Pass", false, false)
 
 FunctionPass *llvm::createAArch64ConditionalCompares() {
-  return new AArch64ConditionalCompares();
+  return new AArch64ConditionalComparesLegacy();
 }
 
-void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
-  AU.addRequired<MachineTraceMetrics>();
-  AU.addPreserved<MachineTraceMetrics>();
+void AArch64ConditionalComparesLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addRequired<MachineTraceMetricsWrapperPass>();
+  AU.addPreserved<MachineTraceMetricsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 /// Update the dominator tree after if-conversion erased some blocks.
-void AArch64ConditionalCompares::updateDomTree(
+void AArch64ConditionalComparesImpl::updateDomTree(
     ArrayRef<MachineBasicBlock *> Removed) {
   // convert() removes CmpBB which was previously dominated by Head.
   // CmpBB children should be transferred to Head.
@@ -826,15 +847,15 @@ void AArch64ConditionalCompares::updateDomTree(
     MachineDomTreeNode *Node = DomTree->getNode(RemovedMBB);
     assert(Node != HeadNode && "Cannot erase the head node");
     assert(Node->getIDom() == HeadNode && "CmpBB should be dominated by Head");
-    while (Node->getNumChildren())
-      DomTree->changeImmediateDominator(Node->back(), HeadNode);
+    while (!Node->isLeaf())
+      DomTree->changeImmediateDominator(*Node->begin(), HeadNode);
     DomTree->eraseNode(RemovedMBB);
   }
 }
 
 /// Update LoopInfo after if-conversion.
-void
-AArch64ConditionalCompares::updateLoops(ArrayRef<MachineBasicBlock *> Removed) {
+void AArch64ConditionalComparesImpl::updateLoops(
+    ArrayRef<MachineBasicBlock *> Removed) {
   if (!Loops)
     return;
   for (MachineBasicBlock *RemovedMBB : Removed)
@@ -842,7 +863,7 @@ AArch64ConditionalCompares::updateLoops(ArrayRef<MachineBasicBlock *> Removed) {
 }
 
 /// Invalidate MachineTraceMetrics before if-conversion.
-void AArch64ConditionalCompares::invalidateTraces() {
+void AArch64ConditionalComparesImpl::invalidateTraces() {
   Traces->invalidate(CmpConv.Head);
   Traces->invalidate(CmpConv.CmpBB);
 }
@@ -850,7 +871,7 @@ void AArch64ConditionalCompares::invalidateTraces() {
 /// Apply cost model and heuristics to the if-conversion in IfConv.
 /// Return true if the conversion is a good idea.
 ///
-bool AArch64ConditionalCompares::shouldConvert() {
+bool AArch64ConditionalComparesImpl::shouldConvert() {
   // Stress testing mode disables all cost considerations.
   if (Stress)
     return true;
@@ -911,7 +932,7 @@ bool AArch64ConditionalCompares::shouldConvert() {
   return true;
 }
 
-bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
+bool AArch64ConditionalComparesImpl::tryConvert(MachineBasicBlock *MBB) {
   bool Changed = false;
   while (CmpConv.canConvert(MBB) && shouldConvert()) {
     invalidateTraces();
@@ -920,24 +941,20 @@ bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
     Changed = true;
     updateDomTree(RemovedBlocks);
     updateLoops(RemovedBlocks);
+    for (MachineBasicBlock *MBB : RemovedBlocks)
+      MBB->eraseFromParent();
   }
   return Changed;
 }
 
-bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
+bool AArch64ConditionalComparesImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                     << "********** Function: " << MF.getName() << '\n');
-  if (skipFunction(MF.getFunction()))
-    return false;
 
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   SchedModel = MF.getSubtarget().getSchedModel();
   MRI = &MF.getRegInfo();
-  DomTree = &getAnalysis<MachineDominatorTree>();
-  Loops = &getAnalysis<MachineLoopInfo>();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
-  Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();
 
@@ -954,4 +971,44 @@ bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
       Changed = true;
 
   return Changed;
+}
+
+bool AArch64ConditionalComparesLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  const MachineBranchProbabilityInfo *MBPI =
+      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  MachineDominatorTree *DomTree =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineLoopInfo *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MachineTraceMetrics *Traces =
+      &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+
+  AArch64ConditionalComparesImpl Impl(MBPI, DomTree, Loops, Traces);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+AArch64ConditionalComparesPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  const MachineBranchProbabilityInfo *MBPI =
+      &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  MachineDominatorTree *DomTree =
+      &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachineLoopInfo *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  MachineTraceMetrics *Traces =
+      &MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+
+  AArch64ConditionalComparesImpl Impl(MBPI, DomTree, Loops, Traces);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineTraceMetricsAnalysis>();
+  return PA;
 }

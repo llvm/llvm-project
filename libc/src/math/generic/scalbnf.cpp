@@ -7,19 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/scalbnf.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/common.h"
+#include "src/__support/math/scalbnf.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, scalbnf, (float x, int n)) {
-#if !defined(__FLT_RADIX__)
-#error __FLT_RADIX__ undefined.
-#elif __FLT_RADIX__ != 2
-#error __FLT_RADIX__!=2, unimplemented.
-#else
-  return fputil::ldexp(x, n);
-#endif
+  return math::scalbnf(x, n);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

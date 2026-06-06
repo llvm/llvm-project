@@ -12,12 +12,12 @@ define i64 @test1(ptr %array, i64 %i, i64 %j)  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[ARRAY:%.*]], i64 [[I]]
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 5
-; CHECK-NEXT:    store i64 [[J:%.*]], ptr [[GEP4]], align 4
-; CHECK-NEXT:    [[GEP26:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 6
-; CHECK-NEXT:    store i64 [[J]], ptr [[GEP26]], align 4
-; CHECK-NEXT:    [[GEP38:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 35
-; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP38]], align 4
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 40
+; CHECK-NEXT:    store i64 [[J:%.*]], ptr [[GEP4]], align 8
+; CHECK-NEXT:    [[GEP26:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    store i64 [[J]], ptr [[GEP26]], align 8
+; CHECK-NEXT:    [[GEP38:%.*]] = getelementptr i8, ptr [[TMP0]], i64 280
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP38]], align 8
 ; CHECK-NEXT:    ret i64 undef
 ;
 entry:
@@ -40,11 +40,11 @@ define i32 @test2(ptr %array, i32 %i, i32 %j) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[J:%.*]], ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr i8, ptr [[TMP1]], i64 24
 ; CHECK-NEXT:    store i32 [[J]], ptr [[GEP54]], align 4
-; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 35
+; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr i8, ptr [[TMP1]], i64 140
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP86]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -72,13 +72,13 @@ define i32 @test3(ptr %array, i32 %i) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[I]], 6
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr i8, ptr [[TMP1]], i64 24
 ; CHECK-NEXT:    store i32 [[ADD3]], ptr [[GEP54]], align 4
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[I]], 35
-; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 35
+; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr i8, ptr [[TMP1]], i64 140
 ; CHECK-NEXT:    store i32 [[ADD6]], ptr [[GEP86]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -105,11 +105,11 @@ define i32 @test4(ptr %array2, i32 %i) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [50 x i32], ptr [[ARRAY2:%.*]], i64 [[TMP0]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 255
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 1020
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[GEP56:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 256
+; CHECK-NEXT:    [[GEP56:%.*]] = getelementptr i8, ptr [[TMP1]], i64 1024
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP56]], align 4
-; CHECK-NEXT:    [[GEP89:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 285
+; CHECK-NEXT:    [[GEP89:%.*]] = getelementptr i8, ptr [[TMP1]], i64 1140
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP89]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -136,10 +136,10 @@ define i32 @test5(ptr %array2, i32 %i, i64 %j) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [50 x i32], ptr [[ARRAY2:%.*]], i64 [[TMP0]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 255
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 1020
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP3]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [50 x i32], ptr [[ARRAY2]], i64 [[TMP0]], i64 [[J:%.*]]
-; CHECK-NEXT:    [[GEP55:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 300
+; CHECK-NEXT:    [[GEP55:%.*]] = getelementptr i8, ptr [[TMP2]], i64 1200
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP55]], align 4
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[I]], 35
 ; CHECK-NEXT:    [[SEXT7:%.*]] = sext i32 [[ADD6]] to i64
@@ -169,11 +169,11 @@ define i64 @test6(ptr %array, i64 %i, i64 %j) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[I:%.*]], 5
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[ARRAY:%.*]], i64 [[J:%.*]]
-; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP]], align 4
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[ARRAY]], i64 [[I]]
-; CHECK-NEXT:    [[GEP52:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 6
-; CHECK-NEXT:    store i64 [[I]], ptr [[GEP52]], align 4
-; CHECK-NEXT:    store i64 [[I]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[GEP52:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    store i64 [[I]], ptr [[GEP52]], align 8
+; CHECK-NEXT:    store i64 [[I]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    ret i64 undef
 ;
 entry:
@@ -196,15 +196,15 @@ define i32 @test7(ptr %array, i32 %i, i32 %j, i32 %k) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[K:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[ARRAY]], i64 [[TMP2]]
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr i8, ptr [[TMP3]], i64 24
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP54]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[J:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[ARRAY]], i64 [[TMP4]]
-; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 35
+; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr i8, ptr [[TMP5]], i64 140
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP86]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -231,13 +231,13 @@ define i32 @test8(ptr %array, ptr %array2, ptr %array3, i32 %i) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY2:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr i8, ptr [[TMP2]], i64 24
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP54]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[ARRAY3:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 35
+; CHECK-NEXT:    [[GEP86:%.*]] = getelementptr i8, ptr [[TMP3]], i64 140
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP86]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -264,12 +264,12 @@ define i32 @test9(ptr %array, i32 %i) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [50 x i32], ptr [[ARRAY:%.*]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 20
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [50 x i32], ptr [[ARRAY]], i64 [[TMP0]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 6
+; CHECK-NEXT:    [[GEP54:%.*]] = getelementptr i8, ptr [[TMP2]], i64 24
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP54]], align 4
-; CHECK-NEXT:    [[GEP87:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 335
+; CHECK-NEXT:    [[GEP87:%.*]] = getelementptr i8, ptr [[TMP2]], i64 1340
 ; CHECK-NEXT:    store i32 [[I]], ptr [[GEP87]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
@@ -288,4 +288,50 @@ entry:
   %gep8 = getelementptr inbounds [50 x i32], ptr %array, i64 %sext4, i64 %sext7
   store i32 %i, ptr %gep8
   ret i32 undef
+}
+
+; Case where inbounds can't be preserved despite the fact that %shr is positive -
+; byte offset (%shr * 8) is negative, so the GEP with %shr index can be outside of
+; bounds of the allocated object.
+define i64 @test_inbounds1(ptr %arr, i64 %x) {
+; CHECK-LABEL: @test_inbounds1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = tail call i64 @llvm.umin.i64(i64 [[X:%.*]], i64 4)
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[MIN]], -1
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[XOR]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [6 x i64], ptr [[ARR:%.*]], i64 0, i64 [[SHR]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 40
+; CHECK-NEXT:    [[RES:%.*]] = load i64, ptr [[GEP2]], align 8
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %min = tail call i64 @llvm.umin.i64(i64 %x, i64 4)
+  %xor = xor i64 %min, -1
+  %shr = lshr i64 %xor, 1
+  %sub = add nsw i64 %shr, -9223372036854775803
+  %gep = getelementptr inbounds nuw [6 x i64], ptr %arr, i64 0, i64 %sub
+  %res = load i64, ptr %gep, align 8
+  ret i64 %res
+}
+
+; The same case as above - inbounds attribute can't be preserved due to negative
+; GEP index (%sub).
+define i64 @test_inbounds2(ptr %arr, i64 %x) {
+; CHECK-LABEL: @test_inbounds2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = tail call i64 @llvm.umin.i64(i64 [[X:%.*]], i64 4)
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[MIN]], 1
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 0, [[SHR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [6 x i64], ptr [[ARR:%.*]], i64 0, i64 [[SUB1]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
+; CHECK-NEXT:    [[RES:%.*]] = load i64, ptr [[GEP2]], align 8
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %min = tail call i64 @llvm.umin.i64(i64 %x, i64 4)
+  %shr = lshr i64 %min, 1
+  %sub = sub nsw nuw i64 4, %shr
+  %gep = getelementptr inbounds nuw [6 x i64], ptr %arr, i64 0, i64 %sub
+  %res = load i64, ptr %gep, align 8
+  ret i64 %res
 }

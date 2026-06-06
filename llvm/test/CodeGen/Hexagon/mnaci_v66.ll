@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; This test validates the generation of v66 only instruction M2_mnaci
 ; CHECK: r{{[0-9]+}} -= mpyi(r{{[0-9]+}},r{{[0-9]+}})
 

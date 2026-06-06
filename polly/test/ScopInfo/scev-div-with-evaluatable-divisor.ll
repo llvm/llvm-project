@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 ; Derived from test-suite/SingleSource/UnitTests/Vector/SSE/sse.stepfft.c
 
@@ -9,7 +9,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define void @cfft2(i32 %n, ptr %A) local_unnamed_addr #0 {
+define void @cfft2(i32 %n, ptr %A) local_unnamed_addr {
 entry:
   br i1 true, label %for.body.lr.ph, label %for.end
 
@@ -17,7 +17,7 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.inc, %for.body.lr.ph
-  %mj.017 = phi i32 [ 1, %for.body.lr.ph ], [ undef, %for.inc ]
+  %mj.017 = phi i32 [ 1, %for.body.lr.ph ], [ poison, %for.inc ]
   br i1 true, label %if.else, label %if.then
 
 if.then:                                          ; preds = %for.body
@@ -48,8 +48,6 @@ for.inc:                                          ; preds = %for.body.i58, %for.
 for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

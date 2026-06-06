@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -w -fmerge-all-constants -triple x86_64-elf-gnu -emit-llvm -o - %s -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 -w -fmerge-all-constants -triple x86_64-elf-gnu -emit-llvm -o - %s -std=c++20 | FileCheck -check-prefix=CHECK20 %s
 
+// RUN: %clang_cc1 -w -fmerge-all-constants -triple x86_64-elf-gnu -emit-llvm -o - %s -std=c++11 -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -w -fmerge-all-constants -triple x86_64-elf-gnu -emit-llvm -o - %s -std=c++20 -fexperimental-new-constant-interpreter | FileCheck -check-prefix=CHECK20 %s
+
 // FIXME: The padding in all these objects should be zero-initialized.
 namespace StructUnion {
   struct A {
@@ -226,8 +229,7 @@ namespace LiteralReference {
     int n;
   };
 
-  // This creates a non-const temporary and binds a reference to it.
-  // CHECK: @[[TEMP:.*]] = internal global {{.*}} { i32 5 }, align 4
+  // CHECK: @[[TEMP:.*]] = internal constant {{.*}} { i32 5 }, align 4
   // CHECK: @_ZN16LiteralReference3litE ={{.*}} constant {{.*}} @[[TEMP]], align 8
   const Lit &lit = Lit();
 
@@ -344,13 +346,13 @@ namespace VirtualMembers {
     constexpr E() : B(3), c{'b','y','e'} {}
     char c[3];
   };
-  // CHECK: @_ZN14VirtualMembers1eE ={{.*}} global { ptr, double, i32, ptr, double, [5 x i8], i16, ptr, double, [5 x i8], [3 x i8] } { ptr getelementptr inbounds ({ [3 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTVN14VirtualMembers1EE, i32 0, inrange i32 0, i32 2), double 1.000000e+00, i32 64, ptr getelementptr inbounds ({ [3 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTVN14VirtualMembers1EE, i32 0, inrange i32 1, i32 2), double 2.000000e+00, [5 x i8] c"hello", i16 5, ptr getelementptr inbounds ({ [3 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTVN14VirtualMembers1EE, i32 0, inrange i32 2, i32 2), double 3.000000e+00, [5 x i8] c"world", [3 x i8] c"bye" }
+  // CHECK: @_ZN14VirtualMembers1eE ={{.*}} global { ptr, double, i32, ptr, double, [5 x i8], i16, ptr, double, [5 x i8], [3 x i8] } { ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTVN14VirtualMembers1EE, i32 0, i32 0, i32 2), double 1.000000e+00, i32 64, ptr getelementptr inbounds inrange(-16, 16) ({ [3 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTVN14VirtualMembers1EE, i32 0, i32 1, i32 2), double 2.000000e+00, [5 x i8] c"hello", i16 5, ptr getelementptr inbounds inrange(-16, 16) ({ [3 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTVN14VirtualMembers1EE, i32 0, i32 2, i32 2), double 3.000000e+00, [5 x i8] c"world", [3 x i8] c"bye" }
   E e;
 
   struct nsMemoryImpl {
     virtual void f();
   };
-  // CHECK: @_ZN14VirtualMembersL13sGlobalMemoryE = internal global %"struct.VirtualMembers::nsMemoryImpl" { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN14VirtualMembers12nsMemoryImplE, i32 0, inrange i32 0, i32 2) }
+  // CHECK: @_ZN14VirtualMembersL13sGlobalMemoryE = internal global %"struct.VirtualMembers::nsMemoryImpl" { ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN14VirtualMembers12nsMemoryImplE, i32 0, i32 0, i32 2) }
   __attribute__((used))
   static nsMemoryImpl sGlobalMemory;
 
@@ -361,7 +363,7 @@ namespace VirtualMembers {
 
     T t;
   };
-  // CHECK: @_ZN14VirtualMembers1tE ={{.*}} global { ptr, i32 } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN14VirtualMembers13TemplateClassIiEE, i32 0, inrange i32 0, i32 2), i32 42 }
+  // CHECK: @_ZN14VirtualMembers1tE ={{.*}} global { ptr, i32 } { ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN14VirtualMembers13TemplateClassIiEE, i32 0, i32 0, i32 2), i32 42 }
   TemplateClass<int> t;
 }
 
@@ -424,6 +426,8 @@ namespace DR2126 {
 // CHECK: @_ZN33ClassTemplateWithStaticDataMember3useE ={{.*}} constant ptr @_ZGRN33ClassTemplateWithStaticDataMember1SIvE1aE_
 // CHECK: @_ZGRN39ClassTemplateWithHiddenStaticDataMember1SIvE1aE_ = linkonce_odr hidden constant i32 5, comdat
 // CHECK: @_ZN39ClassTemplateWithHiddenStaticDataMember3useE ={{.*}} constant ptr @_ZGRN39ClassTemplateWithHiddenStaticDataMember1SIvE1aE_
+// CHECK: @.str.[[STR:[0-9]+]] ={{.*}} constant [9 x i8] c"12345678\00"
+// CHECK-NEXT: @e = global %struct.PR69979 { ptr @.str.[[STR]] }
 // CHECK: @_ZGRZN20InlineStaticConstRef3funEvE1i_ = linkonce_odr constant i32 10, comdat
 // CHECK20: @_ZZN12LocalVarInit4dtorEvE1a = internal constant {{.*}} i32 103
 
@@ -630,6 +634,19 @@ struct X {
 
 // CHECK: @_ZGRN34ClassWithStaticConstexprDataMember1X1pE_
 const char *f() { return &X::p; }
+}
+
+struct PR69979 {
+  const char (&d)[9];
+} e {"12345678"};
+
+namespace GH147949 {
+  struct Coordinate {};
+  Coordinate Make();
+  void TestBody() {
+    // CHECK: call {{.*}} @_ZN8GH1479494MakeEv
+    const Coordinate x{Make()};
+  }
 }
 
 // VirtualMembers::TemplateClass::templateMethod() must be defined in this TU,

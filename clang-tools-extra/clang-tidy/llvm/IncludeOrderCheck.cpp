@@ -1,4 +1,4 @@
-//===--- IncludeOrderCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,6 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
-
-#include <map>
 
 namespace clang::tidy::llvm_check {
 
@@ -27,7 +25,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
 
@@ -41,7 +40,7 @@ private:
   };
 
   using FileIncludes = std::vector<IncludeDirective>;
-  std::map<clang::FileID, FileIncludes> IncludeDirectives;
+  llvm::DenseMap<FileID, FileIncludes> IncludeDirectives;
   bool LookForMainModule = true;
 
   ClangTidyCheck &Check;
@@ -61,13 +60,13 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
     return 0;
 
   // LLVM and clang headers are in the penultimate position.
-  if (Filename.startswith("llvm/") || Filename.startswith("llvm-c/") ||
-      Filename.startswith("clang/") || Filename.startswith("clang-c/"))
+  if (Filename.starts_with("llvm/") || Filename.starts_with("llvm-c/") ||
+      Filename.starts_with("clang/") || Filename.starts_with("clang-c/"))
     return 2;
 
   // Put these between system and llvm headers to be consistent with LLVM
   // clang-format style.
-  if (Filename.startswith("gtest/") || Filename.startswith("gmock/"))
+  if (Filename.starts_with("gtest/") || Filename.starts_with("gmock/"))
     return 3;
 
   // System headers are sorted to the end.
@@ -81,8 +80,8 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
   // to leave it in the top position.
   IncludeDirective ID = {HashLoc, FilenameRange, std::string(FileName),
@@ -161,15 +160,15 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
           continue;
         const IncludeDirective &CopyFrom = FileDirectives[IncludeIndices[I]];
 
-        SourceLocation FromLoc = CopyFrom.Range.getBegin();
+        const SourceLocation FromLoc = CopyFrom.Range.getBegin();
         const char *FromData = SM.getCharacterData(FromLoc);
-        unsigned FromLen = std::strcspn(FromData, "\n");
+        const unsigned FromLen = std::strcspn(FromData, "\n");
 
-        StringRef FixedName(FromData, FromLen);
+        const StringRef FixedName(FromData, FromLen);
 
-        SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
+        const SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
         const char *ToData = SM.getCharacterData(ToLoc);
-        unsigned ToLen = std::strcspn(ToData, "\n");
+        const unsigned ToLen = std::strcspn(ToData, "\n");
         auto ToRange =
             CharSourceRange::getCharRange(ToLoc, ToLoc.getLocWithOffset(ToLen));
 

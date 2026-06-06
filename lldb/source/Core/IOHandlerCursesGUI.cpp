@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/IOHandlerCursesGUI.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_CURSES
@@ -22,16 +23,17 @@
 #if defined(__APPLE__)
 #include <deque>
 #endif
+#include <memory>
 #include <string>
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObjectUpdater.h"
 #include "lldb/Host/File.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/ValueObject/ValueObjectUpdater.h"
 #include "lldb/lldb-forward.h"
 
 #include "lldb/Interpreter/CommandCompletions.h"
@@ -42,8 +44,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -56,6 +56,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #endif
 
 #include "llvm/ADT/StringRef.h"
@@ -94,6 +96,7 @@ using llvm::StringRef;
 #define KEY_SHIFT_TAB (KEY_MAX + 1)
 #define KEY_ALT_ENTER (KEY_MAX + 2)
 
+namespace lldb_private {
 namespace curses {
 class Menu;
 class MenuDelegate;
@@ -2950,7 +2953,10 @@ public:
   // Get the basename of the target's main executable if available, empty string
   // otherwise.
   std::string GetDefaultProcessName() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
     if (target == nullptr)
       return "";
 
@@ -2958,7 +2964,7 @@ public:
     if (!module_sp->IsExecutable())
       return "";
 
-    return module_sp->GetFileSpec().GetFilename().AsCString();
+    return module_sp->GetFileSpec().GetFilename().GetString();
   }
 
   bool StopRunningProcess() {
@@ -2985,7 +2991,10 @@ public:
   }
 
   Target *GetTarget() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
 
     if (target != nullptr)
       return target;
@@ -3178,13 +3187,13 @@ public:
         m_debugger.GetListener(), llvm::StringRef(), &core_file_spec, false));
 
     if (!process_sp) {
-      SetError("Unable to find process plug-in for core file!");
+      SetError("Unknown core file format!");
       return;
     }
 
     Status status = process_sp->LoadCore();
     if (status.Fail()) {
-      SetError("Can't find plug-in for core file!");
+      SetError("Unknown core file format!");
       return;
     }
   }
@@ -3343,7 +3352,10 @@ public:
   // Methods for setting the default value of the fields.
 
   void SetArgumentsFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3353,7 +3365,10 @@ public:
   }
 
   void SetTargetEnvironmentFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3362,7 +3377,10 @@ public:
   }
 
   void SetInheritedEnvironmentFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3373,7 +3391,10 @@ public:
   }
 
   std::string GetDefaultWorkingDirectory() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return "";
 
@@ -3382,7 +3403,10 @@ public:
   }
 
   bool GetDefaultDisableASLR() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return false;
 
@@ -3390,7 +3414,10 @@ public:
   }
 
   bool GetDefaultDisableStandardIO() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return true;
 
@@ -3398,7 +3425,10 @@ public:
   }
 
   bool GetDefaultDetachOnError() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return true;
 
@@ -3409,7 +3439,10 @@ public:
   // ProcessLaunchInfo.
 
   void GetExecutableSettings(ProcessLaunchInfo &launch_info) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     ModuleSP executable_module = target->GetExecutableModule();
     llvm::StringRef target_settings_argv0 = target->GetArg0();
 
@@ -3425,7 +3458,10 @@ public:
   }
 
   void GetArguments(ProcessLaunchInfo &launch_info) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     Args arguments = m_arguments_field->GetArguments();
     launch_info.GetArguments().AppendArguments(arguments);
   }
@@ -3476,7 +3512,10 @@ public:
     if (!m_arch_field->IsSpecified())
       return;
 
-    TargetSP target_sp = m_debugger.GetSelectedTarget();
+    TargetSP target_sp = m_debugger
+                             .GetSelectedExecutionContext(
+                                 /*adopt_dummy_target=*/false)
+                             .GetTargetSP();
     PlatformSP platform_sp =
         target_sp ? target_sp->GetPlatform() : PlatformSP();
     launch_info.GetArchitecture() = Platform::GetAugmentedArchSpec(
@@ -3517,7 +3556,11 @@ public:
   }
 
   void GetInheritTCC(ProcessLaunchInfo &launch_info) {
-    if (m_debugger.GetSelectedTarget()->GetInheritTCC())
+    if (Target *target = m_debugger
+                             .GetSelectedExecutionContext(
+                                 /*adopt_dummy_target=*/false)
+                             .GetTargetPtr();
+        target && target->GetInheritTCC())
       launch_info.GetFlags().Set(eLaunchFlagInheritTCCFromParent);
   }
 
@@ -3564,7 +3607,10 @@ public:
   }
 
   Target *GetTarget() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
 
     if (target == nullptr) {
       SetError("No target exists!");
@@ -4479,8 +4525,9 @@ protected:
 };
 
 } // namespace curses
+} // namespace lldb_private
 
-using namespace curses;
+using namespace lldb_private::curses;
 
 struct Row {
   ValueObjectUpdater value;
@@ -4519,7 +4566,7 @@ struct Row {
       calculated_children = true;
       ValueObjectSP valobj = value.GetSP();
       if (valobj) {
-        const size_t num_children = valobj->GetNumChildren();
+        const uint32_t num_children = valobj->GetNumChildrenIgnoringErrors();
         for (size_t i = 0; i < num_children; ++i) {
           children.push_back(Row(valobj->GetChildAtIndex(i), this));
         }
@@ -5058,8 +5105,8 @@ public:
         const SymbolContext &sc =
             frame_sp->GetSymbolContext(eSymbolContextEverything);
         ExecutionContext exe_ctx(frame_sp);
-        if (FormatEntity::Format(m_format, strm, &sc, &exe_ctx, nullptr,
-                                 nullptr, false, false)) {
+        if (FormatEntity::Formatter(&sc, &exe_ctx, nullptr, false, false)
+                .Format(m_format, strm)) {
           int right_pad = 1;
           window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
         }
@@ -5116,8 +5163,8 @@ public:
     if (thread_sp) {
       StreamString strm;
       ExecutionContext exe_ctx(thread_sp);
-      if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
-                               nullptr, false, false)) {
+      if (FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+              .Format(m_format, strm)) {
         int right_pad = 1;
         window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
@@ -5215,8 +5262,8 @@ public:
     if (process_sp && process_sp->IsAlive()) {
       StreamString strm;
       ExecutionContext exe_ctx(process_sp);
-      if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
-                               nullptr, false, false)) {
+      if (FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+              .Format(m_format, strm)) {
         int right_pad = 1;
         window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
@@ -5393,7 +5440,8 @@ public:
       Address resolved_address;
       resolved_address.SetLoadAddress(breakpoint_site->GetLoadAddress(),
                                       &breakpoint_location->GetTarget());
-      Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
+      const Symbol *resolved_symbol =
+          resolved_address.CalculateSymbolContextSymbol();
       if (resolved_symbol) {
         StreamString indirect_target_stream;
         indirect_target_stream.PutCString("indirect target = ");
@@ -5450,7 +5498,10 @@ public:
   ~BreakpointTreeDelegate() override = default;
 
   BreakpointSP GetBreakpoint(const TreeItem &item) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     BreakpointList &breakpoints = target->GetBreakpointList(false);
     return breakpoints.GetBreakpointAtIndex(item.GetIdentifier());
   }
@@ -5495,7 +5546,10 @@ public:
   ~BreakpointsTreeDelegate() override = default;
 
   bool TreeDelegateShouldDraw() override {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (!target)
       return false;
 
@@ -5507,7 +5561,10 @@ public:
   }
 
   void TreeDelegateGenerateChildren(TreeItem &item) override {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
 
     BreakpointList &breakpoints = target->GetBreakpointList(false);
     std::unique_lock<std::recursive_mutex> lock;
@@ -5929,7 +5986,9 @@ public:
       if (m_frame_block != frame_block) {
         m_frame_block = frame_block;
 
-        VariableList *locals = frame->GetVariableList(true, nullptr);
+        VariableList *locals = frame->GetVariableList(
+            /*get_file_globals=*/true, /*include_synthetic_vars=*/true,
+            nullptr);
         if (locals) {
           const DynamicValueType use_dynamic = eDynamicDontRunTarget;
           for (const VariableSP &local_sp : *locals) {
@@ -6534,7 +6593,7 @@ public:
       if (process && process->IsAlive() &&
           StateIsStoppedState(process->GetState(), true)) {
         if (submenus.size() == 7)
-          menu.AddSubmenu(MenuSP(new Menu(Menu::Type::Separator)));
+          menu.AddSubmenu(std::make_shared<Menu>(Menu::Type::Separator));
         else if (submenus.size() > 8)
           submenus.erase(submenus.begin() + 8, submenus.end());
 
@@ -6556,9 +6615,9 @@ public:
             if (queue_name && queue_name[0])
               thread_menu_title.Printf(" %s", queue_name);
           }
-          menu.AddSubmenu(
-              MenuSP(new Menu(thread_menu_title.GetString().str().c_str(),
-                              nullptr, menu_char, thread_sp->GetID())));
+          menu.AddSubmenu(std::make_shared<Menu>(
+              thread_menu_title.GetString().str().c_str(), nullptr, menu_char,
+              thread_sp->GetID()));
         }
       } else if (submenus.size() > 7) {
         // Remove the separator and any other thread submenu items that were
@@ -6747,8 +6806,9 @@ public:
 
       if (StateIsStoppedState(state, true)) {
         StreamString strm;
-        if (thread && FormatEntity::Format(m_format, strm, nullptr, &exe_ctx,
-                                           nullptr, nullptr, false, false)) {
+        if (thread &&
+            FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+                .Format(m_format, strm)) {
           window.MoveCursor(40, 0);
           window.PutCStringTruncated(1, strm.GetString().str().c_str());
         }
@@ -6779,8 +6839,7 @@ protected:
 class SourceFileWindowDelegate : public WindowDelegate {
 public:
   SourceFileWindowDelegate(Debugger &debugger)
-      : WindowDelegate(), m_debugger(debugger), m_sc(), m_file_sp(),
-        m_disassembly_sp(), m_disassembly_range(), m_title() {}
+      : WindowDelegate(), m_debugger(debugger) {}
 
   ~SourceFileWindowDelegate() override = default;
 
@@ -6894,7 +6953,8 @@ public:
           if (context_changed)
             m_selected_line = m_pc_line;
 
-          if (m_file_sp && m_file_sp->GetFileSpec() == m_sc.line_entry.file) {
+          if (m_file_sp && m_file_sp->GetSupportFile()->GetSpecOnly() ==
+                               m_sc.line_entry.GetFile()) {
             // Same file, nothing to do, we should either have the lines or
             // not (source file missing)
             if (m_selected_line >= static_cast<size_t>(m_first_visible_line)) {
@@ -6910,7 +6970,7 @@ public:
             // File changed, set selected line to the line with the PC
             m_selected_line = m_pc_line;
             m_file_sp =
-                m_debugger.GetSourceManager().GetFile(m_sc.line_entry.file);
+                m_debugger.GetSourceManager().GetFile(m_sc.line_entry.file_sp);
             if (m_file_sp) {
               const size_t num_lines = m_file_sp->GetNumLines();
               m_line_width = 1;
@@ -6936,12 +6996,8 @@ public:
               m_disassembly_scope = m_sc.function;
               m_disassembly_sp = m_sc.function->GetInstructions(
                   exe_ctx, nullptr, !prefer_file_cache);
-              if (m_disassembly_sp) {
+              if (m_disassembly_sp)
                 set_selected_line_to_pc = true;
-                m_disassembly_range = m_sc.function->GetAddressRange();
-              } else {
-                m_disassembly_range.Clear();
-              }
             } else {
               set_selected_line_to_pc = context_changed;
             }
@@ -6950,14 +7006,8 @@ public:
               m_disassembly_scope = m_sc.symbol;
               m_disassembly_sp = m_sc.symbol->GetInstructions(
                   exe_ctx, nullptr, prefer_file_cache);
-              if (m_disassembly_sp) {
+              if (m_disassembly_sp)
                 set_selected_line_to_pc = true;
-                m_disassembly_range.GetBaseAddress() =
-                    m_sc.symbol->GetAddress();
-                m_disassembly_range.SetByteSize(m_sc.symbol->GetByteSize());
-              } else {
-                m_disassembly_range.Clear();
-              }
             } else {
               set_selected_line_to_pc = context_changed;
             }
@@ -7000,7 +7050,8 @@ public:
             LineEntry bp_loc_line_entry;
             if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
                     bp_loc_line_entry)) {
-              if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file) {
+              if (m_file_sp->GetSupportFile()->GetSpecOnly() ==
+                  bp_loc_line_entry.GetFile()) {
                 bp_lines.insert(bp_loc_line_entry.line);
               }
             }
@@ -7052,7 +7103,7 @@ public:
           m_file_sp->DisplaySourceLines(curr_line + 1, column, 0, 0,
                                         &lineStream);
           StringRef line = lineStream.GetString();
-          if (line.endswith("\n"))
+          if (line.ends_with("\n"))
             line = line.drop_back();
           bool wasWritten = window.OutputColoredStringTruncated(
               1, line, m_first_visible_column, is_pc_line);
@@ -7110,13 +7161,7 @@ public:
                  ++bp_loc_idx) {
               BreakpointLocationSP bp_loc_sp =
                   bp_sp->GetLocationAtIndex(bp_loc_idx);
-              LineEntry bp_loc_line_entry;
-              const lldb::addr_t file_addr =
-                  bp_loc_sp->GetAddress().GetFileAddress();
-              if (file_addr != LLDB_INVALID_ADDRESS) {
-                if (m_disassembly_range.ContainsFileAddress(file_addr))
-                  bp_file_addrs.insert(file_addr);
-              }
+              bp_file_addrs.insert(bp_loc_sp->GetAddress().GetFileAddress());
             }
           }
         }
@@ -7331,7 +7376,7 @@ public:
         if (exe_ctx.HasProcessScope() && exe_ctx.GetProcessRef().IsAlive()) {
           BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
               nullptr, // Don't limit the breakpoint to certain modules
-              m_file_sp->GetFileSpec(), // Source file
+              m_file_sp->GetSupportFile()->GetSpecOnly(), // Source file
               m_selected_line +
                   1, // Source line number (m_selected_line is zero based)
               0,     // Unspecified column.
@@ -7477,7 +7522,8 @@ public:
           LineEntry bp_loc_line_entry;
           if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
                   bp_loc_line_entry)) {
-            if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file &&
+            if (m_file_sp->GetSupportFile()->GetSpecOnly() ==
+                    bp_loc_line_entry.GetFile() &&
                 m_selected_line + 1 == bp_loc_line_entry.line) {
               bool removed =
                   exe_ctx.GetTargetRef().RemoveBreakpointByID(bp_sp->GetID());
@@ -7491,7 +7537,7 @@ public:
       // No breakpoint found on the location, add it.
       BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
           nullptr, // Don't limit the breakpoint to certain modules
-          m_file_sp->GetFileSpec(), // Source file
+          m_file_sp->GetSupportFile()->GetSpecOnly(), // Source file
           m_selected_line +
               1, // Source line number (m_selected_line is zero based)
           0,     // No column specified.
@@ -7547,7 +7593,6 @@ protected:
   SourceManager::FileSP m_file_sp;
   SymbolContextScope *m_disassembly_scope = nullptr;
   lldb::DisassemblerSP m_disassembly_sp;
-  AddressRange m_disassembly_range;
   StreamString m_title;
   lldb::user_id_t m_tid = LLDB_INVALID_THREAD_ID;
   int m_line_width = 4;
@@ -7570,12 +7615,14 @@ IOHandlerCursesGUI::IOHandlerCursesGUI(Debugger &debugger)
 
 void IOHandlerCursesGUI::Activate() {
   IOHandler::Activate();
-  if (!m_app_ap) {
-    m_app_ap = std::make_unique<Application>(GetInputFILE(), GetOutputFILE());
+  if (!m_app_up) {
+    m_app_up = std::make_unique<Application>(
+        m_input_sp ? m_input_sp->GetStream() : nullptr,
+        m_output_sp ? m_input_sp->GetStream() : nullptr);
 
     // This is both a window and a menu delegate
     std::shared_ptr<ApplicationDelegate> app_delegate_sp(
-        new ApplicationDelegate(*m_app_ap, m_debugger));
+        new ApplicationDelegate(*m_app_up, m_debugger));
 
     MenuDelegateSP app_menu_delegate_sp =
         std::static_pointer_cast<MenuDelegate>(app_delegate_sp);
@@ -7584,73 +7631,70 @@ void IOHandlerCursesGUI::Activate() {
     MenuSP exit_menuitem_sp(
         new Menu("Exit", nullptr, 'x', ApplicationDelegate::eMenuID_LLDBExit));
     exit_menuitem_sp->SetCannedResult(MenuActionResult::Quit);
-    lldb_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "About LLDB", nullptr, 'a', ApplicationDelegate::eMenuID_LLDBAbout)));
-    lldb_menu_sp->AddSubmenu(MenuSP(new Menu(Menu::Type::Separator)));
+    lldb_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "About LLDB", nullptr, 'a', ApplicationDelegate::eMenuID_LLDBAbout));
+    lldb_menu_sp->AddSubmenu(std::make_shared<Menu>(Menu::Type::Separator));
     lldb_menu_sp->AddSubmenu(exit_menuitem_sp);
 
     MenuSP target_menu_sp(new Menu("Target", "F2", KEY_F(2),
                                    ApplicationDelegate::eMenuID_Target));
-    target_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Create", nullptr, 'c', ApplicationDelegate::eMenuID_TargetCreate)));
-    target_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Delete", nullptr, 'd', ApplicationDelegate::eMenuID_TargetDelete)));
+    target_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Create", nullptr, 'c', ApplicationDelegate::eMenuID_TargetCreate));
+    target_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Delete", nullptr, 'd', ApplicationDelegate::eMenuID_TargetDelete));
 
     MenuSP process_menu_sp(new Menu("Process", "F3", KEY_F(3),
                                     ApplicationDelegate::eMenuID_Process));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Attach", nullptr, 'a', ApplicationDelegate::eMenuID_ProcessAttach)));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Attach", nullptr, 'a', ApplicationDelegate::eMenuID_ProcessAttach));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Detach and resume", nullptr, 'd',
+        ApplicationDelegate::eMenuID_ProcessDetachResume));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Detach suspended", nullptr, 's',
+        ApplicationDelegate::eMenuID_ProcessDetachSuspended));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Launch", nullptr, 'l', ApplicationDelegate::eMenuID_ProcessLaunch));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(Menu::Type::Separator));
     process_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Detach and resume", nullptr, 'd',
-                        ApplicationDelegate::eMenuID_ProcessDetachResume)));
-    process_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Detach suspended", nullptr, 's',
-                        ApplicationDelegate::eMenuID_ProcessDetachSuspended)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Launch", nullptr, 'l', ApplicationDelegate::eMenuID_ProcessLaunch)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(Menu::Type::Separator)));
-    process_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Continue", nullptr, 'c',
-                        ApplicationDelegate::eMenuID_ProcessContinue)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Halt", nullptr, 'h', ApplicationDelegate::eMenuID_ProcessHalt)));
-    process_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Kill", nullptr, 'k', ApplicationDelegate::eMenuID_ProcessKill)));
+        std::make_shared<Menu>("Continue", nullptr, 'c',
+                               ApplicationDelegate::eMenuID_ProcessContinue));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Halt", nullptr, 'h', ApplicationDelegate::eMenuID_ProcessHalt));
+    process_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Kill", nullptr, 'k', ApplicationDelegate::eMenuID_ProcessKill));
 
     MenuSP thread_menu_sp(new Menu("Thread", "F4", KEY_F(4),
                                    ApplicationDelegate::eMenuID_Thread));
-    thread_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Step In", nullptr, 'i', ApplicationDelegate::eMenuID_ThreadStepIn)));
+    thread_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Step In", nullptr, 'i', ApplicationDelegate::eMenuID_ThreadStepIn));
     thread_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Step Over", nullptr, 'v',
-                        ApplicationDelegate::eMenuID_ThreadStepOver)));
-    thread_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Step Out", nullptr, 'o', ApplicationDelegate::eMenuID_ThreadStepOut)));
+        std::make_shared<Menu>("Step Over", nullptr, 'v',
+                               ApplicationDelegate::eMenuID_ThreadStepOver));
+    thread_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Step Out", nullptr, 'o', ApplicationDelegate::eMenuID_ThreadStepOut));
 
     MenuSP view_menu_sp(
         new Menu("View", "F5", KEY_F(5), ApplicationDelegate::eMenuID_View));
+    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Backtrace", nullptr, 't', ApplicationDelegate::eMenuID_ViewBacktrace));
+    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Registers", nullptr, 'r', ApplicationDelegate::eMenuID_ViewRegisters));
+    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Source", nullptr, 's', ApplicationDelegate::eMenuID_ViewSource));
+    view_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "Variables", nullptr, 'v', ApplicationDelegate::eMenuID_ViewVariables));
     view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Backtrace", nullptr, 't',
-                        ApplicationDelegate::eMenuID_ViewBacktrace)));
-    view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Registers", nullptr, 'r',
-                        ApplicationDelegate::eMenuID_ViewRegisters)));
-    view_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "Source", nullptr, 's', ApplicationDelegate::eMenuID_ViewSource)));
-    view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Variables", nullptr, 'v',
-                        ApplicationDelegate::eMenuID_ViewVariables)));
-    view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Breakpoints", nullptr, 'b',
-                        ApplicationDelegate::eMenuID_ViewBreakpoints)));
+        std::make_shared<Menu>("Breakpoints", nullptr, 'b',
+                               ApplicationDelegate::eMenuID_ViewBreakpoints));
 
     MenuSP help_menu_sp(
         new Menu("Help", "F6", KEY_F(6), ApplicationDelegate::eMenuID_Help));
-    help_menu_sp->AddSubmenu(MenuSP(new Menu(
-        "GUI Help", nullptr, 'g', ApplicationDelegate::eMenuID_HelpGUIHelp)));
+    help_menu_sp->AddSubmenu(std::make_shared<Menu>(
+        "GUI Help", nullptr, 'g', ApplicationDelegate::eMenuID_HelpGUIHelp));
 
-    m_app_ap->Initialize();
-    WindowSP &main_window_sp = m_app_ap->GetMainWindow();
+    m_app_up->Initialize();
+    WindowSP &main_window_sp = m_app_up->GetMainWindow();
 
     MenuSP menubar_sp(new Menu(Menu::Type::Bar));
     menubar_sp->AddSubmenu(lldb_menu_sp);
@@ -7731,10 +7775,10 @@ void IOHandlerCursesGUI::Activate() {
   }
 }
 
-void IOHandlerCursesGUI::Deactivate() { m_app_ap->Terminate(); }
+void IOHandlerCursesGUI::Deactivate() { m_app_up->Terminate(); }
 
 void IOHandlerCursesGUI::Run() {
-  m_app_ap->Run(m_debugger);
+  m_app_up->Run(m_debugger);
   SetIsDone(true);
 }
 
@@ -7749,7 +7793,7 @@ bool IOHandlerCursesGUI::Interrupt() {
 void IOHandlerCursesGUI::GotEOF() {}
 
 void IOHandlerCursesGUI::TerminalSizeChanged() {
-  m_app_ap->TerminalSizeChanged();
+  m_app_up->TerminalSizeChanged();
 }
 
 #endif // LLDB_ENABLE_CURSES

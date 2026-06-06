@@ -18,9 +18,26 @@ using namespace llvm;
 
 namespace {
 
+TEST(LowLevelTypeTest, Token) {
+  LLVMContext C;
+
+  const LLT TTy = LLT::token();
+
+  // Test kind.
+  EXPECT_TRUE(TTy.isValid());
+  EXPECT_TRUE(TTy.isScalar());
+  EXPECT_TRUE(TTy.isToken());
+
+  EXPECT_FALSE(TTy.isPointer());
+  EXPECT_FALSE(TTy.isVector());
+
+  const LLT STy = LLT::scalar(0);
+  EXPECT_EQ(STy, TTy);
+}
+
 TEST(LowLevelTypeTest, Scalar) {
   LLVMContext C;
-  DataLayout DL("");
+  DataLayout DL;
 
   for (unsigned S : {0U, 1U, 17U, 32U, 64U, 0xfffffU}) {
     const LLT Ty = LLT::scalar(S);
@@ -31,6 +48,8 @@ TEST(LowLevelTypeTest, Scalar) {
 
     ASSERT_FALSE(Ty.isPointer());
     ASSERT_FALSE(Ty.isVector());
+
+    EXPECT_TRUE(S != 0 || Ty.isToken());
 
     // Test sizes.
     EXPECT_EQ(S, Ty.getSizeInBits());
@@ -50,7 +69,7 @@ TEST(LowLevelTypeTest, Scalar) {
 
 TEST(LowLevelTypeTest, Vector) {
   LLVMContext C;
-  DataLayout DL("");
+  DataLayout DL;
 
   for (unsigned S : {0U, 1U, 17U, 32U, 64U, 0xfffU}) {
     for (auto EC :
@@ -77,6 +96,7 @@ TEST(LowLevelTypeTest, Vector) {
 
       ASSERT_FALSE(VTy.isScalar());
       ASSERT_FALSE(VTy.isPointer());
+      ASSERT_FALSE(VTy.isToken());
 
       // Test sizes.
       EXPECT_EQ(S, VTy.getScalarSizeInBits());
@@ -84,7 +104,7 @@ TEST(LowLevelTypeTest, Vector) {
       if (!EC.isScalable())
         EXPECT_EQ(S * EC.getFixedValue(), VTy.getSizeInBits());
       else
-        EXPECT_EQ(TypeSize::Scalable(S * EC.getKnownMinValue()),
+        EXPECT_EQ(TypeSize::getScalable(S * EC.getKnownMinValue()),
                   VTy.getSizeInBits());
 
       // Test equality operators.
@@ -259,6 +279,7 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test kind.
       ASSERT_TRUE(Ty.isValid());
       ASSERT_TRUE(Ty.isPointer());
+      ASSERT_TRUE(Ty.isPointerOrPointerVector());
 
       ASSERT_FALSE(Ty.isScalar());
       ASSERT_FALSE(Ty.isVector());
@@ -266,6 +287,8 @@ TEST(LowLevelTypeTest, Pointer) {
       ASSERT_TRUE(VTy.isValid());
       ASSERT_TRUE(VTy.isVector());
       ASSERT_TRUE(VTy.getElementType().isPointer());
+      ASSERT_TRUE(VTy.isPointerVector());
+      ASSERT_TRUE(VTy.isPointerOrPointerVector());
 
       EXPECT_EQ(Ty, VTy.getElementType());
       EXPECT_EQ(Ty.getSizeInBits(), VTy.getScalarSizeInBits());
@@ -281,10 +304,9 @@ TEST(LowLevelTypeTest, Pointer) {
       EXPECT_FALSE(VTy != VTy);
 
       // Test Type->LLT conversion.
-      Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
+      Type *IRTy = PointerType::get(C, AS);
       EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
-      Type *IRVTy =
-          VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), EC);
+      Type *IRVTy = VectorType::get(PointerType::get(C, AS), EC);
       EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
     }
   }
@@ -297,6 +319,7 @@ TEST(LowLevelTypeTest, Invalid) {
   ASSERT_FALSE(Ty.isScalar());
   ASSERT_FALSE(Ty.isPointer());
   ASSERT_FALSE(Ty.isVector());
+  ASSERT_FALSE(Ty.isToken());
 }
 
 TEST(LowLevelTypeTest, Divide) {
@@ -384,26 +407,11 @@ static_assert(CEV2P1.getElementCount() != ElementCount::getFixed(1));
 static_assert(CEV2S32.getElementCount() == ElementCount::getFixed(2));
 static_assert(CEV2S32.getSizeInBits() == TypeSize::getFixed(64));
 static_assert(CEV2P1.getSizeInBits() == TypeSize::getFixed(128));
-static_assert(CEV2P1.getScalarType() == LLT::pointer(1, 64));
-static_assert(CES32.getScalarType() == CES32);
-static_assert(CEV2S32.getScalarType() == CES32);
-static_assert(CEV2S32.changeElementType(CEP0) == LLT::fixed_vector(2, CEP0));
-static_assert(CEV2S32.changeElementSize(16) == LLT::fixed_vector(2, 16));
-static_assert(CEV2S32.changeElementCount(ElementCount::getFixed(4)) ==
-              LLT::fixed_vector(4, 32));
 static_assert(CES32.isByteSized());
 static_assert(!LLT::scalar(7).isByteSized());
 static_assert(CES32.getScalarSizeInBits() == 32);
 static_assert(CEP0.getAddressSpace() == 0);
 static_assert(LLT::pointer(1, 64).getAddressSpace() == 1);
-static_assert(CEV2S32.multiplyElements(2) == LLT::fixed_vector(4, 32));
-static_assert(CEV2S32.divide(2) == LLT::scalar(32));
-static_assert(LLT::scalarOrVector(ElementCount::getFixed(1), LLT::scalar(32)) ==
-              LLT::scalar(32));
-static_assert(LLT::scalarOrVector(ElementCount::getFixed(2), LLT::scalar(32)) ==
-              LLT::fixed_vector(2, 32));
-static_assert(LLT::scalarOrVector(ElementCount::getFixed(2), CEP0) ==
-              LLT::fixed_vector(2, CEP0));
 
 TEST(LowLevelTypeTest, ConstExpr) {
   EXPECT_EQ(LLT(), CELLT);
@@ -411,5 +419,34 @@ TEST(LowLevelTypeTest, ConstExpr) {
   EXPECT_EQ(LLT::fixed_vector(2, 32), CEV2S32);
   EXPECT_EQ(LLT::pointer(0, 32), CEP0);
   EXPECT_EQ(LLT::scalable_vector(2, 32), CESV2S32);
+  EXPECT_EQ(CEV2P1.getScalarType(), LLT::pointer(1, 64));
+  EXPECT_EQ(CES32.getScalarType(), CES32);
+  EXPECT_EQ(CEV2S32.getScalarType(), CES32);
+  EXPECT_EQ(CEV2S32.changeElementType(CEP0), LLT::fixed_vector(2, CEP0));
+  EXPECT_EQ(CEV2S32.changeElementSize(16), LLT::fixed_vector(2, 16));
+  EXPECT_EQ(CEV2S32.changeElementCount(ElementCount::getFixed(4)),
+            LLT::fixed_vector(4, 32));
+  EXPECT_EQ(CEV2S32.multiplyElements(2), LLT::fixed_vector(4, 32));
+  EXPECT_EQ(CEV2S32.divide(2), LLT::scalar(32));
+  EXPECT_EQ(LLT::scalarOrVector(ElementCount::getFixed(1), LLT::scalar(32)),
+            LLT::scalar(32));
+  EXPECT_EQ(LLT::scalarOrVector(ElementCount::getFixed(2), LLT::scalar(32)),
+            LLT::fixed_vector(2, 32));
+  EXPECT_EQ(LLT::scalarOrVector(ElementCount::getFixed(2), CEP0),
+            LLT::fixed_vector(2, CEP0));
+}
+
+TEST(LowLevelTypeTest, IsFixedVector) {
+  EXPECT_FALSE(LLT::scalar(32).isFixedVector());
+  EXPECT_TRUE(LLT::fixed_vector(2, 32).isFixedVector());
+  EXPECT_FALSE(LLT::scalable_vector(2, 32).isFixedVector());
+  EXPECT_FALSE(LLT::scalable_vector(1, 32).isFixedVector());
+}
+
+TEST(LowLevelTypeTest, IsScalableVector) {
+  EXPECT_FALSE(LLT::scalar(32).isScalableVector());
+  EXPECT_FALSE(LLT::fixed_vector(2, 32).isScalableVector());
+  EXPECT_TRUE(LLT::scalable_vector(2, 32).isScalableVector());
+  EXPECT_TRUE(LLT::scalable_vector(1, 32).isScalableVector());
 }
 }

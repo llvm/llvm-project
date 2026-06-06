@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -38,6 +39,22 @@ using namespace llvm;
 
 static const size_t TabStop = 8;
 
+// Out of line to avoid needing definition of vfs::FileSystem in header.
+SourceMgr::SourceMgr() = default;
+SourceMgr::SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : FS(std::move(FS)) {}
+SourceMgr::SourceMgr(SourceMgr &&) = default;
+SourceMgr &SourceMgr::operator=(SourceMgr &&) = default;
+SourceMgr::~SourceMgr() = default;
+
+IntrusiveRefCntPtr<vfs::FileSystem> SourceMgr::getVirtualFileSystem() const {
+  return FS;
+}
+
+void SourceMgr::setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+  this->FS = std::move(FS);
+}
+
 unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
                                    SMLoc IncludeLoc,
                                    std::string &IncludedFile) {
@@ -51,9 +68,16 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
-                           std::string &IncludedFile) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
-      MemoryBuffer::getFile(Filename);
+                           std::string &IncludedFile,
+                           bool RequiresNullTerminator) {
+  auto GetFile = [this, RequiresNullTerminator](StringRef Path) {
+    return FS ? FS->getBufferForFile(Path, /*FileSize=*/-1,
+                                     RequiresNullTerminator)
+              : MemoryBuffer::getFile(Path, /*IsText=*/false,
+                                      RequiresNullTerminator);
+  };
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr = GetFile(Filename);
 
   SmallString<64> Buffer(Filename);
   // If the file didn't exist directly, see if it's in an include path.
@@ -61,7 +85,7 @@ SourceMgr::OpenIncludeFile(const std::string &Filename,
        ++i) {
     Buffer = IncludeDirectories[i];
     sys::path::append(Buffer, Filename);
-    NewBufOrErr = MemoryBuffer::getFile(Buffer);
+    NewBufOrErr = GetFile(Buffer);
   }
 
   if (NewBufOrErr)
@@ -101,7 +125,8 @@ static std::vector<T> &GetOrCreateOffsetCache(void *&OffsetCache,
 }
 
 template <typename T>
-unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
+std::pair<unsigned, unsigned>
+SourceMgr::SrcBuffer::getLineAndColumnSpecialized(const char *Ptr) const {
   std::vector<T> &Offsets =
       GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
 
@@ -114,21 +139,28 @@ unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
 
   // llvm::lower_bound gives the number of EOL before PtrOffset. Add 1 to get
   // the line number.
-  return llvm::lower_bound(Offsets, PtrOffset) - Offsets.begin() + 1;
+  auto I = llvm::lower_bound(Offsets, PtrOffset);
+  unsigned LineNo = I - Offsets.begin() + 1;
+
+  // The column number is the distance from the previous EOL (or the start of
+  // the buffer) to the pointer.
+  T LineStartOffs = (I == Offsets.begin()) ? 0 : (I[-1] + 1);
+  unsigned ColNo = PtrOffset - LineStartOffs + 1;
+  return {LineNo, ColNo};
 }
 
-/// Look up a given \p Ptr in the buffer, determining which line it came
-/// from.
-unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
+/// Look up a given \p Ptr in the buffer, determining which line and column
+/// it came from.
+LLVM_ABI std::pair<unsigned, unsigned>
+SourceMgr::SrcBuffer::getLineAndColumn(const char *Ptr) const {
   size_t Sz = Buffer->getBufferSize();
   if (Sz <= std::numeric_limits<uint8_t>::max())
-    return getLineNumberSpecialized<uint8_t>(Ptr);
-  else if (Sz <= std::numeric_limits<uint16_t>::max())
-    return getLineNumberSpecialized<uint16_t>(Ptr);
-  else if (Sz <= std::numeric_limits<uint32_t>::max())
-    return getLineNumberSpecialized<uint32_t>(Ptr);
-  else
-    return getLineNumberSpecialized<uint64_t>(Ptr);
+    return getLineAndColumnSpecialized<uint8_t>(Ptr);
+  if (Sz <= std::numeric_limits<uint16_t>::max())
+    return getLineAndColumnSpecialized<uint16_t>(Ptr);
+  if (Sz <= std::numeric_limits<uint32_t>::max())
+    return getLineAndColumnSpecialized<uint32_t>(Ptr);
+  return getLineAndColumnSpecialized<uint64_t>(Ptr);
 }
 
 template <typename T>
@@ -197,12 +229,7 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   auto &SB = getBufferInfo(BufferID);
   const char *Ptr = Loc.getPointer();
 
-  unsigned LineNo = SB.getLineNumber(Ptr);
-  const char *BufStart = SB.Buffer->getBufferStart();
-  size_t NewlineOffs = StringRef(BufStart, Ptr - BufStart).find_last_of("\n\r");
-  if (NewlineOffs == StringRef::npos)
-    NewlineOffs = ~(size_t)0;
-  return std::make_pair(LineNo, Ptr - BufStart - NewlineOffs);
+  return SB.getLineAndColumn(Ptr);
 }
 
 // FIXME: Note that the formatting of source locations is spread between
@@ -382,7 +409,7 @@ SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line,
                            ArrayRef<SMFixIt> Hints)
     : SM(&sm), Loc(L), Filename(std::string(FN)), LineNo(Line), ColumnNo(Col),
       Kind(Kind), Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
-      FixIts(Hints.begin(), Hints.end()) {
+      FixIts(Hints) {
   llvm::sort(FixIts);
 }
 
@@ -482,7 +509,7 @@ static void printSourceLine(raw_ostream &S, StringRef LineContents) {
 static bool isNonASCII(char c) { return c & 0x80; }
 
 void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
-                         bool ShowKindLabel) const {
+                         bool ShowKindLabel, bool ShowLocation) const {
   ColorMode Mode = ShowColors ? ColorMode::Auto : ColorMode::Disable;
 
   {
@@ -491,7 +518,7 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
     if (ProgName && ProgName[0])
       S << ProgName << ": ";
 
-    if (!Filename.empty()) {
+    if (ShowLocation && !Filename.empty()) {
       if (Filename == "-")
         S << "<stdin>";
       else

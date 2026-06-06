@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: test_vdealb_64:
 ; CHECK: v0.b = vdeal(v0.b)

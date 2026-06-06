@@ -26,12 +26,15 @@ Constraint::Constraint(const llvm::Record *record)
     kind = CK_Type;
   } else if (def->isSubClassOf("AttrConstraint")) {
     kind = CK_Attr;
+  } else if (def->isSubClassOf("PropConstraint")) {
+    kind = CK_Prop;
   } else if (def->isSubClassOf("RegionConstraint")) {
     kind = CK_Region;
   } else if (def->isSubClassOf("SuccessorConstraint")) {
     kind = CK_Successor;
-  } else {
-    assert(def->isSubClassOf("Constraint"));
+  } else if (!def->isSubClassOf("Constraint")) {
+    llvm::errs() << "Expected a constraint but got: \n" << *def << "\n";
+    llvm::report_fatal_error("Abort");
   }
 }
 
@@ -108,6 +111,14 @@ std::optional<StringRef> Constraint::getBaseDefName() const {
   }
 }
 
+std::optional<StringRef> Constraint::getCppFunctionName() const {
+  std::optional<StringRef> name =
+      def->getValueAsOptionalString("cppFunctionName");
+  if (!name || *name == "")
+    return std::nullopt;
+  return name;
+}
+
 AppliedConstraint::AppliedConstraint(Constraint &&constraint,
                                      llvm::StringRef self,
                                      std::vector<std::string> &&entities)
@@ -119,27 +130,18 @@ Constraint DenseMapInfo<Constraint>::getEmptyKey() {
                     Constraint::CK_Uncategorized);
 }
 
-Constraint DenseMapInfo<Constraint>::getTombstoneKey() {
-  return Constraint(RecordDenseMapInfo::getTombstoneKey(),
-                    Constraint::CK_Uncategorized);
-}
-
 unsigned DenseMapInfo<Constraint>::getHashValue(Constraint constraint) {
   if (constraint == getEmptyKey())
     return RecordDenseMapInfo::getHashValue(RecordDenseMapInfo::getEmptyKey());
-  if (constraint == getTombstoneKey()) {
-    return RecordDenseMapInfo::getHashValue(
-        RecordDenseMapInfo::getTombstoneKey());
-  }
   return llvm::hash_combine(constraint.getPredicate(), constraint.getSummary());
 }
 
 bool DenseMapInfo<Constraint>::isEqual(Constraint lhs, Constraint rhs) {
   if (lhs == rhs)
     return true;
-  if (lhs == getEmptyKey() || lhs == getTombstoneKey())
+  if (lhs == getEmptyKey())
     return false;
-  if (rhs == getEmptyKey() || rhs == getTombstoneKey())
+  if (rhs == getEmptyKey())
     return false;
   return lhs.getPredicate() == rhs.getPredicate() &&
          lhs.getSummary() == rhs.getSummary();

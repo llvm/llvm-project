@@ -8,12 +8,13 @@
 add_mlir_library(MLIRSparseTensorRuntime
   File.cpp
   MapRef.cpp
-  NNZ.cpp
   Storage.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
-  LINK_LIBS PUBLIC
+  STANDALONE
+  )
+mlir_target_link_libraries(MLIRSparseTensorRuntime PUBLIC
   MLIRSparseTensorEnums
   mlir_float16_utils
   )
@@ -22,6 +23,6 @@ set_property(TARGET MLIRSparseTensorRuntime PROPERTY CXX_STANDARD 17)
 check_cxx_compiler_flag(-Wweak-vtables
   COMPILER_SUPPORTS_WARNING_WEAK_VTABLES)
 if(COMPILER_SUPPORTS_WARNING_WEAK_VTABLES)
-  target_compile_options(MLIRSparseTensorRuntime PUBLIC
+  target_compile_options(MLIRSparseTensorRuntime PRIVATE
     "-Wweak-vtables")
 endif()

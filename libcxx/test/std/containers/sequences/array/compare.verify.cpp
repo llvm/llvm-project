@@ -28,11 +28,7 @@
 template <int>
 struct NoCompare {};
 
-#if TEST_STD_VER >= 14 && TEST_STD_VER <= 17
-// expected-error@*:* 3 {{no matching function for call to object of type 'std::__less<void, void>'}}
-#endif
-
-int main(int, char**) {
+void test() {
   {
     typedef NoCompare<0> T;
     typedef std::array<T, 3> C;
@@ -57,6 +53,4 @@ int main(int, char**) {
     TEST_IGNORE_NODISCARD(c1 == c1);
     TEST_IGNORE_NODISCARD(c1 < c1);
   }
-
-  return 0;
 }

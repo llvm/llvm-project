@@ -49,7 +49,6 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
     case TargetLowering::TypeLegal:
     case TargetLowering::TypePromoteInteger:
       break;
-    case TargetLowering::TypePromoteFloat:
     case TargetLowering::TypeSoftPromoteHalf:
       llvm_unreachable("Bitcast of a promotion-needing float should never need"
                        "expansion");
@@ -176,7 +175,7 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
   // Increment the pointer to the other half.
   unsigned IncrementSize = NOutVT.getSizeInBits() / 8;
   StackPtr =
-      DAG.getMemBasePlusOffset(StackPtr, TypeSize::Fixed(IncrementSize), dl);
+      DAG.getMemBasePlusOffset(StackPtr, TypeSize::getFixed(IncrementSize), dl);
 
   // Load the second half from the stack slot.
   Hi = DAG.getLoad(NOutVT, dl, Store, StackPtr,
@@ -232,8 +231,8 @@ void DAGTypeLegalizer::ExpandRes_EXTRACT_VECTOR_ELT(SDNode *N, SDValue &Lo,
 
   // Extract the elements at 2 * Idx and 2 * Idx + 1 from the new vector.
   SDValue Idx = N->getOperand(1);
-
-  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx, Idx);
+  Idx = DAG.getNode(ISD::SHL, dl, Idx.getValueType(), Idx,
+                    DAG.getShiftAmountConstant(1, Idx.getValueType(), dl));
   Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NewVT, NewVec, Idx);
 
   Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx,
@@ -260,15 +259,14 @@ void DAGTypeLegalizer::ExpandRes_NormalLoad(SDNode *N, SDValue &Lo,
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
 
   Lo = DAG.getLoad(NVT, dl, Chain, Ptr, LD->getPointerInfo(),
-                   LD->getOriginalAlign(), LD->getMemOperand()->getFlags(),
-                   AAInfo);
+                   LD->getBaseAlign(), LD->getMemOperand()->getFlags(), AAInfo);
 
   // Increment the pointer to the other half.
   unsigned IncrementSize = NVT.getSizeInBits() / 8;
-  Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(IncrementSize), dl);
-  Hi = DAG.getLoad(
-      NVT, dl, Chain, Ptr, LD->getPointerInfo().getWithOffset(IncrementSize),
-      LD->getOriginalAlign(), LD->getMemOperand()->getFlags(), AAInfo);
+  Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
+  Hi = DAG.getLoad(NVT, dl, Chain, Ptr,
+                   LD->getPointerInfo().getWithOffset(IncrementSize),
+                   LD->getBaseAlign(), LD->getMemOperand()->getFlags(), AAInfo);
 
   // Build a factor node to remember that this load is independent of the
   // other one.
@@ -376,6 +374,15 @@ SDValue DAGTypeLegalizer::ExpandOp_BUILD_VECTOR(SDNode *N) {
   assert(OldVT == VecVT.getVectorElementType() &&
          "BUILD_VECTOR operand type doesn't match vector element type!");
 
+  if (VecVT.isInteger() && TLI.isOperationLegal(ISD::SPLAT_VECTOR, VecVT) &&
+      TLI.isOperationLegalOrCustom(ISD::SPLAT_VECTOR_PARTS, VecVT)) {
+    if (SDValue V = cast<BuildVectorSDNode>(N)->getSplatValue()) {
+      SDValue Lo, Hi;
+      GetExpandedOp(V, Lo, Hi);
+      return DAG.getNode(ISD::SPLAT_VECTOR_PARTS, dl, VecVT, Lo, Hi);
+    }
+  }
+
   // Build a vector of twice the length out of the expanded elements.
   // For example <3 x i64> -> <6 x i32>.
   SmallVector<SDValue, 16> NewElts;
@@ -403,6 +410,17 @@ SDValue DAGTypeLegalizer::ExpandOp_EXTRACT_ELEMENT(SDNode *N) {
   return N->getConstantOperandVal(1) ? Hi : Lo;
 }
 
+// Split the integer operand in two and create a second FAKE_USE node for
+// the other half. The original SDNode is updated in place.
+SDValue DAGTypeLegalizer::ExpandOp_FAKE_USE(SDNode *N) {
+  SDValue Lo, Hi;
+  SDValue Chain = N->getOperand(0);
+  GetExpandedOp(N->getOperand(1), Lo, Hi);
+  SDValue LoUse = DAG.getNode(ISD::FAKE_USE, SDLoc(), MVT::Other, Chain, Lo);
+  DAG.UpdateNodeOperands(N, LoUse, Hi);
+  return SDValue(N, 0);
+}
+
 SDValue DAGTypeLegalizer::ExpandOp_INSERT_VECTOR_ELT(SDNode *N) {
   // The vector type is legal but the element type needs expansion.
   EVT VecVT = N->getValueType(0);
@@ -428,12 +446,12 @@ SDValue DAGTypeLegalizer::ExpandOp_INSERT_VECTOR_ELT(SDNode *N) {
     std::swap(Lo, Hi);
 
   SDValue Idx = N->getOperand(2);
-  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx, Idx);
+  Idx = DAG.getNode(ISD::SHL, dl, Idx.getValueType(), Idx,
+                    DAG.getShiftAmountConstant(1, Idx.getValueType(), dl));
   NewVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Lo, Idx);
-  Idx = DAG.getNode(ISD::ADD, dl,
-                    Idx.getValueType(), Idx,
+  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx,
                     DAG.getConstant(1, dl, Idx.getValueType()));
-  NewVec =  DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Hi, Idx);
+  NewVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Hi, Idx);
 
   // Convert the new vector to the old vector type.
   return DAG.getNode(ISD::BITCAST, dl, VecVT, NewVec);
@@ -475,14 +493,14 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
   if (TLI.hasBigEndianPartOrdering(ValueVT, DAG.getDataLayout()))
     std::swap(Lo, Hi);
 
-  Lo = DAG.getStore(Chain, dl, Lo, Ptr, St->getPointerInfo(),
-                    St->getOriginalAlign(), St->getMemOperand()->getFlags(),
-                    AAInfo);
+  Lo =
+      DAG.getStore(Chain, dl, Lo, Ptr, St->getPointerInfo(), St->getBaseAlign(),
+                   St->getMemOperand()->getFlags(), AAInfo);
 
-  Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
+  Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
   Hi = DAG.getStore(
       Chain, dl, Hi, Ptr, St->getPointerInfo().getWithOffset(IncrementSize),
-      St->getOriginalAlign(), St->getMemOperand()->getFlags(), AAInfo);
+      St->getBaseAlign(), St->getMemOperand()->getFlags(), AAInfo);
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
 }
@@ -579,6 +597,16 @@ void DAGTypeLegalizer::SplitVecRes_AssertZext(SDNode *N, SDValue &Lo,
 
   Lo = DAG.getNode(ISD::AssertZext, dl, L.getValueType(), L, N->getOperand(1));
   Hi = DAG.getNode(ISD::AssertZext, dl, H.getValueType(), H, N->getOperand(1));
+}
+
+void DAGTypeLegalizer::SplitVecRes_AssertSext(SDNode *N, SDValue &Lo,
+                                              SDValue &Hi) {
+  SDValue L, H;
+  SDLoc dl(N);
+  GetSplitOp(N->getOperand(0), L, H);
+
+  Lo = DAG.getNode(ISD::AssertSext, dl, L.getValueType(), L, N->getOperand(1));
+  Hi = DAG.getNode(ISD::AssertSext, dl, H.getValueType(), H, N->getOperand(1));
 }
 
 void DAGTypeLegalizer::SplitRes_FREEZE(SDNode *N, SDValue &Lo, SDValue &Hi) {

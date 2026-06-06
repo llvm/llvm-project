@@ -8,10 +8,6 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@foo.cold.1
 
-; - The llvm.dbg.value intrinsic pointing to an argument in @foo (%arg1) is
-;   dropped
-; CHECK-NOT: llvm.dbg.value
-
 ; - Instructions without locations in the original function have no
 ;   location in the new function
 ; CHECK:      [[ADD1:%.*]] = add i32 %{{.*}}, 1{{$}}
@@ -23,21 +19,21 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-NEXT: call void @sink(i32 [[ADD1]]), !dbg [[LINE1:![0-9]+]]
 
 ; - llvm.dbg.value intrinsics for values local to @foo.cold.1 are preserved
-; CHECK-NEXT: llvm.dbg.value(metadata i32 [[ADD1]], metadata [[VAR1:![0-9]+]], metadata !DIExpression()), !dbg [[LINE1]]
+; CHECK-NEXT: #dbg_value(i32 [[ADD1]], [[VAR1:![0-9]+]], !DIExpression(), [[LINE1]]
 
 ; - Expressions inside of dbg.value intrinsics are preserved
-; CHECK-NEXT: llvm.dbg.value(metadata i32 [[ADD1]], metadata [[VAR1]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value)
+; CHECK-NEXT: #dbg_value(i32 [[ADD1]], [[VAR1]], !DIExpression(DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value)
 
 ; CHECK-NEXT: call void @sink(i32 [[ADD1]]), !dbg [[LINE2:![0-9]+]]
 ; CHECK-NEXT: call void @sink(i32 [[ADD1]]), !dbg [[LINE3:![0-9]+]]
 
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[ADD1]]
-; CHECK-SAME:      metadata [[VAR_FROM_INLINE_ME:![0-9]+]]
-; CHECK-SAME:      !dbg [[LINE2]]
+; CHECK-NEXT: #dbg_value(i32 [[ADD1]]
+; CHECK-SAME:      [[VAR_FROM_INLINE_ME:![0-9]+]]
+; CHECK-SAME:      [[LINE2]]
 
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[ADD1]]
-; CHECK-SAME:      metadata [[VAR2:![0-9]+]]
-; CHECK-SAME:     !dbg [[LINE4:![0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 [[ADD1]]
+; CHECK-SAME:      [[VAR2:![0-9]+]]
+; CHECK-SAME:     [[LINE4:![0-9]+]]
 
 
 ; - The DISubprogram for @foo.cold.1 has an empty DISubroutineType
@@ -110,7 +106,7 @@ define void @inline_me() !dbg !12{
 !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
 !10 = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_unsigned)
 !11 = !DILocation(line: 1, column: 1, scope: !6)
-!12 = distinct !DISubprogram(name: "inline_me", linkageName: "inline_me", scope: null, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !8)
+!12 = distinct !DISubprogram(name: "inline_me", linkageName: "inline_me", scope: null, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !2)
 !13 = !DILocation(line: 2, column: 2, scope: !12, inlinedAt: !14)
 !14 = !DILocation(line: 3, column: 3, scope: !15)
 !15 = distinct !DILexicalBlock(scope: !16, file: !1, line: 4, column: 4)

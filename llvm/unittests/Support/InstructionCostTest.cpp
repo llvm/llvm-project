@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/InstructionCost.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
-#include <limits>
 
 using namespace llvm;
 
 namespace {
 
 struct CostTest : public testing::Test {
-  CostTest() {}
+  CostTest() = default;
 };
 
 } // namespace
@@ -24,7 +24,7 @@ TEST_F(CostTest, DefaultCtor) {
   InstructionCost DefaultCost;
 
   ASSERT_TRUE(DefaultCost.isValid());
-  EXPECT_EQ(*(DefaultCost.getValue()), 0);
+  EXPECT_EQ(DefaultCost.getValue(), 0);
 }
 
 TEST_F(CostTest, Operators) {
@@ -71,8 +71,7 @@ TEST_F(CostTest, Operators) {
   EXPECT_FALSE(TmpCost.isValid());
 
   // Test value extraction
-  EXPECT_EQ(*(VThree.getValue()), 3);
-  EXPECT_EQ(IThreeA.getValue(), std::nullopt);
+  EXPECT_EQ(VThree.getValue(), 3);
 
   EXPECT_EQ(std::min(VThree, VNegTwo), -2);
   EXPECT_EQ(std::max(VThree, VSix), 6);
@@ -92,4 +91,22 @@ TEST_F(CostTest, Operators) {
   EXPECT_EQ(Min * Two, Min);
   EXPECT_EQ(Max * MinusTwo, Min);
   EXPECT_EQ(Min * MinusTwo, Max);
+}
+
+TEST_F(CostTest, StreamOperator) {
+  auto ToString = [](InstructionCost C) {
+    std::string Printed;
+    raw_string_ostream OS(Printed);
+    OS << C;
+    return Printed;
+  };
+
+  EXPECT_EQ(ToString(InstructionCost(3)), "3");
+  EXPECT_EQ(ToString(InstructionCost(-2)), "-2");
+  EXPECT_EQ(ToString(InstructionCost(-3) / 4), "-0.75");
+  EXPECT_EQ(ToString(InstructionCost(-5) / 3), "-1.5");
+  EXPECT_EQ(ToString(InstructionCost(5) / 3), "1.5");
+  EXPECT_EQ(ToString(InstructionCost::getMax()), "2305843009213693951.75");
+  EXPECT_EQ(ToString(InstructionCost::getMin()), "-2305843009213693952");
+  EXPECT_EQ(ToString(InstructionCost::getInvalid(-7)), "Invalid");
 }

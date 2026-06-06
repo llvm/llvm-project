@@ -303,6 +303,85 @@ func.func @failedParentOneOf_wrong_parent1() {
    }) : () -> ()
 }
 
+// -----
+
+// CHECK: succeededHasAncestor_direct_parent
+func.func @succeededHasAncestor_direct_parent() {
+  "test.parent"() ({
+    "test.child_with_ancestor"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededHasAncestor_indirect
+func.func @succeededHasAncestor_indirect() {
+  "test.parent"() ({
+    "some.intermediate_op"() ({
+      "test.child_with_ancestor"() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedHasAncestor_wrong_ancestor() {
+  "some.op"() ({
+    // expected-error@+1 {{'test.child_with_ancestor' op expects ancestor op 'test.parent'}}
+    "test.child_with_ancestor"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// CHECK: succeededAncestorOneOf
+func.func @succeededAncestorOneOf() {
+  "test.parent"() ({
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededAncestor1OneOf
+func.func @succeededAncestor1OneOf() {
+  "test.parent1"() ({
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededAncestorOneOf_indirect
+func.func @succeededAncestorOneOf_indirect() {
+  "test.parent1"() ({
+    "some.intermediate_op"() ({
+      "test.child_with_ancestor_one_of"() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAncestorOneOf_wrong_ancestor() {
+  "some.otherop"() ({
+    // expected-error@+1 {{'test.child_with_ancestor_one_of' op expects ancestor op to be one of 'test.parent, test.parent1'}}
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+}
 
 // -----
 
@@ -502,6 +581,25 @@ func.func @succeededOilistTrivial() {
 
 // -----
 
+// CHECK-LABEL: @succeededOilistTrivialProperties
+func.func @succeededOilistTrivialProperties() {
+  // CHECK: test.oilist_with_keywords_only_properties keyword
+  test.oilist_with_keywords_only_properties keyword
+  // CHECK: test.oilist_with_keywords_only_properties otherKeyword
+  test.oilist_with_keywords_only_properties otherKeyword
+  // CHECK: test.oilist_with_keywords_only_properties keyword otherKeyword
+  test.oilist_with_keywords_only_properties keyword otherKeyword
+  // CHECK: test.oilist_with_keywords_only_properties keyword otherKeyword
+  test.oilist_with_keywords_only_properties otherKeyword keyword
+  // CHECK: test.oilist_with_keywords_only_properties thirdKeyword
+  test.oilist_with_keywords_only_properties thirdKeyword
+  // CHECK: test.oilist_with_keywords_only_properties keyword thirdKeyword
+  test.oilist_with_keywords_only_properties keyword thirdKeyword
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @succeededOilistSimple
 func.func @succeededOilistSimple(%arg0 : i32, %arg1 : i32, %arg2 : i32) {
   // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32
@@ -572,15 +670,13 @@ func.func @failedHasDominanceScopeOutsideDominanceFreeScope() -> () {
 
 // Ensure that SSACFG regions of operations in GRAPH regions are
 // checked for dominance
-func.func @illegalInsideDominanceFreeScope() -> () {
+func.func @illegalInsideDominanceFreeScope(%cond: i1) -> () {
   test.graph_region {
-    func.func @test() -> i1 {
-    ^bb1:
+    scf.if %cond {
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
       // expected-note @+1 {{operand defined here}}
-	   %1 = "baz"(%2#0) : (i1) -> (i64)
-      return %2#1 : i1
+      %1 = "baz"(%2#0) : (i1) -> (i64)
     }
     "terminator"() : () -> ()
   }
@@ -591,20 +687,21 @@ func.func @illegalInsideDominanceFreeScope() -> () {
 
 // Ensure that SSACFG regions of operations in GRAPH regions are
 // checked for dominance
-func.func @illegalCDFGInsideDominanceFreeScope() -> () {
+func.func @illegalCFGInsideDominanceFreeScope(%cond: i1) -> () {
   test.graph_region {
-    func.func @test() -> i1 {
-    ^bb1:
-      // expected-error @+1 {{operand #0 does not dominate this use}}
-      %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
-      cf.br ^bb4
-    ^bb2:
-      cf.br ^bb2
-    ^bb4:
-      %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
-		return %2#1 : i1
+    scf.if %cond {
+      "test.ssacfg_region"() ({
+      ^bb1:
+        // expected-error @+1 {{operand #0 does not dominate this use}}
+        %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
+        cf.br ^bb4
+      ^bb2:
+        cf.br ^bb2
+      ^bb4:
+        %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
+      }) : () -> ()
     }
-     "terminator"() : () -> ()
+    "terminator"() : () -> ()
   }
   return
 }

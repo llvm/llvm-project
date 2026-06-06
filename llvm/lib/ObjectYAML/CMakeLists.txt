@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMObjectYAML
   ArchiveEmitter.cpp
   ArchiveYAML.cpp
+  BBAddrMapYAML.cpp
   CodeViewYAMLDebugSections.cpp
   CodeViewYAMLSymbols.cpp
   CodeViewYAMLTypeHashing.cpp
@@ -13,6 +14,8 @@ add_llvm_component_library(LLVMObjectYAML
   DXContainerYAML.cpp
   ELFEmitter.cpp
   ELFYAML.cpp
+  GOFFEmitter.cpp
+  GOFFYAML.cpp
   MachOEmitter.cpp
   MachOYAML.cpp
   ObjectYAML.cpp

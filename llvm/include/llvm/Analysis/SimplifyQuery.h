@@ -9,11 +9,14 @@
 #ifndef LLVM_ANALYSIS_SIMPLIFYQUERY_H
 #define LLVM_ANALYSIS_SIMPLIFYQUERY_H
 
-#include "llvm/IR/PatternMatch.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class AssumptionCache;
+class DomConditionCache;
 class DominatorTree;
 class TargetLibraryInfo;
 
@@ -56,12 +59,23 @@ struct InstrInfoQuery {
   }
 };
 
+/// Evaluate query assuming this condition holds.
+struct CondContext {
+  Value *Cond;
+  bool Invert = false;
+  SmallPtrSet<Value *, 4> AffectedValues;
+
+  CondContext(Value *Cond) : Cond(Cond) {}
+};
+
 struct SimplifyQuery {
   const DataLayout &DL;
   const TargetLibraryInfo *TLI = nullptr;
   const DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
   const Instruction *CxtI = nullptr;
+  const DomConditionCache *DC = nullptr;
+  const CondContext *CC = nullptr;
 
   // Wrapper to query additional information for instructions like metadata or
   // keywords like nsw, which provides conservative results if those cannot
@@ -72,6 +86,7 @@ struct SimplifyQuery {
   /// possible values for uses of undef. If it is false, simplifications are not
   /// allowed to assume a particular value for a use of undef for example.
   bool CanUseUndef = true;
+  bool AllowEphemerals = false;
 
   SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
       : DL(DL), CxtI(CXTI) {}
@@ -80,8 +95,8 @@ struct SimplifyQuery {
                 const DominatorTree *DT = nullptr,
                 AssumptionCache *AC = nullptr,
                 const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
-                bool CanUseUndef = true)
-      : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
+                bool CanUseUndef = true, const DomConditionCache *DC = nullptr)
+      : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), DC(DC), IIQ(UseInstrInfo),
         CanUseUndef(CanUseUndef) {}
 
   SimplifyQuery(const DataLayout &DL, const DominatorTree *DT,
@@ -101,15 +116,32 @@ struct SimplifyQuery {
     Copy.CanUseUndef = false;
     return Copy;
   }
+  SimplifyQuery allowEphemerals(bool AllowEphemerals) const {
+    SimplifyQuery Copy(*this);
+    Copy.AllowEphemerals = AllowEphemerals;
+    return Copy;
+  }
 
   /// If CanUseUndef is true, returns whether \p V is undef.
   /// Otherwise always return false.
-  bool isUndefValue(Value *V) const {
-    if (!CanUseUndef)
-      return false;
+  LLVM_ABI bool isUndefValue(Value *V) const;
 
-    using namespace PatternMatch;
-    return match(V, m_Undef());
+  SimplifyQuery getWithoutDomCondCache() const {
+    SimplifyQuery Copy(*this);
+    Copy.DC = nullptr;
+    return Copy;
+  }
+
+  SimplifyQuery getWithCondContext(const CondContext &CC) const {
+    SimplifyQuery Copy(*this);
+    Copy.CC = &CC;
+    return Copy;
+  }
+
+  SimplifyQuery getWithoutCondContext() const {
+    SimplifyQuery Copy(*this);
+    Copy.CC = nullptr;
+    return Copy;
   }
 };
 

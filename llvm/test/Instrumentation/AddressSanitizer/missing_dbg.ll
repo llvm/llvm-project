@@ -34,4 +34,4 @@ entry:
 !4 = !DISubroutineType(types: !5)
 !5 = !{}
 
-; CHECK:       [[DBG]] = !DILocation(line: 0, scope: !3)
+; CHECK:       [[DBG]] = !DILocation(line: 0, scope: !4)

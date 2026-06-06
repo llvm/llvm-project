@@ -45,16 +45,12 @@ define <8 x i16> @test_v8i16_nosignbit(<8 x i16> %a, <8 x i16> %b) {
 define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 ; SSE-LABEL: test_v16i8_reassociation:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
-; SSE-NEXT:    pmaxub %xmm1, %xmm0
-; SSE-NEXT:    pmaxub %xmm1, %xmm0
+; SSE-NEXT:    pmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8_reassociation:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
-; AVX-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %a, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
   %2 = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %1, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
@@ -64,7 +60,7 @@ define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> %a, <16 x i8> %b) {
 ; SSE2-LABEL: test_v16i8_demandedbits:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpgtb %xmm0, %xmm1
 ; SSE2-NEXT:    pand %xmm1, %xmm3
@@ -103,7 +99,7 @@ define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> 
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
 ; AVX512BW-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512BW-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpcmpnltb %zmm1, %zmm0, %k1
 ; AVX512BW-NEXT:    vpblendmb %zmm2, %zmm3, %zmm0 {%k1}
@@ -117,3 +113,51 @@ define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> 
 }
 
 declare <16 x i8> @llvm.umax.v16i8(<16 x i8> %x, <16 x i8> %y)
+
+define <8 x i16> @test_v8i16_knownnonnegative_no_smax(<8 x i16> %a, <8 x i16> %b) {
+; SSE2-LABEL: test_v8i16_knownnonnegative_no_smax:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    pmaxsw %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: test_v8i16_knownnonnegative_no_smax:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    pmaxuw %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; SSE42-LABEL: test_v8i16_knownnonnegative_no_smax:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; SSE42-NEXT:    pand %xmm2, %xmm0
+; SSE42-NEXT:    pand %xmm1, %xmm2
+; SSE42-NEXT:    pmaxuw %xmm2, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX512F-LABEL: test_v8i16_knownnonnegative_no_smax:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; AVX512F-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: test_v8i16_knownnonnegative_no_smax:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; AVX512BW-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    retq
+
+  %1 = and <8 x i16> %a, <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767>
+  %2 = and <8 x i16> %b, <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767>
+  %cmp = icmp ugt <8 x i16> %1, %2
+  %res = select <8 x i1> %cmp, <8 x i16> %1, <8 x i16> %2
+  ret <8 x i16> %res
+}

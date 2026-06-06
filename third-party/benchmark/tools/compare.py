@@ -1,29 +1,35 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import unittest
+# type: ignore
 
 """
 compare.py - versatile benchmark output compare tool
 """
 
 import argparse
-from argparse import ArgumentParser
 import json
+import os
 import sys
+import unittest
+from argparse import ArgumentParser
+
 import gbench
-from gbench import util, report
-from gbench.util import *
+from gbench import report, util
 
 
 def check_inputs(in1, in2, flags):
     """
     Perform checking on the user provided inputs and diagnose any abnormalities
     """
-    in1_kind, in1_err = classify_input_file(in1)
-    in2_kind, in2_err = classify_input_file(in2)
-    output_file = find_benchmark_flag("--benchmark_out=", flags)
-    output_type = find_benchmark_flag("--benchmark_out_format=", flags)
-    if in1_kind == IT_Executable and in2_kind == IT_Executable and output_file:
+    in1_kind, _ = util.classify_input_file(in1)
+    in2_kind, _ = util.classify_input_file(in2)
+    output_file = util.find_benchmark_flag("--benchmark_out=", flags)
+    output_type = util.find_benchmark_flag("--benchmark_out_format=", flags)
+    if (
+        in1_kind == util.IT_Executable
+        and in2_kind == util.IT_Executable
+        and output_file
+    ):
         print(
             (
                 "WARNING: '--benchmark_out=%s' will be passed to both "
@@ -31,11 +37,14 @@ def check_inputs(in1, in2, flags):
             )
             % output_file
         )
-    if in1_kind == IT_JSON and in2_kind == IT_JSON and len(flags) > 0:
-        print(
-            "WARNING: passing optional flags has no effect since both "
-            "inputs are JSON"
-        )
+    if in1_kind == util.IT_JSON and in2_kind == util.IT_JSON:
+        # When both sides are JSON the only supported flag is
+        # --benchmark_filter=
+        for flag in util.remove_benchmark_flags("--benchmark_filter=", flags):
+            print(
+                "WARNING: passing %s has no effect since both "
+                "inputs are JSON" % flag
+            )
     if output_type is not None and output_type != "json":
         print(
             (
@@ -48,7 +57,9 @@ def check_inputs(in1, in2, flags):
 
 
 def create_parser():
-    parser = ArgumentParser(description="versatile benchmark output compare tool")
+    parser = ArgumentParser(
+        description="versatile benchmark output compare tool"
+    )
 
     parser.add_argument(
         "-a",
@@ -74,7 +85,10 @@ def create_parser():
         "-d",
         "--dump_to_json",
         dest="dump_to_json",
-        help="Additionally, dump benchmark comparison output to this file in JSON format.",
+        help=(
+            "Additionally, dump benchmark comparison output to this file in"
+            " JSON format."
+        ),
     )
 
     utest = parser.add_argument_group()
@@ -83,8 +97,15 @@ def create_parser():
         dest="utest",
         default=True,
         action="store_false",
-        help="The tool can do a two-tailed Mann-Whitney U test with the null hypothesis that it is equally likely that a randomly selected value from one sample will be less than or greater than a randomly selected value from a second sample.\nWARNING: requires **LARGE** (no less than {}) number of repetitions to be meaningful!\nThe test is being done by default, if at least {} repetitions were done.\nThis option can disable the U Test.".format(
-            report.UTEST_OPTIMAL_REPETITIONS, report.UTEST_MIN_REPETITIONS
+        help=(
+            "The tool can do a two-tailed Mann-Whitney U test with the null"
+            " hypothesis that it is equally likely that a randomly selected"
+            " value from one sample will be less than or greater than a"
+            " randomly selected value from a second sample.\nWARNING: requires"
+            f" **LARGE** (no less than {report.UTEST_OPTIMAL_REPETITIONS})"
+            " number of repetitions to be meaningful!\nThe test is being done"
+            f" by default, if at least {report.UTEST_MIN_REPETITIONS}"
+            " repetitions were done.\nThis option can disable the U Test."
         ),
     )
     alpha_default = 0.05
@@ -94,7 +115,9 @@ def create_parser():
         default=alpha_default,
         type=float,
         help=(
-            "significance level alpha. if the calculated p-value is below this value, then the result is said to be statistically significant and the null hypothesis is rejected.\n(default: %0.4f)"
+            "significance level alpha. if the calculated p-value is below this"
+            " value, then the result is said to be statistically significant"
+            " and the null hypothesis is rejected.\n(default: %0.4f)"
         )
         % alpha_default,
     )
@@ -105,7 +128,10 @@ def create_parser():
 
     parser_a = subparsers.add_parser(
         "benchmarks",
-        help="The most simple use-case, compare all the output of these two benchmarks",
+        help=(
+            "The most simple use-case, compare all the output of these two"
+            " benchmarks"
+        ),
     )
     baseline = parser_a.add_argument_group("baseline", "The benchmark baseline")
     baseline.add_argument(
@@ -169,7 +195,10 @@ def create_parser():
 
     parser_c = subparsers.add_parser(
         "benchmarksfiltered",
-        help="Compare filter one of first benchmark with filter two of the second benchmark",
+        help=(
+            "Compare filter one of first benchmark with filter two of the"
+            " second benchmark"
+        ),
     )
     baseline = parser_c.add_argument_group("baseline", "The benchmark baseline")
     baseline.add_argument(
@@ -194,7 +223,10 @@ def create_parser():
         metavar="test_contender",
         type=argparse.FileType("r"),
         nargs=1,
-        help="The second benchmark executable or JSON output file, that will be compared against the baseline",
+        help=(
+            "The second benchmark executable or JSON output file, that will be"
+            " compared against the baseline"
+        ),
     )
     contender.add_argument(
         "filter_contender",
@@ -294,7 +326,9 @@ def main():
     # Now, filter the benchmarks so that the difference report can work
     if filter_baseline and filter_contender:
         replacement = "[%s vs. %s]" % (filter_baseline, filter_contender)
-        json1 = gbench.report.filter_benchmark(json1_orig, filter_baseline, replacement)
+        json1 = gbench.report.filter_benchmark(
+            json1_orig, filter_baseline, replacement
+        )
         json2 = gbench.report.filter_benchmark(
             json2_orig, filter_contender, replacement
         )
@@ -314,7 +348,7 @@ def main():
     # Optionally, diff and output to JSON
     if args.dump_to_json is not None:
         with open(args.dump_to_json, "w") as f_json:
-            json.dump(diff_report, f_json)
+            json.dump(diff_report, f_json, indent=1)
 
 
 class TestParser(unittest.TestCase):
@@ -423,7 +457,9 @@ class TestParser(unittest.TestCase):
         self.assertFalse(parsed.benchmark_options)
 
     def test_filters_with_remainder(self):
-        parsed = self.parser.parse_args(["filters", self.testInput0, "c", "d", "e"])
+        parsed = self.parser.parse_args(
+            ["filters", self.testInput0, "c", "d", "e"]
+        )
         self.assertFalse(parsed.display_aggregates_only)
         self.assertTrue(parsed.utest)
         self.assertEqual(parsed.mode, "filters")
@@ -459,7 +495,14 @@ class TestParser(unittest.TestCase):
 
     def test_benchmarksfiltered_with_remainder(self):
         parsed = self.parser.parse_args(
-            ["benchmarksfiltered", self.testInput0, "c", self.testInput1, "e", "f"]
+            [
+                "benchmarksfiltered",
+                self.testInput0,
+                "c",
+                self.testInput1,
+                "e",
+                "f",
+            ]
         )
         self.assertFalse(parsed.display_aggregates_only)
         self.assertTrue(parsed.utest)

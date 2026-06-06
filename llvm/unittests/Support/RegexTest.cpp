@@ -60,6 +60,14 @@ TEST_F(RegexTest, Basics) {
   EXPECT_TRUE(r5.match(String));
 }
 
+TEST_F(RegexTest, EmptyPattern) {
+  // The empty pattern doesn't match anything -- not even the empty string.
+  // (This is different from some other regex implementations.)
+  Regex r("");
+  EXPECT_FALSE(r.match("123"));
+  EXPECT_FALSE(r.match(""));
+}
+
 TEST_F(RegexTest, Backreferences) {
   Regex r1("([a-z]+)_\\1");
   SmallVector<StringRef, 4> Matches;
@@ -98,6 +106,25 @@ TEST_F(RegexTest, Backreferences) {
   EXPECT_EQ(2u, Matches.size());
   EXPECT_FALSE(r6.match("abc_ab", &Matches));
   EXPECT_FALSE(r6.match("abc_xyz", &Matches));
+
+  Matches.clear();
+  Regex r7("(a)|(b)|(c)|(d)|(e)|(f)|(g)|(h)|(i)|(j)_\\g{10}");
+  EXPECT_TRUE(r7.match("j_j", &Matches));
+  EXPECT_FALSE(r7.match("k_k", &Matches));
+  EXPECT_FALSE(r7.match("j_k", &Matches));
+  EXPECT_EQ(11u, Matches.size());
+
+  std::string Error;
+
+  Matches.clear();
+  Regex r8("(a|b|c|d|e|f|g|h|i|j|k|l|m|n)_\\g{21}");
+  EXPECT_FALSE(r8.match("j_j", &Matches, &Error));
+  EXPECT_EQ(Error, "invalid backreference number");
+
+  Matches.clear();
+  Regex r9("(a|b|c|d|e|f|g|h|i|j|k|l|m|n)_\\g{20}");
+  r9.match("n_n", &Matches);
+  EXPECT_EQ(0u, Matches.size());
 }
 
 TEST_F(RegexTest, Substitution) {
@@ -224,4 +251,11 @@ TEST_F(RegexTest, OssFuzz3727Regression) {
   EXPECT_FALSE(r.isValid(Error));
 }
 
+}
+
+TEST_F(RegexTest, NullStringInput) {
+  Regex r("^$");
+  // String data points to nullptr in default constructor
+  StringRef String;
+  EXPECT_TRUE(r.match(String));
 }

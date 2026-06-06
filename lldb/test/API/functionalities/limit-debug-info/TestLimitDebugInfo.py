@@ -9,7 +9,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class LimitDebugInfoTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def _check_type(self, target, name):
         exe = target.FindModule(lldb.SBFileSpec("a.out"))
         type_ = exe.FindFirstType(name)
@@ -19,7 +22,7 @@ class LimitDebugInfoTestCase(TestBase):
         base = type_.GetDirectBaseClassAtIndex(0).GetType()
         self.trace("base:%s" % base)
         self.assertTrue(base)
-        self.assertEquals(base.GetNumberOfFields(), 0)
+        self.assertEqual(base.GetNumberOfFields(), 0)
         self.assertFalse(base.IsTypeComplete())
 
     def _check_debug_info_is_limited(self, target):

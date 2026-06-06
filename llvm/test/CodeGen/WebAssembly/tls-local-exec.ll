@@ -1,13 +1,16 @@
 ; Run the tests with the `localexec` TLS mode specified.
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics - | FileCheck --check-prefixes=CHECK,TLS %s
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS %s
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -mtriple=wasm32-wasip3 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS-LIBCALL %s
 
 ; Also, run the same tests without a specified TLS mode--this should still emit `localexec` code on non-Emscripten targtes which don't currently support dynamic linking.
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics - | FileCheck --check-prefixes=CHECK,TLS %s
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS %s
+; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -mtriple=wasm32-wasip3 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS-LIBCALL %s
 
 ; Finally, when bulk memory is disabled, no TLS code should be generated.
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=-bulk-memory,atomics - | FileCheck --check-prefixes=CHECK,NO-TLS %s
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -mtriple=wasm32-wasip3 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=-bulk-memory,atomics - | FileCheck --check-prefixes=CHECK,NO-TLS %s
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: address_of_tls:
@@ -18,9 +21,16 @@ define i32 @address_of_tls() {
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: return
 
+  ; TLS-LIBCALL-DAG: call __wasm_get_tls_base
+  ; TLS-LIBCALL-DAG: i32.const tls@TLSREL
+  ; TLS-LIBCALL-NEXT: i32.add
+  ; TLS-LIBCALL-NEXT: return
+
   ; NO-TLS-NEXT: i32.const tls
   ; NO-TLS-NEXT: return
-  ret i32 ptrtoint(ptr @tls to i32)
+  %p = call ptr @llvm.threadlocal.address.p0(ptr @tls)
+  %r = ptrtoint ptr %p to i32
+  ret i32 %r
 }
 
 ; CHECK-LABEL: address_of_tls_external:
@@ -31,9 +41,16 @@ define i32 @address_of_tls_external() {
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: return
 
+  ; TLS-LIBCALL-DAG: call __wasm_get_tls_base
+  ; TLS-LIBCALL-DAG: i32.const tls_external@TLSREL
+  ; TLS-LIBCALL-NEXT: i32.add
+  ; TLS-LIBCALL-NEXT: return
+
   ; NO-TLS-NEXT: i32.const tls_external
   ; NO-TLS-NEXT: return
-  ret i32 ptrtoint(ptr @tls_external to i32)
+  %p = call ptr @llvm.threadlocal.address.p0(ptr @tls_external)
+  %r = ptrtoint ptr %p to i32
+  ret i32 %r
 }
 
 ; CHECK-LABEL: ptr_to_tls:
@@ -44,9 +61,15 @@ define ptr @ptr_to_tls() {
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: return
 
+  ; TLS-LIBCALL-DAG: call __wasm_get_tls_base
+  ; TLS-LIBCALL-DAG: i32.const tls@TLSREL
+  ; TLS-LIBCALL-NEXT: i32.add
+  ; TLS-LIBCALL-NEXT: return
+
   ; NO-TLS-NEXT: i32.const tls
   ; NO-TLS-NEXT: return
-  ret ptr @tls
+  %p = call ptr @llvm.threadlocal.address.p0(ptr @tls)
+  ret ptr %p
 }
 
 ; CHECK-LABEL: tls_load:
@@ -58,10 +81,17 @@ define i32 @tls_load() {
   ; TLS-NEXT: i32.load 0
   ; TLS-NEXT: return
 
+  ; TLS-LIBCALL-DAG: call __wasm_get_tls_base
+  ; TLS-LIBCALL-DAG: i32.const tls@TLSREL
+  ; TLS-LIBCALL-NEXT: i32.add
+  ; TLS-LIBCALL-NEXT: i32.load 0
+  ; TLS-LIBCALL-NEXT: return
+
   ; NO-TLS-NEXT: i32.const 0
   ; NO-TLS-NEXT: i32.load tls
   ; NO-TLS-NEXT: return
-  %tmp = load i32, ptr @tls, align 4
+  %p = call ptr @llvm.threadlocal.address.p0(ptr @tls)
+  %tmp = load i32, ptr %p, align 4
   ret i32 %tmp
 }
 
@@ -74,10 +104,17 @@ define void @tls_store(i32 %x) {
   ; TLS-NEXT: i32.store 0
   ; TLS-NEXT: return
 
+  ; TLS-LIBCALL-DAG: call __wasm_get_tls_base
+  ; TLS-LIBCALL-DAG: i32.const tls@TLSREL
+  ; TLS-LIBCALL-NEXT: i32.add
+  ; TLS-LIBCALL-NEXT: i32.store 0
+  ; TLS-LIBCALL-NEXT: return
+
   ; NO-TLS-NEXT: i32.const 0
   ; NO-TLS-NEXT: i32.store tls
   ; NO-TLS-NEXT: return
-  store i32 %x, ptr @tls, align 4
+  %p = call ptr @llvm.threadlocal.address.p0(ptr @tls)
+  store i32 %x, ptr %p, align 4
   ret void
 }
 
@@ -92,6 +129,7 @@ define i32 @tls_size() {
 
 ; CHECK: .type tls,@object
 ; TLS-NEXT: .section .tbss.tls,"T",@
+; TLS-LIBCALL-NEXT: .section .tbss.tls,"T",@
 ; NO-TLS-NEXT: .section .bss.tls,"",@
 ; CHECK-NEXT: .p2align 2
 ; CHECK-NEXT: tls:

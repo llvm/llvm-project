@@ -148,6 +148,11 @@ Available checks are:
      Issues caught by this sanitizer are not undefined behavior,
      but are often unintentional.
   -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
+  -  ``-fsanitize=implicit-bitfield-conversion``: Implicit conversion from
+     integer of larger bit width to smaller bitfield, if that results in data
+     loss. This includes unsigned/signed truncations and sign changes, similarly
+     to how the ``-fsanitize=implicit-integer-conversion`` group works, but
+     explicitly for bitfields.
   -  ``-fsanitize=nonnull-attribute``: Passing null pointer as a function
      parameter which is declared to never be null.
   -  ``-fsanitize=null``: Use of a null pointer or creation of a null
@@ -172,7 +177,7 @@ Available checks are:
      problems at higher optimization levels.
   -  ``-fsanitize=pointer-overflow``: Performing pointer arithmetic which
      overflows, or where either the old or new pointer value is a null pointer
-     (or in C, when they both are).
+     (excluding the case where both are null pointers).
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer
@@ -190,10 +195,11 @@ Available checks are:
   -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow, where the
      result of a signed integer computation cannot be represented in its type.
      This includes all the checks covered by ``-ftrapv``, as well as checks for
-     signed division overflow (``INT_MIN/-1``), but not checks for
-     lossy implicit conversions performed before the computation
-     (see ``-fsanitize=implicit-conversion``). Both of these two issues are
-     handled by ``-fsanitize=implicit-conversion`` group of checks.
+     signed division overflow (``INT_MIN/-1``). Note that checks are still
+     added even when ``-fwrapv`` is enabled. This sanitizer does not check for
+     lossy implicit conversions performed before the computation (see
+     ``-fsanitize=implicit-integer-conversion``). Both of these two issues are handled
+     by ``-fsanitize=implicit-integer-conversion`` group of checks.
   -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
      program point.
   -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer overflow, where
@@ -201,20 +207,21 @@ Available checks are:
      type. Unlike signed integer overflow, this is not undefined behavior, but
      it is often unintentional. This sanitizer does not check for lossy implicit
      conversions performed before such a computation
-     (see ``-fsanitize=implicit-conversion``).
+     (see ``-fsanitize=implicit-integer-conversion``).
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
   -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
      the wrong dynamic type, or that its lifetime has not begun or has ended.
      Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
      ``clang``, to make sure C++-specific parts of the runtime library and C++
-     standard libraries are present.
+     standard libraries are present. The check is not a part of the ``undefined``
+     group. Also it does not support ``-fsanitize-trap=vptr``.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
      ``float-divide-by-zero``, ``unsigned-integer-overflow``,
-     ``implicit-conversion``, ``local-bounds`` and the ``nullability-*`` group
-     of checks.
+     ``implicit-conversion``, ``local-bounds``, ``vptr`` and the
+     ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
   -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral
@@ -223,11 +230,15 @@ You can also use the following check groups:
   -  ``-fsanitize=implicit-integer-arithmetic-value-change``: Catches implicit
      conversions that change the arithmetic value of the integer. Enables
      ``implicit-signed-integer-truncation`` and ``implicit-integer-sign-change``.
-  -  ``-fsanitize=implicit-conversion``: Checks for suspicious
-     behavior of implicit conversions. Enables
+  -  ``-fsanitize=implicit-integer-conversion``: Checks for suspicious
+     behavior of implicit integer conversions. Enables
      ``implicit-unsigned-integer-truncation``,
      ``implicit-signed-integer-truncation``, and
      ``implicit-integer-sign-change``.
+  -  ``-fsanitize=implicit-conversion``: Checks for suspicious
+     behavior of implicit conversions. Enables
+     ``implicit-integer-conversion``, and
+     ``implicit-bitfield-conversion``.
   -  ``-fsanitize=integer``: Checks for undefined or suspicious integer
      behavior (e.g. unsigned integer overflow).
      Enables ``signed-integer-overflow``, ``unsigned-integer-overflow``,
@@ -245,6 +256,8 @@ Volatile
 
 The ``null``, ``alignment``, ``object-size``, ``local-bounds``, and ``vptr`` checks do not apply
 to pointers to types with the ``volatile`` qualifier.
+
+.. _minimal-runtime:
 
 Minimal Runtime
 ===============
@@ -264,8 +277,8 @@ Stack traces and report symbolization
 If you want UBSan to print symbolized stack trace for each error report, you
 will need to:
 
-#. Compile with ``-g`` and ``-fno-omit-frame-pointer`` to get proper debug
-   information in your binary.
+#. Compile with ``-g``, ``-fno-sanitize-merge`` and ``-fno-omit-frame-pointer``
+   to get proper debug information in your binary.
 #. Run your program with environment variable
    ``UBSAN_OPTIONS=print_stacktrace=1``.
 #. Make sure ``llvm-symbolizer`` binary is in ``PATH``.
@@ -282,6 +295,71 @@ To silence reports from unsigned integer overflow, you can set
 ``UBSAN_OPTIONS=silence_unsigned_overflow=1``.  This feature, combined with
 ``-fsanitize-recover=unsigned-integer-overflow``, is particularly useful for
 providing fuzzing signal without blowing up logs.
+
+Disabling instrumentation for common overflow patterns
+------------------------------------------------------
+
+There are certain overflow-dependent or overflow-prone code patterns which
+produce a lot of noise for integer overflow/truncation sanitizers. Negated
+unsigned constants, post-decrements in a while loop condition and simple
+overflow checks are accepted and pervasive code patterns. However, the signal
+received from sanitizers instrumenting these code patterns may be too noisy for
+some projects. To disable instrumentation for these common patterns one should
+use ``-fsanitize-undefined-ignore-overflow-pattern=``.
+
+Currently, this option supports three overflow-dependent code idioms:
+
+``negated-unsigned-const``
+
+.. code-block:: c++
+
+    /// -fsanitize-undefined-ignore-overflow-pattern=negated-unsigned-const
+    unsigned long foo = -1UL; // No longer causes a negation overflow warning
+    unsigned long bar = -2UL; // and so on...
+
+``unsigned-post-decr-while``
+
+.. code-block:: c++
+
+    /// -fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while
+    unsigned char count = 16;
+    while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
+
+``add-signed-overflow-test,add-unsigned-overflow-test``
+
+.. code-block:: c++
+
+    /// -fsanitize-undefined-ignore-overflow-pattern=add-(signed|unsigned)-overflow-test
+    if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings,
+                                            // won't be instrumented (signed or unsigned types)
+
+.. list-table:: Overflow Pattern Types
+   :widths: 30 50
+   :header-rows: 1
+
+   * - Pattern
+     - Sanitizer
+   * - negated-unsigned-const
+     - unsigned-integer-overflow
+   * - unsigned-post-decr-while
+     - unsigned-integer-overflow
+   * - add-unsigned-overflow-test
+     - unsigned-integer-overflow
+   * - add-signed-overflow-test
+     - signed-integer-overflow
+
+
+
+Note: ``add-signed-overflow-test`` suppresses only the check for Undefined
+Behavior. Eager Undefined Behavior optimizations are still possible. One may
+remedy this with ``-fwrapv`` or ``-fno-strict-overflow``.
+
+You can enable all exclusions with
+``-fsanitize-undefined-ignore-overflow-pattern=all`` or disable all exclusions
+with ``-fsanitize-undefined-ignore-overflow-pattern=none``. If
+``-fsanitize-undefined-ignore-overflow-pattern`` is not specified ``none`` is
+implied. Specifying ``none`` alongside other values also implies ``none`` as
+``none`` has precedence over other values -- including ``all``.
 
 Issue Suppression
 =================
@@ -302,6 +380,56 @@ This attribute may not be
 supported by other compilers, so consider using it together with
 ``#if defined(__clang__)``.
 
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+Unlike many of the other sanitizers (e.g., ASan/MSan, TSan), UBSan is largely
+compatible with inlining, both the compiler's heuristic inlining as well as
+``__attribute__((always_inline))``.
+
+There are (at least) two exceptions:
+
+* inlining may change the layout of variables, which can affect whether
+  the `alignment` check detects an under-aligned variable
+* combining `__attribute((no_sanitize("local-bounds")))` with
+  `__attribute((always_inline))` is not supported
+
+Disabling Overflow Instrumentation with ``__attribute__((overflow_behavior(wrap)))``
+------------------------------------------------------------------------------------
+
+For more fine-grained control over how integer overflow is handled, you can use
+the ``__attribute__((overflow_behavior(wrap)))`` attribute. This attribute can
+be applied to ``typedef`` declarations and integer types to specify that
+arithmetic operations on that type should wrap on overflow. This can be used to
+disable overflow sanitization for specific types, while leaving it enabled for
+all other types.
+
+The ``overflow_behavior`` attribute not only affects UBSan instrumentation
+but also changes the fundamental overflow behavior of arithmetic operations
+on the annotated type. Operations on types marked with ``wrap`` will have
+well-defined wrapping semantics, while operations on types marked with
+``trap`` will be checked for overflow (regardless of global flags like
+``-fwrapv``).
+
+The attribute also affects implicit type promotion rules: when an overflow
+behavior type participates in arithmetic operations with standard integer
+types, the result maintains the overflow behavior type's characteristics,
+including its bit-width. This means annotated types can preserve narrower
+widths that would normally be promoted, allowing operations to stay within
+the constraints of the smallest annotated type in the expression.
+
+For more information, see :doc:`OverflowBehaviorTypes`.
+
+Enforcing Overflow Instrumentation with ``__attribute__((overflow_behavior(trap)))``
+---------------------------------------------------------------------------------------
+
+Conversely, you can use ``__attribute__((overflow_behavior(trap)))`` to
+enforce overflow checks for a specific type, even when ``-fwrapv`` is enabled
+globally. This is useful for ensuring that critical calculations are always
+checked for overflow, regardless of the global compiler settings.
+
+For more information, see :doc:`OverflowBehaviorTypes`.
+
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------
 
@@ -319,6 +447,16 @@ suppression file in a ``UBSAN_OPTIONS`` environment variable.
 .. code-block:: bash
 
     UBSAN_OPTIONS=suppressions=MyUBSan.supp
+
+Alternatively, you can provide default suppressions by defining a
+``__ubsan_default_suppressions`` function:
+
+.. code-block:: c++
+
+    extern "C" const char *__ubsan_default_suppressions() {
+      return "signed-integer-overflow:file-with-known-overflow.cpp\n"
+             "alignment:function_doing_unaligned_access\n";
+    }
 
 You need to specify a :ref:`check <ubsan-checks>` you are suppressing and the
 bug location. For example:
@@ -340,6 +478,15 @@ There are several limitations:
   most of UBSan checks are recoverable by default.
 * Check groups (like ``undefined``) can't be used in suppressions file, only
   fine-grained checks are supported.
+
+Security Considerations
+=======================
+
+UndefinedBehaviorSanitizer's runtime is meant for testing purposes and its usage
+in production environment should be carefully considered from security
+perspective as it may compromise the security of the resulting executable.
+For security-sensitive applications consider using :ref:`Minimal Runtime
+<minimal-runtime>` or trap mode for all checks.
 
 Supported Platforms
 ===================

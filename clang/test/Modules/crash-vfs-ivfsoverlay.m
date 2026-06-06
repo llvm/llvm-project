@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 
@@ -41,5 +41,5 @@
 // CHECKYAML: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
+// CHECKYAML-NEXT:     'name': "module.modulemap",
 // CHECKYAML-NEXT:     'external-contents': "/[[OTHERPATH:.*]]/actual_module2.map"

@@ -109,10 +109,14 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    subl %eax, %edx
 ; CHECK-NEXT:    movl %edx, %esp
 ; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    subl $28, %esp
 ; CHECK-NEXT:    movl $405, %esi # imm = 0x195
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    addl $28, %esp
+; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    movl $405, %ebx # imm = 0x195
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop

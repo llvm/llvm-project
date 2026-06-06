@@ -61,42 +61,84 @@ TYPE_PARSER(parenthesized(
 TYPE_PARSER(construct<AcImpliedDoControl>(
     maybe(integerTypeSpec / "::"), loopBounds(scalarIntExpr)))
 
+// Conditional expression lookahead helper: checks if input starting with '('
+// contains '?' at nesting level 1. This avoids exponential backtracking when
+// parsing deeply nested parentheses that are not conditional expressions.
+struct ConditionalExprLookahead {
+  using resultType = Success;
+  constexpr ConditionalExprLookahead() {}
+  std::optional<Success> Parse(ParseState &state) const {
+    ParseState scan{state};
+    if (!attempt("("_tok).Parse(scan)) {
+      return std::nullopt;
+    }
+    int nestLevel{1};
+    while (!scan.IsAtEnd()) {
+      if (attempt(charLiteralConstant).Parse(scan)) {
+        // Skip character literals; don't check contents.
+      } else if (attempt("("_tok).Parse(scan)) {
+        ++nestLevel;
+      } else if (attempt(")"_tok).Parse(scan)) {
+        if (--nestLevel == 0) {
+          return std::nullopt;
+        }
+      } else if (attempt("?"_tok).Parse(scan)) {
+        if (nestLevel == 1) {
+          return {Success{}};
+        }
+      } else {
+        scan.UncheckedAdvance();
+      }
+    }
+    return std::nullopt;
+  }
+};
+
 // R1001 primary ->
 //         literal-constant | designator | array-constructor |
 //         structure-constructor | function-reference | type-param-inquiry |
-//         type-param-name | ( expr )
+//         type-param-name | ( expr ) | conditional-expr
 // type-param-inquiry is parsed as a structure component, except for
 // substring%KIND/LEN
 constexpr auto primary{instrumented("primary"_en_US,
-    first(construct<Expr>(indirect(Parser<CharLiteralConstantSubstring>{})),
+    first(construct<Expr>(indirect(charLiteralConstantSubstring)),
         construct<Expr>(literalConstant),
-        construct<Expr>(construct<Expr::Parentheses>(parenthesized(expr))),
+        construct<Expr>(ConditionalExprLookahead{} >>
+            parenthesized(Parser<ConditionalExpr>{})),
+        construct<Expr>(construct<Expr::Parentheses>("(" >>
+            expr / !","_tok / recovery(")"_tok, SkipPastNested<'(', ')'>{}))),
         construct<Expr>(indirect(functionReference) / !"("_tok / !"%"_tok),
         construct<Expr>(designator / !"("_tok / !"%"_tok),
         construct<Expr>(indirect(Parser<SubstringInquiry>{})), // %LEN or %KIND
         construct<Expr>(Parser<StructureConstructor>{}),
         construct<Expr>(Parser<ArrayConstructor>{}),
         // PGI/XLF extension: COMPLEX constructor (x,y)
-        extension<LanguageFeature::ComplexConstructor>(
-            "nonstandard usage: generalized COMPLEX constructor"_port_en_US,
-            construct<Expr>(parenthesized(
-                construct<Expr::ComplexConstructor>(expr, "," >> expr)))),
-        extension<LanguageFeature::PercentLOC>(
-            "nonstandard usage: %LOC"_port_en_US,
-            construct<Expr>("%LOC" >> parenthesized(construct<Expr::PercentLoc>(
-                                          indirect(variable)))))))};
+        construct<Expr>(parenthesized(
+            construct<Expr::ComplexConstructor>(expr, "," >> expr))),
+        // prevent confusing error on missing primary expression
+        lookAhead("%LOC"_tok) >>
+            extension<LanguageFeature::PercentLOC>(
+                "nonstandard usage: %LOC"_port_en_US,
+                construct<Expr>("%LOC" >>
+                    parenthesized(
+                        construct<Expr::PercentLoc>(indirect(variable)))))))};
 
 // R1002 level-1-expr -> [defined-unary-op] primary
 // TODO: Reasonable extension: permit multiple defined-unary-ops
 constexpr auto level1Expr{sourced(
-    first(primary, // must come before define op to resolve .TRUE._8 ambiguity
-        construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)),
-        extension<LanguageFeature::SignedPrimary>(
-            "nonstandard usage: signed primary"_port_en_US,
-            construct<Expr>(construct<Expr::UnaryPlus>("+" >> primary))),
-        extension<LanguageFeature::SignedPrimary>(
-            "nonstandard usage: signed primary"_port_en_US,
-            construct<Expr>(construct<Expr::Negate>("-" >> primary)))))};
+    primary || // must come before define op to resolve .TRUE._8 ambiguity
+    construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)))};
+
+// F2023 R1002 conditional-expr ->
+//   ( scalar-logical-expr ? expr
+//     [ : scalar-logical-expr ? expr ]...
+//     : expr )
+// The chained list form is encoded as a right-associative tree: the else-expr
+// is either a chained conditional-expr (which need not be separately
+// parenthesized) or a terminal expr.
+TYPE_PARSER(
+    construct<ConditionalExpr>(scalarLogicalExpr / "?", indirect(expr) / ":",
+        indirect(construct<Expr>(Parser<ConditionalExpr>{}) || expr)))
 
 // R1004 mult-operand -> level-1-expr [power-op mult-operand]
 // R1007 power-op -> **
@@ -107,7 +149,19 @@ struct MultOperand {
   static inline std::optional<Expr> Parse(ParseState &);
 };
 
-static constexpr auto multOperand{sourced(MultOperand{})};
+// Extension: allow + or - before a mult-operand
+// Such a unary operand has lower precedence than exponentiation,
+// so -x**2 is -(x**2), not (-x)**2; this matches all other
+// compilers with this extension.
+static constexpr auto standardMultOperand{sourced(MultOperand{})};
+static constexpr auto multOperand{standardMultOperand ||
+    extension<LanguageFeature::SignedMultOperand>(
+        "nonstandard usage: signed mult-operand"_port_en_US,
+        construct<Expr>(
+            construct<Expr::UnaryPlus>("+" >> standardMultOperand))) ||
+    extension<LanguageFeature::SignedMultOperand>(
+        "nonstandard usage: signed mult-operand"_port_en_US,
+        construct<Expr>(construct<Expr::Negate>("-" >> standardMultOperand)))};
 
 inline std::optional<Expr> MultOperand::Parse(ParseState &state) {
   std::optional<Expr> result{level1Expr.Parse(state)};

@@ -7,12 +7,12 @@ target triple = "x86_64-unknown-linux-gnu"
 ;CHECK: vsqrtf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @sqrtf(float) nounwind readnone
-define void @sqrt_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @sqrt_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -24,7 +24,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -32,12 +32,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vexpf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @expf(float) nounwind readnone
-define void @exp_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @exp_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -49,7 +49,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -57,12 +57,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vlogf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @logf(float) nounwind readnone
-define void @log_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @log_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -74,7 +74,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -83,12 +83,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: fabs{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @fabsf(float) nounwind readnone
-define void @fabs_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @fabs_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -100,7 +100,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -108,13 +108,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @exp_f32_intrin(
 ;CHECK: vexpf{{.*}}<4 x float>
 ;CHECK: ret void
-declare float @llvm.exp.f32(float) nounwind readnone
-define void @exp_f32_intrin(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @exp_f32_intrin(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -126,7 +125,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -135,12 +134,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-NOT: foo{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @foo(float) nounwind readnone
-define void @foo_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @foo_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -152,7 +151,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -160,12 +159,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @sqrt_f32_nobuiltin(
 ;CHECK-NOT: vsqrtf{{.*}}<4 x float>
 ;CHECK: ret void
-define void @sqrt_f32_nobuiltin(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @sqrt_f32_nobuiltin(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -177,7 +176,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -185,12 +184,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vceilf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @ceilf(float) nounwind readnone
-define void @ceil_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @ceil_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -202,7 +201,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -210,12 +209,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vfloorf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @floorf(float) nounwind readnone
-define void @floor_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @floor_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -227,7 +226,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -235,12 +234,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vexpm1f{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @expm1f(float) nounwind readnone
-define void @expm1_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @expm1_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -252,7 +251,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -260,12 +259,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vlog1pf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @log1pf(float) nounwind readnone
-define void @log1p_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @log1p_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -277,7 +276,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -285,12 +284,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vlog10f{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @log10f(float) nounwind readnone
-define void @log10_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @log10_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -302,7 +301,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -310,12 +309,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vlogbf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @logbf(float) nounwind readnone
-define void @logb_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @logb_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -327,7 +326,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -335,12 +334,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vsinf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @sinf(float) nounwind readnone
-define void @sin_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @sin_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -352,7 +351,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -360,12 +359,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vcosf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @cosf(float) nounwind readnone
-define void @cos_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @cos_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -377,7 +376,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -385,12 +384,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vtanf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @tanf(float) nounwind readnone
-define void @tan_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @tan_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -402,7 +401,31 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @tan_f32_intrinsic(
+;CHECK: vtanf{{.*}}<4 x float>
+;CHECK: ret void
+define void @tan_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.tan.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
   ret void
 }
 
@@ -410,12 +433,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vasinf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @asinf(float) nounwind readnone
-define void @asin_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @asin_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -427,7 +450,31 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @asin_f32_intrinsic(
+;CHECK: vasinf{{.*}}<4 x float>
+;CHECK: ret void
+define void @asin_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.asin.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
   ret void
 }
 
@@ -435,12 +482,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vacosf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @acosf(float) nounwind readnone
-define void @acos_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @acos_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -452,7 +499,31 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @acos_f32_intrinsic(
+;CHECK: vacosf{{.*}}<4 x float>
+;CHECK: ret void
+define void @acos_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.acos.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
   ret void
 }
 
@@ -460,12 +531,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vatanf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @atanf(float) nounwind readnone
-define void @atan_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @atan_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -477,7 +548,31 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @atan_f32_intrinsic(
+;CHECK: vatanf{{.*}}<4 x float>
+;CHECK: ret void
+define void @atan_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.atan.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
   ret void
 }
 
@@ -485,12 +580,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vsinhf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @sinhf(float) nounwind readnone
-define void @sinh_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @sinh_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -502,7 +597,31 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @sinh_f32_intrinsic(
+;CHECK: vsinhf{{.*}}<4 x float>
+;CHECK: ret void
+define void @sinh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.sinh.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
   ret void
 }
 
@@ -510,12 +629,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vcoshf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @coshf(float) nounwind readnone
-define void @cosh_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @cosh_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -527,7 +646,31 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @cosh_f32_intrinsic(
+;CHECK: vcoshf{{.*}}<4 x float>
+;CHECK: ret void
+define void @cosh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.cosh.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
   ret void
 }
 
@@ -535,12 +678,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vtanhf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @tanhf(float) nounwind readnone
-define void @tanh_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @tanh_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -552,7 +695,31 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
+  ret void
+}
+
+;CHECK-LABEL: @tanh_f32_intrinsic(
+;CHECK: vtanhf{{.*}}<4 x float>
+;CHECK: ret void
+define void @tanh_f32_intrinsic(i32 %n, ptr noalias %y, ptr noalias %x) {
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  br i1 %cmp6, label %for.body, label %for.end
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %call = tail call float @llvm.tanh.f32(float %0) nounwind readnone
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  store float %call, ptr %arrayidx2, align 4
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
   ret void
 }
 
@@ -560,12 +727,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vasinhf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @asinhf(float) nounwind readnone
-define void @asinh_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @asinh_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -577,7 +744,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -585,12 +752,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vacoshf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @acoshf(float) nounwind readnone
-define void @acosh_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @acosh_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -602,7 +769,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -610,12 +777,12 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: vatanhf{{.*}}<4 x float>
 ;CHECK: ret void
 declare float @atanhf(float) nounwind readnone
-define void @atanh_f32(i32 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
+define void @atanh_f32(i32 %n, ptr noalias %y, ptr noalias %x) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %y, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -627,6 +794,6 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }

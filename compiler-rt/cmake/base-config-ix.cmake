@@ -14,22 +14,40 @@ include(CompilerRTDarwinUtils)
 check_include_file(unwind.h HAVE_UNWIND_H)
 
 # Used by sanitizer_common and tests.
-check_include_file(rpc/xdr.h HAVE_RPC_XDR_H)
+set(_rpc_xdr_header "rpc/xdr.h")
+set(_default_require_rpc_xdr_h OFF)
+if ("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
+  set(_rpc_xdr_header "tirpc/rpc/xdr.h")
+  if (COMPILER_RT_BUILD_SANITIZERS)
+    set(_default_require_rpc_xdr_h ON)
+  endif()
+endif()
+check_include_file(${_rpc_xdr_header} HAVE_RPC_XDR_H)
+option(COMPILER_RT_REQUIRE_RPC_XDR_H
+  "Require ${_rpc_xdr_header} for sanitizer builds (default ON for AIX when sanitizers are enabled, OFF elsewhere). \
+Set to OFF to bypass the missing-header error."
+  ${_default_require_rpc_xdr_h})
 if (NOT HAVE_RPC_XDR_H)
   set(HAVE_RPC_XDR_H 0)
+  if (COMPILER_RT_REQUIRE_RPC_XDR_H)
+    message(FATAL_ERROR
+      "${_rpc_xdr_header} is required for sanitizer builds but was not found. "
+      "Install the appropriate development package (e.g. bos.net.nfs.adt on AIX), "
+      "or set -DCOMPILER_RT_REQUIRE_RPC_XDR_H=OFF to bypass this check.")
+  endif()
 endif()
 
 # Top level target used to build all compiler-rt libraries.
 add_custom_target(compiler-rt ALL)
 add_custom_target(install-compiler-rt)
 add_custom_target(install-compiler-rt-stripped)
+set_property(TARGET compiler-rt PROPERTY FOLDER "Compiler-RT/Metatargets")
 set_property(
   TARGET
-    compiler-rt
     install-compiler-rt
     install-compiler-rt-stripped
   PROPERTY
-    FOLDER "Compiler-RT Misc"
+    FOLDER "Compiler-RT/Installation"
 )
 
 # Setting these variables from an LLVM build is sufficient that compiler-rt can
@@ -43,7 +61,7 @@ if (LLVM_TREE_AVAILABLE)
   get_clang_resource_dir(COMPILER_RT_OUTPUT_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/..)
   set(COMPILER_RT_EXEC_OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
   get_clang_resource_dir(COMPILER_RT_INSTALL_PATH)
-  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests."
+  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt tests."
          ${LLVM_INCLUDE_TESTS})
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered"
          ${LLVM_ENABLE_WERROR})
@@ -59,9 +77,9 @@ if (LLVM_TREE_AVAILABLE)
     set(_host_executable_suffix ${CMAKE_EXECUTABLE_SUFFIX})
   endif()
   set(COMPILER_RT_TEST_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang${_host_executable_suffix})
   set(COMPILER_RT_TEST_CXX_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang++${_host_executable_suffix})
 else()
     # Take output dir and install path from the user.
   set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH
@@ -70,19 +88,28 @@ else()
     "Path where built compiler-rt executables should be stored.")
   set(COMPILER_RT_INSTALL_PATH "" CACHE PATH
     "Prefix for directories where built compiler-rt artifacts should be installed.")
-  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests." OFF)
+  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt tests." OFF)
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered" OFF)
   # Use a host compiler to compile/link tests.
   set(COMPILER_RT_TEST_COMPILER ${CMAKE_C_COMPILER} CACHE PATH "Compiler to use for testing")
   set(COMPILER_RT_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE PATH "C++ Compiler to use for testing")
 endif()
 
-if("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang[+]*$")
+get_filename_component(_test_compiler_name "${COMPILER_RT_TEST_COMPILER}" NAME)
+if("${COMPILER_RT_TEST_COMPILER}" STREQUAL "${CMAKE_C_COMPILER}")
+  set(COMPILER_RT_TEST_COMPILER_ID "${CMAKE_C_COMPILER_ID}")
+elseif("${_test_compiler_name}" MATCHES "clang.*")
   set(COMPILER_RT_TEST_COMPILER_ID Clang)
-elseif("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang.*.exe$")
-  set(COMPILER_RT_TEST_COMPILER_ID Clang)
+elseif("${_test_compiler_name}" MATCHES "cl.exe$")
+  set(COMPILER_RT_TEST_COMPILER_ID MSVC)
 else()
+  message(STATUS "Unknown compiler ${COMPILER_RT_TEST_COMPILER}, assuming GNU")
   set(COMPILER_RT_TEST_COMPILER_ID GNU)
+endif()
+
+# AppleClang expects 'Clang' as compiler-rt test compiler ID.
+if ("${COMPILER_RT_TEST_COMPILER_ID}" STREQUAL "AppleClang")
+  set(COMPILER_RT_TEST_COMPILER_ID Clang)
 endif()
 
 if(NOT DEFINED COMPILER_RT_OS_DIR)
@@ -94,6 +121,8 @@ if(NOT DEFINED COMPILER_RT_OS_DIR)
     string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
   endif()
 endif()
+
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib)
@@ -156,6 +185,7 @@ if(APPLE)
 
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
+  option(COMPILER_RT_ENABLE_XROS "Enable building for xrOS - Experimental" Off)
 
 else()
   option(COMPILER_RT_DEFAULT_TARGET_ONLY "Build builtins only for the default target" Off)
@@ -213,6 +243,11 @@ macro(test_targets)
           test_target_arch(x86_64 "" "")
         endif()
       endif()
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+      test_target_arch(amdgcn "" "--target=amdgcn-amd-amdhsa" "-nogpulib"
+                       "-flto" "-Xclang -mcode-object-version=none")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
+      test_target_arch(hexagon "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "loongarch64")
       test_target_arch(loongarch64 "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc64le|ppc64le")
@@ -253,6 +288,10 @@ macro(test_targets)
         test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE=1" "-D_FILE_OFFSET_BITS=64")
         test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
       endif()
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
+      test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto" "-c")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "spirv64")
+      test_target_arch(spirv64 "" "--spirv64-unknown-unknown" "-nogpulib" "-flto" "-c")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")
@@ -278,6 +317,8 @@ macro(test_targets)
       test_target_arch(wasm64 "" "--target=wasm64-unknown-unknown")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "ve")
       test_target_arch(ve "__ve__" "--target=ve-unknown-none")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "alpha")
+      test_target_arch(alpha "" "")
     endif()
     set(COMPILER_RT_OS_SUFFIX "")
   endif()

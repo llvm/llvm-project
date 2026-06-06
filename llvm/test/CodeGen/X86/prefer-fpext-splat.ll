@@ -176,8 +176,6 @@ define <2 x double> @prefer_f16_v2f64(ptr %p) nounwind {
 ; AVX512F-LABEL: prefer_f16_v2f64:
 ; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vpbroadcastw (%rdi), %xmm0
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; AVX512F-NEXT:    retq

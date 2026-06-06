@@ -49,7 +49,7 @@ entry:
 ; COMMON:       .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
-; COMMON-NEXT:  .byte   0x22                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:  .byte   0x22                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; COMMON-NEXT:                                        # +HasTraceBackTableOffset, -IsInternalProcedure
 ; COMMON-NEXT:                                        # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                        # +IsFloatingPointPresent
@@ -70,7 +70,7 @@ entry:
 ; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
-; COMMON-NEXT:  .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:  .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; COMMON-NEXT:                                         # +HasTraceBackTableOffset, -IsInternalProcedure
 ; COMMON-NEXT:                                         # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                         # -IsFloatingPointPresent
@@ -99,12 +99,12 @@ entry:
 ; COMMON-NEXT:  .align  2
 ; COMMON-NEXT:  .vbyte  4, 0
 ; COMMON-NEXT:  .vbyte  4, 0
-; CHECK-ASM-NEXT:   .csect [PR],5
+; CHECK-ASM-NEXT:   .csect ..text..[PR],5
 ; CHECK-FUNC-NEXT:  .csect .foov[PR],5
 ; COMMON-NEXT:                                         # -- End function
 ; COMMON:       .toc
 ; COMMON:      L..C2:
-; COMMON-NEXT:  .tc __ehinfo.1[TC],__ehinfo.1
+; COMMON-NEXT:  .tc __ehinfo.1[TE],__ehinfo.1
 
 
 ; OBJ-DIS:      9c: 00 00 00 00  	# Traceback table start

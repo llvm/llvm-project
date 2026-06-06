@@ -7,11 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED: gcc
 
-// UNSUPPORTED: libcpp-has-no-std-modules
-// UNSUPPORTED: clang-modules-build
+// XFAIL: has-no-cxx-module-support
 
 // A minimal test to validate import works.
+
+// C++20 modules are incompatible with Clang modules
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
+
+// MODULE_DEPENDENCIES: std
 
 import std;
 

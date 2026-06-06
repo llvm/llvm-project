@@ -16,7 +16,7 @@ define float @test1(float %x) nounwind readnone ssp {
 
 define float @test2(float %x) nounwind readnone ssp {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR4]]
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret float [[SQRTF]]
 ;
   %conv = fpext float %x to double
@@ -31,8 +31,8 @@ define float @test2(float %x) nounwind readnone ssp {
 
 define float @test3(ptr %v) nounwind uwtable ssp {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double 0x7FF8000000000000) #[[ATTR4]]
-; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double +qnan) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #[[ATTR5]]
 ; CHECK-NEXT:    [[CONV38:%.*]] = fptrunc double [[CALL34]] to float
 ; CHECK-NEXT:    ret float [[CONV38]]
 ;
@@ -51,7 +51,7 @@ define float @test3(ptr %v) nounwind uwtable ssp {
 
 define void @0(float %f) {
 ; CHECK-LABEL: @0(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %d = fpext float %f to double
@@ -88,7 +88,138 @@ define float @sqrt_call_fabs_f32(float %x) {
   ret float %sqrt
 }
 
+define double @sqrt_exp(double %x) {
+; CHECK-LABEL: @sqrt_exp(
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc double [[X:%.*]], 5.000000e-01
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @llvm.exp.f64(double [[MERGED_SQRT]])
+; CHECK-NEXT:    ret double [[E]]
+;
+  %e = call reassoc double @llvm.exp.f64(double %x)
+  %res = call reassoc double @llvm.sqrt.f64(double %e)
+  ret double %res
+}
+
+define double @sqrt_exp_2(double %x) {
+; CHECK-LABEL: @sqrt_exp_2(
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc double [[X:%.*]], 5.000000e-01
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @exp(double [[MERGED_SQRT]])
+; CHECK-NEXT:    ret double [[E]]
+;
+  %e = call reassoc double @exp(double %x)
+  %res = call reassoc double @sqrt(double %e)
+  ret double %res
+}
+
+define double @sqrt_exp2(double %x) {
+; CHECK-LABEL: @sqrt_exp2(
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc double [[X:%.*]], 5.000000e-01
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @exp2(double [[MERGED_SQRT]])
+; CHECK-NEXT:    ret double [[E]]
+;
+  %e = call reassoc double @exp2(double %x)
+  %res = call reassoc double @sqrt(double %e)
+  ret double %res
+}
+
+define double @sqrt_exp10(double %x) {
+; CHECK-LABEL: @sqrt_exp10(
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc double [[X:%.*]], 5.000000e-01
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @exp10(double [[MERGED_SQRT]])
+; CHECK-NEXT:    ret double [[E]]
+;
+  %e = call reassoc double @exp10(double %x)
+  %res = call reassoc double @sqrt(double %e)
+  ret double %res
+}
+
+; Negative test
+define double @sqrt_exp_nofast_1(double %x) {
+; CHECK-LABEL: @sqrt_exp_nofast_1(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.exp.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sqrt.f64(double [[E]])
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %e = call double @llvm.exp.f64(double %x)
+  %res = call reassoc double @llvm.sqrt.f64(double %e)
+  ret double %res
+}
+
+; Negative test
+define double @sqrt_exp_nofast_2(double %x) {
+; CHECK-LABEL: @sqrt_exp_nofast_2(
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @llvm.exp.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sqrt.f64(double [[E]])
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %e = call reassoc double @llvm.exp.f64(double %x)
+  %res = call double @llvm.sqrt.f64(double %e)
+  ret double %res
+}
+
+define double @sqrt_exp_merge_constant(double %x, double %y) {
+; CHECK-LABEL: @sqrt_exp_merge_constant(
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc nsz double [[X:%.*]], 5.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @llvm.exp.f64(double [[MERGED_SQRT]])
+; CHECK-NEXT:    ret double [[E]]
+;
+  %mul = fmul reassoc nsz double %x, 10.0
+  %e = call reassoc double @llvm.exp.f64(double %mul)
+  %res = call reassoc nsz double @llvm.sqrt.f64(double %e)
+  ret double %res
+}
+
+define double @sqrt_exp_intr_and_libcall(double %x) {
+; CHECK-LABEL: @sqrt_exp_intr_and_libcall(
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc double [[X:%.*]], 5.000000e-01
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @exp(double [[MERGED_SQRT]])
+; CHECK-NEXT:    ret double [[E]]
+;
+  %e = call reassoc double @exp(double %x)
+  %res = call reassoc double @llvm.sqrt.f64(double %e)
+  ret double %res
+}
+
+define double @sqrt_exp_intr_and_libcall_2(double %x) {
+; CHECK-LABEL: @sqrt_exp_intr_and_libcall_2(
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc double [[X:%.*]], 5.000000e-01
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @llvm.exp.f64(double [[MERGED_SQRT]])
+; CHECK-NEXT:    ret double [[E]]
+;
+  %e = call reassoc double @llvm.exp.f64(double %x)
+  %res = call reassoc double @sqrt(double %e)
+  ret double %res
+}
+
+define <2 x float> @sqrt_exp_vec(<2 x float> %x) {
+; CHECK-LABEL: @sqrt_exp_vec(
+; CHECK-NEXT:    [[MERGED_SQRT:%.*]] = fmul reassoc <2 x float> [[X:%.*]], splat (float 5.000000e-01)
+; CHECK-NEXT:    [[E:%.*]] = call reassoc <2 x float> @llvm.exp.v2f32(<2 x float> [[MERGED_SQRT]])
+; CHECK-NEXT:    ret <2 x float> [[E]]
+;
+  %e = call reassoc <2 x float> @llvm.exp.v2f32(<2 x float> %x)
+  %res = call reassoc <2 x float> @llvm.sqrt.v2f32(<2 x float> %e)
+  ret <2 x float> %res
+}
+
+define <2 x float> @sqrt_unary_shuffle_ops(<2 x float> %x) {
+; CHECK-LABEL: @sqrt_unary_shuffle_ops(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[A:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <2 x float> [[R]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[R1]]
+;
+  %a = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x float> @llvm.sqrt(<2 x float> %a)
+  ret <2 x float> %r
+}
+
 declare i32 @foo(double)
 declare double @sqrt(double) readnone
 declare float @sqrtf(float)
 declare float @llvm.fabs.f32(float)
+declare double @llvm.exp.f64(double)
+declare double @llvm.sqrt.f64(double)
+declare double @exp(double)
+declare double @exp2(double)
+declare double @exp10(double)
+declare <2 x float> @llvm.exp.v2f32(<2 x float>)
+declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)

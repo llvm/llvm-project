@@ -21,8 +21,8 @@ namespace llvm {
 namespace sys {
 namespace unicode {
 
-extern const char *UnicodeNameToCodepointDict;
-extern const uint8_t *UnicodeNameToCodepointIndex;
+extern const char *const UnicodeNameToCodepointDict;
+extern const uint8_t *const UnicodeNameToCodepointIndex;
 extern const std::size_t UnicodeNameToCodepointIndexSize;
 extern const std::size_t UnicodeNameToCodepointLargestNameSize;
 
@@ -123,7 +123,7 @@ static bool startsWith(StringRef Name, StringRef Needle, bool Strict,
 
   Consummed = 0;
   if (Strict) {
-    if (!Name.startswith(Needle))
+    if (!Name.starts_with(Needle))
       return false;
     Consummed = Needle.size();
     return true;
@@ -249,12 +249,12 @@ constexpr const char *const HangulSyllables[][3] = {
     };
 // clang-format on
 
-// Unicode 15.0
+// Unicode 18.0
 // 3.12 Conjoining Jamo Behavior Common constants
-constexpr const char32_t SBase = 0xAC00;
-constexpr const uint32_t LCount = 19;
-constexpr const uint32_t VCount = 21;
-constexpr const uint32_t TCount = 28;
+constexpr char32_t SBase = 0xAC00;
+constexpr uint32_t LCount = 19;
+constexpr uint32_t VCount = 21;
+constexpr uint32_t TCount = 28;
 
 static std::size_t findSyllable(StringRef Name, bool Strict,
                                 char &PreviousInName, int &Pos, int Column) {
@@ -320,21 +320,25 @@ struct GeneratedNamesData {
   uint32_t End;
 };
 
-// Unicode 15.0 Table 4-8. Name Derivation Rule Prefix Strings
+// Unicode 15.1 Table 4-8. Name Derivation Rule Prefix Strings
 static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x3400, 0x4DBF},
     {"CJK UNIFIED IDEOGRAPH-", 0x4E00, 0x9FFF},
     {"CJK UNIFIED IDEOGRAPH-", 0x20000, 0x2A6DF},
-    {"CJK UNIFIED IDEOGRAPH-", 0x2A700, 0x2B739},
-    {"CJK UNIFIED IDEOGRAPH-", 0x2B740, 0x2B81D},
-    {"CJK UNIFIED IDEOGRAPH-", 0x2B820, 0x2CEA1},
+    {"CJK UNIFIED IDEOGRAPH-", 0x2A700, 0x2B73F},
+    {"CJK UNIFIED IDEOGRAPH-", 0x2B740, 0x2B81E},
+    {"CJK UNIFIED IDEOGRAPH-", 0x2B820, 0x2CEAD},
     {"CJK UNIFIED IDEOGRAPH-", 0x2CEB0, 0x2EBE0},
+    {"CJK UNIFIED IDEOGRAPH-", 0x2EBF0, 0x2EE5D},
     {"CJK UNIFIED IDEOGRAPH-", 0x30000, 0x3134A},
     {"CJK UNIFIED IDEOGRAPH-", 0x31350, 0x323AF},
+    {"CJK UNIFIED IDEOGRAPH-", 0x323B0, 0x33479},
+    {"EGYPTIAN HIEROGLYPH-", 0x13460, 0x143FA},
     {"TANGUT IDEOGRAPH-", 0x17000, 0x187F7},
     {"TANGUT IDEOGRAPH-", 0x18D00, 0x18D08},
     {"KHITAN SMALL SCRIPT CHARACTER-", 0x18B00, 0x18CD5},
     {"NUSHU CHARACTER-", 0x1B170, 0x1B2FB},
+    {"SEAL CHARACTER-", 0x3D000, 0x3FC3F},
     {"CJK COMPATIBILITY IDEOGRAPH-", 0xF900, 0xFA6D},
     {"CJK COMPATIBILITY IDEOGRAPH-", 0xFA70, 0xFAD9},
     {"CJK COMPATIBILITY IDEOGRAPH-", 0x2F800, 0x2FA1D},
@@ -387,8 +391,7 @@ static std::optional<char32_t> nameToCodepoint(StringRef Name, bool Strict,
     std::reverse(Buffer.begin(), Buffer.end());
     // UAX44-LM2. Ignore case, whitespace, underscore ('_'), and all medial
     // hyphens except the hyphen in U+1180 HANGUL JUNGSEONG O-E.
-    if (!Strict && Value == 0x116c &&
-        Name.find_insensitive("O-E") != StringRef::npos) {
+    if (!Strict && Value == 0x116c && Name.contains_insensitive("O-E")) {
       Buffer = "HANGUL JUNGSEONG O-E";
       Value = 0x1180;
     }
@@ -476,7 +479,7 @@ nearestMatchesForCodepointName(StringRef Pattern, std::size_t MaxMatchesCount) {
       std::min(NormalizedName.size(), UnicodeNameToCodepointLargestNameSize) +
       1;
 
-  LLVM_ATTRIBUTE_UNUSED static std::size_t Rows =
+  [[maybe_unused]] static std::size_t Rows =
       UnicodeNameToCodepointLargestNameSize + 1;
 
   std::vector<char> Distances(

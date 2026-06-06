@@ -8,10 +8,11 @@
 
 #include "LibCxx.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 
 using namespace lldb;
@@ -27,9 +28,9 @@ public:
 
   ~LibcxxStdSpanSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   /// Determines properties of the std::span<> associated with this object
   //
@@ -53,11 +54,9 @@ public:
   // This function checks for a '__size' member to determine the number
   // of elements in the span. If no such member exists, we get the size
   // from the only other place it can be: the template argument.
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_start = nullptr; ///< First element of span. Held, not owned.
@@ -73,14 +72,14 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdSpanSyntheticFrontEnd::CalculateNumChildren() {
   return m_num_elements;
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_start)
     return {};
 
@@ -88,23 +87,28 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::GetChildAtIndex(
   offset = offset + m_start->GetValueAsUnsigned(0);
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), offset,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), offset,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
-bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   // Get element type.
   ValueObjectSP data_type_finder_sp = GetChildMemberWithName(
       m_backend, {ConstString("__data_"), ConstString("__data")});
   if (!data_type_finder_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
 
   // Get element size.
-  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
-    m_element_size = *size;
+  llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
+  if (!size_or_err)
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
+                    "{0}");
+  else {
+    m_element_size = *size_or_err;
 
     // Get data.
     if (m_element_size > 0) {
@@ -118,23 +122,22 @@ bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
     } else if (auto arg =
                    m_backend.GetCompilerType().GetIntegralTemplateArgument(1)) {
 
-      m_num_elements = arg->value.getLimitedValue();
+      m_num_elements = arg->value.GetAPSInt().getLimitedValue();
     }
   }
 
-  return true;
+  return lldb::ChildCacheState::eReuse;
 }
 
-bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t> lldb_private::formatters::
+    LibcxxStdSpanSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
-    return UINT32_MAX;
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+  }
+  return *optional_idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

@@ -52,14 +52,8 @@ def ext_multi_line_line_comment : Extension<"multi-line // comment">,
 def ext_line_comment : Extension<
   "// comments are not allowed in this language">,
   InGroup<Comment>;
-def ext_no_newline_eof : Extension<"no newline at end of file">,
-  InGroup<NewlineEOF>;
 def warn_no_newline_eof : Warning<"no newline at end of file">,
   InGroup<NewlineEOF>, DefaultIgnore;
-
-def warn_cxx98_compat_no_newline_eof : Warning<
-  "C++98 requires newline at end of file">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 
 def ext_dollar_in_identifier : Extension<"'$' in identifier">,
   InGroup<DiagGroup<"dollar-in-identifier-extension">>;
@@ -96,17 +90,36 @@ def err_unterminated___pragma : Error<"missing terminating ')' character">;
 
 def err_conflict_marker : Error<"version control conflict marker in file">;
 
+def err_counter_overflow : Error<
+  "'__COUNTER__' value cannot exceed 2'147'483'647">;
+def ext_counter : Extension<
+  "'__COUNTER__' is a C2y extension">, InGroup<C2y>, SuppressInSystemMacro;
+def warn_counter : Warning<
+  "'__COUNTER__' is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore, SuppressInSystemMacro;
+
 def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_invalid_char_raw_delim : Error<
-  "invalid character '%0' character in raw string delimiter"
+  "invalid character '%0' in raw string delimiter"
+  "; use PREFIX( )PREFIX to delimit raw string">;
+def err_invalid_newline_raw_delim : Error<
+  "invalid newline character in raw string delimiter"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_unterminated_raw_string : Error<
   "raw string missing terminating delimiter )%0\"">;
 def warn_cxx98_compat_raw_string_literal : Warning<
   "raw string literals are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+
+def warn_cxx26_compat_raw_string_literal_character_set : Warning<
+  " '%0' in a raw string literal delimiter is incompatible "
+  "with standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
+def ext_cxx26_raw_string_literal_character_set : Extension<
+  " '%0' in a raw string literal delimiter is a C++2c extension">,
+  InGroup<CXX26>, DefaultIgnore;
 
 def warn_multichar_character_literal : Warning<
   "multi-character character constant">, InGroup<MultiChar>;
@@ -137,14 +150,14 @@ def ext_mathematical_notation : ExtWarn<
   InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
 
 def ext_delimited_escape_sequence : Extension<
-  "%select{delimited|named}0 escape sequences are a "
-  "%select{Clang|C++23}1 extension">,
-  InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
-
+  "%select{delimited|named}0 escape sequences are a %select{C++23|C2y|Clang}1 "
+  "extension">, InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
 def warn_cxx23_delimited_escape_sequence : Warning<
-  "%select{delimited|named}0 escape sequences are "
-  "incompatible with C++ standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
+  "%select{delimited|named}0 escape sequences are incompatible with C++ "
+  "standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
+def warn_c2y_delimited_escape_sequence : Warning<
+  "delimited escape sequences are incompatible with C standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 
 def err_delimited_escape_empty : Error<
   "delimited escape sequence cannot be empty">;
@@ -245,8 +258,22 @@ def warn_cxx17_hex_literal : Warning<
   "hexadecimal floating literals are incompatible with "
   "C++ standards before C++17">,
   InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
+def ext_octal_literal : Extension<
+  "octal integer literals are a C2y extension">, InGroup<C2y>;
+def ext_cpp_octal_literal : Extension<
+  "octal integer literals are a Clang extension">,
+  InGroup<DiagGroup<"octal-prefix-extension">>;
+def warn_c2y_compat_octal_literal : Warning<
+  "octal integer literals are incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
+def warn_unprefixed_octal_deprecated : Warning<
+  "octal literals without a '0o' prefix are deprecated">,
+  InGroup<DeprecatedOctalLiterals>;
 def ext_binary_literal : Extension<
-  "binary integer literals are a GNU extension">, InGroup<GNUBinaryLiteral>;
+  "binary integer literals are a C23 extension">, InGroup<C23>;
+def warn_c23_compat_binary_literal : Warning<
+  "binary integer literals are incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def ext_binary_literal_cxx14 : Extension<
   "binary integer literals are a C++14 extension">, InGroup<CXX14BinaryLiteral>;
 def warn_cxx11_compat_binary_literal : Warning<
@@ -269,6 +296,9 @@ def warn_cxx98_compat_unicode_literal : Warning<
 def warn_cxx14_compat_u8_character_literal : Warning<
   "unicode literals are incompatible with C++ standards before C++17">,
   InGroup<CXXPre17Compat>, DefaultIgnore;
+def warn_c17_compat_u8_character_literal : Warning<
+  "unicode literals are incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def warn_cxx11_compat_user_defined_literal : Warning<
   "identifier after literal will be treated as a user-defined literal suffix "
   "in C++11">, InGroup<CXX11Compat>, DefaultIgnore;
@@ -343,13 +373,24 @@ def ext_missing_whitespace_after_macro_name : ExtWarn<
 def warn_missing_whitespace_after_macro_name : Warning<
   "whitespace recommended after macro name">;
 
-class NonportablePath  : Warning<
+class NonportablePath : Warning<
   "non-portable path to file '%0'; specified path differs in case from file"
   " name on disk">;
 def pp_nonportable_path : NonportablePath,
-  InGroup<DiagGroup<"nonportable-include-path">>;
+  InGroup<NonportableIncludePath>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
-  InGroup<DiagGroup<"nonportable-system-include-path">>;
+  InGroup<NonportableSystemIncludePath>;
+
+class NonportablePathTrailing : Warning<
+  "non-portable path to file '%0'; specified path contains trailing"
+  " %select{whitespace|dot}1">;
+def pp_nonportable_path_trailing : NonportablePathTrailing,
+  InGroup<NonportableIncludePath>;
+def pp_nonportable_system_path_trailing : NonportablePathTrailing, DefaultIgnore,
+  InGroup<NonportableSystemIncludePath>;
+def pp_nonportable_path_separator : Warning<
+  "non-portable path to file '%0'; specified path contains backslashes">,
+  DefaultIgnore, InGroup<NonportableIncludePathSeparator>;
 
 def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">,
   InGroup<DiagGroup<"pragma-once-outside-header">>;
@@ -375,7 +416,10 @@ def pp_macro_not_used : Warning<"macro is not used">, DefaultIgnore,
   InGroup<DiagGroup<"unused-macros">>;
 def warn_pp_undef_identifier : Warning<
   "%0 is not defined, evaluates to 0">,
-  InGroup<DiagGroup<"undef">>, DefaultIgnore;
+  InGroup<UndefinedIdentifier>, DefaultIgnore;
+def warn_pp_undef_true_identifier : Warning<
+  "'true' is not defined, evaluates to 0">,
+  InGroup<UndefinedTrueIdentifier>;
 def warn_pp_undef_prefix : Warning<
   "%0 is not defined, evaluates to 0">,
   InGroup<DiagGroup<"undef-prefix">>, DefaultIgnore;
@@ -390,9 +434,15 @@ def warn_pp_macro_hides_keyword : Extension<
 def warn_pp_macro_is_reserved_id : Warning<
   "macro name is a reserved identifier">, DefaultIgnore,
   InGroup<ReservedIdAsMacro>;
+def warn_pp_macro_is_reserved_attribute_id : Warning<
+  "%0 is a reserved attribute identifier">, DefaultIgnore,
+  InGroup<ReservedAttributeIdentifier>;
 def warn_pp_objc_macro_redef_ignored : Warning<
   "ignoring redefinition of Objective-C qualifier macro">,
   InGroup<DiagGroup<"objc-macro-redefinition">>;
+def warn_pp_identifier_is_cpp_keyword : Warning<
+  "identifier %0 conflicts with a C++ keyword">,
+  InGroup<CppKeywordInC>, DefaultIgnore;
 
 def pp_invalid_string_literal : Warning<
   "invalid string literal, ignoring final '\\'">;
@@ -422,6 +472,16 @@ def warn_cxx23_compat_warning_directive : Warning<
 def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
+def ext_pp_embed_directive : ExtWarn<
+  "#embed is a %select{C23|Clang}0 extension">,
+  InGroup<C23>;
+def warn_compat_pp_embed_directive : Warning<
+  "#embed is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def err_pp_embed_dup_params : Error<
+  "cannot specify parameter '%0' twice in the same '#embed' directive">;
+def err_pp_embed_device_file : Error<
+  "device files are not yet supported by '#embed' directive">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
@@ -454,14 +514,21 @@ def warn_cxx98_compat_variadic_macro : Warning<
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_named_variadic_macro : Extension<
   "named variadic macros are a GNU extension">, InGroup<VariadicMacros>;
-def err_embedded_directive : Error<
-  "embedding a #%0 directive within macro arguments is not supported">;
+def err_embedded_directive : Error<"embedding a %select{|#}0%1 directive "
+                                   "within macro arguments is not supported">;
 def ext_embedded_directive : Extension<
   "embedding a directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
-def ext_missing_varargs_arg : Extension<
-  "must specify at least one argument for '...' parameter of variadic macro">,
-  InGroup<GNUZeroVariadicMacroArguments>;
+def ext_c_missing_varargs_arg : Extension<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "a C23 extension">, InGroup<VariadicMacroArgumentsOmitted>;
+def ext_cxx_missing_varargs_arg : Extension<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "a C++20 extension">, InGroup<VariadicMacroArgumentsOmitted>;
+def warn_c17_compat_missing_varargs_arg : Warning<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "incompatible with C standards before C23">,
+  InGroup<VariadicMacroArgumentsOmitted>, DefaultIgnore;
 def warn_cxx17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C++ standards before C++20">,
@@ -476,6 +543,8 @@ def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 
 def ext_pp_opencl_variadic_macros : Extension<
   "variadic macros are a Clang extension in OpenCL">;
+def err_opencl_logical_exclusive_or : Error<
+  "^^ is a reserved operator in OpenCL">;
 
 def ext_pp_gnu_line_directive : Extension<
   "this style of line directive is a GNU extension">,
@@ -484,6 +553,8 @@ def err_pp_invalid_directive : Error<
   "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
 def warn_pp_invalid_directive : Warning<
   err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
+def err_pp_unknown_parameter : Error<
+  "unknown%select{ | embed}0 preprocessor parameter '%1'">;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;
@@ -642,6 +713,9 @@ def err_pragma_push_pop_macro_malformed : Error<
 def warn_pragma_pop_macro_no_push : Warning<
    "pragma pop_macro could not pop '%0', no matching push_macro">,
   InGroup<IgnoredPragmas>;
+def warn_pargma_push_pop_macro_empty_string : Warning<
+   "'#pragma %select{push_macro|pop_macro}0' expected a non-empty string">,
+  InGroup<IgnoredPragmas>;
 def warn_pragma_message : Warning<"%0">,
    InGroup<PoundPragmaMessage>, DefaultWarnNoWerror;
 def err_pragma_message : Error<"%0">;
@@ -676,6 +750,8 @@ def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unknown_module : Warning<
   "unknown module '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_unable_to_find_module : Warning<
+  "unable to find module '%0'">, InGroup<IgnoredPragmas>;
 // #pragma module
 def err_pp_expected_module_name : Error<
   "expected %select{identifier after '.' in |}0module name">;
@@ -698,11 +774,15 @@ def err_pp_module_build_missing_end : Error<
   "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
+def err_defined_in_pp_embed : Error<
+  "'defined' cannot appear within this context">;
 def err_paste_at_start : Error<
   "'##' cannot appear at start of macro expansion">;
 def err_paste_at_end : Error<"'##' cannot appear at end of macro expansion">;
 def ext_paste_comma : Extension<
-  "token pasting of ',' and __VA_ARGS__ is a GNU extension">, InGroup<GNUZeroVariadicMacroArguments>;
+  "token pasting of ',' and '__VA_ARGS__' is a GNU extension%select{|; "
+  "consider using '__VA_OPT__(,)' instead}0">,
+  InGroup<GNUZeroVariadicMacroArguments>;
 def err_unterm_macro_invoc : Error<
   "unterminated function-like macro invocation">;
 def err_too_many_args_in_macro_invoc : Error<
@@ -785,6 +865,12 @@ def warn_pp_date_time : Warning<
   ShowInSystemHeader, DefaultIgnore, InGroup<DiagGroup<"date-time">>;
 
 // Module map parsing
+def remark_mmap_parse : Remark<
+  "parsing modulemap '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
+def remark_mmap_load : Remark<
+  "loading modulemap '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
+def remark_mmap_load_module : Remark<
+  "loading parsed module '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
 def err_mmap_unknown_token : Error<"skipping stray token">;
 def err_mmap_expected_module : Error<"expected module declaration">;
 def err_mmap_expected_module_name : Error<"expected module name">;
@@ -802,6 +888,13 @@ def err_mmap_module_redefinition : Error<
 def note_mmap_prev_definition : Note<"previously defined here">;
 def err_mmap_umbrella_clash : Error<
   "umbrella for module '%0' already covers this directory">;
+def warn_mmap_duplicate_header_ownership : Warning<
+  "header '%0' is owned by multiple modules">,
+  InGroup<DiagGroup<"duplicate-header-ownership">>, DefaultIgnore;
+def note_mmap_header_owned_by : Note<
+  "header owned by module '%0' here">;
+def note_mmap_header_covered_by_umbrella : Note<
+  "header covered by umbrella for module '%0' here">;
 def err_mmap_module_id : Error<
   "expected a module name or '*'">;
 def err_mmap_expected_library_name : Error<
@@ -876,6 +969,8 @@ def warn_mmap_redundant_export_as : Warning<
   InGroup<PrivateModule>;
 def err_mmap_submodule_export_as : Error<
   "only top-level modules can be re-exported as public">;
+def err_mmap_qualified_export_as : Error<
+  "a module can only be re-exported as another top-level module">;
 
 def warn_quoted_include_in_framework_header : Warning<
   "double-quoted include \"%0\" in framework header, "
@@ -884,6 +979,13 @@ def warn_quoted_include_in_framework_header : Warning<
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
   >, InGroup<FrameworkIncludePrivateFromPublic>;
+def warn_header_shadowing : Warning<
+  "multiple candidates for header '%0' found; "
+  "directory '%1' chosen, ignoring others including '%2'">,
+  InGroup<ShadowHeader>, DefaultIgnore;
+def warn_deprecated_module_dot_map : Warning<
+  "'%0' as a module map name is deprecated, rename it to %select{module.modulemap|module.private.modulemap}1%select{| in the 'Modules' directory of the framework}2">,
+  InGroup<DeprecatedModuleDotMap>;
 
 def remark_pp_include_directive_modular_translation : Remark<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
@@ -905,6 +1007,8 @@ def err_undeclared_use_of_module : Error<
   "module %0 does not depend on a module exporting '%1'">;
 def err_undeclared_use_of_module_indirect : Error<
   "module %0 does not directly depend on a module exporting '%1', which is part of indirectly-used module %2">;
+def err_undeclared_use_of_module_private : Error<
+  "module %0 does not depend on a module exporting '%1', which is part of module %2, although its private module does">;
 def warn_non_modular_include_in_framework_module : Warning<
   "include of non-modular header inside framework module '%0': '%1'">,
   InGroup<NonModularIncludeInFrameworkModule>, DefaultIgnore;
@@ -914,14 +1018,45 @@ def warn_non_modular_include_in_module : Warning<
 def warn_module_conflict : Warning<
   "module '%0' conflicts with already-imported module '%1': %2">,
   InGroup<ModuleConflict>;
+def warn_mmap_path_outside_directory : Warning<
+  "path refers outside of the module directory; such paths in implicitly "
+  "discovered module maps are deprecated">,
+  InGroup<DiagGroup<"module-map-path-outside-directory">>, DefaultIgnore;
+def warn_mmap_deprecated_symlink_to_modular_header : Warning<
+  "header '%0' may be a symlink to '%1' owned by module '%2'; "
+  "symlinks to modular headers are deprecated, replace with a textual "
+  "forwarding header">,
+  InGroup<DiagGroup<"mmap-deprecated-symlink-to-modular-header">>,
+  DefaultIgnore;
+def note_mmap_module_defined_here : Note<"module defined here">;
 
 // C++20 modules
+def err_pp_module_name_is_macro : Error<
+  "%select{module|partition}0 name component %1 cannot be a object-like macro">;
+def err_pp_module_expected_ident : Error<
+  "expected %select{identifier after '.' in |}0module name">;
+def err_pp_unexpected_tok_after_module_name : Error<
+  "unexpected preprocessing token '%0' after module name, "
+  "only ';' and '[' (start of attribute specifier sequence) are allowed">;
+def warn_pp_extra_tokens_at_module_directive_eol
+    : Warning<"extra tokens after semicolon in '%0' directive">,
+      InGroup<ExtraTokens>;
+def err_pp_module_decl_in_header
+    : Error<"module declaration must not come from an #include directive">;
+def err_pp_cond_span_module_decl
+    : Error<"module directive lines are not allowed on lines controlled "
+    "by preprocessor conditionals">;
 def err_header_import_semi_in_macro : Error<
   "semicolon terminating header import declaration cannot be produced "
   "by a macro">;
 def err_header_import_not_header_unit : Error<
   "header file %0 (aka '%1') cannot be imported because "
   "it is not known to be a header unit">;
+def warn_pp_include_angled_in_module_purview : Warning<
+  "'#include <filename>' attaches the declarations to the named module '%0'"
+  ", which is not usually intended; consider moving that directive before "
+  "the module declaration">,
+  InGroup<DiagGroup<"include-angled-in-module-purview">>;
 
 def warn_header_guard : Warning<
   "%0 is used as a header guard here, followed by #define of a different macro">,
@@ -970,5 +1105,5 @@ def err_pp_unclosed_pragma_unsafe_buffer_usage :
 Error<"'#pragma unsafe_buffer_usage' was not ended">;
 
 def err_pp_pragma_unsafe_buffer_usage_syntax :
-Error<"Expected 'begin' or 'end'">;
+Error<"expected 'begin' or 'end'">;
 }

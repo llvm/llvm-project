@@ -24,6 +24,8 @@
 
 #include "../buffer.h"
 #include "../counted.h"
+#include "../overload_compare_iterator.h"
+#include "copy_move_types.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -37,6 +39,40 @@ static_assert(std::is_invocable_v<decltype(std::ranges::uninitialized_copy_n), i
 struct NotConvertibleFromInt {};
 static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_copy_n), int*, std::size_t, NotConvertibleFromInt*,
                                    NotConvertibleFromInt*>);
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  constexpr int n       = 3;
+  const ConstCopy in[n] = {ConstCopy(1), ConstCopy(2), ConstCopy(3)};
+  std::allocator<ConstCopy> alloc;
+
+  {
+    ConstCopy* out = alloc.allocate(n);
+    auto result    = std::ranges::uninitialized_copy_n(in, n, out, out + n);
+    assert(result.in == in + n);
+    assert(result.out == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i].val == in[i].val);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // Destination range is shorter than the source range.
+  {
+    constexpr int m = 2;
+    ConstCopy* out  = alloc.allocate(m);
+    auto result     = std::ranges::uninitialized_copy_n(in, n, out, out + m);
+    assert(result.in == in + m);
+    assert(result.out == out + m);
+    for (int i = 0; i != m; ++i)
+      assert(out[i].val == in[i].val);
+
+    std::destroy(out, out + m);
+    alloc.deallocate(out, m);
+  }
+
+  return true;
+}
 
 int main(int, char**) {
   // An empty range -- no default constructors should be invoked.
@@ -103,22 +139,6 @@ int main(int, char**) {
 
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-  // Works with const iterators.
-  {
-    constexpr int N = 5;
-    Counted in[N] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
-    Buffer<Counted, N> out;
-    Counted::reset();
-
-    std::ranges::uninitialized_copy_n(in, N, out.cbegin(), out.cend());
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    assert(std::equal(in, in + N, out.begin(), out.end()));
-
-    std::destroy(out.begin(), out.end());
-  }
-  Counted::reset();
-
   // Conversions.
   {
     constexpr int N = 3;
@@ -160,6 +180,42 @@ int main(int, char**) {
     Buffer<int, N> out;
     std::ranges::uninitialized_copy_n(std::move(in), N, out.begin(), out.end());
   }
+
+  // Test with an iterator that overloads operator== and operator!= as the input and output iterators
+  {
+    using T        = int;
+    using Iterator = overload_compare_iterator<T*>;
+    const int N    = 5;
+
+    // input
+    {
+      char pool[sizeof(T) * N] = {0};
+      T* p                     = reinterpret_cast<T*>(pool);
+      T* p_end                 = reinterpret_cast<T*>(pool) + N;
+      T array[N]               = {1, 2, 3, 4, 5};
+      std::ranges::uninitialized_copy_n(Iterator(array), N, p, p_end);
+      for (int i = 0; i != N; ++i) {
+        assert(array[i] == p[i]);
+      }
+    }
+
+    // output
+    {
+      char pool[sizeof(T) * N] = {0};
+      T* p                     = reinterpret_cast<T*>(pool);
+      T* p_end                 = reinterpret_cast<T*>(pool) + N;
+      T array[N]               = {1, 2, 3, 4, 5};
+      std::ranges::uninitialized_copy_n(array, N, Iterator(p), Iterator(p_end));
+      for (int i = 0; i != N; ++i) {
+        assert(array[i] == p[i]);
+      }
+    }
+  }
+
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif // TEST_STD_VER >= 26
 
   return 0;
 }

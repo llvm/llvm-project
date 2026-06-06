@@ -11,9 +11,10 @@
 ;; }
 
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV: %[[#SamplerID0:]] = OpConstantSampler %[[#]] Repeat 1 Nearest
-; CHECK-SPIRV: %[[#SamplerID1:]] = OpConstantSampler %[[#]] None 0 Nearest
+; CHECK-SPIRV-DAG: %[[#SamplerID0:]] = OpConstantSampler %[[#]] Repeat 1 Nearest
+; CHECK-SPIRV-DAG: %[[#SamplerID1:]] = OpConstantSampler %[[#]] None 0 Nearest
 ; CHECK-SPIRV: %[[#]] = OpSampledImage %[[#]] %[[#]] %[[#SamplerID0]]
 ; CHECK-SPIRV: %[[#]] = OpSampledImage %[[#]] %[[#]] %[[#SamplerID1]]
 

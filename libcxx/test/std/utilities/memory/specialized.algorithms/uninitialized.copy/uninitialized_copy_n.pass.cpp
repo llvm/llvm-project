@@ -16,7 +16,10 @@
 #include <memory>
 #include <cassert>
 
+#include "algorithms.h"
+#include "copy_move_types.h"
 #include "test_macros.h"
+#include "../overload_compare_iterator.h"
 
 struct B
 {
@@ -46,6 +49,23 @@ struct Nasty
 };
 
 int Nasty::counter_ = 0;
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  const int n           = 3;
+  const ConstCopy in[n] = {ConstCopy(1), ConstCopy(2), ConstCopy(3)};
+  std::allocator<ConstCopy> alloc;
+  ConstCopy* out = alloc.allocate(n);
+
+  ConstCopy* result = std::uninitialized_copy_n(in, n, out);
+  assert(result == out + n);
+  for (int i = 0; i != n; ++i)
+    assert(out[i].val == in[i].val);
+
+  util::destroy(out, out + n);
+  alloc.deallocate(out, n);
+
+  return true;
+}
 
 int main(int, char**)
 {
@@ -85,5 +105,39 @@ int main(int, char**)
     }
     }
 
-  return 0;
+    // Test with an iterator that overloads operator== and operator!= as the input and output iterators
+    {
+        using T = int;
+        using Iterator = overload_compare_iterator<T*>;
+        const int N = 5;
+
+        // input
+        {
+            char pool[sizeof(T) * N] = {0};
+            T* p = reinterpret_cast<T*>(pool);
+            T array[N] = {1, 2, 3, 4, 5};
+            std::uninitialized_copy_n(Iterator(array), N, p);
+            for (int i = 0; i != N; ++i) {
+                assert(array[i] == p[i]);
+            }
+        }
+
+        // output
+        {
+            char pool[sizeof(T) * N] = {0};
+            T* p = reinterpret_cast<T*>(pool);
+            T array[N] = {1, 2, 3, 4, 5};
+            std::uninitialized_copy_n(array, N, Iterator(p));
+            for (int i = 0; i != N; ++i) {
+                assert(array[i] == p[i]);
+            }
+        }
+    }
+
+    test();
+#if TEST_STD_VER >= 26
+    static_assert(test());
+#endif
+
+    return 0;
 }

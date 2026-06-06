@@ -28,8 +28,8 @@ entry:
   %0 = load i32, ptr %a.addr, align 4, !dbg !14
   %cmp = icmp sgt i32 %0, 0, !dbg !18
   br i1 %cmp, label %if.then, label %if.else, !dbg !19
-; CHECK: edge entry -> if.then probability is 0x0167ba82 / 0x80000000 = 1.10%
-; CHECK: edge entry -> if.else probability is 0x7e98457e / 0x80000000 = 98.90% [HOT edge]
+; CHECK: edge %entry -> %if.then probability is 0x0167ba82 / 0x80000000 = 1.10%
+; CHECK: edge %entry -> %if.else probability is 0x7e98457e / 0x80000000 = 98.90% [HOT edge]
 
 if.then:                                          ; preds = %entry
   store i32 10, ptr %retval, align 4, !dbg !20
@@ -47,7 +47,7 @@ return:                                           ; preds = %if.else, %if.then
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
+attributes #0 = { nounwind uwtable "use-sample-profile" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

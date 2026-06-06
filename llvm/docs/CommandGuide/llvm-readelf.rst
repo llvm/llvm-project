@@ -20,14 +20,14 @@ input. Otherwise, it will read from the specified ``filenames``.
 OPTIONS
 -------
 
-.. option:: --all, -a
-
- Equivalent to specifying all the main display options relevant to the file
- format.
-
 .. option:: --addrsig
 
  Display the address-significance table.
+
+ .. option:: --all, -a
+
+ Equivalent to specifying all the main display options relevant to the file
+ format.
 
 .. option:: --arch-specific, -A
 
@@ -38,6 +38,23 @@ OPTIONS
  Display the contents of the basic block address map section(s), which contain the
  address of each function, along with the relative offset of each basic block.
 
+.. option:: --call-graph-info
+
+  Display the call graph section entries i.e. for each function
+  its identifying information, each of its direct callees' information
+  and for each indirect callee a 64-bit number representing the callee's
+  function signature. This information can be used to reconstruct
+  the program call graph.
+
+.. option:: --cg-profile
+
+ Display the callgraph profile section.
+
+.. option:: --decompress, -z
+
+  Dump decompressed section content when used with ``-x`` or ``-p``.
+  If the section(s) are not compressed, they are displayed as is.
+
 .. option:: --demangle, -C
 
  Display demangled symbol names in the output.
@@ -46,6 +63,10 @@ OPTIONS
 
  Display the dependent libraries section.
 
+.. option:: --dynamic-table, --dynamic, -d
+
+ Display the dynamic table.
+
 .. option:: --dyn-relocations
 
  Display the dynamic relocation entries.
@@ -53,18 +74,6 @@ OPTIONS
 .. option:: --dyn-symbols, --dyn-syms
 
  Display the dynamic symbol table.
-
-.. option:: --dynamic-table, --dynamic, -d
-
- Display the dynamic table.
-
-.. option:: --cg-profile
-
- Display the callgraph profile section.
-
-.. option:: --histogram, -I
-
- Display a bucket list histogram for dynamic symbol hash tables.
 
 .. option:: --elf-linker-options
 
@@ -80,10 +89,6 @@ OPTIONS
 .. option:: --extra-sym-info
 
  Display extra information (section name) when showing symbols.
-
-.. option:: --section-groups, -g
-
- Display section groups.
 
 .. option:: --expand-relocs
 
@@ -120,6 +125,10 @@ OPTIONS
  Display the specified section(s) as hexadecimal bytes. ``section`` may be a
  section index or section name.
 
+.. option:: --histogram, -I
+
+ Display a bucket list histogram for dynamic symbol hash tables.
+
 .. option:: --memtag
 
  Display information about memory tagging present in the binary. This includes
@@ -138,6 +147,10 @@ OPTIONS
 
  Display all notes.
 
+.. option:: --offloading
+
+ Display list of HIP offload bundles.
+
 .. option:: --pretty-print
 
  When used with :option:`--elf-output-style`, JSON output will be formatted in
@@ -147,17 +160,9 @@ OPTIONS
 
  Display the program headers.
 
-.. option:: --raw-relr
-
- Do not decode relocations in RELR relocation sections when displaying them.
-
 .. option:: --relocations, --relocs, -r
 
  Display the relocation entries in the file.
-
-.. option:: --sections, --section-headers, -S
-
- Display all sections.
 
 .. option:: --section-data
 
@@ -168,6 +173,10 @@ OPTIONS
 
  Display all section details. Used as an alternative to :option:`--sections`.
 
+.. option:: --section-groups, -g
+
+ Display section groups.
+
 .. option:: --section-mapping
 
  Display the section to segment mapping.
@@ -176,6 +185,10 @@ OPTIONS
 
  When used with :option:`--sections`, display relocations for each section
  shown. This option has no effect for GNU style output.
+
+.. option:: --sections, --section-headers, -S
+
+ Display all sections.
 
 .. option:: --section-symbols
 

@@ -35,7 +35,7 @@ Sometimes it is necessary to add elements of a vector to obtain a scalar. Some p
 The Vector dialect in MLIR defines an operation to explicitly denote a within-vector reduction:
 
 ```mlir
-%0 = vector.reduction <add>, %0 : vector<8xf32> into f32
+%1 = vector.reduction <add>, %0 : vector<8xf32> into f32
 ```
 
 When no support is available, such an operation can be transformed into a loop:
@@ -46,7 +46,7 @@ When no support is available, such an operation can be transformed into a loop:
 %c8 = arith.constant 8 : index
 %init = arith.constant 0.0 : f32
 %result = scf.for %i = %c0 to %c8 step %c1 iter_args(%partial = %init) -> (f32) {
-  %element = vector.extractelement %0[%i : index] : vector<8xf32>
+  %element = vector.extract %0[%i] : f32 into vector<8xf32>
   %updated = arith.addf %partial, %element : f32
   scf.yield %updated : f32
 }
@@ -56,7 +56,7 @@ Even when special instructions are available, it may still be desirable to use t
 
 ## Contraction
 
-Contraction is a generalization of reduction that multiplies elements from two vectors before adding them up. A simple “add” reduction can be thought of as a contraction where one of the vectors contains `1.0`, the neutral element of multiplication. Contractions offer even more flexibility to the compiler, and are represented as by a dedicated operation in MLIR:
+Contraction is a generalization of reduction that multiplies elements from two vectors before adding them up. A simple “add” reduction can be thought of as a contraction where one of the vectors contains `1.0`, the neutral element of multiplication. Contractions offer even more flexibility to the compiler, and are represented by a dedicated operation in MLIR:
 
 ```mlir
 // Neutral initializer for the addition.
@@ -72,14 +72,14 @@ Contraction is a generalization of reduction that multiplies elements from two v
 } %0, %ones, %init : vector<8xf32>, vector<8xf32> into f32
 ```
 
-Note the `affine_map` expressions indicating how vector elements are indexed. Their meaning is perhaps most evident when writing the loop form pseudo-code equivalent to this contraction:
+Note the `affine_map` expressions indicating how vector elements are indexed. Their meaning is perhaps most evident when writing the loop form in pseudo-code equivalent to this contraction:
 
 ```mlir
 for i in 0 to 8:
   init += p0[i] * ones[i]
 ```
 
-where both `%0` and `%ones` use the loop induction variable `i`, as noted on the right-hand side of the corresponding affine map, `(i) -> (i)`, and the `%init` does not, as reflected on the right-hand side of its affine map, `(i) -> ()`.
+where both `%0` and `%ones` use the loop induction variable `i`, as noted on the right-hand side of the corresponding affine map, `(i) -> (i)`, and `%init` does not, as reflected on the right-hand side of its affine map, `(i) -> ()`.
 
 Similarly to uniform elementwise extension, MLIR vector contractions are not limited to 1D cases. In the 2D+ case, one can additionally specify which of the vector dimensions are being reduced and which ones are being preserved. This can be achieved by using the `iterator_types` attribute that specifies, for each dimension, whether it is being reduced (`"reduction"`) or preserved (`"parallel"`). Consider the following 3D contraction that encodes a matrix-matrix multiplication:
 
@@ -134,7 +134,7 @@ Furthermore, the operation now contains a region that explicitly specifies the m
 
 ## “Loop” Fusion
 
-Since the region of the `generic` operation can contain arbitrarily many operations, we can use it to express “fusion” of the implicit loops by simply having more operations chained in the region. For example, the common machine learning rectified linear unit layer (ReLU), which can be defined as `relu(x) = max(0, x)`, can be defined be expressed using the “compare-and-select” idiom in one `generic` operation, without the temporary buffer for the comparison result and without repeating the outer operation:
+Since the region of the `linalg.generic` operation can contain arbitrarily many operations, we can use it to express “fusion” of the implicit loops by simply having more operations chained in the region. For example, the common machine learning rectified linear unit layer (ReLU), which can be defined as `relu(x) = max(0, x)`, can be expressed using the “compare-and-select” idiom in one `linalg.generic` operation, without the temporary buffer for the comparison result and without repeating the outer operation:
 
 ```mlir
 linalg.generic {
@@ -145,7 +145,7 @@ linalg.generic {
   %c0 = arith.constant 0.0 : f32
   %0 = arith.cmpf ogt %in_one, %c0 : f32
   %1 = arith.select %0, %in_one, %c0 : f32
-  linalg.yield %1 : f32 
+  linalg.yield %1 : f32
 }
 ```
 
@@ -155,7 +155,7 @@ Such operations can be converted to loops or lowered into vector forms after spl
 
 Let us take one last step up on the abstraction ladder. MLIR provides a tensor abstraction that makes it easy for the compiler to reason about multidimensional yet regular data without having to solve complex problems such as alias analysis and dependency satisfaction, which would be necessary on multidimensional buffers. The tensor abstraction is very similar to the vector abstraction (major differences include the availability of unranked tensors, tensor layouts, and vectors being usable as elemental types of tensors but not of other vectors). Tensors are read-only, and operations updating a tensor produce a new tensor.
 
-The `generic` operation from above can lifted to operate on tensors instead of buffers:
+The `linalg.generic` operation from above can lifted to operate on tensors instead of buffers:
 
 ```mlir
 %result = linalg.generic {
@@ -174,18 +174,18 @@ The `generic` operation from above can lifted to operate on tensors instead of b
 
 As you can notice, most components of this operation remain identical to its buffer version. It has been specifically designed this way. The main difference, beside the operand types, is that the operation now produces a new result instead of updating the `out` buffer. The `out` operand is used only as the initialization value.
 
-If the `generic` operation had existed on vectors, it would have had the exact same structure.
+If the `linalg.generic` operation had existed on vectors, it would have had the exact same structure.
 
 ## Tiling and Loop Materialization
 
 At this level of abstraction, it becomes easy for the compiler to perform more advanced transformations usually required for high-performance code generation, such as [tiling](https://en.wikipedia.org/wiki/Loop_nest_optimization). Tiling, in general, can be seen as partitioning the iteration space into smaller parts, or tiles, so that the data required by each part fits into a level of cache for example. The order in which tiles are executed must preserve the original data dependencies.
 
-In the case of `generic` operations, the iteration space is implicit and is defined by the shape of the operands. Therefore, a tile can be expressed by performing the _same_ operation on a subset (slice) of the original data. Since the order in which the body of `generic` is applied to different tuples of the input elements is unspecified, tiles can be executed in any order, without the need for dependence analysis. In order to control the execution of different tiles, the implementation of tiling produces loops. Thus tiling `generic` operations can also be seen as materializing the loops that have been implicit until now.
+In the case of `linalg.generic` operations, the iteration space is implicit and is defined by the shape of the operands. Therefore, a tile can be expressed by performing the _same_ operation on a subset (slice) of the original data. Since the order in which the body of `linalg.generic` is applied to different tuples of the input elements is unspecified, tiles can be executed in any order, without the need for dependence analysis. In order to control the execution of different tiles, the implementation of tiling produces loops. Thus tiling `linalg.generic` operations can also be seen as materializing the loops that have been implicit until now.
 
-For example, tiling the matrix multiplication presented above with tile sizes `(2, 8)`, we obtain a loop nest around a `generic` expressing the same operation on a `2x8` tensor.
+For example, tiling the matrix multiplication presented above with tile sizes `(2, 8)`, we obtain a loop nest around a `linalg.generic` expressing the same operation on a `2x8` tensor.
 
 ```mlir
-// A special "multi-for" loop that supports tensor-insertion semantics 
+// A special "multi-for" loop that supports tensor-insertion semantics
 // as opposed to implicit updates. The resulting 8x16 tensor will be produced
 // by this loop.
 // The trip count of iterators is computed dividing the original tensor size,
@@ -202,9 +202,9 @@ For example, tiling the matrix multiplication presented above with tile sizes `(
   // Take slices of inputs and outputs. Only the "i" and "j" dimensions are sliced.
   %lhs_slice = tensor.extract_slice %lhs[%3, 0] [2, 10] [1, 1]
              : tensor<8x10xf32> to tensor<2x10xf32>
-  %rhs_slice = tensor.extract_slice %rhs[0, %4] [10, 8] [1, 1] 
+  %rhs_slice = tensor.extract_slice %rhs[0, %4] [10, 8] [1, 1]
              : tensor<10x16xf32> to tensor<10x8xf32>
-  %result_slice = tensor.extract_slice %shared[%3, %4] [2, 8] [1, 1] 
+  %result_slice = tensor.extract_slice %shared[%3, %4] [2, 8] [1, 1]
                 : tensor<8x16xf32> to tensor<2x8xf32>
 
   // This is exactly the same operation as before, but now operating on smaller
@@ -214,7 +214,7 @@ For example, tiling the matrix multiplication presented above with tile sizes `(
                    affine_map<(i, j, k) -> (k, j)>,
                    affine_map<(i, j, k) -> (i, j)>],
   iterator_types = ["parallel", "parallel", "reduction"]
-  } ins(%lhs_slice, %rhs_slice : tensor<2x10xf32>, tensor<10x8xf32>) 
+  } ins(%lhs_slice, %rhs_slice : tensor<2x10xf32>, tensor<10x8xf32>)
     outs(%result_slice : tensor<2x8xf32>) -> tensor<2x8xf32> {
   ^bb0(%lhs_one: f32, %rhs_one: f32, %init_one: f32):
     %0 = arith.mulf %lhs_one, %rhs_one : f32
@@ -238,15 +238,15 @@ After materializing loops with tiling, another key code generation transformatio
 1. the subset (slice) of the operand that is used by the tile, and
 2. the tensor-level structured operation producing the whole tensor that is being sliced.
 
-By inverting the `indexing_map` and applying it to the set of elements accessed through the slice, we can compute the part of the iteration space of the operation defining the full tensor necessary to compute the tile. Thus fusion boils down to replacing the `tensor.extract_slice` operation with the tile of the `linalg.generic` producing the original operand. 
+By inverting the `indexing_map` and applying it to the set of elements accessed through the slice, we can compute the part of the iteration space of the operation defining the full tensor necessary to compute the tile. Thus fusion boils down to replacing the `tensor.extract_slice` operation with the tile of the `linalg.generic` producing the original operand.
 
 Let us assume that the matrix multiplication operation is followed by another operation that multiplies each element of the resulting matrix with itself. This trailing elementwise operation has a 2D iteration space, unlike the 3D one in matrix multiplication. Nevertheless, it is possible to tile the trailing operation and then fuse the producer of its operand, the matmul, into the loop generated by tiling. The untiled dimension will be used in its entirety.
 
 
 ```mlir
 // Same loop as before.
-%0 = scf.forall (%i, %j) in (4, 2) 
-     shared_outs(%shared = %init) 
+%0 = scf.forall (%i, %j) in (4, 2)
+     shared_outs(%shared = %init)
      -> (tensor<8x16xf32>, tensor<8x16xf32>) {
   // Scale the loop induction variables by the tile sizes.
   %1 = affine.apply affine_map<(d0) -> (d0 * 2)>(%i)
@@ -286,7 +286,7 @@ Let us assume that the matrix multiplication operation is followed by another op
     indexing_maps = [affine_map<(i, j) -> (i, j)>,
                      affine_map<(i, j) -> (i, j)>],
     iterator_types = ["parallel", "parallel"]
-  } ins(%partial : tensor<2x8xf32>)   
+  } ins(%partial : tensor<2x8xf32>)
    outs(%shared_slice : tensor<2x8xf32>) {
   ^bb0(%in: f32, %out: f32):
     %5 = arith.mulf %in, %in : f32

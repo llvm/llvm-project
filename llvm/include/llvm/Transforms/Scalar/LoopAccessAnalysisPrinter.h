@@ -18,12 +18,14 @@ class raw_ostream;
 
 /// Printer pass for the \c LoopAccessInfo results.
 class LoopAccessInfoPrinterPass
-    : public PassInfoMixin<LoopAccessInfoPrinterPass> {
+    : public RequiredPassInfoMixin<LoopAccessInfoPrinterPass> {
   raw_ostream &OS;
+  bool AllowPartial;
 
 public:
-  explicit LoopAccessInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  explicit LoopAccessInfoPrinterPass(raw_ostream &OS, bool AllowPartial)
+      : OS(OS), AllowPartial(AllowPartial) {}
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // End llvm namespace

@@ -158,21 +158,24 @@ DecodedCharacter DecodeRawCharacter<Encoding::UTF_8>(
     const char *cp, std::size_t bytes) {
   auto p{reinterpret_cast<const std::uint8_t *>(cp)};
   char32_t ch{*p};
-  if (ch <= 0x7f) {
+  // Valid UTF-8 encodings must be minimal.
+  if (ch <= 0x7f) { // 1 byte: 7 bits of payload
     return {ch, 1};
-  } else if ((ch & 0xf8) == 0xf0 && bytes >= 4 && ch > 0xf0 &&
-      ((p[1] | p[2] | p[3]) & 0xc0) == 0x80) {
+  } else if ((ch & 0xf8) == 0xf0 && bytes >= 4 &&
+      ((p[1] | p[2] | p[3]) & 0xc0) == 0x80 && (ch > 0xf0 || p[1] > 0x8f)) {
+    // 4 bytes: 3+6+6+6=21 bits of payload
     ch = ((ch & 7) << 6) | (p[1] & 0x3f);
     ch = (ch << 6) | (p[2] & 0x3f);
     ch = (ch << 6) | (p[3] & 0x3f);
     return {ch, 4};
-  } else if ((ch & 0xf0) == 0xe0 && bytes >= 3 && ch > 0xe0 &&
-      ((p[1] | p[2]) & 0xc0) == 0x80) {
+  } else if ((ch & 0xf0) == 0xe0 && bytes >= 3 &&
+      ((p[1] | p[2]) & 0xc0) == 0x80 && (ch > 0xe0 || p[1] > 0x9f)) {
+    // 3 bytes: 4+6+6=16 bits of payload
     ch = ((ch & 0xf) << 6) | (p[1] & 0x3f);
     ch = (ch << 6) | (p[2] & 0x3f);
     return {ch, 3};
   } else if ((ch & 0xe0) == 0xc0 && bytes >= 2 && ch > 0xc0 &&
-      (p[1] & 0xc0) == 0x80) {
+      (p[1] & 0xc0) == 0x80) { // 2 bytes: 5+6=11 bits of payload
     ch = ((ch & 0x1f) << 6) | (p[1] & 0x3f);
     return {ch, 2};
   } else {
@@ -235,7 +238,30 @@ template <Encoding ENCODING>
 DecodedCharacter DecodeCharacter(
     const char *cp, std::size_t bytes, bool backslashEscapes) {
   if (backslashEscapes && bytes >= 2 && *cp == '\\') {
-    return DecodeEscapedCharacters<ENCODING>(cp, bytes);
+    if (ENCODING == Encoding::UTF_8 && bytes >= 6 &&
+        ToLowerCaseLetter(cp[1]) == 'u' && IsHexadecimalDigit(cp[2]) &&
+        IsHexadecimalDigit(cp[3]) && IsHexadecimalDigit(cp[4]) &&
+        IsHexadecimalDigit(cp[5])) {
+      char32_t ch{
+          static_cast<char32_t>(4096 * HexadecimalDigitValue(cp[2]) +
+              256 * HexadecimalDigitValue(cp[3]) +
+              16 * HexadecimalDigitValue(cp[4]) + HexadecimalDigitValue(cp[5])),
+      };
+      if (bytes >= 10 && IsHexadecimalDigit(cp[6]) &&
+          IsHexadecimalDigit(cp[7]) && IsHexadecimalDigit(cp[8]) &&
+          IsHexadecimalDigit(cp[9])) {
+        return {(ch << 16) |
+                (4096 * HexadecimalDigitValue(cp[6]) +
+                    256 * HexadecimalDigitValue(cp[7]) +
+                    16 * HexadecimalDigitValue(cp[8]) +
+                    HexadecimalDigitValue(cp[9])),
+            10};
+      } else {
+        return {ch, 6};
+      }
+    } else {
+      return DecodeEscapedCharacters<ENCODING>(cp, bytes);
+    }
   } else {
     return DecodeRawCharacter<ENCODING>(cp, bytes);
   }
@@ -266,7 +292,8 @@ RESULT DecodeString(const std::string &s, bool backslashEscapes) {
         DecodeCharacter<ENCODING>(p, bytes, backslashEscapes)};
     if (decoded.bytes > 0) {
       if (static_cast<std::size_t>(decoded.bytes) <= bytes) {
-        result.append(1, decoded.codepoint);
+        result.append(
+            1, static_cast<typename RESULT::value_type>(decoded.codepoint));
         bytes -= decoded.bytes;
         p += decoded.bytes;
         continue;

@@ -9,13 +9,21 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H
 #define LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <stdarg.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
+
+template <typename V, typename A>
+LIBC_INLINE constexpr V align_up(V val, A align) {
+  return ((val + V(align) - 1) / V(align)) * V(align);
+}
 
 class ArgList {
   va_list vlist;
@@ -53,7 +61,34 @@ public:
   }
 
   template <class T> LIBC_INLINE T next_var() {
-    ++arg_counter;
+    arg_counter++;
+    return T(arg_counter);
+  }
+
+  size_t read_count() const { return arg_counter; }
+};
+
+// Used by the GPU implementation to parse how many bytes need to be read from
+// the variadic argument buffer.
+template <bool packed> class DummyArgList {
+  size_t arg_counter = 0;
+
+public:
+  LIBC_INLINE DummyArgList() = default;
+  LIBC_INLINE DummyArgList(va_list) { ; }
+  LIBC_INLINE DummyArgList(DummyArgList &other) {
+    arg_counter = other.arg_counter;
+  }
+  LIBC_INLINE ~DummyArgList() = default;
+
+  LIBC_INLINE DummyArgList &operator=(DummyArgList &rhs) {
+    arg_counter = rhs.arg_counter;
+    return *this;
+  }
+
+  template <class T> LIBC_INLINE T next_var() {
+    arg_counter = packed ? arg_counter + sizeof(T)
+                         : align_up(arg_counter, alignof(T)) + sizeof(T);
     return T(arg_counter);
   }
 
@@ -61,6 +96,6 @@ public:
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H

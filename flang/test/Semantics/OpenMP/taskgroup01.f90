@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags -fopenmp-version=50
 
 use omp_lib
   implicit none
@@ -19,9 +21,11 @@ use omp_lib
   !$omp end parallel
 
   !$omp parallel private(xyz)
+  !ERROR: The ALLOCATE clause requires that 'xyz' must be listed in a private data-sharing attribute clause on the same directive
     !$omp taskgroup allocate(xyz)
       !$omp task
         print *, "The "
+  !ERROR: The ALLOCATE clause requires that 'abc' must be listed in a private data-sharing attribute clause on the same directive
         !$omp taskgroup allocate(omp_large_cap_mem_space: abc)
           !$omp task
           print *, "almighty sun"
@@ -39,6 +43,8 @@ use omp_lib
     !$omp task
       !$omp taskgroup task_reduction(+ : reduction_var)
           print *, "The "
+  !ERROR: The type of 'reduction_var' is incompatible with the reduction operator.
+  !ERROR: The type of 'reduction_var' is incompatible with the reduction operator.
         !$omp taskgroup task_reduction(.or. : reduction_var) task_reduction(.and. : reduction_var)
           print *, "almighty sun"
         !$omp end taskgroup

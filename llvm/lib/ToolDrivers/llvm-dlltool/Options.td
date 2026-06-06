@@ -12,11 +12,19 @@ def D_long : JoinedOrSeparate<["--"], "dllname">, Alias<D>;
 def d: JoinedOrSeparate<["-"], "d">, HelpText<"Input .def File">;
 def d_long : JoinedOrSeparate<["--"], "input-def">, Alias<d>;
 
+def N: JoinedOrSeparate<["-"], "N">, HelpText<"Input native .def File on ARM64EC">;
+def N_long : JoinedOrSeparate<["--"], "input-native-def">, Alias<N>;
+
 def k: Flag<["-"], "k">, HelpText<"Kill @n Symbol from export">;
 def k_alias: Flag<["--"], "kill-at">, Alias<k>;
 
 def no_leading_underscore: Flag<["--"], "no-leading-underscore">,
     HelpText<"Don't add leading underscores on symbols">;
+
+def I: JoinedOrSeparate<["-"], "I">, HelpText<"Identify DLL name from import library">;
+def I_long : JoinedOrSeparate<["--"], "identify">, Alias<I>;
+
+def identify_strict : Flag<["--"], "identify-strict">, HelpText<"Error out if the --identify option detects more than one DLL">;
 
 //==============================================================================
 // The flags below do nothing. They are defined only for dlltool compatibility.

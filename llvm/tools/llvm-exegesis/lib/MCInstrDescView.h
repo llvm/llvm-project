@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 
 namespace llvm {
+class MCSubtargetInfo;
 namespace exegesis {
 
 // A variable represents the value associated to an Operand or a set of Operands
@@ -72,20 +73,22 @@ struct Operand {
   bool isVariable() const;
   bool isMemory() const;
   bool isImmediate() const;
+  bool isEarlyClobber() const;
   unsigned getIndex() const;
   unsigned getTiedToIndex() const;
   unsigned getVariableIndex() const;
-  unsigned getImplicitReg() const;
+  MCRegister getImplicitReg() const;
   const RegisterAliasingTracker &getRegisterAliasing() const;
   const MCOperandInfo &getExplicitOperandInfo() const;
 
   // Please use the accessors above and not the following fields.
   std::optional<uint8_t> Index;
   bool IsDef = false;
+  bool IsEarlyClobber = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const MCOperandInfo *Info = nullptr;              // Set for Explicit Op.
   std::optional<uint8_t> TiedToIndex;               // Set for Reg&Explicit Op.
-  MCPhysReg ImplicitReg = 0;                        // Non-0 for Implicit Op.
+  MCRegister ImplicitReg;                           // Non-0 for Implicit Op.
   std::optional<uint8_t> VariableIndex;             // Set for Explicit Op.
 };
 
@@ -107,13 +110,16 @@ struct Instruction {
   // Create an instruction for a particular Opcode.
   static std::unique_ptr<Instruction>
   create(const MCInstrInfo &InstrInfo, const RegisterAliasingTrackerCache &RATC,
-         const BitVectorCache &BVC, unsigned Opcode);
+         const BitVectorCache &BVC, unsigned Opcode,
+         const MCSubtargetInfo *STI = nullptr);
 
   // Prevent copy or move, instructions are allocated once and cached.
   Instruction(const Instruction &) = delete;
   Instruction(Instruction &&) = delete;
   Instruction &operator=(const Instruction &) = delete;
   Instruction &operator=(Instruction &&) = delete;
+
+  unsigned getOpcode() const { return Description.getOpcode(); }
 
   // Returns the Operand linked to this Variable.
   // In case the Variable is tied, the primary (i.e. Def) Operand is returned.
@@ -132,6 +138,12 @@ struct Instruction {
   // Use and Def registers. It may also execute in parallel by picking non
   // aliasing Use and Def registers.
   bool hasAliasingRegisters(const BitVector &ForbiddenRegisters) const;
+
+  // Whether this instruction is self aliasing through some registers.
+  // Repeating this instruction may execute sequentially by picking aliasing
+  // Def and Not Memory Use registers. It may also execute in parallel by
+  // picking non aliasing Def and Not Memory Use registers.
+  bool hasAliasingNotMemoryRegisters(const BitVector &ForbiddenRegisters) const;
 
   // Whether this instruction's registers alias with OtherInstr's registers.
   bool hasAliasingRegistersThrough(const Instruction &OtherInstr,
@@ -160,19 +172,23 @@ struct Instruction {
   const BitVector &ImplUseRegs; // The set of aliased implicit use registers.
   const BitVector &AllDefRegs;  // The set of all aliased def registers.
   const BitVector &AllUseRegs;  // The set of all aliased use registers.
+  // The set of all aliased not memory use registers.
+  const BitVector &NonMemoryRegs;
+
 private:
   Instruction(const MCInstrDesc *Description, StringRef Name,
               SmallVector<Operand, 8> Operands,
               SmallVector<Variable, 4> Variables, const BitVector *ImplDefRegs,
               const BitVector *ImplUseRegs, const BitVector *AllDefRegs,
-              const BitVector *AllUseRegs);
+              const BitVector *AllUseRegs, const BitVector *NonMemoryRegs);
 };
 
 // Instructions are expensive to instantiate. This class provides a cache of
 // Instructions with lazy construction.
 struct InstructionsCache {
   InstructionsCache(const MCInstrInfo &InstrInfo,
-                    const RegisterAliasingTrackerCache &RATC);
+                    const RegisterAliasingTrackerCache &RATC,
+                    const MCSubtargetInfo *STI = nullptr);
 
   // Returns the Instruction object corresponding to this Opcode.
   const Instruction &getInstr(unsigned Opcode) const;
@@ -180,6 +196,7 @@ struct InstructionsCache {
 private:
   const MCInstrInfo &InstrInfo;
   const RegisterAliasingTrackerCache &RATC;
+  const MCSubtargetInfo *STI;
   mutable std::unordered_map<unsigned, std::unique_ptr<Instruction>>
       Instructions;
   const BitVectorCache BVC;

@@ -159,7 +159,7 @@ void g16(void) {
 }
 
 __attribute__((regparm(3))) struct s12 f17(int a, int b, int c);
-// CHECK: declare void @f17(ptr inreg sret(%struct.s12) align 4, i32 inreg noundef, i32 inreg noundef, i32 noundef)
+// CHECK: declare void @f17(ptr dead_on_unwind inreg writable sret(%struct.s12) align 4, i32 inreg noundef, i32 inreg noundef, i32 noundef)
 void g17(void) {
   f17(41, 42, 43);
 }

@@ -18,37 +18,58 @@
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace Fortran::frontend;
+
+static void printWarningOption(llvm::raw_ostream &os,
+                               clang::DiagnosticsEngine::Level level,
+                               const clang::Diagnostic &info) {
+  auto &diagIDs = *info.getDiags()->getDiagnosticIDs();
+
+  if (level == clang::DiagnosticsEngine::Warning) {
+    llvm::StringRef opt = diagIDs.getWarningOptionForDiag(info.getID());
+    if (!opt.empty()) {
+      os << " [-W" << opt;
+      llvm::StringRef optValue = info.getFlagValue();
+      if (!optValue.empty())
+        os << "=" << optValue;
+      os << "]";
+    }
+  }
+}
 
 /// HandleDiagnostic - Store the errors, warnings, and notes that are
 /// reported.
 void TextDiagnosticBuffer::HandleDiagnostic(
     clang::DiagnosticsEngine::Level level, const clang::Diagnostic &info) {
-  // Default implementation (warnings_/errors count).
+  // Default implementation (warnings/errors count).
   DiagnosticConsumer::HandleDiagnostic(level, info);
 
   llvm::SmallString<100> buf;
   info.FormatDiagnostic(buf);
+  llvm::raw_svector_ostream os(buf);
+  printWarningOption(os, level, info);
+
   switch (level) {
   default:
     llvm_unreachable("Diagnostic not handled during diagnostic buffering!");
   case clang::DiagnosticsEngine::Note:
     all.emplace_back(level, notes.size());
-    notes.emplace_back(info.getLocation(), std::string(buf.str()));
+    notes.emplace_back(info.getLocation(), std::string(buf));
     break;
   case clang::DiagnosticsEngine::Warning:
     all.emplace_back(level, warnings.size());
-    warnings.emplace_back(info.getLocation(), std::string(buf.str()));
+    warnings.emplace_back(info.getLocation(), std::string(buf));
     break;
   case clang::DiagnosticsEngine::Remark:
     all.emplace_back(level, remarks.size());
-    remarks.emplace_back(info.getLocation(), std::string(buf.str()));
+    remarks.emplace_back(info.getLocation(), std::string(buf));
     break;
   case clang::DiagnosticsEngine::Error:
   case clang::DiagnosticsEngine::Fatal:
     all.emplace_back(level, errors.size());
-    errors.emplace_back(info.getLocation(), std::string(buf.str()));
+    errors.emplace_back(info.getLocation(), std::string(buf));
     break;
   }
 }

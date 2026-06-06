@@ -30,9 +30,11 @@ class FalsePositiveGenerator : public Checker<eval::Call> {
   using HandlerFn = bool (Self::*)(const CallEvent &Call,
                                    CheckerContext &) const;
   CallDescriptionMap<HandlerFn> Callbacks = {
-      {{{"reachedWithContradiction"}, 0}, &Self::reachedWithContradiction},
-      {{{"reachedWithNoContradiction"}, 0}, &Self::reachedWithNoContradiction},
-      {{{"reportIfCanBeTrue"}, 1}, &Self::reportIfCanBeTrue},
+      {{CDM::SimpleFunc, {"reachedWithContradiction"}, 0},
+       &Self::reachedWithContradiction},
+      {{CDM::SimpleFunc, {"reachedWithNoContradiction"}, 0},
+       &Self::reachedWithNoContradiction},
+      {{CDM::SimpleFunc, {"reportIfCanBeTrue"}, 1}, &Self::reportIfCanBeTrue},
   };
 
   bool report(CheckerContext &C, ProgramStateRef State,
@@ -61,7 +63,7 @@ class FalsePositiveGenerator : public Checker<eval::Call> {
   bool reportIfCanBeTrue(const CallEvent &Call, CheckerContext &C) const {
     // A specific instantiation of an inlined function may have more constrained
     // values than can generally be assumed. Skip the check.
-    if (C.getPredecessor()->getLocationContext()->getStackFrame()->getParent())
+    if (C.getPredecessor()->getStackFrame()->getParent())
       return false;
 
     SVal AssertionVal = Call.getArgSVal(0);
@@ -90,8 +92,8 @@ void addFalsePositiveGenerator(AnalysisASTConsumer &AnalysisConsumer,
   AnOpts.CheckersAndPackages = {{"test.FalsePositiveGenerator", true},
                                 {"debug.ViewExplodedGraph", false}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker<FalsePositiveGenerator>(
-        "test.FalsePositiveGenerator", "EmptyDescription", "EmptyDocsUri");
+    Registry.addChecker<FalsePositiveGenerator>("test.FalsePositiveGenerator",
+                                                "MockDescription");
   });
 }
 

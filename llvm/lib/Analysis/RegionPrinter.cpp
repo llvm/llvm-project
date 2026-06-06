@@ -9,7 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/RegionPrinter.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Analysis/DOTGraphTraitsPass.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
@@ -30,10 +29,9 @@ onlySimpleRegions("only-simple-regions",
                   cl::Hidden,
                   cl::init(false));
 
-namespace llvm {
-
-std::string DOTGraphTraits<RegionNode *>::getNodeLabel(RegionNode *Node,
-                                                       RegionNode *Graph) {
+std::string
+llvm::DOTGraphTraits<RegionNode *>::getNodeLabel(RegionNode *Node,
+                                                 RegionNode *Graph) {
   if (!Node->isSubRegion()) {
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
 
@@ -47,7 +45,8 @@ std::string DOTGraphTraits<RegionNode *>::getNodeLabel(RegionNode *Node,
 }
 
 template <>
-struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
+struct llvm::DOTGraphTraits<RegionInfo *>
+    : public llvm::DOTGraphTraits<RegionNode *> {
 
   DOTGraphTraits (bool isSimple = false)
     : DOTGraphTraits<RegionNode*>(isSimple) {}
@@ -126,7 +125,6 @@ struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
     printRegionCluster(*G->getTopLevelRegion(), GW, 4);
   }
 };
-} // end namespace llvm
 
 namespace {
 
@@ -143,7 +141,6 @@ struct RegionPrinter
   RegionPrinter()
       : DOTGraphTraitsPrinterWrapperPass<RegionInfoPass, false, RegionInfo *,
                                          RegionInfoPassGraphTraits>("reg", ID) {
-    initializeRegionPrinterPass(*PassRegistry::getPassRegistry());
   }
 };
 char RegionPrinter::ID = 0;
@@ -155,7 +152,6 @@ struct RegionOnlyPrinter
   RegionOnlyPrinter()
       : DOTGraphTraitsPrinterWrapperPass<RegionInfoPass, true, RegionInfo *,
                                          RegionInfoPassGraphTraits>("reg", ID) {
-    initializeRegionOnlyPrinterPass(*PassRegistry::getPassRegistry());
   }
 };
 char RegionOnlyPrinter::ID = 0;
@@ -166,9 +162,7 @@ struct RegionViewer
   static char ID;
   RegionViewer()
       : DOTGraphTraitsViewerWrapperPass<RegionInfoPass, false, RegionInfo *,
-                                        RegionInfoPassGraphTraits>("reg", ID) {
-    initializeRegionViewerPass(*PassRegistry::getPassRegistry());
-  }
+                                        RegionInfoPassGraphTraits>("reg", ID) {}
 };
 char RegionViewer::ID = 0;
 
@@ -179,9 +173,7 @@ struct RegionOnlyViewer
   RegionOnlyViewer()
       : DOTGraphTraitsViewerWrapperPass<RegionInfoPass, true, RegionInfo *,
                                         RegionInfoPassGraphTraits>("regonly",
-                                                                   ID) {
-    initializeRegionOnlyViewerPass(*PassRegistry::getPassRegistry());
-  }
+                                                                   ID) {}
 };
 char RegionOnlyViewer::ID = 0;
 

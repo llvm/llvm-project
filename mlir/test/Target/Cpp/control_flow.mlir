@@ -8,12 +8,12 @@ func.func @simple(i64, i1) -> i64 {
 ^bb1:
   cf.br ^bb3(%a: i64)
 ^bb2:
-  %b = emitc.call "add"(%a, %a) : (i64, i64) -> i64
+  %b = emitc.call_opaque "add"(%a, %a) : (i64, i64) -> i64
   cf.br ^bb3(%b: i64)
 ^bb3(%c: i64):
   cf.br ^bb4(%c, %a : i64, i64)
 ^bb4(%d : i64, %e : i64):
-  %0 = emitc.call "add"(%d, %e) : (i64, i64) -> i64
+  %0 = emitc.call_opaque "add"(%d, %e) : (i64, i64) -> i64
   return %0 : i64
 }
   // CPP-DECLTOP: int64_t simple(int64_t [[A:[^ ]*]], bool [[COND:[^ ]*]]) {
@@ -68,3 +68,22 @@ func.func @block_labels1() {
   // CPP-DECLTOP-NEXT: label2:
   // CPP-DECLTOP-NEXT: return;
   // CPP-DECLTOP-NEXT: }
+
+emitc.func @expression_inlining(%0 : i32, %1 : i32) {
+  %2 = expression %0, %1 : (i32, i32) -> i1 {
+    %3 = cmp lt, %0, %1 : (i32, i32) -> i1
+    yield %3 : i1
+  }
+  cf.cond_br %2, ^bb1, ^bb1
+  ^bb1:  // 2 preds: ^bb0, ^bb0
+    return
+}
+// CPP-DECLTOP: void expression_inlining(int32_t [[v1:v.*]], int32_t [[v2:v.*]]) {
+// CPP-DECLTOP-NEXT:   if ([[v1]] < [[v2]]) {
+// CPP-DECLTOP-NEXT:     goto label2;
+// CPP-DECLTOP-NEXT:   } else {
+// CPP-DECLTOP-NEXT:     goto label2;
+// CPP-DECLTOP-NEXT:   }
+// CPP-DECLTOP-NEXT: label2:
+// CPP-DECLTOP-NEXT:   return;
+// CPP-DECLTOP-NEXT: }

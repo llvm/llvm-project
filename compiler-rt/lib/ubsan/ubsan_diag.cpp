@@ -13,18 +13,26 @@
 #include "ubsan_platform.h"
 #if CAN_SANITIZE_UB
 #include "ubsan_diag.h"
-#include "ubsan_init.h"
 #include "ubsan_flags.h"
+#include "ubsan_init.h"
 #include "ubsan_monitor.h"
+
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
 #include "sanitizer_common/sanitizer_suppressions.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+
 #include <stdio.h>
 
 using namespace __ubsan;
+
+// Can be overriden in frontend.
+SANITIZER_INTERFACE_WEAK_DEF(const char *, __ubsan_default_suppressions, void) {
+  return "";
+}
 
 // UBSan is combined with runtimes that already provide this functionality
 // (e.g., ASan) as well as runtimes that lack it (e.g., scudo). Tried to use
@@ -47,7 +55,7 @@ static void MaybePrintStackTrace(uptr pc, uptr bp) {
   if (!flags()->print_stacktrace)
     return;
 
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   ubsan_GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr,
                 common_flags()->fast_unwind_on_fatal);
   stack.Print();
@@ -88,7 +96,7 @@ static void MaybeReportErrorSummary(Location Loc, ErrorType Type) {
       AI.file = internal_strdup(SLoc.getFilename());
       AI.line = SLoc.getLine();
       AI.column = SLoc.getColumn();
-      AI.function = internal_strdup("");  // Avoid printing ?? as function name.
+      AI.function = nullptr;
       ReportErrorSummary(ErrorKind, AI, GetSanititizerToolName());
       AI.Clear();
       return;
@@ -402,7 +410,7 @@ ScopedReport::~ScopedReport() {
     Die();
 }
 
-ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
+alignas(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;
 static const char kVptrCheck[] = "vptr_check";
 static const char *kSuppressionTypes[] = {
@@ -417,6 +425,7 @@ void __ubsan::InitializeSuppressions() {
   suppression_ctx = new (suppression_placeholder)
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
   suppression_ctx->ParseFromFile(flags()->suppressions);
+  suppression_ctx->Parse(__ubsan_default_suppressions());
 }
 
 bool __ubsan::IsVptrCheckSuppressed(const char *TypeName) {

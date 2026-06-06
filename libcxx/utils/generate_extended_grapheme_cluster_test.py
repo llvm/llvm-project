@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -16,7 +16,6 @@
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, TextIO
-from array import array
 import sys
 
 

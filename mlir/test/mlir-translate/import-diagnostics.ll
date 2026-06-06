@@ -21,13 +21,15 @@ end:
 ; ERROR:     error:
 ; DEFAULT:   error:
 ; EXPENSIVE: error:
-define i32 @error(ptr %dst) {
-  indirectbr ptr %dst, [label %bb1, label %bb2]
-bb1:
-  ret i32 0
-bb2:
-  ret i32 1
+define dso_local void @tbaa(ptr %0) {
+  store i32 1, ptr %0, align 4, !tbaa !2
+  ret void
 }
+
+!2 = !{!3, !3, i64 0, i64 4}
+!3 = !{!4, i64 4, !"int"}
+!4 = !{!5, i64 1, !"omnipotent char"}
+!5 = !{!"Simple C++ TBAA"}
 
 ; // -----
 
@@ -37,7 +39,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; DEFAULT-NOT: warning:
 ; EXPENSIVE:   warning:
 define void @dropped_instruction(i64 %arg1) {
-  call void @llvm.dbg.value(metadata i64 %arg1, metadata !3, metadata !DIExpression(DW_OP_plus_uconst, 42, DW_OP_stack_value)), !dbg !5
+  call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)), !dbg !5
   ret void
 }
 
@@ -47,5 +49,7 @@ define void @dropped_instruction(i64 %arg1) {
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "import-failure.ll", directory: "/")
 !3 = !DILocalVariable(scope: !4, name: "arg1", file: !2, line: 1, arg: 1, align: 64);
-!4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !5 = !DILocation(line: 1, column: 2, scope: !4)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}

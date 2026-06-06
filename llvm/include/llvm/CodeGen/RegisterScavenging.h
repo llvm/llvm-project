@@ -38,9 +38,6 @@ class RegScavenger {
   MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator MBBI;
 
-  /// True if RegScavenger is currently tracking the liveness of registers.
-  bool Tracking = false;
-
   /// Information on scavenged registers (held in a spill slot).
   struct ScavengedInfo {
     ScavengedInfo(int FI = -1) : FrameIndex(FI) {}
@@ -85,40 +82,31 @@ public:
   }
 
   /// Start tracking liveness from the begin of basic block \p MBB.
-  void enterBasicBlock(MachineBasicBlock &MBB);
+  LLVM_ABI void enterBasicBlock(MachineBasicBlock &MBB);
 
   /// Start tracking liveness from the end of basic block \p MBB.
   /// Use backward() to move towards the beginning of the block.
-  void enterBasicBlockEnd(MachineBasicBlock &MBB);
+  LLVM_ABI void enterBasicBlockEnd(MachineBasicBlock &MBB);
 
   /// Update internal register state and move MBB iterator backwards. This
   /// method gives precise results even in the absence of kill flags.
-  void backward();
+  LLVM_ABI void backward();
 
-  /// Call backward() as long as the internal iterator does not point to \p I.
+  /// Call backward() to update internal register state to just before \p *I.
   void backward(MachineBasicBlock::iterator I) {
     while (MBBI != I)
       backward();
   }
 
-  /// Move the internal MBB iterator but do not update register states.
-  void skipTo(MachineBasicBlock::iterator I) {
-    if (I == MachineBasicBlock::iterator(nullptr))
-      Tracking = false;
-    MBBI = I;
-  }
-
-  MachineBasicBlock::iterator getCurrentPosition() const { return MBBI; }
-
   /// Return if a specific register is currently used.
-  bool isRegUsed(Register Reg, bool includeReserved = true) const;
+  LLVM_ABI bool isRegUsed(Register Reg, bool includeReserved = true) const;
 
   /// Return all available registers in the register class in Mask.
-  BitVector getRegsAvailable(const TargetRegisterClass *RC);
+  LLVM_ABI BitVector getRegsAvailable(const TargetRegisterClass *RC);
 
   /// Find an unused register of the specified register class.
   /// Return 0 if none is found.
-  Register FindUnusedReg(const TargetRegisterClass *RC) const;
+  LLVM_ABI Register FindUnusedReg(const TargetRegisterClass *RC) const;
 
   /// Add a scavenging frame index.
   void addScavengingFrameIndex(int FI) {
@@ -141,6 +129,8 @@ public:
         A.push_back(I.FrameIndex);
   }
 
+  size_t getNumScavengingFrameIndices() const { return Scavenged.size(); }
+
   /// Make a register of the specific register class available from the current
   /// position backwards to the place before \p To. If \p RestoreAfter is true
   /// this includes the instruction following the current position.
@@ -150,13 +140,14 @@ public:
   ///
   /// If \p AllowSpill is false, fail if a spill is required to make the
   /// register available, and return NoRegister.
-  Register scavengeRegisterBackwards(const TargetRegisterClass &RC,
-                                     MachineBasicBlock::iterator To,
-                                     bool RestoreAfter, int SPAdj,
-                                     bool AllowSpill = true);
+  LLVM_ABI Register scavengeRegisterBackwards(const TargetRegisterClass &RC,
+                                              MachineBasicBlock::iterator To,
+                                              bool RestoreAfter, int SPAdj,
+                                              bool AllowSpill = true);
 
   /// Tell the scavenger a register is used.
-  void setRegUsed(Register Reg, LaneBitmask LaneMask = LaneBitmask::getAll());
+  LLVM_ABI void setRegUsed(Register Reg,
+                           LaneBitmask LaneMask = LaneBitmask::getAll());
 
 private:
   /// Returns true if a register is reserved. It is never "unused".
@@ -174,7 +165,7 @@ private:
 
 /// Replaces all frame index virtual registers with physical registers. Uses the
 /// register scavenger to find an appropriate register to use.
-void scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS);
+LLVM_ABI void scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS);
 
 } // end namespace llvm
 

@@ -119,44 +119,15 @@ entry:
 define <1 x i32> @add_chain_feeding_dotproduct_i32_v8_1(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; CHECK-LABEL: @add_chain_feeding_dotproduct_i32_v8_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 3>
-; CHECK-NEXT:    [[SPLIT4:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 4>
-; CHECK-NEXT:    [[SPLIT5:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 5>
-; CHECK-NEXT:    [[SPLIT6:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 6>
-; CHECK-NEXT:    [[SPLIT7:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 7>
-; CHECK-NEXT:    [[SPLIT8:%.*]] = shufflevector <8 x i32> [[B:%.*]], <8 x i32> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[SPLIT9:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SPLIT10:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[SPLIT11:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <1 x i32> <i32 3>
-; CHECK-NEXT:    [[SPLIT12:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <1 x i32> <i32 4>
-; CHECK-NEXT:    [[SPLIT13:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <1 x i32> <i32 5>
-; CHECK-NEXT:    [[SPLIT14:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <1 x i32> <i32 6>
-; CHECK-NEXT:    [[SPLIT15:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> poison, <1 x i32> <i32 7>
-; CHECK-NEXT:    [[TMP0:%.*]] = add <1 x i32> [[SPLIT]], [[SPLIT8]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add <1 x i32> [[SPLIT1]], [[SPLIT9]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <1 x i32> [[SPLIT2]], [[SPLIT10]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add <1 x i32> [[SPLIT3]], [[SPLIT11]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add <1 x i32> [[SPLIT4]], [[SPLIT12]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add <1 x i32> [[SPLIT5]], [[SPLIT13]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add <1 x i32> [[SPLIT6]], [[SPLIT14]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add <1 x i32> [[SPLIT7]], [[SPLIT15]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <1 x i32> [[TMP0]], <1 x i32> [[TMP1]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <1 x i32> [[TMP2]], <1 x i32> [[TMP3]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <1 x i32> [[TMP4]], <1 x i32> [[TMP5]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <1 x i32> [[TMP6]], <1 x i32> [[TMP7]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[SPLIT16:%.*]] = shufflevector <8 x i32> [[TMP14]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[SPLIT17:%.*]] = shufflevector <8 x i32> [[C:%.*]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP15:%.*]] = add <8 x i32> [[SPLIT16]], [[SPLIT17]]
-; CHECK-NEXT:    [[TMP16:%.*]] = mul <8 x i32> [[TMP15]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP16]])
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <1 x i32> poison, i32 [[TMP17]], i64 0
-; CHECK-NEXT:    ret <1 x i32> [[TMP18]]
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x i32> [[B:%.*]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP0:%.*]] = add <8 x i32> [[SPLIT]], [[SPLIT1]]
+; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x i32> [[C:%.*]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[TMP0]], [[SPLIT2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> [[TMP1]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <1 x i32> poison, i32 [[TMP3]], i64 0
+; CHECK-NEXT:    ret <1 x i32> [[TMP4]]
 ;
 entry:
   %add.1 = add <8 x i32> %a, %b
@@ -280,11 +251,11 @@ define <1 x i32> @intrinsic_column_major_load_dot_product_i32_stride_too_large_1
 ; CHECK-LABEL: @intrinsic_column_major_load_dot_product_i32_stride_too_large_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x i32>, ptr [[LHS_ADDRESS:%.*]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x i32>, ptr [[VEC_GEP2]], align 4
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 12
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 12
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <1 x i32>, ptr [[VEC_GEP4]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD1]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD3]], <1 x i32> [[COL_LOAD5]], <2 x i32> <i32 0, i32 1>
@@ -309,11 +280,11 @@ define <1 x i32> @intrinsic_column_major_load_dot_product_i32_stride_too_large_2
 ; CHECK-LABEL: @intrinsic_column_major_load_dot_product_i32_stride_too_large_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x i32>, ptr [[LHS_ADDRESS:%.*]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 5
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 5
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x i32>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 10
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 10
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x i32>, ptr [[VEC_GEP2]], align 4
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr i32, ptr [[LHS_ADDRESS]], i64 15
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds i32, ptr [[LHS_ADDRESS]], i64 15
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <1 x i32>, ptr [[VEC_GEP4]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD1]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD3]], <1 x i32> [[COL_LOAD5]], <2 x i32> <i32 0, i32 1>
@@ -356,16 +327,16 @@ declare <4 x i32> @llvm.matrix.multiply.v4i32.v4i32.v4i32(<4 x i32>, <4 x i32>, 
 define <1 x i32> @test_builtin_column_major_variable_stride(ptr %src, <4 x i32> %a, i64 %stride) {
 ; CHECK-LABEL: @test_builtin_column_major_variable_stride(
 ; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i64 [[VEC_START]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[VEC_START]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x i32>, ptr [[VEC_GEP]], align 4
 ; CHECK-NEXT:    [[VEC_START1:%.*]] = mul i64 1, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START1]]
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[VEC_START1]]
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x i32>, ptr [[VEC_GEP2]], align 4
 ; CHECK-NEXT:    [[VEC_START4:%.*]] = mul i64 2, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START4]]
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[VEC_START4]]
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <1 x i32>, ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    [[VEC_START7:%.*]] = mul i64 3, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START7]]
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[VEC_START7]]
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x i32>, ptr [[VEC_GEP8]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD3]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <1 x i32> [[COL_LOAD6]], <1 x i32> [[COL_LOAD9]], <2 x i32> <i32 0, i32 1>

@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++17 -triple x86_64-pc-windows-msvc -fsycl-is-device -verify -fsyntax-only -Wno-unused
-// RUN: %clang_cc1 %s -std=c++17 -triple x86_64-linux-gnu -fsycl-is-device -verify -fsyntax-only -Wno-unused
+// RUN: %clang_cc1 %s -std=c++17 -triple spirv64-unknown-unknown -fsycl-is-device -verify -fsyntax-only -Wno-unused
 
 template <typename KernelName, typename KernelType>
 [[clang::sycl_kernel]] void kernel_single_task(KernelType kernelFunc) { // #kernelSingleTask
@@ -173,7 +172,8 @@ void f() {
   // an unevaluated context because the use within a VLA extent forces
   // evaluation.
   int j = 55;
-  __builtin_sycl_unique_stable_name(int[++j]); // no warning expected
+  __builtin_sycl_unique_stable_name(int[++j]); // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                  expected-note {{a constant expression cannot modify an object that is visible outside that expression}}
 }
 
 template <typename T>

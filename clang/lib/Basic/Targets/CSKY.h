@@ -52,10 +52,8 @@ public:
 
     UseZeroLengthBitfieldAlignment = true;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
-    resetDataLayout("e-m:e-S32-p:32:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-"
-                    "v64:32:32-v128:32:32-a:0:32-Fi32-n32");
-
     setABI("abiv2");
+    resetDataLayout();
   }
 
   StringRef getABI() const override { return ABI; }
@@ -71,9 +69,11 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
 
-  unsigned getMinGlobalAlign(uint64_t) const override;
+  unsigned getMinGlobalAlign(uint64_t, bool HasNonWeakDef) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
+    return {};
+  }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return VoidPtrBuiltinVaList;

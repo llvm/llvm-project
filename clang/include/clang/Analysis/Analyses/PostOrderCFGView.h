@@ -29,32 +29,15 @@ class PostOrderCFGView : public ManagedAnalysis {
 
 public:
   /// Implements a set of CFGBlocks using a BitVector.
-  ///
-  /// This class contains a minimal interface, primarily dictated by the SetType
-  /// template parameter of the llvm::po_iterator template, as used with
-  /// external storage. We also use this set to keep track of which CFGBlocks we
-  /// visit during the analysis.
   class CFGBlockSet {
     llvm::BitVector VisitedBlockIDs;
 
   public:
-    // po_iterator requires this iterator, but the only interface needed is the
-    // value_type type.
-    struct iterator { using value_type = const CFGBlock *; };
-
     CFGBlockSet() = default;
     CFGBlockSet(const CFG *G) : VisitedBlockIDs(G->getNumBlockIDs(), false) {}
 
     /// Set the bit associated with a particular CFGBlock.
-    /// This is the important method for the SetType template parameter.
     std::pair<std::nullopt_t, bool> insert(const CFGBlock *Block) {
-      // Note that insert() is called by po_iterator, which doesn't check to
-      // make sure that Block is non-null.  Moreover, the CFGBlock iterator will
-      // occasionally hand out null pointers for pruned edges, so we catch those
-      // here.
-      if (!Block)
-        return std::make_pair(std::nullopt,
-                              false); // if an edge is trivially false.
       if (VisitedBlockIDs.test(Block->getBlockID()))
         return std::make_pair(std::nullopt, false);
       VisitedBlockIDs.set(Block->getBlockID());
@@ -70,7 +53,6 @@ public:
   };
 
 private:
-  using po_iterator = llvm::po_iterator<const CFG *, CFGBlockSet, true>;
   std::vector<const CFGBlock *> Blocks;
 
   using BlockOrderTy = llvm::DenseMap<const CFGBlock *, unsigned>;

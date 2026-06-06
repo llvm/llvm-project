@@ -1,6 +1,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
 
+
 ; C++ source to regenerate:
 ; struct Foo {
 ;   Foo() = default;
@@ -23,29 +24,34 @@
 
 ; ASM-LABEL:  .long  241                      # Symbol subsection for GetFoo
 ; ASM:        .short 4414                     # Record kind: S_LOCAL
-; ASM-NEXT:   .long 4113                      # TypeIndex
+; ASM-NEXT:   .long 4109                      # TypeIndex
 ; ASM-NEXT:   .short 0                        # Flags
 ; ASM-NEXT:   .asciz "foo"
 ; ASM-NEXT:   .p2align 2
 ; ASM-NEXT: .Ltmp
-; ASM:        .cv_def_range  .Ltmp{{.*}} .Ltmp{{.*}}, frame_ptr_rel, 40
+; ASM:        .cv_def_range  .Ltmp{{.*}} .Ltmp{{.*}}, reg_rel_indir, 335, 0, 40, 0
 
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
 ; OBJ:   LocalSym {
 ; OBJ:     Kind: S_LOCAL (0x113E)
-; OBJ:     Type: Foo& (0x1011)
+; OBJ:     Type: Foo (0x100D)
 ; OBJ:     Flags [ (0x0)
 ; OBJ:     ]
 ; OBJ:     VarName: foo
 ; OBJ:   }
-; OBJ:   DefRangeFramePointerRelSym {
-; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: 40
+; OBJ:   DefRangeRegisterRelIndirSym {
+; OBJ:     Kind: S_DEFRANGE_REGISTER_REL_INDIR (0x1177)
+; OBJ:     BaseRegister: RSP (0x14F)
+; OBJ:     HasSpilledUDTMember: No
+; OBJ:     OffsetInParent: 0
+; OBJ:     BasePointerOffset: 40
+; OBJ:     OffsetInUDT: 0
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x1D
 ; OBJ:       ISectStart: 0x0
 ; OBJ:       Range: 0x16
+; OBJ:     }
 ; OBJ:   }
 
 ; ModuleID = 't.cpp'
@@ -59,8 +65,8 @@ target triple = "x86_64-pc-windows-msvc19.16.27030"
 define dso_local void @"?some_function@@YAXH@Z"(i32) #0 !dbg !8 {
 entry:
   %.addr = alloca i32, align 4
-  store i32 %0, i32* %.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %.addr, metadata !12, metadata !DIExpression()), !dbg !13
+  store i32 %0, ptr %.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %.addr, metadata !12, metadata !DIExpression()), !dbg !13
   ret void, !dbg !13
 }
 
@@ -68,16 +74,16 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?GetFoo@@YA?AUFoo@@XZ"(%struct.Foo* noalias sret(%struct.Foo) %agg.result) #0 !dbg !14 {
+define dso_local void @"?GetFoo@@YA?AUFoo@@XZ"(ptr noalias sret(%struct.Foo) %agg.result) #0 !dbg !14 {
 entry:
-  %result.ptr = alloca i8*, align 8
-  %0 = bitcast %struct.Foo* %agg.result to i8*
-  store i8* %0, i8** %result.ptr, align 8
-  call void @llvm.dbg.declare(metadata i8** %result.ptr, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !29
-  %x = getelementptr inbounds %struct.Foo, %struct.Foo* %agg.result, i32 0, i32 0, !dbg !30
-  store i32 41, i32* %x, align 4, !dbg !30
-  %x1 = getelementptr inbounds %struct.Foo, %struct.Foo* %agg.result, i32 0, i32 0, !dbg !31
-  %1 = load i32, i32* %x1, align 4, !dbg !31
+  %result.ptr = alloca ptr, align 8
+  %0 = bitcast ptr %agg.result to ptr
+  store ptr %0, ptr %result.ptr, align 8
+  call void @llvm.dbg.declare(metadata ptr %result.ptr, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !29
+  %x = getelementptr inbounds %struct.Foo, ptr %agg.result, i32 0, i32 0, !dbg !30
+  store i32 41, ptr %x, align 4, !dbg !30
+  %x1 = getelementptr inbounds %struct.Foo, ptr %agg.result, i32 0, i32 0, !dbg !31
+  %1 = load i32, ptr %x1, align 4, !dbg !31
   call void @"?some_function@@YAXH@Z"(i32 %1), !dbg !31
   ret void, !dbg !32
 }
@@ -87,17 +93,17 @@ define dso_local i32 @main() #2 !dbg !33 {
 entry:
   %retval = alloca i32, align 4
   %bar = alloca %struct.Foo, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata %struct.Foo* %bar, metadata !36, metadata !DIExpression()), !dbg !37
-  call void @"?GetFoo@@YA?AUFoo@@XZ"(%struct.Foo* sret(%struct.Foo) %bar), !dbg !37
-  %x = getelementptr inbounds %struct.Foo, %struct.Foo* %bar, i32 0, i32 0, !dbg !38
-  %0 = load i32, i32* %x, align 4, !dbg !38
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %bar, metadata !36, metadata !DIExpression()), !dbg !37
+  call void @"?GetFoo@@YA?AUFoo@@XZ"(ptr sret(%struct.Foo) %bar), !dbg !37
+  %x = getelementptr inbounds %struct.Foo, ptr %bar, i32 0, i32 0, !dbg !38
+  %0 = load i32, ptr %x, align 4, !dbg !38
   ret i32 %0, !dbg !38
 }
 
-attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { noinline norecurse nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { noinline norecurse nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

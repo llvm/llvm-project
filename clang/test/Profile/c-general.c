@@ -3,11 +3,22 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/c-general.proftext -o %t.profdata
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v5 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v3 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v12 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v5 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v3 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
 // Also check compatibility with older profiles.
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v1 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v1 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
+
+// RUN: %clang -fprofile-generate -E -dM %s | FileCheck -match-full-lines -check-prefix=PROFGENMACRO %s
+// RUN: %clang -fprofile-instr-generate -E -dM %s | FileCheck -match-full-lines -check-prefix=PROFGENMACRO %s
+// RUN: %clang -fcs-profile-generate -E -dM %s | FileCheck -match-full-lines -check-prefix=PROFGENMACRO %s
+//
+// RUN: %clang -fprofile-use=%t.profdata -E -dM %s | FileCheck -match-full-lines -check-prefix=PROFUSEMACRO %s
+// RUN: %clang -fprofile-instr-use=%t.profdata -E -dM %s | FileCheck -match-full-lines -check-prefix=PROFUSEMACRO %s
+
+// PROFGENMACRO:#define __LLVM_INSTR_PROFILE_GENERATE 1
+// PROFUSEMACRO:#define __LLVM_INSTR_PROFILE_USE 1
 
 // PGOGEN: @[[SLC:__profc_simple_loops]] = private global [4 x i64] zeroinitializer
 // PGOGEN: @[[IFC:__profc_conditionals]] = private global [13 x i64] zeroinitializer

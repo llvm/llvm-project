@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 define i32 @foo(i32 %a, i32 %b) nounwind readnone {
 ; CHECK: lsl

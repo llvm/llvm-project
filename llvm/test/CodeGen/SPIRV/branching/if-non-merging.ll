@@ -1,4 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: [[I32:%.+]] = OpTypeInt 32
 ; CHECK-DAG: [[BOOL:%.+]] = OpTypeBool
@@ -21,7 +22,9 @@ false_label:
 ; CHECK: [[ENTRY:%.+]] = OpLabel
 ; CHECK: [[COND:%.+]] = OpIEqual [[BOOL]] [[A]] [[B]]
 ; CHECK: OpBranchConditional [[COND]] [[TRUE_LABEL:%.+]] [[FALSE_LABEL:%.+]]
-; CHECK: [[TRUE_LABEL]] = OpLabel
-; CHECK: OpReturnValue [[TRUE]]
+
 ; CHECK: [[FALSE_LABEL]] = OpLabel
 ; CHECK: OpReturnValue [[FALSE]]
+
+; CHECK: [[TRUE_LABEL]] = OpLabel
+; CHECK: OpReturnValue [[TRUE]]

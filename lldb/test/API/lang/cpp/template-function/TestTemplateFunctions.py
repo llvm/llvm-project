@@ -8,6 +8,8 @@ from lldbsuite.test import lldbutil
 
 
 class TemplateFunctionsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test_template_function(self, add_cast):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -21,7 +23,8 @@ class TemplateFunctionsTestCase(TestBase):
                 "expr b1 <=> b2",
                 error=True,
                 substrs=[
-                    "warning: <user expression 0>:1:4: '<=>' is a single token in C++20; add a space to avoid a change in behavior"
+                    "warning:",
+                    "'<=>' is a single token in C++20; add a space to avoid a change in behavior",
                 ],
             )
 

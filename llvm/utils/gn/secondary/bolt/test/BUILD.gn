@@ -45,6 +45,8 @@ write_lit_config("lit_site_cfg") {
     "BOLT_ENABLE_RUNTIME=0",  # FIXME: enable runtime
     "BOLT_TARGETS_TO_BUILD=$bolt_targets_to_build_string",
     "GNU_LD_EXECUTABLE=",  # FIXME: set sometimes?
+    "LIBBOLT_RT_HUGIFY=",
+    "LIBBOLT_RT_INSTR=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_USE_SANITIZER=",
     "Python3_EXECUTABLE=$python_path",

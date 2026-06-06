@@ -9,7 +9,7 @@
 # CHECK: NameIndex @ 0x0: Abbreviation 0x1: DW_IDX_die_offset uses an unknown form: DW_FORM_unknown_1fff.
 # CHECK: warning: NameIndex @ 0x0: Abbreviation 0x3 references an unknown tag: DW_TAG_unknown_8080.
 # CHECK: error: NameIndex @ 0x0: Abbreviation 0x5 has no DW_IDX_die_offset attribute.
-# CHECK: error: NameIndex @ 0x55: Indexing multiple compile units and abbreviation 0x1 has no DW_IDX_compile_unit attribute.
+# CHECK: error: NameIndex @ 0x55: Indexing multiple compile units and abbreviation 0x1 has no DW_IDX_compile_unit or DW_IDX_type_unit attribute.
 
 	.section	.debug_str,"MS",@progbits,1
 .Lstring_producer:

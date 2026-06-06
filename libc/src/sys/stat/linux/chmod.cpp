@@ -8,31 +8,20 @@
 
 #include "src/sys/stat/chmod.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/chmod.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
-#include "src/errno/libc_errno.h"
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/syscall.h> // For syscall numbers.
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, chmod, (const char *path, mode_t mode)) {
-#ifdef SYS_chmod
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_chmod, path, mode);
-#elif defined(SYS_fchmodat)
-  int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_fchmodat, AT_FDCWD, path, mode);
-#else
-#error "chmod and fchmodat syscalls not available."
-#endif
-
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result = linux_syscalls::chmod(path, mode);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

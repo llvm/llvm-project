@@ -1,3 +1,5 @@
+add_subdirectory(SandboxVectorizer)
+
 set(LLVM_LINK_COMPONENTS
   Analysis
   Core
@@ -9,9 +11,9 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(VectorizeTests
   VPlanTest.cpp
   VPDomTreeTest.cpp
+  VPPostDomFrontierTest.cpp
   VPlanHCFGTest.cpp
-  VPlanSlpTest.cpp
+  VPlanPatternMatchTest.cpp
+  VPlanUncountableExitTest.cpp
   VPlanVerifierTest.cpp
   )
-
-set_property(TARGET VectorizeTests PROPERTY FOLDER "Tests/UnitTests/TransformsTests")

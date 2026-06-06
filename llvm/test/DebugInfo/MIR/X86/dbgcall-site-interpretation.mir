@@ -14,22 +14,21 @@
 # CHECK-EMPTY: 
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT:       DW_AT_location      (DW_OP_reg4 RSI)
-# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg4 RSI))
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg15 R15+0)
 # CHECK-EMPTY: 
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT:       DW_AT_location      (DW_OP_reg5 RDI)
-# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg4 RSI))
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg15 R15+0)
 # CHECK-EMPTY:
 # CHECK:        DW_TAG_GNU_call_site
 # CHECK-NEXT:     DW_AT_abstract_origin {{.*}}"foo"
 # CHECK-NEXT:     DW_AT_low_pc
 # CHECK-EMPTY:
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
-# RCX loads memory location. We can't rely that memory location won't be changed.
-# CHECK-NOT:       DW_AT_location      (DW_OP_reg2 RCX)
 # CHECK-NEXT:       DW_AT_location      (DW_OP_reg4 RSI)
 # CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_lit4)
 # CHECK-EMPTY:
+# RCX loads memory location. We can't rely that memory location won't be changed.
 # CHECK-NOT:      DW_TAG_GNU_call_site_parameter
 #
 # Check that call site interpretation analysis can interpret instructions such
@@ -37,6 +36,7 @@
 # instructions. Last negative check should verify that we are not producing
 # interpretation for RDX register since its loaded value is call clobberable.
 # Also check that we are generating proper call site debug entities.
+# The MIR has been hand-modified in order to test those cases.
 --- |
   ; ModuleID = 'dbgcall-site-interpretation.c'
   source_filename = "dbgcall-site-interpretation.c"
@@ -51,14 +51,14 @@
     call void @llvm.dbg.value(metadata i32 %arg1, metadata !14, metadata !DIExpression()), !dbg !21
     call void @llvm.dbg.value(metadata i32 %arg2, metadata !15, metadata !DIExpression()), !dbg !21
     call void @llvm.dbg.value(metadata i32 %arg3, metadata !16, metadata !DIExpression()), !dbg !21
-    store i32 %arg3, i32* %arg3.addr, align 4
+    store i32 %arg3, ptr %arg3.addr, align 4
     call void @llvm.dbg.value(metadata i32 %arg4, metadata !17, metadata !DIExpression()), !dbg !21
-    %0 = bitcast i32* %local2 to i8*, !dbg !21
-    call void @llvm.dbg.value(metadata i32* %arg3.addr, metadata !16, metadata !DIExpression(DW_OP_deref)), !dbg !21
-    %call = call i32 @foo(i32 %arg1, i32 %arg2, i32* nonnull %arg3.addr, i32 %arg4), !dbg !21
+    %0 = bitcast ptr %local2 to ptr, !dbg !21
+    call void @llvm.dbg.value(metadata ptr %arg3.addr, metadata !16, metadata !DIExpression(DW_OP_deref)), !dbg !21
+    %call = call i32 @foo(i32 %arg1, i32 %arg2, ptr nonnull %arg3.addr, i32 %arg4), !dbg !21
     call void @llvm.dbg.value(metadata i32 %call, metadata !18, metadata !DIExpression()), !dbg !21
     %cmp = icmp sgt i32 %arg1, %arg2, !dbg !21
-    %1 = load i32, i32* %arg3.addr, align 4, !dbg !21
+    %1 = load i32, ptr %arg3.addr, align 4, !dbg !21
     call void @llvm.dbg.value(metadata i32 %1, metadata !16, metadata !DIExpression()), !dbg !21
     %add = add nsw i32 %1, %arg1, !dbg !21
     %add1 = add nsw i32 %arg4, %arg2, !dbg !21
@@ -70,19 +70,19 @@
     %add3 = add nsw i32 %1, %arg4, !dbg !21
     %storemerge = select i1 %tobool, i32 %mul, i32 %add3, !dbg !21
     call void @llvm.dbg.value(metadata i32 %storemerge, metadata !19, metadata !DIExpression()), !dbg !21
-    store i32 %storemerge, i32* %local2, align 4, !dbg !21
+    store i32 %storemerge, ptr %local2, align 4, !dbg !21
     %cmp6 = icmp slt i32 %storemerge, %arg4, !dbg !21
     %local3.0.v = select i1 %cmp6, i32 %local1.0, i32 %arg1, !dbg !21
     %local3.0 = mul nsw i32 %local3.0.v, %storemerge, !dbg !21
     call void @llvm.dbg.value(metadata i32 %local3.0, metadata !20, metadata !DIExpression()), !dbg !21
-    call void @llvm.dbg.value(metadata i32* %local2, metadata !19, metadata !DIExpression(DW_OP_deref)), !dbg !21
-    %call12 = call i32 @foo(i32 %local1.0, i32 4, i32* nonnull %local2, i32 %local3.0), !dbg !21
+    call void @llvm.dbg.value(metadata ptr %local2, metadata !19, metadata !DIExpression(DW_OP_deref)), !dbg !21
+    %call12 = call i32 @foo(i32 %local1.0, i32 4, ptr nonnull %local2, i32 %local3.0), !dbg !21
     call void @llvm.dbg.value(metadata i32 %call12, metadata !14, metadata !DIExpression()), !dbg !21
     %add13 = add nsw i32 %call12, 4, !dbg !21
     ret i32 %add13, !dbg !21
   }
   
-  declare !dbg !4 dso_local i32 @foo(i32, i32, i32*, i32) local_unnamed_addr
+  declare !dbg !4 dso_local i32 @foo(i32, i32, ptr, i32) local_unnamed_addr
   
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -95,7 +95,7 @@
   !1 = !DIFile(filename: "dbgcall-site-interpretation.c", directory: "/dir")
   !2 = !{}
   !3 = !{!4}
-  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 9, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 9, flags: DIFlagPrototyped, type: !10, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !5 = !{i32 2, !"Dwarf Version", i32 4}
   !6 = !{i32 2, !"Debug Info Version", i32 3}
   !7 = !{i32 1, !"wchar_size", i32 4}

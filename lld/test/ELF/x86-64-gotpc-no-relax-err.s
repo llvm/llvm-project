@@ -7,12 +7,19 @@
 ## `>>> defined in` for linker synthesized __stop_* symbols (there is no
 ## associated file or linker script line number).
 
-# CHECK:      error: {{.*}}:(.text+0x2): relocation R_X86_64_GOTPCRELX out of range: 2147483658 is not in [-2147483648, 2147483647]; references '__stop_data'
-# CHECK-NEXT: error: {{.*}}:(.text+0x9): relocation R_X86_64_REX_GOTPCRELX out of range: 2147483651 is not in [-2147483648, 2147483647]; references '__stop_data'
+# CHECK:      error: {{.*}}:(.text+0x2): relocation R_X86_64_GOTPCRELX out of range: 2147483666 is not in [-2147483648, 2147483647]; references '__stop_data'
+# CHECK-NEXT: >>> defined in <internal>
+# CHECK-EMPTY:
+# CHECK-NEXT: error: {{.*}}:(.text+0x9): relocation R_X86_64_REX_GOTPCRELX out of range: 2147483659 is not in [-2147483648, 2147483647]; references '__stop_data'
+# CHECK-NEXT: >>> defined in <internal>
+# CHECK-EMPTY:
+# CHECK-NEXT: error: {{.*}}:(.text+0x11): relocation R_X86_64_CODE_4_GOTPCRELX out of range: 2147483651 is not in [-2147483648, 2147483647]; references '__stop_data'
+# CHECK-NEXT: >>> defined in <internal>
 
 #--- a.s
   movl __stop_data@GOTPCREL(%rip), %eax  # out of range
   movq __stop_data@GOTPCREL(%rip), %rax  # out of range
+  movq __stop_data@GOTPCREL(%rip), %r16  # out of range
   movq __stop_data@GOTPCREL(%rip), %rax  # in range
 
 .section data,"aw",@progbits
@@ -20,5 +27,5 @@
 #--- lds
 SECTIONS {
   .text 0x200000 : { *(.text) }
-  .got 0x80200010 : { *(.got) }
+  .got 0x80200016 : { *(.got) }
 }

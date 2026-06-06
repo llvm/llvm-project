@@ -38,11 +38,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <iterator>
-#include <limits>
 #include <vector>
 
 using namespace llvm;
@@ -166,20 +163,20 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
   if (Leaf.Low == Leaf.High) {
     // Make the seteq instruction...
     Comp =
-        new ICmpInst(*NewLeaf, ICmpInst::ICMP_EQ, Val, Leaf.Low, "SwitchLeaf");
+        new ICmpInst(NewLeaf, ICmpInst::ICMP_EQ, Val, Leaf.Low, "SwitchLeaf");
   } else {
     // Make range comparison
     if (Leaf.Low == LowerBound) {
       // Val >= Min && Val <= Hi --> Val <= Hi
-      Comp = new ICmpInst(*NewLeaf, ICmpInst::ICMP_SLE, Val, Leaf.High,
+      Comp = new ICmpInst(NewLeaf, ICmpInst::ICMP_SLE, Val, Leaf.High,
                           "SwitchLeaf");
     } else if (Leaf.High == UpperBound) {
       // Val <= Max && Val >= Lo --> Val >= Lo
-      Comp = new ICmpInst(*NewLeaf, ICmpInst::ICMP_SGE, Val, Leaf.Low,
+      Comp = new ICmpInst(NewLeaf, ICmpInst::ICMP_SGE, Val, Leaf.Low,
                           "SwitchLeaf");
     } else if (Leaf.Low->isZero()) {
       // Val >= 0 && Val <= Hi --> Val <=u Hi
-      Comp = new ICmpInst(*NewLeaf, ICmpInst::ICMP_ULE, Val, Leaf.High,
+      Comp = new ICmpInst(NewLeaf, ICmpInst::ICMP_ULE, Val, Leaf.High,
                           "SwitchLeaf");
     } else {
       // Emit V-Lo <=u Hi-Lo
@@ -187,14 +184,14 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
       Instruction *Add = BinaryOperator::CreateAdd(
           Val, NegLo, Val->getName() + ".off", NewLeaf);
       Constant *UpperBound = ConstantExpr::getAdd(NegLo, Leaf.High);
-      Comp = new ICmpInst(*NewLeaf, ICmpInst::ICMP_ULE, Add, UpperBound,
+      Comp = new ICmpInst(NewLeaf, ICmpInst::ICMP_ULE, Add, UpperBound,
                           "SwitchLeaf");
     }
   }
 
   // Make the conditional branch...
   BasicBlock *Succ = Leaf.BB;
-  BranchInst::Create(Succ, Default, Comp, NewLeaf);
+  CondBrInst::Create(Comp, Succ, Default, NewLeaf);
 
   // Update the PHI incoming value/block for the default.
   for (auto &I : Default->phis()) {
@@ -209,7 +206,7 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
     PHINode *PN = cast<PHINode>(I);
     // Remove all but one incoming entries from the cluster
     APInt Range = Leaf.High->getValue() - Leaf.Low->getValue();
-    for (APInt j(Range.getBitWidth(), 0, true); j.slt(Range); ++j) {
+    for (APInt j(Range.getBitWidth(), 0, false); j.ult(Range); ++j) {
       PN->removeIncomingValue(OrigBlock);
     }
 
@@ -300,7 +297,7 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
   F->insert(++OrigBlock->getIterator(), NewNode);
   Comp->insertInto(NewNode, NewNode->end());
 
-  BranchInst::Create(LBranch, RBranch, Comp, NewNode);
+  CondBrInst::Create(Comp, LBranch, RBranch, NewNode);
   return NewNode;
 }
 
@@ -370,7 +367,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   const unsigned NumSimpleCases = Clusterify(Cases, SI);
   IntegerType *IT = cast<IntegerType>(SI->getCondition()->getType());
   const unsigned BitWidth = IT->getBitWidth();
-  // Explictly use higher precision to prevent unsigned overflow where
+  // Explicitly use higher precision to prevent unsigned overflow where
   // `UnsignedMax - 0 + 1 == 0`
   APInt UnsignedZero(BitWidth + 1, 0);
   APInt UnsignedMax = APInt::getMaxValue(BitWidth);
@@ -380,7 +377,7 @@ void ProcessSwitchInst(SwitchInst *SI,
 
   // If there is only the default destination, just branch.
   if (Cases.empty()) {
-    BranchInst::Create(Default, OrigBlock);
+    UncondBrInst::Create(Default, OrigBlock);
     // Remove all the references from Default's PHIs to OrigBlock, but one.
     FixPhis(Default, OrigBlock, OrigBlock, UnsignedMax);
     SI->eraseFromParent();
@@ -391,7 +388,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   ConstantInt *UpperBound = nullptr;
   bool DefaultIsUnreachableFromSwitch = false;
 
-  if (isa<UnreachableInst>(Default->getFirstNonPHIOrDbg())) {
+  if (SI->defaultDestUnreachable()) {
     // Make the bounds tightly fitted around the case value range, because we
     // know that the value passed to the switch must be exactly one of the case
     // values.
@@ -408,12 +405,13 @@ void ProcessSwitchInst(SwitchInst *SI,
     // 2. even if limited to icmp instructions only, it will have to process
     //    roughly C icmp's per switch, where C is the number of cases in the
     //    switch, while LowerSwitch only needs to call LVI once per switch.
-    const DataLayout &DL = F->getParent()->getDataLayout();
-    KnownBits Known = computeKnownBits(Val, DL, /*Depth=*/0, AC, SI);
+    const DataLayout &DL = F->getDataLayout();
+    KnownBits Known = computeKnownBits(Val, DL, AC, SI);
     // TODO Shouldn't this create a signed range?
     ConstantRange KnownBitsRange =
         ConstantRange::fromKnownBits(Known, /*IsSigned=*/false);
-    const ConstantRange LVIRange = LVI->getConstantRange(Val, SI);
+    const ConstantRange LVIRange =
+        LVI->getConstantRange(Val, SI, /*UndefAllowed*/ false);
     ConstantRange ValRange = KnownBitsRange.intersectWith(LVIRange);
     // We delegate removal of unreachable non-default cases to other passes. In
     // the unlikely event that some of them survived, we just conservatively
@@ -494,7 +492,7 @@ void ProcessSwitchInst(SwitchInst *SI,
 
     // If there are no cases left, just branch.
     if (Cases.empty()) {
-      BranchInst::Create(Default, OrigBlock);
+      UncondBrInst::Create(Default, OrigBlock);
       SI->eraseFromParent();
       // As all the cases have been replaced with a single branch, only keep
       // one entry in the PHI nodes.
@@ -523,7 +521,7 @@ void ProcessSwitchInst(SwitchInst *SI,
     FixPhis(Default, OrigBlock, nullptr, UnsignedMax);
 
   // Branch to our shiny new if-then stuff...
-  BranchInst::Create(SwitchBlock, OrigBlock);
+  UncondBrInst::Create(SwitchBlock, OrigBlock);
 
   // We are now done with the switch instruction, delete it.
   BasicBlock *OldDefault = SI->getDefaultDest();

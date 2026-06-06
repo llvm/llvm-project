@@ -12,6 +12,7 @@ exe_name = "StripMe"  # Must match Makefile
 
 
 class FunctionStartsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
@@ -64,8 +65,8 @@ class FunctionStartsTestCase(TestBase):
         self.assertSuccess(error, "Didn't attach successfully to %d" % (popen.pid))
 
         bkpt = target.BreakpointCreateByName("dont_strip_me", exe)
-        self.assertTrue(
-            bkpt.GetNumLocations() > 0, "Didn't set the dont_strip_me bkpt."
+        self.assertGreater(
+            bkpt.GetNumLocations(), 0, "Didn't set the dont_strip_me bkpt."
         )
 
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
@@ -74,6 +75,6 @@ class FunctionStartsTestCase(TestBase):
         # Our caller frame should have been stripped.  Make sure we made a synthetic symbol
         # for it:
         thread = threads[0]
-        self.assertTrue(thread.num_frames > 1, "Couldn't backtrace.")
+        self.assertGreater(thread.num_frames, 1, "Couldn't backtrace.")
         name = thread.frame[1].GetFunctionName()
         self.assertTrue(name.startswith("___lldb_unnamed_symbol"))

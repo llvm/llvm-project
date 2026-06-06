@@ -1,0 +1,13 @@
+## Verify that BOLT detects fixed destination of indirect jump for PIC
+## case.
+
+RUN: %clang %cflags -no-pie %S/Inputs/jump-table-fixed-ref-pic.s -Wl,-q -o %t
+RUN: llvm-bolt %t --relocs -o %t.null -print-cfg 2>&1 | FileCheck %s
+
+CHECK: BOLT-INFO: fixed PIC indirect branch detected in main {{.*}} the destination value is 0x[[#TGT:]]
+CHECK: Binary Function "main" after building cfg
+
+CHECK:      movslq ".rodata/1"+8(%rip), %rax
+CHECK-NEXT: leaq ".rodata/1"(%rip), %rdx
+CHECK-NEXT: addq %rdx, %rax
+CHECK-NEXT: jmpq *%rax # UNKNOWN CONTROL FLOW

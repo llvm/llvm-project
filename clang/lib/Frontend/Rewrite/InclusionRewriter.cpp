@@ -75,7 +75,8 @@ private:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override;
@@ -189,9 +190,10 @@ void InclusionRewriter::InclusionDirective(
     StringRef /*FileName*/, bool /*IsAngled*/,
     CharSourceRange /*FilenameRange*/, OptionalFileEntryRef /*File*/,
     StringRef /*SearchPath*/, StringRef /*RelativePath*/,
-    const Module *Imported, SrcMgr::CharacteristicKind FileType) {
-  if (Imported) {
-    auto P = ModuleIncludes.insert(std::make_pair(HashLoc, Imported));
+    const Module *SuggestedModule, bool ModuleImported,
+    SrcMgr::CharacteristicKind FileType) {
+  if (ModuleImported) {
+    auto P = ModuleIncludes.insert(std::make_pair(HashLoc, SuggestedModule));
     (void)P;
     assert(P.second && "Unexpected revisitation of the same include directive");
   } else
@@ -307,7 +309,7 @@ void InclusionRewriter::OutputContentUpTo(const MemoryBufferRef &FromFile,
       Rest = Rest.substr(Idx);
     }
   }
-  if (EnsureNewline && !TextToWrite.endswith(LocalEOL))
+  if (EnsureNewline && !TextToWrite.ends_with(LocalEOL))
     OS << MainEOL;
 
   WriteFrom = WriteTo;
@@ -444,8 +446,11 @@ void InclusionRewriter::Process(FileID FileId,
               if (Mod)
                 OS << "#pragma clang module end /*"
                    << Mod->getFullModuleName(true) << "*/\n";
-              OS << "#endif /* " << getIncludedFileName(Inc)
-                 << " expanded by -frewrite-includes */" << LocalEOL;
+              // There's no #include, therefore no #if, for -include files.
+              if (FromFile != PredefinesBuffer) {
+                OS << "#endif /* " << getIncludedFileName(Inc)
+                   << " expanded by -frewrite-includes */" << LocalEOL;
+              }
 
               // Add line marker to indicate we're returning from an included
               // file.

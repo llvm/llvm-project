@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof | opt -S -codegenprepare | FileCheck %s
-; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof | opt -S -codegenprepare -profile-unknown-in-special-section -partial-profile | FileCheck %s --check-prefix=UNKNOWN
-; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -profile-sample-accurate -S | opt -S -codegenprepare | FileCheck %s --check-prefix=ACCURATE
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof | opt -S -passes='require<profile-summary>,function(codegenprepare)' | FileCheck %s
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof | opt -S -passes='require<profile-summary>,function(codegenprepare)' -profile-unknown-in-special-section -partial-profile | FileCheck %s --check-prefix=UNKNOWN
+; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -profile-sample-accurate -S | opt -S -passes='require<profile-summary>,function(codegenprepare)' | FileCheck %s --check-prefix=ACCURATE
 
 target triple = "x86_64-pc-linux-gnu"
 
@@ -36,11 +36,11 @@ attributes #1 = { "use-sample-profile" }
 
 ; CHECK: ![[NOPROFILE_ID]] = !{!"function_entry_count", i64 -1}
 ; CHECK: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
-; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !"unlikely"}
+; CHECK: ![[COLD_ID]] = !{!"section_prefix", !"unlikely"}
 ; UNKNOWN: ![[NOPROFILE_ID]] = !{!"function_entry_count", i64 -1}
-; UNKNOWN: ![[UNKNOWN_ID]] = !{!"function_section_prefix", !"unknown"}
+; UNKNOWN: ![[UNKNOWN_ID]] = !{!"section_prefix", !"unknown"}
 ; ACCURATE: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
-; ACCURATE: ![[COLD_ID]] = !{!"function_section_prefix", !"unlikely"}
+; ACCURATE: ![[COLD_ID]] = !{!"section_prefix", !"unlikely"}
 !llvm.module.flags = !{!1}
 !1 = !{i32 1, !"ProfileSummary", !2}
 !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}

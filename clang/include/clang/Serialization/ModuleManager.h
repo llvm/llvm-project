@@ -15,11 +15,10 @@
 #define LLVM_CLANG_SERIALIZATION_MODULEMANAGER_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,15 +37,71 @@ class FileEntry;
 class FileManager;
 class GlobalModuleIndex;
 class HeaderSearch;
-class InMemoryModuleCache;
+class ModuleCache;
 class PCHContainerReader;
 
 namespace serialization {
 
+/// The result of attempting to add a new module.
+class AddModuleResult {
+public:
+  enum Kind {
+    /// State at construction.
+    None,
+    /// The module file had already been loaded.
+    AlreadyLoaded,
+    /// The module file was just loaded in response to this call.
+    NewlyLoaded,
+    /// The module file is missing.
+    Missing,
+    /// The module file is out-of-date.
+    OutOfDate
+  };
+
+  Kind getKind() const { return K; };
+
+  ModuleFile *getModule() const { return Module; }
+
+  StringRef getBufferError() const {
+    assert(K == Missing && !Module);
+    return BufferError;
+  }
+
+  const SmallVector<Change, 2> &getChanges() const {
+    assert(K == OutOfDate && !Module);
+    return Changes;
+  }
+
+  InputFilesValidation getValidationStatus() const {
+    assert(K == OutOfDate && !Module);
+    return ValidationStatus;
+  }
+
+  StringRef getSignatureError() const {
+    assert(K == OutOfDate && !Module);
+    return SignatureError;
+  }
+
+  void setOutOfDate(InputFilesValidation Status) {
+    K = OutOfDate;
+    ValidationStatus = Status;
+  }
+
+private:
+  friend class ModuleManager;
+
+  Kind K = None;
+  ModuleFile *Module = nullptr;
+  SmallVector<Change, 2> Changes;
+  InputFilesValidation ValidationStatus = InputFilesValidation::NotStarted;
+  std::string BufferError;
+  std::string SignatureError;
+};
+
 /// Manages the set of modules loaded by an AST reader.
 class ModuleManager {
   /// The chain of AST files, in the order in which we started to load
-  /// them (this order isn't really useful for anything).
+  /// them.
   SmallVector<std::unique_ptr<ModuleFile>, 2> Chain;
 
   /// The chain of non-module PCH files. The first entry is the one named
@@ -58,25 +113,21 @@ class ModuleManager {
   // to implement short-circuiting logic when running DFS over the dependencies.
   SmallVector<ModuleFile *, 2> Roots;
 
-  /// All loaded modules, indexed by name.
-  llvm::DenseMap<const FileEntry *, ModuleFile *> Modules;
+  /// All loaded modules.
+  llvm::DenseMap<ModuleFileKey, ModuleFile *> Modules;
 
   /// FileManager that handles translating between filenames and
   /// FileEntry *.
   FileManager &FileMgr;
 
   /// Cache of PCM files.
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  ModuleCache &ModCache;
 
   /// Knows how to unwrap module containers.
   const PCHContainerReader &PCHContainerRdr;
 
   /// Preprocessor's HeaderSearchInfo containing the module map.
   const HeaderSearch &HeaderSearchInfo;
-
-  /// A lookup of in-memory (virtual file) buffers
-  llvm::DenseMap<const FileEntry *, std::unique_ptr<llvm::MemoryBuffer>>
-      InMemoryBuffers;
 
   /// The visitation order.
   SmallVector<ModuleFile *, 4> VisitOrder;
@@ -96,6 +147,13 @@ class ModuleManager {
   /// The global module index will actually be owned by the ASTReader; this is
   /// just an non-owning pointer.
   GlobalModuleIndex *GlobalIndex = nullptr;
+
+  bool isModuleFileOutOfDate(off_t Size, time_t ModTime, off_t ExpectedSize,
+                             time_t ExpectedModTime, AddModuleResult &Result);
+
+  bool checkSignature(ASTFileSignature Signature,
+                      ASTFileSignature ExpectedSignature,
+                      AddModuleResult &Result);
 
   /// State used by the "visit" operation to avoid malloc traffic in
   /// calls to visit().
@@ -134,9 +192,9 @@ public:
       SmallVectorImpl<std::unique_ptr<ModuleFile>>::reverse_iterator>;
   using ModuleOffset = std::pair<uint32_t, StringRef>;
 
-  explicit ModuleManager(FileManager &FileMgr, InMemoryModuleCache &ModuleCache,
-                         const PCHContainerReader &PCHContainerRdr,
-                         const HeaderSearch &HeaderSearchInfo);
+  ModuleManager(FileManager &FileMgr, ModuleCache &ModCache,
+                const PCHContainerReader &PCHContainerRdr,
+                const HeaderSearch &HeaderSearchInfo);
 
   /// Forward iterator to traverse all loaded modules.
   ModuleIterator begin() { return Chain.begin(); }
@@ -173,35 +231,17 @@ public:
   /// Returns the module associated with the given index
   ModuleFile &operator[](unsigned Index) const { return *Chain[Index]; }
 
-  /// Returns the module associated with the given file name.
-  ModuleFile *lookupByFileName(StringRef FileName) const;
-
   /// Returns the module associated with the given module name.
   ModuleFile *lookupByModuleName(StringRef ModName) const;
 
-  /// Returns the module associated with the given module file.
-  ModuleFile *lookup(const FileEntry *File) const;
+  /// Returns the module associated with the given module file name.
+  ModuleFile *lookupByFileName(ModuleFileName FileName) const;
 
-  /// Returns the in-memory (virtual file) buffer with the given name
-  std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name);
+  /// Returns the module associated with the given module file key.
+  ModuleFile *lookup(ModuleFileKey Key) const;
 
   /// Number of modules loaded
   unsigned size() const { return Chain.size(); }
-
-  /// The result of attempting to add a new module.
-  enum AddModuleResult {
-    /// The module file had already been loaded.
-    AlreadyLoaded,
-
-    /// The module file was just loaded in response to this call.
-    NewlyLoaded,
-
-    /// The module file is missing.
-    Missing,
-
-    /// The module file is out-of-date.
-    OutOfDate
-  };
 
   using ASTFileSignatureReader = ASTFileSignature (*)(StringRef);
 
@@ -231,29 +271,17 @@ public:
   /// \param ReadSignature Reads the signature from an AST file without actually
   /// loading it.
   ///
-  /// \param Module A pointer to the module file if the module was successfully
-  /// loaded.
-  ///
-  /// \param ErrorStr Will be set to a non-empty string if any errors occurred
-  /// while trying to load the module.
-  ///
-  /// \return A pointer to the module that corresponds to this file name,
-  /// and a value indicating whether the module was loaded.
-  AddModuleResult addModule(StringRef FileName, ModuleKind Type,
-                            SourceLocation ImportLoc,
-                            ModuleFile *ImportedBy, unsigned Generation,
-                            off_t ExpectedSize, time_t ExpectedModTime,
+  /// \return The result of attempting to add the module, including a pointer
+  /// to the module file if successfully loaded.
+  AddModuleResult addModule(ModuleFileName FileName, ModuleKind Type,
+                            SourceLocation ImportLoc, ModuleFile *ImportedBy,
+                            unsigned Generation, off_t ExpectedSize,
+                            time_t ExpectedModTime,
                             ASTFileSignature ExpectedSignature,
-                            ASTFileSignatureReader ReadSignature,
-                            ModuleFile *&Module,
-                            std::string &ErrorStr);
+                            ASTFileSignatureReader ReadSignature);
 
   /// Remove the modules starting from First (to the end).
   void removeModules(ModuleIterator First);
-
-  /// Add an in-memory buffer the list of known buffers
-  void addInMemoryBuffer(StringRef FileName,
-                         std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
   /// Set the global module index.
   void setGlobalIndex(GlobalModuleIndex *Index);
@@ -284,30 +312,16 @@ public:
   void visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
              llvm::SmallPtrSetImpl<ModuleFile *> *ModuleFilesHit = nullptr);
 
-  /// Attempt to resolve the given module file name to a file entry.
-  ///
-  /// \param FileName The name of the module file.
-  ///
-  /// \param ExpectedSize The size that the module file is expected to have.
-  /// If the actual size differs, the resolver should return \c true.
-  ///
-  /// \param ExpectedModTime The modification time that the module file is
-  /// expected to have. If the actual modification time differs, the resolver
-  /// should return \c true.
-  ///
-  /// \param File Will be set to the file if there is one, or null
-  /// otherwise.
-  ///
-  /// \returns True if a file exists but does not meet the size/
-  /// modification time criteria, false if the file is either available and
-  /// suitable, or is missing.
-  bool lookupModuleFile(StringRef FileName, off_t ExpectedSize,
-                        time_t ExpectedModTime, OptionalFileEntryRef &File);
-
   /// View the graphviz representation of the module graph.
   void viewGraph();
 
-  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
+  /// Creates the deduplication key for use in \c ModuleManager.
+  /// Returns an empty optional if:
+  /// * the module cache does not exist for an implicit module name,
+  /// * the module file does not exist for an explicit module name.
+  std::optional<ModuleFileKey> makeKey(const ModuleFileName &Name) const;
+
+  ModuleCache &getModuleCache() const { return ModCache; }
 };
 
 } // namespace serialization

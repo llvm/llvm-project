@@ -12,8 +12,8 @@ id a;
 
 // CHECK-LABEL: define void @foo0()
 // CHECK: %[[_COMPOUNDLITERAL:.*]] = alloca %[[STRUCT_A]], align 8
-// CHECK: getelementptr inbounds %[[STRUCT_A]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 0
-// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_A]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %[[STRUCT_A]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 0
+// CHECK: %[[F1:.*]] = getelementptr inbounds nuw %[[STRUCT_A]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 0
 // CHECK: %[[V2:.*]] = load ptr, ptr %[[F1]], align 8
 // CHECK: call void asm sideeffect "", "r,~{dirflag},~{fpsr},~{flags}"(ptr %[[V2]])
 // CHECK: call void asm sideeffect "",

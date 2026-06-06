@@ -5,26 +5,28 @@
 #ifdef CK1
 
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK1
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -Wno-vla -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK1
+// Verify implicit-behavior 'storage' as alias for 'alloc' in OpenMP 6.0
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -DOMP6 -verify -Wno-vla -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK1
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -Wno-vla -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -Wno-vla -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -Wno-vla -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // SIMD-ONLY10-NOT: {{__kmpc|__tgt}}
 
 // CK1-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK1-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 544]
+// CK1-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 544, i64 288]
 
 // CK1-LABEL: implicit_maps_double_complex{{.*}}(
 void implicit_maps_double_complex (int a){
@@ -42,42 +44,46 @@ void implicit_maps_double_complex (int a){
 // CK1-DAG: store ptr [[PTR:%[^,]+]], ptr [[BP1]]
 // CK1-DAG: store ptr [[PTR]], ptr [[P1]]
 
-// CK1: call void [[KERNEL:@.+]](ptr [[PTR]])
-#pragma omp target defaultmap(alloc \
-                              : scalar)
+// CK1: call void [[KERNEL:@.+]](ptr [[PTR]], ptr null)
+#ifdef OMP6
+// 'storage' is an alias for 'alloc' in OpenMP 6.0
+#pragma omp target defaultmap(storage : scalar)
+#else
+#pragma omp target defaultmap(alloc : scalar)
+#endif // OMP6
   {
    dc *= dc;
   }
 }
 
-// CK1: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]])
+// CK1: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK1: [[ADDR:%.+]] = alloca ptr,
 // CK1: store ptr [[ARG]], ptr [[ADDR]],
 // CK1: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK1: {{.+}} = getelementptr inbounds { double, double }, ptr [[REF]], i32 0, i32 0
+// CK1: {{.+}} = getelementptr inbounds nuw { double, double }, ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK2
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK2
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK2
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK2
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK2
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK2
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK2
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK2
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // SIMD-ONLY10-NOT: {{__kmpc|__tgt}}
 #ifdef CK2
 
 // CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK2-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK2-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TO  | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 545
-// CK2-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 545]
+// CK2-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 545, i64 288]
 
 // CK2-LABEL: implicit_maps_double_complex{{.*}}(
 void implicit_maps_double_complex (int a){
@@ -95,7 +101,7 @@ void implicit_maps_double_complex (int a){
 // CK2-DAG: store ptr [[PTR:%[^,]+]], ptr [[BP1]]
 // CK2-DAG: store ptr [[PTR]], ptr [[P1]]
 
-// CK2: call void [[KERNEL:@.+]](ptr [[PTR]])
+// CK2: call void [[KERNEL:@.+]](ptr [[PTR]], ptr null)
 #pragma omp target defaultmap(to \
                               : scalar)
   {
@@ -103,34 +109,34 @@ void implicit_maps_double_complex (int a){
   }
 }
 
-// CK2: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]])
+// CK2: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK2: [[ADDR:%.+]] = alloca ptr,
 // CK2: store ptr [[ARG]], ptr [[ADDR]],
 // CK2: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK2: {{.+}} = getelementptr inbounds { double, double }, ptr [[REF]], i32 0, i32 0
+// CK2: {{.+}} = getelementptr inbounds nuw { double, double }, ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK3
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK3
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK3
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK3
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK3
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK3
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK3
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK3
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // SIMD-ONLY10-NOT: {{__kmpc|__tgt}}
 #ifdef CK3
 
 // CK3-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK3-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK3-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 546
-// CK3-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 546]
+// CK3-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 546, i64 288]
 
 // CK3-LABEL: implicit_maps_double_complex{{.*}}(
 void implicit_maps_double_complex (int a){
@@ -148,7 +154,7 @@ void implicit_maps_double_complex (int a){
 // CK3-DAG: store ptr [[PTR:%[^,]+]], ptr [[BP1]]
 // CK3-DAG: store ptr [[PTR]], ptr [[P1]]
 
-// CK3: call void [[KERNEL:@.+]](ptr [[PTR]])
+// CK3: call void [[KERNEL:@.+]](ptr [[PTR]], ptr null)
 #pragma omp target defaultmap(from \
                               : scalar)
   {
@@ -156,26 +162,26 @@ void implicit_maps_double_complex (int a){
   }
 }
 
-// CK3: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]])
+// CK3: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK3: [[ADDR:%.+]] = alloca ptr,
 // CK3: store ptr [[ARG]], ptr [[ADDR]],
 // CK3: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK3: {{.+}} = getelementptr inbounds { double, double }, ptr [[REF]], i32 0, i32 0
+// CK3: {{.+}} = getelementptr inbounds nuw { double, double }, ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK4 --check-prefix CK4-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK4 --check-prefix CK4-64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK4  --check-prefix CK4-64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK4  --check-prefix CK4-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK4  --check-prefix CK4-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK4  --check-prefix CK4-32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK4  --check-prefix CK4-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK4  --check-prefix CK4-32
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
 // SIMD-ONLY6-NOT: {{__kmpc|__tgt}}
 #ifdef CK4
 
@@ -184,11 +190,11 @@ void implicit_maps_double_complex (int a){
 
 // CK4-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK4-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
+// CK4-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 8, i64 0]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK4-64-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// CK4-64-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
 // Map types: OMP_MAP_TO  | OMP_MAP_PRIVATE | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 673
-// CK4-32-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 673]
+// CK4-32-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 673, i64 288]
 
 // CK4-LABEL: implicit_maps_double{{.*}}(
 void implicit_maps_double (int a){
@@ -212,8 +218,8 @@ void implicit_maps_double (int a){
 // CK4-32-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK4-32-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK4-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
-// CK4-32: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK4-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
+// CK4-32: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(firstprivate \
                               : scalar)
   {
@@ -221,12 +227,12 @@ void implicit_maps_double (int a){
   }
 }
 
-// CK4-64: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
+// CK4-64: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]], ptr {{[^)]*}})
 // CK4-64: [[ADDR:%.+]] = alloca i[[sz]],
 // CK4-64: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK4-64: {{.+}} = load double, ptr [[ADDR]],
 
-// CK4-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK4-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK4-32: [[ADDR:%.+]] = alloca ptr,
 // CK4-32: store ptr [[ARG]], ptr [[ADDR]],
 // CK4-32: [[REF:%.+]] = load ptr, ptr [[ADDR]],
@@ -234,27 +240,29 @@ void implicit_maps_double (int a){
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK5
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK5
+// Verify implicit-behavior 'alloc' still accepted in OpenMP 6.0
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK5
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK5
 
 // CK5-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK5-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK5-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK5-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 544]
+// CK5-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 544, i64 288]
 
 // CK5-LABEL: implicit_maps_array{{.*}}(
 void implicit_maps_array (int a){
@@ -272,7 +280,7 @@ void implicit_maps_array (int a){
 // CK5-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK5-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK5: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK5: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(alloc \
                               : aggregate)
   {
@@ -281,34 +289,34 @@ void implicit_maps_array (int a){
   }
 }
 
-// CK5: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK5: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK5: [[ADDR:%.+]] = alloca ptr,
 // CK5: store ptr [[ARG]], ptr [[ADDR]],
 // CK5: [[REF:%.+]] = load ptr, ptr [[ADDR]],
 // CK5: {{.+}} = getelementptr inbounds [2 x double], ptr [[REF]], i{{64|32}} 0, i{{64|32}} 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK6
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK6
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK6 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK6
 
 // CK6-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK6-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK6-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TO | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 545
-// CK6-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 545]
+// CK6-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 545, i64 288]
 
 // CK6-LABEL: implicit_maps_array{{.*}}(
 void implicit_maps_array (int a){
@@ -326,7 +334,7 @@ void implicit_maps_array (int a){
   // CK6-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
   // CK6-DAG: store ptr [[DECL]], ptr [[P1]]
 
-  // CK6: call void [[KERNEL:@.+]](ptr [[DECL]])
+  // CK6: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(to)
   {
     darr[0] += 1.0;
@@ -334,34 +342,34 @@ void implicit_maps_array (int a){
   }
 }
 
-// CK6: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK6: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK6: [[ADDR:%.+]] = alloca ptr,
 // CK6: store ptr [[ARG]], ptr [[ADDR]],
 // CK6: [[REF:%.+]] = load ptr, ptr [[ADDR]],
 // CK6: {{.+}} = getelementptr inbounds [2 x double], ptr [[REF]], i{{64|32}} 0, i{{64|32}} 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK7
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK7
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK7
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK7
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK7
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK7
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK7
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK7
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK7 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK7
 
 // CK7-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK7-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK7-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 546
-// CK7-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 546]
+// CK7-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 546, i64 288]
 
 // CK7-LABEL: implicit_maps_array{{.*}}(
 void implicit_maps_array (int a){
@@ -379,7 +387,7 @@ void implicit_maps_array (int a){
 // CK7-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK7-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK7: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK7: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(from \
                               : aggregate)
   {
@@ -388,34 +396,34 @@ void implicit_maps_array (int a){
   }
 }
 
-// CK7: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK7: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK7: [[ADDR:%.+]] = alloca ptr,
 // CK7: store ptr [[ARG]], ptr [[ADDR]],
 // CK7: [[REF:%.+]] = load ptr, ptr [[ADDR]],
 // CK7: {{.+}} = getelementptr inbounds [2 x double], ptr [[REF]], i{{64|32}} 0, i{{64|32}} 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK8
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK8
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK8
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK8
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK8
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK8
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK8
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK8
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK8 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK8
 
 // CK8-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK8-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK8-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK8-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
+// CK8-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 288]
 
 // CK8-LABEL: implicit_maps_array{{.*}}(
 void implicit_maps_array (int a){
@@ -433,7 +441,7 @@ void implicit_maps_array (int a){
   // CK8-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
   // CK8-DAG: store ptr [[DECL]], ptr [[P1]]
 
-  // CK8: call void [[KERNEL:@.+]](ptr [[DECL]])
+  // CK8: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(tofrom)
   {
     darr[0] += 1.0;
@@ -441,7 +449,7 @@ void implicit_maps_array (int a){
   }
 }
 
-// CK8: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK8: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK8: [[ADDR:%.+]] = alloca ptr,
 // CK8: store ptr [[ARG]], ptr [[ADDR]],
 // CK8: [[REF:%.+]] = load ptr, ptr [[ADDR]],
@@ -449,27 +457,27 @@ void implicit_maps_array (int a){
 #endif
 
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK9 --check-prefix CK9-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK9 --check-prefix CK9-64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK9 --check-prefix CK9-64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK9 --check-prefix CK9-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK9 --check-prefix CK9-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK9 --check-prefix CK9-32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK9 --check-prefix CK9-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK9 --check-prefix CK9-32
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY26 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY26 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY26 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY26 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY26 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY26 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK9 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY26 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY26 %s
 // SIMD-ONLY26-NOT: {{__kmpc|__tgt}}
 
 #ifdef CK9
 
 
 // CK9-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
-// CK9: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 40]
-// CK9: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 673]
+// CK9: [[SIZE09:@.+]] = private {{.*}}constant [2 x i64] [i64 40, i64 0]
+// CK9: [[MTYPE09:@.+]] = private {{.*}}constant [2 x i64] [i64 673, i64 288]
 
 
 // CK9-LABEL: zero_size_section_and_private_maps{{.*}}(
@@ -490,7 +498,7 @@ void zero_size_section_and_private_maps (int ii){
 // CK9-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK9-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK9: call void [[CALL09:@.+]](ptr {{[^,]+}})
+// CK9: call void [[CALL09:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target defaultmap(firstprivate \
                               : aggregate)
   {
@@ -502,28 +510,28 @@ void zero_size_section_and_private_maps (int ii){
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK10
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK10
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK10
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK10
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK10
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK10
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK10
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK10
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK10 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK10
 
 
 // CK10-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK10: [[SIZE:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
+// CK10: [[SIZE:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK10: [[MTYPE:@.+]] = private {{.*}}constant [1 x i64] [i64 544]
+// CK10: [[MTYPE:@.+]] = private {{.*}}constant [2 x i64] [i64 544, i64 288]
 
 // CK10-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (){
@@ -542,7 +550,7 @@ void explicit_maps_single (){
 // CK10-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK10-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK10: call void [[CALL:@.+]](ptr {{[^,]+}})
+// CK10: call void [[CALL:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target defaultmap(alloc \
                               : pointer)
   {
@@ -553,28 +561,28 @@ void explicit_maps_single (){
   // CK10: define {{.+}}[[CALL]]
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK11
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK11
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK11 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK11
 
 
 // CK11-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK11: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
+// CK11: [[SIZE09:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
 // Map types: OMP_MAP_TO | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 545
-// CK11: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 545]
+// CK11: [[MTYPE09:@.+]] = private {{.*}}constant [2 x i64] [i64 545, i64 288]
 
 // CK11-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (){
@@ -593,7 +601,7 @@ void explicit_maps_single (){
 // CK11-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK11-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK11: call void [[CALL09:@.+]](ptr {{[^,]+}})
+// CK11: call void [[CALL09:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target defaultmap(to \
                               : pointer)
   {
@@ -604,28 +612,28 @@ void explicit_maps_single (){
   // CK11: define {{.+}}[[CALL09]]
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK12
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK12
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK12
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK12
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK12
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK12
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK12
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK12
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK12 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK12
 
 
 // CK12-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK12: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
+// CK12: [[SIZE09:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
 // Map types: OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 546
-// CK12: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 546]
+// CK12: [[MTYPE09:@.+]] = private {{.*}}constant [2 x i64] [i64 546, i64 288]
 
 // CK12-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (){
@@ -644,7 +652,7 @@ void explicit_maps_single (){
 // CK12-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK12-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK12: call void [[CALL09:@.+]](ptr {{[^,]+}})
+// CK12: call void [[CALL09:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target defaultmap(from \
                               : pointer)
   {
@@ -655,28 +663,28 @@ void explicit_maps_single (){
   // CK12: define {{.+}}[[CALL09]]
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK13
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK13
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK13
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK13
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK13
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK13
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK13
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK13
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK13 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK13
 
 
 // CK13-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK13: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
+// CK13: [[SIZE09:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
 // Map types: OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK13: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 547]
+// CK13: [[MTYPE09:@.+]] = private {{.*}}constant [2 x i64] [i64 547, i64 288]
 
 // CK13-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (){
@@ -695,7 +703,7 @@ void explicit_maps_single (){
 // CK13-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK13-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK13: call void [[CALL09:@.+]](ptr {{[^,]+}})
+// CK13: call void [[CALL09:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target defaultmap(tofrom \
                               : pointer)
   {
@@ -706,28 +714,28 @@ void explicit_maps_single (){
   // CK13: define {{.+}}[[CALL09]]
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK14
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK14
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK14
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK14
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK14
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK14
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK14
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK14
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK14 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY8 %s
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK14
 
 
 // CK14-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK14: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
-// Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK14: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 544]
+// CK14: [[SIZE09:@.+]] = private {{.*}}constant [2 x i64] zeroinitializer
+// Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_LITERAL | OMP_MAP_IMPLICIT = 800
+// CK14: [[MTYPE09:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 288]
 
 // CK14-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (){
@@ -746,7 +754,7 @@ void explicit_maps_single (){
 // CK14-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK14-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK14: call void [[CALL09:@.+]](ptr {{[^,]+}})
+// CK14: call void [[CALL09:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target defaultmap(firstprivate \
                               : pointer)
   {
@@ -757,30 +765,30 @@ void explicit_maps_single (){
   // CK14: define {{.+}}[[CALL09]]
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK15
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK15
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK15
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK15
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK15
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK15
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK15
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK15
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY12 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY12 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY12 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY12 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY12 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY12 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK15 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY12 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY12 %s
 // SIMD-ONLY12-NOT: {{__kmpc|__tgt}}
 #ifdef CK15
 
 // CK15-LABEL: @.__omp_offloading_{{.*}}implicit_maps_variable_length_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK15-DAG: [[SIZES:@.+]] = {{.+}}constant [3 x i64] [i64 {{4|8}}, i64 {{4|8}}, i64 0]
+// CK15-DAG: [[SIZES:@.+]] = {{.+}}constant [4 x i64] [i64 {{4|8}}, i64 {{4|8}}, i64 0, i64 0]
 // Map types:
 //  - OMP_MAP_LITERAL + OMP_MAP_TARGET_PARAM + OMP_MAP_IMPLICIT = 800 (vla size)
 //  - OMP_MAP_LITERAL + OMP_MAP_TARGET_PARAM + OMP_MAP_IMPLICIT = 800 (vla size)
 //  - OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK15-DAG: [[TYPES:@.+]] = {{.+}}constant [3 x i64] [i64 800, i64 800, i64 544]
+// CK15-DAG: [[TYPES:@.+]] = {{.+}}constant [4 x i64] [i64 800, i64 800, i64 544, i64 288]
 
 // CK15-LABEL: implicit_maps_variable_length_array{{.*}}(
 void implicit_maps_variable_length_array (int a){
@@ -815,7 +823,7 @@ void implicit_maps_variable_length_array (int a){
 // CK15-DAG: store i64 [[VALS2:%.+]], ptr [[S2]],
 // CK15-DAG: [[VALS2]] = {{mul nuw i64 %.+, 8|sext i32 %.+ to i64}}
 
-// CK15: call void [[KERNEL:@.+]](i[[sz]] {{.+}}, i[[sz]] {{.+}}, ptr [[DECL]])
+// CK15: call void [[KERNEL:@.+]](i[[sz]] {{.+}}, i[[sz]] {{.+}}, ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(alloc \
                               : aggregate)
   {
@@ -823,7 +831,7 @@ void implicit_maps_variable_length_array (int a){
   }
 }
 
-// CK15: define internal void [[KERNEL]](i[[sz]] [[VLA0:%.+]], i[[sz]] [[VLA1:%.+]], ptr {{.*}}[[ARG:%.+]])
+// CK15: define internal void [[KERNEL]](i[[sz]] [[VLA0:%.+]], i[[sz]] [[VLA1:%.+]], ptr {{.*}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK15: [[ADDR0:%.+]] = alloca i[[sz]],
 // CK15: [[ADDR1:%.+]] = alloca i[[sz]],
 // CK15: [[ADDR2:%.+]] = alloca ptr,
@@ -836,27 +844,27 @@ void implicit_maps_variable_length_array (int a){
 // CK15: {{.+}} = getelementptr inbounds double, ptr [[REF]], i[[sz]] %{{.+}}
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK16
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK16
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK16
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK16
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK16
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK16
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK16
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK16
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK16 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // SIMD-ONLY16-NOT: {{__kmpc|__tgt}}
 #ifdef CK16
 
 // CK16-DAG: [[ST:%.+]] = type { i32, double }
 // CK16-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
-// CK16-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
+// CK16-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 {{16|12}}, i64 0]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK16-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 544]
+// CK16-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 544, i64 288]
 
 class SSS {
 public:
@@ -880,7 +888,7 @@ void implicit_maps_struct (int a){
 // CK16-DAG: store ptr [[DECL:%.+]], ptr [[BP1]]
 // CK16-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK16: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK16: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(alloc \
                               : aggregate)
   {
@@ -889,34 +897,34 @@ void implicit_maps_struct (int a){
   }
 }
 
-// CK16: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK16: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK16: [[ADDR:%.+]] = alloca ptr,
 // CK16: store ptr [[ARG]], ptr [[ADDR]],
 // CK16: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK16: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK16: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK17
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK17
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK17
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK17
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK17
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK17
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK17
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK17
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // SIMD-ONLY16-NOT: {{__kmpc|__tgt}}
 #ifdef CK17
 
 // CK17-DAG: [[ST:%.+]] = type { i32, double }
 // CK17-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
-// CK17-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
+// CK17-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 {{16|12}}, i64 0]
 // Map types: OMP_MAP_TO | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 545
-// CK17-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 545]
+// CK17-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 545, i64 288]
 
 class SSS {
 public:
@@ -940,7 +948,7 @@ void implicit_maps_struct (int a){
 // CK17-DAG: store ptr [[DECL:%.+]], ptr [[BP1]]
 // CK17-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK17: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK17: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(to \
                               : aggregate)
   {
@@ -949,34 +957,34 @@ void implicit_maps_struct (int a){
   }
 }
 
-// CK17: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK17: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK17: [[ADDR:%.+]] = alloca ptr,
 // CK17: store ptr [[ARG]], ptr [[ADDR]],
 // CK17: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK17: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK17: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK18
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK18
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK18
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK18
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK18
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK18
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK18
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK18
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // SIMD-ONLY16-NOT: {{__kmpc|__tgt}}
 #ifdef CK18
 
 // CK18-DAG: [[ST:%.+]] = type { i32, double }
 // CK18-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
-// CK18-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
+// CK18-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 {{16|12}}, i64 0]
 // Map types: OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 546
-// CK18-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 546]
+// CK18-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 546, i64 288]
 
 class SSS {
 public:
@@ -1000,7 +1008,7 @@ void implicit_maps_struct (int a){
 // CK18-DAG: store ptr [[DECL:%.+]], ptr [[BP1]]
 // CK18-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK18: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK18: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(from \
                               : aggregate)
   {
@@ -1009,34 +1017,34 @@ void implicit_maps_struct (int a){
   }
 }
 
-// CK18: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK18: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK18: [[ADDR:%.+]] = alloca ptr,
 // CK18: store ptr [[ARG]], ptr [[ADDR]],
 // CK18: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK18: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK18: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK19
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK19
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK19
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK19
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK19
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK19
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK19
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK19
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // SIMD-ONLY16-NOT: {{__kmpc|__tgt}}
 #ifdef CK19
 
 // CK19-DAG: [[ST:%.+]] = type { i32, double }
 // CK19-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
-// CK19-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
+// CK19-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 {{16|12}}, i64 0]
 // Map types: OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK19-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
+// CK19-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 288]
 
 class SSS {
 public:
@@ -1060,7 +1068,7 @@ void implicit_maps_struct (int a){
 // CK19-DAG: store ptr [[DECL:%.+]], ptr [[BP1]]
 // CK19-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK19: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK19: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(tofrom \
                               : aggregate)
   {
@@ -1069,26 +1077,26 @@ void implicit_maps_struct (int a){
   }
 }
 
-// CK19: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK19: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK19: [[ADDR:%.+]] = alloca ptr,
 // CK19: store ptr [[ARG]], ptr [[ADDR]],
 // CK19: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK19: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK19: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK20 --check-prefix CK20-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK20 --check-prefix CK20-64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK20  --check-prefix CK20-64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK20  --check-prefix CK20-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK20  --check-prefix CK20-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK20  --check-prefix CK20-32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK20  --check-prefix CK20-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK20  --check-prefix CK20-32
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY6 %s
 // SIMD-ONLY6-NOT: {{__kmpc|__tgt}}
 #ifdef CK20
 
@@ -1097,11 +1105,11 @@ void implicit_maps_struct (int a){
 
 // CK20-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK20-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
+// CK20-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 8, i64 0]
 // Map types: OMP_MAP_LITERAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK20-64-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// CK20-64-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
 // Map types: OMP_MAP_TO | OMP_MAP_PRIVATE | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 673
-// CK20-32-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 673]
+// CK20-32-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 673, i64 288]
 
 // CK20-LABEL: implicit_maps_double{{.*}}(
 void implicit_maps_double (int a){
@@ -1125,8 +1133,8 @@ void implicit_maps_double (int a){
 // CK20-32-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK20-32-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK20-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
-// CK20-32: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK20-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
+// CK20-32: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(default \
                               : scalar)
   {
@@ -1134,12 +1142,12 @@ void implicit_maps_double (int a){
   }
 }
 
-// CK20-64: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
+// CK20-64: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]], ptr {{[^)]*}})
 // CK20-64: [[ADDR:%.+]] = alloca i[[sz]],
 // CK20-64: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK20-64: {{.+}} = load double, ptr [[ADDR]],
 
-// CK20-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK20-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK20-32: [[ADDR:%.+]] = alloca ptr,
 // CK20-32: store ptr [[ARG]], ptr [[ADDR]],
 // CK20-32: [[REF:%.+]] = load ptr, ptr [[ADDR]],
@@ -1147,27 +1155,27 @@ void implicit_maps_double (int a){
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK21
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK21
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK21
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK21
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK21
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK21
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK21
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK21
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK21 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY16 %s
 // SIMD-ONLY16-NOT: {{__kmpc|__tgt}}
 #ifdef CK21
 
 // CK21-DAG: [[ST:%.+]] = type { i32, double }
 // CK21-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
-// CK21-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
+// CK21-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 {{16|12}}, i64 0]
 // Map types: OMP_MAP_TO + OMP_MAP_FROM + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK21-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
+// CK21-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 288]
 
 class SSS {
 public:
@@ -1191,7 +1199,7 @@ void implicit_maps_struct (int a){
 // CK21-DAG: store ptr [[DECL:%.+]], ptr [[BP1]]
 // CK21-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK21: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK21: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(default \
                               : aggregate)
   {
@@ -1200,34 +1208,34 @@ void implicit_maps_struct (int a){
   }
 }
 
-// CK21: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK21: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK21: [[ADDR:%.+]] = alloca ptr,
 // CK21: store ptr [[ARG]], ptr [[ADDR]],
 // CK21: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK21: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK21: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK22
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK22
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK22
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK22
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK22
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK22
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK22
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK22
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY9 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY9 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY9 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY9 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY9 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY9 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY9 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY9 %s
 // SIMD-ONLY9-NOT: {{__kmpc|__tgt}}
 #ifdef CK22
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}implicit_maps_pointer{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK22-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
+// CK22-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] zeroinitializer
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK22-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 544]
+// CK22-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 544, i64 288]
 
 // CK22-LABEL: implicit_maps_pointer{{.*}}(
 void implicit_maps_pointer (){
@@ -1245,7 +1253,7 @@ void implicit_maps_pointer (){
 // CK22-DAG: store ptr [[PTR:%[^,]+]], ptr [[BP1]]
 // CK22-DAG: store ptr [[PTR]], ptr [[P1]]
 
-// CK22: call void [[KERNEL:@.+]](ptr [[PTR]])
+// CK22: call void [[KERNEL:@.+]](ptr [[PTR]], ptr null)
 #pragma omp target defaultmap(default \
                               : pointer)
   {
@@ -1254,7 +1262,7 @@ void implicit_maps_pointer (){
   }
 }
 
-// CK22: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]])
+// CK22: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK22: [[ADDR:%.+]] = alloca ptr,
 // CK22: store ptr [[ARG]], ptr [[ADDR]],
 // CK22: [[REF:%.+]] = load ptr, ptr [[ADDR]],
@@ -1262,45 +1270,45 @@ void implicit_maps_pointer (){
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK23 --check-prefix CK23-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK23 --check-prefix CK23-64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck %s  --check-prefix CK23 --check-prefix CK23-32
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK23 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK23
 
 double *g;
 
 // CK23: @g ={{.*}} global ptr
-// CK23: [[SIZES00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
-// CK23: [[TYPES00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
+// CK23: [[SIZES00:@.+]] = {{.+}}constant [2 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}, i[[sz:64|32]] 0]
+// CK23: [[TYPES00:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
 
-// CK23: [[SIZES01:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK23: [[TYPES01:@.+]] = {{.+}}constant [1 x i64] [i64 288]
+// CK23: [[SIZES01:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] 0]
+// CK23: [[TYPES01:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
 
-// CK23: [[SIZES02:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK23: [[TYPES02:@.+]] = {{.+}}constant [1 x i64] [i64 288]
+// CK23: [[SIZES02:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] 0]
+// CK23: [[TYPES02:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
 
-// CK23: [[SIZES03:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK23: [[TYPES03:@.+]] = {{.+}}constant [1 x i64] [i64 288]
+// CK23: [[SIZES03:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] 0]
+// CK23: [[TYPES03:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
 
-// CK23: [[SIZES04:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK23: [[TYPES04:@.+]] = {{.+}}constant [1 x i64] [i64 288]
+// CK23: [[SIZES04:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] 0]
+// CK23: [[TYPES04:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
 
-// CK23: [[SIZES05:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK23: [[TYPES05:@.+]] = {{.+}}constant [1 x i64] [i64 288]
+// CK23: [[SIZES05:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] 0]
+// CK23: [[TYPES05:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
 
-// CK23: [[SIZES06:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
-// CK23: [[TYPES06:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
+// CK23: [[SIZES06:@.+]] = {{.+}}constant [3 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}, i[[sz]] 0]
+// CK23: [[TYPES06:@.+]] = {{.+}}constant [3 x i64] [i64 288, i64 288, i64 288]
 
 // CK23-LABEL: @_Z3foo{{.*}}(
 template<typename T>
@@ -1321,7 +1329,7 @@ void foo(float *&lr, T *&tr) {
 // CK23-DAG: store ptr [[VAL]], ptr [[P1]]
 // CK23-DAG: [[VAL]] = load ptr, ptr [[ADDR:@g]],
 
-// CK23: call void [[KERNEL:@.+]](ptr [[VAL]])
+// CK23: call void [[KERNEL:@.+]](ptr [[VAL]], ptr null)
 #pragma omp target is_device_ptr(g) defaultmap(none \
                                                : pointer)
   {
@@ -1341,7 +1349,7 @@ void foo(float *&lr, T *&tr) {
 // CK23-DAG: store ptr [[VAL]], ptr [[P1]]
 // CK23-DAG: [[VAL]] = load ptr, ptr [[ADDR:%.+]],
 
-// CK23: call void [[KERNEL:@.+]](ptr [[VAL]])
+// CK23: call void [[KERNEL:@.+]](ptr [[VAL]], ptr null)
 #pragma omp target is_device_ptr(l) defaultmap(none \
                                                : pointer)
   {
@@ -1361,7 +1369,7 @@ void foo(float *&lr, T *&tr) {
 // CK23-DAG: store ptr [[VAL]], ptr [[P1]]
 // CK23-DAG: [[VAL]] = load ptr, ptr [[ADDR:%.+]],
 
-// CK23: call void [[KERNEL:@.+]](ptr [[VAL]])
+// CK23: call void [[KERNEL:@.+]](ptr [[VAL]], ptr null)
 #pragma omp target is_device_ptr(t) defaultmap(none \
                                                : pointer)
   {
@@ -1382,7 +1390,7 @@ void foo(float *&lr, T *&tr) {
 // CK23-DAG: [[VAL]] = load ptr, ptr [[ADDR:%.+]],
 // CK23-DAG: [[ADDR]] = load ptr, ptr [[ADDR2:%.+]],
 
-// CK23: call void [[KERNEL:@.+]](ptr [[VAL]])
+// CK23: call void [[KERNEL:@.+]](ptr [[VAL]], ptr null)
 #pragma omp target is_device_ptr(lr) defaultmap(none \
                                                 : pointer)
   {
@@ -1403,7 +1411,7 @@ void foo(float *&lr, T *&tr) {
 // CK23-DAG: [[VAL]] = load ptr, ptr [[ADDR:%.+]],
 // CK23-DAG: [[ADDR]] = load ptr, ptr [[ADDR2:%.+]],
 
-// CK23: call void [[KERNEL:@.+]](ptr [[VAL]])
+// CK23: call void [[KERNEL:@.+]](ptr [[VAL]], ptr null)
 #pragma omp target is_device_ptr(tr) defaultmap(none \
                                                 : pointer)
   {
@@ -1424,7 +1432,7 @@ void foo(float *&lr, T *&tr) {
 // CK23-DAG: [[VAL]] = load ptr, ptr [[ADDR:%.+]],
 // CK23-DAG: [[ADDR]] = load ptr, ptr [[ADDR2:%.+]],
 
-// CK23: call void [[KERNEL:@.+]](ptr [[VAL]])
+// CK23: call void [[KERNEL:@.+]](ptr [[VAL]], ptr null)
 #pragma omp target is_device_ptr(tr, lr) defaultmap(none \
                                                     : pointer)
   {
@@ -1452,7 +1460,7 @@ void foo(float *&lr, T *&tr) {
 // CK23-DAG: [[_VAL]] = load ptr, ptr [[_ADDR:%.+]],
 // CK23-DAG: [[_ADDR]] = load ptr, ptr [[_ADDR2:%.+]],
 
-// CK23: call void [[KERNEL:@.+]](ptr [[VAL]], ptr [[_VAL]])
+// CK23: call void [[KERNEL:@.+]](ptr [[VAL]], ptr [[_VAL]], ptr null)
 #pragma omp target is_device_ptr(tr, lr) defaultmap(none \
                                                     : pointer)
   {
@@ -1466,29 +1474,29 @@ void bar(float *&a, int *&b) {
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK24 --check-prefix CK24-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK24 --check-prefix CK24-64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK24 --check-prefix CK24-64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK24 --check-prefix CK24-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK24 --check-prefix CK24-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK24 --check-prefix CK24-32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK24 --check-prefix CK24-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK24 --check-prefix CK24-32
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK24 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
 #ifdef CK24
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
-// CK24: [[SIZE00:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
-// CK24: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 1059]
+// CK24: [[SIZE00:@.+]] = private {{.*}}constant [2 x i[[Z:64|32]]] [i[[Z:64|32]] 4, i[[Z:64|32]] 0]
+// CK24: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 1059, i64 288]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
-// CK24: [[SIZE01:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
-// CK24: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 1063]
+// CK24: [[SIZE01:@.+]] = private {{.*}}constant [2 x i[[Z:64|32]]] [i[[Z:64|32]] 4, i[[Z:64|32]] 0]
+// CK24: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 1063, i64 288]
 
 // CK24-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (int ii){
@@ -1510,7 +1518,7 @@ void explicit_maps_single (int ii){
 // CK24-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK24-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK24: call void [[CALL00:@.+]](ptr {{[^,]+}})
+// CK24: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(close, tofrom        \
                        : a) defaultmap(none \
                                        : scalar)
@@ -1533,7 +1541,7 @@ void explicit_maps_single (int ii){
 // CK24-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK24-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK24: call void [[CALL01:@.+]](ptr {{[^,]+}})
+// CK24: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(always close tofrom  \
                        : a) defaultmap(none \
                                        : scalar)
@@ -1546,19 +1554,19 @@ void explicit_maps_single (int ii){
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK25 --check-prefix CK25-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK25 --check-prefix CK25-64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK25 --check-prefix CK25-64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK25 --check-prefix CK25-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK25 --check-prefix CK25-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK25 --check-prefix CK25-32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK25 --check-prefix CK25-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK25 --check-prefix CK25-32
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK25 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
 #ifdef CK25
 
@@ -1581,25 +1589,25 @@ void declare_target_to()
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK26 --check-prefix CK26-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK26 --check-prefix CK26-64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK26 --check-prefix CK26-64
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK26 --check-prefix CK26-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK26 --check-prefix CK26-64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK26 --check-prefix CK26-32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK26 --check-prefix CK26-32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK26 --check-prefix CK26-32
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -verify -Wno-vla  -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK26 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY18 %s
 // SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
 #ifdef CK26
 
-// CK26-DAG: [[SIZES:@.+]] = {{.+}}constant [3 x i64] [i64 4, i64 4096, i64 {{.+}}]
+// CK26-DAG: [[SIZES:@.+]] = {{.+}}constant [4 x i64] [i64 4, i64 4096, i64 {{.+}}, i64 0]
 // Map types: OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_PTR_AND_OBJ | OMP_MAP_IMPLICIT = 531
-// CK26-DAG: [[TYPES:@.+]] = {{.+}}constant [3 x i64] [i64 531, i64 531, i64 531]
+// CK26-DAG: [[TYPES:@.+]] = {{.+}}constant [4 x i64] [i64 531, i64 531, i64 531, i64 288]
 
 float Vector[1024];
 #pragma omp declare target link(Vector)

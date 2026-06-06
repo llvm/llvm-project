@@ -4,6 +4,7 @@ Test that the lldb driver's batch mode works correctly.
 
 
 import lldb
+import subprocess
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -13,7 +14,26 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 class DriverBatchModeTest(PExpectTest):
     source = "main.c"
 
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIfRemote
+    def test_batch_mode_no_commands_quits(self):
+        """--batch should immediately quit if there are no commands given."""
+        try:
+            proc = subprocess.run(
+                [lldbtest_config.lldbExec, "--batch", "--no-lldbinit"],
+                timeout=60,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+        except subprocess.TimeoutExpired:
+            self.fail("lldb did not quit automatically.")
+
+        # Exit succesfully.
+        self.assertEqual(proc.returncode, 0)
+        # No prompt printed.
+        self.assertEqual(proc.stdout, "")
+
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_run_crash(self):
         """Test that the lldb driver's batch mode works correctly."""
@@ -50,7 +70,8 @@ class DriverBatchModeTest(PExpectTest):
         self.expect_prompt()
         self.expect("frame variable touch_me_not", substrs=["(char *) touch_me_not"])
 
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_run_exit(self):
         """Test that the lldb driver's batch mode works correctly."""
@@ -86,7 +107,8 @@ class DriverBatchModeTest(PExpectTest):
 
         child.expect(pexpect.EOF)
 
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_launch_stop_at_entry(self):
         """Test that the lldb driver's batch mode works correctly for process launch."""
@@ -125,7 +147,8 @@ class DriverBatchModeTest(PExpectTest):
             self.victim.close()
             self.victim = None
 
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     @expectedFailureNetBSD
     def test_batch_mode_attach_exit(self):

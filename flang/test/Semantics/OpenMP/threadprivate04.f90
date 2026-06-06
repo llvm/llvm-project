@@ -17,6 +17,9 @@ program main
   !$omp single copyprivate(x2, /blk1/)
   !$omp end single
 
+  !$omp single
+  !$omp end single copyprivate(x2, /blk1/)
+
   !$omp do schedule(static, x3)
   do i = 1, N
     y1 = x3

@@ -7,8 +7,8 @@
 #define NULL ((void *)0)
 
 typedef __typeof(sizeof(int)) size_t;
-size_t strlcpy(char *dst, const char *src, size_t n);
-size_t strlcat(char *dst, const char *src, size_t n);
+size_t strlcpy(char *restrict dst, const char *restrict src, size_t n);
+size_t strlcat(char *restrict dst, const char *restrict src, size_t n);
 size_t strlen(const char *s);
 void clang_analyzer_eval(int);
 
@@ -137,5 +137,5 @@ void f11(void) {
 int a, b;
 void unknown_val_crash(void) {
   // We're unable to evaluate the integer-to-pointer cast.
-  strlcat(&b, a, 0); // no-crash
+  strlcat((char*)&b, a, 0); // no-crash
 }

@@ -34,10 +34,11 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD_A:.*]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/a/dep.h",
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/mod.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/a/dep.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -71,10 +72,11 @@
 // CHECK:            ],
 // CHECK-NOT:        "context-hash": "[[HASH_MOD_A]]",
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/b/dep.h",
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/mod.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/b/dep.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

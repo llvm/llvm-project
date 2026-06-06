@@ -1,4 +1,4 @@
-//==--- FlangOptionDocs.td - Option documentation -------------------------===//
+//==--- FlangOptionsDocs.td - Options documentation -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,10 +24,10 @@ Introduction
 
 }];
 
-  string Program = "flang";
+  string Program = "Flang";
   list<string> VisibilityMask = ["FlangOption"];
   list<string> IgnoreFlags = ["HelpHidden", "Unsupported", "Ignored"];
 }
 
-
+#define GENERATING_DOCS
 include "Options.td"

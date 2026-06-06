@@ -11,14 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetMachine.h"
@@ -37,6 +36,7 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   void recordCatchRetBBs(MachineFunction &MF);
   bool hoistCatches(MachineFunction &MF);
   bool addCatchAlls(MachineFunction &MF);
+  bool addCatchRefsAndThrowRefs(MachineFunction &MF);
   bool replaceFuncletReturns(MachineFunction &MF);
   bool removeUnnecessaryUnreachables(MachineFunction &MF);
   bool restoreStackPointer(MachineFunction &MF);
@@ -116,7 +116,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  if (MF.getTarget().getMCAsmInfo()->getExceptionHandlingType() !=
+  if (MF.getTarget().getMCAsmInfo().getExceptionHandlingType() !=
       ExceptionHandling::Wasm)
     return false;
 
@@ -127,6 +127,8 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
     Changed |= hoistCatches(MF);
     Changed |= addCatchAlls(MF);
     Changed |= replaceFuncletReturns(MF);
+    if (!WebAssembly::WasmUseLegacyEH)
+      Changed |= addCatchRefsAndThrowRefs(MF);
   }
   Changed |= removeUnnecessaryUnreachables(MF);
   if (MF.getFunction().hasPersonalityFn())
@@ -214,9 +216,12 @@ bool WebAssemblyLateEHPrepare::addCatchAlls(MachineFunction &MF) {
     if (InsertPos == MBB.end() ||
         !WebAssembly::isCatch(InsertPos->getOpcode())) {
       Changed = true;
+      unsigned CatchAllOpcode = WebAssembly::WasmUseLegacyEH
+                                    ? WebAssembly::CATCH_ALL_LEGACY
+                                    : WebAssembly::CATCH_ALL;
       BuildMI(MBB, InsertPos,
               InsertPos == MBB.end() ? DebugLoc() : InsertPos->getDebugLoc(),
-              TII.get(WebAssembly::CATCH_ALL));
+              TII.get(CatchAllOpcode));
     }
   }
   return Changed;
@@ -245,11 +250,39 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
       Changed = true;
       break;
     }
+    case WebAssembly::RETHROW:
+      // These RETHROWs here were lowered from llvm.wasm.rethrow() intrinsics,
+      // generated in Clang for when an exception is not caught by the given
+      // type (e.g. catch (int)).
+      //
+      // RETHROW's BB argument is the EH pad where the exception to rethrow has
+      // been caught. (Until this point, RETHROW has just a '0' as a placeholder
+      // argument.) For these llvm.wasm.rethrow()s, we can safely assume the
+      // exception comes from the nearest dominating EH pad, because catch.start
+      // EH pad is structured like this:
+      //
+      // catch.start:
+      //   catchpad ...
+      //   %matches = compare ehselector with typeid
+      //   br i1 %matches, label %catch, label %rethrow
+      //
+      // rethrow:
+      //   ;; rethrows the exception caught in 'catch.start'
+      //   call @llvm.wasm.rethrow()
+      TI->removeOperand(0);
+      TI->addOperand(MachineOperand::CreateMBB(getMatchingEHPad(TI)));
+      Changed = true;
+      break;
     case WebAssembly::CLEANUPRET: {
-      // Replace a cleanupret with a rethrow. For C++ support, currently
-      // rethrow's immediate argument is always 0 (= the latest exception).
+      // CLEANUPRETs have the EH pad BB the exception to rethrow has been caught
+      // as an argument. Use it and change the instruction opcode to 'RETHROW'
+      // to make rethrowing instructions consistent.
+      //
+      // This is because we cannot safely assume that it is always the nearest
+      // dominating EH pad, in case there are code transformations such as
+      // inlining.
       BuildMI(MBB, TI, TI->getDebugLoc(), TII.get(WebAssembly::RETHROW))
-          .addImm(0);
+          .addMBB(TI->getOperand(0).getMBB());
       TI->eraseFromParent();
       Changed = true;
       break;
@@ -259,14 +292,71 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
   return Changed;
 }
 
-// Remove unnecessary unreachables after a throw or rethrow.
+// Add CATCH_REF and CATCH_ALL_REF pseudo instructions to EH pads, and convert
+// RETHROWs to THROW_REFs.
+bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  auto &MRI = MF.getRegInfo();
+  DenseMap<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> EHPadToRethrows;
+
+  // Create a map of <EH pad, a vector of RETHROWs rethrowing its exception>
+  for (auto &MBB : MF)
+    for (auto &MI : MBB)
+      if (MI.getOpcode() == WebAssembly::RETHROW)
+        EHPadToRethrows[MI.getOperand(0).getMBB()].push_back(&MI);
+  if (EHPadToRethrows.empty())
+    return false;
+
+  // Convert CATCH into CATCH_REF and CATCH_ALL into CATCH_ALL_REF, when the
+  // caught exception is rethrown. And convert RETHROWs to THROW_REFs.
+  for (auto &[EHPad, Rethrows] : EHPadToRethrows) {
+    auto *Catch = WebAssembly::findCatch(EHPad);
+    assert(Catch && "CATCH not found in EHPad");
+    auto InsertPos = std::next(Catch->getIterator());
+    auto ExnReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
+    if (Catch->getOpcode() == WebAssembly::CATCH) {
+      MachineInstrBuilder MIB = BuildMI(*EHPad, InsertPos, Catch->getDebugLoc(),
+                                        TII.get(WebAssembly::CATCH_REF));
+      // Copy defs (= extracted values) from the old CATCH to the new CATCH_REF
+      for (const auto &Def : Catch->defs())
+        MIB.addDef(Def.getReg());
+      MIB.addDef(ExnReg); // Attach the exnref def after extracted values
+      // Copy the tag symbol (The only use operand a CATCH can have is the tag
+      // symbol)
+      for (const auto &Use : Catch->uses()) {
+        MIB.addExternalSymbol(Use.getSymbolName());
+        break;
+      }
+    } else if (Catch->getOpcode() == WebAssembly::CATCH_ALL) {
+      BuildMI(*EHPad, InsertPos, Catch->getDebugLoc(),
+              TII.get(WebAssembly::CATCH_ALL_REF))
+          .addDef(ExnReg);
+    } else {
+      assert(false);
+    }
+    Catch->eraseFromParent();
+
+    for (auto *Rethrow : Rethrows) {
+      auto InsertPos = std::next(Rethrow->getIterator());
+      BuildMI(*Rethrow->getParent(), InsertPos, Rethrow->getDebugLoc(),
+              TII.get(WebAssembly::THROW_REF))
+          .addReg(ExnReg);
+      Rethrow->eraseFromParent();
+    }
+  }
+
+  return true;
+}
+
+// Remove unnecessary unreachables after a throw/rethrow/throw_ref.
 bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
     MachineFunction &MF) {
   bool Changed = false;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.getOpcode() != WebAssembly::THROW &&
-          MI.getOpcode() != WebAssembly::RETHROW)
+          MI.getOpcode() != WebAssembly::RETHROW &&
+          MI.getOpcode() != WebAssembly::THROW_REF)
         continue;
       Changed = true;
 
@@ -287,8 +377,8 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
 }
 
 // After the stack is unwound due to a thrown exception, the __stack_pointer
-// global can point to an invalid address. This inserts instructions that
-// restore __stack_pointer global.
+// global/__wasm_get_stack_pointer() can point to an invalid address. This
+// inserts instructions that restore the stack pointer state.
 bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
   const auto *FrameLowering = static_cast<const WebAssemblyFrameLowering *>(
       MF.getSubtarget().getFrameLowering());
@@ -301,11 +391,11 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
       continue;
     Changed = true;
 
-    // Insert __stack_pointer restoring instructions at the beginning of each EH
+    // Insert stack pointer restoring instructions at the beginning of each EH
     // pad, after the catch instruction. Here it is safe to assume that SP32
-    // holds the latest value of __stack_pointer, because the only exception for
-    // this case is when a function uses the red zone, but that only happens
-    // with leaf functions, and we don't restore __stack_pointer in leaf
+    // holds the latest value of the stack pointer, because the only exception
+    // for this case is when a function uses the red zone, but that only happens
+    // with leaf functions, and we don't restore the stack pointer in leaf
     // functions anyway.
     auto InsertPos = MBB.begin();
     // Skip EH_LABELs in the beginning of an EH pad if present.
@@ -315,8 +405,8 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
            WebAssembly::isCatch(InsertPos->getOpcode()) &&
            "catch/catch_all should be present in every EH pad at this point");
     ++InsertPos; // Skip the catch instruction
-    FrameLowering->writeSPToGlobal(FrameLowering->getSPReg(MF), MF, MBB,
-                                   InsertPos, MBB.begin()->getDebugLoc());
+    FrameLowering->writeBackSP(FrameLowering->getSPReg(MF), MF, MBB, InsertPos,
+                               MBB.begin()->getDebugLoc());
   }
   return Changed;
 }

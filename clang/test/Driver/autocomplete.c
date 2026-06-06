@@ -69,6 +69,7 @@
 // FNOSANICOVERALL-NEXT: trace-div
 // FNOSANICOVERALL-NEXT: trace-gep
 // FNOSANICOVERALL-NEXT: trace-pc
+// FNOSANICOVERALL-NEXT: trace-pc-entry-exit
 // FNOSANICOVERALL-NEXT: trace-pc-guard
 // RUN: %clang --autocomplete=-ffp-contract= | FileCheck %s -check-prefix=FFPALL
 // FFPALL: fast
@@ -80,6 +81,7 @@
 // FLTOALL-NEXT: thin
 // RUN: %clang --autocomplete=-fveclib= | FileCheck %s -check-prefix=FVECLIBALL
 // FVECLIBALL: Accelerate
+// FVECLIBALL-NEXT: AMDLIBM
 // FVECLIBALL-NEXT: ArmPL
 // FVECLIBALL-NEXT: Darwin_libsystem_m
 // FVECLIBALL-NEXT: libmvec
@@ -110,10 +112,14 @@
 // RUN: %clang --autocomplete=-Wma | FileCheck %s -check-prefix=WARNING
 // WARNING: -Wmacro-redefined
 // WARNING-NEXT: -Wmain
+// WARNING-NEXT: -Wmain-attached-to-named-module
 // WARNING-NEXT: -Wmain-return-type
 // WARNING-NEXT: -Wmalformed-warning-check
 // WARNING-NEXT: -Wmany-braces-around-scalar-init
+// WARNING-NEXT: -Wmath-errno-enabled-with-veclib
 // WARNING-NEXT: -Wmathematical-notation-identifier-extension
+// WARNING-NEXT: -Wmatrix-conversion
+// WARNING-NEXT: -Wmatrix-conversions
 // WARNING-NEXT: -Wmax-tokens
 // WARNING-NEXT: -Wmax-unsigned-zero
 // RUN: %clang --autocomplete=-Wno-invalid-pp- | FileCheck %s -check-prefix=NOWARNING

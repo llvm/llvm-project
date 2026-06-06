@@ -24,8 +24,8 @@ using namespace ento;
 
 namespace {
 class ReturnUndefChecker : public Checker< check::PreStmt<ReturnStmt> > {
-  mutable std::unique_ptr<BugType> BT_Undef;
-  mutable std::unique_ptr<BugType> BT_NullReference;
+  const BugType BT_Undef{this, "Garbage return value"};
+  const BugType BT_NullReference{this, "Returning null reference"};
 
   void emitUndef(CheckerContext &C, const Expr *RetE) const;
   void checkReference(CheckerContext &C, const Expr *RetE,
@@ -42,8 +42,8 @@ void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
     return;
   SVal RetVal = C.getSVal(RetE);
 
-  const StackFrameContext *SFC = C.getStackFrame();
-  QualType RT = CallEvent::getDeclaredResultType(SFC->getDecl());
+  const StackFrame *SF = C.getStackFrame();
+  QualType RT = CallEvent::getDeclaredResultType(SF->getDecl());
 
   if (RetVal.isUndef()) {
     // "return;" is modeled to evaluate to an UndefinedVal. Allow UndefinedVal
@@ -60,7 +60,7 @@ void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
     // Not all blocks have explicitly-specified return types; if the return type
     // is not available, but the return value expression has 'void' type, assume
     // Sema already checked it.
-    if (RT.isNull() && isa<BlockDecl>(SFC->getDecl()) &&
+    if (RT.isNull() && isa<BlockDecl>(SF->getDecl()) &&
         RetE->getType()->isVoidType())
       return;
 
@@ -77,7 +77,7 @@ void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
   }
 }
 
-static void emitBug(CheckerContext &C, BugType &BT, StringRef Msg,
+static void emitBug(CheckerContext &C, const BugType &BT, StringRef Msg,
                     const Expr *RetE, const Expr *TrackingE = nullptr) {
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
@@ -92,9 +92,7 @@ static void emitBug(CheckerContext &C, BugType &BT, StringRef Msg,
 }
 
 void ReturnUndefChecker::emitUndef(CheckerContext &C, const Expr *RetE) const {
-  if (!BT_Undef)
-    BT_Undef.reset(new BugType(this, "Garbage return value"));
-  emitBug(C, *BT_Undef, "Undefined or garbage value returned to caller", RetE);
+  emitBug(C, BT_Undef, "Undefined or garbage value returned to caller", RetE);
 }
 
 void ReturnUndefChecker::checkReference(CheckerContext &C, const Expr *RetE,
@@ -109,10 +107,7 @@ void ReturnUndefChecker::checkReference(CheckerContext &C, const Expr *RetE,
   }
 
   // The return value is known to be null. Emit a bug report.
-  if (!BT_NullReference)
-    BT_NullReference.reset(new BugType(this, "Returning null reference"));
-
-  emitBug(C, *BT_NullReference, BT_NullReference->getDescription(), RetE,
+  emitBug(C, BT_NullReference, BT_NullReference.getDescription(), RetE,
           bugreporter::getDerefExpr(RetE));
 }
 

@@ -339,3 +339,17 @@ const char *a0 = @encode(Array0);
 const char *inner0 = @encode(Outer0<int>::Inner0 *);
 const char *inner1 = @encode(Outer0<int>::Inner1<float> *);
 }
+
+#if __cplusplus >= 202002L
+namespace GH71250 {
+  struct Empty {};
+  struct S {
+    [[no_unique_address]] Empty a;
+    long b;
+    long c;
+  };
+
+  // CHECKCXX20: @_ZN7GH712501sE =  constant [7 x i8] c"{S=qq}\00", align 1
+  extern const char s[] = @encode(S);
+}
+#endif

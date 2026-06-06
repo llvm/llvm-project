@@ -22,6 +22,7 @@ class CPPBreakpointTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr24538, clang-cl does not support throw or catch",
     )
+    @expectedFailureAll(archs=["arm64e"])
     def test(self):
         """Test lldb exception breakpoint command for CPP."""
         self.build()
@@ -65,7 +66,7 @@ class CPPBreakpointTestCase(TestBase):
 
         while frame_functions.count("throws_exception_on_even(int)") == 1:
             stopped_threads = lldbutil.continue_to_breakpoint(process, exception_bkpt)
-            self.assertEquals(len(stopped_threads), 1)
+            self.assertEqual(len(stopped_threads), 1)
 
             thread = stopped_threads[0]
             frame_functions = lldbutil.get_function_names(thread)

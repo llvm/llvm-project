@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHMACHINEFUNCTIONINFO_H
 
 #include "LoongArchSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
@@ -32,9 +33,25 @@ private:
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
 
+  /// Incoming indirect argument pointers saved as virtual registers, keyed by
+  /// formal parameter index. Used for musttail forwarding of indirect args.
+  /// Virtual registers (not SDValues) are used because the SelectionDAG is
+  /// cleared between basic blocks, and musttail calls may be in non-entry
+  /// blocks.
+  DenseMap<unsigned, Register> IncomingIndirectArgs;
+
   /// FrameIndex of the spill slot when there is no scavenged register in
   /// insertIndirectBranch.
   int BranchRelaxationSpillFrameIndex = -1;
+
+  /// Registers that have been sign extended from i32.
+  SmallVector<Register, 8> SExt32Registers;
+
+  /// Pairs of `jr` instructions and corresponding JTI operands, used for the
+  /// `annotate-tablejump` option.
+  SmallVector<std::pair<MachineInstr *, int>, 4> JumpInfos;
+
+  bool HasDynamicAllocation = false;
 
 public:
   LoongArchMachineFunctionInfo(const Function &F,
@@ -56,12 +73,37 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
+  void setIncomingIndirectArg(unsigned ArgIndex, Register Reg) {
+    IncomingIndirectArgs[ArgIndex] = Reg;
+  }
+  Register getIncomingIndirectArg(unsigned ArgIndex) const {
+    auto It = IncomingIndirectArgs.find(ArgIndex);
+    assert(It != IncomingIndirectArgs.end() && "No incoming indirect arg");
+    return It->second;
+  }
+
   int getBranchRelaxationSpillFrameIndex() {
     return BranchRelaxationSpillFrameIndex;
   }
   void setBranchRelaxationSpillFrameIndex(int Index) {
     BranchRelaxationSpillFrameIndex = Index;
   }
+
+  void addSExt32Register(Register Reg) { SExt32Registers.push_back(Reg); }
+
+  bool isSExt32Register(Register Reg) const {
+    return is_contained(SExt32Registers, Reg);
+  }
+
+  void setJumpInfo(MachineInstr *JrMI, int JTIIdx) {
+    JumpInfos.push_back(std::make_pair(JrMI, JTIIdx));
+  }
+  unsigned getJumpInfoSize() { return JumpInfos.size(); }
+  MachineInstr *getJumpInfoJrMI(unsigned Idx) { return JumpInfos[Idx].first; }
+  int getJumpInfoJTIIndex(unsigned Idx) { return JumpInfos[Idx].second; }
+
+  bool hasDynamicAllocation() const { return HasDynamicAllocation; }
+  void setDynamicAllocation() { HasDynamicAllocation = true; }
 };
 
 } // end namespace llvm

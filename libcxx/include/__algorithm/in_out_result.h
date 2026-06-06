@@ -27,22 +27,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-template<class _InIter1, class _OutIter1>
+template <class _InIter1, class _OutIter1>
 struct in_out_result {
   _LIBCPP_NO_UNIQUE_ADDRESS _InIter1 in;
   _LIBCPP_NO_UNIQUE_ADDRESS _OutIter1 out;
 
   template <class _InIter2, class _OutIter2>
     requires convertible_to<const _InIter1&, _InIter2> && convertible_to<const _OutIter1&, _OutIter2>
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr operator in_out_result<_InIter2, _OutIter2>() const & {
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_out_result<_InIter2, _OutIter2>() const& {
     return {in, out};
   }
 
   template <class _InIter2, class _OutIter2>
     requires convertible_to<_InIter1, _InIter2> && convertible_to<_OutIter1, _OutIter2>
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr operator in_out_result<_InIter2, _OutIter2>() && {
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_out_result<_InIter2, _OutIter2>() && {
     return {std::move(in), std::move(out)};
   }
 };
@@ -50,6 +48,20 @@ struct in_out_result {
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 20
+
+template <class _InIter, class _OutIter>
+struct __in_out_result {
+  _InIter __in_;
+  _OutIter __out_;
+
+#if _LIBCPP_STD_VER >= 20
+  template <class _InIter2, class _OutIter2>
+    requires convertible_to<_InIter, _InIter2> && convertible_to<_OutIter, _OutIter2>
+  constexpr operator ranges::in_out_result<_InIter2, _OutIter2>() && {
+    return {std::move(__in_), std::move(__out_)};
+  }
+#endif
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

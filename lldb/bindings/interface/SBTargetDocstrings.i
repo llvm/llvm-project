@@ -34,7 +34,7 @@ produces: ::
 
     Watchpoint 1: addr = 0x1034ca048 size = 4 state = enabled type = rw
         declare @ '/Volumes/data/lldb/svn/trunk/test/python_api/watchpoint/main.c:12'
-        hw_index = 0  hit_count = 2     ignore_count = 0"
+        hit_count = 2     ignore_count = 0"
 ) lldb::SBTarget;
 
 %feature("docstring", "
@@ -250,20 +250,10 @@ produces: ::
     :rtype: SBSymbolContextList"
 ) lldb::SBTarget::FindCompileUnits;
 
-%feature("docstring", "
-    Architecture data byte width accessor
-
-    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's data bus.
-
-    "
+%feature("docstring", "Deprecated. Always returns 1."
 ) lldb::SBTarget::GetDataByteSize;
 
-%feature("docstring", "
-    Architecture code byte width accessor.
-
-    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's code bus.
-
-    "
+%feature("docstring", "Deprecated. Always returns 1."
 ) lldb::SBTarget::GetCodeByteSize;
 
 %feature("docstring", "

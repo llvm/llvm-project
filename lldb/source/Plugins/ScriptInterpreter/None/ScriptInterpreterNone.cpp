@@ -12,10 +12,6 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 
-#include "llvm/Support/Threading.h"
-
-#include <mutex>
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -26,30 +22,30 @@ ScriptInterpreterNone::ScriptInterpreterNone(Debugger &debugger)
 
 ScriptInterpreterNone::~ScriptInterpreterNone() = default;
 
+static const char *no_interpreter_err_msg =
+    "error: Embedded script interpreter unavailable. LLDB was built without "
+    "scripting language support.\n";
+
 bool ScriptInterpreterNone::ExecuteOneLine(llvm::StringRef command,
                                            CommandReturnObject *,
                                            const ExecuteScriptOptions &) {
-  m_debugger.GetErrorStream().PutCString(
-      "error: there is no embedded script interpreter in this mode.\n");
+  m_debugger.GetAsyncErrorStream()->PutCString(no_interpreter_err_msg);
   return false;
 }
 
 void ScriptInterpreterNone::ExecuteInterpreterLoop() {
-  m_debugger.GetErrorStream().PutCString(
-      "error: there is no embedded script interpreter in this mode.\n");
+  m_debugger.GetAsyncErrorStream()->PutCString(no_interpreter_err_msg);
 }
 
 void ScriptInterpreterNone::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguageNone, CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(),
+                                lldb::eScriptLanguageNone, CreateInstance);
 }
 
-void ScriptInterpreterNone::Terminate() {}
+void ScriptInterpreterNone::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 lldb::ScriptInterpreterSP
 ScriptInterpreterNone::CreateInstance(Debugger &debugger) {

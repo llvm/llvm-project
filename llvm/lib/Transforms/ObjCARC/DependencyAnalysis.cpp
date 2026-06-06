@@ -67,7 +67,15 @@ bool llvm::objcarc::CanDecrementRefCount(const Instruction *Inst,
                                          const Value *Ptr,
                                          ProvenanceAnalysis &PA,
                                          ARCInstKind Class) {
-  // First perform a quick check if Class can not touch ref counts.
+  // Atomic stores, RMW, and CmpXchg may make a pointer visible to another
+  // thread, which could release it. Treat such instructions as potentially
+  // decrementing refcounts.
+  if (const auto *SI = dyn_cast<StoreInst>(Inst); SI && SI->isAtomic())
+    return true;
+  if (isa<AtomicRMWInst>(Inst) || isa<AtomicCmpXchgInst>(Inst))
+    return true;
+
+  // Perform a quick check if Class can not touch ref counts.
   if (!CanDecrementRefCount(Class))
     return false;
 
@@ -220,16 +228,13 @@ static bool findDependencies(DependenceKind Flavor, const Value *Arg,
     BasicBlock::iterator StartBBBegin = LocalStartBB->begin();
     for (;;) {
       if (LocalStartPos == StartBBBegin) {
-        pred_iterator PI(LocalStartBB), PE(LocalStartBB, false);
-        if (PI == PE)
+        if (pred_empty(LocalStartBB))
           // Return if we've reached the function entry.
           return false;
         // Add the predecessors to the worklist.
-        do {
-          BasicBlock *PredBB = *PI;
+        for (BasicBlock *PredBB : predecessors(LocalStartBB))
           if (Visited.insert(PredBB).second)
             Worklist.push_back(std::make_pair(PredBB, PredBB->end()));
-        } while (++PI != PE);
         break;
       }
 
@@ -242,7 +247,7 @@ static bool findDependencies(DependenceKind Flavor, const Value *Arg,
   } while (!Worklist.empty());
 
   // Determine whether the original StartBB post-dominates all of the blocks we
-  // visited. If not, insert a sentinal indicating that most optimizations are
+  // visited. If not, insert a sentinel indicating that most optimizations are
   // not safe.
   for (const BasicBlock *BB : Visited) {
     if (BB == StartBB)

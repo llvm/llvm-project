@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --verify-diagnostics --split-input-file
+// RUN: mlir-opt %s --transform-interpreter --verify-diagnostics --split-input-file
 
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @match_sparse_structured(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
@@ -12,16 +12,16 @@ module attributes { transform.with_named_sequence } {
   }
 
   transform.named_sequence @print_sparse_structured(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "sparse_kernel" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "sparse_kernel" : !transform.any_op
     transform.yield
   }
 
   // Entry point. Match any structured sparse operation and emit at remark.
-  transform.sequence failures(propagate) attributes { transform.target_tag = "transform" } {
-  ^bb0(%arg0: !transform.any_op):
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.consumed}) {
     transform.foreach_match in %arg0
         @match_sparse_structured -> @print_sparse_structured
         : (!transform.any_op) -> !transform.any_op
+    transform.yield
   }
 }
 

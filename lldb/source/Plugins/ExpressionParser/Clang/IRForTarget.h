@@ -85,6 +85,7 @@ public:
   IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map, bool resolve_vars,
               lldb_private::IRExecutionUnit &execution_unit,
               lldb_private::Stream &error_stream,
+              lldb_private::ExecutionPolicy execution_policy,
               const char *func_name = "$__lldb_expr");
 
   /// Run this IR transformer on a single module
@@ -111,43 +112,6 @@ private:
   ///     True on success; false otherwise.
   bool FixFunctionLinkage(llvm::Function &llvm_function);
 
-  /// A module-level pass to replace all function pointers with their
-  /// integer equivalents.
-
-  /// The top-level pass implementation
-  ///
-  /// \param[in] llvm_function
-  ///     The function currently being processed.
-  ///
-  /// \return
-  ///     True on success; false otherwise.
-  bool HasSideEffects(llvm::Function &llvm_function);
-
-  /// A function-level pass to check whether the function has side
-  /// effects.
-
-  /// Get the address of a function, and a location to put the complete Value
-  /// of the function if one is available.
-  ///
-  /// \param[in] function
-  ///     The function to find the location of.
-  ///
-  /// \param[out] ptr
-  ///     The location of the function in the target.
-  ///
-  /// \param[out] name
-  ///     The resolved name of the function (matters for intrinsics).
-  ///
-  /// \param[out] value_ptr
-  ///     A variable to put the function's completed Value* in, or NULL
-  ///     if the Value* shouldn't be stored anywhere.
-  ///
-  /// \return
-  ///     The pointer.
-  LookupResult GetFunctionAddress(llvm::Function *function, uint64_t &ptr,
-                                  lldb_private::ConstString &name,
-                                  llvm::Constant **&value_ptr);
-
   /// A function-level pass to take the generated global value
   /// $__lldb_expr_result and make it into a persistent variable. Also see
   /// ASTResultSynthesizer.
@@ -169,30 +133,6 @@ public:
 
 private:
   clang::NamedDecl *DeclForGlobal(llvm::GlobalValue *global);
-
-  /// Set the constant result variable m_const_result to the provided
-  /// constant, assuming it can be evaluated.  The result variable will be
-  /// reset to NULL later if the expression has side effects.
-  ///
-  /// \param[in] initializer
-  ///     The constant initializer for the variable.
-  ///
-  /// \param[in] name
-  ///     The name of the result variable.
-  ///
-  /// \param[in] type
-  ///     The Clang type of the result variable.
-  void MaybeSetConstantResult(llvm::Constant *initializer,
-                              lldb_private::ConstString name,
-                              lldb_private::TypeFromParser type);
-
-  /// If the IR represents a cast of a variable, set m_const_result to the
-  /// result of the cast.  The result variable will be reset to
-  /// NULL latger if the expression has side effects.
-  ///
-  /// \param[in] type
-  ///     The Clang type of the result variable.
-  void MaybeSetCastResult(lldb_private::TypeFromParser type);
 
   /// The top-level pass implementation
   ///
@@ -392,9 +332,9 @@ private:
   lldb_private::TypeFromParser m_result_type;
   /// The module being processed, or NULL if that has not been determined yet.
   llvm::Module *m_module = nullptr;
-  /// The target data for the module being processed, or NULL if there is no
+  /// The target data for the module being processed, or nullptr if there is no
   /// module.
-  std::unique_ptr<llvm::DataLayout> m_target_data;
+  const llvm::DataLayout *m_target_data = nullptr;
   /// The DeclMap containing the Decls
   lldb_private::ClangExpressionDeclMap *m_decl_map;
   /// The address of the function CFStringCreateWithBytes, cast to the
@@ -409,15 +349,11 @@ private:
   lldb_private::Stream &m_error_stream;
   /// The execution unit containing the IR being created.
   lldb_private::IRExecutionUnit &m_execution_unit;
-  /// If non-NULL, the store instruction that writes to the result variable.  If
-  /// m_has_side_effects is true, this is NULL.
-  llvm::StoreInst *m_result_store = nullptr;
   /// True if the function's result in the AST is a pointer (see comments in
   /// ASTResultSynthesizer::SynthesizeBodyResult)
   bool m_result_is_pointer = false;
-  /// A placeholder that will be replaced by a pointer to the final location of
-  /// the static allocation.
-  llvm::GlobalVariable *m_reloc_placeholder = nullptr;
+
+  lldb_private::ExecutionPolicy m_policy;
 
   class FunctionValueCache {
   public:
@@ -446,21 +382,11 @@ private:
   /// expression and places them before FirstEntryInstruction.  These
   /// instructions replace the constant uses, so UnfoldConstant calls itself
   /// recursively for those.
-  ///
-  /// \return
-  ///     True on success; false otherwise
-  static bool UnfoldConstant(llvm::Constant *old_constant,
-                             llvm::Function *llvm_function,
-                             FunctionValueCache &value_maker,
-                             FunctionValueCache &entry_instruction_finder,
-                             lldb_private::Stream &error_stream);
-
-  /// Commit the allocation in m_data_allocator and use its final location to
-  /// replace m_reloc_placeholder.
-  ///
-  /// \return
-  ///     True on success; false otherwise
-  bool CompleteDataAllocation();
+  static llvm::Error
+  UnfoldConstant(llvm::Constant *old_constant, llvm::Function *llvm_function,
+                 FunctionValueCache &value_maker,
+                 FunctionValueCache &entry_instruction_finder,
+                 lldb_private::Stream &error_stream);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRFORTARGET_H

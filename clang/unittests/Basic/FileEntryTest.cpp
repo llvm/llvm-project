@@ -40,8 +40,7 @@ public:
   FileEntryRef addFile(StringRef Name) {
     FEs.emplace_back(new FileEntry());
     return FileEntryRef(
-        *Files.insert({Name, FileEntryRef::MapValue(*FEs.back().get(), DR)})
-             .first);
+        *Files.insert({Name, FileEntryRef::MapValue(*FEs.back(), DR)}).first);
   }
   FileEntryRef addFileAlias(StringRef Name, FileEntryRef Base) {
     return FileEntryRef(
@@ -92,24 +91,6 @@ TEST(FileEntryTest, FileEntryRef) {
   EXPECT_EQ(CE1, &R1.getFileEntry());
 }
 
-TEST(FileEntryTest, OptionalFileEntryRefDegradesToFileEntryPtr) {
-  FileEntryTestHelper Refs;
-  OptionalFileEntryRefDegradesToFileEntryPtr M0;
-  OptionalFileEntryRefDegradesToFileEntryPtr M1 = Refs.addFile("1");
-  OptionalFileEntryRefDegradesToFileEntryPtr M2 = Refs.addFile("2");
-  OptionalFileEntryRefDegradesToFileEntryPtr M0Also = std::nullopt;
-  OptionalFileEntryRefDegradesToFileEntryPtr M1Also =
-      Refs.addFileAlias("1-also", *M1);
-
-  EXPECT_EQ(M0, M0Also);
-  EXPECT_EQ(StringRef("1"), M1->getName());
-  EXPECT_EQ(StringRef("2"), M2->getName());
-  EXPECT_EQ(StringRef("1-also"), M1Also->getName());
-
-  const FileEntry *CE1 = M1;
-  EXPECT_EQ(CE1, &M1->getFileEntry());
-}
-
 TEST(FileEntryTest, equals) {
   FileEntryTestHelper Refs;
   FileEntryRef R1 = Refs.addFile("1");
@@ -126,13 +107,6 @@ TEST(FileEntryTest, equals) {
   EXPECT_NE(R1, R2);
   EXPECT_EQ(R1, R1Redirect);
   EXPECT_EQ(R1, R1Redirect2);
-
-  OptionalFileEntryRefDegradesToFileEntryPtr M1 = R1;
-
-  EXPECT_EQ(M1, &R1.getFileEntry());
-  EXPECT_EQ(&R1.getFileEntry(), M1);
-  EXPECT_NE(M1, &R2.getFileEntry());
-  EXPECT_NE(&R2.getFileEntry(), M1);
 }
 
 TEST(FileEntryTest, isSameRef) {

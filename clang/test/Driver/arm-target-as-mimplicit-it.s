@@ -30,7 +30,7 @@
 
 /// Test invalid input.
 // RUN: not %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
-// RUN: not %clang -target arm-linux-gnueabi -### -Xassembler -mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=XINVALID
+// RUN: not %clang -target arm-linux-gnueabi -### -Xassembler -mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
 // RUN: not %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=always -Wa,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
 // RUN: not %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=always,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
 
@@ -47,5 +47,4 @@
 // NEVER-NOT: "-arm-implicit-it={{.*}}"
 // ARM: "-mllvm" "-arm-implicit-it=arm"
 // THUMB: "-mllvm" "-arm-implicit-it=thumb"
-// INVALID: error: unsupported argument '-mimplicit-it=foo' to option '-Wa,'
-// XINVALID: error: unsupported argument '-mimplicit-it=foo' to option '-Xassembler'
+// INVALID: error: unsupported argument 'foo' to option '-Wa,-mimplicit-it='

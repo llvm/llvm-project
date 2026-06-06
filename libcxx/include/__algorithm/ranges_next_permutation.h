@@ -28,6 +28,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -37,9 +40,7 @@ namespace ranges {
 template <class _InIter>
 using next_permutation_result = in_found_result<_InIter>;
 
-namespace __next_permutation {
-
-struct __fn {
+struct __next_permutation {
   template <bidirectional_iterator _Iter, sentinel_for<_Iter> _Sent, class _Comp = ranges::less, class _Proj = identity>
     requires sortable<_Iter, _Comp, _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr next_permutation_result<_Iter>
@@ -59,15 +60,15 @@ struct __fn {
   }
 };
 
-} // namespace __next_permutation
-
 inline namespace __cpo {
-constexpr inline auto next_permutation = __next_permutation::__fn{};
+constexpr inline auto next_permutation = __next_permutation{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_NEXT_PERMUTATION_H

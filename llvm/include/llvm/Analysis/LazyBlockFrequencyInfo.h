@@ -21,7 +21,6 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-class AnalysisUsage;
 class Function;
 class LoopInfo;
 
@@ -95,7 +94,7 @@ private:
 /// Note that it is expected that we wouldn't need this functionality for the
 /// new PM since with the new PM, analyses are executed on demand.
 
-class LazyBlockFrequencyInfoPass : public FunctionPass {
+class LLVM_ABI LazyBlockFrequencyInfoPass : public FunctionPass {
 private:
   LazyBlockFrequencyInfo<Function, LazyBranchProbabilityInfoPass, LoopInfo,
                          BlockFrequencyInfo>
@@ -123,7 +122,5 @@ public:
   void print(raw_ostream &OS, const Module *M) const override;
 };
 
-/// Helper for client passes to initialize dependent passes for LBFI.
-void initializeLazyBFIPassPass(PassRegistry &Registry);
-}
+} // namespace llvm
 #endif

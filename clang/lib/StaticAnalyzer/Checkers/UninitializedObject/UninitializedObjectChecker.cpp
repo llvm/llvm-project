@@ -38,14 +38,11 @@ namespace {
 
 class UninitializedObjectChecker
     : public Checker<check::EndFunction, check::DeadSymbols> {
-  std::unique_ptr<BugType> BT_uninitField;
+  const BugType BT_uninitField{this, "Uninitialized fields"};
 
 public:
   // The fields of this struct will be initialized when registering the checker.
   UninitObjCheckerOptions Opts;
-
-  UninitializedObjectChecker()
-      : BT_uninitField(new BugType(this, "Uninitialized fields")) {}
 
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
@@ -136,8 +133,8 @@ static bool hasUnguardedAccess(const FieldDecl *FD, ProgramStateRef State);
 void UninitializedObjectChecker::checkEndFunction(
     const ReturnStmt *RS, CheckerContext &Context) const {
 
-  const auto *CtorDecl = dyn_cast_or_null<CXXConstructorDecl>(
-      Context.getLocationContext()->getDecl());
+  const auto *CtorDecl =
+      dyn_cast_or_null<CXXConstructorDecl>(Context.getStackFrame()->getDecl());
   if (!CtorDecl)
     return;
 
@@ -175,10 +172,10 @@ void UninitializedObjectChecker::checkEndFunction(
     return;
 
   PathDiagnosticLocation LocUsedForUniqueing;
-  const Stmt *CallSite = Context.getStackFrame()->getCallSite();
+  const Expr *CallSite = Context.getStackFrame()->getCallSite();
   if (CallSite)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-        CallSite, Context.getSourceManager(), Node->getLocationContext());
+        CallSite, Context.getSourceManager(), Node->getStackFrame());
 
   // For Plist consumers that don't support notes just yet, we'll convert notes
   // to warnings.
@@ -186,8 +183,8 @@ void UninitializedObjectChecker::checkEndFunction(
     for (const auto &Pair : UninitFields) {
 
       auto Report = std::make_unique<PathSensitiveBugReport>(
-          *BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
-          Node->getLocationContext()->getDecl());
+          BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
+          Node->getStackFrame()->getDecl());
       Context.emitReport(std::move(Report));
     }
     return;
@@ -200,8 +197,8 @@ void UninitializedObjectChecker::checkEndFunction(
             << " at the end of the constructor call";
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
-      *BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
-      Node->getLocationContext()->getDecl());
+      BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
+      Node->getStackFrame()->getDecl());
 
   for (const auto &Pair : UninitFields) {
     Report->addNote(Pair.second,
@@ -294,7 +291,9 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
 
   // Are all of this non-union's fields initialized?
   for (const FieldDecl *I : RD->fields()) {
-
+    if (I->isUnnamedBitField()) {
+      continue;
+    }
     const auto FieldVal =
         State->getLValue(I, loc::MemRegionVal(R)).castAs<loc::MemRegionVal>();
     const auto *FR = FieldVal.getRegionAs<FieldRegion>();
@@ -379,7 +378,7 @@ bool FindUninitializedFields::isUnionUninit(const TypedValueRegion *R) {
   return false;
 }
 
-bool FindUninitializedFields::isPrimitiveUninit(const SVal &V) {
+bool FindUninitializedFields::isPrimitiveUninit(SVal V) {
   if (V.isUndef())
     return true;
 
@@ -452,39 +451,56 @@ static void printTail(llvm::raw_ostream &Out,
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
+static const SubRegion *
+getConstructedSubRegion(const CXXConstructorDecl *CtorDecl,
+                        CheckerContext &Context) {
+  Loc ThisLoc =
+      Context.getSValBuilder().getCXXThis(CtorDecl, Context.getStackFrame());
+  SVal ObjectV = Context.getState()->getSVal(ThisLoc);
+  return ObjectV.getAsRegion()->getAs<SubRegion>();
+}
+
 static const TypedValueRegion *
 getConstructedRegion(const CXXConstructorDecl *CtorDecl,
                      CheckerContext &Context) {
 
-  Loc ThisLoc =
-      Context.getSValBuilder().getCXXThis(CtorDecl, Context.getStackFrame());
-
-  SVal ObjectV = Context.getState()->getSVal(ThisLoc);
-
-  auto *R = ObjectV.getAsRegion()->getAs<TypedValueRegion>();
-  if (R && !R->getValueType()->getAsCXXRecordDecl())
+  const SubRegion *SR = getConstructedSubRegion(CtorDecl, Context);
+  if (!SR)
     return nullptr;
 
-  return R;
+  if (const auto *TVR = SR->getAs<TypedValueRegion>()) {
+    return TVR->getValueType()->getAsCXXRecordDecl() ? TVR : nullptr;
+  }
+
+  QualType ThisPointeeTy = CtorDecl->getThisType()->getPointeeType();
+  if (!ThisPointeeTy->getAsCXXRecordDecl())
+    return nullptr;
+
+  auto &MemMgr = Context.getState()->getStateManager().getRegionManager();
+  auto &SVB = Context.getSValBuilder();
+
+  const auto *ElemR = MemMgr.getElementRegion(
+      ThisPointeeTy, SVB.makeZeroArrayIndex(), SR, Context.getASTContext());
+
+  return ElemR;
 }
 
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
                                       CheckerContext &Context) {
 
-  const TypedValueRegion *CurrRegion = getConstructedRegion(Ctor, Context);
+  const SubRegion *CurrRegion = getConstructedSubRegion(Ctor, Context);
   if (!CurrRegion)
     return false;
 
-  const LocationContext *LC = Context.getLocationContext();
-  while ((LC = LC->getParent())) {
+  const StackFrame *SF = Context.getStackFrame();
+  while ((SF = SF->getParent())) {
 
     // If \p Ctor was called by another constructor.
-    const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(LC->getDecl());
+    const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(SF->getDecl());
     if (!OtherCtor)
       continue;
 
-    const TypedValueRegion *OtherRegion =
-        getConstructedRegion(OtherCtor, Context);
+    const SubRegion *OtherRegion = getConstructedSubRegion(OtherCtor, Context);
     if (!OtherRegion)
       continue;
 

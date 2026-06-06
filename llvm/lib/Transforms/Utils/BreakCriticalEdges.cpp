@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -39,36 +40,36 @@ using namespace llvm;
 STATISTIC(NumBroken, "Number of blocks inserted");
 
 namespace {
-  struct BreakCriticalEdges : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    BreakCriticalEdges() : FunctionPass(ID) {
-      initializeBreakCriticalEdgesPass(*PassRegistry::getPassRegistry());
-    }
+struct BreakCriticalEdges : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  BreakCriticalEdges() : FunctionPass(ID) {
+    initializeBreakCriticalEdgesPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override {
-      auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-      auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  bool runOnFunction(Function &F) override {
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
 
-      auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
-      auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
+    auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
+    auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
 
-      auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-      auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
-      unsigned N =
-          SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI, nullptr, PDT));
-      NumBroken += N;
-      return N > 0;
-    }
+    auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+    auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
+    unsigned N = SplitAllCriticalEdges(
+        F, CriticalEdgeSplittingOptions(DT, LI, nullptr, PDT));
+    NumBroken += N;
+    return N > 0;
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<LoopInfoWrapperPass>();
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
 
-      // No loop canonicalization guarantees are broken by this pass.
-      AU.addPreservedID(LoopSimplifyID);
-    }
-  };
-}
+    // No loop canonicalization guarantees are broken by this pass.
+    AU.addPreservedID(LoopSimplifyID);
+  }
+};
+} // namespace
 
 char BreakCriticalEdges::ID = 0;
 INITIALIZE_PASS(BreakCriticalEdges, "break-crit-edges",
@@ -76,6 +77,7 @@ INITIALIZE_PASS(BreakCriticalEdges, "break-crit-edges",
 
 // Publicly exposed interface to pass...
 char &llvm::BreakCriticalEdgesID = BreakCriticalEdges::ID;
+
 FunctionPass *llvm::createBreakCriticalEdgesPass() {
   return new BreakCriticalEdges();
 }
@@ -111,15 +113,14 @@ BasicBlock *
 llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
                              const CriticalEdgeSplittingOptions &Options,
                              const Twine &BBName) {
-  assert(!isa<IndirectBrInst>(TI) &&
-         "Cannot split critical edge from IndirectBrInst");
-
   BasicBlock *TIBB = TI->getParent();
   BasicBlock *DestBB = TI->getSuccessor(SuccNum);
 
-  // Splitting the critical edge to a pad block is non-trivial. Don't do
-  // it in this generic function.
-  if (DestBB->isEHPad()) return nullptr;
+  // Splitting the critical edge to a pad block is non-trivial.
+  // And we cannot split block with IndirectBr as a terminator.
+  // Don't do it in this generic function.
+  if (DestBB->isEHPad() || isa<IndirectBrInst>(TI))
+    return nullptr;
 
   if (Options.IgnoreUnreachableDests &&
       isa<UnreachableInst>(DestBB->getFirstNonPHIOrDbgOrLifetime()))
@@ -173,8 +174,10 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
                                                      DestBB->getName() +
                                                      "_crit_edge");
   // Create our unconditional branch.
-  BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
+  UncondBrInst *NewBI = UncondBrInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
+  if (auto *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
+    NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
 
   // Insert the block into the function... right after the block TI lives in.
   Function &F = *TIBB->getParent();
@@ -205,6 +208,8 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
     }
   }
 
+  unsigned NumSplitIdenticalEdges = 1;
+
   // If there are any other edges from TIBB to DestBB, update those to go
   // through the split block, making those edges non-critical as well (and
   // reducing the number of phi entries in the DestBB if relevant).
@@ -217,6 +222,9 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
 
       // We found another edge to DestBB, go to NewBB instead.
       TI->setSuccessor(i, NewBB);
+
+      // Record the number of split identical edges to DestBB.
+      NumSplitIdenticalEdges++;
     }
   }
 
@@ -288,7 +296,11 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
 
         // Update LCSSA form in the newly created exit block.
         if (Options.PreserveLCSSA) {
-          createPHIsForSplitLoopExit(TIBB, NewBB, DestBB);
+          // If > 1 identical edges to be split, we need to introduce the same
+          // number of the incoming blocks for the new PHINode.
+          createPHIsForSplitLoopExit(
+              SmallVector<BasicBlock *, 4>(NumSplitIdenticalEdges, TIBB), NewBB,
+              DestBB);
         }
 
         if (!LoopPreds.empty()) {
@@ -323,7 +335,8 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
         return nullptr;
       IBB = PredBB;
       break;
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Switch:
       OtherPreds.push_back(PredBB);
       continue;
@@ -338,18 +351,15 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
 bool llvm::SplitIndirectBrCriticalEdges(Function &F,
                                         bool IgnoreBlocksWithoutPHI,
                                         BranchProbabilityInfo *BPI,
-                                        BlockFrequencyInfo *BFI) {
+                                        BlockFrequencyInfo *BFI,
+                                        DomTreeUpdater *DTU) {
   // Check whether the function has any indirectbrs, and collect which blocks
   // they may jump to. Since most functions don't have indirect branches,
   // this lowers the common case's overhead to O(Blocks) instead of O(Edges).
   SmallSetVector<BasicBlock *, 16> Targets;
   for (auto &BB : F) {
-    auto *IBI = dyn_cast<IndirectBrInst>(BB.getTerminator());
-    if (!IBI)
-      continue;
-
-    for (unsigned Succ = 0, E = IBI->getNumSuccessors(); Succ != E; ++Succ)
-      Targets.insert(IBI->getSuccessor(Succ));
+    if (isa<IndirectBrInst>(BB.getTerminator()))
+      Targets.insert_range(successors(&BB));
   }
 
   if (Targets.empty())
@@ -369,8 +379,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       continue;
 
     // Don't even think about ehpads/landingpads.
-    Instruction *FirstNonPHI = Target->getFirstNonPHI();
-    if (FirstNonPHI->isEHPad() || Target->isLandingPad())
+    auto FirstNonPHIIt = Target->getFirstNonPHIIt();
+    if (FirstNonPHIIt->isEHPad() || Target->isLandingPad())
       continue;
 
     // Remember edge probabilities if needed.
@@ -383,7 +393,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       BPI->eraseBlock(Target);
     }
 
-    BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHI, ".split");
+    BasicBlock *BodyBlock =
+        SplitBlock(Target, FirstNonPHIIt, DTU, nullptr, nullptr, ".split");
     if (ShouldUpdateAnalysis) {
       // Copy the BFI/BPI from Target to BodyBlock.
       BPI->setEdgeProbability(BodyBlock, EdgeProbabilities);
@@ -399,8 +410,15 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     // preds.
     ValueToValueMapTy VMap;
     BasicBlock *DirectSucc = CloneBasicBlock(Target, VMap, ".clone", &F);
+    if (!VMap.AtomMap.empty())
+      for (Instruction &I : *DirectSucc)
+        RemapSourceAtom(&I, VMap);
 
     BlockFrequency BlockFreqForDirectSucc;
+    SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
+    SmallPtrSet<BasicBlock *, 8> SeenSrcs;
+    if (DTU)
+      DTUpdates.reserve(OtherPreds.size() * 2 + 1);
     for (BasicBlock *Pred : OtherPreds) {
       // If the target is a loop to itself, then the terminator of the split
       // block (BodyBlock) needs to be updated.
@@ -409,12 +427,23 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       if (ShouldUpdateAnalysis)
         BlockFreqForDirectSucc += BFI->getBlockFreq(Src) *
             BPI->getEdgeProbability(Src, DirectSucc);
+      // A predecessor may appear multiple times in OtherPreds (e.g., a CondBr
+      // with both targets pointing to the same block). Only emit one pair of
+      // DomTree updates per unique source.
+      if (DTU && SeenSrcs.insert(Src).second) {
+        DTUpdates.push_back({DominatorTree::Insert, Src, DirectSucc});
+        DTUpdates.push_back({DominatorTree::Delete, Src, Target});
+      }
     }
     if (ShouldUpdateAnalysis) {
       BFI->setBlockFreq(DirectSucc, BlockFreqForDirectSucc);
       BlockFrequency NewBlockFreqForTarget =
           BFI->getBlockFreq(Target) - BlockFreqForDirectSucc;
       BFI->setBlockFreq(Target, NewBlockFreqForTarget);
+    }
+    if (DTU) {
+      DTUpdates.push_back({DominatorTree::Insert, DirectSucc, BodyBlock});
+      DTU->applyUpdates(DTUpdates);
     }
 
     // Ok, now fix up the PHIs. We know the two blocks only have PHIs, and that
@@ -423,7 +452,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     // (b) Leave that as the only edge in the "Indirect" PHI.
     // (c) Merge the two in the body block.
     BasicBlock::iterator Indirect = Target->begin(),
-                         End = Target->getFirstNonPHI()->getIterator();
+                         End = Target->getFirstNonPHIIt();
     BasicBlock::iterator Direct = DirectSucc->begin();
     BasicBlock::iterator MergeInsert = BodyBlock->getFirstInsertionPt();
 
@@ -433,6 +462,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     while (Indirect != End) {
       PHINode *DirPHI = cast<PHINode>(Direct);
       PHINode *IndPHI = cast<PHINode>(Indirect);
+      BasicBlock::iterator InsertPt = Indirect;
 
       // Now, clean up - the direct block shouldn't get the indirect value,
       // and vice versa.
@@ -443,9 +473,10 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       // PHI is erased.
       Indirect++;
 
-      PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", IndPHI);
+      PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", InsertPt);
       NewIndPHI->addIncoming(IndPHI->getIncomingValueForBlock(IBRPred),
                              IBRPred);
+      NewIndPHI->setDebugLoc(IndPHI->getDebugLoc());
 
       // Create a PHI in the body block, to merge the direct and indirect
       // predecessors.
@@ -453,6 +484,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       MergePHI->insertBefore(MergeInsert);
       MergePHI->addIncoming(NewIndPHI, Target);
       MergePHI->addIncoming(DirPHI, DirectSucc);
+      MergePHI->applyMergedLocation(DirPHI->getDebugLoc(),
+                                    IndPHI->getDebugLoc());
 
       IndPHI->replaceAllUsesWith(MergePHI);
       IndPHI->eraseFromParent();

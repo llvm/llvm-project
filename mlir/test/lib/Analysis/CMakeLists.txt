@@ -10,22 +10,28 @@ add_mlir_library(MLIRTestAnalysis
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
   TestSlice.cpp
+  TestTopologicalSort.cpp
 
   DataFlow/TestDeadCodeAnalysis.cpp
   DataFlow/TestDenseBackwardDataFlowAnalysis.cpp
   DataFlow/TestDenseForwardDataFlowAnalysis.cpp
+  DataFlow/TestIntegerDivisibilityAnalysis.cpp
   DataFlow/TestLivenessAnalysis.cpp
   DataFlow/TestSparseBackwardDataFlowAnalysis.cpp
+  DataFlow/TestStridedMetadataRangeAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
+  )
+mlir_target_link_libraries(MLIRTestAnalysis PUBLIC
   MLIRAffineDialect
   MLIRAnalysis
+  MLIRArithDialect
   MLIRFunctionInterfaces
   MLIRMemRefDialect
   MLIRPass
-  MLIRTestDialect
   )
 
 target_include_directories(MLIRTestAnalysis

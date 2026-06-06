@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 
 using namespace llvm;

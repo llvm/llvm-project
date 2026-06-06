@@ -235,6 +235,11 @@ std::pair<mlir::Value, mlir::Value>
 extractCharacterProcedureTuple(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value tuple, bool openBoxProc = true);
 
+fir::CharBoxValue convertCharacterKind(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       fir::CharBoxValue srcBoxChar,
+                                       int toKind);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_CHARACTER_H

@@ -95,12 +95,13 @@
   itett	ne
   cmpne	r7, #243
   addeq	r7, r1, r2
+  addne	r7, r1, r2
+  uxthne	r7, r7
   itttt	lt
   cmplt	r7, #243
   uxthlt	r7, r1
   strhlt	r2, [r7, #22]
   lsrlt	r1, r6, #3
-  uxthne	r7, r7
   strh	r2, [r7, #22]
   asrs	r1, r6, #7
   lsrs	r1, r6, #31
@@ -253,7 +254,7 @@
   ldrd	r0, r1, [r2, #-0]!
   ldrd	r0, r1, [r2, #0]!
   ldrd	r0, r1, [r2, #-0]
-  ldrd	r1, r1, [r0], #0
+  ldrd	r1, r2, [r0], #0
   ldrex	r1, [r4]
   ldrex	r8, [r4]
   ldrex	r2, [sp, #128]
@@ -648,7 +649,7 @@
   str	r10, [r11], #0
   strd	r1, r1, [r0], #0
   strd	r6, r3, [r5], #-8
-  strd	r8, r5, [r5], #-0
+  strd	r8, r5, [r6], #-0
   strd	r7, r4, [r5], #-4
   strd	r0, r1, [r2, #-0]!
   strd	r0, r1, [r2, #0]!
@@ -949,10 +950,10 @@
 # CHECK-NEXT:  1      2     1.00                        adds.w	r7, r3, r1, lsl #31
 # CHECK-NEXT:  1      2     1.00                        adds.w	r0, r3, r6, lsr #25
 # CHECK-NEXT:  1      2     1.00                        add.w	r4, r8, r1, ror #12
-# CHECK-NEXT:  1      1     0.50                  U     adr.w	r11, #-3270
-# CHECK-NEXT:  1      1     0.50                  U     adr.w	r11, #-826
+# CHECK-NEXT:  1      1     0.50                        adr.w	r11, #-3270
+# CHECK-NEXT:  1      1     0.50                        adr.w	r11, #-826
 # CHECK-NEXT:  1      1     0.50                        subw	r1, pc, #0
-# CHECK-NEXT:  1      1     0.50                  U     adr.w	r0, #1024
+# CHECK-NEXT:  1      1     0.50                        adr.w	r0, #1024
 # CHECK-NEXT:  1      1     0.50                        and	r2, r5, #1044480
 # CHECK-NEXT:  1      1     0.50                        ands	r3, r12, #15
 # CHECK-NEXT:  1      1     0.50                        and	r1, r1, #255
@@ -973,7 +974,7 @@
 # CHECK-NEXT:  1      1     0.50                        asr.w	r3, r4, r2
 # CHECK-NEXT:  1      1     0.50                        asr.w	r1, r1, r2
 # CHECK-NEXT:  1      2     1.00                        asrs.w	r3, r4, r8
-# CHECK-NEXT:  1      1     1.00                  U     bmi.w	#-183396
+# CHECK-NEXT:  1      1     1.00                        bmi.w	#-183396
 # CHECK-NEXT:  1      1     1.00                        b.w	#208962
 # CHECK-NEXT:  1      1     1.00                        b.w	#-16777216
 # CHECK-NEXT:  1      2     1.00                        bfc	r5, #3, #17
@@ -1001,15 +1002,22 @@
 # CHECK-NEXT:  2      3     1.00                  U     bxj	r5
 # CHECK-NEXT:  0      0     0.00                  U     it	ne
 # CHECK-NEXT:  2      3     1.00                  U     bxjne	r7
-# CHECK-NEXT:  1      1     1.00                  U     cbnz	r7, #6
-# CHECK-NEXT:  1      1     1.00                  U     cbnz	r7, #12
-# CHECK-NEXT:  1      1     1.00                  U     cbz	r4, #64
+# CHECK-NEXT:  1      1     1.00                        cbnz	r7, #6
+# CHECK-NEXT:  1      1     1.00                        cbnz	r7, #12
+# CHECK-NEXT:  1      1     1.00                        cbz	r4, #64
 # CHECK-NEXT:  1      1     1.00           *            strh	r6, [r5, #14]
 # CHECK-NEXT:  1      2     1.00                        asrs	r7, r2, #4
 # CHECK-NEXT:  1      1     1.00           *            strh	r6, [r7, #14]
 # CHECK-NEXT:  0      0     0.00                  U     itett	ne
 # CHECK-NEXT:  1      1     0.50                        cmpne	r7, #243
 # CHECK-NEXT:  1      1     0.50                        addeq	r7, r1, r2
+# CHECK-NEXT:  1      1     0.50                        addne	r7, r1, r2
+# CHECK-NEXT:  1      1     0.50                        uxthne	r7, r7
+# CHECK-NEXT:  0      0     0.00                  U     itttt	lt
+# CHECK-NEXT:  1      1     0.50                        cmplt	r7, #243
+# CHECK-NEXT:  1      1     0.50                        uxthlt	r7, r1
+# CHECK-NEXT:  1      1     1.00           *            strhlt	r2, [r7, #22]
+# CHECK-NEXT:  1      1     0.50                        lsrlt	r1, r6, #3
 # CHECK-NEXT:  1      1     1.00           *            strh	r2, [r7, #22]
 # CHECK-NEXT:  1      2     1.00                        asrs	r1, r6, #7
 # CHECK-NEXT:  1      2     1.00                        lsrs	r1, r6, #31
@@ -1022,7 +1030,7 @@
 # CHECK-NEXT:  1      1     0.50                        adds	r7, r5, #4
 # CHECK-NEXT:  1      1     1.00           *            str	r6, [sp, #940]
 # CHECK-NEXT:  1      2     1.00                        asrs	r7, r5, #4
-# CHECK-NEXT:  1      1     0.50                  U     adr	r6, #940
+# CHECK-NEXT:  1      1     0.50                        adr	r6, #940
 # CHECK-NEXT:  1      2     1.00                        asrs	r7, r5, #4
 # CHECK-NEXT:  1      1     0.50                        cmp	r7, #182
 # CHECK-NEXT:  1      1     0.50                        cmp.w	r5, #65280
@@ -1162,6 +1170,7 @@
 # CHECK-NEXT:  4      4     2.00    *                   ldrd	r0, r1, [r2, #-0]!
 # CHECK-NEXT:  4      4     2.00    *                   ldrd	r0, r1, [r2, #0]!
 # CHECK-NEXT:  2      4     2.00    *                   ldrd	r0, r1, [r2, #-0]
+# CHECK-NEXT:  4      4     2.00    *                   ldrd	r1, r2, [r0], #0
 # CHECK-NEXT:  0      0     0.00    *      *      U     ldrex	r1, [r4]
 # CHECK-NEXT:  0      0     0.00    *      *      U     ldrex	r8, [r4]
 # CHECK-NEXT:  0      0     0.00    *      *      U     ldrex	r2, [sp, #128]
@@ -1441,8 +1450,8 @@
 # CHECK-NEXT:  1      1     0.50                        rsb.w	r2, r5, #1044480
 # CHECK-NEXT:  1      1     0.50                        rsbs.w	r3, r12, #15
 # CHECK-NEXT:  1      1     0.50                        rsb.w	r1, r1, #255
-# CHECK-NEXT:  1      1     0.50                  U     rsb	r4, r4, r8
-# CHECK-NEXT:  1      1     0.50                  U     rsb	r4, r9, r8
+# CHECK-NEXT:  1      1     0.50                        rsb	r4, r4, r8
+# CHECK-NEXT:  1      1     0.50                        rsb	r4, r9, r8
 # CHECK-NEXT:  1      2     1.00                        rsb	r1, r4, r8, asr #3
 # CHECK-NEXT:  1      2     1.00                        rsbs	r2, r1, r7, lsl #1
 # CHECK-NEXT:  2      2     1.00    *      *      U     sadd16	r3, r4, r8
@@ -1547,15 +1556,16 @@
 # CHECK-NEXT:  0      0     0.00                  U     ite	lo
 # CHECK-NEXT:  1      3     1.00                        smmlalo	r1, r2, r3, r4
 # CHECK-NEXT:  1      3     1.00                        smmlarhs	r4, r3, r2, r1
-# CHECK-NEXT:  1      3     1.00                  U     smmls	r1, r2, r3, r4
+# CHECK-NEXT:  1      3     1.00                        smmls	r1, r2, r3, r4
 # CHECK-NEXT:  1      3     1.00                        smmlsr	r4, r3, r2, r1
 # CHECK-NEXT:  0      0     0.00                  U     ite	lo
-# CHECK-NEXT:  1      3     1.00                  U     smmlslo	r1, r2, r3, r4
+# CHECK-NEXT:  1      3     1.00                        smmlslo	r1, r2, r3, r4
 # CHECK-NEXT:  1      3     1.00                        smmlsrhs	r4, r3, r2, r1
 # CHECK-NEXT:  1      2     1.00                        ssat	r9, #30, r0, asr #2
 # CHECK-NEXT:  2      1     1.00           *            str	r10, [r11], #0
 # CHECK-NEXT:  2      1     1.00           *            strd	r1, r1, [r0], #0
 # CHECK-NEXT:  2      1     1.00           *            strd	r6, r3, [r5], #-8
+# CHECK-NEXT:  2      1     1.00           *            strd	r8, r5, [r6], #-0
 # CHECK-NEXT:  2      1     1.00           *            strd	r7, r4, [r5], #-4
 # CHECK-NEXT:  2      1     1.00           *            strd	r0, r1, [r2, #-0]!
 # CHECK-NEXT:  2      1     1.00           *            strd	r0, r1, [r2, #0]!
@@ -1584,14 +1594,14 @@
 # CHECK-NEXT:  1      1     1.00           *            strh.w	r8, [r8, r2, lsl #2]
 # CHECK-NEXT:  1      1     1.00           *            strh.w	r7, [sp, r2, lsl #1]
 # CHECK-NEXT:  1      1     1.00           *            strh.w	r7, [sp, r2]
-# CHECK-NEXT:  2      1     1.00                  U     strht	r1, [r2]
-# CHECK-NEXT:  2      1     1.00                  U     strht	r1, [r8]
-# CHECK-NEXT:  2      1     1.00                  U     strht	r1, [r8, #3]
-# CHECK-NEXT:  2      1     1.00                  U     strht	r1, [r8, #255]
-# CHECK-NEXT:  1      1     1.00                  U     strt	r1, [r2]
-# CHECK-NEXT:  1      1     1.00                  U     strt	r1, [r8]
-# CHECK-NEXT:  1      1     1.00                  U     strt	r1, [r8, #3]
-# CHECK-NEXT:  1      1     1.00                  U     strt	r1, [r8, #255]
+# CHECK-NEXT:  2      1     1.00           *            strht	r1, [r2]
+# CHECK-NEXT:  2      1     1.00           *            strht	r1, [r8]
+# CHECK-NEXT:  2      1     1.00           *            strht	r1, [r8, #3]
+# CHECK-NEXT:  2      1     1.00           *            strht	r1, [r8, #255]
+# CHECK-NEXT:  1      1     1.00           *            strt	r1, [r2]
+# CHECK-NEXT:  1      1     1.00           *            strt	r1, [r8]
+# CHECK-NEXT:  1      1     1.00           *            strt	r1, [r8, #3]
+# CHECK-NEXT:  1      1     1.00           *            strt	r1, [r8, #255]
 # CHECK-NEXT:  0      0     0.00                  U     itet	eq
 # CHECK-NEXT:  1      1     0.50                        subeq	r1, r2, #4
 # CHECK-NEXT:  1      1     0.50                        subwne	r5, r3, #1023
@@ -1827,7 +1837,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT: 12.00  164.00 164.00 221.00 313.00 44.00   -      -
+# CHECK-NEXT: 12.00  168.00 168.00 223.00 313.00 46.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -1924,6 +1934,13 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     itett	ne
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     cmpne	r7, #243
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     addeq	r7, r1, r2
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     addne	r7, r1, r2
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxthne	r7, r7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     itttt	lt
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     cmplt	r7, #243
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxthlt	r7, r1
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strhlt	r2, [r7, #22]
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     lsrlt	r1, r6, #3
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strh	r2, [r7, #22]
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     asrs	r1, r6, #7
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     lsrs	r1, r6, #31
@@ -2076,6 +2093,7 @@
 # CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldrd	r0, r1, [r2, #-0]!
 # CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldrd	r0, r1, [r2, #0]!
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldrd	r0, r1, [r2, #-0]
+# CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldrd	r1, r2, [r0], #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     ldrex	r1, [r4]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     ldrex	r8, [r4]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     ldrex	r2, [sp, #128]
@@ -2470,6 +2488,7 @@
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     str	r10, [r11], #0
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r1, r1, [r0], #0
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r6, r3, [r5], #-8
+# CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r8, r5, [r6], #-0
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r7, r4, [r5], #-4
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r0, r1, [r2, #-0]!
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r0, r1, [r2, #0]!

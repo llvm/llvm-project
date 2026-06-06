@@ -9,12 +9,12 @@
 #include "Cocoa.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 using namespace lldb;
@@ -40,23 +40,25 @@ public:
 
   ~NSIndexPathSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return m_impl.GetNumIndexes(); }
-
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
-    return m_impl.GetIndexAtIndex(idx, m_uint_star_type);
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    return m_impl.GetNumIndexes();
   }
 
-  bool Update() override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
+    return m_impl.GetIndexAtIndex(idx, m_uint_star_type, m_backend);
+  }
+
+  lldb::ChildCacheState Update() override {
     m_impl.Clear();
 
     auto type_system = m_backend.GetCompilerType().GetTypeSystem();
     if (!type_system)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     auto ast = ScratchTypeSystemClang::GetForTarget(
         *m_backend.GetExecutionContextRef().GetTargetSP());
     if (!ast)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     m_uint_star_type = ast->GetPointerSizedIntType(false);
 
@@ -65,18 +67,18 @@ public:
 
     ProcessSP process_sp = m_backend.GetProcessSP();
     if (!process_sp)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
 
     if (!runtime)
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(
         runtime->GetClassDescriptor(m_backend));
 
     if (!descriptor.get() || !descriptor->IsValid())
-      return false;
+      return lldb::ChildCacheState::eRefetch;
 
     uint64_t info_bits(0), value_bits(0), payload(0);
 
@@ -119,18 +121,10 @@ public:
         }
       }
     }
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return m_impl.m_mode != Mode::Invalid; }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    const char *item_name = name.GetCString();
-    uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildren())
-      return UINT32_MAX;
-    return idx;
-  }
 
   lldb::ValueObjectSP GetSyntheticValue() override { return nullptr; }
 
@@ -152,14 +146,15 @@ protected:
     }
 
     lldb::ValueObjectSP GetIndexAtIndex(size_t idx,
-                                        const CompilerType &desired_type) {
+                                        const CompilerType &desired_type,
+                                        ValueObject &parent) {
       if (idx >= GetNumIndexes())
         return nullptr;
       switch (m_mode) {
       default:
         return nullptr;
       case Mode::Inlined:
-        return m_inlined.GetIndexAtIndex(idx, desired_type);
+        return m_inlined.GetIndexAtIndex(idx, desired_type, parent);
       case Mode::Outsourced:
         return m_outsourced.GetIndexAtIndex(idx);
       }
@@ -176,7 +171,8 @@ protected:
       size_t GetNumIndexes() { return m_count; }
 
       lldb::ValueObjectSP GetIndexAtIndex(size_t idx,
-                                          const CompilerType &desired_type) {
+                                          const CompilerType &desired_type,
+                                          ValueObject &parent) {
         if (!m_process)
           return nullptr;
 
@@ -184,22 +180,18 @@ protected:
         if (!value.second)
           return nullptr;
 
-        Value v;
+        Scalar scalar;
         if (m_ptr_size == 8) {
-          Scalar scalar((unsigned long long)value.first);
-          v = Value(scalar);
+          scalar = Scalar((unsigned long long)value.first);
         } else {
-          Scalar scalar((unsigned int)value.first);
-          v = Value(scalar);
+          scalar = Scalar((unsigned int)value.first);
         }
-
-        v.SetCompilerType(desired_type);
 
         StreamString idx_name;
         idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
 
-        return ValueObjectConstResult::Create(
-            m_process, v, ConstString(idx_name.GetString()));
+        return parent.CreateChildValueObjectFromScalar(
+            m_process, scalar, desired_type, idx_name.GetString());
       }
 
       void Clear() {

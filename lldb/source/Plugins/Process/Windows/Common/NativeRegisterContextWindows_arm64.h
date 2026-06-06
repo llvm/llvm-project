@@ -10,15 +10,21 @@
 #ifndef liblldb_NativeRegisterContextWindows_arm64_h_
 #define liblldb_NativeRegisterContextWindows_arm64_h_
 
+#include "NativeRegisterContextWindows.h"
+
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 
-#include "NativeRegisterContextWindows.h"
+#include "lldb/Host/windows/windows.h"
 
 namespace lldb_private {
 
 class NativeThreadWindows;
 
-class NativeRegisterContextWindows_arm64 : public NativeRegisterContextWindows {
+class NativeRegisterContextWindows_arm64
+    : public NativeRegisterContextWindows,
+      public NativeRegisterContextDBReg_arm64 {
 public:
   NativeRegisterContextWindows_arm64(const ArchSpec &target_arch,
                                      NativeThreadProtocol &native_thread);
@@ -37,27 +43,7 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  Status IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
-
-  Status GetWatchpointHitIndex(uint32_t &wp_index,
-                               lldb::addr_t trap_addr) override;
-
-  Status IsWatchpointVacant(uint32_t wp_index, bool &is_vacant) override;
-
-  bool ClearHardwareWatchpoint(uint32_t wp_index) override;
-
-  Status ClearAllHardwareWatchpoints() override;
-
-  Status SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
-                                        uint32_t watch_flags,
-                                        uint32_t wp_index);
-
-  uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
-                                 uint32_t watch_flags) override;
-
-  lldb::addr_t GetWatchpointAddress(uint32_t wp_index) override;
-
-  uint32_t NumSupportedHardwareWatchpoints() override;
+  void InvalidateAllRegisters() override;
 
 protected:
   Status GPRRead(const uint32_t reg, RegisterValue &reg_value);
@@ -69,9 +55,18 @@ protected:
   Status FPRWrite(const uint32_t reg, const RegisterValue &reg_value);
 
 private:
+  PCONTEXT m_context;
+  std::shared_ptr<DataBufferHeap> m_context_buffer;
+
   bool IsGPR(uint32_t reg_index) const;
 
   bool IsFPR(uint32_t reg_index) const;
+
+  llvm::Error ReadHardwareDebugInfo() override;
+
+  llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
+
+  Status CacheAllRegisterValues();
 };
 
 } // namespace lldb_private

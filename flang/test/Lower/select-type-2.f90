@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
 module select_type_2
   type p1
     integer :: a
@@ -30,20 +30,21 @@ contains
 
 ! CHECK-LABEL: func.func @_QMselect_type_2Pselect_type1(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_2Tp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
-! CHECK:      %[[TDESC_P3_ADDR:.*]] = fir.address_of(@_QMselect_type_2E.dt.p3) : !fir.ref<!fir.type<{{.*}}>>
-! CHECK:      %[[TDESC_P3_CONV:.*]] = fir.convert %[[TDESC_P3_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
-! CHECK:      %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_2Tp1{a:i32,b:i32}>>) -> !fir.box<none>
-! CHECK:      %[[CLASS_IS_CMP:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P3_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
+! CHECK:      %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope {{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMselect_type_2Fselect_type1Ea"}
+! CHECK:      %[[TDESC_P3_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_2Tp3
+! CHECK:      %[[TDESC_P3_CONV:.*]] = fir.convert %[[TDESC_P3_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
+! CHECK:      %[[BOX_NONE:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.type<_QMselect_type_2Tp1{a:i32,b:i32}>>) -> !fir.box<none>
+! CHECK:      %[[CLASS_IS_CMP:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P3_CONV]]) {{.*}}: (!fir.box<none>, !fir.ref<none>) -> i1
 ! CHECK:      cf.cond_br %[[CLASS_IS_CMP]], ^[[CLASS_IS_P3_BLK:.*]], ^[[NOT_CLASS_IS_P3_BLK:.*]]
 ! CHECK:    ^bb[[NOT_CLASS_IS_P1:[0-9]]]:
 ! CHECK:      cf.br ^bb[[DEFAULT_BLK:[0-9]]]
 ! CHECK:    ^bb[[CLASS_IS_P1:[0-9]]]:
 ! CHECK:      cf.br ^bb[[END_SELECT_BLK:[0-9]]]
 ! CHECK:    ^[[NOT_CLASS_IS_P3_BLK]]:
-! CHECK:      %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_2E.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CHECK:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
-! CHECK:      %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_2Tp1{a:i32,b:i32}>>) -> !fir.box<none>
-! CHECK:      %[[CLASS_IS_CMP:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P1_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
+! CHECK:      %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_2Tp1
+! CHECK:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
+! CHECK:      %[[BOX_NONE:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.type<_QMselect_type_2Tp1{a:i32,b:i32}>>) -> !fir.box<none>
+! CHECK:      %[[CLASS_IS_CMP:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P1_CONV]]) {{.*}}: (!fir.box<none>, !fir.ref<none>) -> i1
 ! CHECK:      cf.cond_br %[[CLASS_IS_CMP]], ^bb[[CLASS_IS_P1]], ^bb[[NOT_CLASS_IS_P1]]
 ! CHECK:    ^[[CLASS_IS_P3_BLK]]:
 ! CHECK:      cf.br ^bb[[END_SELECT_BLK]]

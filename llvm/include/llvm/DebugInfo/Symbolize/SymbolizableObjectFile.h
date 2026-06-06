@@ -43,6 +43,8 @@ public:
   DIGlobal symbolizeData(object::SectionedAddress ModuleOffset) const override;
   std::vector<DILocal>
   symbolizeFrame(object::SectionedAddress ModuleOffset) const override;
+  std::vector<object::SectionedAddress>
+  findSymbol(StringRef Symbol, uint64_t Offset) const override;
 
   // Return true if this is a 32-bit x86 PE COFF module.
   bool isWin32Module() const override;
@@ -71,6 +73,13 @@ private:
   const object::ObjectFile *Module;
   std::unique_ptr<DIContext> DebugInfoContext;
   bool UntagAddresses;
+
+  /// WebAssembly linked files use file offsets for code symbol addresses, but
+  /// DWARF uses section-relative offsets. This helper method converts a module
+  /// file offset into its corresponding section-relative offset, but only if
+  /// the address falls within a Wasm code section.
+  object::SectionedAddress
+  convertDwarfOffsetForWasm(object::SectionedAddress ModuleOffset) const;
 
   struct SymbolDesc {
     uint64_t Addr;

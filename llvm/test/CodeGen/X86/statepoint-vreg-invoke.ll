@@ -183,13 +183,18 @@ define void @test_duplicate_ir_values() gc "statepoint-example" personality ptr 
   ; CHECK-NEXT:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rax :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   dead $edi = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead $rsi = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead $edx = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead $ecx = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead $r8d = IMPLICIT_DEF
   ; CHECK-NEXT:   STATEPOINT 1, 16, 5, undef renamable $rax, undef $edi, undef $rsi, undef $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s64) on %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.normal_continue:
-  ; CHECK-NEXT:   successors: {{$}}
+  ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp

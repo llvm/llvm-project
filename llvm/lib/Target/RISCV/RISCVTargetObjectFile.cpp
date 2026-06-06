@@ -10,8 +10,11 @@
 #include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
@@ -24,12 +27,33 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
                                           const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
-  PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
+  PLTPCRelativeSpecifier = ELF::R_RISCV_PLT32;
+  SupportIndirectSymViaGOTPCRel = true;
 
   SmallDataSection = getContext().getELFSection(
       ".sdata", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
   SmallBSSSection = getContext().getELFSection(".sbss", ELF::SHT_NOBITS,
                                                ELF::SHF_WRITE | ELF::SHF_ALLOC);
+  SmallRODataSection =
+      getContext().getELFSection(".srodata", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+  SmallROData4Section = getContext().getELFSection(
+      ".srodata.cst4", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
+  SmallROData8Section = getContext().getELFSection(
+      ".srodata.cst8", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
+  SmallROData16Section = getContext().getELFSection(
+      ".srodata.cst16", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
+  SmallROData32Section = getContext().getELFSection(
+      ".srodata.cst32", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+}
+
+const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+  auto &Ctx = getContext();
+  const MCExpr *Res = MCSymbolRefExpr::create(Sym, Ctx);
+  Res = MCBinaryExpr::createAdd(
+      Res, MCConstantExpr::create(Offset + MV.getConstant(), Ctx), Ctx);
+  return MCSpecifierExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
 }
 
 // A address must be loaded from a small section if its size is less than the
@@ -76,16 +100,40 @@ bool RISCVELFTargetObjectFile::isGlobalInSmallSection(
     return false;
 
   return isInSmallSection(
-      GVA->getParent()->getDataLayout().getTypeAllocSize(Ty));
+      GVA->getDataLayout().getTypeAllocSize(Ty));
 }
 
 MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // Handle Small Section classification here.
-  if (Kind.isBSS() && isGlobalInSmallSection(GO, TM))
-    return SmallBSSSection;
-  if (Kind.isData() && isGlobalInSmallSection(GO, TM))
-    return SmallDataSection;
+  if (isGlobalInSmallSection(GO, TM)) {
+    // Emit to an unique sdata/sbss section when -fdata-section is set.
+    // However, if a symbol has an explicit sdata/sbss section, place it in that
+    // section.
+    bool EmitUniquedSection = TM.getDataSections() && !GO->hasSection();
+
+    if (Kind.isBSS()) {
+      if (EmitUniquedSection) {
+        SmallString<128> Name(".sbss.");
+        Name.append(GO->getName());
+        return getContext().getELFSection(Name.str(), ELF::SHT_NOBITS,
+                                          ELF::SHF_WRITE | ELF::SHF_ALLOC);
+      }
+
+      return SmallBSSSection;
+    }
+
+    if (Kind.isData()) {
+      if (EmitUniquedSection) {
+        SmallString<128> Name(".sdata.");
+        Name.append(GO->getName());
+        return getContext().getELFSection(Name.str(), ELF::SHT_PROGBITS,
+                                          ELF::SHF_WRITE | ELF::SHF_ALLOC);
+      }
+
+      return SmallDataSection;
+    }
+  }
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
@@ -112,12 +160,43 @@ bool RISCVELFTargetObjectFile::isConstantInSmallSection(
 }
 
 MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
-  if (isConstantInSmallSection(DL, C))
-    return SmallDataSection;
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+
+  // The large code model has to put constant pools close to the program, so we
+  // put them in the .text section. Large code model doesn't support PIC, so
+  // there should be no dynamic relocations that would require `.data.rel.ro`
+  // (which could be too far away anyway).
+  if (TM->getCodeModel() == CodeModel::Large) {
+    if (F)
+      return SectionForGlobal(F, SectionKind::getText(), *TM);
+    else
+      return TextSection;
+  }
+
+  if (C && isConstantInSmallSection(DL, C)) {
+    if (Kind.isMergeableConst4())
+      return SmallROData4Section;
+    if (Kind.isMergeableConst8())
+      return SmallROData8Section;
+    if (Kind.isMergeableConst16())
+      return SmallROData16Section;
+    if (Kind.isMergeableConst32())
+      return SmallROData32Section;
+    // LLVM only generate up to .rodata.cst32, and use .rodata section if more
+    // than 32 bytes, so just use .srodata here.
+    return SmallRODataSection;
+  }
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
-                                                            Alignment);
+                                                            Alignment, F);
+}
+
+void RISCVMachOTargetObjectFile::getNameWithPrefix(
+    SmallVectorImpl<char> &OutName, const GlobalValue *GV,
+    const TargetMachine &TM) const {
+  // RISC-V does not use section-relative relocations so any global symbol must
+  // be accessed via at least a linker-private symbol.
+  getMangler().getNameWithPrefix(OutName, GV, /*CannotUsePrivateLabel=*/true);
 }

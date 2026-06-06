@@ -7,15 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
-#include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
-#include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include <optional>
 
 #define DEBUG_TYPE "orc"
@@ -72,7 +70,7 @@ getMachOObjectFileSymbolInfo(ExecutionSession &ES,
       return SymFlags.takeError();
 
     // Strip the 'exported' flag from MachO linker-private symbols.
-    if (Name->startswith("l"))
+    if (Name->starts_with("l"))
       *SymFlags &= ~JITSymbolFlags::Exported;
 
     I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
@@ -133,7 +131,7 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
     if (Sym.getBinding() == ELF::STB_GNU_UNIQUE)
       *SymFlags |= JITSymbolFlags::Weak;
 
-    I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
+    I.SymbolFlags[ES.intern(std::move(*Name))] = std::move(*SymFlags);
   }
 
   SymbolStringPtr InitSymbol;
@@ -232,6 +230,52 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
 }
 
 Expected<MaterializationUnit::Interface>
+getXCOFFObjectFileSymbolInfo(ExecutionSession &ES,
+                             const object::ObjectFile &Obj) {
+
+  MaterializationUnit::Interface I;
+
+  for (auto &Sym : Obj.symbols()) {
+    Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
+    if (!SymFlagsOrErr)
+      return SymFlagsOrErr.takeError();
+    uint32_t Flags = *SymFlagsOrErr;
+
+    // Skip undefined, non global and ST_File
+    if (Flags & object::SymbolRef::SF_Undefined)
+      continue;
+    if (!(Flags & object::SymbolRef::SF_Global))
+      continue;
+
+    auto SymbolType = Sym.getType();
+    if (!SymbolType)
+      return SymbolType.takeError();
+
+    if (*SymbolType == object::SymbolRef::ST_File)
+      continue;
+
+    auto Name = Sym.getName();
+    if (!Name)
+      return Name.takeError();
+    auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+    if (!SymFlags)
+      return SymFlags.takeError();
+
+    // TODO: Revisit symbol visibility
+    // On AIX, symbols with C_EXT and C_WEAKEXT symbols have no specified
+    // visibility are considered to have Default scope for LinkGraph. When the
+    // object is not a DSO, symbol visibility is not specified. In the absence
+    // of an Export List, its reasonable to minimic roughly the behaviour of
+    // -bexpall or CreateExportList.
+    *SymFlags |= JITSymbolFlags::Exported;
+
+    I.SymbolFlags[ES.intern(std::move(*Name))] = std::move(*SymFlags);
+  }
+  // TODO: Find all initialization symbols for c++ static initializers
+  return I;
+}
+
+Expected<MaterializationUnit::Interface>
 getGenericObjectFileSymbolInfo(ExecutionSession &ES,
                                const object::ObjectFile &Obj) {
   MaterializationUnit::Interface I;
@@ -284,6 +328,8 @@ getObjectFileInterface(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
     return getELFObjectFileSymbolInfo(ES, *ELFObj);
   else if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj->get()))
     return getCOFFObjectFileSymbolInfo(ES, *COFFObj);
+  else if (auto *XCOFFObj = dyn_cast<object::XCOFFObjectFile>(Obj->get()))
+    return getXCOFFObjectFileSymbolInfo(ES, *XCOFFObj);
 
   return getGenericObjectFileSymbolInfo(ES, **Obj);
 }

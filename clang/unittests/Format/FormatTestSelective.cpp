@@ -17,9 +17,9 @@ namespace clang {
 namespace format {
 namespace {
 
-class FormatTestSelective : public ::testing::Test {
+class FormatTestSelective : public testing::Test {
 protected:
-  std::string format(llvm::StringRef Code, unsigned Offset, unsigned Length) {
+  std::string format(StringRef Code, unsigned Offset, unsigned Length) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
@@ -41,6 +41,11 @@ TEST_F(FormatTestSelective, RemovesTrailingWhitespaceOfFormattedLine) {
   EXPECT_EQ("int a;", format("int a;         ", 0, 0));
   EXPECT_EQ("int a;\n", format("int a;  \n   \n   \n ", 0, 0));
   EXPECT_EQ("int a;\nint b;    ", format("int a;  \nint b;    ", 0, 0));
+
+  EXPECT_EQ("void f() {}", format("void f() {\n"
+                                  "  \n"
+                                  "}",
+                                  11, 0));
 }
 
 TEST_F(FormatTestSelective, FormatsCorrectRegionForLeadingWhitespace) {
@@ -185,13 +190,13 @@ TEST_F(FormatTestSelective, ContinueReindenting) {
             "int c;\n"
             "int d;\n"
             "int e;\n"
-            "  int f;\n",
+            "  int f;",
             format("int   i;\n"
                    "  int b;\n"
                    " int   c;\n"
                    "  int d;\n"
                    "int e;\n"
-                   "  int f;\n",
+                   "  int f;",
                    11, 0));
 }
 
@@ -201,13 +206,13 @@ TEST_F(FormatTestSelective, ReindentClosingBrace) {
             "  int a;\n"
             "  int b;\n"
             "}\n"
-            " int c;\n",
+            " int c;",
             format("int   i;\n"
                    "  int f(){\n"
                    "int a;\n"
                    "int b;\n"
                    "  }\n"
-                   " int c;\n",
+                   " int c;",
                    11, 0));
   EXPECT_EQ("void f() {\n"
             "  if (foo) {\n"
@@ -216,7 +221,7 @@ TEST_F(FormatTestSelective, ReindentClosingBrace) {
             "    c();\n"
             "  }\n"
             "int d;\n"
-            "}\n",
+            "}",
             format("void f() {\n"
                    "  if (foo) {\n"
                    "b();\n"
@@ -224,7 +229,7 @@ TEST_F(FormatTestSelective, ReindentClosingBrace) {
                    "c();\n"
                    "}\n"
                    "int d;\n"
-                   "}\n",
+                   "}",
                    13, 0));
   EXPECT_EQ("int i = []() {\n"
             "  class C {\n"
@@ -232,14 +237,14 @@ TEST_F(FormatTestSelective, ReindentClosingBrace) {
             "    int b;\n"
             "  };\n"
             "  int c;\n"
-            "};\n",
+            "};",
             format("int i = []() {\n"
                    "  class C{\n"
                    "int a;\n"
                    "int b;\n"
                    "};\n"
                    "int c;\n"
-                   "  };\n",
+                   "  };",
                    17, 0));
 }
 
@@ -388,6 +393,17 @@ TEST_F(FormatTestSelective, WrongIndent) {
                    "  int j;\n" // Format here.
                    "}",
                    24, 0));
+  EXPECT_EQ("namespace {\n"
+            "class C {\n"
+            "  int i;\n"
+            "};\n"
+            "} // namespace",
+            format("namespace {\n" // Format here.
+                   "  class C {\n"
+                   "    int i;\n"
+                   "  };\n"
+                   "}",
+                   1, 0));
 }
 
 TEST_F(FormatTestSelective, AlwaysFormatsEntireMacroDefinitions) {
@@ -656,15 +672,14 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
   // need to be adapted.
   Style = getLLVMStyle();
 
-  const StringRef Code{"      class Foo {\n"
-                       "            void test() {\n"
-                       "    #ifdef 1\n"
-                       "                #define some\n" // format this line
-                       "         #endif\n"
-                       "    }};"};
+  constexpr StringRef Code("      class Foo {\n"
+                           "            void test() {\n"
+                           "    #ifdef 1\n"
+                           "                #define some\n" // format this line
+                           "         #endif\n"
+                           "    }};");
 
-  EXPECT_EQ(Style.IndentPPDirectives,
-            FormatStyle::PPDirectiveIndentStyle::PPDIS_None);
+  EXPECT_EQ(Style.IndentPPDirectives, FormatStyle::PPDIS_None);
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
@@ -673,8 +688,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "            }};", // Ditto: Bug?
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_BeforeHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
@@ -683,8 +697,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "    }};",
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_AfterHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"

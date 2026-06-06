@@ -57,9 +57,12 @@ function(add_ocaml_library name)
                   "-ccopt" "-Wl,-rpath,\\$CAMLORIGIN/../.."
                   ${ocaml_pkgs})
 
+  set(ocaml_dep_inputs)
   foreach( ocaml_dep ${ARG_OCAMLDEP} )
     get_target_property(dep_ocaml_flags "ocaml_${ocaml_dep}" OCAML_FLAGS)
     list(APPEND ocaml_flags ${dep_ocaml_flags})
+    get_target_property(dep_ocaml_outputs "ocaml_${ocaml_dep}" OCAML_OUTPUTS)
+    list(APPEND ocaml_dep_inputs ${dep_ocaml_outputs})
   endforeach()
 
   if( NOT BUILD_SHARED_LIBS )
@@ -157,7 +160,7 @@ function(add_ocaml_library name)
     OUTPUT ${ocaml_outputs}
     COMMAND "${OCAMLFIND}" "ocamlmklib" "-ocamlcflags" "-bin-annot"
       "-o" "${name}" ${ocaml_flags} ${ocaml_params}
-    DEPENDS ${ocaml_inputs} ${c_outputs}
+    DEPENDS ${ocaml_inputs} ${ocaml_dep_inputs} ${c_outputs}
     COMMENT "Building OCaml library ${name}"
     VERBATIM)
 
@@ -168,16 +171,20 @@ function(add_ocaml_library name)
             "-I" "${LLVM_LIBRARY_DIR}/ocaml/llvm/"
             "-dump" "${bin}/${name}.odoc"
             ${ocaml_pkgs} ${ocaml_inputs}
-    DEPENDS ${ocaml_inputs} ${ocaml_outputs}
+    DEPENDS ${ocaml_inputs} ${ocaml_dep_inputs} ${ocaml_outputs}
     COMMENT "Building OCaml documentation for ${name}"
     VERBATIM)
 
   add_custom_target("ocaml_${name}" ALL DEPENDS ${ocaml_outputs} "${bin}/${name}.odoc")
+  get_subproject_title(subproject_title)
+  set_target_properties("ocaml_${name}" PROPERTIES FOLDER "${subproject_title}/Bindings/OCaml")
 
   set_target_properties("ocaml_${name}" PROPERTIES
     OCAML_FLAGS "-I;${bin}")
   set_target_properties("ocaml_${name}" PROPERTIES
     OCAML_ODOC "${bin}/${name}.odoc")
+  set_target_properties("ocaml_${name}" PROPERTIES
+    OCAML_OUTPUTS "${ocaml_outputs}")
 
   foreach( ocaml_dep ${ARG_OCAMLDEP} )
     add_dependencies("ocaml_${name}" "ocaml_${ocaml_dep}")
@@ -228,5 +235,5 @@ endfunction()
 add_custom_target(ocaml_make_directory
   COMMAND "${CMAKE_COMMAND}" "-E" "make_directory" "${LLVM_LIBRARY_DIR}/ocaml/llvm")
 add_custom_target("ocaml_all")
-set_target_properties(ocaml_all PROPERTIES FOLDER "Misc")
-set_target_properties(ocaml_make_directory PROPERTIES FOLDER "Misc")
+set_target_properties(ocaml_all PROPERTIES FOLDER "LLVM/Bindings/OCaml")
+set_target_properties(ocaml_make_directory PROPERTIES FOLDER "LLVM/Bindings/OCaml")

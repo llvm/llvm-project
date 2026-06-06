@@ -1,4 +1,4 @@
-//===-- STLAlgorithmModeling.cpp -----------------------------------*- C++ -*--//
+//===-- STLAlgorithmModeling.cpp ----------------------------------*- C++ -*--//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,37 +25,58 @@ using namespace iterator;
 namespace {
 
 class STLAlgorithmModeling : public Checker<eval::Call> {
-  bool evalFind(CheckerContext &C, const CallExpr *CE) const;
+  bool evalFind(CheckerContext &C, const CallEvent &Call) const;
 
-  void Find(CheckerContext &C, const CallExpr *CE, unsigned paramNum) const;
+  void Find(CheckerContext &C, const CallEvent &Call, unsigned paramNum) const;
 
   using FnCheck = bool (STLAlgorithmModeling::*)(CheckerContext &,
-                                                const CallExpr *) const;
+                                                 const CallEvent &Call) const;
 
   const CallDescriptionMap<FnCheck> Callbacks = {
-    {{{"std", "find"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_if"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_if"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_if_not"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_if_not"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_first_of"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_first_of"}, 5}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_first_of"}, 6}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_end"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_end"}, 5}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "find_end"}, 6}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "lower_bound"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "lower_bound"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "upper_bound"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "upper_bound"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search"}, 3}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search"}, 5}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search"}, 6}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search_n"}, 4}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search_n"}, 5}, &STLAlgorithmModeling::evalFind},
-    {{{"std", "search_n"}, 6}, &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find"}, 3}, &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find"}, 4}, &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_if"}, 3},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_if"}, 4},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_if_not"}, 3},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_if_not"}, 4},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_first_of"}, 4},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_first_of"}, 5},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_first_of"}, 6},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_end"}, 4},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_end"}, 5},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "find_end"}, 6},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "lower_bound"}, 3},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "lower_bound"}, 4},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "upper_bound"}, 3},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "upper_bound"}, 4},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "search"}, 3},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "search"}, 4},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "search"}, 5},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "search"}, 6},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "search_n"}, 4},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "search_n"}, 5},
+       &STLAlgorithmModeling::evalFind},
+      {{CDM::SimpleFunc, {"std", "search_n"}, 6},
+       &STLAlgorithmModeling::evalFind},
   };
 
 public:
@@ -76,11 +97,12 @@ bool STLAlgorithmModeling::evalCall(const CallEvent &Call,
   if (!Handler)
     return false;
 
-  return (this->**Handler)(C, CE);
+  return (this->**Handler)(C, Call);
 }
 
 bool STLAlgorithmModeling::evalFind(CheckerContext &C,
-                                    const CallExpr *CE) const {
+                                    const CallEvent &Call) const {
+  const auto *CE = dyn_cast<CallExpr>(Call.getOriginExpr());
   // std::find()-like functions either take their primary range in the first
   // two parameters, or if the first parameter is "execution policy" then in
   // the second and third. This means that the second parameter must always be
@@ -91,30 +113,32 @@ bool STLAlgorithmModeling::evalFind(CheckerContext &C,
   // If no "execution policy" parameter is used then the first argument is the
   // beginning of the range.
   if (isIteratorType(CE->getArg(0)->getType())) {
-    Find(C, CE, 0);
+    Find(C, Call, 0);
     return true;
   }
 
   // If "execution policy" parameter is used then the second argument is the
   // beginning of the range.
   if (isIteratorType(CE->getArg(2)->getType())) {
-    Find(C, CE, 1);
+    Find(C, Call, 1);
     return true;
   }
 
   return false;
 }
 
-void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
+void STLAlgorithmModeling::Find(CheckerContext &C, const CallEvent &Call,
                                 unsigned paramNum) const {
+  const auto *CE = dyn_cast<CallExpr>(Call.getOriginExpr());
+  const auto &Elem = Call.getCFGElementRef();
   auto State = C.getState();
   auto &SVB = C.getSValBuilder();
-  const auto *LCtx = C.getLocationContext();
+  const auto *SF = C.getStackFrame();
 
-  SVal RetVal = SVB.conjureSymbolVal(nullptr, CE, LCtx, C.blockCount());
-  SVal Param = State->getSVal(CE->getArg(paramNum), LCtx);
+  SVal RetVal = SVB.conjureSymbolVal(nullptr, Elem, SF, C.blockCount());
+  SVal Param = State->getSVal(CE->getArg(paramNum), SF);
 
-  auto StateFound = State->BindExpr(CE, LCtx, RetVal);
+  auto StateFound = State->BindExpr(CE, SF, RetVal);
 
   // If we have an iterator position for the range-begin argument then we can
   // assume that in case of successful search the position of the found element
@@ -123,7 +147,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
   const auto *Pos = getIteratorPosition(State, Param);
   if (Pos) {
     StateFound = createIteratorPosition(StateFound, RetVal, Pos->getContainer(),
-                                        CE, LCtx, C.blockCount());
+                                        Elem, SF, C.blockCount());
     const auto *NewPos = getIteratorPosition(StateFound, RetVal);
     assert(NewPos && "Failed to create new iterator position.");
 
@@ -136,7 +160,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
     StateFound = StateFound->assume(GreaterOrEqual.castAs<DefinedSVal>(), true);
   }
 
-  Param = State->getSVal(CE->getArg(paramNum + 1), LCtx);
+  Param = State->getSVal(CE->getArg(paramNum + 1), SF);
 
   // If we have an iterator position for the range-end argument then we can
   // assume that in case of successful search the position of the found element
@@ -145,7 +169,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
   Pos = getIteratorPosition(State, Param);
   if (Pos) {
     StateFound = createIteratorPosition(StateFound, RetVal, Pos->getContainer(),
-                                        CE, LCtx, C.blockCount());
+                                        Elem, SF, C.blockCount());
     const auto *NewPos = getIteratorPosition(StateFound, RetVal);
     assert(NewPos && "Failed to create new iterator position.");
 
@@ -161,7 +185,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
   C.addTransition(StateFound);
 
   if (AggressiveStdFindModeling) {
-    auto StateNotFound = State->BindExpr(CE, LCtx, Param);
+    auto StateNotFound = State->BindExpr(CE, SF, Param);
     C.addTransition(StateNotFound);
   }
 }
@@ -178,4 +202,3 @@ void ento::registerSTLAlgorithmModeling(CheckerManager &Mgr) {
 bool ento::shouldRegisterSTLAlgorithmModeling(const CheckerManager &mgr) {
   return true;
 }
-

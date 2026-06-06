@@ -8,9 +8,9 @@ define i64 @t0(ptr %p) {
 ; CHECK-NEXT:    paddq %mm0, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
-  %t = load x86_mmx, ptr %p
-  %u = tail call x86_mmx @llvm.x86.mmx.padd.q(x86_mmx %t, x86_mmx %t)
-  %s = bitcast x86_mmx %u to i64
+  %t = load <1 x i64>, ptr %p
+  %u = tail call <1 x i64> @llvm.x86.mmx.padd.q(<1 x i64> %t, <1 x i64> %t)
+  %s = bitcast <1 x i64> %u to i64
   ret i64 %s
 }
 
@@ -21,9 +21,9 @@ define i64 @t1(ptr %p) {
 ; CHECK-NEXT:    paddd %mm0, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
-  %t = load x86_mmx, ptr %p
-  %u = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %t, x86_mmx %t)
-  %s = bitcast x86_mmx %u to i64
+  %t = load <1 x i64>, ptr %p
+  %u = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %t, <1 x i64> %t)
+  %s = bitcast <1 x i64> %u to i64
   ret i64 %s
 }
 
@@ -34,9 +34,9 @@ define i64 @t2(ptr %p) {
 ; CHECK-NEXT:    paddw %mm0, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
-  %t = load x86_mmx, ptr %p
-  %u = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %t, x86_mmx %t)
-  %s = bitcast x86_mmx %u to i64
+  %t = load <1 x i64>, ptr %p
+  %u = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %t, <1 x i64> %t)
+  %s = bitcast <1 x i64> %u to i64
   ret i64 %s
 }
 
@@ -47,29 +47,27 @@ define i64 @t3(ptr %p) {
 ; CHECK-NEXT:    paddb %mm0, %mm0
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
-  %t = load x86_mmx, ptr %p
-  %u = tail call x86_mmx @llvm.x86.mmx.padd.b(x86_mmx %t, x86_mmx %t)
-  %s = bitcast x86_mmx %u to i64
+  %t = load <1 x i64>, ptr %p
+  %u = tail call <1 x i64> @llvm.x86.mmx.padd.b(<1 x i64> %t, <1 x i64> %t)
+  %s = bitcast <1 x i64> %u to i64
   ret i64 %s
 }
 
-@R = external global x86_mmx
+@R = external global <1 x i64>
 
 define void @t4(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-LABEL: t4:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movq %rdi, %mm0
-; CHECK-NEXT:    movq %rsi, %mm1
+; CHECK-NEXT:    movq %rsi, %mm0
+; CHECK-NEXT:    movq %rdi, %mm1
 ; CHECK-NEXT:    paddusw %mm0, %mm1
 ; CHECK-NEXT:    movq _R@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq %mm1, (%rax)
 ; CHECK-NEXT:    emms
 ; CHECK-NEXT:    retq
 entry:
-  %tmp2 = bitcast <1 x i64> %A to x86_mmx
-  %tmp3 = bitcast <1 x i64> %B to x86_mmx
-  %tmp7 = tail call x86_mmx @llvm.x86.mmx.paddus.w(x86_mmx %tmp2, x86_mmx %tmp3)
-  store x86_mmx %tmp7, ptr @R
+  %tmp7 = tail call <1 x i64> @llvm.x86.mmx.paddus.w(<1 x i64> %A, <1 x i64> %B)
+  store <1 x i64> %tmp7, ptr @R
   tail call void @llvm.x86.mmx.emms()
   ret void
 }
@@ -88,7 +86,7 @@ define i64 @t5(i32 %a, i32 %b) nounwind readnone {
   ret i64 %conv
 }
 
-declare x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx, i32)
+declare <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64>, i32)
 
 define <1 x i64> @t6(i64 %t) {
 ; CHECK-LABEL: t6:
@@ -98,16 +96,14 @@ define <1 x i64> @t6(i64 %t) {
 ; CHECK-NEXT:    movq %mm0, %rax
 ; CHECK-NEXT:    retq
   %t1 = insertelement <1 x i64> undef, i64 %t, i32 0
-  %t0 = bitcast <1 x i64> %t1 to x86_mmx
-  %t2 = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx %t0, i32 48)
-  %t3 = bitcast x86_mmx %t2 to <1 x i64>
-  ret <1 x i64> %t3
+  %t2 = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> %t1, i32 48)
+  ret <1 x i64> %t2
 }
 
-declare x86_mmx @llvm.x86.mmx.paddus.w(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.padd.b(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.padd.w(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.padd.q(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.mmx.paddus.w(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.padd.b(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.padd.q(<1 x i64>, <1 x i64>)
 declare void @llvm.x86.mmx.emms()
 

@@ -1,0 +1,18 @@
+//===-- Implementation of ufromfpxf function ------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "src/math/ufromfpxf.h"
+#include "src/__support/math/ufromfpxf.h"
+
+namespace LIBC_NAMESPACE_DECL {
+
+LLVM_LIBC_FUNCTION(float, ufromfpxf, (float x, int rnd, unsigned int width)) {
+  return math::ufromfpxf(x, rnd, width);
+}
+
+} // namespace LIBC_NAMESPACE_DECL

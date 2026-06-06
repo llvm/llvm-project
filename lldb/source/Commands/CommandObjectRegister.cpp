@@ -50,19 +50,7 @@ public:
                          {{CommandArgumentType::eArgTypeFormat,
                            "Specify a format to be used for display. If this "
                            "is set, register fields will not be displayed."}}) {
-    CommandArgumentEntry arg;
-    CommandArgumentData register_arg;
-
-    // Define the first (and only) variant of this arg.
-    register_arg.arg_type = eArgTypeRegisterName;
-    register_arg.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(register_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeRegisterName, eArgRepeatStar);
 
     // Add the "--format"
     m_option_group.Append(&m_format_options,
@@ -80,9 +68,7 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope())
       return;
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -109,8 +95,8 @@ public:
         addr_t reg_addr = reg_value.GetAsUInt64(LLDB_INVALID_ADDRESS);
         if (reg_addr != LLDB_INVALID_ADDRESS) {
           Address so_reg_addr;
-          if (exe_ctx.GetTargetRef().GetSectionLoadList().ResolveLoadAddress(
-                  reg_addr, so_reg_addr)) {
+          if (exe_ctx.GetTargetRef().ResolveLoadAddress(reg_addr,
+                                                        so_reg_addr)) {
             strm.PutCString("  ");
             so_reg_addr.Dump(&strm, exe_ctx.GetBestExecutionContextScope(),
                              Address::DumpStyleResolvedDescription);
@@ -161,7 +147,7 @@ public:
   }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
 
@@ -185,8 +171,8 @@ protected:
               break;
             }
           } else {
-            result.AppendErrorWithFormat(
-                "invalid register set index: %" PRIu64 "\n", (uint64_t)set_idx);
+            result.AppendErrorWithFormat("invalid register set index: %" PRIu64,
+                                         (uint64_t)set_idx);
             break;
           }
         }
@@ -228,13 +214,14 @@ protected:
                               print_flags))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {
-            result.AppendErrorWithFormat("Invalid register name '%s'.\n",
+            result.AppendErrorWithFormat("Invalid register name '%s'",
                                          arg_str.str().c_str());
           }
         }
       }
     }
-    return result.Succeeded();
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   class CommandOptions : public OptionGroup {
@@ -348,7 +335,7 @@ public:
   }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     DataExtractor reg_data;
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
 
@@ -378,12 +365,12 @@ protected:
             // has been written.
             m_exe_ctx.GetThreadRef().Flush();
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
-            return true;
+            return;
           }
         }
         if (error.AsCString()) {
           result.AppendErrorWithFormat(
-              "Failed to write register '%s' with value '%s': %s\n",
+              "Failed to write register '%s' with value '%s': %s",
               reg_name.str().c_str(), value_str.str().c_str(),
               error.AsCString());
         } else {
@@ -392,11 +379,10 @@ protected:
               reg_name.str().c_str(), value_str.str().c_str());
         }
       } else {
-        result.AppendErrorWithFormat("Register not found for '%s'.\n",
+        result.AppendErrorWithFormat("Register not found for '%s'",
                                      reg_name.str().c_str());
       }
     }
-    return result.Succeeded();
   }
 };
 
@@ -426,13 +412,7 @@ Fields      (*)  A table of the names and bit positions of the values contained
 Fields marked with (*) may not always be present. Some information may be
 different for the same register when connected to different debug servers.)");
 
-    CommandArgumentData register_arg;
-    register_arg.arg_type = eArgTypeRegisterName;
-    register_arg.arg_repetition = eArgRepeatPlain;
-
-    CommandArgumentEntry arg1;
-    arg1.push_back(register_arg);
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeRegisterName);
   }
 
   ~CommandObjectRegisterInfo() override = default;
@@ -442,15 +422,14 @@ different for the same register when connected to different debug servers.)");
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
       return;
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() != 1) {
       result.AppendError("register info takes exactly 1 argument: <reg-name>");
-      return result.Succeeded();
+      return;
     }
 
     llvm::StringRef reg_name = command[0].ref();
@@ -462,10 +441,8 @@ protected:
           GetCommandInterpreter().GetDebugger().GetTerminalWidth());
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else
-      result.AppendErrorWithFormat("No register found with name '%s'.\n",
+      result.AppendErrorWithFormat("No register found with name '%s'",
                                    reg_name.str().c_str());
-
-    return result.Succeeded();
   }
 };
 

@@ -45,7 +45,7 @@ void g(C &c) {
   // CHECK: call {{.*}} @_Z6formatIJEEiiPKcDpT_(i32 {{.*}}, ptr noundef @[[STR_2]])
 
   // CHECK: call {{.*}} @_Z1fv()
-  // CHECK: %[[VAL_n:.*]] = getelementptr inbounds %[[VAL_struct_A:.*]], ptr %[[VAL_0:.*]], i32 0, i32 0
+  // CHECK: %[[VAL_n:.*]] = getelementptr inbounds nuw %[[VAL_struct_A:.*]], ptr %[[VAL_0:.*]], i32 0, i32 0
   // CHECK: %[[VAL_1:.*]] = load i32, ptr %[[VAL_n]],
   // CHECK: call {{.*}} @_Z6formatIJPKcS1_S1_iEEiiS1_DpT_(i32 {{.*}}, ptr noundef @[[STR_6]], ptr noundef @[[STR_7]], ptr noundef @[[STR_8]], ptr noundef @[[STR_9]], i32 noundef %[[VAL_1]])
 
@@ -66,7 +66,7 @@ void g(C &c) {
   // CHECK: call {{.*}} @_Z6formatIJEEiiPKcDpT_(i32 {{.*}}, ptr noundef @[[STR_2]])
 
   // CHECK: call {{.*}} @_Z1fv()
-  // CHECK: %[[VAL_n17:.*]] = getelementptr inbounds %[[VAL_struct_B:.*]], ptr %[[VAL_cast_result]], i32 0, i32 0
+  // CHECK: %[[VAL_n17:.*]] = getelementptr inbounds nuw %[[VAL_struct_B:.*]], ptr %[[VAL_cast_result]], i32 0, i32 0
   // CHECK: %[[VAL_3:.*]] = load i32, ptr %[[VAL_n17]],
   // CHECK: call {{.*}} @_Z6formatIJPKcS1_S1_iEEiiS1_DpT_(i32 {{.*}}, ptr noundef @[[STR_6]], ptr noundef @[[STR_7]], ptr noundef @[[STR_8]], ptr noundef @[[STR_9]], i32 noundef %[[VAL_3]])
 
@@ -76,12 +76,12 @@ void g(C &c) {
   // CHECK: call {{.*}} @_Z1fv()
   // CHECK: call {{.*}} @_Z6formatIJPKcS1_S1_EEiiS1_DpT_(i32 {{.*}}, ptr noundef @[[STR_12]], ptr noundef @[[STR_4]], ptr noundef @[[STR_5]], ptr noundef @[[STR_13]])
 
-  // CHECK: %[[VAL_a:.*]] = getelementptr inbounds %[[VAL_struct_C:.*]], ptr %[[VAL_0]], i32 0, i32 2
+  // CHECK: %[[VAL_a:.*]] = getelementptr inbounds nuw %[[VAL_struct_C:.*]], ptr %[[VAL_0]], i32 0, i32 2
   // CHECK: call {{.*}} @_Z1fv()
   // CHECK: call {{.*}} @_Z6formatIJEEiiPKcDpT_(i32 {{.*}}, ptr noundef @[[STR_2]])
 
   // CHECK: call {{.*}} @_Z1fv()
-  // CHECK: %[[VAL_n26:.*]] = getelementptr inbounds %[[VAL_struct_A]], ptr %[[VAL_a]], i32 0, i32 0
+  // CHECK: %[[VAL_n26:.*]] = getelementptr inbounds nuw %[[VAL_struct_A]], ptr %[[VAL_a]], i32 0, i32 0
   // CHECK: %[[VAL_4:.*]] = load i32, ptr %[[VAL_n26]],
   // CHECK: call {{.*}} @_Z6formatIJPKcS1_S1_iEEiiS1_DpT_(i32 {{.*}}, ptr noundef @[[STR_6]], ptr noundef @[[STR_7]], ptr noundef @[[STR_8]], ptr noundef @[[STR_9]], i32 noundef %[[VAL_4]])
 
@@ -89,16 +89,16 @@ void g(C &c) {
   // CHECK: call {{.*}} @_Z6formatIJPKcEEiiS1_DpT_(i32 {{.*}}, ptr noundef @[[STR_10]], ptr noundef @[[STR_4]])
 
   // CHECK: call {{.*}} @_Z1fv()
-  // CHECK: %[[VAL_x:.*]] = getelementptr inbounds %[[VAL_struct_C]], ptr %[[VAL_0]], i32 0, i32 3
+  // CHECK: %[[VAL_x:.*]] = getelementptr inbounds nuw %[[VAL_struct_C]], ptr %[[VAL_0]], i32 0, i32 3
   // CHECK: call {{.*}} @_Z6formatIJPKcS1_S1_P1XEEiiS1_DpT_(i32 {{.*}}, ptr noundef @[[STR_14]], ptr noundef @[[STR_4]], ptr noundef @[[STR_15]], ptr noundef @[[STR_16]], ptr noundef %[[VAL_x]])
 
   // CHECK: call {{.*}} @_Z1fv()
-  // CHECK: %[[VAL_f:.*]] = getelementptr inbounds %[[VAL_struct_C]], ptr %[[VAL_0]], i32 0, i32 4
+  // CHECK: %[[VAL_f:.*]] = getelementptr inbounds nuw %[[VAL_struct_C]], ptr %[[VAL_0]], i32 0, i32 4
   // CHECK: %[[VAL_5:.*]] = load i32, ptr %[[VAL_f]],
   // CHECK: call {{.*}} @_Z6formatIJPKcS1_S1_iEEiiS1_DpT_(i32 {{.*}}, ptr noundef @[[STR_6]], ptr noundef @[[STR_4]], ptr noundef @[[STR_8]], ptr noundef @[[STR_17]], i32 noundef %[[VAL_5]])
 
   // CHECK: call {{.*}} @_Z1fv()
-  // CHECK: %[[VAL_g:.*]] = getelementptr inbounds %[[VAL_struct_C]], ptr %[[VAL_0]], i32 0, i32 5
+  // CHECK: %[[VAL_g:.*]] = getelementptr inbounds nuw %[[VAL_struct_C]], ptr %[[VAL_0]], i32 0, i32 5
   // CHECK: %[[VAL_6:.*]] = load i32, ptr %[[VAL_g]],
   // CHECK: call {{.*}} @_Z6formatIJPKcS1_S1_iEEiiS1_DpT_(i32 {{.*}}, ptr noundef @[[STR_6]], ptr noundef @[[STR_4]], ptr noundef @[[STR_8]], ptr noundef @[[STR_18]], i32 noundef %[[VAL_6]])
 
@@ -116,7 +116,7 @@ void h(X &x) {
   // CHECK: %[[VAL_0:.*]] = load ptr, ptr %[[VAL_x_addr]],
   // CHECK: call {{.*}} @_Z6formatIJEEiiPKcDpT_(i32 noundef 0, ptr noundef @[[STR_2]])
 
-  // CHECK: %[[VAL_n:.*]] = getelementptr inbounds %[[VAL_class_X:.*]], ptr %[[VAL_0]], i32 0, i32 0
+  // CHECK: %[[VAL_n:.*]] = getelementptr inbounds nuw %[[VAL_class_X:.*]], ptr %[[VAL_0]], i32 0, i32 0
   // CHECK: %[[VAL_1:.*]] = load i32, ptr %[[VAL_n]],
   // CHECK: call {{.*}} @_Z6formatIJPKcS1_S1_iEEiiS1_DpT_(i32 noundef 0, ptr noundef @[[STR_6]], ptr noundef @[[STR_4]], ptr noundef @[[STR_8]], ptr noundef @[[STR_9]], i32 noundef %[[VAL_1]])
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseSet.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <type_traits>
 
@@ -32,9 +33,56 @@ TEST(DenseSetTest, DoubleEntrySetTest) {
   EXPECT_EQ(0u, set.count(2));
 }
 
+TEST(DenseSetTest, CtorRange) {
+  constexpr unsigned Args[] = {3, 1, 2};
+  llvm::DenseSet<unsigned> set(llvm::from_range, Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(1, 2, 3));
+}
+
+TEST(DenseSetTest, CtorRangeImplicitConversion) {
+  constexpr char Args[] = {3, 1, 2};
+  llvm::DenseSet<unsigned> set(llvm::from_range, Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(1, 2, 3));
+}
+
+TEST(SmallDenseSetTest, CtorRange) {
+  constexpr unsigned Args[] = {9, 7, 8};
+  llvm::SmallDenseSet<unsigned> set(llvm::from_range, Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(7, 8, 9));
+}
+
+TEST(DenseSetTest, InsertRange) {
+  llvm::DenseSet<unsigned> set;
+  constexpr unsigned Args[] = {3, 1, 2};
+  set.insert_range(Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(1, 2, 3));
+}
+
+TEST(SmallDenseSetTest, InsertRange) {
+  llvm::SmallDenseSet<unsigned> set;
+  constexpr unsigned Args[] = {9, 7, 8};
+  set.insert_range(Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(7, 8, 9));
+}
+
+TEST(DenseSetTest, RemoveIf) {
+  llvm::DenseSet<unsigned> set;
+  for (unsigned I = 0; I < 100; ++I)
+    set.insert(I);
+
+  EXPECT_TRUE(set.remove_if([](unsigned V) { return V % 2 == 0; }));
+  EXPECT_EQ(set.size(), 50u);
+  for (unsigned I = 0; I < 100; ++I)
+    EXPECT_EQ(set.contains(I), I % 2 == 1);
+
+  EXPECT_FALSE(set.remove_if([](unsigned) { return false; }));
+  EXPECT_EQ(set.size(), 50u);
+  EXPECT_TRUE(set.remove_if([](unsigned) { return true; }));
+  EXPECT_TRUE(set.empty());
+}
+
 struct TestDenseSetInfo {
   static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
   static unsigned getHashValue(const char* Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -63,13 +111,13 @@ private:
 };
 
 // Register these types for testing.
-typedef ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
-                         const DenseSet<unsigned, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 1, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
-                         const SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 64, TestDenseSetInfo>>
-    DenseSetTestTypes;
+using DenseSetTestTypes =
+    ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
+                     const DenseSet<unsigned, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 1, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
+                     const SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 64, TestDenseSetInfo>>;
 TYPED_TEST_SUITE(DenseSetTest, DenseSetTestTypes, );
 
 TYPED_TEST(DenseSetTest, Constructor) {
@@ -182,9 +230,6 @@ namespace llvm {
 // Specialization required to insert a CountCopyAndMove into a DenseSet.
 template <> struct DenseMapInfo<CountCopyAndMove> {
   static inline CountCopyAndMove getEmptyKey() { return CountCopyAndMove(-1); };
-  static inline CountCopyAndMove getTombstoneKey() {
-    return CountCopyAndMove(-2);
-  };
   static unsigned getHashValue(const CountCopyAndMove &Val) {
     return Val.Value;
   }
@@ -232,4 +277,15 @@ TEST(DenseSetCustomTest, ConstTest) {
   EXPECT_TRUE(Map.contains(B));
   EXPECT_TRUE(Map.contains(C));
 }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseSetCustomTest, EraseInvalidatesIterators) {
+  DenseSet<int> Set;
+  Set.insert(1);
+  Set.insert(2);
+  auto It = Set.find(1);
+  Set.erase(2);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+#endif
 }

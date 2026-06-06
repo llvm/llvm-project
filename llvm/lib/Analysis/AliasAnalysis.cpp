@@ -29,7 +29,6 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -47,7 +46,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -60,11 +58,10 @@ STATISTIC(NumNoAlias,   "Number of NoAlias results");
 STATISTIC(NumMayAlias,  "Number of MayAlias results");
 STATISTIC(NumMustAlias, "Number of MustAlias results");
 
-namespace llvm {
 /// Allow disabling BasicAA from the AA results. This is particularly useful
 /// when testing to isolate a single AA implementation.
-cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden, cl::init(false));
-} // namespace llvm
+static cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden,
+                                    cl::init(false));
 
 #ifndef NDEBUG
 /// Print a trace of alias analysis queries and their results.
@@ -73,10 +70,12 @@ static cl::opt<bool> EnableAATrace("aa-trace", cl::Hidden, cl::init(false));
 static const bool EnableAATrace = false;
 #endif
 
+AAResults::AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
+
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {}
 
-AAResults::~AAResults() {}
+AAResults::~AAResults() = default;
 
 bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv) {
@@ -111,6 +110,9 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI) {
+  assert(LocA.Ptr->getType()->isPointerTy() &&
+         LocB.Ptr->getType()->isPointerTy() &&
+         "Can only call alias() on pointers");
   AliasResult Result = AliasResult::MayAlias;
 
   if (EnableAATrace) {
@@ -143,6 +145,18 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
     else
       ++NumMayAlias;
   }
+  return Result;
+}
+
+AliasResult AAResults::aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult Result = AliasResult::MayAlias;
+
+  for (const auto &AA : AAs) {
+    Result = AA->aliasErrno(Loc, M);
+    if (Result != AliasResult::MayAlias)
+      break;
+  }
+
   return Result;
 }
 
@@ -221,44 +235,35 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
       return ModRefInfo::NoModRef;
   }
 
-  // Try to refine the mod-ref info further using other API entry points to the
-  // aggregate set of AA results.
-
-  // We can completely ignore inaccessible memory here, because MemoryLocations
-  // can only reference accessible memory.
-  auto ME = getMemoryEffects(Call, AAQI)
-                .getWithoutLoc(IRMemLocation::InaccessibleMem);
-  if (ME.doesNotAccessMemory())
-    return ModRefInfo::NoModRef;
-
-  ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
-  if ((ArgMR | OtherMR) != OtherMR) {
-    // Refine the modref info for argument memory. We only bother to do this
-    // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
-    // on the final result.
-    ModRefInfo AllArgsMask = ModRefInfo::NoModRef;
-    for (const auto &I : llvm::enumerate(Call->args())) {
-      const Value *Arg = I.value();
-      if (!Arg->getType()->isPointerTy())
-        continue;
-      unsigned ArgIdx = I.index();
-      MemoryLocation ArgLoc = MemoryLocation::getForArgument(Call, ArgIdx, TLI);
-      AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI, Call);
-      if (ArgAlias != AliasResult::NoAlias)
-        AllArgsMask |= getArgModRefInfo(Call, ArgIdx);
-    }
-    ArgMR &= AllArgsMask;
-  }
-
-  Result &= ArgMR | OtherMR;
-
   // Apply the ModRef mask. This ensures that if Loc is a constant memory
   // location, we take into account the fact that the call definitely could not
   // modify the memory location.
   if (!isNoModRef(Result))
     Result &= getModRefInfoMask(Loc);
 
+  return Result;
+}
+
+ModRefInfo
+getModRefInfoInaccessibleAndTargetMemLoc(const MemoryEffects CallUse,
+                                         const MemoryEffects CallDef) {
+
+  ModRefInfo Result = ModRefInfo::NoModRef;
+  auto addModRefInfoForLoc = [&](IRMemLocation L) {
+    ModRefInfo UseMR = CallUse.getModRef(L);
+    if (UseMR == ModRefInfo::NoModRef)
+      return;
+    ModRefInfo DefMR = CallDef.getModRef(L);
+    if (DefMR == ModRefInfo::NoModRef)
+      return;
+    if (DefMR == ModRefInfo::Ref && DefMR == UseMR)
+      return;
+    Result |= UseMR;
+  };
+
+  addModRefInfoForLoc(IRMemLocation::InaccessibleMem);
+  for (auto Loc : MemoryEffects::targetMemLocations())
+    addModRefInfoForLoc(Loc);
   return Result;
 }
 
@@ -366,7 +371,33 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
     return R;
   }
 
+  // If only Inaccessible and Target Memory Location have set ModRefInfo
+  // then check the relation between the same locations.
+  if (Call1B.onlyAccessesInaccessibleOrTargetMem() &&
+      Call2B.onlyAccessesInaccessibleOrTargetMem())
+    return getModRefInfoInaccessibleAndTargetMemLoc(Call1B, Call2B);
+
   return Result;
+}
+
+ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2) {
+  SimpleAAQueryInfo AAQIP(*this);
+  return getModRefInfo(I1, I2, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2, AAQueryInfo &AAQI) {
+  // Early-exit if either instruction does not read or write memory.
+  if (!I1->mayReadOrWriteMemory() || !I2->mayReadOrWriteMemory())
+    return ModRefInfo::NoModRef;
+
+  if (const auto *Call2 = dyn_cast<CallBase>(I2))
+    return getModRefInfo(I1, Call2, AAQI);
+
+  // FIXME: We can have a more precise result.
+  ModRefInfo MR = getModRefInfo(I1, MemoryLocation::getOrNone(I2), AAQI);
+  return isModOrRefSet(MR) ? ModRefInfo::ModRef : ModRefInfo::NoModRef;
 }
 
 MemoryEffects AAResults::getMemoryEffects(const CallBase *Call,
@@ -423,60 +454,56 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
   return OS;
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
-  switch (MR) {
-  case ModRefInfo::NoModRef:
-    OS << "NoModRef";
-    break;
-  case ModRefInfo::Ref:
-    OS << "Ref";
-    break;
-  case ModRefInfo::Mod:
-    OS << "Mod";
-    break;
-  case ModRefInfo::ModRef:
-    OS << "ModRef";
-    break;
-  }
-  return OS;
-}
-
-raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
-  for (IRMemLocation Loc : MemoryEffects::locations()) {
-    switch (Loc) {
-    case IRMemLocation::ArgMem:
-      OS << "ArgMem: ";
-      break;
-    case IRMemLocation::InaccessibleMem:
-      OS << "InaccessibleMem: ";
-      break;
-    case IRMemLocation::Other:
-      OS << "Other: ";
-      break;
-    }
-    OS << ME.getModRef(Loc) << ", ";
-  }
-  return OS;
-}
-
 //===----------------------------------------------------------------------===//
 // Helper method implementation
 //===----------------------------------------------------------------------===//
 
+ModRefInfo llvm::getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
+                                AAQueryInfo &AAQI) {
+  if (!Loc.Ptr)
+    return ModRefInfo::ModRef;
+
+  // If the location is *never* captured, it cannot be affected by
+  // synchronizing operations. However, we cannot ignore locations that are
+  // only captured after the operation, as the synchronization may still have
+  // an effect if the object is only captured *later*. As such, set I to null
+  // and ReturnCaptures to true here.
+  const Value *Obj = getUnderlyingObject(Loc.Ptr);
+  CaptureComponents CC = AAQI.CA->getCapturesBefore(
+      Obj, /*I=*/nullptr, /*OrAt=*/true, /*ReturnCaptures=*/true);
+  if (capturesNothing(CC))
+    return ModRefInfo::NoModRef;
+
+  // If only read provenance was captured, other threads may only read the
+  // object.
+  ModRefInfo MR =
+      capturesReadProvenanceOnly(CC) ? ModRefInfo::Ref : ModRefInfo::ModRef;
+
+  // If Loc is a constant memory location, the synchronization operation
+  // definitely could not modify it.
+  return MR & AA->getModRefInfoMask(Loc);
+}
+
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Be conservative in the face of atomic.
-  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
-    return ModRefInfo::ModRef;
-
   // If the load address doesn't alias the given address, it doesn't read
   // or write the specified memory.
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(L), Loc, AAQI, L);
-    if (AR == AliasResult::NoAlias)
+    if (AR == AliasResult::NoAlias) {
+      // Synchronization effects may affect locations that do not alias.
+      // FIXME: Should be isStrongerThanMonotonic().
+      if (isStrongerThanUnordered(L->getOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
+    }
   }
+
+  // Preserve the ordering requirement.
+  if (isStrongerThanUnordered(L->getOrdering()))
+    return ModRefInfo::ModRef;
+
   // Otherwise, a load just reads.
   return ModRefInfo::Ref;
 }
@@ -484,16 +511,17 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Be conservative in the face of atomic.
-  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
-    return ModRefInfo::ModRef;
-
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(S), Loc, AAQI, S);
     // If the store address cannot alias the pointer in question, then the
     // specified memory cannot be modified by the store.
-    if (AR == AliasResult::NoAlias)
+    if (AR == AliasResult::NoAlias) {
+      // Synchronization effects may affect locations that do not alias.
+      // FIXME: Should be isStrongerThanMonotonic().
+      if (isStrongerThanUnordered(S->getOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
+    }
 
     // Examine the ModRef mask. If Mod isn't present, then return NoModRef.
     // This ensures that if Loc is a constant memory location, we take into
@@ -503,18 +531,30 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
       return ModRefInfo::NoModRef;
   }
 
+  // Preserve the ordering requirement.
+  if (isStrongerThanUnordered(S->getOrdering()))
+    return ModRefInfo::ModRef;
+
   // Otherwise, a store just writes.
   return ModRefInfo::Mod;
 }
 
-ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
+ModRefInfo AAResults::getModRefInfo(const FenceInst *F,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // All we know about a fence instruction is what we get from the ModRef
-  // mask: if Loc is a constant memory location, the fence definitely could
-  // not modify it.
-  if (Loc.Ptr)
-    return getModRefInfoMask(Loc);
+  if (Loc.Ptr) {
+    ModRefInfo Result = ModRefInfo::ModRef;
+
+    for (const auto &AA : AAs) {
+      Result &= AA->getModRefInfo(F, Loc, AAQI);
+
+      if (isNoModRef(Result))
+        return ModRefInfo::NoModRef;
+    }
+
+    return Result & getSyncEffects(this, Loc, AAQI);
+  }
+
   return ModRefInfo::ModRef;
 }
 
@@ -566,16 +606,16 @@ ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
 ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Acquire/Release cmpxchg has properties that matter for arbitrary addresses.
-  if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
-    return ModRefInfo::ModRef;
-
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(CX), Loc, AAQI, CX);
     // If the cmpxchg address does not alias the location, it does not access
     // it.
-    if (AR == AliasResult::NoAlias)
+    if (AR == AliasResult::NoAlias) {
+      // Synchronization effects may affect locations that do not alias.
+      if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
+    }
   }
 
   return ModRefInfo::ModRef;
@@ -584,16 +624,16 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Acquire/Release atomicrmw has properties that matter for arbitrary addresses.
-  if (isStrongerThanMonotonic(RMW->getOrdering()))
-    return ModRefInfo::ModRef;
-
   if (Loc.Ptr) {
     AliasResult AR = alias(MemoryLocation::get(RMW), Loc, AAQI, RMW);
     // If the atomicrmw address does not alias the location, it does not access
     // it.
-    if (AR == AliasResult::NoAlias)
+    if (AR == AliasResult::NoAlias) {
+      // Synchronization effects may affect locations that do not alias.
+      if (isStrongerThanMonotonic(RMW->getOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
+    }
   }
 
   return ModRefInfo::ModRef;
@@ -659,9 +699,9 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!Call || Call == Object)
     return ModRefInfo::ModRef;
 
-  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
-                                 /* StoreCaptures */ true, I, DT,
-                                 /* include Object */ true))
+  if (capturesAnything(PointerMayBeCapturedBefore(
+          Object, /* ReturnCaptures */ true, I, DT,
+          /* include Object */ true, CaptureComponents::Provenance)))
     return ModRefInfo::ModRef;
 
   unsigned ArgNo = 0;
@@ -672,9 +712,14 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // Only look at the no-capture or byval pointer arguments.  If this
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
-    if (!(*CI)->getType()->isPointerTy() ||
-        (!Call->doesNotCapture(ArgNo) && ArgNo < Call->arg_size() &&
-         !Call->isByValArgument(ArgNo)))
+    if (!(*CI)->getType()->isPointerTy())
+      continue;
+
+    // Make sure we still check captures(ret: address, provenance) and
+    // captures(address) arguments, as these wouldn't be treated as a capture
+    // at the call-site.
+    CaptureInfo Captures = Call->getCaptureInfo(ArgNo);
+    if (capturesAnyProvenance(Captures.getOtherComponents()))
       continue;
 
     AliasResult AR =
@@ -732,14 +777,10 @@ AAResults::Concept::~Concept() = default;
 // Provide a definition for the static object used to identify passes.
 AnalysisKey AAManager::Key;
 
-ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {
-  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {}
 
-ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB)
-    : ImmutablePass(ID), CB(std::move(CB)) {
-  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB, bool RunEarly)
+    : ImmutablePass(ID), CB(std::move(CB)), RunEarly(RunEarly) {}
 
 char ExternalAAWrapperPass::ID = 0;
 
@@ -751,9 +792,7 @@ llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback) {
   return new ExternalAAWrapperPass(std::move(Callback));
 }
 
-AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {
-  initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {}
 
 char AAResultsWrapperPass::ID = 0;
 
@@ -786,28 +825,49 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
   AAR.reset(
       new AAResults(getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F)));
 
+  // Add any target-specific alias analyses that should be run early.
+  auto *ExtWrapperPass = getAnalysisIfAvailable<ExternalAAWrapperPass>();
+  if (ExtWrapperPass && ExtWrapperPass->RunEarly && ExtWrapperPass->CB) {
+    LLVM_DEBUG(dbgs() << "AAResults register Early ExternalAA: "
+                      << ExtWrapperPass->getPassName() << "\n");
+    ExtWrapperPass->CB(*this, F, *AAR);
+  }
+
   // BasicAA is always available for function analyses. Also, we add it first
   // so that it can trump TBAA results when it proves MustAlias.
   // FIXME: TBAA should have an explicit mode to support this and then we
   // should reconsider the ordering here.
-  if (!DisableBasicAA)
+  if (!DisableBasicAA) {
+    LLVM_DEBUG(dbgs() << "AAResults register BasicAA\n");
     AAR->addAAResult(getAnalysis<BasicAAWrapperPass>().getResult());
+  }
 
   // Populate the results with the currently available AAs.
-  if (auto *WrapperPass = getAnalysisIfAvailable<ScopedNoAliasAAWrapperPass>())
+  if (auto *WrapperPass =
+          getAnalysisIfAvailable<ScopedNoAliasAAWrapperPass>()) {
+    LLVM_DEBUG(dbgs() << "AAResults register ScopedNoAliasAA\n");
     AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<TypeBasedAAWrapperPass>())
+  }
+  if (auto *WrapperPass = getAnalysisIfAvailable<TypeBasedAAWrapperPass>()) {
+    LLVM_DEBUG(dbgs() << "AAResults register TypeBasedAA\n");
     AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<GlobalsAAWrapperPass>())
+  }
+  if (auto *WrapperPass = getAnalysisIfAvailable<GlobalsAAWrapperPass>()) {
+    LLVM_DEBUG(dbgs() << "AAResults register GlobalsAA\n");
     AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<SCEVAAWrapperPass>())
+  }
+  if (auto *WrapperPass = getAnalysisIfAvailable<SCEVAAWrapperPass>()) {
+    LLVM_DEBUG(dbgs() << "AAResults register SCEVAA\n");
     AAR->addAAResult(WrapperPass->getResult());
+  }
 
   // If available, run an external AA providing callback over the results as
   // well.
-  if (auto *WrapperPass = getAnalysisIfAvailable<ExternalAAWrapperPass>())
-    if (WrapperPass->CB)
-      WrapperPass->CB(*this, F, *AAR);
+  if (ExtWrapperPass && !ExtWrapperPass->RunEarly && ExtWrapperPass->CB) {
+    LLVM_DEBUG(dbgs() << "AAResults register Late ExternalAA: "
+                      << ExtWrapperPass->getPassName() << "\n");
+    ExtWrapperPass->CB(*this, F, *AAR);
+  }
 
   // Analyses don't mutate the IR, so return false.
   return false;
@@ -864,24 +924,50 @@ bool llvm::isIdentifiedFunctionLocal(const Value *V) {
   return isa<AllocaInst>(V) || isNoAliasCall(V) || isNoAliasOrByValArgument(V);
 }
 
-bool llvm::isEscapeSource(const Value *V) {
-  if (auto *CB = dyn_cast<CallBase>(V))
-    return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB,
-                                                                        true);
+bool llvm::isBaseOfObject(const Value *V) {
+  // TODO: We can handle other cases here
+  // 1) For GC languages, arguments to functions are often required to be
+  //    base pointers.
+  // 2) Result of allocation routines are often base pointers.  Leverage TLI.
+  return (isa<AllocaInst>(V) || isa<GlobalVariable>(V));
+}
 
-  // The load case works because isNonEscapingLocalObject considers all
+bool llvm::isEscapeSource(const Value *V) {
+  if (auto *CB = dyn_cast<CallBase>(V)) {
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+            CB, /*MustPreserveOffset=*/false))
+      return false;
+
+    // The return value of a function with a captures(ret: address, provenance)
+    // attribute is not necessarily an escape source. The return value may
+    // alias with a non-escaping object.
+    return !CB->hasArgumentWithAdditionalReturnCaptureComponents();
+  }
+
+  // The load case works because isNotCapturedBefore considers all
   // stores to be escapes (it passes true for the StoreCaptures argument
   // to PointerMayBeCaptured).
   if (isa<LoadInst>(V))
     return true;
 
-  // The inttoptr case works because isNonEscapingLocalObject considers all
+  // The inttoptr case works because isNotCapturedBefore considers all
   // means of converting or equating a pointer to an int (ptrtoint, ptr store
   // which could be followed by an integer load, ptr<->int compare) as
   // escaping, and objects located at well-known addresses via platform-specific
   // means cannot be considered non-escaping local objects.
   if (isa<IntToPtrInst>(V))
     return true;
+
+  // Capture tracking considers insertions into aggregates and vectors as
+  // captures. As such, extractions from aggregates and vectors are escape
+  // sources.
+  if (isa<ExtractValueInst, ExtractElementInst>(V))
+    return true;
+
+  // Same for inttoptr constant expressions.
+  if (auto *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      return true;
 
   return false;
 }
@@ -896,7 +982,7 @@ bool llvm::isNotVisibleOnUnwind(const Value *Object,
 
   // Byval goes out of scope on unwind.
   if (auto *A = dyn_cast<Argument>(Object))
-    return A->hasByValAttr();
+    return A->hasByValAttr() || A->hasAttribute(Attribute::DeadOnUnwind);
 
   // A noalias return is not accessible from any other code. If the pointer
   // does not escape prior to the unwind, then the caller cannot access the
@@ -911,15 +997,26 @@ bool llvm::isNotVisibleOnUnwind(const Value *Object,
 
 // We don't consider globals as writable: While the physical memory is writable,
 // we may not have provenance to perform the write.
-bool llvm::isWritableObject(const Value *Object) {
+bool llvm::isWritableObject(const Value *Object,
+                            bool &ExplicitlyDereferenceableOnly) {
+  ExplicitlyDereferenceableOnly = false;
+
   // TODO: Alloca might not be writable after its lifetime ends.
   // See https://github.com/llvm/llvm-project/issues/51838.
   if (isa<AllocaInst>(Object))
     return true;
 
-  // TODO: Also handle sret.
-  if (auto *A = dyn_cast<Argument>(Object))
+  if (auto *A = dyn_cast<Argument>(Object)) {
+    // Also require noalias, otherwise writability at function entry cannot be
+    // generalized to writability at other program points, even if the pointer
+    // does not escape.
+    if (A->hasAttribute(Attribute::Writable) && A->hasNoAliasAttr()) {
+      ExplicitlyDereferenceableOnly = true;
+      return true;
+    }
+
     return A->hasByValAttr();
+  }
 
   // TODO: Noalias shouldn't imply writability, this should check for an
   // allocator function instead.

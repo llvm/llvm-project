@@ -36,8 +36,8 @@ define void @sqrt_test(ptr addrspace(1) noalias nocapture %out, float %a) nounwi
 ; CHECK-LABEL: @sqrt_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #2
-; CHECK-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -59,8 +59,8 @@ define void @fabs_test(ptr addrspace(1) noalias nocapture %out, float %a) nounwi
 ; CHECK-LABEL: @fabs_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #2
-; CHECK-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -82,8 +82,8 @@ define void @fma_test(ptr addrspace(1) noalias nocapture %out, float %a, float %
 ; CHECK-LABEL: @fma_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #2
-; CHECK-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -105,8 +105,8 @@ define void @fmuladd_test(ptr addrspace(1) noalias nocapture %out, float %a, flo
 ; CHECK-LABEL: @fmuladd_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #2
-; CHECK-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -128,8 +128,8 @@ define void @minnum_test(ptr addrspace(1) noalias nocapture %out, float %a, floa
 ; CHECK-LABEL: @minnum_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minnum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minnum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -151,8 +151,8 @@ define void @maxnum_test(ptr addrspace(1) noalias nocapture %out, float %a, floa
 ; CHECK-LABEL: @maxnum_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -174,8 +174,8 @@ define void @minimum_test(ptr addrspace(1) noalias nocapture %out, float %a, flo
 ; CHECK-LABEL: @minimum_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -197,8 +197,8 @@ define void @maximum_test(ptr addrspace(1) noalias nocapture %out, float %a, flo
 ; CHECK-LABEL: @maximum_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

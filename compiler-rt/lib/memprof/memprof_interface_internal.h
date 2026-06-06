@@ -36,9 +36,18 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __memprof_record_access(void const volatile *addr);
 
 SANITIZER_INTERFACE_ATTRIBUTE
+void __memprof_record_access_hist(void const volatile *addr);
+
+SANITIZER_INTERFACE_ATTRIBUTE
 void __memprof_record_access_range(void const volatile *addr, uptr size);
 
+SANITIZER_INTERFACE_ATTRIBUTE
+void __memprof_record_access_range_hist(void const volatile *addr, uptr size);
+
 SANITIZER_INTERFACE_ATTRIBUTE void __memprof_print_accumulated_stats();
+
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE extern char
+    __memprof_default_options_str[1];
 
 SANITIZER_INTERFACE_ATTRIBUTE
 const char *__memprof_default_options();
@@ -48,7 +57,12 @@ extern uptr __memprof_shadow_memory_dynamic_address;
 
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE extern char
     __memprof_profile_filename[1];
+
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE extern bool
+    __memprof_histogram;
+
 SANITIZER_INTERFACE_ATTRIBUTE int __memprof_profile_dump();
+SANITIZER_INTERFACE_ATTRIBUTE void __memprof_profile_reset();
 
 SANITIZER_INTERFACE_ATTRIBUTE void __memprof_load(uptr p);
 SANITIZER_INTERFACE_ATTRIBUTE void __memprof_store(uptr p);

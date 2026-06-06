@@ -1,12 +1,9 @@
 // Test for on-demand leak checking.
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=use_stacks=0:use_registers=0 %run %t foo 2>&1 | FileCheck %s
-// RUN: %env_lsan_opts=use_stacks=0:use_registers=0 %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0:symbolize=0 %run %t foo 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0:symbolize=0 %run %t 2>&1 | FileCheck %s
 
 // UNSUPPORTED: darwin
-
-// FIXME: Investigate.
-// XFAIL: internal_symbolizer && lsan-standalone && i386-linux
 
 #include <assert.h>
 #include <stdio.h>

@@ -7,7 +7,8 @@
 namespace benchmark {
 namespace internal {
 
-BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
+BenchmarkInstance::BenchmarkInstance(benchmark::Benchmark* benchmark,
+                                     int family_idx,
                                      int per_family_instance_idx,
                                      const std::vector<int64_t>& args,
                                      int thread_count)
@@ -16,7 +17,7 @@ BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
       per_family_instance_index_(per_family_instance_idx),
       aggregation_report_mode_(benchmark_.aggregation_report_mode_),
       args_(args),
-      time_unit_(benchmark_.time_unit_),
+      time_unit_(benchmark_.GetTimeUnit()),
       measure_process_cpu_time_(benchmark_.measure_process_cpu_time_),
       use_real_time_(benchmark_.use_real_time_),
       use_manual_time_(benchmark_.use_manual_time_),
@@ -25,8 +26,11 @@ BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
       statistics_(benchmark_.statistics_),
       repetitions_(benchmark_.repetitions_),
       min_time_(benchmark_.min_time_),
+      min_warmup_time_(benchmark_.min_warmup_time_),
       iterations_(benchmark_.iterations_),
-      threads_(thread_count) {
+      threads_(thread_count),
+      setup_(benchmark_.setup_),
+      teardown_(benchmark_.teardown_) {
   name_.function_name = benchmark_.name_;
 
   size_t arg_i = 0;
@@ -48,6 +52,11 @@ BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
 
   if (!IsZero(benchmark->min_time_)) {
     name_.min_time = StrFormat("min_time:%0.3f", benchmark_.min_time_);
+  }
+
+  if (!IsZero(benchmark->min_warmup_time_)) {
+    name_.min_warmup_time =
+        StrFormat("min_warmup_time:%0.3f", benchmark_.min_warmup_time_);
   }
 
   if (benchmark_.iterations_ != 0) {
@@ -78,33 +87,31 @@ BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
   if (!benchmark_.thread_counts_.empty()) {
     name_.threads = StrFormat("threads:%d", threads_);
   }
-
-  setup_ = benchmark_.setup_;
-  teardown_ = benchmark_.teardown_;
 }
 
 State BenchmarkInstance::Run(
     IterationCount iters, int thread_id, internal::ThreadTimer* timer,
     internal::ThreadManager* manager,
-    internal::PerfCountersMeasurement* perf_counters_measurement) const {
-  State st(iters, args_, thread_id, threads_, timer, manager,
-           perf_counters_measurement);
+    internal::PerfCountersMeasurement* perf_counters_measurement,
+    ProfilerManager* profiler_manager) const {
+  State st(name_.function_name, iters, args_, thread_id, threads_, timer,
+           manager, perf_counters_measurement, profiler_manager);
   benchmark_.Run(st);
   return st;
 }
 
 void BenchmarkInstance::Setup() const {
-  if (setup_) {
-    State st(/*iters*/ 1, args_, /*thread_id*/ 0, threads_, nullptr, nullptr,
-             nullptr);
+  if (setup_ != nullptr) {
+    State st(name_.function_name, /*iters*/ 1, args_, /*thread_id*/ 0, threads_,
+             nullptr, nullptr, nullptr, nullptr);
     setup_(st);
   }
 }
 
 void BenchmarkInstance::Teardown() const {
-  if (teardown_) {
-    State st(/*iters*/ 1, args_, /*thread_id*/ 0, threads_, nullptr, nullptr,
-             nullptr);
+  if (teardown_ != nullptr) {
+    State st(name_.function_name, /*iters*/ 1, args_, /*thread_id*/ 0, threads_,
+             nullptr, nullptr, nullptr, nullptr);
     teardown_(st);
   }
 }

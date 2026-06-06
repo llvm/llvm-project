@@ -18,6 +18,7 @@
 #define LLVM_ADT_MAPVECTOR_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <cstddef>
@@ -32,15 +33,9 @@ namespace llvm {
 /// mapping is done with DenseMap from Keys to indexes in that vector.
 template <typename KeyT, typename ValueT,
           typename MapType = DenseMap<KeyT, unsigned>,
-          typename VectorType = SmallVector<std::pair<KeyT, ValueT>, 0>>
+          typename VectorType = SmallVector<std::pair<KeyT, ValueT>, 0>,
+          unsigned N = 0>
 class MapVector {
-  MapType Map;
-  VectorType Vector;
-
-  static_assert(
-      std::is_integral_v<typename MapType::mapped_type>,
-      "The mapped_type of the specified Map must be an integral type");
-
 public:
   using key_type = KeyT;
   using value_type = typename VectorType::value_type;
@@ -52,12 +47,15 @@ public:
   using const_reverse_iterator = typename VectorType::const_reverse_iterator;
 
   /// Clear the MapVector and return the underlying vector.
-  VectorType takeVector() {
+  [[nodiscard]] VectorType takeVector() {
     Map.clear();
     return std::move(Vector);
   }
 
-  size_type size() const { return Vector.size(); }
+  /// Returns an array reference of the underlying vector.
+  [[nodiscard]] ArrayRef<value_type> getArrayRef() const { return Vector; }
+
+  [[nodiscard]] size_type size() const { return Vector.size(); }
 
   /// Grow the MapVector so that it can contain at least \p NumEntries items
   /// before resizing again.
@@ -66,24 +64,28 @@ public:
     Vector.reserve(NumEntries);
   }
 
-  iterator begin() { return Vector.begin(); }
-  const_iterator begin() const { return Vector.begin(); }
-  iterator end() { return Vector.end(); }
-  const_iterator end() const { return Vector.end(); }
+  [[nodiscard]] iterator begin() { return Vector.begin(); }
+  [[nodiscard]] const_iterator begin() const { return Vector.begin(); }
+  [[nodiscard]] iterator end() { return Vector.end(); }
+  [[nodiscard]] const_iterator end() const { return Vector.end(); }
 
-  reverse_iterator rbegin() { return Vector.rbegin(); }
-  const_reverse_iterator rbegin() const { return Vector.rbegin(); }
-  reverse_iterator rend() { return Vector.rend(); }
-  const_reverse_iterator rend() const { return Vector.rend(); }
-
-  bool empty() const {
-    return Vector.empty();
+  [[nodiscard]] reverse_iterator rbegin() { return Vector.rbegin(); }
+  [[nodiscard]] const_reverse_iterator rbegin() const {
+    return Vector.rbegin();
   }
+  [[nodiscard]] reverse_iterator rend() { return Vector.rend(); }
+  [[nodiscard]] const_reverse_iterator rend() const { return Vector.rend(); }
 
-  std::pair<KeyT, ValueT>       &front()       { return Vector.front(); }
-  const std::pair<KeyT, ValueT> &front() const { return Vector.front(); }
-  std::pair<KeyT, ValueT>       &back()        { return Vector.back(); }
-  const std::pair<KeyT, ValueT> &back()  const { return Vector.back(); }
+  [[nodiscard]] bool empty() const { return Vector.empty(); }
+
+  [[nodiscard]] std::pair<KeyT, ValueT> &front() { return Vector.front(); }
+  [[nodiscard]] const std::pair<KeyT, ValueT> &front() const {
+    return Vector.front();
+  }
+  [[nodiscard]] std::pair<KeyT, ValueT> &back() { return Vector.back(); }
+  [[nodiscard]] const std::pair<KeyT, ValueT> &back() const {
+    return Vector.back();
+  }
 
   void clear() {
     Map.clear();
@@ -96,67 +98,103 @@ public:
   }
 
   ValueT &operator[](const KeyT &Key) {
-    std::pair<KeyT, typename MapType::mapped_type> Pair = std::make_pair(Key, 0);
-    std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
-    auto &I = Result.first->second;
-    if (Result.second) {
-      Vector.push_back(std::make_pair(Key, ValueT()));
-      I = Vector.size() - 1;
-    }
-    return Vector[I].second;
+    return try_emplace_impl(Key).first->second;
   }
 
+  [[nodiscard]] auto keys() { return make_first_range(Vector); }
+  [[nodiscard]] auto keys() const { return make_first_range(Vector); }
+  [[nodiscard]] auto values() { return make_second_range(Vector); }
+  [[nodiscard]] auto values() const { return make_second_range(Vector); }
+
   // Returns a copy of the value.  Only allowed if ValueT is copyable.
-  ValueT lookup(const KeyT &Key) const {
+  [[nodiscard]] ValueT lookup(const KeyT &Key) const {
     static_assert(std::is_copy_constructible_v<ValueT>,
                   "Cannot call lookup() if ValueT is not copyable.");
-    typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? ValueT() : Vector[Pos->second].second;
+    auto I = find(Key);
+    return I == end() ? ValueT() : I->second;
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
+    return try_emplace_impl(Key, std::forward<Ts>(Args)...);
+  }
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
+    return try_emplace_impl(std::move(Key), std::forward<Ts>(Args)...);
   }
 
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
-    std::pair<KeyT, typename MapType::mapped_type> Pair = std::make_pair(KV.first, 0);
-    std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
-    auto &I = Result.first->second;
-    if (Result.second) {
-      Vector.push_back(std::make_pair(KV.first, KV.second));
-      I = Vector.size() - 1;
-      return std::make_pair(std::prev(end()), true);
-    }
-    return std::make_pair(begin() + I, false);
+    return try_emplace_impl(KV.first, KV.second);
   }
-
   std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
-    // Copy KV.first into the map, then move it into the vector.
-    std::pair<KeyT, typename MapType::mapped_type> Pair = std::make_pair(KV.first, 0);
-    std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
-    auto &I = Result.first->second;
-    if (Result.second) {
-      Vector.push_back(std::move(KV));
-      I = Vector.size() - 1;
-      return std::make_pair(std::prev(end()), true);
-    }
-    return std::make_pair(begin() + I, false);
+    return try_emplace_impl(std::move(KV.first), std::move(KV.second));
   }
 
-  bool contains(const KeyT &Key) const { return Map.find(Key) != Map.end(); }
-
-  size_type count(const KeyT &Key) const { return contains(Key) ? 1 : 0; }
-
-  iterator find(const KeyT &Key) {
-    typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? Vector.end() :
-                            (Vector.begin() + Pos->second);
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(const KeyT &Key, V &&Val) {
+    auto Ret = try_emplace(Key, std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
+  }
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(KeyT &&Key, V &&Val) {
+    auto Ret = try_emplace(std::move(Key), std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
   }
 
-  const_iterator find(const KeyT &Key) const {
+  [[nodiscard]] bool contains(const KeyT &Key) const {
+    return find(Key) != end();
+  }
+
+  [[nodiscard]] size_type count(const KeyT &Key) const {
+    return contains(Key) ? 1 : 0;
+  }
+
+  [[nodiscard]] iterator find(const KeyT &Key) {
+    if constexpr (canBeSmall())
+      if (isSmall())
+        return findInVector(Vector, Key);
+
     typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? Vector.end() :
-                            (Vector.begin() + Pos->second);
+    return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
+  }
+
+  [[nodiscard]] const_iterator find(const KeyT &Key) const {
+    if constexpr (canBeSmall())
+      if (isSmall())
+        return findInVector(Vector, Key);
+
+    typename MapType::const_iterator Pos = Map.find(Key);
+    return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  [[nodiscard]] ValueT &at(const KeyT &Key) {
+    auto I = find(Key);
+    assert(I != end() && "MapVector::at failed due to a missing key");
+    return I->second;
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  [[nodiscard]] const ValueT &at(const KeyT &Key) const {
+    auto I = find(Key);
+    assert(I != end() && "MapVector::at failed due to a missing key");
+    return I->second;
   }
 
   /// Remove the last element from the vector.
   void pop_back() {
+    if constexpr (canBeSmall())
+      if (isSmall()) {
+        Vector.pop_back();
+        return;
+      }
+
     typename MapType::iterator Pos = Map.find(Vector.back().first);
     Map.erase(Pos);
     Vector.pop_back();
@@ -170,6 +208,10 @@ public:
   /// \note This is a deceivingly expensive operation (linear time).  It's
   /// usually better to use \a remove_if() if possible.
   typename VectorType::iterator erase(typename VectorType::iterator Iterator) {
+    if constexpr (canBeSmall())
+      if (isSmall())
+        return Vector.erase(Iterator);
+
     Map.erase(Iterator->first);
     auto Next = Vector.erase(Iterator);
     if (Next == Vector.end())
@@ -201,11 +243,79 @@ public:
   /// Erase all elements that match \c Pred in a single pass.  Takes linear
   /// time.
   template <class Predicate> void remove_if(Predicate Pred);
+
+  /// Return the approximate size (in bytes) of the data structure.
+  /// This is just the raw memory used by MapVector.
+  /// If entries are pointers to objects, the size of the referenced objects
+  /// are not included.
+  [[nodiscard]] size_t getMemorySize() const {
+    return capacity_in_bytes(Map) + capacity_in_bytes(Vector);
+  }
+
+private:
+  template <typename VectorT, typename LookupKeyT>
+  [[nodiscard]] static auto findInVector(VectorT &Vec, const LookupKeyT &Key) {
+    return find_if(Vec, [&Key](const auto &P) { return P.first == Key; });
+  }
+
+  [[nodiscard]] static constexpr bool canBeSmall() { return N != 0; }
+
+  [[nodiscard]] bool isSmall() const { return Map.empty(); }
+
+  void makeBig() {
+    if constexpr (canBeSmall()) {
+      unsigned Index = 0;
+      for (const auto &entry : Vector)
+        Map[entry.first] = Index++;
+    }
+  }
+
+  MapType Map;
+  VectorType Vector;
+
+  static_assert(N <= 32, "Small size should be less than or equal to 32!");
+
+  static_assert(
+      std::is_integral_v<typename MapType::mapped_type>,
+      "The mapped_type of the specified Map must be an integral type");
+
+  template <typename KeyArgT, typename... Ts>
+  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
+    if constexpr (canBeSmall())
+      if (isSmall()) {
+        auto I = findInVector(Vector, Key);
+        if (I != Vector.end())
+          return {I, false};
+        Vector.emplace_back(std::piecewise_construct,
+                            std::forward_as_tuple(std::forward<KeyArgT>(Key)),
+                            std::forward_as_tuple(std::forward<Ts>(Args)...));
+        if (Vector.size() > N)
+          makeBig();
+        return {std::prev(end()), true};
+      }
+
+    auto [It, Inserted] = Map.try_emplace(Key);
+    if (Inserted) {
+      It->second = Vector.size();
+      Vector.emplace_back(std::piecewise_construct,
+                          std::forward_as_tuple(std::forward<KeyArgT>(Key)),
+                          std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return {std::prev(end()), true};
+    }
+    return {begin() + It->second, false};
+  }
 };
 
-template <typename KeyT, typename ValueT, typename MapType, typename VectorType>
+template <typename KeyT, typename ValueT, typename MapType, typename VectorType,
+          unsigned N>
 template <class Function>
-void MapVector<KeyT, ValueT, MapType, VectorType>::remove_if(Function Pred) {
+void MapVector<KeyT, ValueT, MapType, VectorType, N>::remove_if(Function Pred) {
+  if constexpr (canBeSmall())
+    if (isSmall()) {
+      Vector.erase(llvm::remove_if(Vector, Pred), Vector.end());
+      return;
+    }
+
   auto O = Vector.begin();
   for (auto I = O, E = Vector.end(); I != E; ++I) {
     if (Pred(*I)) {
@@ -228,10 +338,18 @@ void MapVector<KeyT, ValueT, MapType, VectorType>::remove_if(Function Pred) {
 /// A MapVector that performs no allocations if smaller than a certain
 /// size.
 template <typename KeyT, typename ValueT, unsigned N>
-struct SmallMapVector
-    : MapVector<KeyT, ValueT, SmallDenseMap<KeyT, unsigned, N>,
-                SmallVector<std::pair<KeyT, ValueT>, N>> {
+struct SmallMapVector : MapVector<KeyT, ValueT, DenseMap<KeyT, unsigned>,
+                                  SmallVector<std::pair<KeyT, ValueT>, N>, N> {
 };
+
+template <typename KeyT, typename ValueT,
+          typename MapType = DenseMap<KeyT, unsigned>,
+          typename VectorType = SmallVector<std::pair<KeyT, ValueT>, 0>,
+          unsigned N = 0>
+[[nodiscard]] size_t
+capacity_in_bytes(const MapVector<KeyT, ValueT, MapType, VectorType, N> &X) {
+  return X.getMemorySize();
+}
 
 } // end namespace llvm
 

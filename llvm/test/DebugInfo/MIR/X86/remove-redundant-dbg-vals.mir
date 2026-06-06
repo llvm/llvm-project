@@ -1,4 +1,5 @@
 # RUN: llc %s -o - -run-pass=removeredundantdebugvalues | FileCheck --implicit-check-not=DBG_VALUE %s
+# RUN: llc %s -o - -passes=remove-redundant-debug-values | FileCheck --implicit-check-not=DBG_VALUE %s
 
 ## This checks that the RemoveRedundantDebugValues removes redundant
 ## DBG_VALUEs. The MIR was hand-written, and foo{[2-6]}() are just
@@ -56,8 +57,8 @@
   define dso_local i32 @foo(i32 %param) local_unnamed_addr !dbg !8 {
   entry:
     call void @llvm.dbg.value(metadata i32 %param, metadata !13, metadata !DIExpression()), !dbg !14
-    store i32 %param, i32* @side_effect, align 4, !dbg !15
-    %0 = load i32, i32* @value, align 4, !dbg !20
+    store i32 %param, ptr @side_effect, align 4, !dbg !15
+    %0 = load i32, ptr @value, align 4, !dbg !20
     call void @llvm.dbg.value(metadata i32 %0, metadata !13, metadata !DIExpression()), !dbg !14
     tail call void @bar(i32 %0), !dbg !21
     ret i32 0, !dbg !22
@@ -65,8 +66,8 @@
 
   define dso_local i32 @foo6(i32 %param) local_unnamed_addr !dbg !34 {
   entry:
-    store i32 %param, i32* @side_effect, align 4, !dbg !35
-    %0 = load i32, i32* @value, align 4, !dbg !35
+    store i32 %param, ptr @side_effect, align 4, !dbg !35
+    %0 = load i32, ptr @value, align 4, !dbg !35
     tail call void @bar(i32 %0), !dbg !35
     ret i32 0, !dbg !35
   }
@@ -74,8 +75,8 @@
   ; Function Attrs: nounwind uwtable
   define dso_local i32 @foo2(i32 %param) local_unnamed_addr !dbg !26 {
   entry:
-    store i32 %param, i32* @side_effect, align 4, !dbg !27
-    %0 = load i32, i32* @value, align 4, !dbg !27
+    store i32 %param, ptr @side_effect, align 4, !dbg !27
+    %0 = load i32, ptr @value, align 4, !dbg !27
     tail call void @bar(i32 %0), !dbg !27
     ret i32 0, !dbg !27
   }
@@ -83,8 +84,8 @@
   ; Function Attrs: nounwind uwtable
   define dso_local i32 @foo3(i32 %param) local_unnamed_addr !dbg !28 {
   entry:
-    store i32 %param, i32* @side_effect, align 4, !dbg !29
-    %0 = load i32, i32* @value, align 4, !dbg !29
+    store i32 %param, ptr @side_effect, align 4, !dbg !29
+    %0 = load i32, ptr @value, align 4, !dbg !29
     tail call void @bar(i32 %0), !dbg !29
     ret i32 0, !dbg !29
   }
@@ -92,8 +93,8 @@
   ; Function Attrs: nounwind uwtable
   define dso_local i32 @foo4(i32 %param) local_unnamed_addr !dbg !30 {
   entry:
-    store i32 %param, i32* @side_effect, align 4, !dbg !31
-    %0 = load i32, i32* @value, align 4, !dbg !31
+    store i32 %param, ptr @side_effect, align 4, !dbg !31
+    %0 = load i32, ptr @value, align 4, !dbg !31
     tail call void @bar(i32 %0), !dbg !31
     ret i32 0, !dbg !31
   }
@@ -101,8 +102,8 @@
   ; Function Attrs: nounwind uwtable
   define dso_local i32 @foo5(i32 %param) local_unnamed_addr !dbg !32 {
   entry:
-    store i32 %param, i32* @side_effect, align 4, !dbg !33
-    %0 = load i32, i32* @value, align 4, !dbg !33
+    store i32 %param, ptr @side_effect, align 4, !dbg !33
+    %0 = load i32, ptr @value, align 4, !dbg !33
     tail call void @bar(i32 %0), !dbg !33
     ret i32 0, !dbg !33
   }
@@ -138,15 +139,15 @@
   !23 = !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !24, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !24 = !DISubroutineType(types: !25)
   !25 = !{null, !11}
-  !26 = distinct !DISubprogram(name: "foo2", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !26 = distinct !DISubprogram(name: "foo2", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
   !27 = !DILocation(line: 0, scope: !26)
-  !28 = distinct !DISubprogram(name: "foo3", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !28 = distinct !DISubprogram(name: "foo3", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
   !29 = !DILocation(line: 0, scope: !28)
-  !30 = distinct !DISubprogram(name: "foo4", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !30 = distinct !DISubprogram(name: "foo4", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
   !31 = !DILocation(line: 0, scope: !30)
-  !32 = distinct !DISubprogram(name: "foo5", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !32 = distinct !DISubprogram(name: "foo5", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
   !33 = !DILocation(line: 0, scope: !32)
-  !34 = distinct !DISubprogram(name: "foo6", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !34 = distinct !DISubprogram(name: "foo6", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
   !35 = !DILocation(line: 0, scope: !34)
 
 ...

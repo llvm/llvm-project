@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
@@ -171,33 +172,65 @@ constexpr void test_iterators() {
 
   { // range has zero length
     {
-      int a[] = {};
-      auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a)), 1, 1);
-      assert(base(ret.begin()) == a);
-      assert(base(ret.end()) == a);
+      std::array<int, 0> a = {};
+      auto ret             = std::ranges::search_n(Iter(a.data()), Sent(Iter(a.data())), 1, 1);
+      assert(base(ret.begin()) == a.data());
+      assert(base(ret.end()) == a.data());
     }
     {
-      int a[] = {};
-      auto range = std::ranges::subrange(Iter(a), Sent(Iter(a)));
+      std::array<int, 0> a = {};
+      auto range           = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
       auto ret = std::ranges::search_n(range, 1, 1);
-      assert(base(ret.begin()) == a);
-      assert(base(ret.end()) == a);
+      assert(base(ret.begin()) == a.data());
+      assert(base(ret.end()) == a.data());
     }
   }
 
   { // check that the first match is returned
-    {
-      int a[] = {6, 6, 8, 6, 6, 8, 6, 6, 8};
-      auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 9)), 2, 6);
-      assert(base(ret.begin()) == a);
-      assert(base(ret.end()) == a + 2);
+    { // Match is at the start
+      {
+        int a[]  = {6, 6, 8, 6, 6, 8, 6, 6, 8};
+        auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 9)), 2, 6);
+        assert(base(ret.begin()) == a);
+        assert(base(ret.end()) == a + 2);
+      }
+      {
+        int a[]    = {6, 6, 8, 6, 6, 8, 6, 6, 8};
+        auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
+        auto ret   = std::ranges::search_n(range, 2, 6);
+        assert(base(ret.begin()) == a);
+        assert(base(ret.end()) == a + 2);
+      }
     }
-    {
-      int a[] = {6, 6, 8, 6, 6, 8, 6, 6, 8};
-      auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
-      auto ret = std::ranges::search_n(range, 2, 6);
-      assert(base(ret.begin()) == a);
-      assert(base(ret.end()) == a + 2);
+    { // Match is in the middle
+      {
+        int a[]  = {6, 8, 8, 6, 6, 8, 6, 6, 8};
+        auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 9)), 2, 6);
+        assert(base(ret.begin()) == a + 3);
+        assert(base(ret.end()) == a + 5);
+      }
+      {
+        int a[]    = {6, 8, 8, 6, 6, 8, 6, 6, 8};
+        auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
+        auto ret   = std::ranges::search_n(range, 2, 6);
+        assert(base(ret.begin()) == a + 3);
+        assert(base(ret.end()) == a + 5);
+      }
+    }
+    { // Match is at the end
+      {
+        int a[]  = {6, 6, 8, 6, 6, 8, 6, 6, 6};
+        auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 9)), 3, 6);
+        assert(base(ret.begin()) == a + 6);
+        assert(base(ret.end()) == a + 9);
+      }
+      {
+        int a[]    = {6, 6, 8, 6, 6, 8, 6, 6, 6};
+        auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
+        auto ret   = std::ranges::search_n(range, 3, 6);
+        assert(base(ret.begin()) == a + 6);
+        assert(base(ret.end()) == a + 9);
+      }
     }
   }
 

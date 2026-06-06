@@ -51,6 +51,17 @@ transform.sequence failures(propagate) {
 
 // -----
 
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) {
+    // expected-error @+2 {{expected children ops to implement TransformOpInterface}}
+    // expected-note @below {{op without interface}}
+    "test.unknown_op" () : () -> ()
+    transform.yield
+  }
+}
+
+// -----
+
 // expected-error @below {{expects the types of the terminator operands to match the types of the result}}
 %0 = transform.sequence -> !transform.any_op failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
@@ -279,6 +290,55 @@ transform.sequence failures(propagate) {
 
 // -----
 
+transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+  %op = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  // expected-error @below {{op expects the same number of targets as the body has block arguments}}
+  transform.foreach %op : !transform.any_op -> !transform.any_op, !transform.any_value {
+  ^bb1(%op_arg: !transform.any_op, %val_arg: !transform.any_value):
+    transform.yield %op_arg, %val_arg : !transform.any_op, !transform.any_value
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+  %op = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  // expected-error @below {{op expects co-indexed targets and the body's block arguments to have the same op/value/param type}}
+  transform.foreach %op : !transform.any_op -> !transform.any_value {
+  ^bb1(%val_arg: !transform.any_value):
+    transform.yield %val_arg : !transform.any_value
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+  %op = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  // expected-error @below {{op expects the same number of results as the yield terminator has operands}}
+  transform.foreach %op : !transform.any_op -> !transform.any_op, !transform.any_op {
+  ^bb1(%arg_op: !transform.any_op):
+    transform.yield %arg_op : !transform.any_op
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+  %op = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  %val = transform.test_produce_value_handle_to_self_operand %op : (!transform.any_op) -> !transform.any_value
+  // expected-error @below {{expects co-indexed results and yield operands to have the same op/value/param type}}
+  transform.foreach %op, %val : !transform.any_op, !transform.any_value -> !transform.any_op, !transform.any_value {
+  ^bb1(%op_arg: !transform.any_op, %val_arg: !transform.any_value):
+    transform.yield %val_arg, %op_arg : !transform.any_value, !transform.any_op
+  }
+}
+
+// -----
+
 transform.sequence failures(suppress) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{TransformOpInterface requires memory effects on operands to be specified}}
@@ -320,6 +380,7 @@ module attributes { transform.with_named_sequence } {
   // expected-error @below {{recursion not allowed in named sequences}}
   transform.named_sequence @self_recursion() -> () {
     transform.include @self_recursion failures(suppress) () : () -> ()
+    transform.yield
   }
 }
 
@@ -327,13 +388,13 @@ module attributes { transform.with_named_sequence } {
 
 module @mutual_recursion attributes { transform.with_named_sequence } {
   // expected-note @below {{operation on recursion stack}}  
-  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> () {
     transform.include @bar failures(suppress) (%arg0) : (!transform.any_op) -> ()
     transform.yield
   }
 
   // expected-error @below {{recursion not allowed in named sequences}}
-  transform.named_sequence @bar(%arg0: !transform.any_op) -> () {
+  transform.named_sequence @bar(%arg0: !transform.any_op {transform.readonly}) -> () {
     transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
     transform.yield
   }
@@ -381,7 +442,7 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> () {
     transform.yield
   }
 
@@ -395,7 +456,7 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @foo(%arg0: !transform.any_op) -> (!transform.any_op) {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> (!transform.any_op) {
     transform.yield %arg0 : !transform.any_op
   }
 
@@ -409,7 +470,7 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @foo(%arg0: !transform.any_op) -> (!transform.any_op) {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> (!transform.any_op) {
     transform.yield %arg0 : !transform.any_op
   }
 
@@ -433,10 +494,9 @@ module {
 // -----
 
 module attributes { transform.with_named_sequence} {
-  // expected-note @below {{ancestor transform op}}
   transform.sequence failures(suppress) {
   ^bb0(%arg0: !transform.any_op):
-    // expected-error @below {{cannot be defined inside another transform op}}
+    // expected-error @below {{op symbol's parent must have the SymbolTable trai}}
     transform.named_sequence @nested() {
       transform.yield
     }
@@ -451,7 +511,7 @@ module attributes { transform.with_named_sequence} {
   // expected-error @below {{expected 'transform.yield' as terminator}}
   transform.named_sequence @nested() {
     // expected-note @below {{terminator}}
-    func.call @foo() : () -> ()
+    func.return 
   }
 }
 
@@ -495,14 +555,15 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  // expected-error @below {{must provide consumed/readonly status for arguments of external or called ops}}
   transform.named_sequence @foo(%op: !transform.any_op) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 
   transform.sequence failures(propagate) {
   ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{TransformOpInterface requires memory effects on operands to be specified}}
+    // expected-note @below {{no effects specified for operand #0}}
     transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
     transform.yield
   }
@@ -513,7 +574,7 @@ module attributes { transform.with_named_sequence } {
 module attributes { transform.with_named_sequence } {
   // expected-error @below {{argument #0 cannot be both readonly and consumed}}
   transform.named_sequence @foo(%op: !transform.any_op {transform.readonly, transform.consumed}) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 
@@ -532,7 +593,7 @@ module attributes { transform.with_named_sequence } {
   // CHECK-LABEL: transform.named_sequence @emit_warning_only
   // expected-warning @below {{argument #0 is not consumed in the body but is marked as consume}}
   transform.named_sequence @emit_warning_only(%op: !transform.any_op {transform.consumed}) {
-    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
   }
 
@@ -630,7 +691,84 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @match() -> !transform.any_op
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @match(!transform.any_op {transform.readonly}, !transform.any_op {transform.readonly}) -> !transform.any_op
+  transform.named_sequence @action(!transform.any_op {transform.readonly})
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    // expected-error @below {{the number of operands (1) doesn't match the number of matcher arguments (2) for @match}}
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @match(!transform.any_op {transform.readonly}, !transform.any_op {transform.consumed}) -> !transform.any_op
+  transform.named_sequence @action(!transform.any_op {transform.readonly})
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    %r = transform.replicate num(%root) %root : !transform.any_op, !transform.any_op
+    // expected-error @below {{'transform.foreach_match' op does not expect matcher symbol to consume its operand #1}}
+    transform.foreach_match in %root, %r
+      @match -> @action : (!transform.any_op, !transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @match(!transform.any_op {transform.readonly}, !transform.any_op {transform.readonly}) -> !transform.any_op
+  transform.named_sequence @action(!transform.any_op {transform.readonly})
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    %r = transform.get_operand %root[0] : (!transform.any_op) -> !transform.any_value
+    // expected-error @below {{mismatching type interfaces for operand and matcher argument #1 of matcher @match}}
+    transform.foreach_match in %root, %r
+      @match -> @action : (!transform.any_op, !transform.any_value) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(!transform.any_op {transform.readonly}) -> !transform.any_op
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @action(!transform.any_op {transform.readonly}) -> !transform.any_op
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    // expected-error @below {{the number of action results (1) for @action doesn't match the number of extra op results (0)}}
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(!transform.any_op {transform.readonly}) -> !transform.any_op
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @action(!transform.any_op {transform.readonly}) -> !transform.any_op
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    // expected-error @below {{mismatching type interfaces for action result #0 of action @action and op result}}
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> (!transform.any_op, !transform.any_value)
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(!transform.any_op {transform.readonly}) -> !transform.any_op
   transform.named_sequence @action()
 
   transform.sequence failures(propagate) {
@@ -650,7 +788,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) {
   ^bb0(%root: !transform.any_op):
-    // expected-error @below {{action symbol is not expected to have results}}
+    // expected-error @below {{the number of action results (1) for @action doesn't match the number of extra op results (0)}}
     transform.foreach_match in %root
       @match -> @action : (!transform.any_op) -> !transform.any_op
   }
@@ -665,7 +803,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) {
   ^bb0(%root: !transform.any_op):
-    // expected-error @below {{expects matcher symbol to have one argument with the same transform interface as the first operand}}
+    // expected-error @below {{the number of operands (1) doesn't match the number of matcher arguments (0) for @match}}
     transform.foreach_match in %root
       @match -> @action : (!transform.any_op) -> !transform.any_op
   }
@@ -680,7 +818,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) {
   ^bb0(%root: !transform.any_op):
-    // expected-error @below {{'transform.foreach_match' op does not expect matcher symbol to consume its operand}}
+    // expected-error @below {{'transform.foreach_match' op does not expect matcher symbol to consume its operand #0}}
     transform.foreach_match in %root
       @match -> @action : (!transform.any_op) -> !transform.any_op
   }
@@ -695,4 +833,166 @@ transform.sequence failures(propagate) {
     // expected-note @below {{op without interface}}
     transform.named_sequence @foo()
   } : !transform.any_op
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected the type of the parameter attribute ('i64') to match the parameter type ('i32')}}
+  transform.num_associations %arg0 : (!transform.any_op) -> !transform.param<i32>
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{unresolved matcher symbol @missing_symbol}}
+    transform.collect_matching @missing_symbol in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected the matcher to take one operation handle argument}}
+    transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @matcher() {
+    transform.yield
+  }
+}
+
+// -----
+
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected the matcher argument to be marked readonly}}
+    transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @matcher(%arg0: !transform.any_op) {
+    transform.yield
+  }
+}
+
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected the matcher to yield as many values as op has results (1), got 0}}
+    transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @matcher(%arg0: !transform.any_op {transform.readonly}) {
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{mismatching type interfaces for matcher result and op result #0}}
+    transform.collect_matching @matcher in %arg0 : (!transform.any_op) -> !transform.any_value
+    transform.yield
+  }
+
+  transform.named_sequence @matcher(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
+    transform.yield %arg0 : !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match_matmul(%entry: !transform.any_op) -> () {
+    %c3 = transform.param.constant 1 : i64 -> !transform.param<i64>
+    // expected-error @below {{op operand #0 must be TransformHandleTypeInterface instance}}
+    transform.print %c3 : !transform.param<i64>
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) -> () {
+    // Intentionally malformed func with no region. This shouldn't crash the
+    // verifier of `with_named_sequence` that runs before we get to the
+    // function.
+    // expected-error @below {{requires one region}}
+    "func.func"() : () -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) -> () {
+    // Intentionally malformed call with a region. This shouldn't crash the
+    // verifier of `with_named_sequence` that runs before we get to the call.
+    // expected-error @below {{requires zero regions}}
+    "func.call"() <{
+      function_type = () -> (),
+      sym_name = "lambda_function"
+    }> ({
+    ^bb0:
+      "func.return"() : () -> ()
+    }) : () -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // Intentionally malformed sequence where the verifier should not crash.
+  // expected-error @below {{ op expects argument attribute array to have the same number of elements as the number of function arguments, got 1, but expected 3}}
+  "transform.named_sequence"() <{
+    arg_attrs = [{transform.readonly}],
+    function_type = (i1, tensor<f32>, tensor<f32>) -> (),
+    sym_name = "print_message"
+  }> ({}) : () -> ()
+  "transform.named_sequence"() <{
+    function_type = (!transform.any_op) -> (),
+    sym_name = "reference_other_module"
+  }> ({
+  ^bb0(%arg0: !transform.any_op):
+    "transform.include"(%arg0) <{target = @print_message}> : (!transform.any_op) -> ()
+    "transform.yield"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/60213:
+// Verifying a transform.sequence with an empty body region must not crash.
+// Previously, verifyTransformOpInterface called getEffects, which called
+// getBodyBlock() -> Region::front() on an empty region, causing an assertion.
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+// expected-error @below {{region #0 ('body') failed to verify constraint: region with 1 blocks}}
+  "transform.sequence"(%arg0) <{failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 1, 0>}> ({
+  }) : (!pdl.operation) -> ()
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{duplicate normal form: #transform.test_single_block_normal_form<nested false>}}
+    // expected-note @below {{previous instance: #transform.test_single_block_normal_form<nested true>}}
+    transform.structured.match attributes {sym_name = "nested"} in %arg0 : (!transform.any_op) -> !transform.normalized_op<#transform.test_single_block_normal_form<nested true>, #transform.test_single_block_normal_form<nested false>>
+    transform.yield
+  }
 }

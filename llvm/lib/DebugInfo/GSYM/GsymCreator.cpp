@@ -6,9 +6,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
+#include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -19,6 +21,34 @@
 
 using namespace llvm;
 using namespace gsym;
+
+// Keep this matching cheap: Itanium and Swift both encode identifiers as
+// <length><identifier> in the raw mangled name. Look for that token instead of
+// demangling during finalize().
+static bool isSupportedMangledPrefix(StringRef Name) {
+  return Name.starts_with("_Z") || Name.starts_with("$s") ||
+         Name.starts_with("$S");
+}
+
+static bool shouldReplaceWithMangledName(StringRef AlternateName,
+                                         StringRef CurrentName) {
+  // Any name is better than no name.
+  if (CurrentName.empty() && !AlternateName.empty())
+    return true;
+
+  // Keep the current name if it's already mangled, or if the alternate name
+  // is not a supported mangled name.
+  if (isSupportedMangledPrefix(CurrentName) ||
+      !isSupportedMangledPrefix(AlternateName))
+    return false;
+
+  // Confirm the alternate mangled name actually contains the current name as
+  // an Itanium/Swift identifier token (<length><identifier>).
+  SmallString<64> LengthAndName;
+  raw_svector_ostream OS(LengthAndName);
+  OS << CurrentName.size() << CurrentName;
+  return AlternateName.contains(StringRef(LengthAndName));
+}
 
 GsymCreator::GsymCreator(bool Quiet)
     : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
@@ -32,8 +62,8 @@ uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   // If we inline the insertString() function call into the constructor, the
   // call order is undefined due to parameter lists not having any ordering
   // requirements.
-  const uint32_t Dir = insertString(directory);
-  const uint32_t Base = insertString(filename);
+  const gsym_strp_t Dir = insertString(directory);
+  const gsym_strp_t Base = insertString(filename);
   return insertFileEntry(FileEntry(Dir, Base));
 }
 
@@ -55,8 +85,11 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
     return 0;
   const FileEntry SrcFE = SrcGC.Files[FileIdx];
   // Copy the strings for the file and then add the newly converted file entry.
-  uint32_t Dir = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
-  uint32_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
+  gsym_strp_t Dir =
+      SrcFE.Dir == 0
+          ? 0
+          : StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
+  gsym_strp_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
   FileEntry DstFE(Dir, Base);
   return insertFileEntry(DstFE);
 }
@@ -70,122 +103,60 @@ llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
   if (EC)
     return llvm::errorCodeToError(EC);
   FileWriter O(OutStrm, ByteOrder);
+  O.setStringOffsetSize(getStringOffsetSize());
   return encode(O);
 }
 
-llvm::Error GsymCreator::encode(FileWriter &O) const {
-  std::lock_guard<std::mutex> Guard(Mutex);
-  if (Funcs.empty())
-    return createStringError(std::errc::invalid_argument,
-                             "no functions to encode");
-  if (!Finalized)
-    return createStringError(std::errc::invalid_argument,
-                             "GsymCreator wasn't finalized prior to encoding");
-
-  if (Funcs.size() > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument,
-                             "too many FunctionInfos");
-
-  std::optional<uint64_t> BaseAddress = getBaseAddress();
-  // Base address should be valid if we have any functions.
-  if (!BaseAddress)
-    return createStringError(std::errc::invalid_argument,
-                             "invalid base address");
-  Header Hdr;
-  Hdr.Magic = GSYM_MAGIC;
-  Hdr.Version = GSYM_VERSION;
-  Hdr.AddrOffSize = getAddressOffsetSize();
-  Hdr.UUIDSize = static_cast<uint8_t>(UUID.size());
-  Hdr.BaseAddress = *BaseAddress;
-  Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
-  Hdr.StrtabOffset = 0; // We will fix this up later.
-  Hdr.StrtabSize = 0;   // We will fix this up later.
-  memset(Hdr.UUID, 0, sizeof(Hdr.UUID));
-  if (UUID.size() > sizeof(Hdr.UUID))
-    return createStringError(std::errc::invalid_argument,
-                             "invalid UUID size %u", (uint32_t)UUID.size());
-  // Copy the UUID value if we have one.
-  if (UUID.size() > 0)
-    memcpy(Hdr.UUID, UUID.data(), UUID.size());
-  // Write out the header.
-  llvm::Error Err = Hdr.encode(O);
-  if (Err)
-    return Err;
-
-  const uint64_t MaxAddressOffset = getMaxAddressOffset();
-  // Write out the address offsets.
-  O.alignTo(Hdr.AddrOffSize);
-  for (const auto &FuncInfo : Funcs) {
-    uint64_t AddrOffset = FuncInfo.startAddress() - Hdr.BaseAddress;
-    // Make sure we calculated the address offsets byte size correctly by
-    // verifying the current address offset is within ranges. We have seen bugs
-    // introduced when the code changes that can cause problems here so it is
-    // good to catch this during testing.
-    assert(AddrOffset <= MaxAddressOffset);
-    (void)MaxAddressOffset;
-    switch (Hdr.AddrOffSize) {
-    case 1:
-      O.writeU8(static_cast<uint8_t>(AddrOffset));
-      break;
-    case 2:
-      O.writeU16(static_cast<uint16_t>(AddrOffset));
-      break;
-    case 4:
-      O.writeU32(static_cast<uint32_t>(AddrOffset));
-      break;
-    case 8:
-      O.writeU64(AddrOffset);
-      break;
-    }
-  }
-
-  // Write out all zeros for the AddrInfoOffsets.
-  O.alignTo(4);
-  const off_t AddrInfoOffsetsOffset = O.tell();
-  for (size_t i = 0, n = Funcs.size(); i < n; ++i)
-    O.writeU32(0);
-
-  // Write out the file table
-  O.alignTo(4);
-  assert(!Files.empty());
-  assert(Files[0].Dir == 0);
-  assert(Files[0].Base == 0);
-  size_t NumFiles = Files.size();
-  if (NumFiles > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument, "too many files");
-  O.writeU32(static_cast<uint32_t>(NumFiles));
-  for (auto File : Files) {
-    O.writeU32(File.Dir);
-    O.writeU32(File.Base);
-  }
-
-  // Write out the string table.
-  const off_t StrtabOffset = O.tell();
-  StrTab.write(O.get_stream());
-  const off_t StrtabSize = O.tell() - StrtabOffset;
-  std::vector<uint32_t> AddrInfoOffsets;
-
-  // Write out the address infos for each function info.
-  for (const auto &FuncInfo : Funcs) {
-    if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O))
-      AddrInfoOffsets.push_back(OffsetOrErr.get());
-    else
-      return OffsetOrErr.takeError();
-  }
-  // Fixup the string table offset and size in the header
-  O.fixup32((uint32_t)StrtabOffset, offsetof(Header, StrtabOffset));
-  O.fixup32((uint32_t)StrtabSize, offsetof(Header, StrtabSize));
-
-  // Fixup all address info offsets
-  uint64_t Offset = 0;
-  for (auto AddrInfoOffset : AddrInfoOffsets) {
-    O.fixup32(AddrInfoOffset, AddrInfoOffsetsOffset + Offset);
-    Offset += 4;
-  }
-  return ErrorSuccess();
+llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
+  // Use the loader to load call site information from the YAML file.
+  CallSiteInfoLoader Loader(*this, Funcs);
+  return Loader.loadYAML(YAMLFile);
 }
 
-llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
+void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
+  // Nothing to do if we have less than 2 functions.
+  if (Funcs.size() < 2)
+    return;
+
+  // Sort the function infos by address range first, preserving input order
+  llvm::stable_sort(Funcs);
+  std::vector<FunctionInfo> TopLevelFuncs;
+
+  // Add the first function info to the top level functions
+  TopLevelFuncs.emplace_back(std::move(Funcs.front()));
+
+  // Now if the next function info has the same address range as the top level,
+  // then merge it into the top level function, otherwise add it to the top
+  // level.
+  for (size_t Idx = 1; Idx < Funcs.size(); ++Idx) {
+    FunctionInfo &TopFunc = TopLevelFuncs.back();
+    FunctionInfo &MatchFunc = Funcs[Idx];
+    if (TopFunc.Range == MatchFunc.Range) {
+      // Both have the same range - add the 2nd func as a child of the 1st func
+      if (!TopFunc.MergedFunctions)
+        TopFunc.MergedFunctions = MergedFunctionsInfo();
+      // Avoid adding duplicate functions to MergedFunctions. Since functions
+      // are already ordered within the Funcs array, we can just check equality
+      // against the last function in the merged array.
+      else if (TopFunc.MergedFunctions->MergedFunctions.back() == MatchFunc)
+        continue;
+      TopFunc.MergedFunctions->MergedFunctions.emplace_back(
+          std::move(MatchFunc));
+    } else
+      // No match, add the function as a top-level function
+      TopLevelFuncs.emplace_back(std::move(MatchFunc));
+  }
+
+  uint32_t mergedCount = Funcs.size() - TopLevelFuncs.size();
+  // If any functions were merged, print a message about it.
+  if (mergedCount != 0)
+    Out << "Have " << mergedCount
+        << " merged functions as children of other functions\n";
+
+  std::swap(Funcs, TopLevelFuncs);
+}
+
+llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
     return createStringError(std::errc::invalid_argument, "already finalized");
@@ -222,8 +193,9 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   // object.
   if (!IsSegment) {
     if (NumBefore > 1) {
-      // Sort function infos so we can emit sorted functions.
-      llvm::sort(Funcs);
+      // Sort function infos so we can emit sorted functions. Use stable sort to
+      // ensure determinism.
+      llvm::stable_sort(Funcs);
       std::vector<FunctionInfo> FinalizedFuncs;
       FinalizedFuncs.reserve(Funcs.size());
       FinalizedFuncs.emplace_back(std::move(Funcs.front()));
@@ -237,33 +209,42 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
         if (ranges_equal || Prev.Range.intersects(Curr.Range)) {
           // Overlapping ranges or empty identical ranges.
           if (ranges_equal) {
-            // Same address range. Check if one is from debug
-            // info and the other is from a symbol table. If
-            // so, then keep the one with debug info. Our
-            // sorting guarantees that entries with matching
-            // address ranges that have debug info are last in
-            // the sort.
-            if (!(Prev == Curr)) {
-              if (Prev.hasRichInfo() && Curr.hasRichInfo()) {
-                if (!Quiet) {
-                  OS << "warning: same address range contains "
-                        "different debug "
-                    << "info. Removing:\n"
-                    << Prev << "\nIn favor of this one:\n"
-                    << Curr << "\n";
-                }
-              }
-              // We want to swap the current entry with the previous since
-              // later entries with the same range always have more debug info
-              // or different debug info.
+            // Same address range. The sort orders entries with more debug info
+            // last, so when exactly one entry has rich info, Prev is the
+            // non-rich (typically symbol-table) entry and Curr is the rich
+            // (typically DWARF) one. DWARF often truncates a function's
+            // linkage name to its short form, so before dropping the non-rich
+            // entry check whether its name is a more complete mangled
+            // (Itanium or Swift) form of the rich entry's name and, if so,
+            // copy it onto the rich entry. This lets downstream tools
+            // demangle the full signature.
+            const bool PrevRich = Prev.hasRichInfo();
+            const bool CurrRich = Curr.hasRichInfo();
+            if (PrevRich != CurrRich) {
+              if (shouldReplaceWithMangledName(getString(Prev.Name),
+                                               getString(Curr.Name)))
+                Curr.Name = Prev.Name;
+              std::swap(Prev, Curr);
+            } else if (Prev != Curr) {
+              if (PrevRich)
+                Out.Report(
+                    "Duplicate address ranges with different debug info.",
+                    [&](raw_ostream &OS) {
+                      OS << "warning: same address range contains "
+                            "different debug "
+                         << "info. Removing:\n"
+                         << Prev << "\nIn favor of this one:\n"
+                         << Curr << "\n";
+                    });
               std::swap(Prev, Curr);
             }
           } else {
-            if (!Quiet) { // print warnings about overlaps
+            Out.Report("Overlapping function ranges", [&](raw_ostream &OS) {
+              // print warnings about overlaps
               OS << "warning: function ranges overlap:\n"
                 << Prev << "\n"
                 << Curr << "\n";
-            }
+            });
             FinalizedFuncs.emplace_back(std::move(Curr));
           }
         } else {
@@ -290,20 +271,21 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
         Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
       }
     }
-    OS << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
-      << Funcs.size() << " total\n";
+    Out << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
+        << Funcs.size() << " total\n";
   }
   return Error::success();
 }
 
-uint32_t GsymCreator::copyString(const GsymCreator &SrcGC, uint32_t StrOff) {
+gsym_strp_t GsymCreator::copyString(const GsymCreator &SrcGC,
+                                    gsym_strp_t StrOff) {
   // String offset at zero is always the empty string, no copying needed.
   if (StrOff == 0)
     return 0;
   return StrTab.add(SrcGC.StringOffsetMap.find(StrOff)->second);
 }
 
-uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
+gsym_strp_t GsymCreator::insertString(StringRef S, bool Copy) {
   if (S.empty())
     return 0;
 
@@ -321,13 +303,19 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
       CHStr = CachedHashStringRef{StringStorage.insert(S).first->getKey(),
                                   CHStr.hash()};
   }
-  const uint32_t StrOff = StrTab.add(CHStr);
+  const gsym_strp_t StrOff = StrTab.add(CHStr);
   // Save a mapping of string offsets to the cached string reference in case
   // we need to segment the GSYM file and copy string from one string table to
   // another.
-  if (StringOffsetMap.count(StrOff) == 0)
-    StringOffsetMap.insert(std::make_pair(StrOff, CHStr));
+  StringOffsetMap.try_emplace(StrOff, CHStr);
   return StrOff;
+}
+
+StringRef GsymCreator::getString(gsym_strp_t Offset) {
+  auto I = StringOffsetMap.find(Offset);
+  assert(I != StringOffsetMap.end() &&
+         "GsymCreator::getString expects a valid offset as parameter.");
+  return I->second.val();
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
@@ -416,19 +404,67 @@ uint8_t GsymCreator::getAddressOffsetSize() const {
   return 1;
 }
 
-uint64_t GsymCreator::calculateHeaderAndTableSize() const {
-  uint64_t Size = sizeof(Header);
-  const size_t NumFuncs = Funcs.size();
-  // Add size of address offset table
-  Size += NumFuncs * getAddressOffsetSize();
-  // Add size of address info offsets which are 32 bit integers in version 1.
-  Size += NumFuncs * sizeof(uint32_t);
-  // Add file table size
-  Size += Files.size() * sizeof(FileEntry);
-  // Add string table size
-  Size += StrTab.getSize();
+llvm::Error
+GsymCreator::validateForEncoding(std::optional<uint64_t> &BaseAddr) const {
+  if (Funcs.empty())
+    return createStringError(std::errc::invalid_argument,
+                             "no functions to encode");
+  if (!Finalized)
+    return createStringError(std::errc::invalid_argument,
+                             "GsymCreator wasn't finalized prior to encoding");
+  if (Funcs.size() > UINT32_MAX)
+    return createStringError(std::errc::invalid_argument,
+                             "too many FunctionInfos");
+  BaseAddr = getBaseAddress();
+  if (!BaseAddr)
+    return createStringError(std::errc::invalid_argument,
+                             "invalid base address");
+  return Error::success();
+}
 
-  return Size;
+void GsymCreator::encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
+                                    uint64_t BaseAddr) const {
+  const uint64_t MaxAddressOffset = getMaxAddressOffset();
+  O.alignTo(AddrOffSize);
+  for (const auto &FI : Funcs) {
+    uint64_t AddrOffset = FI.startAddress() - BaseAddr;
+    // Make sure we calculated the address offsets byte size correctly by
+    // verifying the current address offset is within ranges. We have seen bugs
+    // introduced when the code changes that can cause problems here so it is
+    // good to catch this during testing.
+    assert(AddrOffset <= MaxAddressOffset);
+    (void)MaxAddressOffset;
+    switch (AddrOffSize) {
+    case 1:
+      O.writeU8(static_cast<uint8_t>(AddrOffset));
+      break;
+    case 2:
+      O.writeU16(static_cast<uint16_t>(AddrOffset));
+      break;
+    case 4:
+      O.writeU32(static_cast<uint32_t>(AddrOffset));
+      break;
+    case 8:
+      O.writeU64(AddrOffset);
+      break;
+    default:
+      llvm_unreachable("unsupported address offset size");
+    }
+  }
+}
+
+llvm::Error GsymCreator::encodeFileTable(FileWriter &O) const {
+  assert(!Files.empty());
+  assert(Files[0].Dir == 0);
+  assert(Files[0].Base == 0);
+  if (Files.size() > UINT32_MAX)
+    return createStringError(std::errc::invalid_argument, "too many files");
+  O.writeU32(static_cast<uint32_t>(Files.size()));
+  for (const auto &File : Files) {
+    O.writeStringOffset(File.Dir);
+    O.writeStringOffset(File.Base);
+  }
+  return Error::success();
 }
 
 // This function takes a InlineInfo class that was copy constructed from an
@@ -472,7 +508,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
   }
   std::lock_guard<std::mutex> Guard(Mutex);
   Funcs.emplace_back(DstFI);
-  return Funcs.back().cacheEncoding();
+  return Funcs.back().cacheEncoding(*this);
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,
@@ -489,10 +525,11 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
         createSegment(SegmentSize, FuncIdx);
     if (ExpectedGC) {
       GsymCreator *GC = ExpectedGC->get();
-      if (GC == NULL)
+      if (!GC)
         break; // We had not more functions to encode.
-      raw_null_ostream ErrorStrm;
-      llvm::Error Err = GC->finalize(ErrorStrm);
+      // Don't collect any messages at all
+      OutputAggregator Out(nullptr);
+      llvm::Error Err = GC->finalize(Out);
       if (Err)
         return Err;
       std::string SegmentedGsymPath;
@@ -500,7 +537,6 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
       std::optional<uint64_t> FirstFuncAddr = GC->getFirstFunctionAddress();
       if (FirstFuncAddr) {
         SGP << Path << "-" << llvm::format_hex(*FirstFuncAddr, 1);
-        SGP.flush();
         Err = GC->save(SegmentedGsymPath, ByteOrder, std::nullopt);
         if (Err)
           return Err;
@@ -518,7 +554,7 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
   if (FuncIdx >= Funcs.size())
     return std::unique_ptr<GsymCreator>();
 
-  std::unique_ptr<GsymCreator> GC(new GsymCreator(/*Quiet=*/true));
+  std::unique_ptr<GsymCreator> GC = createNew(/*Quiet=*/true);
 
   // Tell the creator that this is a segment.
   GC->setIsSegment();

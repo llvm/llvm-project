@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_BLKSIZE_T_H__
-#define __LLVM_LIBC_TYPES_BLKSIZE_T_H__
+#ifndef LLVM_LIBC_TYPES_BLKSIZE_T_H
+#define LLVM_LIBC_TYPES_BLKSIZE_T_H
 
 typedef __INTPTR_TYPE__ blksize_t;
 
-#endif // __LLVM_LIBC_TYPES_BLKSIZE_T_H__
+#endif // LLVM_LIBC_TYPES_BLKSIZE_T_H

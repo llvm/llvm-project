@@ -7,38 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
-#include "config/linux/app.h"
+#include "config/app.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
-#include "src/__support/threads/linux/futex_word.h" // For FutexWordType
-#include "src/errno/libc_errno.h"                   // For error macros
+#include "src/__support/libc_errno.h" // For error macros
+#include "src/__support/macros/config.h"
+#include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include <arm_acle.h>
 #endif
 
-#include <fcntl.h>
-#include <linux/futex.h>
+#include "hdr/errno_macros.h"
+#include "hdr/fcntl_macros.h"
+#include "hdr/stdint_proxy.h"
+#include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
 #include <linux/sched.h> // For CLONE_* flags.
-#include <stdint.h>
-#include <sys/mman.h>    // For PROT_* and MAP_* definitions.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
-
-#ifdef SYS_mmap2
-static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
-#elif defined(SYS_mmap)
-static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
-#else
-#error "mmap or mmap2 syscalls not available."
-#endif
+namespace LIBC_NAMESPACE_DECL {
 
 static constexpr size_t NAME_SIZE_MAX = 16; // Includes the null terminator
 static constexpr uint32_t CLEAR_TID_VALUE = 0xABCD1234;
@@ -92,29 +89,27 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
 
   // TODO: Maybe add MAP_STACK? Currently unimplemented on linux but helps
   // future-proof.
-  long mmap_result = LIBC_NAMESPACE::syscall_impl<long>(
-      MMAP_SYSCALL_NUMBER,
-      0, // No special address
-      size, prot,
-      MAP_ANONYMOUS | MAP_PRIVATE, // Process private.
-      -1,                          // Not backed by any file
-      0                            // No offset
-  );
-  if (mmap_result < 0 && (uintptr_t(mmap_result) >= UINTPTR_MAX - size))
-    return Error{int(-mmap_result)};
+  ErrorOr<void *> mmap_result =
+      linux_syscalls::mmap(nullptr, size, prot,
+                           MAP_ANONYMOUS | MAP_PRIVATE, // Process private.
+                           -1, // Not backed by any file
+                           0   // No offset
+      );
+  if (!mmap_result.has_value())
+    return mmap_result;
+
+  char *stack = static_cast<char *>(mmap_result.value()) + guardsize;
 
   if (guardsize) {
     // Give read/write permissions to actual stack.
     // TODO: We are assuming stack growsdown here.
-    long result = LIBC_NAMESPACE::syscall_impl<long>(
-        SYS_mprotect, mmap_result + guardsize, stacksize,
-        PROT_READ | PROT_WRITE);
+    auto result =
+        linux_syscalls::mprotect(stack, stacksize, PROT_READ | PROT_WRITE);
 
-    if (result != 0)
-      return Error{int(-result)};
+    if (!result)
+      return Error{result.error()};
   }
-  mmap_result += guardsize;
-  return reinterpret_cast<void *>(mmap_result);
+  return stack;
 }
 
 // This must always be inlined as we may be freeing the calling threads stack in
@@ -125,7 +120,7 @@ free_stack(void *stack, size_t stacksize, size_t guardsize) {
   uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
   stackaddr -= guardsize;
   stack = reinterpret_cast<void *>(stackaddr);
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_munmap, stack, stacksize + guardsize);
+  linux_syscalls::munmap(stack, stacksize + guardsize);
 }
 
 struct Thread;
@@ -176,7 +171,7 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
 #endif
 }
 
-[[gnu::noinline]] LIBC_INLINE void start_thread() {
+[[gnu::noinline]] void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
   self.attrib = attrib;
@@ -247,8 +242,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   // stack memory.
 
   static constexpr size_t INTERNAL_STACK_DATA_SIZE =
-      sizeof(StartArgs) + sizeof(ThreadAttributes) +
-      sizeof(cpp::Atomic<FutexWordType>);
+      sizeof(StartArgs) + sizeof(ThreadAttributes) + sizeof(Futex);
 
   // This is pretty arbitrary, but at the moment we don't adjust user provided
   // stacksize (or default) to account for this data as its assumed minimal. If
@@ -283,14 +277,15 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   attrib->owned_stack = owned_stack;
   attrib->tls = tls.addr;
   attrib->tls_size = tls.size;
+  attrib->joiner = nullptr;
 
   start_args->thread_attrib = attrib;
   start_args->runner = runner;
   start_args->arg = arg;
 
-  auto clear_tid = reinterpret_cast<cpp::Atomic<FutexWordType> *>(
+  auto clear_tid = reinterpret_cast<Futex *>(
       adjusted_stack + sizeof(StartArgs) + sizeof(ThreadAttributes));
-  clear_tid->val = CLEAR_TID_VALUE;
+  clear_tid->set(CLEAR_TID_VALUE);
   attrib->platform_data = clear_tid;
 
   // The clone syscall takes arguments in an architecture specific order.
@@ -341,6 +336,26 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 }
 
 int Thread::join(ThreadReturnValue &retval) {
+  if (self.attrib) {
+    // Reject self join.
+    if (self.attrib == attrib)
+      return EDEADLK;
+
+    // Do a best-effort check of concurrent/repeated join.
+    // This cmpxchg establishes exclusive joiner role by setting the joiner
+    // field iff there is no previous joiner
+    ThreadAttributes *expected = nullptr;
+    if (!attrib->joiner.compare_exchange_strong(expected, self.attrib,
+                                                cpp::MemoryOrder::ACQ_REL))
+      return EINVAL;
+
+    // Reject mutual join.
+    if (self.attrib->joiner.load(cpp::MemoryOrder::ACQUIRE) == attrib) {
+      attrib->joiner.store(nullptr, cpp::MemoryOrder::RELEASE);
+      return EDEADLK;
+    }
+  }
+
   wait();
 
   if (attrib->style == ThreadStyle::POSIX)
@@ -374,14 +389,11 @@ void Thread::wait() {
   // The kernel should set the value at the clear tid address to zero.
   // If not, it is a spurious wake and we should continue to wait on
   // the futex.
-  auto *clear_tid =
-      reinterpret_cast<cpp::Atomic<FutexWordType> *>(attrib->platform_data);
-  while (clear_tid->load() != 0) {
-    // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
-    // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
-    LIBC_NAMESPACE::syscall_impl<long>(FUTEX_SYSCALL_ID, &clear_tid->val,
-                                       FUTEX_WAIT, CLEAR_TID_VALUE, nullptr);
-  }
+  auto *clear_tid = reinterpret_cast<Futex *>(attrib->platform_data);
+  // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
+  // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
+  while (clear_tid->load() != 0)
+    clear_tid->wait(CLEAR_TID_VALUE, cpp::nullopt, true);
 }
 
 bool Thread::operator==(const Thread &thread) const {
@@ -419,19 +431,13 @@ int Thread::set_name(const cpp::string_view &name) {
   char path_name_buffer[THREAD_NAME_PATH_SIZE];
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDWR);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                             path_name_buffer, O_RDWR);
-#endif
-  if (fd < 0)
-    return -fd;
+  ErrorOr<int> fd = linux_syscalls::open(path_name_buffer, O_RDWR, 0);
+  if (!fd)
+    return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_write, fd, name.data(),
-                                                 name.size());
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_write, fd.value(),
+                                                 name.data(), name.size());
+  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd.value());
 
   if (retval < 0)
     return -retval;
@@ -461,19 +467,13 @@ int Thread::get_name(cpp::StringStream &name) const {
   char path_name_buffer[THREAD_NAME_PATH_SIZE];
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDONLY);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                             path_name_buffer, O_RDONLY);
-#endif
-  if (fd < 0)
-    return -fd;
+  ErrorOr<int> fd = linux_syscalls::open(path_name_buffer, O_RDONLY, 0);
+  if (!fd)
+    return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_read, fd, name_buffer,
-                                                 NAME_SIZE_MAX);
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_read, fd.value(),
+                                                 name_buffer, NAME_SIZE_MAX);
+  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd.value());
   if (retval < 0)
     return -retval;
   if (retval == NAME_SIZE_MAX)
@@ -522,4 +522,4 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   __builtin_unreachable();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

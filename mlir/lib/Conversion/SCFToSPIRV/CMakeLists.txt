@@ -11,6 +11,7 @@ add_mlir_conversion_library(MLIRSCFToSPIRV
   LINK_LIBS PUBLIC
   MLIRArithToSPIRV
   MLIRFuncToSPIRV
+  MLIRIndexToSPIRV
   MLIRMemRefToSPIRV
   MLIRSPIRVDialect
   MLIRSPIRVConversion

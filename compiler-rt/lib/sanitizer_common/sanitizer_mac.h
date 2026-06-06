@@ -37,15 +37,18 @@ struct VersionBase {
 
   VersionBase(u16 major, u16 minor) : major(major), minor(minor) {}
 
-  bool operator==(const VersionType &other) const {
-    return major == other.major && minor == other.minor;
-  }
   bool operator>=(const VersionType &other) const {
     return major > other.major ||
            (major == other.major && minor >= other.minor);
   }
   bool operator<(const VersionType &other) const { return !(*this >= other); }
 };
+
+template <typename VersionType>
+bool operator==(const VersionBase<VersionType> &self,
+                const VersionBase<VersionType> &other) {
+  return self.major == other.major && self.minor == other.minor;
+}
 
 struct MacosVersion : VersionBase<MacosVersion> {
   MacosVersion(u16 major, u16 minor) : VersionBase(major, minor) {}
@@ -55,8 +58,13 @@ struct DarwinKernelVersion : VersionBase<DarwinKernelVersion> {
   DarwinKernelVersion(u16 major, u16 minor) : VersionBase(major, minor) {}
 };
 
+struct ReservedRange {
+  uptr beg, end;
+};
+
 MacosVersion GetMacosAlignedVersion();
 DarwinKernelVersion GetDarwinKernelVersion();
+void GetAppReservedRanges(InternalMmapVector<ReservedRange>& ranges);
 
 char **GetEnviron();
 

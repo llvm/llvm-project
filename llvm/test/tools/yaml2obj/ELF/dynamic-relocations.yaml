@@ -4,6 +4,9 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readelf -r %t | FileCheck %s
 
+# RUN: yaml2obj -DTYPE=SHT_CREL %s -o %t.crel
+# RUN: llvm-readelf -r %t.crel | FileCheck %s
+
 # CHECK:      Relocation section '.rela.dyn' at offset {{.*}} contains 2 entries:
 # CHECK-NEXT:     Offset             Info             Type      Symbol's Value  Symbol's Name
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE 0000000012345678 dynamic
@@ -24,7 +27,7 @@ Sections:
   - Name: .data
     Type: SHT_PROGBITS
   - Name: .rela.dyn
-    Type: SHT_REL
+    Type: [[TYPE=SHT_REL]]
     Link: .dynsym
     Info: .data
     Relocations:

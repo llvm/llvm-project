@@ -1,0 +1,60 @@
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+
+# The file main.c is does not show up in search on Windows.
+# UNSUPPORTED: system-windows
+
+# Until we figure out the correct CHECK lines.
+# UNSUPPORTED: system-darwin
+
+# Checking simple regex search
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK1
+# CHECK1:         Name: {{.+}}31mma{{.+}}0min.c
+
+# Checking complex regex searches
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s main.c|foo' | FileCheck %s --check-prefix CHECK2
+# CHECK2:         Name: {{.+}}31mmain.c{{.+}}0m
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s m[abc]' | FileCheck %s --check-prefix CHECK3
+# CHECK3:         Name: {{.+}}31mma{{.+}}0min.c
+
+# Checking to ensure that no attempt is made to color anything when there are no matching symbols found
+
+# RUN: %lldb %t -o 'settings set use-color true' -o 'image lookup -r -s IMPPATTERN123456' | FileCheck %s --check-prefix CHECK4
+# CHECK4-NOT: {{[0-9]+}} symbols match the regular expression
+
+# Checking multiple matches on same symbol
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s (ma|n)' | FileCheck %s --check-prefix CHECK5
+# CHECK5:         Name: {{.+}}31mma{{.+}}0mi{{.+}}31mn{{.+}}0m.c
+
+# Checking no colorization without regex search
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -s main' | FileCheck %s --check-prefix CHECK6
+# CHECK6:        Summary: {{.+}}`main at main.c:
+
+# Checking no colorization when use-color is false
+
+# RUN: %lldb %t -b -o 'settings set use-color false' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK7
+# CHECK7:        Name: main.c
+
+# Checking for custom colors
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ${ansi.fg.green}' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK8
+# CHECK8:         Name: {{.+}}32mma{{.+}}0min.c
+
+# Checking for functionality when there's prefix but no suffix
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ${ansi.fg.red}' -o 'settings set show-regex-match-ansi-suffix ""' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK9
+# CHECK9:         Name: {{.+}}31mmain.c
+
+# Checking for functionality when there's suffix but no prefix
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ""' -o 'settings set show-regex-match-ansi-suffix ${ansi.fg.red}' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK10
+# CHECK10:         Name: ma{{.+}}31min.c
+
+# Checking for no colorization when there's neither suffix nor prefix
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ""' -o 'settings set show-regex-match-ansi-suffix ""' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK11
+# CHECK11:         Name: main.c

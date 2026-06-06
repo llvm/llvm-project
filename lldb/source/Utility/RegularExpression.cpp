@@ -12,10 +12,11 @@
 
 using namespace lldb_private;
 
-RegularExpression::RegularExpression(llvm::StringRef str)
+RegularExpression::RegularExpression(llvm::StringRef str,
+                                     llvm::Regex::RegexFlags flags)
     : m_regex_text(std::string(str)),
       // m_regex does not reference str anymore after it is constructed.
-      m_regex(llvm::Regex(str)) {}
+      m_regex(llvm::Regex(str, flags)) {}
 
 RegularExpression::RegularExpression(const RegularExpression &rhs)
     : RegularExpression(rhs.GetText()) {}
@@ -35,7 +36,6 @@ llvm::StringRef RegularExpression::GetText() const { return m_regex_text; }
 llvm::Error RegularExpression::GetError() const {
   std::string error;
   if (!m_regex.isValid(error))
-    return llvm::make_error<llvm::StringError>(error,
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(error);
   return llvm::Error::success();
 }

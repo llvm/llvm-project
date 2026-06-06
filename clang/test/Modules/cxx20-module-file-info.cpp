@@ -14,13 +14,14 @@
 // RUN:  -o %t/B.pcm
 
 // RUN: %clang_cc1 -std=c++20 -module-file-info %t/B.pcm | FileCheck \
-// RUN:  --check-prefix=CHECK-B %s
+// RUN:     --check-prefix=CHECK-B %s
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/mod-info-tu3.cpp \
-// RUN:  -fmodule-file=%t/A.pcm -fmodule-file=%t/B.pcm -o %t/Foo.pcm
+// RUN:     -fmodule-file=A=%t/A.pcm -fmodule-file=B=%t/B.pcm -o %t/Foo.pcm
 
-// RUN: %clang_cc1 -std=c++20 -module-file-info %t/Foo.pcm | FileCheck \
-// RUN:  --check-prefix=CHECK-FOO %s
+// RUN: %clang_cc1 -std=c++20 -module-file-info %t/Foo.pcm -fmodule-file=A=%t/A.pcm \
+// RUN:     -fmodule-file=B=%t/B.pcm  | FileCheck \
+// RUN:     --check-prefix=CHECK-FOO %s
 
 // expected-no-diagnostics
 

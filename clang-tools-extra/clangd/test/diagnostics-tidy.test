@@ -14,7 +14,7 @@
 # CHECK-NEXT:        "message": "Suspicious usage of 'sizeof(K)'; did you mean 'K'?",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
-# CHECK-NEXT:            "character": 12,
+# CHECK-NEXT:            "character": 16,
 # CHECK-NEXT:            "line": 1
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {

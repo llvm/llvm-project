@@ -6,8 +6,11 @@
 
 ! As `flang` does not implement `-fc1as` (i.e. a driver for the integrated
 ! assembler), we need to use `-fno-integrated-as` here.
-
-! UNSUPPORTED: system-windows
+! However, calling an external assembler on arm64 Macs fails, because it's
+! currently being invoked with the `-Q` flag, that is not supported on arm64.
+! UNSUPPORTED: system-windows, system-darwin
+! TODO Remove after -fno-integrated-as properly sets DisableIntegratedAS
+! UNSUPPORTED: true
 
 !--------------------------
 ! Invalid output directory
@@ -50,9 +53,9 @@
 ! Content to check from the MLIR outputs
 !--------------------------
 ! MLIR-FIR-NOT: llvm.func
-! MLIR-FIR: func.func @{{.*}}main() {
+! MLIR-FIR: func.func @{{.*}}main(){{.*}}
 
-! MLIR-FIR-NOT: func.func
-! MLIR-LLVMIR: llvm.func @{{.*}}main() {
+! MLIR-LLVMIR-NOT: func.func
+! MLIR-LLVMIR: llvm.func @{{.*}}main(){{.*}}
 
 end program

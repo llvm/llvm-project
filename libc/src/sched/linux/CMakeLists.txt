@@ -1,11 +1,36 @@
 add_entrypoint_object(
+  getcpu
+  SRCS
+    getcpu.cpp
+  HDRS
+    ../getcpu.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   sched_getaffinity
   SRCS
     sched_getaffinity.cpp
   HDRS
     ../sched_getaffinity.h
   DEPENDS
-    libc.include.sched
+    libc.hdr.stdint_proxy
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.pid_t
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sched_getcpu
+  SRCS
+    sched_getcpu.cpp
+  HDRS
+    ../sched_getcpu.h
+  DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -17,7 +42,9 @@ add_entrypoint_object(
   HDRS
     ../sched_setaffinity.h
   DEPENDS
-    libc.include.sched
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.pid_t
+    libc.hdr.types.size_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -29,8 +56,9 @@ add_entrypoint_object(
   HDRS
     ../sched_getcpucount.h
   DEPENDS
-    libc.include.sched
-  )
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
 
 add_entrypoint_object(
   sched_yield
@@ -51,7 +79,10 @@ add_entrypoint_object(
   HDRS
     ../sched_setparam.h
   DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_sched_param
     libc.include.sys_syscall
+    libc.include.time
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -63,7 +94,10 @@ add_entrypoint_object(
   HDRS
     ../sched_getparam.h
   DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_sched_param
     libc.include.sys_syscall
+    libc.include.time
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -75,7 +109,10 @@ add_entrypoint_object(
   HDRS
     ../sched_setscheduler.h
   DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_sched_param
     libc.include.sys_syscall
+    libc.include.time
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -87,6 +124,7 @@ add_entrypoint_object(
   HDRS
     ../sched_getscheduler.h
   DEPENDS
+    libc.hdr.types.pid_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -123,7 +161,53 @@ add_entrypoint_object(
   HDRS
     ../sched_rr_get_interval.h
   DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_timespec
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  __sched_setcpuzero
+  SRCS
+    sched_setcpuzero.cpp
+  HDRS
+    ../sched_setcpuzero.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  __sched_setcpuset
+  SRCS
+    sched_setcpuset.cpp
+  HDRS
+    ../sched_setcpuset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  __sched_getcpuisset
+  SRCS
+    sched_getcpuisset.cpp
+  HDRS
+    ../sched_getcpuisset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
 )

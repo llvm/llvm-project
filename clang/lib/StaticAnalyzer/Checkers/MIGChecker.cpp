@@ -46,13 +46,13 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
   // additionally an argument of a MIG routine, the checker keeps track of that
   // information and issues a warning when an error is returned from the
   // respective routine.
-  std::vector<std::pair<CallDescription, unsigned>> Deallocators = {
+  CallDescriptionMap<unsigned> Deallocators = {
 #define CALL(required_args, deallocated_arg, ...)                              \
-  {{{__VA_ARGS__}, required_args}, deallocated_arg}
-      // E.g., if the checker sees a C function 'vm_deallocate' that is
-      // defined on class 'IOUserClient' that has exactly 3 parameters, it knows
-      // that argument #1 (starting from 0, i.e. the second argument) is going
-      // to be consumed in the sense of the MIG consume-on-success convention.
+  {{CDM::SimpleFunc, {__VA_ARGS__}, required_args}, deallocated_arg}
+      // E.g., if the checker sees a C function 'vm_deallocate' that has
+      // exactly 3 parameters, it knows that argument #1 (starting from 0, i.e.
+      // the second argument) is going to be consumed in the sense of the MIG
+      // consume-on-success convention.
       CALL(3, 1, "vm_deallocate"),
       CALL(3, 1, "mach_vm_deallocate"),
       CALL(2, 0, "mig_deallocate"),
@@ -78,6 +78,9 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
       CALL(1, 0, "thread_inspect_deallocate"),
       CALL(1, 0, "upl_deallocate"),
       CALL(1, 0, "vm_map_deallocate"),
+#undef CALL
+#define CALL(required_args, deallocated_arg, ...)                              \
+  {{CDM::CXXMethod, {__VA_ARGS__}, required_args}, deallocated_arg}
       // E.g., if the checker sees a method 'releaseAsyncReference64()' that is
       // defined on class 'IOUserClient' that takes exactly 1 argument, it knows
       // that the argument is going to be consumed in the sense of the MIG
@@ -87,7 +90,7 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
 #undef CALL
   };
 
-  CallDescription OsRefRetain{{"os_ref_retain"}, 1};
+  CallDescription OsRefRetain{CDM::SimpleFunc, {"os_ref_retain"}, 1};
 
   void checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const;
 
@@ -131,8 +134,8 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
   // routine arguments in the heap.
   while (const MemRegion *MR = Sym->getOriginRegion()) {
     const auto *VR = dyn_cast<VarRegion>(MR);
-    if (VR && VR->hasStackParametersStorage() &&
-           VR->getStackFrame()->inTopFrame())
+    if (VR && VR->hasMemorySpace<StackArgumentsSpaceRegion>(C.getState()) &&
+        VR->getStackFrame()->inTopFrame())
       return cast<ParmVarDecl>(VR->getDecl());
 
     const SymbolicRegion *SR = MR->getSymbolicBase();
@@ -146,17 +149,15 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
 }
 
 static bool isInMIGCall(CheckerContext &C) {
-  const LocationContext *LC = C.getLocationContext();
-  assert(LC && "Unknown location context");
+  const StackFrame *SF = C.getStackFrame();
+  assert(SF && "Unknown stack frame");
 
-  const StackFrameContext *SFC;
   // Find the top frame.
-  while (LC) {
-    SFC = LC->getStackFrame();
-    LC = SFC->getParent();
+  while (SF->getParent()) {
+    SF = SF->getParent();
   }
 
-  const Decl *D = SFC->getDecl();
+  const Decl *D = SF->getDecl();
 
   if (std::optional<AnyCall> AC = AnyCall::forDecl(D)) {
     // Even though there's a Sema warning when the return type of an annotated
@@ -198,15 +199,12 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!isInMIGCall(C))
     return;
 
-  auto I = llvm::find_if(Deallocators,
-                         [&](const std::pair<CallDescription, unsigned> &Item) {
-                           return Item.first.matches(Call);
-                         });
-  if (I == Deallocators.end())
+  const unsigned *ArgIdxPtr = Deallocators.lookup(Call);
+  if (!ArgIdxPtr)
     return;
 
   ProgramStateRef State = C.getState();
-  unsigned ArgIdx = I->second;
+  unsigned ArgIdx = *ArgIdxPtr;
   SVal Arg = Call.getArgSVal(ArgIdx);
   const ParmVarDecl *PVD = getOriginParam(Arg, C);
   if (!PVD || State->contains<RefCountedParameters>(PVD))
@@ -270,7 +268,7 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
   if (!State->get<ReleasedParameter>())
     return;
 
-  SVal V = C.getSVal(RS);
+  SVal V = RS->getRetValue() ? C.getSVal(RS->getRetValue()) : UndefinedVal();
   if (mayBeSuccess(V, C))
     return;
 

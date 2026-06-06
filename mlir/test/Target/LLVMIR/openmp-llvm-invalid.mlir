@@ -2,8 +2,8 @@
 
 // Checking translation when the update is carried out by using more than one op
 // in the region.
-llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %expr: i32) {
-  omp.atomic.update %x : !llvm.ptr<i32> {
+llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %expr: i32) {
+  omp.atomic.update %x : !llvm.ptr {
   ^bb0(%xval: i32):
     %t1 = llvm.mul %xval, %expr : i32
     %t2 = llvm.sdiv %t1, %expr : i32
@@ -17,10 +17,10 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %expr: i32
 
 // Checking translation when the captured variable is not used in the inner
 // update operation
-llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %expr: i32) {
+llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %expr: i32) {
   // expected-error @+2 {{no atomic update operation with region argument as operand found inside atomic.update region}}
   // expected-error @+1 {{LLVM Translation failed for operation: omp.atomic.update}}
-  omp.atomic.update %x : !llvm.ptr<i32> {
+  omp.atomic.update %x : !llvm.ptr {
   ^bb0(%xval: i32):
     %newval = llvm.mul %expr, %expr : i32
     omp.yield(%newval : i32)
@@ -32,12 +32,12 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %expr: i32
 
 // Checking translation when the update is carried out by using more than one
 // operations in the atomic capture region.
-llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %v: !llvm.ptr<i32>, %expr: i32) {
+llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %v: !llvm.ptr, %expr: i32) {
   // expected-error @+1 {{LLVM Translation failed for operation: omp.atomic.capture}}
   omp.atomic.capture memory_order(seq_cst) {
-    omp.atomic.read %v = %x : !llvm.ptr<i32>, i32
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
     // expected-error @+1 {{no atomic update operation with region argument as operand found inside atomic.update region}}
-    omp.atomic.update %x : !llvm.ptr<i32> {
+    omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %newval = llvm.mul %expr, %expr : i32
       omp.yield(%newval : i32)
@@ -50,10 +50,10 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %v: !llvm.
 
 // Checking translation when the captured variable is not used in the inner
 // update operation
-llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr<i32>, %v: !llvm.ptr<i32>, %expr: i32) {
+llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %v: !llvm.ptr, %expr: i32) {
   omp.atomic.capture memory_order(seq_cst) {
-    omp.atomic.read %v = %x : !llvm.ptr<i32>, i32 
-    omp.atomic.update %x : !llvm.ptr<i32> {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.update %x : !llvm.ptr {
     ^bb0(%xval: i32):
       %t1 = llvm.mul %xval, %expr : i32
       %t2 = llvm.sdiv %t1, %expr : i32
@@ -72,20 +72,89 @@ llvm.func @omp_threadprivate() {
   %2 = llvm.mlir.constant(2 : i32) : i32
   %3 = llvm.mlir.constant(3 : i32) : i32
 
-  %4 = llvm.alloca %0 x i32 {in_type = i32, name = "a"} : (i64) -> !llvm.ptr<i32>
+  %4 = llvm.alloca %0 x i32 {in_type = i32, name = "a"} : (i64) -> !llvm.ptr
 
   // expected-error @below {{Addressing symbol not found}}
   // expected-error @below {{LLVM Translation failed for operation: omp.threadprivate}}
-  %5 = omp.threadprivate %4 : !llvm.ptr<i32> -> !llvm.ptr<i32>
+  %5 = omp.threadprivate %4 : !llvm.ptr -> !llvm.ptr
 
-  llvm.store %1, %5 : !llvm.ptr<i32>
+  llvm.store %1, %5 : i32, !llvm.ptr
 
   omp.parallel  {
-    %6 = omp.threadprivate %4 : !llvm.ptr<i32> -> !llvm.ptr<i32>
-    llvm.store %2, %6 : !llvm.ptr<i32>
+    %6 = omp.threadprivate %4 : !llvm.ptr -> !llvm.ptr
+    llvm.store %2, %6 : i32, !llvm.ptr
     omp.terminator
   }
 
-  llvm.store %3, %5 : !llvm.ptr<i32>
+  llvm.store %3, %5 : i32, !llvm.ptr
   llvm.return
+}
+
+// -----
+
+llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error @below {{Ill-formed type attributes for linear variables}}
+  omp.wsloop linear(%x : !llvm.ptr = %step : i32) {
+     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+       omp.yield
+     }
+  } {linear_var_types = []}
+  llvm.return
+}
+
+// -----
+
+llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error @below {{Ill-formed type attributes for linear variables}} 
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
+     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+       omp.yield
+     }
+  } {linear_var_types = []}
+  llvm.return
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device(%arg0 : !llvm.ptr) {
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.threadprivate}}
+    %0 = omp.threadprivate %arg0 : !llvm.ptr -> !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device_nested_target(%arg0 : !llvm.ptr) {
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.parallel}}
+    omp.parallel {
+      omp.target {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device_sibling_target(%x: !llvm.ptr, %expr: i32) {
+    omp.target {
+      omp.terminator
+    }
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.atomic.update}}
+    omp.atomic.update %x : !llvm.ptr {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    llvm.return
+  }
 }

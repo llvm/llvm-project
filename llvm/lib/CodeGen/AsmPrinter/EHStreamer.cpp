@@ -13,7 +13,6 @@
 #include "EHStreamer.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -24,7 +23,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -246,17 +244,17 @@ void EHStreamer::computeCallSiteTable(
   // Whether the last CallSite entry was for an invoke.
   bool PreviousIsInvoke = false;
 
-  bool IsSJLJ = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::SjLj;
+  bool IsSJLJ = Asm->MAI.getExceptionHandlingType() == ExceptionHandling::SjLj;
 
   // Visit all instructions in order of address.
   for (const auto &MBB : *Asm->MF) {
     if (&MBB == &Asm->MF->front() || MBB.isBeginSection()) {
       // We start a call-site range upon function entry and at the beginning of
       // every basic block section.
-      CallSiteRanges.push_back(
-          {Asm->MBBSectionRanges[MBB.getSectionIDNum()].BeginLabel,
-           Asm->MBBSectionRanges[MBB.getSectionIDNum()].EndLabel,
-           Asm->getMBBExceptionSym(MBB), CallSites.size()});
+      auto &Range = Asm->MBBSectionRanges[MBB.getSectionID()];
+      CallSiteRanges.push_back({Range.BeginLabel, Range.EndLabel,
+                                Asm->getMBBExceptionSym(MBB),
+                                CallSites.size()});
       PreviousIsInvoke = false;
       SawPotentiallyThrowing = false;
       LastLabel = nullptr;
@@ -293,8 +291,8 @@ void EHStreamer::computeCallSiteTable(
       // throw, create a call-site entry with no landing pad for the region
       // between the try-ranges.
       if (SawPotentiallyThrowing &&
-          (Asm->MAI->usesCFIForEH() ||
-           Asm->MAI->getExceptionHandlingType() == ExceptionHandling::AIX)) {
+          (Asm->MAI.usesCFIForEH() ||
+           Asm->MAI.getExceptionHandlingType() == ExceptionHandling::AIX)) {
         CallSites.push_back({LastLabel, BeginLabel, nullptr, 0});
         PreviousIsInvoke = false;
       }
@@ -417,9 +415,9 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   SmallVector<CallSiteRange, 4> CallSiteRanges;
   computeCallSiteTable(CallSites, CallSiteRanges, LandingPads, FirstActions);
 
-  bool IsSJLJ = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::SjLj;
-  bool IsWasm = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::Wasm;
-  bool HasLEB128Directives = Asm->MAI->hasLEB128Directives();
+  bool IsSJLJ = Asm->MAI.getExceptionHandlingType() == ExceptionHandling::SjLj;
+  bool IsWasm = Asm->MAI.getExceptionHandlingType() == ExceptionHandling::Wasm;
+  bool HasLEB128Directives = Asm->MAI.hasLEB128Directives();
   unsigned CallSiteEncoding =
       IsSJLJ ? static_cast<unsigned>(dwarf::DW_EH_PE_udata4) :
                Asm->getObjFileLowering().getCallSiteEncoding();
@@ -686,7 +684,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
         // For non-PIC we can simply use the absolute value.
         Asm->emitEncodingByte(dwarf::DW_EH_PE_absptr, "@LPStart");
         Asm->OutStreamer->emitSymbolValue(LandingPadRange->FragmentBeginLabel,
-                                          Asm->MAI->getCodePointerSize());
+                                          Asm->MAI.getCodePointerSize());
       } else {
         // For PIC mode, we Emit a PC-relative address for LPStart.
         Asm->emitEncodingByte(dwarf::DW_EH_PE_pcrel, "@LPStart");
@@ -698,7 +696,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
                 MCSymbolRefExpr::create(LandingPadRange->FragmentBeginLabel,
                                         Context),
                 MCSymbolRefExpr::create(Dot, Context), Context),
-            Asm->MAI->getCodePointerSize());
+            Asm->MAI.getCodePointerSize());
       }
 
       if (HasLEB128Directives)

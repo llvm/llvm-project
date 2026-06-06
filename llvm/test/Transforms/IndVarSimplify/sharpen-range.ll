@@ -1,5 +1,5 @@
 ;; RUN: opt -S < %s -passes=indvars | FileCheck %s
-; RUN: opt -passes=lcssa,loop-simplify -S < %s | opt -S -passes='require<targetir>,require<scalar-evolution>,require<domtree>,loop(indvars)'
+; RUN: opt -passes=lcssa,loop-simplify -S < %s | opt -S -passes='require<target-ir>,require<scalar-evolution>,require<domtree>,loop(indvars)'
 
 ;; Check if llvm can narrow !range metadata based on loop entry
 ;; predicates.
@@ -87,7 +87,7 @@ loop.begin:
 ; CHECK: loop.begin:
   %i.01 = phi i64 [ 2, %entry ], [ %add, %loop.end ]
   %cmp = icmp ugt i64 %i.01, 1
-; CHECK: %cmp = icmp ugt i64 %i.01, 1
+; CHECK: %cmp = icmp samesign ugt i64 %i.01, 1
   br i1 %cmp, label %loop, label %loop.end
 
 loop:

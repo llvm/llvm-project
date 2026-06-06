@@ -15,11 +15,11 @@
 #include <cassert>
 #include <ranges>
 
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 
 struct ThrowingMove {
   ThrowingMove() = default;
-  ThrowingMove(ThrowingMove&&){};
+  ThrowingMove(ThrowingMove&&) {}
   ThrowingMove& operator=(ThrowingMove&&){return *this;}
 };
 

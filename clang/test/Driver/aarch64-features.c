@@ -1,4 +1,5 @@
 // RUN: %clang --target=aarch64-none-linux-gnu -### %s -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=aarch64_be-none-linux-gnu -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=arm64-none-linux-gnu -### %s -fsyntax-only 2>&1 | FileCheck %s
 
 // CHECK: "-funwind-tables=2"
@@ -43,8 +44,11 @@
 // RUN: %clang --target=aarch64-windows-gnu -rtlib=compiler-rt \
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-OFF %s
 
+// RUN: %clang --target=aarch64-unknown-freebsd -rtlib=compiler-rt \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
+
 // RUN: %clang --target=aarch64-unknown-openbsd -rtlib=compiler-rt \
-// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-OFF %s
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
 
 // RUN: %clang --target=aarch64-linux-gnu -rtlib=libgcc \
 // RUN: --gcc-toolchain=%S/Inputs/aarch64-linux-gnu-tree/gcc-10 \
@@ -76,6 +80,15 @@
 
 // RUN: %clang --target=aarch64-windows-gnu -rtlib=libgcc -moutline-atomics \
 // RUN: --gcc-toolchain=%S/Inputs/aarch64-linux-gnu-tree/gcc-7.5.0 \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
+
+// RUN: %clang --target=aarch64-unknown-hurd-gnu -rtlib=libgcc \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
+
+// RUN: %clang --target=aarch64-unknown-haiku -rtlib=libgcc \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
+
+// RUN: %clang --target=aarch64-unknown-managarm-mlibc -rtlib=libgcc \
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
 
 // CHECK-OUTLINE-ATOMICS-ON: "-target-feature" "+outline-atomics"

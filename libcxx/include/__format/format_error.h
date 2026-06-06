@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -26,28 +27,26 @@ _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 class _LIBCPP_EXPORTED_FROM_ABI format_error : public runtime_error {
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit format_error(const string& __s)
-      : runtime_error(__s) {}
-  _LIBCPP_HIDE_FROM_ABI explicit format_error(const char* __s)
-      : runtime_error(__s) {}
-  _LIBCPP_HIDE_FROM_ABI format_error(const format_error&) = default;
+  _LIBCPP_HIDE_FROM_ABI explicit format_error(const string& __s) : runtime_error(__s) {}
+  _LIBCPP_HIDE_FROM_ABI explicit format_error(const char* __s) : runtime_error(__s) {}
+  _LIBCPP_HIDE_FROM_ABI format_error(const format_error&)            = default;
   _LIBCPP_HIDE_FROM_ABI format_error& operator=(const format_error&) = default;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
   ~format_error() noexcept override = default;
 };
 _LIBCPP_DIAGNOSTIC_POP
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void
-__throw_format_error(const char* __s) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_format_error(const char* __s) {
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw format_error(__s);
-#else
+#  else
   _LIBCPP_VERBOSE_ABORT("format_error was thrown in -fno-exceptions mode with message \"%s\"", __s);
-#endif
+#  endif
 }
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___FORMAT_FORMAT_ERROR_H

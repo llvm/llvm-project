@@ -1,6 +1,6 @@
-from __future__ import absolute_import
 import inspect
 import os
+import enum
 import platform
 import sys
 
@@ -8,9 +8,10 @@ import lit.Test
 import lit.formats
 import lit.TestingConfig
 import lit.util
+from lit.DiffUpdater import diff_test_updater
 
 # LitConfig must be a new style class for properties to work
-class LitConfig(object):
+class LitConfig:
     """LitConfig - Configuration data for a 'lit' test runner instance, shared
     across all tests.
 
@@ -24,7 +25,7 @@ class LitConfig(object):
         self,
         progname,
         path,
-        quiet,
+        diagnostic_level,
         useValgrind,
         valgrindLeakCheck,
         valgrindArgs,
@@ -34,15 +35,18 @@ class LitConfig(object):
         order,
         params,
         config_prefix=None,
-        maxIndividualTestTime=0,
+        maxIndividualTestTime=None,
+        maxRetriesPerTest=None,
         parallelism_groups={},
         per_test_coverage=False,
+        gtest_sharding=True,
+        update_tests=False,
     ):
         # The name of the test runner.
         self.progname = progname
         # The items to add to the PATH environment variable.
         self.path = [str(p) for p in path]
-        self.quiet = bool(quiet)
+        self.diagnostic_level = diagnostic_level
         self.useValgrind = bool(useValgrind)
         self.valgrindLeakCheck = bool(valgrindLeakCheck)
         self.valgrindUserArgs = list(valgrindArgs)
@@ -85,8 +89,12 @@ class LitConfig(object):
             self.valgrindArgs.extend(self.valgrindUserArgs)
 
         self.maxIndividualTestTime = maxIndividualTestTime
+        self.maxRetriesPerTest = maxRetriesPerTest
         self.parallelism_groups = parallelism_groups
         self.per_test_coverage = per_test_coverage
+        self.gtest_sharding = bool(gtest_sharding)
+        self.update_tests = update_tests
+        self.test_updaters = [diff_test_updater]
 
     @property
     def maxIndividualTestTime(self):
@@ -115,6 +123,14 @@ class LitConfig(object):
         Interface for setting maximum time to spend executing
         a single test
         """
+        if hasattr(self, "_maxIndividualTestTime"):
+            raise AttributeError(
+                "lit_config.maxIndividualTestTime is read-only. "
+                "Use config.maxIndividualTestTime instead."
+            )
+        if value is None:
+            self._maxIndividualTestTime = None
+            return
         if not isinstance(value, int):
             self.fatal("maxIndividualTestTime must set to a value of type int.")
         self._maxIndividualTestTime = value
@@ -147,8 +163,7 @@ class LitConfig(object):
     def load_config(self, config, path):
         """load_config(config, path) - Load a config object from an alternate
         path."""
-        if self.debug:
-            self.note("load_config from %r" % path)
+        self.dbg("load_config from %r" % path)
         config.load_from_path(path, self)
         return config
 
@@ -201,11 +216,15 @@ class LitConfig(object):
         return dir
 
     def _write_message(self, kind, message):
+        if not self.diagnostic_level_enabled(kind):
+            return
         # Get the file/line where this message was generated.
         f = inspect.currentframe()
         # Step out of _write_message, and then out of wrapper.
         f = f.f_back.f_back
         file = os.path.abspath(inspect.getsourcefile(f))
+        if lit.util.pythonize_bool(self.params.get("use_normalized_slashes")):
+            file = file.replace("\\", "/")
         line = inspect.getlineno(f)
         sys.stderr.write(
             "%s: %s:%d: %s: %s\n" % (self.progname, file, line, kind, message)
@@ -226,13 +245,21 @@ class LitConfig(object):
                 "unable to find %r parameter, use '--param=%s=VALUE'" % (key, key)
             )
 
+    def diagnostic_level_enabled(self, kind):
+        if kind == "debug":
+            return self.debug
+        return DiagnosticLevel.create(self.diagnostic_level) >= DiagnosticLevel.create(
+            kind
+        )
+
+    def dbg(self, message):
+        self._write_message("debug", message)
+
     def note(self, message):
-        if not self.quiet:
-            self._write_message("note", message)
+        self._write_message("note", message)
 
     def warning(self, message):
-        if not self.quiet:
-            self._write_message("warning", message)
+        self._write_message("warning", message)
         self.numWarnings += 1
 
     def error(self, message):
@@ -242,3 +269,41 @@ class LitConfig(object):
     def fatal(self, message):
         self._write_message("fatal", message)
         sys.exit(2)
+
+    def run_command_cached(self, cmd, allow_failure=False, **kwargs):
+        """
+        Run a command with subprocess.run, with a cache global to this llvm-lit invocation
+        If allow_failure is True, lit_config.fatal will be invoked if the command fails.
+        All additional kwargs are passed to subprocess.run
+        """
+        if type(cmd) is list:
+            cmd = tuple(cmd)
+            return lit.util.runCommandCached(self, cmd, allow_failure, **kwargs)
+        elif type(cmd) is str:
+            return lit.util.runCommandCached(self, cmd, allow_failure, **kwargs)
+        else:
+            raise ValueError(
+                f"runCommandCached expected list or str, got {type(cmd)}: {cmd}"
+            )
+
+
+@enum.unique
+class DiagnosticLevel(enum.IntEnum):
+    FATAL = 0
+    ERROR = 1
+    WARNING = 2
+    NOTE = 3
+
+    @classmethod
+    def create(cls, value):
+        if value == "fatal":
+            return cls.FATAL
+        if value == "error":
+            return cls.ERROR
+        if value == "warning":
+            return cls.WARNING
+        if value == "note":
+            return cls.NOTE
+        raise ValueError(
+            f"invalid diagnostic level {repr(value)} of type {type(value)}"
+        )

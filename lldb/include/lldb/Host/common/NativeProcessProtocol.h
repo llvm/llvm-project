@@ -45,19 +45,22 @@ struct SVR4LibraryInfo {
   lldb::addr_t next;
 };
 
+/// Generic loaded-library entry used by the non-SVR4 `qXfer:libraries:read`
+/// form of the GDB remote library-list protocol (PE on Windows).
+struct LoadedLibraryInfo {
+  std::string name;
+  lldb::addr_t base_addr;
+};
+
 // NativeProcessProtocol
 class NativeProcessProtocol {
 public:
   virtual ~NativeProcessProtocol() = default;
 
   typedef std::vector<std::unique_ptr<NativeThreadProtocol>> thread_collection;
-  template <typename I>
-  static NativeThreadProtocol &thread_list_adapter(I &iter) {
-    assert(*iter);
-    return **iter;
-  }
-  typedef LockingAdaptedIterable<thread_collection, NativeThreadProtocol &,
-                                 thread_list_adapter, std::recursive_mutex>
+  typedef LockingAdaptedIterable<
+      std::recursive_mutex, thread_collection,
+      llvm::pointee_iterator<thread_collection::const_iterator>>
       ThreadIterable;
 
   virtual Status Resume(const ResumeActionList &resume_actions) = 0;
@@ -150,6 +153,17 @@ public:
                                    "Not implemented");
   }
 
+  /// Return the currently loaded libraries of the target in the
+  /// `qXfer:libraries:read` form (generic name + base address pairs; used on
+  /// Windows, where the inferior is not SVR4 and the module list comes from
+  /// the PE loader).
+  virtual llvm::Expected<std::vector<LoadedLibraryInfo>> GetLoadedLibraries() {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Not implemented");
+  }
+
+  virtual bool HasPendingLibraryEvents() { return false; }
+
   virtual bool IsAlive() const;
 
   virtual size_t UpdateThreads() = 0;
@@ -161,6 +175,10 @@ public:
                                bool hardware) = 0;
 
   virtual Status RemoveBreakpoint(lldb::addr_t addr, bool hardware = false);
+
+  bool HasSoftwareBreakpoint(lldb::addr_t addr) {
+    return m_software_breakpoints.find(addr) != m_software_breakpoints.end();
+  }
 
   // Hardware Breakpoint functions
   virtual const HardwareBreakpointMap &GetHardwareBreakpointMap() const;
@@ -248,6 +266,11 @@ public:
     virtual void
     NewSubprocess(NativeProcessProtocol *parent_process,
                   std::unique_ptr<NativeProcessProtocol> child_process) = 0;
+
+    /// Called by the platform when the inferior writes to stdout/stderr
+    /// through a redirected pseudoconsole that the platform owns.
+    virtual void NewProcessOutput(NativeProcessProtocol *process,
+                                  llvm::StringRef data) {}
   };
 
   virtual Status GetLoadedModuleFileSpec(const char *module_path,
@@ -268,8 +291,10 @@ public:
     memory_tagging = (1u << 6),
     savecore = (1u << 7),
     siginfo_read = (1u << 8),
+    libraries = (1u << 9),
+    accelerator_plugins = (1u << 10),
 
-    LLVM_MARK_AS_BITMASK_ENUM(siginfo_read)
+    LLVM_MARK_AS_BITMASK_ENUM(accelerator_plugins)
   };
 
   class Manager {
@@ -413,9 +438,16 @@ public:
                                    "Not implemented");
   }
 
+  /// Get the list of structured data plugins supported by this process. They
+  /// must match the `type` field used by the corresponding
+  /// StructuredDataPlugins in the client.
+  ///
+  /// \return
+  ///     A vector of structured data plugin names.
+  virtual std::vector<std::string> GetStructuredDataPlugins() { return {}; };
+
 protected:
   struct SoftwareBreakpoint {
-    uint32_t ref_count;
     llvm::SmallVector<uint8_t, 4> saved_opcodes;
     llvm::ArrayRef<uint8_t> breakpoint_opcodes;
   };

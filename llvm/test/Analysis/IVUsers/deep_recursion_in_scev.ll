@@ -4,30 +4,30 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @quux(i8 addrspace(1)* %arg, i8 addrspace(1)* %arg1) {
+define void @quux(ptr addrspace(1) %arg, ptr addrspace(1) %arg1) {
 bb:
-  %tmp2 = getelementptr inbounds i8, i8 addrspace(1)* %arg, i64 80
-  %tmp3 = bitcast i8 addrspace(1)* %tmp2 to i8 addrspace(1)* addrspace(1)*
-  %tmp4 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %tmp3, align 8
-  %tmp5 = getelementptr inbounds i8, i8 addrspace(1)* %tmp4, i64 8
-  %tmp6 = bitcast i8 addrspace(1)* %tmp5 to i8 addrspace(1)* addrspace(1)*
-  %tmp7 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %tmp6, align 8
-  %tmp8 = getelementptr inbounds i8, i8 addrspace(1)* %tmp7, i64 8
-  %tmp9 = bitcast i8 addrspace(1)* %tmp8 to i32 addrspace(1)*
-  %tmp10 = load i32, i32 addrspace(1)* %tmp9, align 8
+  %tmp2 = getelementptr inbounds i8, ptr addrspace(1) %arg, i64 80
+  %tmp3 = bitcast ptr addrspace(1) %tmp2 to ptr addrspace(1)
+  %tmp4 = load ptr addrspace(1), ptr addrspace(1) %tmp3, align 8
+  %tmp5 = getelementptr inbounds i8, ptr addrspace(1) %tmp4, i64 8
+  %tmp6 = bitcast ptr addrspace(1) %tmp5 to ptr addrspace(1)
+  %tmp7 = load ptr addrspace(1), ptr addrspace(1) %tmp6, align 8
+  %tmp8 = getelementptr inbounds i8, ptr addrspace(1) %tmp7, i64 8
+  %tmp9 = bitcast ptr addrspace(1) %tmp8 to ptr addrspace(1)
+  %tmp10 = load i32, ptr addrspace(1) %tmp9, align 8
   %tmp11 = udiv i32 65, %tmp10
-  %tmp12 = getelementptr inbounds i8, i8 addrspace(1)* %arg, i64 80
-  %tmp13 = bitcast i8 addrspace(1)* %tmp12 to i8 addrspace(1)* addrspace(1)*
-  %tmp14 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %tmp13, align 8
-  %tmp15 = getelementptr inbounds i8, i8 addrspace(1)* %tmp14, i64 8
-  %tmp16 = bitcast i8 addrspace(1)* %tmp15 to i8 addrspace(1)* addrspace(1)*
-  %tmp17 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %tmp16, align 8
-  %tmp18 = getelementptr inbounds i8, i8 addrspace(1)* %arg1, i64 8
-  %tmp19 = bitcast i8 addrspace(1)* %tmp18 to i32 addrspace(1)*
-  %tmp20 = load i32, i32 addrspace(1)* %tmp19, align 8, !range !0
-  %tmp21 = getelementptr inbounds i8, i8 addrspace(1)* %tmp17, i64 8
-  %tmp22 = bitcast i8 addrspace(1)* %tmp21 to i32 addrspace(1)*
-  %tmp23 = load i32, i32 addrspace(1)* %tmp22, align 8, !range !0
+  %tmp12 = getelementptr inbounds i8, ptr addrspace(1) %arg, i64 80
+  %tmp13 = bitcast ptr addrspace(1) %tmp12 to ptr addrspace(1)
+  %tmp14 = load ptr addrspace(1), ptr addrspace(1) %tmp13, align 8
+  %tmp15 = getelementptr inbounds i8, ptr addrspace(1) %tmp14, i64 8
+  %tmp16 = bitcast ptr addrspace(1) %tmp15 to ptr addrspace(1)
+  %tmp17 = load ptr addrspace(1), ptr addrspace(1) %tmp16, align 8
+  %tmp18 = getelementptr inbounds i8, ptr addrspace(1) %arg1, i64 8
+  %tmp19 = bitcast ptr addrspace(1) %tmp18 to ptr addrspace(1)
+  %tmp20 = load i32, ptr addrspace(1) %tmp19, align 8, !range !0
+  %tmp21 = getelementptr inbounds i8, ptr addrspace(1) %tmp17, i64 8
+  %tmp22 = bitcast ptr addrspace(1) %tmp21 to ptr addrspace(1)
+  %tmp23 = load i32, ptr addrspace(1) %tmp22, align 8, !range !0
   %tmp24 = zext i32 %tmp23 to i64
   %tmp25 = and i32 %tmp11, 7
   %tmp26 = icmp ugt i32 %tmp10, 9

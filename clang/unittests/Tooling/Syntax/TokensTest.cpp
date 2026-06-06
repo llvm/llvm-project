@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.def"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/Utils.h"
@@ -91,7 +92,8 @@ public:
   /// Run the clang frontend, collect the preprocessed tokens from the frontend
   /// invocation and store them in this->Buffer.
   /// This also clears SourceManager before running the compiler.
-  void recordTokens(llvm::StringRef Code) {
+  void recordTokens(llvm::StringRef Code,
+                    llvm::ArrayRef<const char *> ExtraArgs = {}) {
     class RecordTokens : public ASTFrontendAction {
     public:
       explicit RecordTokens(TokenBuffer &Result) : Result(Result) {}
@@ -122,8 +124,10 @@ public:
     // Prepare to run a compiler.
     if (!Diags->getClient())
       Diags->setClient(new IgnoringDiagConsumer);
-    std::vector<const char *> Args = {"tok-test", "-std=c++03", "-fsyntax-only",
-                                      FileName};
+    std::vector<const char *> Args = {"tok-test", LangStandard.c_str(),
+                                      "-fsyntax-only"};
+    Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
+    Args.push_back(FileName);
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
     CIOpts.VFS = FS;
@@ -132,16 +136,19 @@ public:
     CI->getFrontendOpts().DisableFree = false;
     CI->getPreprocessorOpts().addRemappedFile(
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
-    CompilerInstance Compiler;
-    Compiler.setInvocation(std::move(CI));
-    Compiler.setDiagnostics(Diags.get());
-    Compiler.setFileManager(FileMgr.get());
-    Compiler.setSourceManager(SourceMgr.get());
+    CompilerInstance Compiler(std::move(CI));
+    Compiler.setDiagnostics(Diags);
+    Compiler.setVirtualFileSystem(FS);
+    Compiler.setFileManager(FileMgr);
+    Compiler.setSourceManager(SourceMgr);
 
     this->Buffer = TokenBuffer(*SourceMgr);
     RecordTokens Recorder(this->Buffer);
-    ASSERT_TRUE(Compiler.ExecuteAction(Recorder))
-        << "failed to run the frontend";
+    if (AllowErrors)
+      Compiler.ExecuteAction(Recorder);
+    else
+      ASSERT_TRUE(Compiler.ExecuteAction(Recorder))
+          << "failed to run the frontend";
   }
 
   /// Record the tokens and return a test dump of the resulting buffer.
@@ -249,14 +256,18 @@ public:
   }
 
   // Data fields.
+  std::string LangStandard = "-std=c++03";
+  bool AllowErrors = false;
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(new DiagnosticIDs, new DiagnosticOptions);
+      llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagnosticIDs::create(),
+                                                   DiagOpts);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
-      new llvm::vfs::InMemoryFileSystem;
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   llvm::IntrusiveRefCntPtr<FileManager> FileMgr =
-      new FileManager(FileSystemOptions(), FS);
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), FS);
   llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr =
-      new SourceManager(*Diags, *FileMgr);
+      llvm::makeIntrusiveRefCnt<SourceManager>(*Diags, *FileMgr);
   /// Contains last result of calling recordTokens().
   TokenBuffer Buffer = TokenBuffer(*SourceMgr);
 };
@@ -374,9 +385,22 @@ TEST_F(TokenCollectorTest, Locations) {
 
   auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
   for (auto &R : Code.ranges()) {
-    EXPECT_THAT(Buffer.spelledTokenAt(StartLoc.getLocWithOffset(R.Begin)),
-                Pointee(RangeIs(R)));
+    EXPECT_THAT(
+        Buffer.spelledTokenContaining(StartLoc.getLocWithOffset(R.Begin)),
+        Pointee(RangeIs(R)));
   }
+}
+
+TEST_F(TokenCollectorTest, LocationInMiddleOfSpelledToken) {
+  llvm::Annotations Code(R"cpp(
+    int foo = [[baa^aar]];
+  )cpp");
+  recordTokens(Code.code());
+  // Check spelled tokens.
+  auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
+  EXPECT_THAT(
+      Buffer.spelledTokenContaining(StartLoc.getLocWithOffset(Code.point())),
+      Pointee(RangeIs(Code.range())));
 }
 
 TEST_F(TokenCollectorTest, MacroDirectives) {
@@ -816,6 +840,18 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("prev good")), std::nullopt);
 }
 
+TEST_F(TokenBufferTest, NoCrashForEofToken) {
+  recordTokens(R"cpp(
+    int main() {
+  )cpp");
+  ASSERT_TRUE(!Buffer.expandedTokens().empty());
+  ASSERT_EQ(Buffer.expandedTokens().back().kind(), tok::eof);
+  // Expanded range including `eof` is handled gracefully (`eof` is ignored).
+  EXPECT_THAT(
+      Buffer.spelledForExpanded(Buffer.expandedTokens()),
+      ValueIs(SameRange(Buffer.spelledTokens(SourceMgr->getMainFileID()))));
+}
+
 TEST_F(TokenBufferTest, ExpandedTokensForRange) {
   recordTokens(R"cpp(
     #define SIGN(X) X##_washere
@@ -1119,5 +1155,38 @@ TEST_F(TokenCollectorTest, Pragmas) {
       for(int i=0;i<4;++i);
     }
   )cpp");
+}
+
+TEST_F(TokenBufferTest, EofTokenOnBracketDepthLimit) {
+  // Force parser to bail out due to exceeding the bracket depth limit.
+  recordTokens("((;", {"-fbracket-depth=1"});
+
+  ASSERT_GE(Buffer.expandedTokens().size(), 2u);
+  // The stream is truncated but ends with an `eof`.
+  EXPECT_EQ(Buffer.expandedTokens().back().kind(), tok::eof);
+  EXPECT_EQ(Buffer.expandedTokens().drop_back().back().kind(), tok::l_paren);
+}
+
+TEST_F(TokenCollectorTest, CXX20ModuleImportModule) {
+  LangStandard = "-std=c++20";
+  AllowErrors = true;
+
+  recordTokens("import Non.Existent;\n");
+  EXPECT_THAT(Buffer.expandedTokens(),
+              ElementsAre(Kind(tok::kw_import), Kind(tok::annot_module_name),
+                          Kind(tok::semi), Kind(tok::eof)));
+}
+
+TEST_F(TokenCollectorTest, CXX20ModuleImportPartition) {
+  LangStandard = "-std=c++20";
+  AllowErrors = true;
+
+  recordTokens("export module M.N;\nimport :Non.Existent;\n");
+  EXPECT_THAT(Buffer.expandedTokens(),
+              ElementsAre(Kind(tok::kw_export), Kind(tok::kw_module),
+                          Kind(tok::annot_module_name), Kind(tok::semi),
+                          Kind(tok::kw_import), Kind(tok::colon),
+                          Kind(tok::annot_module_name), Kind(tok::semi),
+                          Kind(tok::eof)));
 }
 } // namespace

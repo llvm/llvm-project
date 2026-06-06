@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/WindowsError.h"
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -27,6 +28,7 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #include <shellapi.h>
 #include <shlobj.h>
+#include <winioctl.h>
 
 #undef max
 
@@ -58,6 +60,34 @@ static bool is_separator(const wchar_t value) {
   }
 }
 
+// Long path path prefix constants (UTF-8).
+static constexpr llvm::StringLiteral LongPathPrefix8 = R"(\\?\)";
+static constexpr llvm::StringLiteral LongPathUNCPrefix8 = R"(\\?\UNC\)";
+
+// Long path prefix constants (UTF-16).
+static constexpr wchar_t LongPathPrefix16[] = LR"(\\?\)";
+static constexpr wchar_t LongPathUNCPrefix16[] = LR"(\\?\UNC\)";
+
+static constexpr DWORD LongPathPrefix16Len =
+    static_cast<DWORD>(std::size(LongPathPrefix16) - 1);
+static constexpr DWORD LongPathUNCPrefix16Len =
+    static_cast<DWORD>(std::size(LongPathUNCPrefix16) - 1);
+
+static void stripLongPathPrefix(wchar_t *&Data, DWORD &CountChars) {
+  if (CountChars >= LongPathUNCPrefix16Len &&
+      ::wmemcmp(Data, LongPathUNCPrefix16, LongPathUNCPrefix16Len) == 0) {
+    // Convert \\?\UNC\foo\bar to \\foo\bar
+    CountChars -= 6;
+    Data += 6;
+    Data[0] = L'\\';
+  } else if (CountChars >= LongPathPrefix16Len &&
+             ::wmemcmp(Data, LongPathPrefix16, LongPathPrefix16Len) == 0) {
+    // Convert \\?\C:\foo to C:\foo
+    CountChars -= 4;
+    Data += 4;
+  }
+}
+
 namespace llvm {
 namespace sys {
 namespace windows {
@@ -76,7 +106,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
   // If the path is a long path, mangled into forward slashes, normalize
   // back to backslashes here.
-  if (Path8Str.startswith("//?/"))
+  if (Path8Str.starts_with("//?/"))
     llvm::sys::path::native(Path8Str, path::Style::windows_backslash);
 
   if (std::error_code EC = UTF8ToUTF16(Path8Str, Path16))
@@ -93,10 +123,8 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
       return mapWindowsError(::GetLastError());
   }
 
-  const char *const LongPathPrefix = "\\\\?\\";
-
   if ((Path16.size() + CurPathLen) < MaxPathLen ||
-      Path8Str.startswith(LongPathPrefix))
+      Path8Str.starts_with(LongPathPrefix8))
     return std::error_code();
 
   if (!IsAbsolute) {
@@ -114,14 +142,60 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   assert(!RootName.empty() &&
          "Root name cannot be empty for an absolute path!");
 
-  SmallString<2 * MAX_PATH> FullPath(LongPathPrefix);
+  SmallString<2 * MAX_PATH> FullPath;
   if (RootName[1] != ':') { // Check if UNC.
-    FullPath.append("UNC\\");
+    FullPath.append(LongPathUNCPrefix8);
     FullPath.append(Path8Str.begin() + 2, Path8Str.end());
-  } else
+  } else {
+    FullPath.append(LongPathPrefix8);
     FullPath.append(Path8Str);
+  }
 
   return UTF8ToUTF16(FullPath, Path16);
+}
+
+std::error_code makeLongFormPath(const Twine &Path8,
+                                 llvm::SmallVectorImpl<char> &Result8) {
+  SmallString<128> PathStorage;
+  StringRef PathStr = Path8.toStringRef(PathStorage);
+  bool HadPrefix = PathStr.starts_with(LongPathPrefix8);
+
+  SmallVector<wchar_t, 128> Path16;
+  if (std::error_code EC = widenPath(PathStr, Path16))
+    return EC;
+
+  // Start with a buffer equal to input.
+  llvm::SmallVector<wchar_t, 128> Long16;
+  DWORD Len = static_cast<DWORD>(Path16.size());
+
+  // Loop instead of a double call to be defensive against TOCTOU races.
+  do {
+    Long16.resize_for_overwrite(Len);
+
+    Len = ::GetLongPathNameW(Path16.data(), Long16.data(), Len);
+
+    // A zero return value indicates a failure other than insufficient space.
+    if (Len == 0)
+      return mapWindowsError(::GetLastError());
+
+    // If there's insufficient space, the return value is the required size in
+    // characters *including* the null terminator, and therefore greater than
+    // the buffer size we provided. Equality would imply success with no room
+    // for the terminator and should not occur for this API.
+    assert(Len != Long16.size());
+  } while (Len > Long16.size());
+
+  // On success, GetLongPathNameW returns the number of characters not
+  // including the null-terminator.
+  Long16.truncate(Len);
+
+  // Strip \\?\ or \\?\UNC\ long length prefix if it wasn't part of the
+  // original path.
+  wchar_t *Data = Long16.data();
+  if (!HadPrefix)
+    stripLongPathPrefix(Data, Len);
+
+  return sys::windows::UTF16ToUTF8(Data, Len, Result8);
 }
 
 } // end namespace windows
@@ -131,6 +205,8 @@ namespace fs {
 const file_t kInvalidFile = INVALID_HANDLE_VALUE;
 
 std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
+  auto BypassSandbox = sandbox::scopedDisable();
+
   SmallVector<wchar_t, MAX_PATH> PathName;
   PathName.resize_for_overwrite(PathName.capacity());
   DWORD Size = ::GetModuleFileNameW(NULL, PathName.data(), PathName.size());
@@ -154,6 +230,11 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
     return "";
 
   llvm::sys::path::make_preferred(PathNameUTF8);
+
+  SmallString<256> RealPath;
+  sys::fs::real_path(PathNameUTF8, RealPath);
+  if (RealPath.size())
+    return std::string(RealPath);
   return std::string(PathNameUTF8.data());
 }
 
@@ -163,14 +244,19 @@ UniqueID file_status::getUniqueID() const {
 
 ErrorOr<space_info> disk_space(const Twine &Path) {
   ULARGE_INTEGER Avail, Total, Free;
-  if (!::GetDiskFreeSpaceExA(Path.str().c_str(), &Avail, &Total, &Free))
+  SmallVector<wchar_t, 128> PathUTF16;
+
+  if (std::error_code EC = widenPath(Path, PathUTF16))
+    return EC;
+
+  if (!::GetDiskFreeSpaceExW(PathUTF16.data(), &Avail, &Total, &Free))
     return mapWindowsError(::GetLastError());
+
   space_info SpaceInfo;
-  SpaceInfo.capacity =
-      (static_cast<uint64_t>(Total.HighPart) << 32) + Total.LowPart;
-  SpaceInfo.free = (static_cast<uint64_t>(Free.HighPart) << 32) + Free.LowPart;
-  SpaceInfo.available =
-      (static_cast<uint64_t>(Avail.HighPart) << 32) + Avail.LowPart;
+  SpaceInfo.capacity = Total.QuadPart;
+  SpaceInfo.free = Free.QuadPart;
+  SpaceInfo.available = Avail.QuadPart;
+
   return SpaceInfo;
 }
 
@@ -191,6 +277,8 @@ TimePoint<> basic_file_status::getLastModificationTime() const {
 uint32_t file_status::getLinkCount() const { return NumLinks; }
 
 std::error_code current_path(SmallVectorImpl<char> &result) {
+  sandbox::violationIfEnabled();
+
   SmallVector<wchar_t, MAX_PATH> cur_path;
   DWORD len = MAX_PATH;
 
@@ -219,6 +307,8 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
 }
 
 std::error_code set_current_path(const Twine &path) {
+  sandbox::violationIfEnabled();
+
   // Convert to utf-16.
   SmallVector<wchar_t, 128> wide_path;
   if (std::error_code ec = widenPath(path, wide_path))
@@ -248,8 +338,73 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
   return std::error_code();
 }
 
-// We can't use symbolic links for windows.
+std::error_code create_symlink(const Twine &to, const Twine &from) {
+  // The Win32 API normally allows forward slashes, but under some cases it does
+  // not correctly handle them in the target of a symlink.
+  SmallString<128> ToStr;
+  llvm::sys::path::native(to, ToStr);
+
+  SmallVector<wchar_t, 128> WideFrom;
+  SmallVector<wchar_t, 128> WideTo;
+  if (std::error_code ec = widenPath(from, WideFrom))
+    return ec;
+  if (std::error_code ec = widenPath(ToStr, WideTo))
+    return ec;
+
+  // Windows requires SYMBOLIC_LINK_FLAG_DIRECTORY for directory symlinks, so
+  // check first what type the target is. Relative symlink targets are relative
+  // to the link's parent directory, not the CWD, so resolve accordingly before
+  // checking attributes.
+  SmallVector<wchar_t, 128> WideResolved;
+  const SmallVectorImpl<wchar_t> *AttrPath = &WideTo;
+
+  if (sys::path::is_relative(ToStr)) {
+    SmallString<128> FromStr;
+    from.toVector(FromStr);
+    SmallString<128> Resolved = sys::path::parent_path(FromStr);
+    sys::path::append(Resolved, ToStr);
+    if (std::error_code ec = widenPath(Resolved, WideResolved))
+      return ec;
+    AttrPath = &WideResolved;
+  }
+  DWORD Flags = 0;
+  DWORD Attr = ::GetFileAttributesW(AttrPath->begin());
+  if (Attr == INVALID_FILE_ATTRIBUTES) {
+    DWORD Err = ::GetLastError();
+    if (Err != ERROR_FILE_NOT_FOUND && Err != ERROR_PATH_NOT_FOUND)
+      return mapWindowsError(Err);
+    // Target doesn't exist. Default to a file symlink, matching the Unix
+    // behavior of allowing dangling symlinks.
+  } else if (Attr & FILE_ATTRIBUTE_DIRECTORY) {
+    Flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+  }
+
+  // Try with SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE first, which works
+  // in non-UWP programs and when Developer Mode is enabled on Windows 10+.
+  if (::CreateSymbolicLinkW(WideFrom.begin(), WideTo.begin(),
+                            Flags |
+                                SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+    return std::error_code();
+
+  // If the flag is not recognized (older Windows), retry without it.
+  DWORD Err = ::GetLastError();
+  if (Err == ERROR_INVALID_PARAMETER) {
+    if (::CreateSymbolicLinkW(WideFrom.begin(), WideTo.begin(), Flags))
+      return std::error_code();
+    Err = ::GetLastError();
+  }
+
+  return mapWindowsError(Err);
+}
+
 std::error_code create_link(const Twine &to, const Twine &from) {
+  std::error_code EC = create_symlink(to, from);
+  if (EC)
+    EC = create_hard_link(to, from);
+  return EC;
+}
+
+std::error_code create_hard_link(const Twine &to, const Twine &from) {
   // Convert to utf-16.
   SmallVector<wchar_t, 128> wide_from;
   SmallVector<wchar_t, 128> wide_to;
@@ -262,10 +417,6 @@ std::error_code create_link(const Twine &to, const Twine &from) {
     return mapWindowsError(::GetLastError());
 
   return std::error_code();
-}
-
-std::error_code create_hard_link(const Twine &to, const Twine &from) {
-  return create_link(to, from);
 }
 
 std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
@@ -343,6 +494,8 @@ static std::error_code is_local_internal(SmallVectorImpl<wchar_t> &Path,
 }
 
 std::error_code is_local(const Twine &path, bool &result) {
+  sandbox::violationIfEnabled();
+
   if (!llvm::sys::fs::exists(path) || !llvm::sys::path::has_root_path(path))
     return make_error_code(errc::no_such_file_or_directory);
 
@@ -386,16 +539,7 @@ static std::error_code realPathFromHandle(HANDLE H,
   // paths don't get canonicalized by file APIs.
   wchar_t *Data = Buffer.data();
   DWORD CountChars = Buffer.size();
-  if (CountChars >= 8 && ::memcmp(Data, L"\\\\?\\UNC\\", 16) == 0) {
-    // Convert \\?\UNC\foo\bar to \\foo\bar
-    CountChars -= 6;
-    Data += 6;
-    Data[0] = '\\';
-  } else if (CountChars >= 4 && ::memcmp(Data, L"\\\\?\\", 8) == 0) {
-    // Convert \\?\c:\foo to c:\foo
-    CountChars -= 4;
-    Data += 4;
-  }
+  stripLongPathPrefix(Data, CountChars);
 
   // Convert the result from UTF-16 to UTF-8.
   if (std::error_code EC = UTF16ToUTF8(Data, CountChars, RealPath))
@@ -406,6 +550,8 @@ static std::error_code realPathFromHandle(HANDLE H,
 }
 
 std::error_code is_local(int FD, bool &Result) {
+  sandbox::violationIfEnabled();
+
   SmallVector<wchar_t, 128> FinalPath;
   HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
 
@@ -584,10 +730,12 @@ std::error_code rename(const Twine &From, const Twine &To) {
   for (unsigned Retry = 0; Retry != 200; ++Retry) {
     if (Retry != 0)
       ::Sleep(10);
+    // `FILE_FLAG_BACKUP_SEMANTICS` must be used to create a handle to a
+    // directory.
     FromHandle =
         ::CreateFileW(WideFrom.begin(), GENERIC_READ | DELETE,
                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                      NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (FromHandle)
       break;
 
@@ -611,7 +759,25 @@ std::error_code resize_file(int FD, uint64_t Size) {
   return std::error_code(error, std::generic_category());
 }
 
+std::error_code resize_file_sparse(int FD, uint64_t Size) {
+  HANDLE hFile = reinterpret_cast<HANDLE>(::_get_osfhandle(FD));
+  DWORD temp;
+  if (!DeviceIoControl(hFile, FSCTL_SET_SPARSE, NULL, 0, NULL, 0, &temp,
+                       NULL)) {
+    return mapWindowsError(GetLastError());
+  }
+  LARGE_INTEGER liSize;
+  liSize.QuadPart = Size;
+  if (!SetFilePointerEx(hFile, liSize, NULL, FILE_BEGIN) ||
+      !SetEndOfFile(hFile)) {
+    return mapWindowsError(GetLastError());
+  }
+  return std::error_code();
+}
+
 std::error_code access(const Twine &Path, AccessMode Mode) {
+  sandbox::violationIfEnabled();
+
   SmallVector<wchar_t, 128> PathUtf16;
 
   if (std::error_code EC = widenPath(Path, PathUtf16))
@@ -620,6 +786,10 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
   DWORD Attributes = ::GetFileAttributesW(PathUtf16.begin());
 
   if (Attributes == INVALID_FILE_ATTRIBUTES) {
+    // Avoid returning unexpected error codes when querying for existence.
+    if (Mode == AccessMode::Exist)
+      return errc::no_such_file_or_directory;
+
     // See if the file didn't actually exist.
     DWORD LastError = ::GetLastError();
     if (LastError != ERROR_FILE_NOT_FOUND && LastError != ERROR_PATH_NOT_FOUND)
@@ -647,6 +817,8 @@ bool equivalent(file_status A, file_status B) {
 }
 
 std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
+  sandbox::violationIfEnabled();
+
   file_status fsA, fsB;
   if (std::error_code ec = status(A, fsA))
     return ec;
@@ -666,7 +838,7 @@ static bool isReservedName(StringRef path) {
 
   // First, check to see if this is a device namespace, which always
   // starts with \\.\, since device namespaces are not legal file paths.
-  if (path.startswith("\\\\.\\"))
+  if (path.starts_with("\\\\.\\"))
     return true;
 
   // Then compare against the list of ancient reserved names.
@@ -738,7 +910,7 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
     PathHash = (static_cast<uint64_t>(Info.nFileIndexHigh) << 32ULL) |
                static_cast<uint64_t>(Info.nFileIndexLow);
   } else {
-    PathHash = hash_combine_range(ntPath.begin(), ntPath.end());
+    PathHash = hash_combine_range(ntPath);
   }
 
   Result = file_status(
@@ -751,17 +923,19 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   return std::error_code();
 
 handle_status_error:
-  DWORD LastError = ::GetLastError();
-  if (LastError == ERROR_FILE_NOT_FOUND || LastError == ERROR_PATH_NOT_FOUND)
+  std::error_code Err = mapLastWindowsError();
+  if (Err == std::errc::no_such_file_or_directory)
     Result = file_status(file_type::file_not_found);
-  else if (LastError == ERROR_SHARING_VIOLATION)
+  else if (Err == std::errc::permission_denied)
     Result = file_status(file_type::type_unknown);
   else
     Result = file_status(file_type::status_error);
-  return mapWindowsError(LastError);
+  return Err;
 }
 
 std::error_code status(const Twine &path, file_status &result, bool Follow) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> path_storage;
   SmallVector<wchar_t, 128> path_utf16;
 
@@ -774,14 +948,16 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
   if (std::error_code ec = widenPath(path8, path_utf16))
     return ec;
 
-  DWORD attr = ::GetFileAttributesW(path_utf16.begin());
-  if (attr == INVALID_FILE_ATTRIBUTES)
-    return getStatus(INVALID_HANDLE_VALUE, result);
-
   DWORD Flags = FILE_FLAG_BACKUP_SEMANTICS;
-  // Handle reparse points.
-  if (!Follow && (attr & FILE_ATTRIBUTE_REPARSE_POINT))
-    Flags |= FILE_FLAG_OPEN_REPARSE_POINT;
+  if (!Follow) {
+    DWORD attr = ::GetFileAttributesW(path_utf16.begin());
+    if (attr == INVALID_FILE_ATTRIBUTES)
+      return getStatus(INVALID_HANDLE_VALUE, result);
+
+    // Handle reparse points.
+    if (attr & FILE_ATTRIBUTE_REPARSE_POINT)
+      Flags |= FILE_FLAG_OPEN_REPARSE_POINT;
+  }
 
   ScopedFileHandle h(
       ::CreateFileW(path_utf16.begin(), 0, // Attributes only.
@@ -794,11 +970,15 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
 }
 
 std::error_code status(int FD, file_status &Result) {
+  sandbox::violationIfEnabled();
+
   HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   return getStatus(FileHandle, Result);
 }
 
 std::error_code status(file_t FileHandle, file_status &Result) {
+  sandbox::violationIfEnabled();
+
   return getStatus(FileHandle, Result);
 }
 
@@ -850,7 +1030,8 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 }
 
 std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
-                                         uint64_t Offset, mapmode Mode) {
+                                         uint64_t Offset, mapmode Mode,
+                                         const char *Name) {
   this->Mode = Mode;
   if (OrigFileHandle == INVALID_HANDLE_VALUE)
     return make_error_code(errc::bad_file_descriptor);
@@ -868,8 +1049,14 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
     break;
   }
 
-  HANDLE FileMappingHandle = ::CreateFileMappingW(OrigFileHandle, 0, flprotect,
-                                                  Hi_32(Size), Lo_32(Size), 0);
+  SmallVector<wchar_t, 128> NameUTF16;
+  if (Name)
+    if (std::error_code EC = UTF8ToUTF16(Name, NameUTF16))
+      return EC;
+
+  HANDLE FileMappingHandle =
+      ::CreateFileMappingW(OrigFileHandle, 0, flprotect, Hi_32(Size),
+                           Lo_32(Size), Name ? c_str(NameUTF16) : 0);
   if (FileMappingHandle == NULL) {
     std::error_code ec = mapWindowsError(GetLastError());
     return ec;
@@ -926,9 +1113,11 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
 
 mapped_file_region::mapped_file_region(sys::fs::file_t fd, mapmode mode,
                                        size_t length, uint64_t offset,
-                                       std::error_code &ec)
+                                       std::error_code &ec, const char *name)
     : Size(length) {
-  ec = init(fd, offset, mode);
+  sandbox::violationIfEnabled();
+
+  ec = init(fd, offset, mode, name);
   if (ec)
     copyFrom(mapped_file_region());
 }
@@ -940,10 +1129,10 @@ static bool hasFlushBufferKernelBug() {
 
 static bool isEXE(StringRef Magic) {
   static const char PEMagic[] = {'P', 'E', '\0', '\0'};
-  if (Magic.startswith(StringRef("MZ")) && Magic.size() >= 0x3c + 4) {
+  if (Magic.starts_with(StringRef("MZ")) && Magic.size() >= 0x3c + 4) {
     uint32_t off = read32le(Magic.data() + 0x3c);
     // PE/COFF file, either EXE or DLL.
-    if (Magic.substr(off).startswith(StringRef(PEMagic, sizeof(PEMagic))))
+    if (Magic.substr(off).starts_with(StringRef(PEMagic, sizeof(PEMagic))))
       return true;
   }
   return false;
@@ -956,7 +1145,8 @@ void mapped_file_region::unmapImpl() {
 
     ::UnmapViewOfFile(Mapping);
 
-    if (Mode == mapmode::readwrite && Exe && hasFlushBufferKernelBug()) {
+    if (Mode == mapmode::readwrite) {
+      bool DoFlush = Exe && hasFlushBufferKernelBug();
       // There is a Windows kernel bug, the exact trigger conditions of which
       // are not well understood.  When triggered, dirty pages are not properly
       // flushed and subsequent process's attempts to read a file can return
@@ -964,7 +1154,27 @@ void mapped_file_region::unmapImpl() {
       // sufficient to ensure that this bug is not triggered.
       // The bug only occurs when writing an executable and executing it right
       // after, under high I/O pressure.
-      ::FlushFileBuffers(FileHandle);
+      if (!DoFlush) {
+        // Separately, on VirtualBox Shared Folder mounts, writes via memory
+        // maps always end up unflushed (regardless of version of Windows),
+        // unless flushed with this explicit call, if they are renamed with
+        // SetFileInformationByHandle(FileRenameInfo) before closing the output
+        // handle.
+        //
+        // As the flushing is quite expensive, use a heuristic to limit the
+        // cases where we do the flushing. Only do the flushing if we aren't
+        // sure we are on a local file system.
+        bool IsLocal = false;
+        SmallVector<wchar_t, 128> FinalPath;
+        if (!realPathFromHandle(FileHandle, FinalPath)) {
+          // Not checking the return value here - if the check fails, assume the
+          // file isn't local.
+          is_local_internal(FinalPath, IsLocal);
+        }
+        DoFlush = !IsLocal;
+      }
+      if (DoFlush)
+        ::FlushFileBuffers(FileHandle);
     }
 
     ::CloseHandle(FileHandle);
@@ -972,6 +1182,41 @@ void mapped_file_region::unmapImpl() {
 }
 
 void mapped_file_region::dontNeedImpl() {}
+
+void mapped_file_region::randomAccessImpl() {}
+
+void mapped_file_region::willNeedImpl() {
+  struct MEMORY_RANGE_ENTRY {
+    PVOID VirtualAddress;
+    SIZE_T NumberOfBytes;
+  };
+  // PrefetchVirtualMemory is only available on Windows 8 and later. Since we
+  // still support compilation on Windows 7, we load the function dynamically.
+  typedef BOOL(WINAPI * PrefetchVirtualMemory_t)(
+      HANDLE hProcess, ULONG_PTR NumberOfEntries,
+      MEMORY_RANGE_ENTRY * VirtualAddresses, ULONG Flags);
+
+  static auto pfnPrefetchVirtualMemory = []() -> PrefetchVirtualMemory_t {
+    HMODULE kernelM =
+        llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
+    if (!kernelM)
+      return nullptr;
+    return (PrefetchVirtualMemory_t)(void *)::GetProcAddress(
+        kernelM, "PrefetchVirtualMemory");
+  }();
+  if (pfnPrefetchVirtualMemory) {
+    MEMORY_RANGE_ENTRY Range{Mapping, Size};
+    pfnPrefetchVirtualMemory(::GetCurrentProcess(), 1, &Range, 0);
+  }
+}
+
+std::error_code mapped_file_region::sync() const {
+  if (!::FlushViewOfFile(Mapping, Size))
+    return mapWindowsError(GetLastError());
+  if (!::FlushFileBuffers(FileHandle))
+    return mapWindowsError(GetLastError());
+  return std::error_code();
+}
 
 int mapped_file_region::alignment() {
   SYSTEM_INFO SysInfo;
@@ -992,6 +1237,8 @@ static basic_file_status status_from_find_data(WIN32_FIND_DATAW *FindData) {
 std::error_code detail::directory_iterator_construct(detail::DirIterState &IT,
                                                      StringRef Path,
                                                      bool FollowSymlinks) {
+  sandbox::violationIfEnabled();
+
   SmallVector<wchar_t, 128> PathUTF16;
 
   if (std::error_code EC = widenPath(Path, PathUTF16))
@@ -1025,8 +1272,9 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &IT,
       if (LastError == ERROR_NO_MORE_FILES)
         return detail::directory_iterator_destruct(IT);
       return mapWindowsError(LastError);
-    } else
+    } else {
       FilenameLen = ::wcslen(FirstFind.cFileName);
+    }
 
   // Construct the current directory entry.
   SmallString<128> DirectoryEntryNameUTF8;
@@ -1056,6 +1304,8 @@ std::error_code detail::directory_iterator_destruct(detail::DirIterState &IT) {
 }
 
 std::error_code detail::directory_iterator_increment(detail::DirIterState &IT) {
+  sandbox::violationIfEnabled();
+
   WIN32_FIND_DATAW FindData;
   if (!::FindNextFileW(HANDLE(IT.IterationHandle), &FindData)) {
     DWORD LastError = ::GetLastError();
@@ -1144,13 +1394,16 @@ static DWORD nativeAccess(FileAccess Access, OpenFlags Flags) {
     Result |= DELETE;
   if (Flags & OF_UpdateAtime)
     Result |= FILE_WRITE_ATTRIBUTES;
+  if (Flags & OF_UpdateAttributes)
+    Result |= FILE_WRITE_ATTRIBUTES;
   return Result;
 }
 
 static std::error_code openNativeFileInternal(const Twine &Name,
                                               file_t &ResultFile, DWORD Disp,
                                               DWORD Access, DWORD Flags,
-                                              bool Inherit = false) {
+                                              bool Inherit = false,
+                                              bool AllowDirectory = false) {
   SmallVector<wchar_t, 128> PathUTF16;
   if (std::error_code EC = widenPath(Name, PathUTF16))
     return EC;
@@ -1172,7 +1425,7 @@ static std::error_code openNativeFileInternal(const Twine &Name,
     // no performances issues.
     if (LastError != ERROR_ACCESS_DENIED)
       return EC;
-    if (is_directory(Name))
+    if (!AllowDirectory && is_directory(Name))
       return make_error_code(errc::is_a_directory);
     return EC;
   }
@@ -1183,12 +1436,17 @@ static std::error_code openNativeFileInternal(const Twine &Name,
 Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
                                 FileAccess Access, OpenFlags Flags,
                                 unsigned Mode) {
+  sandbox::violationIfEnabled();
+
   // Verify that we don't have both "append" and "excl".
   assert((!(Disp == CD_CreateNew) || !(Flags & OF_Append)) &&
          "Cannot specify both 'CreateNew' and 'Append' file creation flags!");
 
   DWORD NativeDisp = nativeDisposition(Disp, Flags);
   DWORD NativeAccess = nativeAccess(Access, Flags);
+  DWORD NativeFlags = FILE_ATTRIBUTE_NORMAL;
+  if (Flags & OF_OpenDirectory)
+    NativeFlags |= FILE_FLAG_BACKUP_SEMANTICS;
 
   bool Inherit = false;
   if (Flags & OF_ChildInherit)
@@ -1196,7 +1454,8 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
 
   file_t Result;
   std::error_code EC = openNativeFileInternal(
-      Name, Result, NativeDisp, NativeAccess, FILE_ATTRIBUTE_NORMAL, Inherit);
+      Name, Result, NativeDisp, NativeAccess, NativeFlags, Inherit,
+      /*AllowDirectory=*/Flags & OF_OpenDirectory);
   if (EC)
     return errorCodeToError(EC);
 
@@ -1218,6 +1477,8 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
 std::error_code openFile(const Twine &Name, int &ResultFD,
                          CreationDisposition Disp, FileAccess Access,
                          OpenFlags Flags, unsigned int Mode) {
+  sandbox::violationIfEnabled();
+
   Expected<file_t> Result = openNativeFile(Name, Disp, Access, Flags);
   if (!Result)
     return errorToErrorCode(Result.takeError());
@@ -1241,12 +1502,16 @@ static std::error_code directoryRealPath(const Twine &Name,
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 OpenFlags Flags,
                                 SmallVectorImpl<char> *RealPath) {
+  sandbox::violationIfEnabled();
+
   Expected<HANDLE> NativeFile = openNativeFileForRead(Name, Flags, RealPath);
   return nativeFileToFd(std::move(NativeFile), ResultFD, OF_None);
 }
 
 Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
+  sandbox::violationIfEnabled();
+
   Expected<file_t> Result =
       openNativeFile(Name, CD_OpenExisting, FA_Read, Flags);
 
@@ -1265,9 +1530,9 @@ file_t getStdinHandle() { return ::GetStdHandle(STD_INPUT_HANDLE); }
 file_t getStdoutHandle() { return ::GetStdHandle(STD_OUTPUT_HANDLE); }
 file_t getStderrHandle() { return ::GetStdHandle(STD_ERROR_HANDLE); }
 
-Expected<size_t> readNativeFileImpl(file_t FileHandle,
-                                    MutableArrayRef<char> Buf,
-                                    OVERLAPPED *Overlap) {
+static Expected<size_t> readNativeFileImpl(file_t FileHandle,
+                                           MutableArrayRef<char> Buf,
+                                           OVERLAPPED *Overlap) {
   // ReadFile can only read 2GB at a time. The caller should check the number of
   // bytes and read in a loop until termination.
   DWORD BytesToRead =
@@ -1283,20 +1548,26 @@ Expected<size_t> readNativeFileImpl(file_t FileHandle,
 }
 
 Expected<size_t> readNativeFile(file_t FileHandle, MutableArrayRef<char> Buf) {
+  sandbox::violationIfEnabled();
+
   return readNativeFileImpl(FileHandle, Buf, /*Overlap=*/nullptr);
 }
 
 Expected<size_t> readNativeFileSlice(file_t FileHandle,
                                      MutableArrayRef<char> Buf,
                                      uint64_t Offset) {
+  sandbox::violationIfEnabled();
+
   OVERLAPPED Overlapped = {};
   Overlapped.Offset = uint32_t(Offset);
   Overlapped.OffsetHigh = uint32_t(Offset >> 32);
   return readNativeFileImpl(FileHandle, Buf, &Overlapped);
 }
 
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
-  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY;
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
+                            LockKind Kind) {
+  DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
+  Flags |= LOCKFILE_FAIL_IMMEDIATELY;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   auto Start = std::chrono::steady_clock::now();
@@ -1306,6 +1577,8 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
       return std::error_code();
     DWORD Error = ::GetLastError();
     if (Error == ERROR_LOCK_VIOLATION) {
+      if (Timeout.count() == 0)
+        break;
       ::Sleep(1);
       continue;
     }
@@ -1314,8 +1587,8 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
   return mapWindowsError(ERROR_LOCK_VIOLATION);
 }
 
-std::error_code lockFile(int FD) {
-  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK;
+std::error_code lockFile(int FD, LockKind Kind) {
+  DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))
@@ -1341,9 +1614,11 @@ std::error_code closeFile(file_t &F) {
 }
 
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  SmallString<128> NativePath;
+  llvm::sys::path::native(path, NativePath, path::Style::windows_backslash);
   // Convert to utf-16.
   SmallVector<wchar_t, 128> Path16;
-  std::error_code EC = widenPath(path, Path16);
+  std::error_code EC = widenPath(NativePath, Path16);
   if (EC && !IgnoreErrors)
     return EC;
 
@@ -1355,14 +1630,36 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
   Path16.push_back(0);
   Path16.push_back(0);
 
-  SHFILEOPSTRUCTW shfos = {};
-  shfos.wFunc = FO_DELETE;
-  shfos.pFrom = Path16.data();
-  shfos.fFlags = FOF_NO_UI;
-
-  int result = ::SHFileOperationW(&shfos);
-  if (result != 0 && !IgnoreErrors)
-    return mapWindowsError(result);
+  HRESULT HR;
+  do {
+    HR =
+        CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (FAILED(HR))
+      break;
+    llvm::scope_exit Uninitialize([] { CoUninitialize(); });
+    IFileOperation *FileOp = NULL;
+    HR = CoCreateInstance(CLSID_FileOperation, NULL, CLSCTX_ALL,
+                          IID_PPV_ARGS(&FileOp));
+    if (FAILED(HR))
+      break;
+    llvm::scope_exit FileOpRelease([&FileOp] { FileOp->Release(); });
+    HR = FileOp->SetOperationFlags(FOF_NO_UI | FOFX_NOCOPYHOOKS);
+    if (FAILED(HR))
+      break;
+    PIDLIST_ABSOLUTE PIDL = ILCreateFromPathW(Path16.data());
+    llvm::scope_exit FreePIDL([&PIDL] { ILFree(PIDL); });
+    IShellItem *ShItem = NULL;
+    HR = SHCreateItemFromIDList(PIDL, IID_PPV_ARGS(&ShItem));
+    if (FAILED(HR))
+      break;
+    llvm::scope_exit ShItemRelease([&ShItem] { ShItem->Release(); });
+    HR = FileOp->DeleteItem(ShItem, NULL);
+    if (FAILED(HR))
+      break;
+    HR = FileOp->PerformOperations();
+  } while (false);
+  if (FAILED(HR) && !IgnoreErrors)
+    return mapWindowsError(HRESULT_CODE(HR));
   return std::error_code();
 }
 
@@ -1405,6 +1702,8 @@ void expand_tilde(const Twine &path, SmallVectorImpl<char> &dest) {
 
 std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
                           bool expand_tilde) {
+  sandbox::violationIfEnabled();
+
   dest.clear();
   if (path.isTriviallyEmpty())
     return std::error_code();
@@ -1424,6 +1723,102 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
           llvm::sys::fs::openFileForRead(path, fd, OF_None, &dest))
     return EC;
   ::close(fd);
+  return std::error_code();
+}
+
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#endif
+// This struct is normally only available in the Windows Driver Kit (WDK)
+// headers, not in the standard Windows SDK.
+struct LLVM_REPARSE_DATA_BUFFER {
+  unsigned long ReparseTag;
+  unsigned short ReparseDataLength;
+  unsigned short Reserved;
+  union {
+    struct {
+      unsigned short SubstituteNameOffset;
+      unsigned short SubstituteNameLength;
+      unsigned short PrintNameOffset;
+      unsigned short PrintNameLength;
+      unsigned long Flags;
+      wchar_t PathBuffer[1];
+    } SymbolicLinkReparseBuffer;
+    struct {
+      unsigned short SubstituteNameOffset;
+      unsigned short SubstituteNameLength;
+      unsigned short PrintNameOffset;
+      unsigned short PrintNameLength;
+      wchar_t PathBuffer[1];
+    } MountPointReparseBuffer;
+    struct {
+      unsigned char DataBuffer[1];
+    } GenericReparseBuffer;
+  };
+};
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+
+std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
+  dest.clear();
+
+  SmallVector<wchar_t, 128> PathUTF16;
+  if (std::error_code EC = widenPath(path, PathUTF16))
+    return EC;
+
+  // Open the symlink without following it.
+  ScopedFileHandle H(::CreateFileW(
+      c_str(PathUTF16), FILE_READ_ATTRIBUTES,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+      OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+      NULL));
+  if (!H)
+    return mapWindowsError(::GetLastError());
+
+  // Read the reparse point data.
+  union {
+    LLVM_REPARSE_DATA_BUFFER RDB;
+    char Buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+  };
+  DWORD BytesReturned;
+  if (!::DeviceIoControl(H, FSCTL_GET_REPARSE_POINT, NULL, 0, &RDB,
+                         sizeof(Buffer), &BytesReturned, NULL)) {
+    DWORD Err = ::GetLastError();
+    if (Err == ERROR_NOT_A_REPARSE_POINT)
+      return make_error_code(errc::invalid_argument);
+    return mapWindowsError(Err);
+  }
+
+  if (RDB.ReparseTag != IO_REPARSE_TAG_SYMLINK)
+    return make_error_code(errc::invalid_argument);
+
+  const auto &SLB = RDB.SymbolicLinkReparseBuffer;
+  size_t PathBufOffset =
+      offsetof(LLVM_REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer);
+
+  // Prefer PrintName (user-friendly, e.g. "C:\foo") over SubstituteName
+  // (NT-internal, e.g. "\??\C:\foo").
+  USHORT NameOffset, NameLength;
+  if (SLB.PrintNameLength != 0) {
+    NameOffset = SLB.PrintNameOffset;
+    NameLength = SLB.PrintNameLength;
+  } else {
+    NameOffset = SLB.SubstituteNameOffset;
+    NameLength = SLB.SubstituteNameLength;
+  }
+
+  // Validate that the returned data is large enough to contain the name.
+  if (PathBufOffset + NameOffset + NameLength > BytesReturned)
+    return make_error_code(errc::invalid_argument);
+
+  const wchar_t *Target = SLB.PathBuffer + NameOffset / sizeof(wchar_t);
+  USHORT TargetLen = NameLength / sizeof(wchar_t);
+
+  if (std::error_code EC = UTF16ToUTF8(Target, TargetLen, dest))
+    return EC;
+
   return std::error_code();
 }
 

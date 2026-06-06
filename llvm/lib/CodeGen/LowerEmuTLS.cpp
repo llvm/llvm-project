@@ -13,7 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
@@ -24,32 +28,49 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "loweremutls"
+#define DEBUG_TYPE "lower-emutls"
 
 namespace {
 
 class LowerEmuTLS : public ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  LowerEmuTLS() : ModulePass(ID) {
-    initializeLowerEmuTLSPass(*PassRegistry::getPassRegistry());
-  }
+  LowerEmuTLS() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override;
-private:
-  bool addEmuTlsVar(Module &M, const GlobalVariable *GV);
-  static void copyLinkageVisibility(Module &M,
-                                    const GlobalVariable *from,
-                                    GlobalVariable *to) {
-    to->setLinkage(from->getLinkage());
-    to->setVisibility(from->getVisibility());
-    to->setDSOLocal(from->isDSOLocal());
-    if (from->hasComdat()) {
-      to->setComdat(M.getOrInsertComdat(to->getName()));
-      to->getComdat()->setSelectionKind(from->getComdat()->getSelectionKind());
-    }
-  }
 };
+}
+
+static bool addEmuTlsVar(Module &M, const GlobalVariable *GV);
+
+static void copyLinkageVisibility(Module &M, const GlobalVariable *from,
+                                  GlobalVariable *to) {
+  to->setLinkage(from->getLinkage());
+  to->setVisibility(from->getVisibility());
+  to->setDSOLocal(from->isDSOLocal());
+  if (from->hasComdat()) {
+    to->setComdat(M.getOrInsertComdat(to->getName()));
+    to->getComdat()->setSelectionKind(from->getComdat()->getSelectionKind());
+  }
+}
+
+PreservedAnalyses LowerEmuTLSPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  bool Changed = false;
+  SmallVector<const GlobalVariable *, 8> TlsVars;
+  for (const auto &G : M.globals()) {
+    if (G.isThreadLocal())
+      TlsVars.push_back(&G);
+  }
+  for (const auto *G : TlsVars)
+    Changed |= addEmuTlsVar(M, G);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  PA.abandon<GlobalsAA>();
+  PA.abandon<ModuleSummaryIndexAnalysis>();
+  PA.abandon<StackSafetyGlobalAnalysis>();
+  return PA;
 }
 
 char LowerEmuTLS::ID = 0;
@@ -83,7 +104,7 @@ bool LowerEmuTLS::runOnModule(Module &M) {
   return Changed;
 }
 
-bool LowerEmuTLS::addEmuTlsVar(Module &M, const GlobalVariable *GV) {
+bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   LLVMContext &C = M.getContext();
   PointerType *VoidPtrType = PointerType::getUnqual(C);
 
@@ -116,10 +137,8 @@ bool LowerEmuTLS::addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   IntegerType *WordType = DL.getIntPtrType(C);
   PointerType *InitPtrType = PointerType::getUnqual(C);
   Type *ElementTypes[4] = {WordType, WordType, VoidPtrType, InitPtrType};
-  ArrayRef<Type*> ElementTypeArray(ElementTypes, 4);
-  StructType *EmuTlsVarType = StructType::create(ElementTypeArray);
-  EmuTlsVar = cast<GlobalVariable>(
-      M.getOrInsertGlobal(EmuTlsVarName, EmuTlsVarType));
+  StructType *EmuTlsVarType = StructType::create(ElementTypes);
+  EmuTlsVar = M.getOrInsertGlobal(EmuTlsVarName, EmuTlsVarType);
   copyLinkageVisibility(M, GV, EmuTlsVar);
 
   // Define "__emutls_t.*" and "__emutls_v.*" only if GV is defined.
@@ -127,14 +146,13 @@ bool LowerEmuTLS::addEmuTlsVar(Module &M, const GlobalVariable *GV) {
     return true;
 
   Type *GVType = GV->getValueType();
-  Align GVAlignment = DL.getValueOrABITypeAlignment(GV->getAlign(), GVType);
+  Align GVAlignment = GV->getPointerAlignment(DL);
 
   // Define "__emutls_t.*" if there is InitValue
   GlobalVariable *EmuTlsTmplVar = nullptr;
   if (InitValue) {
     std::string EmuTlsTmplName = ("__emutls_t." + GV->getName()).str();
-    EmuTlsTmplVar = dyn_cast_or_null<GlobalVariable>(
-        M.getOrInsertGlobal(EmuTlsTmplName, GVType));
+    EmuTlsTmplVar = M.getOrInsertGlobal(EmuTlsTmplName, GVType);
     assert(EmuTlsTmplVar && "Failed to create emualted TLS initializer");
     EmuTlsTmplVar->setConstant(true);
     EmuTlsTmplVar->setInitializer(const_cast<Constant*>(InitValue));
@@ -147,9 +165,7 @@ bool LowerEmuTLS::addEmuTlsVar(Module &M, const GlobalVariable *GV) {
       ConstantInt::get(WordType, DL.getTypeStoreSize(GVType)),
       ConstantInt::get(WordType, GVAlignment.value()), NullPtr,
       EmuTlsTmplVar ? EmuTlsTmplVar : NullPtr};
-  ArrayRef<Constant*> ElementValueArray(ElementValues, 4);
-  EmuTlsVar->setInitializer(
-      ConstantStruct::get(EmuTlsVarType, ElementValueArray));
+  EmuTlsVar->setInitializer(ConstantStruct::get(EmuTlsVarType, ElementValues));
   Align MaxAlignment =
       std::max(DL.getABITypeAlign(WordType), DL.getABITypeAlign(VoidPtrType));
   EmuTlsVar->setAlignment(MaxAlignment);

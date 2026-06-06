@@ -7,37 +7,37 @@
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: TYPE (0x1)
 ; CHECK-NEXT:     Size: 4
-; CHECK-NEXT:     Offset: 8
+; CHECK-NEXT:     Offset: 14
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: IMPORT (0x2)
 ; CHECK-NEXT:     Size: 81
-; CHECK-NEXT:     Offset: 18
+; CHECK-NEXT:     Offset: 24
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: FUNCTION (0x3)
 ; CHECK-NEXT:     Size: 2
-; CHECK-NEXT:     Offset: 105
+; CHECK-NEXT:     Offset: 111
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: ELEM (0x9)
 ; CHECK-NEXT:     Size: 7
-; CHECK-NEXT:     Offset: 113
+; CHECK-NEXT:     Offset: 119
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: DATACOUNT (0xC)
 ; CHECK-NEXT:     Size: 1
-; CHECK-NEXT:     Offset: 126
+; CHECK-NEXT:     Offset: 132
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CODE (0xA)
 ; CHECK-NEXT:     Size: 4
-; CHECK-NEXT:     Offset: 133
+; CHECK-NEXT:     Offset: 139
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: DATA (0xB)
 ; CHECK-NEXT:     Size: 27
-; CHECK-NEXT:     Offset: 143
+; CHECK-NEXT:     Offset: 149
 ; CHECK-NEXT:     Segments [
 ; CHECK-NEXT:       Segment {
 ; CHECK-NEXT:         Name: .data.foo
@@ -54,97 +54,97 @@
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 86
-; CHECK-NEXT:     Offset: 176
+; CHECK-NEXT:     Offset: 182
 ; CHECK-NEXT:     Name: .debug_abbrev
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 130
-; CHECK-NEXT:     Offset: 282
+; CHECK-NEXT:     Offset: 288
 ; CHECK-NEXT:     Name: .debug_info
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 80
-; CHECK-NEXT:     Offset: 430
+; CHECK-NEXT:     Offset: 436
 ; CHECK-NEXT:     Name: .debug_aranges
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 121
-; CHECK-NEXT:     Offset: 531
+; CHECK-NEXT:     Offset: 537
 ; CHECK-NEXT:     Name: .debug_str
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 42
-; CHECK-NEXT:     Offset: 669
+; CHECK-NEXT:     Offset: 675
 ; CHECK-NEXT:     Name: .debug_pubnames
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 26
-; CHECK-NEXT:     Offset: 733
+; CHECK-NEXT:     Offset: 739
 ; CHECK-NEXT:     Name: .debug_pubtypes
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 60
-; CHECK-NEXT:     Offset: 781
+; CHECK-NEXT:     Offset: 787
 ; CHECK-NEXT:     Name: .debug_line
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 91
-; CHECK-NEXT:     Offset: 859
+; CHECK-NEXT:     Offset: 865
 ; CHECK-NEXT:     Name: linking
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 9
-; CHECK-NEXT:     Offset: 964
+; CHECK-NEXT:     Offset: 970
 ; CHECK-NEXT:     Name: reloc.DATA
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 61
-; CHECK-NEXT:     Offset: 990
+; CHECK-NEXT:     Offset: 996
 ; CHECK-NEXT:     Name: reloc..debug_info
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 18
-; CHECK-NEXT:     Offset: 1075
+; CHECK-NEXT:     Offset: 1081
 ; CHECK-NEXT:     Name: reloc..debug_aranges
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 1120
+; CHECK-NEXT:     Offset: 1126
 ; CHECK-NEXT:     Name: reloc..debug_pubnames
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 1154
+; CHECK-NEXT:     Offset: 1160
 ; CHECK-NEXT:     Name: reloc..debug_pubtypes
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 1188
+; CHECK-NEXT:     Offset: 1194
 ; CHECK-NEXT:     Name: reloc..debug_line
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 77
-; CHECK-NEXT:     Offset: 1218
+; CHECK-NEXT:     Offset: 1224
 ; CHECK-NEXT:     Name: producers
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 11
-; CHECK-NEXT:     Offset: 1311
+; CHECK-NEXT:     Offset: 1317
 ; CHECK-NEXT:     Name: target_features
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]
@@ -160,20 +160,20 @@
 ; CHECK-NEXT:     0x16 R_WASM_SECTION_OFFSET_I32 .debug_line 0
 ; CHECK-NEXT:     0x1A R_WASM_SECTION_OFFSET_I32 .debug_str 62
 ; CHECK-NEXT:     0x1E R_WASM_FUNCTION_OFFSET_I64 f2 0
-; CHECK-NEXT:     0x2B R_WASM_SECTION_OFFSET_I32 .debug_str 105
-; CHECK-NEXT:     0x37 R_WASM_MEMORY_ADDR_I64 foo 0
-; CHECK-NEXT:     0x45 R_WASM_SECTION_OFFSET_I32 .debug_str 109
-; CHECK-NEXT:     0x4C R_WASM_SECTION_OFFSET_I32 .debug_str 113
-; CHECK-NEXT:     0x58 R_WASM_MEMORY_ADDR_I64 ptr2 0
-; CHECK-NEXT:     0x67 R_WASM_FUNCTION_OFFSET_I64 f2 0
-; CHECK-NEXT:     0x76 R_WASM_GLOBAL_INDEX_I32 __stack_pointer
-; CHECK-NEXT:     0x7B R_WASM_SECTION_OFFSET_I32 .debug_str 118
+; CHECK-NEXT:     0x2B R_WASM_FUNCTION_OFFSET_I64 f2 0
+; CHECK-NEXT:     0x3A R_WASM_GLOBAL_INDEX_I32 __stack_pointer
+; CHECK-NEXT:     0x3F R_WASM_SECTION_OFFSET_I32 .debug_str 118
+; CHECK-NEXT:     0x46 R_WASM_SECTION_OFFSET_I32 .debug_str 105
+; CHECK-NEXT:     0x52 R_WASM_MEMORY_ADDR_I64 foo 0
+; CHECK-NEXT:     0x60 R_WASM_SECTION_OFFSET_I32 .debug_str 109
+; CHECK-NEXT:     0x67 R_WASM_SECTION_OFFSET_I32 .debug_str 113
+; CHECK-NEXT:     0x73 R_WASM_MEMORY_ADDR_I64 ptr2 0
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section (10) .debug_aranges {
 ; CHECK-NEXT:     0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0
-; CHECK-NEXT:     0x10 R_WASM_MEMORY_ADDR_I64 foo 0
-; CHECK-NEXT:     0x20 R_WASM_MEMORY_ADDR_I64 ptr2 0
-; CHECK-NEXT:     0x30 R_WASM_FUNCTION_OFFSET_I64 f2 0
+; CHECK-NEXT:     0x10 R_WASM_FUNCTION_OFFSET_I64 f2 0
+; CHECK-NEXT:     0x20 R_WASM_MEMORY_ADDR_I64 foo 0
+; CHECK-NEXT:     0x30 R_WASM_MEMORY_ADDR_I64 ptr2 0
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section (12) .debug_pubnames {
 ; CHECK-NEXT:     0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0

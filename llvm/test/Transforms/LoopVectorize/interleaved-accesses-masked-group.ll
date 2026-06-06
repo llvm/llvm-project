@@ -113,7 +113,7 @@ source_filename = "test.c"
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-unknown-linux-gnu"
 
-define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr #0 {
+define void @masked_strided1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) #0 {
 entry:
   %conv = zext i8 %guard to i32
   br label %for.body
@@ -127,7 +127,7 @@ if.then:
   %mul = shl nuw nsw i32 %ix.024, 1
   %arrayidx = getelementptr inbounds i8, ptr %p, i32 %mul
   %0 = load i8, ptr %arrayidx, align 1
-  %add = or i32 %mul, 1
+  %add = or disjoint i32 %mul, 1
   %arrayidx4 = getelementptr inbounds i8, ptr %p, i32 %add
   %1 = load i8, ptr %arrayidx4, align 1
   %cmp.i = icmp slt i8 %0, %1
@@ -149,7 +149,7 @@ for.end:
 }
 
 
-define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr #0 {
+define void @masked_strided2(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard) #0 {
 entry:
   %conv = zext i8 %guard to i32
   br label %for.body
@@ -163,7 +163,7 @@ for.body:
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:
-  %add = or i32 %mul, 1
+  %add = or disjoint i32 %mul, 1
   %arrayidx3 = getelementptr inbounds i8, ptr %q, i32 %add
   store i8 2, ptr %arrayidx3, align 1
   br label %for.inc
@@ -178,7 +178,7 @@ for.end:
 }
 
 
-define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard1, i8 zeroext %guard2) local_unnamed_addr #0 {
+define void @masked_strided3(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard1, i8 zeroext %guard2) #0 {
 entry:
   %conv = zext i8 %guard1 to i32
   %conv3 = zext i8 %guard2 to i32
@@ -200,7 +200,7 @@ if.end:
   br i1 %cmp4, label %if.then6, label %for.inc
 
 if.then6:
-  %add = or i32 %mul, 1
+  %add = or disjoint i32 %mul, 1
   %arrayidx7 = getelementptr inbounds i8, ptr %q, i32 %add
   store i8 2, ptr %arrayidx7, align 1
   br label %for.inc

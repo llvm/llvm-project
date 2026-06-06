@@ -10,14 +10,14 @@ define void @load_store_zve32x(ptr %p) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 4
+; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
 ; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 4
+; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
 ; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
 ; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
 ; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 4
+; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
 ; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]

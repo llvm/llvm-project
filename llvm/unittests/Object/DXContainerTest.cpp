@@ -9,8 +9,12 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/MC/DXContainerInfo.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -47,6 +51,12 @@ TEST(DXCFile, EmptyFile) {
       FailedWithMessage("Reading structure out of file bounds"));
 }
 
+TEST(DXCFile, NullBuffer) {
+  EXPECT_THAT_EXPECTED(
+      DXContainer::create(MemoryBufferRef(StringRef(), "")),
+      FailedWithMessage("Reading structure out of file bounds"));
+}
+
 TEST(DXCFile, ParseHeader) {
   uint8_t Buffer[] = {0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -59,6 +69,15 @@ TEST(DXCFile, ParseHeader) {
                      "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16) == 0);
   EXPECT_EQ(C.getHeader().Version.Major, 1u);
   EXPECT_EQ(C.getHeader().Version.Minor, 0u);
+}
+
+TEST(DXCFile, MissingHeaderMagic) {
+  uint8_t Buffer[] = {0xFF, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+                      0x70, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<32>(Buffer)),
+                       FailedWithMessage("Missing DXBC header magic"));
 }
 
 TEST(DXCFile, ParsePartMissingOffsets) {
@@ -174,6 +193,393 @@ TEST(DXCFile, ParseEmptyParts) {
   }
 }
 
+// This test verify DXIL part are correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            DXIL
+//     Size:            28
+//     Program:
+//       MajorVersion:    6
+//       MinorVersion:    5
+//       ShaderKind:      5
+//       Size:            8
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 5
+//       DXILSize:        4
+//       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+// ...
+TEST(DXCFile, ParseDXILPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x48, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x44, 0x58, 0x49, 0x4c, 0x1c, 0x00, 0x00, 0x00, 0x65, 0x00, 0x05, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x44, 0x58, 0x49, 0x4c, 0x05, 0x01, 0x00, 0x00,
+      0x10, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x42, 0x43, 0xc0, 0xde};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<object::DXContainer::DXILData> &DXIL = C.getDXIL(false);
+  EXPECT_TRUE(DXIL.has_value());
+  dxbc::ProgramHeader Header = DXIL->first;
+  EXPECT_EQ(Header.getMajorVersion(), 6u);
+  EXPECT_EQ(Header.getMinorVersion(), 5u);
+  EXPECT_EQ(Header.ShaderKind, 5u);
+  EXPECT_EQ(Header.Size, 8u);
+  EXPECT_EQ(Header.Bitcode.MajorVersion, 1u);
+  EXPECT_EQ(Header.Bitcode.MinorVersion, 5u);
+}
+
+// This test verifies that ILDB part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            ILDB
+//     Size:            28
+//     Program:
+//       MajorVersion:    6
+//       MinorVersion:    5
+//       ShaderKind:      5
+//       Size:            8
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 5
+//       DXILSize:        4
+//       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+// ...
+TEST(DXCFile, ParseILDBPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x48, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x49, 0x4c, 0x44, 0x42, 0x1c, 0x00, 0x00, 0x00, 0x65, 0x00, 0x05, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x44, 0x58, 0x49, 0x4c, 0x05, 0x01, 0x00, 0x00,
+      0x10, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x42, 0x43, 0xc0, 0xde};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<object::DXContainer::DXILData> &DXIL = C.getDXIL(true);
+  EXPECT_TRUE(DXIL.has_value());
+  dxbc::ProgramHeader Header = DXIL->first;
+  EXPECT_EQ(Header.getMajorVersion(), 6u);
+  EXPECT_EQ(Header.getMinorVersion(), 5u);
+  EXPECT_EQ(Header.ShaderKind, 5u);
+  EXPECT_EQ(Header.Size, 8u);
+  EXPECT_EQ(Header.Bitcode.MajorVersion, 1u);
+  EXPECT_EQ(Header.Bitcode.MinorVersion, 5u);
+  EXPECT_TRUE(memcmp(DXIL->second, "\x42\x43\xc0\xde", 4) == 0);
+}
+
+// This test verifies that ILDN part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            ILDN
+//     Size:            12
+//     DebugName:
+//      Flags:           0
+//      NameLength:      7
+//      DebugName:       abc.pdb
+// ...
+TEST(DXCFile, ParseILDNPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x38, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x49, 0x4C, 0x44, 0x4E, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
+      0x61, 0x62, 0x63, 0x2E, 0x70, 0x64, 0x62, 0x00};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::DebugName> &ILDN = C.getDebugName();
+  EXPECT_TRUE(ILDN.has_value());
+  dxbc::DebugNameHeader Header = ILDN->Parameters;
+  EXPECT_EQ(Header.Flags, 0u);
+  EXPECT_EQ(Header.NameLength, 7u);
+  EXPECT_EQ(ILDN->Filename, "abc.pdb");
+}
+
+// This test verifies that VERS part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            VERS
+//     Size:            40
+//     DebugName:
+//      Major:           1
+//      Minor:           10
+//      IsDebugBuild:    true
+//      IsValidated:     false
+//      CommitCount:     5267
+//      ContentSizeInBytes: 21
+//      CommitSha:       21f060b7
+//      CustomVersionString: 1.9.0.15267
+// ...
+TEST(DXCFile, ParseVERSPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x54, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x56, 0x45, 0x52, 0x53, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0A, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x93, 0x14, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+      0x32, 0x31, 0x66, 0x30, 0x36, 0x30, 0x62, 0x37, 0x00, 0x31, 0x2E, 0x39,
+      0x2E, 0x30, 0x2E, 0x31, 0x35, 0x32, 0x36, 0x37, 0x00, 0x00, 0x00, 0x00};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<84>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::CompilerVersion> &VERS =
+      C.getCompilerVersionInfo();
+  EXPECT_TRUE(VERS.has_value());
+  dxbc::CompilerVersionHeader Header = VERS->Parameters;
+  EXPECT_EQ(Header.Major, 1u);
+  EXPECT_EQ(Header.Minor, 10u);
+  EXPECT_EQ(Header.Flags, dxbc::CompilerVersionFlags::Debug);
+  EXPECT_EQ(Header.CommitCount, 5267u);
+  EXPECT_EQ(Header.ContentSizeInBytes, 21u);
+  EXPECT_EQ(VERS->CommitSha, "21f060b7");
+  EXPECT_EQ(VERS->CustomVersionString, "1.9.0.15267");
+}
+
+// This test verifies that SRCI part is correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   FileSize:        324
+//   PartCount:       1
+//   PartOffsets:     [ 44 ]
+// Parts:
+//   - Name:            SRCI
+//     Size:            272
+//     SourceInfo:
+//       Header:
+//         AlignedSizeInBytes: 272
+//         Flags:           0
+//         SectionCount:    3
+//       Names:
+//         SectionHeader:
+//           AlignedSizeInBytes: 104
+//           Flags:           0
+//           Type:            SourceNames
+//         Header:
+//           Flags:           0
+//           Count:           3
+//           EntriesSizeInBytes: 84
+//         Entries:
+//           - AlignedSizeInBytes: 28
+//             Flags:           0
+//             NameSizeInBytes: 11
+//             ContentSizeInBytes: 13
+//             FileName:        smoke.hlsl
+//           - AlignedSizeInBytes: 28
+//             Flags:           0
+//             NameSizeInBytes: 11
+//             ContentSizeInBytes: 12
+//             FileName:        inc2.hlsli
+//           - AlignedSizeInBytes: 28
+//             Flags:           0
+//             NameSizeInBytes: 11
+//             ContentSizeInBytes: 12
+//             FileName:        inc1.hlsli
+//       Contents:
+//         SectionHeader:
+//           AlignedSizeInBytes: 72
+//           Flags:           0
+//           Type:            SourceContents
+//         Header:
+//           AlignedSizeInBytes: 64
+//           Flags:           0
+//           Type:            Zlib
+//           EntriesSizeInBytes: 44
+//           UncompressedEntriesSizeInBytes: 76
+//           Count:           3
+//         Entries:
+//           - AlignedSizeInBytes: 28
+//             Flags:           0
+//             ContentSizeInBytes: 13
+//             FileContent:     smoke_source
+//           - AlignedSizeInBytes: 24
+//             Flags:           0
+//             ContentSizeInBytes: 12
+//             FileContent:     inc2_source
+//           - AlignedSizeInBytes: 24
+//             Flags:           0
+//             ContentSizeInBytes: 12
+//             FileContent:     inc1_source
+//       Args:
+//         SectionHeader:
+//           AlignedSizeInBytes: 88
+//           Flags:           0
+//           Type:            Args
+//         Header:
+//           Flags:           0
+//           SizeInBytes:     67
+//           Count:           5
+//         Args:
+//           - Arg:             E
+//             Value:           main
+//           - Arg:             T
+//             Value:           ps_6_0
+//           - Arg:             Zi
+//             Value:           ''
+//           - Arg:             Fd
+//             Value:           fd_zs.test.tmp.pdb
+//           - Arg:             Fo
+//             Value:           fd_zs.test.tmp.dxo_fd
+TEST(DXCFile, ParseSRCIPart) {
+  if (!compression::zlib::isAvailable())
+    GTEST_SKIP() << "Test skipped because zlib is not available.";
+
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x44, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x53, 0x52, 0x43, 0x49,
+      0x10, 0x01, 0x00, 0x00, 0x10, 0x01, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+      0x68, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x03, 0x00, 0x00, 0x00, 0x54, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00, 0x73, 0x6D,
+      0x6F, 0x6B, 0x65, 0x2E, 0x68, 0x6C, 0x73, 0x6C, 0x00, 0x00, 0x1C, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x0C, 0x00,
+      0x00, 0x00, 0x69, 0x6E, 0x63, 0x32, 0x2E, 0x68, 0x6C, 0x73, 0x6C, 0x69,
+      0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B, 0x00,
+      0x00, 0x00, 0x0C, 0x00, 0x00, 0x00, 0x69, 0x6E, 0x63, 0x31, 0x2E, 0x68,
+      0x6C, 0x73, 0x6C, 0x69, 0x00, 0x00, 0x00, 0x00, 0x48, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+      0x2C, 0x00, 0x00, 0x00, 0x4C, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+      0x78, 0xDA, 0x93, 0x61, 0x80, 0x00, 0x5E, 0x20, 0x2E, 0xCE, 0xCD, 0xCF,
+      0x4E, 0x8D, 0x2F, 0xCE, 0x2F, 0x2D, 0x4A, 0x4E, 0x05, 0x89, 0x49, 0x40,
+      0xE5, 0x78, 0x80, 0x38, 0x33, 0x2F, 0xD9, 0x08, 0x26, 0x85, 0x26, 0x6E,
+      0x08, 0x13, 0x07, 0x00, 0xE2, 0x43, 0x0E, 0x38, 0x58, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x43, 0x00, 0x00, 0x00,
+      0x05, 0x00, 0x00, 0x00, 0x45, 0x00, 0x6D, 0x61, 0x69, 0x6E, 0x00, 0x54,
+      0x00, 0x70, 0x73, 0x5F, 0x36, 0x5F, 0x30, 0x00, 0x5A, 0x69, 0x00, 0x00,
+      0x46, 0x64, 0x00, 0x66, 0x64, 0x5F, 0x7A, 0x73, 0x2E, 0x74, 0x65, 0x73,
+      0x74, 0x2E, 0x74, 0x6D, 0x70, 0x2E, 0x70, 0x64, 0x62, 0x00, 0x46, 0x6F,
+      0x00, 0x66, 0x64, 0x5F, 0x7A, 0x73, 0x2E, 0x74, 0x65, 0x73, 0x74, 0x2E,
+      0x74, 0x6D, 0x70, 0x2E, 0x64, 0x78, 0x6F, 0x5F, 0x66, 0x64, 0x00, 0x00};
+
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<324>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<mcdxbc::SourceInfo> &SRCI = C.getSourceInfo();
+  EXPECT_TRUE(SRCI.has_value());
+  dxbc::SourceInfo::Header Header = SRCI->Parameters;
+  EXPECT_EQ(Header.AlignedSizeInBytes, 272u);
+  EXPECT_EQ(Header.Flags, 0u);
+  EXPECT_EQ(Header.SectionCount, 3u);
+
+  EXPECT_EQ(SRCI->Names.GenericHeader.AlignedSizeInBytes, 104u);
+  EXPECT_EQ(SRCI->Names.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.GenericHeader.Type,
+            dxbc::SourceInfo::SectionType::SourceNames);
+
+  EXPECT_EQ(SRCI->Names.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Parameters.Count, 3u);
+  EXPECT_EQ(SRCI->Names.Parameters.EntriesSizeInBytes, 84u);
+
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[0].Parameters.ContentSizeInBytes, 13u);
+  EXPECT_EQ(SRCI->Names.Entries[0].FileName, "smoke.hlsl");
+
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[1].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Names.Entries[1].FileName, "inc2.hlsli");
+
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.NameSizeInBytes, 11u);
+  EXPECT_EQ(SRCI->Names.Entries[2].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Names.Entries[2].FileName, "inc1.hlsli");
+
+  EXPECT_EQ(SRCI->Contents.GenericHeader.AlignedSizeInBytes, 72u);
+  EXPECT_EQ(SRCI->Contents.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.GenericHeader.Type,
+            dxbc::SourceInfo::SectionType::SourceContents);
+
+  EXPECT_EQ(SRCI->Contents.Parameters.AlignedSizeInBytes, 64u);
+  EXPECT_EQ(SRCI->Contents.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Parameters.Type,
+            dxbc::SourceInfo::Contents::CompressionType::Zlib);
+  EXPECT_EQ(SRCI->Contents.Parameters.EntriesSizeInBytes, 44u);
+  EXPECT_EQ(SRCI->Contents.Parameters.UncompressedEntriesSizeInBytes, 76u);
+  EXPECT_EQ(SRCI->Contents.Parameters.Count, 3u);
+
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.AlignedSizeInBytes, 28u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].Parameters.ContentSizeInBytes, 13u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].FileContent, "smoke_source");
+
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.AlignedSizeInBytes, 24u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Contents.Entries[1].FileContent, "inc2_source");
+
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.AlignedSizeInBytes, 24u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].Parameters.ContentSizeInBytes, 12u);
+  EXPECT_EQ(SRCI->Contents.Entries[2].FileContent, "inc1_source");
+
+  EXPECT_EQ(SRCI->Args.GenericHeader.AlignedSizeInBytes, 88u);
+  EXPECT_EQ(SRCI->Args.GenericHeader.Flags, 0u);
+  EXPECT_EQ(SRCI->Args.GenericHeader.Type, dxbc::SourceInfo::SectionType::Args);
+
+  EXPECT_EQ(SRCI->Args.Parameters.Flags, 0u);
+  EXPECT_EQ(SRCI->Args.Parameters.SizeInBytes, 67u);
+  EXPECT_EQ(SRCI->Args.Parameters.Count, 5u);
+
+  EXPECT_EQ(SRCI->Args.Args[0].first, "E");
+  EXPECT_EQ(SRCI->Args.Args[0].second, "main");
+
+  EXPECT_EQ(SRCI->Args.Args[1].first, "T");
+  EXPECT_EQ(SRCI->Args.Args[1].second, "ps_6_0");
+
+  EXPECT_EQ(SRCI->Args.Args[2].first, "Zi");
+  EXPECT_EQ(SRCI->Args.Args[2].second, "");
+
+  EXPECT_EQ(SRCI->Args.Args[3].first, "Fd");
+  EXPECT_EQ(SRCI->Args.Args[3].second, "fd_zs.test.tmp.pdb");
+
+  EXPECT_EQ(SRCI->Args.Args[4].first, "Fo");
+  EXPECT_EQ(SRCI->Args.Args[4].second, "fd_zs.test.tmp.dxo_fd");
+}
+
 static Expected<DXContainer>
 generateDXContainer(StringRef Yaml, SmallVectorImpl<char> &BinaryData) {
   DXContainerYAML::Object Obj;
@@ -221,15 +627,15 @@ Parts:
       MaximumWaveLaneCount: 4294967295
       ResourceStride:  16
       Resources:
-        - Type:            1
+        - Type:            Sampler
           Space:           1
           LowerBound:      1
           UpperBound:      1
-        - Type:            2
+        - Type:            CBV
           Space:           2
           LowerBound:      2
           UpperBound:      2
-        - Type:            3
+        - Type:            SRVTyped
           Space:           3
           LowerBound:      3
           UpperBound:      3
@@ -240,8 +646,8 @@ Parts:
       MinorVersion:    0
       ShaderKind:      14
       Size:            6
-      DXILMajorVersion: 0
-      DXILMinorVersion: 1
+      DXILMajorVersion: 1
+      DXILMinorVersion: 0
       DXILSize:        0
 ...
 )";
@@ -263,13 +669,13 @@ Parts:
   dxbc::PSV::v2::ResourceBindInfo Binding;
 
   Binding = *It;
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 2u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::CBV);
   EXPECT_EQ(Binding.Flags, 0u);
 
   --It;
@@ -277,25 +683,25 @@ Parts:
 
   EXPECT_TRUE(It == PSVInfo->getResources().begin());
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Flags, 0u);
 
   --It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 2u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::CBV);
   EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 3u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVTyped);
   EXPECT_EQ(Binding.Flags, 0u);
 
   EXPECT_FALSE(It == PSVInfo->getResources().end());
@@ -306,7 +712,7 @@ Parts:
   EXPECT_TRUE(It == PSVInfo->getResources().end());
   EXPECT_FALSE(It != PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
   EXPECT_EQ(Binding.Flags, 0u);
 
   {
@@ -316,7 +722,7 @@ Parts:
     EXPECT_TRUE(Old == PSVInfo->getResources().end());
     EXPECT_FALSE(Old != PSVInfo->getResources().end());
 
-    EXPECT_EQ(Binding.Type, 0u);
+    EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
     EXPECT_EQ(Binding.Flags, 0u);
   }
 
@@ -324,7 +730,7 @@ Parts:
 
   EXPECT_TRUE(It == PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
   EXPECT_EQ(Binding.Flags, 0u);
 
   {
@@ -332,13 +738,13 @@ Parts:
     Binding = *Old;
     EXPECT_TRUE(Old == PSVInfo->getResources().end());
 
-    EXPECT_EQ(Binding.Type, 0u);
+    EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
     EXPECT_EQ(Binding.Flags, 0u);
   }
 
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 3u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVTyped);
   EXPECT_EQ(Binding.Flags, 0u);
 }
 
@@ -361,8 +767,8 @@ Parts:
 //       MinorVersion:    0
 //       ShaderKind:      14
 //       Size:            6
-//       DXILMajorVersion: 0
-//       DXILMinorVersion: 1
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 0
 //       DXILSize:        0
 //   - Name:            PSV0
 //     Size:            36
@@ -477,7 +883,7 @@ TEST(DXCFile, MaliciousFiles) {
 //
 // --- !dxcontainer
 // Header:
-//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 //                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
 //   Version:
 //     Major:           1
@@ -491,8 +897,8 @@ TEST(DXCFile, MaliciousFiles) {
 //       MinorVersion:    0
 //       ShaderKind:      14
 //       Size:            6
-//       DXILMajorVersion: 0
-//       DXILMinorVersion: 1
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 0
 //       DXILSize:        0
 //   - Name:            PSV0
 //     Size:            100
@@ -542,7 +948,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   dxbc::PSV::v2::ResourceBindInfo Binding;
 
   Binding = *It;
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -550,7 +956,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 5u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVStructured);
   EXPECT_EQ(Binding.Space, 6u);
   EXPECT_EQ(Binding.LowerBound, 7u);
   EXPECT_EQ(Binding.UpperBound, 8u);
@@ -560,7 +966,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
 
   EXPECT_TRUE(It == PSVInfo->getResources().begin());
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -568,7 +974,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   --It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -576,7 +982,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 5u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVStructured);
   EXPECT_EQ(Binding.Space, 6u);
   EXPECT_EQ(Binding.LowerBound, 7u);
   EXPECT_EQ(Binding.UpperBound, 8u);;
@@ -590,7 +996,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   EXPECT_TRUE(It == PSVInfo->getResources().end());
   EXPECT_FALSE(It != PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
   EXPECT_EQ(Binding.Flags, 0u);
 }
 
@@ -775,4 +1181,477 @@ TEST(DXCFile, MalformedSignature) {
         FailedWithMessage("Invalid parameter name offset: name starts after "
                           "the end of the part data"));
   }
+}
+
+TEST(RootSignature, RootParameters) {
+  {
+    // Root Parameters offset has changed to 36, additional padding was added,
+    // as well as fixing the parameter offset.
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9a, 0x53, 0xd8, 0xec, 0xbe, 0x35, 0x6f,
+        0x05, 0x39, 0xe1, 0xfe, 0x31, 0x20, 0xf0, 0xc1, 0x01, 0x00, 0x00, 0x00,
+        0x85, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x59, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x2c, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x00,
+        0x0e, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00};
+
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<144>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getNumParameters(), 1u);
+    ASSERT_EQ(RS.getRootParametersOffset(), 36u);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 44u);
+    ASSERT_EQ(RS.getFlags(), 17u);
+
+    auto RootParam = *RS.param_headers().begin();
+    ASSERT_EQ((unsigned)RootParam.ParameterType, 1u);
+    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 2u);
+    auto ParamView = RS.getParameter(RootParam);
+    ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
+
+    DirectX::RootConstantView *RootConstantsView =
+        dyn_cast<DirectX::RootConstantView>(&*ParamView);
+    ASSERT_TRUE(RootConstantsView != nullptr);
+    auto Constants = RootConstantsView->read();
+
+    ASSERT_THAT_ERROR(Constants.takeError(), Succeeded());
+
+    ASSERT_EQ(Constants->ShaderRegister, 15u);
+    ASSERT_EQ(Constants->RegisterSpace, 14u);
+    ASSERT_EQ(Constants->Num32BitValues, 16u);
+  }
+}
+
+TEST(RootSignature, ParseRootFlags) {
+  {
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F,
+        0x05, 0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1, 0x01, 0x00, 0x00, 0x00,
+        0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x18, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+    };
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<68>(Buffer)));
+
+    const auto &RS = C.getRootSignature();
+    ASSERT_TRUE(RS.has_value());
+    ASSERT_EQ(RS->getVersion(), 2u);
+    ASSERT_EQ(RS->getNumParameters(), 0u);
+    ASSERT_EQ(RS->getRootParametersOffset(), 24u);
+    ASSERT_EQ(RS->getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS->getStaticSamplersOffset(), 0u);
+    ASSERT_EQ(RS->getFlags(), 0x01u);
+  }
+  {
+    // this parameter has the root signature definition missing some values.
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35,
+        0x6F, 0x05, 0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1, 0x01, 0x00,
+        0x00, 0x00, 0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24,
+        0x00, 0x00, 0x00, 0x52, 0x54, 0x53, 0x30, 0x18, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+    EXPECT_THAT_EXPECTED(
+        DXContainer::create(getMemoryBuffer<64>(Buffer)),
+        FailedWithMessage(
+            "Invalid root signature, insufficient space for header."));
+  }
+}
+
+TEST(RootSignature, ParseRootConstant) {
+  {
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9a, 0x53, 0xd8, 0xec, 0xbe, 0x35, 0x6f,
+        0x05, 0x39, 0xe1, 0xfe, 0x31, 0x20, 0xf0, 0xc1, 0x01, 0x00, 0x00, 0x00,
+        0x85, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x59, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x2c, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x00,
+        0x0e, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getNumParameters(), 1u);
+    ASSERT_EQ(RS.getRootParametersOffset(), 24u);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 44u);
+    ASSERT_EQ(RS.getFlags(), 17u);
+
+    auto RootParam = *RS.param_headers().begin();
+    ASSERT_EQ((unsigned)RootParam.ParameterType, 1u);
+    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 2u);
+    auto ParamView = RS.getParameter(RootParam);
+    ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
+
+    DirectX::RootConstantView *RootConstantsView =
+        dyn_cast<DirectX::RootConstantView>(&*ParamView);
+    ASSERT_TRUE(RootConstantsView != nullptr);
+    auto Constants = RootConstantsView->read();
+
+    ASSERT_THAT_ERROR(Constants.takeError(), Succeeded());
+
+    ASSERT_EQ(Constants->ShaderRegister, 15u);
+    ASSERT_EQ(Constants->RegisterSpace, 14u);
+    ASSERT_EQ(Constants->Num32BitValues, 16u);
+  }
+}
+
+TEST(RootSignature, ParseRootDescriptor) {
+  {
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9a, 0x53, 0xd8, 0xec, 0xbe, 0x35, 0x6f,
+        0x05, 0x39, 0xe1, 0xfe, 0x31, 0x20, 0xf0, 0xc1, 0x01, 0x00, 0x00, 0x00,
+        0x85, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x59, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x3c, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x03, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x00,
+        0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 1u);
+    ASSERT_EQ(RS.getNumParameters(), 1u);
+    ASSERT_EQ(RS.getRootParametersOffset(), 24u);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 60u);
+    ASSERT_EQ(RS.getFlags(), 17u);
+
+    auto RootParam = *RS.param_headers().begin();
+    ASSERT_EQ((unsigned)RootParam.ParameterType, 2u);
+    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 3u);
+    auto ParamView = RS.getParameter(RootParam);
+    ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
+
+    DirectX::RootDescriptorView *RootDescriptorView =
+        dyn_cast<DirectX::RootDescriptorView>(&*ParamView);
+    ASSERT_TRUE(RootDescriptorView != nullptr);
+    auto Descriptor = RootDescriptorView->read(RS.getVersion());
+
+    ASSERT_THAT_ERROR(Descriptor.takeError(), Succeeded());
+
+    ASSERT_EQ(Descriptor->ShaderRegister, 31u);
+    ASSERT_EQ(Descriptor->RegisterSpace, 32u);
+  }
+
+  {
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9a, 0x53, 0xd8, 0xec, 0xbe, 0x35, 0x6f,
+        0x05, 0x39, 0xe1, 0xfe, 0x31, 0x20, 0xf0, 0xc1, 0x01, 0x00, 0x00, 0x00,
+        0x85, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x59, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x3c, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x03, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x00,
+        0x20, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getNumParameters(), 1u);
+    ASSERT_EQ(RS.getRootParametersOffset(), 24u);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 60u);
+    ASSERT_EQ(RS.getFlags(), 17u);
+
+    auto RootParam = *RS.param_headers().begin();
+    ASSERT_EQ((unsigned)RootParam.ParameterType, 2u);
+    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 3u);
+    auto ParamView = RS.getParameter(RootParam);
+    ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
+
+    DirectX::RootDescriptorView *RootDescriptorView =
+        dyn_cast<DirectX::RootDescriptorView>(&*ParamView);
+    ASSERT_TRUE(RootDescriptorView != nullptr);
+    auto Descriptor = RootDescriptorView->read(RS.getVersion());
+
+    ASSERT_THAT_ERROR(Descriptor.takeError(), Succeeded());
+
+    ASSERT_EQ(Descriptor->ShaderRegister, 31u);
+    ASSERT_EQ(Descriptor->RegisterSpace, 32u);
+    ASSERT_EQ(Descriptor->Flags, 4u);
+  }
+}
+
+TEST(RootSignature, ParseDescriptorTable) {
+  {
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9a, 0x53, 0xd8, 0xec, 0xbe, 0x35, 0x6f,
+        0x05, 0x39, 0xe1, 0xfe, 0x31, 0x20, 0xf0, 0xc1, 0x01, 0x00, 0x00, 0x00,
+        0x85, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x59, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x3c, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x03, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x2c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+        0x2a, 0x00, 0x00, 0x00, 0x2b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+        0x29, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getNumParameters(), 1u);
+    ASSERT_EQ(RS.getRootParametersOffset(), 24u);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 60u);
+    ASSERT_EQ(RS.getFlags(), 17u);
+
+    auto RootParam = *RS.param_headers().begin();
+    ASSERT_EQ((unsigned)RootParam.ParameterType, 0u);
+    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 3u);
+    auto ParamView = RS.getParameter(RootParam);
+    ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
+
+    auto *DescriptorTableView =
+        dyn_cast<DirectX::DescriptorTableView>(&*ParamView);
+    ASSERT_TRUE(DescriptorTableView != nullptr);
+    auto Table = DescriptorTableView->read<dxbc::RTS0::v2::DescriptorRange>();
+
+    ASSERT_THAT_ERROR(Table.takeError(), Succeeded());
+
+    ASSERT_EQ(Table->NumRanges, 1u);
+
+    auto Range = *Table->begin();
+
+    ASSERT_EQ(Range.RangeType, 0u);
+    ASSERT_EQ(Range.NumDescriptors, -1u);
+    ASSERT_EQ(Range.BaseShaderRegister, 42u);
+    ASSERT_EQ(Range.RegisterSpace, 43u);
+    ASSERT_EQ(Range.OffsetInDescriptorsFromTableStart, 41u);
+    ASSERT_EQ(Range.Flags, 65536u);
+  }
+
+  {
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9a, 0x53, 0xd8, 0xec, 0xbe, 0x35, 0x6f,
+        0x05, 0x39, 0xe1, 0xfe, 0x31, 0x20, 0xf0, 0xc1, 0x01, 0x00, 0x00, 0x00,
+        0x85, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x59, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x3c, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x03, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x2c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+        0x2a, 0x00, 0x00, 0x00, 0x2b, 0x00, 0x00, 0x00, 0x29, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 1u);
+    ASSERT_EQ(RS.getNumParameters(), 1u);
+    ASSERT_EQ(RS.getRootParametersOffset(), 24u);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 60u);
+    ASSERT_EQ(RS.getFlags(), 17u);
+
+    auto RootParam = *RS.param_headers().begin();
+    ASSERT_EQ((unsigned)RootParam.ParameterType, 0u);
+    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 3u);
+    auto ParamView = RS.getParameter(RootParam);
+    ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
+
+    auto *DescriptorTableView =
+        dyn_cast<DirectX::DescriptorTableView>(&*ParamView);
+    ASSERT_TRUE(DescriptorTableView != nullptr);
+    auto Table = DescriptorTableView->read<dxbc::RTS0::v1::DescriptorRange>();
+
+    ASSERT_THAT_ERROR(Table.takeError(), Succeeded());
+
+    ASSERT_EQ(Table->NumRanges, 1u);
+
+    auto Range = *Table->begin();
+
+    ASSERT_EQ(Range.RangeType, 0u);
+    ASSERT_EQ(Range.NumDescriptors, -1u);
+    ASSERT_EQ(Range.BaseShaderRegister, 42u);
+    ASSERT_EQ(Range.RegisterSpace, 43u);
+    ASSERT_EQ(Range.OffsetInDescriptorsFromTableStart, 41u);
+  }
+}
+
+TEST(RootSignature, ParseStaticSamplers) {
+  {
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x90, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x4c, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+        0xa4, 0x70, 0x9d, 0x3f, 0x14, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x85, 0xeb, 0x91, 0x40, 0x66, 0x66, 0x0e, 0x41,
+        0x1f, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 2u);
+    ASSERT_EQ(RS.getNumParameters(), 0u);
+    ASSERT_EQ(RS.getRootParametersOffset(), 0u);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 1u);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 24u);
+    ASSERT_EQ(RS.getFlags(), 17u);
+
+    auto Sampler = *RS.samplers().begin();
+
+    ASSERT_EQ(Sampler.Filter, 10u);
+    ASSERT_EQ(Sampler.AddressU, 1u);
+    ASSERT_EQ(Sampler.AddressV, 2u);
+    ASSERT_EQ(Sampler.AddressW, 5u);
+    ASSERT_FLOAT_EQ(Sampler.MipLODBias, 1.23f);
+    ASSERT_EQ(Sampler.MaxAnisotropy, 20u);
+    ASSERT_EQ(Sampler.ComparisonFunc, 4u);
+    ASSERT_EQ(Sampler.BorderColor, 0u);
+    ASSERT_FLOAT_EQ(Sampler.MinLOD, 4.56f);
+    ASSERT_FLOAT_EQ(Sampler.MaxLOD, 8.9f);
+    ASSERT_EQ(Sampler.ShaderRegister, 31u);
+    ASSERT_EQ(Sampler.RegisterSpace, 32u);
+    ASSERT_EQ(Sampler.ShaderVisibility, 7u);
+  }
+  {
+    // this is testing static sampler parsing for root signature version 1.2,
+    // it changes: the version number, the size of root signature being emitted
+    // and the values for flag fields.
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x90, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x4c, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+        0xa4, 0x70, 0x9d, 0x3f, 0x14, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x85, 0xeb, 0x91, 0x40, 0x66, 0x66, 0x0e, 0x41,
+        0x1f, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<148>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 3U);
+    ASSERT_EQ(RS.getNumParameters(), 0U);
+    ASSERT_EQ(RS.getRootParametersOffset(), 0U);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 1U);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 24U);
+    ASSERT_EQ(RS.getFlags(), 17U);
+
+    auto Sampler = *RS.samplers().begin();
+
+    ASSERT_EQ(Sampler.Filter, 10U);
+    ASSERT_EQ(Sampler.AddressU, 1U);
+    ASSERT_EQ(Sampler.AddressV, 2U);
+    ASSERT_EQ(Sampler.AddressW, 5U);
+    ASSERT_FLOAT_EQ(Sampler.MipLODBias, 1.23F);
+    ASSERT_EQ(Sampler.MaxAnisotropy, 20U);
+    ASSERT_EQ(Sampler.ComparisonFunc, 4U);
+    ASSERT_EQ(Sampler.BorderColor, 0U);
+    ASSERT_FLOAT_EQ(Sampler.MinLOD, 4.56F);
+    ASSERT_FLOAT_EQ(Sampler.MaxLOD, 8.9F);
+    ASSERT_EQ(Sampler.ShaderRegister, 31U);
+    ASSERT_EQ(Sampler.RegisterSpace, 32U);
+    ASSERT_EQ(Sampler.ShaderVisibility, 7U);
+    ASSERT_EQ(Sampler.Flags, 1U);
+  }
+}
+
+// PSVInfo:
+//   Version:         2
+//   ShaderStage:     5
+//   MinimumWaveLaneCount: 0
+//   MaximumWaveLaneCount: 4294967295
+//   NumThreadsX:     8
+//   NumThreadsY:     1
+//   NumThreadsZ:     1
+//   EntryName:       CSMain  <--- not serialized for version < 3
+//   ResourceStride:  0
+//   Resources:       []
+TEST(DXCFile, PSVv2EntryNameNotInStringTable) {
+  // Verify that when EntryName is set but PSV version is < 3,
+  // the entry name does not appear in the serialized string table.
+  mcdxbc::PSVRuntimeInfo PSV;
+  PSV.BaseData.ShaderStage =
+      static_cast<uint8_t>(Triple::EnvironmentType::Compute - Triple::Pixel);
+  PSV.BaseData.MinimumWaveLaneCount = 0;
+  PSV.BaseData.MaximumWaveLaneCount = 0xFFFFFFFF;
+  PSV.BaseData.NumThreadsX = 8;
+  PSV.BaseData.NumThreadsY = 1;
+  PSV.BaseData.NumThreadsZ = 1;
+  PSV.EntryName = "CSMain";
+
+  PSV.finalize(Triple::EnvironmentType::Compute, 2);
+
+  SmallVector<char> Buffer;
+  raw_svector_ostream OS(Buffer);
+  PSV.write(OS, 2);
+
+  // The serialized PSV data should not contain the entry name string.
+  StringRef Data(Buffer.data(), Buffer.size());
+  EXPECT_FALSE(Data.contains("CSMain"));
+
+  // Deserialize and verify the string table contains only null bytes
+  // (size 4 = one null byte padded to 4-byte alignment).
+  DirectX::PSVRuntimeInfo ParsedPSV(Data);
+  ASSERT_THAT_ERROR(ParsedPSV.parse(static_cast<uint16_t>(
+                        Triple::EnvironmentType::Compute - Triple::Pixel)),
+                    Succeeded());
+  EXPECT_EQ(ParsedPSV.getVersion(), 2u);
+  StringRef StrTab = ParsedPSV.getStringTable();
+  EXPECT_EQ(StrTab.size(), 4u);
+  EXPECT_TRUE(llvm::all_of(StrTab, [](char C) { return C == '\0'; }));
 }

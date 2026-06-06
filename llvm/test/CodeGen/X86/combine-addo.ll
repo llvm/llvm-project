@@ -77,7 +77,7 @@ define <4 x i32> @combine_vec_uadd_not(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    psubd %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
+; SSE-NEXT:    pmovsxbd {{.*#+}} xmm0 = [1,1,1,1]
 ; SSE-NEXT:    pmaxud %xmm2, %xmm0
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE-NEXT:    blendvps %xmm0, %xmm2, %xmm1

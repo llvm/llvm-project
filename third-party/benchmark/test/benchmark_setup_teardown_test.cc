@@ -2,27 +2,27 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
-#include <limits>
 #include <string>
 
 #include "benchmark/benchmark.h"
 
 // Test that Setup() and Teardown() are called exactly once
 // for each benchmark run (single-threaded).
-namespace single {
+namespace {
+namespace singlethreaded {
 static int setup_call = 0;
 static int teardown_call = 0;
-}  // namespace single
+}  // namespace singlethreaded
+}  // namespace
 static void DoSetup1(const benchmark::State& state) {
-  ++single::setup_call;
+  ++singlethreaded::setup_call;
 
   // Setup/Teardown should never be called with any thread_idx != 0.
   assert(state.thread_index() == 0);
 }
 
 static void DoTeardown1(const benchmark::State& state) {
-  ++single::teardown_call;
+  ++singlethreaded::teardown_call;
   assert(state.thread_index() == 0);
 }
 
@@ -40,23 +40,24 @@ BENCHMARK(BM_with_setup)
     ->Teardown(DoTeardown1);
 
 // Test that Setup() and Teardown() are called once for each group of threads.
+namespace {
 namespace concurrent {
 static std::atomic<int> setup_call(0);
 static std::atomic<int> teardown_call(0);
 static std::atomic<int> func_call(0);
 }  // namespace concurrent
 
-static void DoSetup2(const benchmark::State& state) {
+void DoSetup2(const benchmark::State& state) {
   concurrent::setup_call.fetch_add(1, std::memory_order_acquire);
   assert(state.thread_index() == 0);
 }
 
-static void DoTeardown2(const benchmark::State& state) {
+void DoTeardown2(const benchmark::State& state) {
   concurrent::teardown_call.fetch_add(1, std::memory_order_acquire);
   assert(state.thread_index() == 0);
 }
 
-static void BM_concurrent(benchmark::State& state) {
+void BM_concurrent(benchmark::State& state) {
   for (auto s : state) {
   }
   concurrent::func_call.fetch_add(1, std::memory_order_acquire);
@@ -80,11 +81,11 @@ int fixture_setup = 0;
 
 class FIXTURE_BECHMARK_NAME : public ::benchmark::Fixture {
  public:
-  void SetUp(const ::benchmark::State&) BENCHMARK_OVERRIDE {
+  void SetUp(const ::benchmark::State& /*unused*/) override {
     fixture_interaction::fixture_setup++;
   }
 
-  ~FIXTURE_BECHMARK_NAME() {}
+  ~FIXTURE_BECHMARK_NAME() override {}
 };
 
 BENCHMARK_F(FIXTURE_BECHMARK_NAME, BM_WithFixture)(benchmark::State& st) {
@@ -92,7 +93,7 @@ BENCHMARK_F(FIXTURE_BECHMARK_NAME, BM_WithFixture)(benchmark::State& st) {
   }
 }
 
-static void DoSetupWithFixture(const benchmark::State&) {
+void DoSetupWithFixture(const benchmark::State& /*unused*/) {
   fixture_interaction::setup++;
 }
 
@@ -110,10 +111,10 @@ namespace repetitions {
 int setup = 0;
 }
 
-static void DoSetupWithRepetitions(const benchmark::State&) {
+void DoSetupWithRepetitions(const benchmark::State& /*unused*/) {
   repetitions::setup++;
 }
-static void BM_WithRep(benchmark::State& state) {
+void BM_WithRep(benchmark::State& state) {
   for (auto _ : state) {
   }
 }
@@ -126,16 +127,19 @@ BENCHMARK(BM_WithRep)
     ->Setup(DoSetupWithRepetitions)
     ->Iterations(100)
     ->Repetitions(4);
+}  // namespace
 
 int main(int argc, char** argv) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
+
   benchmark::Initialize(&argc, argv);
 
   size_t ret = benchmark::RunSpecifiedBenchmarks(".");
   assert(ret > 0);
 
   // Setup/Teardown is called once for each arg group (1,3,5,7).
-  assert(single::setup_call == 4);
-  assert(single::teardown_call == 4);
+  assert(singlethreaded::setup_call == 4);
+  assert(singlethreaded::teardown_call == 4);
 
   // 3 group of threads calling this function (3,5,10).
   assert(concurrent::setup_call.load(std::memory_order_relaxed) == 3);
@@ -145,7 +149,7 @@ int main(int argc, char** argv) {
 
   // Setup is called 4 times, once for each arg group (1,3,5,7)
   assert(fixture_interaction::setup == 4);
-  // Fixture::Setup is called everytime the bm routine is run.
+  // Fixture::Setup is called every time the bm routine is run.
   // The exact number is indeterministic, so we just assert that
   // it's more than setup.
   assert(fixture_interaction::fixture_setup > fixture_interaction::setup);

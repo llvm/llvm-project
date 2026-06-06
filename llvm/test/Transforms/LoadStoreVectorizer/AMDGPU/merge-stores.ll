@@ -1,8 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa --mcpu=hawaii -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 ; Copy of test/CodeGen/AMDGPU/merge-stores.ll with some additions
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
-
 ; TODO: Vector element tests
 ; TODO: Non-zero base offset for load and store combinations
 ; TODO: Same base addrspacecasted
@@ -82,7 +80,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i16_align_1(ptr addrsp
 
 define amdgpu_kernel void @merge_global_store_2_constants_half_natural_align(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: @merge_global_store_2_constants_half_natural_align(
-; CHECK-NEXT:    store <2 x half> <half 0xH3C00, half 0xH4000>, ptr addrspace(1) [[OUT:%.*]], align 2
+; CHECK-NEXT:    store <2 x half> <half 1.000000e+00, half 2.000000e+00>, ptr addrspace(1) [[OUT:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr half, ptr addrspace(1) %out, i32 1
@@ -94,7 +92,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_half_natural_align(ptr
 
 define amdgpu_kernel void @merge_global_store_2_constants_half_align_1(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: @merge_global_store_2_constants_half_align_1(
-; CHECK-NEXT:    store <2 x half> <half 0xH3C00, half 0xH4000>, ptr addrspace(1) [[OUT:%.*]], align 1
+; CHECK-NEXT:    store <2 x half> <half 1.000000e+00, half 2.000000e+00>, ptr addrspace(1) [[OUT:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr half, ptr addrspace(1) %out, i32 1

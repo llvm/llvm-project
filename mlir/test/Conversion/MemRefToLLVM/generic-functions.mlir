@@ -1,7 +1,7 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(finalize-memref-to-llvm{use-generic-functions=1 use-opaque-pointers=1})" -split-input-file %s \
+// RUN: mlir-opt -pass-pipeline="builtin.module(finalize-memref-to-llvm{use-generic-functions=1})" -split-input-file %s \
 // RUN: | FileCheck %s --check-prefix="CHECK-NOTALIGNED"
 
-// RUN: mlir-opt -pass-pipeline="builtin.module(finalize-memref-to-llvm{use-generic-functions=1 use-aligned-alloc=1 use-opaque-pointers=1})" -split-input-file %s \
+// RUN: mlir-opt -pass-pipeline="builtin.module(finalize-memref-to-llvm{use-generic-functions=1 use-aligned-alloc=1})" -split-input-file %s \
 // RUN: | FileCheck %s --check-prefix="CHECK-ALIGNED"
 
 // CHECK-LABEL: func @alloc()

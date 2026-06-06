@@ -10,13 +10,19 @@
 #define LLVM_LIB_TARGET_BPF_BPF_H
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class BPFRegisterBankInfo;
+class BPFSubtarget;
 class BPFTargetMachine;
+class InstructionSelector;
 class PassRegistry;
+
+#define BPF_TRAP "__bpf_trap"
 
 ModulePass *createBPFCheckAndAdjustIR();
 
@@ -26,42 +32,64 @@ FunctionPass *createBPFMIPeepholePass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
+InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
+                                                  const BPFSubtarget &,
+                                                  const BPFRegisterBankInfo &);
+
+void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
-void initializeBPFDAGToDAGISelPass(PassRegistry &);
+void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);
-void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
+void initializeBPFMIPreEmitCheckingPass(PassRegistry &);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
 void initializeBPFMISimplifyPatchablePass(PassRegistry &);
 
 class BPFAbstractMemberAccessPass
-    : public PassInfoMixin<BPFAbstractMemberAccessPass> {
+    : public RequiredPassInfoMixin<BPFAbstractMemberAccessPass> {
   BPFTargetMachine *TM;
 
 public:
   BPFAbstractMemberAccessPass(BPFTargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
-class BPFPreserveDITypePass : public PassInfoMixin<BPFPreserveDITypePass> {
+class BPFPreserveDITypePass
+    : public RequiredPassInfoMixin<BPFPreserveDITypePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
-class BPFIRPeepholePass : public PassInfoMixin<BPFIRPeepholePass> {
+class BPFIRPeepholePass : public RequiredPassInfoMixin<BPFIRPeepholePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
-class BPFAdjustOptPass : public PassInfoMixin<BPFAdjustOptPass> {
+class BPFASpaceCastSimplifyPass
+    : public RequiredPassInfoMixin<BPFASpaceCastSimplifyPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class BPFAdjustOptPass : public OptionalPassInfoMixin<BPFAdjustOptPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
+
+class BPFPreserveStaticOffsetPass
+    : public RequiredPassInfoMixin<BPFPreserveStaticOffsetPass> {
+  bool AllowPartial;
+
+public:
+  BPFPreserveStaticOffsetPass(bool AllowPartial) : AllowPartial(AllowPartial) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static std::pair<GetElementPtrInst *, LoadInst *>
+  reconstructLoad(CallInst *Call);
+
+  static std::pair<GetElementPtrInst *, StoreInst *>
+  reconstructStore(CallInst *Call);
+};
+
 } // namespace llvm
 
 #endif

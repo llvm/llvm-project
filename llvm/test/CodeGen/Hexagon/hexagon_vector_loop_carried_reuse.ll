@@ -1,4 +1,4 @@
-; RUN: opt < %s -hexagon-vlcr | opt -passes=adce -S | FileCheck %s
+; RUN: opt -mtriple=hexagon-- -passes='loop(hexagon-vlcr),adce' -S %s | FileCheck %s
 
 ; CHECK: %.hexagon.vlcr = tail call <32 x i32> @llvm.hexagon.V6.vmaxub.128B
 ; ModuleID = 'hexagon_vector_loop_carried_reuse.c'
@@ -66,7 +66,7 @@ declare <32 x i32> @llvm.hexagon.V6.vmaxub.128B(<32 x i32>, <32 x i32>) #1
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.valignbi.128B(<32 x i32>, <32 x i32>, i32) #1
 
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length128b,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length128b,-long-calls" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.ident = !{!0}

@@ -12,10 +12,10 @@ entry:
 
 define void @test() #0 {
 entry:
-  %pFunc = alloca void (...)*, align 4
-  store void (...)* bitcast (void ()* @func1 to void (...)*), void (...)** %pFunc, align 4
-  %0 = load void (...)*, void (...)** %pFunc, align 4
-  %callee.knr.cast = bitcast void (...)* %0 to void ()*
+  %pFunc = alloca ptr, align 4
+  store ptr @func1, ptr %pFunc, align 4
+  %0 = load ptr, ptr %pFunc, align 4
+  %callee.knr.cast = bitcast ptr %0 to ptr
   call void %callee.knr.cast()
 
 ; abs32-LABEL:   test

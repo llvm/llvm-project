@@ -39,6 +39,11 @@ multiclass B<string name, string help1, string help2> {
   def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
 }
 
+multiclass BB<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 multiclass B_disable<string name, string help1, string help2> {
   def NAME: Flag<["--", "-"], name>, HelpText<help1>;
   def disable_ # NAME: Flag<["--", "-"], "disable-" # name>, HelpText<help2>;
@@ -79,6 +84,8 @@ defm exclude_symbols: Eq<"exclude-symbols",
     "Exclude symbols from automatic export">, MetaVarName<"<symbol[,symbol,...]>">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
+defm dll_search_prefix:Eq<"dll-search-prefix", "Specify DLL prefix instead of 'lib'">,
+    MetaVarName<"<dll_search_prefix>">;
 defm fatal_warnings: B<"fatal-warnings",
     "Treat warnings as errors",
     "Do not treat warnings as errors (default)">;
@@ -118,6 +125,10 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 defm out_implib: Eq<"out-implib", "Import library name">;
 defm output_def: Eq<"output-def", "Output def file">;
+def pop_state: F<"pop-state">,
+  HelpText<"Restore the states saved by --push-state">;
+def push_state: F<"push-state">,
+  HelpText<"Save the current state of --Bstatic/--Bdynamic and --whole-archive">;
 defm reloc_section: B_enable_disable<"reloc-section",
      "Enable base relocations", "Disable base relocations">;
 defm section_alignment: Eq<"section-alignment", "Set section alignment">;
@@ -139,6 +150,8 @@ defm threads
 defm tsaware: B_disable<"tsaware",
     "Set the 'Terminal Server aware' flag", "Don't set the 'Terminal Server aware' flag">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
+defm undefined_glob: EEq<"undefined-glob", "Force undefined symbol during linking">,
+  MetaVarName<"<pattern>">;
 defm whole_archive: B<"whole-archive",
     "Include all object files for following archives",
     "No longer include all object files for following archives">;
@@ -149,6 +162,7 @@ defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
      MetaVarName<"<symbol>">;
 
 
+// LLD specific options, for LTO, shared with the ELF backend
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
 def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
@@ -157,9 +171,24 @@ def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
   HelpText<"Perform context sensitive PGO instrumentation">;
 def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
+def lto_emit_asm: FF<"lto-emit-asm">,
+  HelpText<"Emit assembly code">;
+def lto_sample_profile: JJ<"lto-sample-profile=">,
+  HelpText<"Sample profile file path">;
+defm fat_lto_objects: BB<"fat-lto-objects",
+    "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
+    "Ignore the .llvm.lto section in relocatable object files (default).">;
 
+def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
+  HelpText<"Path to ThinLTO cached object file directory">;
+defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
+def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_index_only: FF<"thinlto-index-only">;
+def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
 def thinlto_jobs_eq: JJ<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
+def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 
 def plugin_opt_eq_minus: J<"plugin-opt=-">,
   HelpText<"Specify an LLVM option for compatibility with LLVMgold.so">;
@@ -172,6 +201,9 @@ def: J<"plugin-opt=cs-profile-path=">,
   Alias<lto_cs_profile_file>, HelpText<"Alias for --lto-cs-profile-file">;
 def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
   HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
+def plugin_opt_emit_asm: F<"plugin-opt=emit-asm">,
+  Alias<lto_emit_asm>, HelpText<"Alias for --lto-emit-asm">;
+def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
 def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
 
@@ -184,10 +216,9 @@ def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the executable">;
 defm delayload: Eq<"delayload", "DLL to load only on demand">;
+defm dependent_load_flag: EEq<"dependent-load-flag", "Override default LibraryLoad flags">;
 defm mllvm: EqNoHelp<"mllvm">;
 defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argument is empty">;
-defm thinlto_cache_dir: EqLong<"thinlto-cache-dir",
-  "Path to ThinLTO cached object file directory">;
 defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;
 defm guard_cf : B<"guard-cf", "Enable Control Flow Guard" ,
   "Do not enable Control Flow Guard (default)">;
@@ -196,6 +227,15 @@ defm guard_longjmp : B<"guard-longjmp",
   "Do not enable Control Flow Guard long jump hardening">;
 defm error_limit:
   EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
+def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">,
+  MetaVarName<"<arg>">;
+def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
+def functionpadmin: J<"functionpadmin=">, HelpText<"Prepares an image for hotpatching">,
+  MetaVarName<"<arg>">;
+def : F<"functionpadmin">, Alias<functionpadmin>, HelpText<"Alias for --functionpadmin=">;
+defm native_def
+    : EEq<"native-def",
+          "Use a module-definition file for the native view in a hybrid image">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
@@ -213,7 +253,6 @@ def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 // Ignored options
 def: Joined<["-"], "O">;
 def: F<"as-needed">;
-def: F<"build-id">;
 def: F<"disable-auto-image-base">;
 def: F<"enable-auto-image-base">;
 def: F<"end-group">;
@@ -226,6 +265,9 @@ defm: EqNoHelp<"plugin">;
 defm: EqNoHelp<"sysroot">;
 def: F<"sort-common">;
 def: F<"start-group">;
+
+// Ignored options, that produce warnings
+defm rpath: EqNoHelp<"rpath">;
 
 // Ignore GCC collect2 LTO plugin related options. Note that we don't support
 // GCC LTO, but GCC collect2 passes these options even in non-LTO mode.

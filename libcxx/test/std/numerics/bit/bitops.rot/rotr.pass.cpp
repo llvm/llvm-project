@@ -1,11 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
@@ -15,6 +15,7 @@
 
 #include <bit>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -41,6 +42,8 @@ constexpr bool test()
     assert(std::rotr(T(max - 1), 5) == T(max - (highbit >> 4)));
     assert(std::rotr(T(max - 1), 6) == T(max - (highbit >> 5)));
     assert(std::rotr(T(max - 1), 7) == T(max - (highbit >> 6)));
+    assert(std::rotr(T(max - 1), std::numeric_limits<int>::max()) ==
+           std::rotr(T(max - 1), std::numeric_limits<int>::max() % std::numeric_limits<T>::digits));
 
     assert(std::rotr(T(max - 1), -1) == T(max - 2));
     assert(std::rotr(T(max - 1), -2) == T(max - 4));
@@ -49,6 +52,8 @@ constexpr bool test()
     assert(std::rotr(T(max - 1), -5) == T(max - 32));
     assert(std::rotr(T(max - 1), -6) == T(max - 64));
     assert(std::rotr(T(max - 1), -7) == T(max - 128));
+    assert(std::rotr(T(max - 1), std::numeric_limits<int>::min()) ==
+           std::rotr(T(max - 1), std::numeric_limits<int>::min() % std::numeric_limits<T>::digits));
 
     assert(std::rotr(T(128), 0) == T(128));
     assert(std::rotr(T(128), 1) == T(64));
@@ -159,6 +164,62 @@ int main(int, char**)
     test<std::uintmax_t>();
     test<std::uintptr_t>();
     test<std::size_t>();
+
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
+    // rotr uses numeric_limits::digits internally, so only byte-aligned
+    // widths are safe.
+#if TEST_HAS_EXTENSION(bit_int)
+    {
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
+
+      T32 m32 = ~T32(0);
+      T32 h32 = T32(1) << 31;
+      assert(std::rotr(T32(1), 0) == T32(1));
+      assert(std::rotr(T32(16), 4) == T32(1));
+      assert(std::rotr(T32(128), 1) == T32(64));
+      assert(std::rotr(T32(128), 7) == T32(1));
+      assert(std::rotr(T32(1), -1) == T32(2));
+      assert(std::rotr(T32(1), -7) == T32(128));
+      assert(std::rotr(T32(m32 - 1), 0) == T32(m32 - 1));
+      assert(std::rotr(T32(m32 - 1), 1) == T32(m32 - h32));
+      // Full rotation returns original.
+      assert(std::rotr(T32(1), 32) == T32(1));
+
+      assert(std::rotr(T64(1), 0) == T64(1));
+      assert(std::rotr(T64(16), 4) == T64(1));
+      assert(std::rotr(T64(1), -1) == T64(2));
+      assert(std::rotr(T64(1), 64) == T64(1));
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T128 = unsigned _BitInt(128);
+      assert(std::rotr(T128(1), 0) == T128(1));
+      assert(std::rotr(T128(16), 4) == T128(1));
+      assert(std::rotr(T128(1), -1) == T128(2));
+      assert(std::rotr(T128(1), 128) == T128(1));
+      // Wrap low bit to high position.
+      assert(std::rotr(T128(1), 1) == T128(1) << 127);
+      // Multi-bit rotation across the 64-bit boundary.
+      assert(std::rotr(T128(3), 2) == ((T128(1) << 127) | (T128(1) << 126)));
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::rotr(T256(1), 0) == T256(1));
+      assert(std::rotr(T256(16), 4) == T256(1));
+      assert(std::rotr(T256(1) << 200, 200) == T256(1));
+      assert(std::rotr(T256(1), -1) == T256(2));
+      assert(std::rotr(T256(1), 256) == T256(1));
+      assert(std::rotr(T256(~T256(0) - 1), 1) == T256(~T256(0) - (T256(1) << 255)));
+      // Wrap low bit to highest.
+      assert(std::rotr(T256(1), 1) == T256(1) << 255);
+      // Modulo: rotation amount larger than width.
+      assert(std::rotr(T256(1), 256 + 4) == T256(1) << 252);
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
 
     return 0;
 }

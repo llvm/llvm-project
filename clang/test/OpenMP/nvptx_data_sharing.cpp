@@ -31,12 +31,14 @@ void test_ds(){
 #endif
 
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14
-// CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [2 x ptr], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_kernel_environment)
+// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
@@ -46,14 +48,14 @@ void test_ds(){
 // CHECK-NEXT:    store i32 10, ptr [[A]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[A]], ptr [[TMP2]], align 8
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 // CHECK-NEXT:    store i32 100, ptr [[B]], align 4
 // CHECK-NEXT:    store i32 1000, ptr [[C]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS1]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[B]], ptr [[TMP3]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS1]], i64 0, i64 1
 // CHECK-NEXT:    store ptr [[A]], ptr [[TMP4]], align 8
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_omp_outlined1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_omp_outlined1_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 2)
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_omp_outlined1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7test_dsv_l14_omp_outlined1_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 2, i32 0)
 // CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[B]], i64 4)
 // CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[A]], i64 4)
 // CHECK-NEXT:    call void @__kmpc_target_deinit()

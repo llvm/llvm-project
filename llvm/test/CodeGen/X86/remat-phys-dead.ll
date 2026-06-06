@@ -18,6 +18,6 @@ define i8 @test_remat() {
 define i32 @test_remat32() {
   ret i32 0
 ; CHECK: REGISTER COALESCER
-; CHECK: Remat: $eax = MOV32r0 implicit-def dead $eflags
+; CHECK: $eax = MOV32r0 implicit-def dead $eflags
 }
 

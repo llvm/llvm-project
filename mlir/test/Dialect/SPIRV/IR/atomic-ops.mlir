@@ -5,15 +5,15 @@
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_and(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicAnd "Device" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicAnd "Device" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicAnd <Device> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicAnd <Device> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
 // -----
 
 func.func @atomic_and(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : i32) -> i32 {
-  // expected-error @+1 {{pointer operand must point to an integer value, found 'f32'}}
+  // expected-error @+1 {{'spirv.AtomicAnd' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicAnd"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<f32, StorageBuffer>, i32) -> (i32)
   return %0 : i32
 }
@@ -22,7 +22,7 @@ func.func @atomic_and(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : i32) -> i3
 // -----
 
 func.func @atomic_and(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i64) -> i64 {
-  // expected-error @+1 {{expected value to have the same type as the pointer operand's pointee type 'i32', but found 'i64'}}
+  // expected-error @+1 {{'spirv.AtomicAnd' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicAnd"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, StorageBuffer>, i64) -> (i64)
   return %0 : i64
 }
@@ -31,7 +31,7 @@ func.func @atomic_and(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i64) -> i6
 
 func.func @atomic_and(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
   // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
-  %0 = spirv.AtomicAnd "Device" "Acquire|Release" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicAnd <Device> <Acquire|Release> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -42,15 +42,15 @@ func.func @atomic_and(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i3
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
-  // CHECK: spirv.AtomicCompareExchange "Workgroup" "Release" "Acquire" %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
-  %0 = spirv.AtomicCompareExchange "Workgroup" "Release" "Acquire" %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  // CHECK: spirv.AtomicCompareExchange <Workgroup> <Release> <Acquire> %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
+  %0 = spirv.AtomicCompareExchange <Workgroup> <Release> <Acquire> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
   return %0: i32
 }
 
 // -----
 
 func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64, %comparator: i32) -> i32 {
-  // expected-error @+1 {{value operand must have the same type as the op result, but found 'i64' vs 'i32'}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchange' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i64, i32) -> (i32)
   return %0: i32
 }
@@ -58,7 +58,7 @@ func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64
 // -----
 
 func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i16) -> i32 {
-  // expected-error @+1 {{comparator operand must have the same type as the op result, but found 'i16' vs 'i32'}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchange' op failed to verify that `comparator` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i32, i16) -> (i32)
   return %0: i32
 }
@@ -66,7 +66,7 @@ func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32
 // -----
 
 func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32, %comparator: i32) -> i32 {
-  // expected-error @+1 {{pointer operand's pointee type must have the same as the op result type, but found 'i64' vs 'i32'}}
+  // expected-error @+1 {{spirv.AtomicCompareExchange' op failed to verify that `result` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i64, Workgroup>, i32, i32) -> (i32)
   return %0: i32
 }
@@ -78,15 +78,15 @@ func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
-  // CHECK: spirv.AtomicCompareExchangeWeak "Workgroup" "Release" "Acquire" %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
-  %0 = spirv.AtomicCompareExchangeWeak "Workgroup" "Release" "Acquire" %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  // CHECK: spirv.AtomicCompareExchangeWeak <Workgroup> <Release> <Acquire> %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
+  %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <Release> <Acquire> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
   return %0: i32
 }
 
 // -----
 
 func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64, %comparator: i32) -> i32 {
-  // expected-error @+1 {{value operand must have the same type as the op result, but found 'i64' vs 'i32'}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i64, i32) -> (i32)
   return %0: i32
 }
@@ -94,7 +94,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value
 // -----
 
 func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i16) -> i32 {
-  // expected-error @+1 {{comparator operand must have the same type as the op result, but found 'i16' vs 'i32'}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that `comparator` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i32, i16) -> (i32)
   return %0: i32
 }
@@ -102,7 +102,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value
 // -----
 
 func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32, %comparator: i32) -> i32 {
-  // expected-error @+1 {{pointer operand's pointee type must have the same as the op result type, but found 'i64' vs 'i32'}}
+  // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' op failed to verify that `result` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spirv.scope<Workgroup>, equal_semantics = #spirv.memory_semantics<AcquireRelease>, unequal_semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i64, Workgroup>, i32, i32) -> (i32)
   return %0: i32
 }
@@ -114,15 +114,31 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i64, Workgroup>, %value
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32) -> i32 {
-  // CHECK: spirv.AtomicExchange "Workgroup" "Release" %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
-  %0 = spirv.AtomicExchange "Workgroup" "Release" %ptr, %value: !spirv.ptr<i32, Workgroup>
+  // CHECK: spirv.AtomicExchange <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
+  %0 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value: !spirv.ptr<i32, Workgroup>
   return %0: i32
 }
 
 // -----
 
+func.func @atomic_exchange_bf16(%ptr: !spirv.ptr<bf16, Workgroup>, %value: bf16) -> bf16 {
+  // expected-error @+1 {{'spirv.AtomicExchange' op operand #1 must be 8/16/32/64-bit integer or 16/32/64-bit float, but got 'bf16'}}
+  %0 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value : !spirv.ptr<bf16, Workgroup>
+  return %0: bf16
+}
+
+// -----
+
+func.func @atomic_exchange_float8(%ptr: !spirv.ptr<f8E4M3FN, Workgroup>, %value: f8E4M3FN) -> f8E4M3FN {
+  // expected-error @+1 {{'spirv.AtomicExchange' op operand #1 must be 8/16/32/64-bit integer or 16/32/64-bit float, but got 'f8E4M3FN'}}
+  %0 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value : !spirv.ptr<f8E4M3FN, Workgroup>
+  return %0: f8E4M3FN
+}
+
+// -----
+
 func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64) -> i32 {
-  // expected-error @+1 {{value operand must have the same type as the op result, but found 'i64' vs 'i32'}}
+  // expected-error @+1 {{'spirv.AtomicExchange' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicExchange"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i64) -> (i32)
   return %0: i32
 }
@@ -130,7 +146,7 @@ func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64) -> i32
 // -----
 
 func.func @atomic_exchange(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32) -> i32 {
-  // expected-error @+1 {{pointer operand's pointee type must have the same as the op result type, but found 'i64' vs 'i32'}}
+  // expected-error @+1 {{'spirv.AtomicExchange' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicExchange"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i64, Workgroup>, i32) -> (i32)
   return %0: i32
 }
@@ -142,8 +158,8 @@ func.func @atomic_exchange(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32) -> i32
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_iadd(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicIAdd "Workgroup" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicIAdd "Workgroup" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicIAdd <Workgroup> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicIAdd <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -152,8 +168,8 @@ func.func @atomic_iadd(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_idecrement(%ptr : !spirv.ptr<i32, StorageBuffer>) -> i32 {
-  // CHECK: spirv.AtomicIDecrement "Workgroup" "None" %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicIDecrement "Workgroup" "None" %ptr : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicIDecrement <Workgroup> <None> %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicIDecrement <Workgroup> <None> %ptr : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -162,8 +178,8 @@ func.func @atomic_idecrement(%ptr : !spirv.ptr<i32, StorageBuffer>) -> i32 {
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_iincrement(%ptr : !spirv.ptr<i32, StorageBuffer>) -> i32 {
-  // CHECK: spirv.AtomicIIncrement "Workgroup" "None" %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicIIncrement "Workgroup" "None" %ptr : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicIIncrement <Workgroup> <None> %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicIIncrement <Workgroup> <None> %ptr : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -172,18 +188,48 @@ func.func @atomic_iincrement(%ptr : !spirv.ptr<i32, StorageBuffer>) -> i32 {
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_isub(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicISub "Workgroup" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicISub "Workgroup" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicISub <Workgroup> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicISub <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicLoad
+//===----------------------------------------------------------------------===//
+
+func.func @atomic_load(%ptr : !spirv.ptr<i32, Workgroup>) -> i32 {
+  // CHECK: spirv.AtomicLoad <Workgroup> <Acquire> %{{.*}} : !spirv.ptr<i32, Workgroup>
+  %0 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<i32, Workgroup>
+  return %0 : i32
+}
+
+// -----
+
+func.func @atomic_load_float(%ptr : !spirv.ptr<f32, StorageBuffer>) -> f32 {
+  // CHECK: spirv.AtomicLoad <Device> <None> %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  %0 = spirv.AtomicLoad <Device> <None> %ptr : !spirv.ptr<f32, StorageBuffer>
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_load_mismatch(%ptr : !spirv.ptr<i32, Workgroup>) -> i64 {
+  // expected-error @+1 {{'spirv.AtomicLoad' op failed to verify that `result` type matches pointee type of `pointer`}}
+  %0 = "spirv.AtomicLoad"(%ptr) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<Acquire>} : (!spirv.ptr<i32, Workgroup>) -> (i64)
+  return %0 : i64
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // spirv.AtomicOr
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_or(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicOr "Workgroup" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicOr "Workgroup" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicOr <Workgroup> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicOr <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -192,8 +238,8 @@ func.func @atomic_or(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_smax(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicSMax "Workgroup" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicSMax "Workgroup" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicSMax <Workgroup> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicSMax <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -202,18 +248,48 @@ func.func @atomic_smax(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_smin(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicSMin "Workgroup" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicSMin "Workgroup" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicSMin <Workgroup> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicSMin <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicStore
+//===----------------------------------------------------------------------===//
+
+func.func @atomic_store(%ptr : !spirv.ptr<i32, Workgroup>, %value : i32) {
+  // CHECK: spirv.AtomicStore <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
+  spirv.AtomicStore <Workgroup> <Release> %ptr, %value : !spirv.ptr<i32, Workgroup>
+  return
+}
+
+// -----
+
+func.func @atomic_store_float(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) {
+  // CHECK: spirv.AtomicStore <Device> <None> %{{.*}}, %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  spirv.AtomicStore <Device> <None> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  return
+}
+
+// -----
+
+func.func @atomic_store_mismatch(%ptr : !spirv.ptr<i32, Workgroup>, %value : i64) {
+  // expected-error @+1 {{'spirv.AtomicStore' op failed to verify that `value` type matches pointee type of `pointer`}}
+  "spirv.AtomicStore"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<Release>} : (!spirv.ptr<i32, Workgroup>, i64) -> ()
+  return
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // spirv.AtomicUMax
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_umax(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicUMax "Workgroup" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicUMax "Workgroup" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicUMax <Workgroup> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicUMax <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -222,8 +298,8 @@ func.func @atomic_umax(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_umin(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicUMin "Workgroup" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicUMin "Workgroup" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicUMin <Workgroup> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicUMin <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -232,8 +308,8 @@ func.func @atomic_umin(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_xor(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i32 {
-  // CHECK: spirv.AtomicXor "Workgroup" "None" %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
-  %0 = spirv.AtomicXor "Workgroup" "None" %ptr, %value : !spirv.ptr<i32, StorageBuffer>
+  // CHECK: spirv.AtomicXor <Workgroup> <None> %{{.*}}, %{{.*}} : !spirv.ptr<i32, StorageBuffer>
+  %0 = spirv.AtomicXor <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
 
@@ -244,15 +320,15 @@ func.func @atomic_xor(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i3
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_fadd(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) -> f32 {
-  // CHECK: spirv.EXT.AtomicFAdd "Device" "None" %{{.*}}, %{{.*}} : !spirv.ptr<f32, StorageBuffer>
-  %0 = spirv.EXT.AtomicFAdd "Device" "None" %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  // CHECK: spirv.EXT.AtomicFAdd <Device> <None> %{{.*}}, %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  %0 = spirv.EXT.AtomicFAdd <Device> <None> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
   return %0 : f32
 }
 
 // -----
 
 func.func @atomic_fadd(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : f32) -> f32 {
-  // expected-error @+1 {{pointer operand must point to an float value, found 'i32'}}
+  // expected-error @+1 {{'spirv.EXT.AtomicFAdd' op failed to verify that `result` type matches pointee type of `pointer`}}
   %0 = "spirv.EXT.AtomicFAdd"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, StorageBuffer>, f32) -> (f32)
   return %0 : f32
 }
@@ -260,7 +336,7 @@ func.func @atomic_fadd(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : f32) -> f
 // -----
 
 func.func @atomic_fadd(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f64) -> f64 {
-  // expected-error @+1 {{expected value to have the same type as the pointer operand's pointee type 'f32', but found 'f64'}}
+  // expected-error @+1 {{'spirv.EXT.AtomicFAdd' op failed to verify that `result` type matches pointee type of `pointer`}}
   %0 = "spirv.EXT.AtomicFAdd"(%ptr, %value) {memory_scope = #spirv.scope<Device>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<f32, StorageBuffer>, f64) -> (f64)
   return %0 : f64
 }
@@ -269,6 +345,14 @@ func.func @atomic_fadd(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f64) -> f
 
 func.func @atomic_fadd(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) -> f32 {
   // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
-  %0 = spirv.EXT.AtomicFAdd "Device" "Acquire|Release" %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  %0 = spirv.EXT.AtomicFAdd <Device> <Acquire|Release> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
   return %0 : f32
+}
+
+// -----
+
+func.func @atomic_bf16_fadd(%ptr : !spirv.ptr<bf16, StorageBuffer>, %value : bf16) -> bf16 {
+  // expected-error @+1 {{op operand #1 must be 16/32/64-bit float, but got 'bf16'}}
+  %0 = spirv.EXT.AtomicFAdd <Device> <None> %ptr, %value : !spirv.ptr<bf16, StorageBuffer>
+  return %0 : bf16
 }

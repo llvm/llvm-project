@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===-- armv7_cortex_m_target_definition.py.py ------------------*- C++ -*-===//
 #
 #                     The LLVM Compiler Infrastructure
@@ -222,7 +222,7 @@ g_target_definition = None
 
 def get_target_definition():
     global g_target_definition
-    if g_target_definition == None:
+    if g_target_definition is None:
         g_target_definition = {}
         offset = 0
         for reg_info in armv7_register_infos:

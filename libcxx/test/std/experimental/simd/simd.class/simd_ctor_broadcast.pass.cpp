@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+// XFAIL: target=powerpc{{.*}}le-unknown-linux-gnu
 
 // <experimental/simd>
 //
 // [simd.class]
 // template<class U> simd(U&& value) noexcept;
+
+#include <algorithm>
+#include <experimental/simd>
 
 #include "../test_utils.h"
 
@@ -40,7 +44,7 @@ struct CheckSimdBroadcastCtorFromVectorizedType {
     std::array<T, array_size> expected_value;
     std::fill(expected_value.begin(), expected_value.end(), 3);
 
-    types::for_each(arithmetic_no_bool_types(), BroadCastHelper<T, SimdAbi, array_size>(expected_value));
+    types::for_each(simd_test_types(), BroadCastHelper<T, SimdAbi, array_size>(expected_value));
   }
 };
 
@@ -109,7 +113,7 @@ template <class T, std::size_t>
 struct CheckBroadcastCtorTraits {
   template <class SimdAbi>
   void operator()() {
-    types::for_each(arithmetic_no_bool_types(), CheckBroadcastCtorTraitsHelper<T, SimdAbi>());
+    types::for_each(simd_test_types(), CheckBroadcastCtorTraitsHelper<T, SimdAbi>());
 
     static_assert(!has_broadcast_ctor<no_implicit_type<T>, T, SimdAbi>::value);
     static_assert(has_broadcast_ctor<implicit_type<T>, T, SimdAbi>::value);

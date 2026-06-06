@@ -9,19 +9,15 @@
 #include <functional>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-bad_function_call::~bad_function_call() noexcept
-{
+bad_function_call::~bad_function_call() noexcept {}
+
+const char* bad_function_call::what() const noexcept { return "std::bad_function_call"; }
+
+size_t __hash_memory(_LIBCPP_NOESCAPE const void* ptr, size_t size) noexcept {
+  return __murmur2_or_cityhash<size_t>()(ptr, size);
 }
-#endif
 
-#ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
-const char*
-bad_function_call::what() const noexcept
-{
-    return "std::bad_function_call";
-}
-#endif
-
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -8,12 +8,9 @@
 
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Option/Arg.h"
 #include <cassert>
 #include <cstring>
 
@@ -62,7 +59,8 @@ types::ID types::getPreprocessedType(ID Id) {
 }
 
 static bool isPreprocessedModuleType(ID Id) {
-  return Id == TY_CXXModule || Id == TY_PP_CXXModule;
+  return Id == TY_CXXModule || Id == TY_PP_CXXModule || Id == TY_CXXStdModule ||
+         Id == TY_PP_CXXStdModule;
 }
 
 static bool isPreprocessedHeaderUnitType(ID Id) {
@@ -104,13 +102,28 @@ bool types::onlyPrecompileType(ID Id) {
 
 bool types::canTypeBeUserSpecified(ID Id) {
   static const clang::driver::types::ID kStaticLangageTypes[] = {
-      TY_CUDA_DEVICE,   TY_HIP_DEVICE,    TY_PP_CHeader,
-      TY_PP_ObjCHeader, TY_PP_CXXHeader,  TY_PP_ObjCXXHeader,
-      TY_PP_CXXModule,  TY_LTO_IR,        TY_LTO_BC,
-      TY_Plist,         TY_RewrittenObjC, TY_RewrittenLegacyObjC,
-      TY_Remap,         TY_PCH,           TY_Object,
-      TY_Image,         TY_dSYM,          TY_Dependencies,
-      TY_CUDA_FATBIN,   TY_HIP_FATBIN};
+      TY_CUDA_DEVICE,
+      TY_HIP_DEVICE,
+      TY_PP_CHeader,
+      TY_PP_ObjCHeader,
+      TY_PP_CXXHeader,
+      TY_PP_ObjCXXHeader,
+      TY_PP_CXXModule,
+      TY_CXXStdModule,
+      TY_PP_CXXStdModule,
+      TY_LTO_IR,
+      TY_LTO_BC,
+      TY_Plist,
+      TY_RewrittenObjC,
+      TY_RewrittenLegacyObjC,
+      TY_Remap,
+      TY_PCH,
+      TY_Object,
+      TY_Image,
+      TY_dSYM,
+      TY_Dependencies,
+      TY_CUDA_FATBIN,
+      TY_HIP_FATBIN};
   return !llvm::is_contained(kStaticLangageTypes, Id);
 }
 
@@ -133,7 +146,7 @@ bool types::isAcceptedByClang(ID Id) {
 
   case TY_Asm:
   case TY_C: case TY_PP_C:
-  case TY_CL: case TY_CLCXX:
+  case TY_CL: case TY_PP_CL: case TY_CLCXX: case TY_PP_CLCXX:
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
   case TY_HIP:
@@ -151,7 +164,10 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CXXHUHeader:
   case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
-  case TY_CXXModule: case TY_PP_CXXModule:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
+  case TY_CXXStdModule:
+  case TY_PP_CXXStdModule:
   case TY_AST: case TY_ModuleFile: case TY_PCH:
   case TY_LLVM_IR: case TY_LLVM_BC:
   case TY_API_INFO:
@@ -170,6 +186,9 @@ bool types::isAcceptedByFlang(ID Id) {
   case TY_LLVM_IR:
   case TY_LLVM_BC:
     return true;
+  case TY_PP_CUDA:
+  case TY_CUDA:
+    return true;
   }
 }
 
@@ -181,7 +200,9 @@ bool types::isDerivedFromC(ID Id) {
   case TY_PP_C:
   case TY_C:
   case TY_CL:
+  case TY_PP_CL:
   case TY_CLCXX:
+  case TY_PP_CLCXX:
   case TY_PP_CUDA:
   case TY_CUDA:
   case TY_CUDA_DEVICE:
@@ -196,7 +217,6 @@ bool types::isDerivedFromC(ID Id) {
   case TY_PP_ObjCXX:
   case TY_PP_ObjCXX_Alias:
   case TY_ObjCXX:
-  case TY_RenderScript:
   case TY_PP_CHeader:
   case TY_CHeader:
   case TY_CLHeader:
@@ -208,6 +228,8 @@ bool types::isDerivedFromC(ID Id) {
   case TY_ObjCXXHeader:
   case TY_CXXModule:
   case TY_PP_CXXModule:
+  case TY_CXXStdModule:
+  case TY_PP_CXXStdModule:
     return true;
   }
 }
@@ -225,7 +247,17 @@ bool types::isObjC(ID Id) {
   }
 }
 
-bool types::isOpenCL(ID Id) { return Id == TY_CL || Id == TY_CLCXX; }
+bool types::isOpenCL(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+  case TY_PP_CL:
+  case TY_PP_CLCXX:
+  case TY_CL:
+  case TY_CLCXX:
+    return true;
+  }
+}
 
 bool types::isCXX(ID Id) {
   switch (Id) {
@@ -240,7 +272,12 @@ bool types::isCXX(ID Id) {
   case TY_CXXHUHeader:
   case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
-  case TY_CXXModule: case TY_PP_CXXModule:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
+  case TY_CXXStdModule:
+  case TY_PP_CXXStdModule:
+  case TY_ModuleFile:
+  case TY_PP_CLCXX:
   case TY_CUDA: case TY_PP_CUDA: case TY_CUDA_DEVICE:
   case TY_HIP:
   case TY_PP_HIP:
@@ -310,7 +347,9 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("cc", TY_CXX)
       .Case("CC", TY_CXX)
       .Case("cl", TY_CL)
+      .Case("cli", TY_PP_CL)
       .Case("clcpp", TY_CLCXX)
+      .Case("clii", TY_PP_CLCXX)
       .Case("cp", TY_CXX)
       .Case("cu", TY_CUDA)
       .Case("hh", TY_CXXHeader)
@@ -318,7 +357,6 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("ll", TY_LLVM_IR)
       .Case("mi", TY_PP_ObjC)
       .Case("mm", TY_ObjCXX)
-      .Case("rs", TY_RenderScript)
       .Case("adb", TY_Ada)
       .Case("ads", TY_Ada)
       .Case("asm", TY_PP_Asm)
@@ -420,6 +458,7 @@ ID types::lookupHeaderTypeForSourceType(ID Id) {
     return types::TY_CHeader;
   case types::TY_CXX:
   case types::TY_CXXModule:
+  case types::TY_CXXStdModule:
     return types::TY_CXXHeader;
   case types::TY_ObjC:
     return types::TY_ObjCHeader;

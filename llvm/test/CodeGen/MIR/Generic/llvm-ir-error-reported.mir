@@ -7,10 +7,10 @@
   ; CHECK: [[@LINE+3]]:15: use of undefined value '%a'
   define i32 @foo(i32 %x, i32 %y) {
     %z = alloca i32, align 4
-    store i32 %a, i32* %z, align 4
+    store i32 %a, ptr %z, align 4
     br label %Test
   Test:
-    %m = load i32, i32* %z, align 4
+    %m = load i32, ptr %z, align 4
     %cond = icmp eq i32 %y, %m
     br i1 %cond, label %IfEqual, label %IfUnequal
   IfEqual:

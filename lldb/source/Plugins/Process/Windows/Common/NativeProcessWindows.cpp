@@ -15,12 +15,16 @@
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/State.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -47,10 +51,12 @@ namespace lldb_private {
 NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
-    : NativeProcessProtocol(LLDB_INVALID_PROCESS_ID,
-                            launch_info.GetPTY().ReleasePrimaryFileDescriptor(),
-                            delegate),
-      ProcessDebugger(), m_arch(launch_info.GetArchitecture()) {
+    : NativeProcessProtocol(
+          LLDB_INVALID_PROCESS_ID,
+          PseudoTerminal::invalid_fd, // NativeProcessWindows owns the ConPTY.
+          delegate),
+      ProcessDebugger(), m_arch(launch_info.GetArchitecture()),
+      m_stdio_communication("lldb.NativeProcessWindows.stdio") {
   ErrorAsOutParameter EOut(&E);
   DebugDelegateSP delegate_sp(new NativeDebugDelegate(*this));
   E = LaunchProcess(launch_info, delegate_sp).ToError();
@@ -58,12 +64,16 @@ NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
     return;
 
   SetID(GetDebuggedProcessId());
+
+  m_pty = launch_info.TakePTY();
+  StartStdioForwarding();
 }
 
 NativeProcessWindows::NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
-    : NativeProcessProtocol(pid, terminal_fd, delegate), ProcessDebugger() {
+    : NativeProcessProtocol(pid, terminal_fd, delegate), ProcessDebugger(),
+      m_stdio_communication("lldb.NativeProcessWindows.stdio") {
   ErrorAsOutParameter EOut(&E);
   DebugDelegateSP delegate_sp(new NativeDebugDelegate(*this));
   ProcessAttachInfo attach_info;
@@ -94,6 +104,8 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
              GetDebuggedProcessId(), state);
     LLDB_LOG(log, "resuming {0} threads.", m_threads.size());
 
+    m_pending_library_events = false;
+
     bool failed = false;
     for (uint32_t i = 0; i < m_threads.size(); ++i) {
       auto thread = static_cast<NativeThreadWindows *>(m_threads[i].get());
@@ -120,7 +132,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
         break;
 
       default:
-        return Status(
+        return Status::FromErrorStringWithFormat(
             "NativeProcessWindows::%s (): unexpected state %s specified "
             "for pid %" PRIu64 ", tid %" PRIu64,
             __FUNCTION__, StateAsCString(action->state), GetID(),
@@ -129,7 +141,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
     }
 
     if (failed) {
-      error.SetErrorString("NativeProcessWindows::DoResume failed");
+      error = Status::FromErrorString("NativeProcessWindows::DoResume failed");
     } else {
       SetState(eStateRunning);
     }
@@ -177,9 +189,10 @@ Status NativeProcessWindows::Detach() {
     else
       LLDB_LOG(log, "Detaching process error: {0}", error);
   } else {
-    error.SetErrorStringWithFormatv("error: process {0} in state = {1}, but "
-                                    "cannot detach it in this state.",
-                                    GetID(), state);
+    error = Status::FromErrorStringWithFormatv(
+        "error: process {0} in state = {1}, but "
+        "cannot detach it in this state.",
+        GetID(), state);
     LLDB_LOG(log, "error: {0}", error);
   }
   return error;
@@ -187,7 +200,8 @@ Status NativeProcessWindows::Detach() {
 
 Status NativeProcessWindows::Signal(int signo) {
   Status error;
-  error.SetErrorString("Windows does not support sending signals to processes");
+  error = Status::FromErrorString(
+      "Windows does not support sending signals to processes");
   return error;
 }
 
@@ -271,11 +285,11 @@ void NativeProcessWindows::StopThread(lldb::tid_t thread_id,
   if (!thread)
     return;
 
+  Log *log = GetLog(WindowsLog::Thread);
   for (uint32_t i = 0; i < m_threads.size(); ++i) {
     auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
-    Status error = t->DoStop();
-    if (error.Fail())
-      exit(1);
+    if (Status error = t->DoStop(); error.Fail())
+      LLDB_LOG(log, "failed to stop thread {0}: {1}", t->GetID(), error);
   }
   SetStopReasonForThread(*thread, reason, description);
 }
@@ -290,7 +304,8 @@ NativeProcessWindows::GetAuxvData() const {
 
 llvm::Expected<llvm::ArrayRef<uint8_t>>
 NativeProcessWindows::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
-  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x3e, 0xd4}; // brk #0xf000
+  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x3e,
+                                             0xd4};     // brk #0xf000
   static const uint8_t g_thumb_opcode[] = {0xfe, 0xde}; // udf #0xfe
 
   switch (GetArchitecture().GetMachine()) {
@@ -307,16 +322,13 @@ NativeProcessWindows::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 }
 
 size_t NativeProcessWindows::GetSoftwareBreakpointPCOffset() {
-    // Windows always reports an incremented PC after a breakpoint is hit,
-    // even on ARM.
-    return cantFail(GetSoftwareBreakpointTrapOpcode(0)).size();
+  // Windows always reports an incremented PC after a breakpoint is hit,
+  // even on ARM.
+  return cantFail(GetSoftwareBreakpointTrapOpcode(0)).size();
 }
 
 bool NativeProcessWindows::FindSoftwareBreakpoint(lldb::addr_t addr) {
-  auto it = m_software_breakpoints.find(addr);
-  if (it == m_software_breakpoints.end())
-    return false;
-  return true;
+  return m_software_breakpoints.find(addr) != m_software_breakpoints.end();
 }
 
 Status NativeProcessWindows::SetBreakpoint(lldb::addr_t addr, uint32_t size,
@@ -359,7 +371,7 @@ Status NativeProcessWindows::CacheLoadedModules() {
       return Status();
   }
 
-  error.SetError(::GetLastError(), lldb::ErrorType::eErrorTypeWin32);
+  error = Status(::GetLastError(), lldb::ErrorType::eErrorTypeWin32);
   return error;
 }
 
@@ -377,8 +389,9 @@ Status NativeProcessWindows::GetLoadedModuleFileSpec(const char *module_path,
       return Status();
     }
   }
-  return Status("Module (%s) not found in process %" PRIu64 "!",
-                module_file_spec.GetPath().c_str(), GetID());
+  return Status::FromErrorStringWithFormat(
+      "Module (%s) not found in process %" PRIu64 "!",
+      module_file_spec.GetPath().c_str(), GetID());
 }
 
 Status
@@ -397,13 +410,38 @@ NativeProcessWindows::GetFileLoadAddress(const llvm::StringRef &file_name,
       return Status();
     }
   }
-  return Status("Can't get loaded address of file (%s) in process %" PRIu64 "!",
-                file_spec.GetPath().c_str(), GetID());
+  return Status::FromErrorStringWithFormat(
+      "Can't get loaded address of file (%s) in process %" PRIu64 "!",
+      file_spec.GetPath().c_str(), GetID());
+}
+
+llvm::Expected<std::vector<LoadedLibraryInfo>>
+NativeProcessWindows::GetLoadedLibraries() {
+  if (Status error = CacheLoadedModules(); error.Fail())
+    return error.ToError();
+
+  std::vector<LoadedLibraryInfo> libs;
+  libs.reserve(m_loaded_modules.size());
+  for (const auto &[file_spec, base] : m_loaded_modules) {
+    LoadedLibraryInfo info;
+    info.name = file_spec.GetPath();
+    info.base_addr = base;
+    libs.push_back(std::move(info));
+  }
+  return libs;
+}
+
+bool NativeProcessWindows::HasPendingLibraryEvents() {
+  return m_pending_library_events;
 }
 
 void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
+
+  // Closing the ConPTY signals EOF on the parent-side STDOUT pipe so the
+  // read thread can exit. Tear it down before the debuggee is destroyed.
+  StopStdioForwarding();
 
   ProcessDebugger::OnExitProcess(exit_code);
 
@@ -442,122 +480,158 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
 }
 
 ExceptionResult
+NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
+  Log *log = GetLog(WindowsLog::Exception);
+  uint32_t wp_id = LLDB_INVALID_INDEX32;
+#ifndef __aarch64__
+  if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID())) {
+    NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
+    Status error =
+        reg_ctx.GetWatchpointHitIndex(wp_id, record.GetExceptionAddress());
+    if (error.Fail())
+      LLDB_LOG(log,
+               "received error while checking for watchpoint hits, pid = "
+               "{0}, error = {1}",
+               thread->GetID(), error);
+    if (wp_id != LLDB_INVALID_INDEX32) {
+      addr_t wp_addr = reg_ctx.GetWatchpointAddress(wp_id);
+      addr_t wp_hit_addr = reg_ctx.GetWatchpointHitAddress(wp_id);
+      std::string desc =
+          formatv("{0} {1} {2}", wp_addr, wp_id, wp_hit_addr).str();
+      StopThread(record.GetThreadID(), StopReason::eStopReasonWatchpoint, desc);
+    }
+  }
+#endif
+  if (wp_id == LLDB_INVALID_INDEX32)
+    StopThread(record.GetThreadID(), StopReason::eStopReasonTrace);
+
+  SetState(eStateStopped, true);
+  return ExceptionResult::MaskException;
+}
+
+ExceptionResult
+NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
+  Log *log = GetLog(WindowsLog::Exception);
+  const auto exception_addr = record.GetExceptionAddress();
+  const auto thread_id = record.GetThreadID();
+
+  if (NativeThreadWindows *stop_thread = GetThreadByID(thread_id)) {
+    auto &reg_ctx = stop_thread->GetRegisterContext();
+
+    if (FindSoftwareBreakpoint(exception_addr)) {
+      LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
+               exception_addr);
+      StopThread(thread_id, StopReason::eStopReasonBreakpoint);
+      // The current PC is AFTER the BP opcode, on all architectures.
+      reg_ctx.SetPC(reg_ctx.GetPC() - GetSoftwareBreakpointPCOffset());
+      SetState(eStateStopped, true);
+      return ExceptionResult::MaskException;
+    }
+
+    // This block of code will only be entered in case of a hardware
+    // watchpoint or breakpoint hit on AArch64. However, we only handle
+    // hardware watchpoints below as breakpoints are not yet supported.
+    const std::vector<ULONG_PTR> &args = record.GetExceptionArguments();
+    // Check that the ExceptionInformation array of EXCEPTION_RECORD
+    // contains at least two elements: the first is a read-write flag
+    // indicating the type of data access operation (read or write) while
+    // the second contains the virtual address of the accessed data.
+    if (args.size() >= 2) {
+      uint32_t hw_id = LLDB_INVALID_INDEX32;
+      Status error = reg_ctx.GetWatchpointHitIndex(hw_id, args[1]);
+      if (error.Fail())
+        LLDB_LOG(log,
+                 "received error while checking for watchpoint hits, pid = "
+                 "{0}, error = {1}",
+                 thread_id, error);
+
+      if (hw_id != LLDB_INVALID_INDEX32) {
+        std::string desc =
+            formatv("{0} {1} {2}", reg_ctx.GetWatchpointAddress(hw_id), hw_id,
+                    exception_addr)
+                .str();
+        StopThread(thread_id, StopReason::eStopReasonWatchpoint, desc);
+        SetState(eStateStopped, true);
+        return ExceptionResult::MaskException;
+      }
+    }
+  }
+
+  if (!m_initial_stop_seen) {
+    m_initial_stop_seen = true;
+    LLDB_LOG(log,
+             "Hit loader breakpoint at address {0:x}, setting initial stop "
+             "event.",
+             exception_addr);
+
+    // We are required to report the reason for the first stop after
+    // launching or being attached.
+    if (NativeThreadWindows *thread = GetThreadByID(thread_id))
+      SetStopReasonForThread(*thread, StopReason::eStopReasonBreakpoint);
+
+    // Do not notify the native delegate (e.g. llgs) since at this moment
+    // the program hasn't returned from Manager::Launch() and the delegate
+    // might not have an valid native process to operate on.
+    SetState(eStateStopped, false);
+
+    // Hit the initial stop. Continue the application.
+    return ExceptionResult::BreakInDebugger;
+  }
+
+  // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
+  // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
+  // Stop the debugger and let the user decide what to do.
+  std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",
+                             record.GetExceptionCode(), exception_addr)
+                         .str();
+  StopThread(thread_id, StopReason::eStopReasonException, std::move(desc));
+  SetState(eStateStopped, true);
+  return ExceptionResult::MaskException;
+}
+
+ExceptionResult
+NativeProcessWindows::HandleGenericException(bool first_chance,
+                                             const ExceptionRecord &record) {
+  Log *log = GetLog(WindowsLog::Exception);
+  LLDB_LOG(log,
+           "Debugger thread reported exception {0:x} at address {1:x} "
+           "(first_chance={2})",
+           record.GetExceptionCode(), record.GetExceptionAddress(),
+           first_chance);
+
+  if (first_chance)
+    return ExceptionResult::SendToApplication;
+
+  std::string desc;
+  llvm::raw_string_ostream desc_stream(desc);
+  desc_stream << "Exception " << llvm::format_hex(record.GetExceptionCode(), 8)
+              << " encountered at address "
+              << llvm::format_hex(record.GetExceptionAddress(), 8);
+  StopThread(record.GetThreadID(), StopReason::eStopReasonException,
+             desc.c_str());
+
+  SetState(eStateStopped, true);
+  return ExceptionResult::BreakInDebugger;
+}
+
+ExceptionResult
 NativeProcessWindows::OnDebugException(bool first_chance,
                                        const ExceptionRecord &record) {
-  Log *log = GetLog(WindowsLog::Exception);
   llvm::sys::ScopedLock lock(m_mutex);
 
   // Let the debugger establish the internal status.
   ProcessDebugger::OnDebugException(first_chance, record);
 
-  static bool initial_stop = false;
-  if (!first_chance) {
-    SetState(eStateStopped, false);
-  }
-
-  ExceptionResult result = ExceptionResult::SendToApplication;
   switch (record.GetExceptionCode()) {
   case DWORD(STATUS_SINGLE_STEP):
-  case STATUS_WX86_SINGLE_STEP: {
-    uint32_t wp_id = LLDB_INVALID_INDEX32;
-    if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID())) {
-      NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
-      Status error =
-          reg_ctx.GetWatchpointHitIndex(wp_id, record.GetExceptionAddress());
-      if (error.Fail())
-        LLDB_LOG(log,
-                 "received error while checking for watchpoint hits, pid = "
-                 "{0}, error = {1}",
-                 thread->GetID(), error);
-      if (wp_id != LLDB_INVALID_INDEX32) {
-        addr_t wp_addr = reg_ctx.GetWatchpointAddress(wp_id);
-        addr_t wp_hit_addr = reg_ctx.GetWatchpointHitAddress(wp_id);
-        std::string desc =
-            formatv("{0} {1} {2}", wp_addr, wp_id, wp_hit_addr).str();
-        StopThread(record.GetThreadID(), StopReason::eStopReasonWatchpoint,
-                   desc);
-      }
-    }
-    if (wp_id == LLDB_INVALID_INDEX32)
-      StopThread(record.GetThreadID(), StopReason::eStopReasonTrace);
-
-    SetState(eStateStopped, true);
-
-    // Continue the debugger.
-    return ExceptionResult::MaskException;
-  }
+  case STATUS_WX86_SINGLE_STEP:
+    return HandleSingleStepException(record);
   case DWORD(STATUS_BREAKPOINT):
   case STATUS_WX86_BREAKPOINT:
-    if (FindSoftwareBreakpoint(record.GetExceptionAddress())) {
-      LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
-               record.GetExceptionAddress());
-
-      StopThread(record.GetThreadID(), StopReason::eStopReasonBreakpoint);
-
-      if (NativeThreadWindows *stop_thread =
-              GetThreadByID(record.GetThreadID())) {
-        auto &register_context = stop_thread->GetRegisterContext();
-        uint32_t breakpoint_size = GetSoftwareBreakpointPCOffset();
-        // The current PC is AFTER the BP opcode, on all architectures.
-        uint64_t pc = register_context.GetPC() - breakpoint_size;
-        register_context.SetPC(pc);
-      }
-
-      SetState(eStateStopped, true);
-      return ExceptionResult::MaskException;
-    }
-
-    if (!initial_stop) {
-      initial_stop = true;
-      LLDB_LOG(log,
-               "Hit loader breakpoint at address {0:x}, setting initial stop "
-               "event.",
-               record.GetExceptionAddress());
-
-      // We are required to report the reason for the first stop after
-      // launching or being attached.
-      if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID()))
-        SetStopReasonForThread(*thread, StopReason::eStopReasonBreakpoint);
-
-      // Do not notify the native delegate (e.g. llgs) since at this moment
-      // the program hasn't returned from Manager::Launch() and the delegate
-      // might not have an valid native process to operate on.
-      SetState(eStateStopped, false);
-
-      // Hit the initial stop. Continue the application.
-      return ExceptionResult::BreakInDebugger;
-    }
-
-    [[fallthrough]];
+    return HandleBreakpointException(record);
   default:
-    LLDB_LOG(log,
-             "Debugger thread reported exception {0:x} at address {1:x} "
-             "(first_chance={2})",
-             record.GetExceptionCode(), record.GetExceptionAddress(),
-             first_chance);
-
-    {
-      std::string desc;
-      llvm::raw_string_ostream desc_stream(desc);
-      desc_stream << "Exception "
-                  << llvm::format_hex(record.GetExceptionCode(), 8)
-                  << " encountered at address "
-                  << llvm::format_hex(record.GetExceptionAddress(), 8);
-      StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-                 desc_stream.str().c_str());
-
-      SetState(eStateStopped, true);
-    }
-
-    // For non-breakpoints, give the application a chance to handle the
-    // exception first.
-    if (first_chance)
-      result = ExceptionResult::SendToApplication;
-    else
-      result = ExceptionResult::BreakInDebugger;
+    return HandleGenericException(first_chance, record);
   }
-
-  return result;
 }
 
 void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
@@ -569,6 +643,18 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
     const NativeWatchpoint &wp = pair.second;
     thread->SetWatchpoint(wp.m_addr, wp.m_size, wp.m_watch_flags,
                           wp.m_hardware);
+  }
+
+  if (StateType state = GetState();
+      state == eStateStopped || state == eStateCrashed) {
+    if (Status error = thread->DoStop(); error.Fail()) {
+      Log *log = GetLog(WindowsLog::Thread);
+      LLDB_LOG(log, "failed to suspend newly-created thread {0}: {1}",
+               thread->GetID(), error);
+    }
+    ThreadStopInfo stop_info;
+    stop_info.reason = lldb::eStopReasonNone;
+    thread->SetStopReason(stop_info, "");
   }
 
   m_threads.push_back(std::move(thread));
@@ -592,14 +678,13 @@ void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
 
 void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
                                      lldb::addr_t module_addr) {
-  // Simply invalidate the cached loaded modules.
-  if (!m_loaded_modules.empty())
-    m_loaded_modules.clear();
+  m_loaded_modules.clear();
+  m_pending_library_events = true;
 }
 
 void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
-  if (!m_loaded_modules.empty())
-    m_loaded_modules.clear();
+  m_loaded_modules.clear();
+  m_pending_library_events = true;
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -624,5 +709,44 @@ NativeProcessWindows::Manager::Attach(
   if (E)
     return std::move(E);
   return std::move(process_up);
+}
+
+NativeProcessWindows::~NativeProcessWindows() { StopStdioForwarding(); }
+
+void NativeProcessWindows::StartStdioForwarding() {
+  if (!m_pty || !m_pty->IsConnected())
+    return;
+
+  m_stdio_communication.SetConnection(
+      std::make_unique<ConnectionConPTY>(m_pty));
+  if (!m_stdio_communication.IsConnected())
+    return;
+  m_stdio_communication.SetReadThreadBytesReceivedCallback(
+      &NativeProcessWindows::STDIOReadThreadBytesReceived, this);
+  m_stdio_communication.StartReadThread();
+}
+
+void NativeProcessWindows::StopStdioForwarding() {
+  if (!m_stdio_communication.HasConnection())
+    return;
+
+  if (m_pty)
+    m_pty->Close();
+
+  if (m_stdio_communication.ReadThreadIsRunning())
+    m_stdio_communication.JoinReadThread();
+
+  if (m_stdio_communication.HasConnection())
+    m_stdio_communication.Disconnect();
+}
+
+void NativeProcessWindows::STDIOReadThreadBytesReceived(void *baton,
+                                                        const void *src,
+                                                        size_t src_len) {
+  auto *self = static_cast<NativeProcessWindows *>(baton);
+  if (src_len == 0)
+    return;
+  self->m_delegate.NewProcessOutput(
+      self, llvm::StringRef(static_cast<const char *>(src), src_len));
 }
 } // namespace lldb_private

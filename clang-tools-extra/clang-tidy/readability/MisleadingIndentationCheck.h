@@ -1,4 +1,4 @@
-//===--- MisleadingIndentationCheck.h - clang-tidy---------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISLEADING_INDENTATION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISLEADING_INDENTATION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISLEADINGINDENTATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISLEADINGINDENTATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,7 +18,7 @@ namespace clang::tidy::readability {
 /// or spaces are used consistently and not mixed.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/misleading-indentation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/misleading-indentation.html
 class MisleadingIndentationCheck : public ClangTidyCheck {
 public:
   MisleadingIndentationCheck(StringRef Name, ClangTidyContext *Context)
@@ -32,9 +32,10 @@ public:
 private:
   void danglingElseCheck(const SourceManager &SM, ASTContext *Context,
                          const IfStmt *If);
-  void missingBracesCheck(const SourceManager &SM, const CompoundStmt *CStmt);
+  void missingBracesCheck(const SourceManager &SM, const CompoundStmt *CStmt,
+                          const LangOptions &LangOpts);
 };
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISLEADING_INDENTATION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISLEADINGINDENTATIONCHECK_H

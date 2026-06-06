@@ -14,7 +14,6 @@
 
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/raw_ostream.h"
@@ -80,6 +79,19 @@ void LiveIntervalUnion::extract(const LiveInterval &VirtReg,
   }
 }
 
+void LiveIntervalUnion::clearAllSegmentsReferencing(
+    const LiveInterval &VirtRegLI) {
+  ++Tag;
+
+  // Remove all segments referencing VirtReg.
+  for (SegmentIter SegPos = Segments.begin(); SegPos.valid();) {
+    if (SegPos.value()->reg() == VirtRegLI.reg())
+      SegPos.erase();
+    else
+      ++SegPos;
+  }
+}
+
 void
 LiveIntervalUnion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
   if (empty()) {
@@ -97,7 +109,7 @@ LiveIntervalUnion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
 // Verify the live intervals in this union and add them to the visited set.
 void LiveIntervalUnion::verify(LiveVirtRegBitSet& VisitedVRegs) {
   for (SegmentIter SI = Segments.begin(); SI.valid(); ++SI)
-    VisitedVRegs.set(SI.value()->reg());
+    VisitedVRegs.set(SI.value()->reg().id());
 }
 #endif //!NDEBUG
 

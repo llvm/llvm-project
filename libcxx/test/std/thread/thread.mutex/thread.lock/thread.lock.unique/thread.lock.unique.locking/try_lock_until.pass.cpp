@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03
 
 // <mutex>
 
@@ -17,61 +14,50 @@
 //   bool try_lock_until(const chrono::time_point<Clock, Duration>& abs_time);
 
 #include <cassert>
+#include <chrono>
 #include <mutex>
 #include <system_error>
 
+#include "checking_mutex.h"
 #include "test_macros.h"
 
-bool try_lock_until_called = false;
+int main(int, char**) {
+  typedef std::chrono::system_clock Clock;
+  checking_mutex mux;
 
-struct mutex
-{
-    template <class Clock, class Duration>
-        bool try_lock_until(const std::chrono::time_point<Clock, Duration>& abs_time)
-    {
-        typedef std::chrono::milliseconds ms;
-        assert(Clock::now() - abs_time < ms(5));
-        try_lock_until_called = !try_lock_until_called;
-        return try_lock_until_called;
-    }
-    void unlock() {}
-};
+  std::unique_lock<checking_mutex> lock(mux, std::defer_lock_t());
 
-mutex m;
+  assert(lock.try_lock_until(Clock::now()));
+  assert(mux.current_state == checking_mutex::locked_via_try_lock_until);
+  assert(lock.owns_lock());
 
-int main(int, char**)
-{
-    typedef std::chrono::steady_clock Clock;
-    std::unique_lock<mutex> lk(m, std::defer_lock);
-    assert(lk.try_lock_until(Clock::now()) == true);
-    assert(try_lock_until_called == true);
-    assert(lk.owns_lock() == true);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
-    {
-        TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
-        assert(false);
-    }
-    catch (std::system_error& e)
-    {
-        assert(e.code().value() == EDEADLK);
-    }
+  try {
+    mux.last_try = checking_mutex::none;
+    (void)lock.try_lock_until(Clock::now());
+    assert(false);
+  } catch (std::system_error& e) {
+    assert(mux.last_try == checking_mutex::none);
+    assert(e.code() == std::errc::resource_deadlock_would_occur);
+  }
 #endif
-    lk.unlock();
-    assert(lk.try_lock_until(Clock::now()) == false);
-    assert(try_lock_until_called == false);
-    assert(lk.owns_lock() == false);
-    lk.release();
+
+  lock.unlock();
+  mux.reject = true;
+  assert(!lock.try_lock_until(Clock::now()));
+  assert(mux.last_try == checking_mutex::locked_via_try_lock_until);
+  assert(lock.owns_lock() == false);
+  lock.release();
+
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
-    {
-        TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
-        assert(false);
-    }
-    catch (std::system_error& e)
-    {
-        assert(e.code().value() == EPERM);
-    }
+  try {
+    mux.last_try = checking_mutex::none;
+    (void)lock.try_lock_until(Clock::now());
+    assert(false);
+  } catch (std::system_error& e) {
+    assert(mux.last_try == checking_mutex::none);
+    assert(e.code() == std::errc::operation_not_permitted);
+  }
 #endif
 
   return 0;

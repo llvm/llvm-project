@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // ADL call with nested iterators of views should not look up base's view's
 // namespace
@@ -76,4 +75,5 @@ static_assert(!CanFindADLFunc<std::ranges::transform_view<adl::BaseView, adl::Pr
 
 #if TEST_STD_VER >= 23
 static_assert(!CanFindADLFunc<std::ranges::zip_view<adl::BaseView>>);
+static_assert(!CanFindADLFunc<std::ranges::enumerate_view<adl::BaseView>>);
 #endif

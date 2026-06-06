@@ -10,7 +10,7 @@
 ;
 define void @no_suspends(i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @no_suspends, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -27,12 +27,15 @@ body:
 cleanup:
   %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
   %need.dyn.free = icmp ne ptr %mem, null
-  br i1 %need.dyn.free, label %dyn.free, label %suspend
+  br i1 %need.dyn.free, label %dyn.free, label %after.free
 dyn.free:
   call void @free(ptr %mem)
+  br label %after.free
+after.free:
+  call void @llvm.coro.dead(ptr %hdl)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -48,7 +51,7 @@ suspend:
 ;
 define void @simplify_resume(ptr %src, ptr %dst) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @simplify_resume, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -81,7 +84,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -96,7 +99,7 @@ suspend:
 ;
 define void @simplify_destroy() presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @simplify_destroy, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -129,7 +132,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 lpad:
   %lpval = landingpad { ptr, i32 }
@@ -151,7 +154,7 @@ lpad:
 ;
 define void @simplify_resume_with_inlined_if(ptr %src, ptr %dst, i1 %cond) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @simplify_resume_with_inlined_if, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -190,7 +193,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -206,7 +209,7 @@ suspend:
 
 define void @cannot_simplify_other_calls() presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @cannot_simplify_other_calls, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -244,7 +247,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -258,7 +261,7 @@ suspend:
 
 define void @cannot_simplify_calls_in_terminator() presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @cannot_simplify_calls_in_terminator, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -291,7 +294,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 lpad:
   %lpval = landingpad { ptr, i32 }
@@ -310,7 +313,7 @@ lpad:
 
 define void @cannot_simplify_not_last_instr(ptr %dst, ptr %src) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @cannot_simplify_not_last_instr, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -325,7 +328,7 @@ body:
   %save = call token @llvm.coro.save(ptr %hdl)
   %subfn = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
   call fastcc void %subfn(ptr %hdl)
-  ; memcpy separates destory from suspend, therefore cannot simplify.
+  ; memcpy separates destroy from suspend, therefore cannot simplify.
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 1, i1 false)
   %0 = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %0, label %suspend [i8 0, label %resume
@@ -343,7 +346,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 }
 
@@ -355,7 +358,7 @@ suspend:
 ;
 define void @cannot_simplify_final_suspend() presplitcoroutine personality i32 0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @cannot_simplify_final_suspend, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
@@ -388,7 +391,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret void
 lpad:
   %lpval = landingpad { ptr, i32 }
@@ -410,7 +413,7 @@ declare ptr @llvm.coro.begin(token, ptr)
 declare token @llvm.coro.save(ptr %hdl)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare ptr @llvm.coro.subfn.addr(ptr, i8)
 

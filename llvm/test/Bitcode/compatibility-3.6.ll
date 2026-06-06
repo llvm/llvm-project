@@ -56,7 +56,7 @@ $comdat2 = comdat any
 @const.int = constant i32 zeroinitializer
 ; CHECK: @const.int = constant i32 0
 @const.float = constant double 0.0
-; CHECK: @const.float = constant double 0.0
+; CHECK: @const.float = constant double 0.000000e+00
 @const.null = constant i8* null
 ; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8 }
@@ -307,8 +307,6 @@ declare ghccc void @f.ghccc()
 ; CHECK: declare ghccc void @f.ghccc()
 declare cc11 void @f.cc11()
 ; CHECK: declare cc11 void @f.cc11()
-declare webkit_jscc void @f.webkit_jscc()
-; CHECK: declare webkit_jscc void @f.webkit_jscc()
 declare anyregcc void @f.anyregcc()
 ; CHECK: declare anyregcc void @f.anyregcc()
 declare preserve_mostcc void @f.preserve_mostcc()
@@ -412,7 +410,7 @@ declare void @f.param.sret(i8* sret(i8))
 declare void @f.param.noalias(i8* noalias)
 ; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(i8* nocapture)
-; CHECK: declare void @f.param.nocapture(ptr nocapture)
+; CHECK: declare void @f.param.nocapture(ptr captures(none))
 declare void @f.param.nest(i8* nest)
 ; CHECK: declare void @f.param.nest(ptr nest)
 declare i8* @f.param.returned(i8* returned)
@@ -647,7 +645,7 @@ define void @typesystem() {
   %t6 = alloca ppc_fp128
   ; CHECK: %t6 = alloca ppc_fp128
   %t7 = alloca x86_mmx
-  ; CHECK: %t7 = alloca x86_mmx
+  ; CHECK: %t7 = alloca <1 x i64>
   %t8 = alloca %opaquety*
   ; CHECK: %t8 = alloca ptr
 
@@ -1063,16 +1061,16 @@ define void @instructions.va_arg(i8* %v, ...) {
   %ap2 = bitcast i8** %ap to i8*
 
   call void @llvm.va_start(i8* %ap2)
-  ; CHECK: call void @llvm.va_start(ptr %ap2)
+  ; CHECK: call void @llvm.va_start.p0(ptr %ap2)
 
   va_arg i8* %ap2, i32
   ; CHECK: va_arg ptr %ap2, i32
 
   call void @llvm.va_copy(i8* %v, i8* %ap2)
-  ; CHECK: call void @llvm.va_copy(ptr %v, ptr %ap2)
+  ; CHECK: call void @llvm.va_copy.p0(ptr %v, ptr %ap2)
 
   call void @llvm.va_end(i8* %ap2)
-  ; CHECK: call void @llvm.va_end(ptr %ap2)
+  ; CHECK: call void @llvm.va_end.p0(ptr %ap2)
 
   ret void
 }
@@ -1114,7 +1112,7 @@ declare void @llvm.instrprof_increment(i8*, i64, i32, i32)
 !10 = !{!"rax"}
 define void @intrinsics.codegen() {
   call i8* @llvm.returnaddress(i32 1)
-  ; CHECK: call ptr @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call i8* @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
@@ -1142,7 +1140,7 @@ define void @intrinsics.codegen() {
   ; CHECK: call i64 @llvm.readcyclecounter()
 
   call void @llvm.clear_cache(i8* null, i8* null)
-  ; CHECK: call void @llvm.clear_cache(ptr null, ptr null)
+  ; CHECK: call void @llvm.clear_cache.p0(ptr null, ptr null)
 
   call void @llvm.instrprof_increment(i8* null, i64 0, i32 0, i32 0)
   ; CHECK: call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
@@ -1180,11 +1178,11 @@ define void @intrinsics.codegen() {
 ; CHECK: attributes #27 = { uwtable }
 ; CHECK: attributes #28 = { "cpu"="cortex-a8" }
 ; CHECK: attributes #29 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #30 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #31 = { nounwind memory(argmem: read) }
-; CHECK: attributes #32 = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #33 = { nocallback nofree nosync nounwind willreturn memory(read) }
-; CHECK: attributes #34 = { nocallback nounwind }
+; CHECK: attributes #30 = { nounwind memory(argmem: read) }
+; CHECK: attributes #31 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #32 = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #33 = { nocallback nounwind }
+; CHECK: attributes #34 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #36 = { builtin }
 

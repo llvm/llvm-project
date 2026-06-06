@@ -12,12 +12,13 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 
 namespace llvm {
 
 class LPMUpdater;
 class Loop;
-class Pass;
 class StringRef;
 class raw_ostream;
 
@@ -64,7 +65,8 @@ class raw_ostream;
 /// Because partial unswitching of switches is extremely unlikely to be possible
 /// in practice and significantly complicates the implementation, this pass does
 /// not currently implement that in any mode.
-class SimpleLoopUnswitchPass : public PassInfoMixin<SimpleLoopUnswitchPass> {
+class SimpleLoopUnswitchPass
+    : public OptionalPassInfoMixin<SimpleLoopUnswitchPass> {
   bool NonTrivial;
   bool Trivial;
 
@@ -72,17 +74,22 @@ public:
   SimpleLoopUnswitchPass(bool NonTrivial = false, bool Trivial = true)
       : NonTrivial(NonTrivial), Trivial(Trivial) {}
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
-/// Create the legacy pass object for the simple loop unswitcher.
-///
-/// See the documentaion for `SimpleLoopUnswitchPass` for details.
-Pass *createSimpleLoopUnswitchLegacyPass(bool NonTrivial = false);
+/// A marker analysis to determine if SimpleLoopUnswitch should run again on a
+/// given loop.
+struct ShouldRunExtraSimpleLoopUnswitch
+    : public ShouldRunExtraPasses<ShouldRunExtraSimpleLoopUnswitch>,
+      public AnalysisInfoMixin<ShouldRunExtraSimpleLoopUnswitch> {
+  LLVM_ABI static AnalysisKey Key;
+};
 
 } // end namespace llvm
 

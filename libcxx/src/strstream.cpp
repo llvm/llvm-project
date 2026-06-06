@@ -18,6 +18,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 strstreambuf::strstreambuf(streamsize __alsize)
     : __strmode_(__dynamic), __alsize_(__alsize), __palloc_(nullptr), __pfree_(nullptr) {}
@@ -79,10 +80,10 @@ strstreambuf::~strstreambuf() {
 
 void strstreambuf::swap(strstreambuf& __rhs) {
   streambuf::swap(__rhs);
-  _VSTD::swap(__strmode_, __rhs.__strmode_);
-  _VSTD::swap(__alsize_, __rhs.__alsize_);
-  _VSTD::swap(__palloc_, __rhs.__palloc_);
-  _VSTD::swap(__pfree_, __rhs.__pfree_);
+  std::swap(__strmode_, __rhs.__strmode_);
+  std::swap(__alsize_, __rhs.__alsize_);
+  std::swap(__palloc_, __rhs.__palloc_);
+  std::swap(__pfree_, __rhs.__pfree_);
 }
 
 void strstreambuf::freeze(bool __freezefl) {
@@ -120,7 +121,7 @@ strstreambuf::int_type strstreambuf::overflow(int_type __c) {
     if (buf == nullptr)
       return int_type(EOF);
     if (old_size != 0) {
-      _LIBCPP_ASSERT_UNCATEGORIZED(eback(), "overflow copying from NULL");
+      _LIBCPP_ASSERT_INTERNAL(eback(), "strstreambuf::overflow reallocating but the get area is a null pointer");
       memcpy(buf, eback(), static_cast<size_t>(old_size));
     }
     ptrdiff_t ninp = gptr() - eback();
@@ -211,7 +212,7 @@ strstreambuf::pos_type strstreambuf::seekoff(off_type __off, ios_base::seekdir _
 
   char* newpos = eback() + newoff;
   if (pos_in)
-    setg(eback(), newpos, _VSTD::max(newpos, egptr()));
+    setg(eback(), newpos, std::max(newpos, egptr()));
   if (pos_out) {
     // min(pbase, newpos), newpos, epptr()
     __off = epptr() - newpos;
@@ -237,7 +238,7 @@ strstreambuf::pos_type strstreambuf::seekpos(pos_type __sp, ios_base::openmode _
 
   char* newpos = eback() + newoff;
   if (pos_in)
-    setg(eback(), newpos, _VSTD::max(newpos, egptr()));
+    setg(eback(), newpos, std::max(newpos, egptr()));
   if (pos_out) {
     // min(pbase, newpos), newpos, epptr()
     off_type temp = epptr() - newpos;
@@ -253,6 +254,7 @@ ostrstream::~ostrstream() {}
 
 strstream::~strstream() {}
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

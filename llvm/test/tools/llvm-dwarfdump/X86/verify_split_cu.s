@@ -8,7 +8,12 @@
 # CHECK: error: Unsupported DW_AT_location encoding: DW_FORM_data1
 # FIXME: This should read "type unit" or just "unit" to be correct for this case/in general
 # CHECK: error: DIE has DW_AT_decl_file that references a file with index 1 and the compile unit has no line table
-# CHECK: Errors detected
+# CHECK: error: Aggregated error counts:
+# CHECK: error: Compilation unit root DIE is not a unit DIE occurred 1 time(s).
+# CHECK: error: File index in DW_AT_decl_file reference CU with no line table occurred 1 time(s).
+# CHECK: error: Invalid DW_AT_location occurred 1 time(s).
+# CHECK: error: Mismatched unit type occurred 1 time(s).
+# CHECK: Errors detected.
 	.section	.debug_info.dwo,"e",@progbits
 	.long	.Ldebug_info_dwo_end1-.Ldebug_info_dwo_start1 # Length of Unit
 .Ldebug_info_dwo_start1:

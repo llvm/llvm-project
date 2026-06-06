@@ -31,7 +31,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -50,7 +50,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
@@ -61,7 +60,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -98,111 +96,116 @@ AssumeMisalignedLoadStores("arm-assume-misaligned-load-store", cl::Hidden,
 
 namespace {
 
-  /// Post- register allocation pass the combine load / store instructions to
-  /// form ldm / stm instructions.
-  struct ARMLoadStoreOpt : public MachineFunctionPass {
-    static char ID;
+/// Post- register allocation pass the combine load / store instructions to
+/// form ldm / stm instructions.
+struct ARMLoadStoreOpt {
+  const MachineFunction *MF;
+  const TargetInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
+  const ARMSubtarget *STI;
+  const TargetLowering *TL;
+  ARMFunctionInfo *AFI;
+  LiveRegUnits LiveRegs;
+  RegisterClassInfo RegClassInfo;
+  MachineBasicBlock::const_iterator LiveRegPos;
+  bool LiveRegsValid;
+  bool RegClassInfoValid;
+  bool isThumb1, isThumb2;
 
-    const MachineFunction *MF;
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    const ARMSubtarget *STI;
-    const TargetLowering *TL;
-    ARMFunctionInfo *AFI;
-    LivePhysRegs LiveRegs;
-    RegisterClassInfo RegClassInfo;
-    MachineBasicBlock::const_iterator LiveRegPos;
-    bool LiveRegsValid;
-    bool RegClassInfoValid;
-    bool isThumb1, isThumb2;
+  bool runOnMachineFunction(MachineFunction &Fn);
 
-    ARMLoadStoreOpt() : MachineFunctionPass(ID) {}
+private:
+  /// A set of load/store MachineInstrs with same base register sorted by
+  /// offset.
+  struct MemOpQueueEntry {
+    MachineInstr *MI;
+    int Offset;        ///< Load/Store offset.
+    unsigned Position; ///< Position as counted from end of basic block.
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
-
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
-    }
-
-    StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
-
-  private:
-    /// A set of load/store MachineInstrs with same base register sorted by
-    /// offset.
-    struct MemOpQueueEntry {
-      MachineInstr *MI;
-      int Offset;        ///< Load/Store offset.
-      unsigned Position; ///< Position as counted from end of basic block.
-
-      MemOpQueueEntry(MachineInstr &MI, int Offset, unsigned Position)
-          : MI(&MI), Offset(Offset), Position(Position) {}
-    };
-    using MemOpQueue = SmallVector<MemOpQueueEntry, 8>;
-
-    /// A set of MachineInstrs that fulfill (nearly all) conditions to get
-    /// merged into a LDM/STM.
-    struct MergeCandidate {
-      /// List of instructions ordered by load/store offset.
-      SmallVector<MachineInstr*, 4> Instrs;
-
-      /// Index in Instrs of the instruction being latest in the schedule.
-      unsigned LatestMIIdx;
-
-      /// Index in Instrs of the instruction being earliest in the schedule.
-      unsigned EarliestMIIdx;
-
-      /// Index into the basic block where the merged instruction will be
-      /// inserted. (See MemOpQueueEntry.Position)
-      unsigned InsertPos;
-
-      /// Whether the instructions can be merged into a ldm/stm instruction.
-      bool CanMergeToLSMulti;
-
-      /// Whether the instructions can be merged into a ldrd/strd instruction.
-      bool CanMergeToLSDouble;
-    };
-    SpecificBumpPtrAllocator<MergeCandidate> Allocator;
-    SmallVector<const MergeCandidate*,4> Candidates;
-    SmallVector<MachineInstr*,4> MergeBaseCandidates;
-
-    void moveLiveRegsBefore(const MachineBasicBlock &MBB,
-                            MachineBasicBlock::const_iterator Before);
-    unsigned findFreeReg(const TargetRegisterClass &RegClass);
-    void UpdateBaseRegUses(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                           unsigned Base, unsigned WordOffset,
-                           ARMCC::CondCodes Pred, unsigned PredReg);
-    MachineInstr *CreateLoadStoreMulti(
-        MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
-        int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
-        ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
-        ArrayRef<std::pair<unsigned, bool>> Regs,
-        ArrayRef<MachineInstr*> Instrs);
-    MachineInstr *CreateLoadStoreDouble(
-        MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
-        int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
-        ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
-        ArrayRef<std::pair<unsigned, bool>> Regs,
-        ArrayRef<MachineInstr*> Instrs) const;
-    void FormCandidates(const MemOpQueue &MemOps);
-    MachineInstr *MergeOpsUpdate(const MergeCandidate &Cand);
-    bool FixInvalidRegPairOp(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator &MBBI);
-    bool MergeBaseUpdateLoadStore(MachineInstr *MI);
-    bool MergeBaseUpdateLSMultiple(MachineInstr *MI);
-    bool MergeBaseUpdateLSDouble(MachineInstr &MI) const;
-    bool LoadStoreMultipleOpti(MachineBasicBlock &MBB);
-    bool MergeReturnIntoLDM(MachineBasicBlock &MBB);
-    bool CombineMovBx(MachineBasicBlock &MBB);
+    MemOpQueueEntry(MachineInstr &MI, int Offset, unsigned Position)
+        : MI(&MI), Offset(Offset), Position(Position) {}
   };
+  using MemOpQueue = SmallVector<MemOpQueueEntry, 8>;
+
+  /// A set of MachineInstrs that fulfill (nearly all) conditions to get
+  /// merged into a LDM/STM.
+  struct MergeCandidate {
+    /// List of instructions ordered by load/store offset.
+    SmallVector<MachineInstr *, 4> Instrs;
+
+    /// Index in Instrs of the instruction being latest in the schedule.
+    unsigned LatestMIIdx;
+
+    /// Index in Instrs of the instruction being earliest in the schedule.
+    unsigned EarliestMIIdx;
+
+    /// Index into the basic block where the merged instruction will be
+    /// inserted. (See MemOpQueueEntry.Position)
+    unsigned InsertPos;
+
+    /// Whether the instructions can be merged into a ldm/stm instruction.
+    bool CanMergeToLSMulti;
+
+    /// Whether the instructions can be merged into a ldrd/strd instruction.
+    bool CanMergeToLSDouble;
+  };
+  SpecificBumpPtrAllocator<MergeCandidate> Allocator;
+  SmallVector<const MergeCandidate *, 4> Candidates;
+  SmallVector<MachineInstr *, 4> MergeBaseCandidates;
+
+  void moveLiveRegsBefore(const MachineBasicBlock &MBB,
+                          MachineBasicBlock::const_iterator Before);
+  unsigned findFreeReg(const TargetRegisterClass &RegClass);
+  void UpdateBaseRegUses(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                         unsigned Base, unsigned WordOffset,
+                         ARMCC::CondCodes Pred, unsigned PredReg);
+  MachineInstr *CreateLoadStoreMulti(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator InsertBefore,
+                                     int Offset, unsigned Base, bool BaseKill,
+                                     unsigned Opcode, ARMCC::CondCodes Pred,
+                                     unsigned PredReg, const DebugLoc &DL,
+                                     ArrayRef<std::pair<unsigned, bool>> Regs,
+                                     ArrayRef<MachineInstr *> Instrs);
+  MachineInstr *CreateLoadStoreDouble(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator InsertBefore,
+                                      int Offset, unsigned Base, bool BaseKill,
+                                      unsigned Opcode, ARMCC::CondCodes Pred,
+                                      unsigned PredReg, const DebugLoc &DL,
+                                      ArrayRef<std::pair<unsigned, bool>> Regs,
+                                      ArrayRef<MachineInstr *> Instrs) const;
+  void FormCandidates(const MemOpQueue &MemOps);
+  MachineInstr *MergeOpsUpdate(const MergeCandidate &Cand);
+  bool FixInvalidRegPairOp(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator &MBBI);
+  bool MergeBaseUpdateLoadStore(MachineInstr *MI);
+  bool MergeBaseUpdateLSMultiple(MachineInstr *MI);
+  bool MergeBaseUpdateLSDouble(MachineInstr &MI) const;
+  bool LoadStoreMultipleOpti(MachineBasicBlock &MBB);
+  bool MergeReturnIntoLDM(MachineBasicBlock &MBB);
+  bool CombineMovBx(MachineBasicBlock &MBB);
+};
+
+struct ARMLoadStoreOptLegacy : public MachineFunctionPass {
+  static char ID;
+
+  ARMLoadStoreOptLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &Fn) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
+};
+
+char ARMLoadStoreOptLegacy::ID = 0;
 
 } // end anonymous namespace
 
-char ARMLoadStoreOpt::ID = 0;
-
-INITIALIZE_PASS(ARMLoadStoreOpt, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME, false,
-                false)
+INITIALIZE_PASS(ARMLoadStoreOptLegacy, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME,
+                false, false)
 
 static bool definesCPSR(const MachineInstr &MI) {
   for (const auto &MO : MI.operands()) {
@@ -495,7 +498,7 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
     bool InsertSub = false;
     unsigned Opc = MBBI->getOpcode();
 
-    if (MBBI->readsRegister(Base)) {
+    if (MBBI->readsRegister(Base, /*TRI=*/nullptr)) {
       int Offset;
       bool IsLoad =
         Opc == ARM::tLDRi || Opc == ARM::tLDRHi || Opc == ARM::tLDRBi;
@@ -560,7 +563,8 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
       return;
     }
 
-    if (MBBI->killsRegister(Base) || MBBI->definesRegister(Base))
+    if (MBBI->killsRegister(Base, /*TRI=*/nullptr) ||
+        MBBI->definesRegister(Base, /*TRI=*/nullptr))
       // Register got killed. Stop updating.
       return;
   }
@@ -589,7 +593,7 @@ unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
   }
 
   for (unsigned Reg : RegClassInfo.getOrder(&RegClass))
-    if (LiveRegs.available(MF->getRegInfo(), Reg))
+    if (LiveRegs.available(Reg) && !MF->getRegInfo().isReserved(Reg))
       return Reg;
   return 0;
 }
@@ -609,11 +613,12 @@ void ARMLoadStoreOpt::moveLiveRegsBefore(const MachineBasicBlock &MBB,
   // Move backward just before the "Before" position.
   while (LiveRegPos != Before) {
     --LiveRegPos;
-    LiveRegs.stepBackward(*LiveRegPos);
+    if (!LiveRegPos->isDebugInstr())
+      LiveRegs.stepBackward(*LiveRegPos);
   }
 }
 
-static bool ContainsReg(const ArrayRef<std::pair<unsigned, bool>> &Regs,
+static bool ContainsReg(ArrayRef<std::pair<unsigned, bool>> Regs,
                         unsigned Reg) {
   for (const std::pair<unsigned, bool> &R : Regs)
     if (R.first == Reg)
@@ -888,7 +893,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
         if (is_contained(ImpDefs, DefReg))
           continue;
         // We can ignore cases where the super-reg is read and written.
-        if (MI->readsRegister(DefReg))
+        if (MI->readsRegister(DefReg, /*TRI=*/nullptr))
           continue;
         ImpDefs.push_back(DefReg);
       }
@@ -903,7 +908,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
   MachineBasicBlock &MBB = *LatestMI->getParent();
   unsigned Offset = getMemoryOpOffset(*First);
   Register Base = getLoadStoreBaseOp(*First).getReg();
-  bool BaseKill = LatestMI->killsRegister(Base);
+  bool BaseKill = LatestMI->killsRegister(Base, /*TRI=*/nullptr);
   Register PredReg;
   ARMCC::CondCodes Pred = getInstrPredicate(*First, PredReg);
   DebugLoc DL = First->getDebugLoc();
@@ -1579,7 +1584,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
   } else {
     MachineOperand &MO = MI->getOperand(0);
     // FIXME: post-indexed stores use am2offset_imm, which still encodes
-    // the vestigal zero-reg offset register. When that's fixed, this clause
+    // the vestigial zero-reg offset register. When that's fixed, this clause
     // can be removed entirely.
     if (isAM2 && NewOpc == ARM::STR_POST_IMM) {
       int Imm = ARM_AM::getAM2Opc(AddSub, abs(Offset), ARM_AM::no_shift);
@@ -1808,21 +1813,23 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
       : (isT2 ? ARM::t2STMIA : ARM::STMIA);
     if (isLd) {
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(NewOpc))
-        .addReg(BaseReg, getKillRegState(BaseKill))
-        .addImm(Pred).addReg(PredReg)
-        .addReg(EvenReg, getDefRegState(isLd) | getDeadRegState(EvenDeadKill))
-        .addReg(OddReg,  getDefRegState(isLd) | getDeadRegState(OddDeadKill))
-        .cloneMemRefs(*MI);
+          .add(BaseOp)
+          .addImm(Pred)
+          .addReg(PredReg)
+          .addReg(EvenReg, getDefRegState(isLd) | getDeadRegState(EvenDeadKill))
+          .addReg(OddReg, getDefRegState(isLd) | getDeadRegState(OddDeadKill))
+          .cloneMemRefs(*MI);
       ++NumLDRD2LDM;
     } else {
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(NewOpc))
-        .addReg(BaseReg, getKillRegState(BaseKill))
-        .addImm(Pred).addReg(PredReg)
-        .addReg(EvenReg,
-                getKillRegState(EvenDeadKill) | getUndefRegState(EvenUndef))
-        .addReg(OddReg,
-                getKillRegState(OddDeadKill)  | getUndefRegState(OddUndef))
-        .cloneMemRefs(*MI);
+          .add(BaseOp)
+          .addImm(Pred)
+          .addReg(PredReg)
+          .addReg(EvenReg,
+                  getKillRegState(EvenDeadKill) | getUndefRegState(EvenUndef))
+          .addReg(OddReg,
+                  getKillRegState(OddDeadKill) | getUndefRegState(OddUndef))
+          .cloneMemRefs(*MI);
       ++NumSTRD2STM;
     }
   } else {
@@ -2062,17 +2069,6 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
       MO.setReg(ARM::PC);
       PrevMI.copyImplicitOps(*MBB.getParent(), *MBBI);
       MBB.erase(MBBI);
-      // We now restore LR into PC so it is not live-out of the return block
-      // anymore: Clear the CSI Restored bit.
-      MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
-      // CSI should be fixed after PrologEpilog Insertion
-      assert(MFI.isCalleeSavedInfoValid() && "CSI should be valid");
-      for (CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
-        if (Info.getReg() == ARM::LR) {
-          Info.setRestored(false);
-          break;
-        }
-      }
       return true;
     }
   }
@@ -2087,7 +2083,8 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
 
   MachineBasicBlock::iterator Prev = MBBI;
   --Prev;
-  if (Prev->getOpcode() != ARM::tMOVr || !Prev->definesRegister(ARM::LR))
+  if (Prev->getOpcode() != ARM::tMOVr ||
+      !Prev->definesRegister(ARM::LR, /*TRI=*/nullptr))
     return false;
 
   for (auto Use : Prev->uses())
@@ -2106,9 +2103,6 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
 }
 
 bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
   MF = &Fn;
   STI = &Fn.getSubtarget<ARMSubtarget>();
   TL = STI->getTargetLowering();
@@ -2120,17 +2114,32 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   isThumb2 = AFI->isThumb2Function();
   isThumb1 = AFI->isThumbFunction() && !isThumb2;
 
-  bool Modified = false;
+  bool Modified = false, ModifiedLDMReturn = false;
   for (MachineBasicBlock &MBB : Fn) {
     Modified |= LoadStoreMultipleOpti(MBB);
     if (STI->hasV5TOps() && !AFI->shouldSignReturnAddress())
-      Modified |= MergeReturnIntoLDM(MBB);
+      ModifiedLDMReturn |= MergeReturnIntoLDM(MBB);
     if (isThumb1)
       Modified |= CombineMovBx(MBB);
   }
+  Modified |= ModifiedLDMReturn;
+
+  // If we merged a BX instruction into an LDM, we need to re-calculate whether
+  // LR is restored. This check needs to consider the whole function, not just
+  // the instruction(s) we changed, because there may be other BX returns which
+  // still need LR to be restored.
+  if (ModifiedLDMReturn)
+    ARMFrameLowering::updateLRRestored(Fn);
 
   Allocator.DestroyAll();
   return Modified;
+}
+
+bool ARMLoadStoreOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  ARMLoadStoreOpt Impl;
+  return Impl.runOnMachineFunction(MF);
 }
 
 #define ARM_PREALLOC_LOAD_STORE_OPT_NAME                                       \
@@ -2138,57 +2147,62 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
 
 namespace {
 
-  /// Pre- register allocation pass that move load / stores from consecutive
-  /// locations close to make it more likely they will be combined later.
-  struct ARMPreAllocLoadStoreOpt : public MachineFunctionPass{
-    static char ID;
+/// Pre- register allocation pass that move load / stores from consecutive
+/// locations close to make it more likely they will be combined later.
+struct ARMPreAllocLoadStoreOpt {
+  AliasAnalysis *AA;
+  const DataLayout *TD;
+  const TargetInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
+  const ARMSubtarget *STI;
+  MachineRegisterInfo *MRI;
+  MachineDominatorTree *DT;
+  MachineFunction *MF;
 
-    AliasAnalysis *AA;
-    const DataLayout *TD;
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    const ARMSubtarget *STI;
-    MachineRegisterInfo *MRI;
-    MachineDominatorTree *DT;
-    MachineFunction *MF;
+  bool runOnMachineFunction(MachineFunction &Fn, AliasAnalysis *AA,
+                            MachineDominatorTree *DT);
 
-    ARMPreAllocLoadStoreOpt() : MachineFunctionPass(ID) {}
+private:
+  bool CanFormLdStDWord(MachineInstr *Op0, MachineInstr *Op1, DebugLoc &dl,
+                        unsigned &NewOpc, Register &EvenReg, Register &OddReg,
+                        Register &BaseReg, int &Offset, Register &PredReg,
+                        ARMCC::CondCodes &Pred, bool &isT2);
+  bool RescheduleOps(
+      MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &Ops,
+      unsigned Base, bool isLd, DenseMap<MachineInstr *, unsigned> &MI2LocMap,
+      SmallDenseMap<Register, SmallVector<MachineInstr *>, 8> &RegisterMap);
+  bool RescheduleLoadStoreInstrs(MachineBasicBlock *MBB);
+  bool DistributeIncrements();
+  bool DistributeIncrements(Register Base);
+};
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+struct ARMPreAllocLoadStoreOptLegacy : public MachineFunctionPass {
+  static char ID;
 
-    StringRef getPassName() const override {
-      return ARM_PREALLOC_LOAD_STORE_OPT_NAME;
-    }
+  ARMPreAllocLoadStoreOptLegacy() : MachineFunctionPass(ID) {}
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  private:
-    bool CanFormLdStDWord(MachineInstr *Op0, MachineInstr *Op1, DebugLoc &dl,
-                          unsigned &NewOpc, Register &EvenReg, Register &OddReg,
-                          Register &BaseReg, int &Offset, Register &PredReg,
-                          ARMCC::CondCodes &Pred, bool &isT2);
-    bool RescheduleOps(
-        MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &Ops,
-        unsigned Base, bool isLd, DenseMap<MachineInstr *, unsigned> &MI2LocMap,
-        SmallDenseMap<Register, SmallVector<MachineInstr *>, 8> &RegisterMap);
-    bool RescheduleLoadStoreInstrs(MachineBasicBlock *MBB);
-    bool DistributeIncrements();
-    bool DistributeIncrements(Register Base);
-  };
+  StringRef getPassName() const override {
+    return ARM_PREALLOC_LOAD_STORE_OPT_NAME;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+char ARMPreAllocLoadStoreOptLegacy::ID = 0;
 
 } // end anonymous namespace
 
-char ARMPreAllocLoadStoreOpt::ID = 0;
-
-INITIALIZE_PASS_BEGIN(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
+INITIALIZE_PASS_BEGIN(ARMPreAllocLoadStoreOptLegacy, "arm-prera-ldst-opt",
                       ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_END(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_END(ARMPreAllocLoadStoreOptLegacy, "arm-prera-ldst-opt",
                     ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
 
 // Limit the number of instructions to be rescheduled.
@@ -2196,24 +2210,37 @@ INITIALIZE_PASS_END(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
 static cl::opt<unsigned> InstReorderLimit("arm-prera-ldst-opt-reorder-limit",
                                           cl::init(8), cl::Hidden);
 
-bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (AssumeMisalignedLoadStores || skipFunction(Fn.getFunction()))
+bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn,
+                                                   AliasAnalysis *AAIn,
+                                                   MachineDominatorTree *DTIn) {
+  if (AssumeMisalignedLoadStores)
     return false;
 
+  AA = AAIn;
+  DT = DTIn;
   TD = &Fn.getDataLayout();
   STI = &Fn.getSubtarget<ARMSubtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &Fn.getRegInfo();
-  DT = &getAnalysis<MachineDominatorTree>();
-  MF  = &Fn;
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MF = &Fn;
 
   bool Modified = DistributeIncrements();
   for (MachineBasicBlock &MFI : Fn)
     Modified |= RescheduleLoadStoreInstrs(&MFI);
 
   return Modified;
+}
+
+bool ARMPreAllocLoadStoreOptLegacy::runOnMachineFunction(MachineFunction &Fn) {
+  if (skipFunction(Fn.getFunction()))
+    return false;
+
+  ARMPreAllocLoadStoreOpt Impl;
+  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MachineDominatorTree *DT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return Impl.runOnMachineFunction(Fn, AA, DT);
 }
 
 static bool IsSafeAndProfitableToMove(bool isLd, unsigned Base,
@@ -2367,7 +2394,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(
       if (NumMove == InstReorderLimit)
         break;
 
-      // Found a mergable instruction; save information about it.
+      // Found a mergeable instruction; save information about it.
       ++NumMove;
       LastOffset = Offset;
       LastBytes = Bytes;
@@ -2428,7 +2455,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(
           Ops.pop_back();
 
           const MCInstrDesc &MCID = TII->get(NewOpc);
-          const TargetRegisterClass *TRC = TII->getRegClass(MCID, 0, TRI, *MF);
+          const TargetRegisterClass *TRC = TII->getRegClass(MCID, 0);
           MRI->constrainRegClass(FirstReg, TRC);
           MRI->constrainRegClass(SecondReg, TRC);
 
@@ -2518,9 +2545,7 @@ static void updateRegisterMapForDbgValueListAfterMove(
     if (RegIt == RegisterMap.end())
       return;
     auto &InstrVec = RegIt->getSecond();
-    for (unsigned I = 0; I < InstrVec.size(); I++)
-      if (InstrVec[I] == InstrToReplace)
-        InstrVec[I] = DbgValueListInstr;
+    llvm::replace(InstrVec, InstrToReplace, DbgValueListInstr);
   });
 }
 
@@ -2534,8 +2559,7 @@ bool
 ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
   bool RetVal = false;
 
-  DenseMap<MachineInstr*, unsigned> MI2LocMap;
-  using MapIt = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>::iterator;
+  DenseMap<MachineInstr *, unsigned> MI2LocMap;
   using Base2InstMap = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>;
   using BaseVec = SmallVector<unsigned, 4>;
   Base2InstMap Base2LdsMap;
@@ -2573,15 +2597,15 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
       Register Base = MI.getOperand(1).getReg();
       int Offset = getMemoryOpOffset(MI);
       bool StopHere = false;
-      auto FindBases = [&] (Base2InstMap &Base2Ops, BaseVec &Bases) {
-        MapIt BI = Base2Ops.find(Base);
-        if (BI == Base2Ops.end()) {
-          Base2Ops[Base].push_back(&MI);
+      auto FindBases = [&](Base2InstMap &Base2Ops, BaseVec &Bases) {
+        auto [BI, Inserted] = Base2Ops.try_emplace(Base);
+        if (Inserted) {
+          BI->second.push_back(&MI);
           Bases.push_back(Base);
           return;
         }
-        for (unsigned i = 0, e = BI->second.size(); i != e; ++i) {
-          if (Offset == getMemoryOpOffset(*BI->second[i])) {
+        for (const MachineInstr *MI : BI->second) {
+          if (Offset == getMemoryOpOffset(*MI)) {
             StopHere = true;
             break;
           }
@@ -2604,16 +2628,14 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
     }
 
     // Re-schedule loads.
-    for (unsigned i = 0, e = LdBases.size(); i != e; ++i) {
-      unsigned Base = LdBases[i];
+    for (unsigned Base : LdBases) {
       SmallVectorImpl<MachineInstr *> &Lds = Base2LdsMap[Base];
       if (Lds.size() > 1)
         RetVal |= RescheduleOps(MBB, Lds, Base, true, MI2LocMap, RegisterMap);
     }
 
     // Re-schedule stores.
-    for (unsigned i = 0, e = StBases.size(); i != e; ++i) {
-      unsigned Base = StBases[i];
+    for (unsigned Base : StBases) {
       SmallVectorImpl<MachineInstr *> &Sts = Base2StsMap[Base];
       if (Sts.size() > 1)
         RetVal |= RescheduleOps(MBB, Sts, Base, false, MI2LocMap, RegisterMap);
@@ -2857,12 +2879,10 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
         //  Erase the entry into the DbgValueSinkCandidates for the DBG_VALUE
         //  that was moved.
         auto DbgVar = createDebugVariableFromMachineInstr(DbgInstr);
-        auto DbgIt = DbgValueSinkCandidates.find(DbgVar);
-        // If the instruction is a DBG_VALUE_LIST, it may have already been
-        // erased from the DbgValueSinkCandidates. Only erase if it exists in
-        // the DbgValueSinkCandidates.
-        if (DbgIt != DbgValueSinkCandidates.end())
-          DbgValueSinkCandidates.erase(DbgIt);
+        // Erase DbgVar from DbgValueSinkCandidates if still present.  If the
+        // instruction is a DBG_VALUE_LIST, it may have already been erased from
+        // DbgValueSinkCandidates.
+        DbgValueSinkCandidates.erase(DbgVar);
         // Zero out original dbg instr
         forEachDbgRegOperand(DbgInstr,
                              [&](MachineOperand &Op) { Op.setReg(0); });
@@ -2995,7 +3015,7 @@ static bool isPreIndex(MachineInstr &MI) {
 // could be easily converted to one where that was valid. For example converting
 // t2LDRi12 to t2LDRi8 for negative offsets. Works in conjunction with
 // AdjustBaseAndOffset below.
-static bool isLegalOrConvertableAddressImm(unsigned Opcode, int Imm,
+static bool isLegalOrConvertibleAddressImm(unsigned Opcode, int Imm,
                                            const TargetInstrInfo *TII,
                                            int &CodesizeEstimate) {
   if (isLegalAddressImm(Opcode, Imm, TII))
@@ -3025,7 +3045,7 @@ static void AdjustBaseAndOffset(MachineInstr *MI, Register NewBaseReg,
   MachineFunction *MF = MI->getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const MCInstrDesc &MCID = TII->get(MI->getOpcode());
-  const TargetRegisterClass *TRC = TII->getRegClass(MCID, BaseOp, TRI, *MF);
+  const TargetRegisterClass *TRC = TII->getRegClass(MCID, BaseOp);
   MRI.constrainRegClass(NewBaseReg, TRC);
 
   int OldOffset = MI->getOperand(BaseOp + 1).getImm();
@@ -3053,7 +3073,7 @@ static void AdjustBaseAndOffset(MachineInstr *MI, Register NewBaseReg,
       ConvOpcode = ARM::t2STRBi8;
       break;
     default:
-      llvm_unreachable("Unhandled convertable opcode");
+      llvm_unreachable("Unhandled convertible opcode");
     }
     assert(isLegalAddressImm(ConvOpcode, OldOffset - Offset, TII) &&
            "Illegal Address Immediate after convert!");
@@ -3082,10 +3102,10 @@ static MachineInstr *createPostIncLoadStore(MachineInstr *MI, int Offset,
 
   const MCInstrDesc &MCID = TII->get(NewOpcode);
   // Constrain the def register class
-  const TargetRegisterClass *TRC = TII->getRegClass(MCID, 0, TRI, *MF);
+  const TargetRegisterClass *TRC = TII->getRegClass(MCID, 0);
   MRI.constrainRegClass(NewReg, TRC);
   // And do the same for the base operand
-  TRC = TII->getRegClass(MCID, 2, TRI, *MF);
+  TRC = TII->getRegClass(MCID, 2);
   MRI.constrainRegClass(MI->getOperand(1).getReg(), TRC);
 
   unsigned AddrMode = (MCID.TSFlags & ARMII::AddrModeMask);
@@ -3181,7 +3201,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
     if (PrePostInc || BaseAccess->getParent() != Increment->getParent())
       return false;
     Register PredReg;
-    if (Increment->definesRegister(ARM::CPSR) ||
+    if (Increment->definesRegister(ARM::CPSR, /*TRI=*/nullptr) ||
         getInstrPredicate(*Increment, PredReg) != ARMCC::AL)
       return false;
 
@@ -3240,7 +3260,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
     if (DT->dominates(BaseAccess, Use)) {
       SuccessorAccesses.insert(Use);
       unsigned BaseOp = getBaseOperandIndex(*Use);
-      if (!isLegalOrConvertableAddressImm(Use->getOpcode(),
+      if (!isLegalOrConvertibleAddressImm(Use->getOpcode(),
                                           Use->getOperand(BaseOp + 1).getImm() -
                                               IncrementOffset,
                                           TII, CodesizeEstimate)) {
@@ -3294,7 +3314,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements() {
         continue;
 
       Register Base = MI.getOperand(BaseOp).getReg();
-      if (!Base.isVirtual() || Visited.count(Base))
+      if (!Base.isVirtual())
         continue;
 
       Visited.insert(Base);
@@ -3308,8 +3328,37 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements() {
 }
 
 /// Returns an instance of the load / store optimization pass.
-FunctionPass *llvm::createARMLoadStoreOptimizationPass(bool PreAlloc) {
+FunctionPass *llvm::createARMLoadStoreOptLegacyPass(bool PreAlloc) {
   if (PreAlloc)
-    return new ARMPreAllocLoadStoreOpt();
-  return new ARMLoadStoreOpt();
+    return new ARMPreAllocLoadStoreOptLegacy();
+  return new ARMLoadStoreOptLegacy();
+}
+
+PreservedAnalyses
+ARMLoadStoreOptPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  ARMLoadStoreOpt Impl;
+  bool Changed = Impl.runOnMachineFunction(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+PreservedAnalyses
+ARMPreAllocLoadStoreOptPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  ARMPreAllocLoadStoreOpt Impl;
+  AliasAnalysis *AA =
+      &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+           .getManager()
+           .getResult<AAManager>(MF.getFunction());
+  MachineDominatorTree *DT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  bool Changed = Impl.runOnMachineFunction(MF, AA, DT);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

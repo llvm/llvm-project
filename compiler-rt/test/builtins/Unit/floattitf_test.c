@@ -7,7 +7,12 @@
 #include <float.h>
 #include <stdio.h>
 
-#if defined(CRT_HAS_TF_MODE)
+// The testcase currently assumes IEEE TF format, once that has been
+// fixed the defined(CRT_HAS_IEEE_TF) guard can be removed to enable it for
+// IBM 128 floats as well.
+#if defined(CRT_HAS_IEEE_TF)
+
+#  include "fp_test.h"
 
 /* Returns: convert a ti_int to a fp_t, rounding toward even. */
 
@@ -21,93 +26,97 @@
 
 COMPILER_RT_ABI fp_t __floattitf(ti_int a);
 
-int test__floattitf(ti_int a, fp_t expected) {
+int _test__floattitf(int line, ti_int a, fp_t expected) {
   fp_t x = __floattitf(a);
   if (x != expected) {
     twords at;
     at.all = a;
-    printf("error in __floattitf(0x%.16llX%.16llX) = %LA, expected %LA\n",
-           at.s.high, at.s.low, x, expected);
+    __uint128_t expected_rep = toRep128(expected);
+    __uint128_t res_rep = toRep128(x);
+    printf("%s:%d: error in __floattitf(0x%.16llX%.16llX) = "
+           "0x%.16llX%.16llX, expected 0x%.16llX%.16llX\n",
+           __FILE__, line, at.s.high, at.s.low, (uint64_t)(res_rep >> 64),
+           (uint64_t)res_rep, (uint64_t)(expected_rep >> 64),
+           (uint64_t)expected_rep);
   }
   return x != expected;
 }
+
+#  define test__floattitf(a, e) _test__floattitf(__LINE__, a, e)
 
 char assumption_1[sizeof(ti_int) == 2 * sizeof(di_int)] = {0};
 char assumption_2[sizeof(ti_int) * CHAR_BIT == 128] = {0};
 char assumption_3[sizeof(fp_t) * CHAR_BIT == 128] = {0};
 
-#endif
-
 int main() {
-#if defined(CRT_HAS_TF_MODE)
-  if (test__floattitf(0, 0.0))
+  if (test__floattitf(0, TF_C(0.0)))
     return 1;
 
-  if (test__floattitf(1, 1.0))
+  if (test__floattitf(1, TF_C(1.0)))
     return 1;
-  if (test__floattitf(2, 2.0))
+  if (test__floattitf(2, TF_C(2.0)))
     return 1;
-  if (test__floattitf(20, 20.0))
+  if (test__floattitf(20, TF_C(20.0)))
     return 1;
-  if (test__floattitf(-1, -1.0))
+  if (test__floattitf(-1, -TF_C(1.0)))
     return 1;
-  if (test__floattitf(-2, -2.0))
+  if (test__floattitf(-2, -TF_C(2.0)))
     return 1;
-  if (test__floattitf(-20, -20.0))
-    return 1;
-
-  if (test__floattitf(0x7FFFFF8000000000LL, 0x1.FFFFFEp+62))
-    return 1;
-  if (test__floattitf(0x7FFFFFFFFFFFF800LL, 0x1.FFFFFFFFFFFFEp+62))
-    return 1;
-  if (test__floattitf(0x7FFFFF0000000000LL, 0x1.FFFFFCp+62))
-    return 1;
-  if (test__floattitf(0x7FFFFFFFFFFFF000LL, 0x1.FFFFFFFFFFFFCp+62))
+  if (test__floattitf(-20, -TF_C(20.0)))
     return 1;
 
-  if (test__floattitf(make_ti(0x8000008000000000LL, 0), -0x1.FFFFFEp+126))
+  if (test__floattitf(0x7FFFFF8000000000LL, TF_C(0x1.FFFFFEp+62)))
+    return 1;
+  if (test__floattitf(0x7FFFFFFFFFFFF800LL, TF_C(0x1.FFFFFFFFFFFFEp+62)))
+    return 1;
+  if (test__floattitf(0x7FFFFF0000000000LL, TF_C(0x1.FFFFFCp+62)))
+    return 1;
+  if (test__floattitf(0x7FFFFFFFFFFFF000LL, TF_C(0x1.FFFFFFFFFFFFCp+62)))
+    return 1;
+
+  if (test__floattitf(make_ti(0x8000008000000000LL, 0), -TF_C(0x1.FFFFFEp+126)))
     return 1;
   if (test__floattitf(make_ti(0x8000000000000800LL, 0),
-                      -0x1.FFFFFFFFFFFFEp+126))
+                      -TF_C(0x1.FFFFFFFFFFFFEp+126)))
     return 1;
-  if (test__floattitf(make_ti(0x8000010000000000LL, 0), -0x1.FFFFFCp+126))
+  if (test__floattitf(make_ti(0x8000010000000000LL, 0), -TF_C(0x1.FFFFFCp+126)))
     return 1;
   if (test__floattitf(make_ti(0x8000000000001000LL, 0),
-                      -0x1.FFFFFFFFFFFFCp+126))
+                      -TF_C(0x1.FFFFFFFFFFFFCp+126)))
     return 1;
 
-  if (test__floattitf(make_ti(0x8000000000000000LL, 0), -0x1.000000p+127))
+  if (test__floattitf(make_ti(0x8000000000000000LL, 0), -TF_C(0x1.000000p+127)))
     return 1;
   if (test__floattitf(make_ti(0x8000000000000001LL, 0),
                       -TF_C(0x1.FFFFFFFFFFFFFFFCp+126)))
     return 1;
 
-  if (test__floattitf(0x0007FB72E8000000LL, 0x1.FEDCBAp+50))
+  if (test__floattitf(0x0007FB72E8000000LL, TF_C(0x1.FEDCBAp+50)))
     return 1;
 
-  if (test__floattitf(0x0007FB72EA000000LL, 0x1.FEDCBA8p+50))
+  if (test__floattitf(0x0007FB72EA000000LL, TF_C(0x1.FEDCBA8p+50)))
     return 1;
-  if (test__floattitf(0x0007FB72EB000000LL, 0x1.FEDCBACp+50))
+  if (test__floattitf(0x0007FB72EB000000LL, TF_C(0x1.FEDCBACp+50)))
     return 1;
-  if (test__floattitf(0x0007FB72EBFFFFFFLL, 0x1.FEDCBAFFFFFFCp+50))
+  if (test__floattitf(0x0007FB72EBFFFFFFLL, TF_C(0x1.FEDCBAFFFFFFCp+50)))
     return 1;
-  if (test__floattitf(0x0007FB72EC000000LL, 0x1.FEDCBBp+50))
+  if (test__floattitf(0x0007FB72EC000000LL, TF_C(0x1.FEDCBBp+50)))
     return 1;
-  if (test__floattitf(0x0007FB72E8000001LL, 0x1.FEDCBA0000004p+50))
-    return 1;
-
-  if (test__floattitf(0x0007FB72E6000000LL, 0x1.FEDCB98p+50))
-    return 1;
-  if (test__floattitf(0x0007FB72E7000000LL, 0x1.FEDCB9Cp+50))
-    return 1;
-  if (test__floattitf(0x0007FB72E7FFFFFFLL, 0x1.FEDCB9FFFFFFCp+50))
-    return 1;
-  if (test__floattitf(0x0007FB72E4000001LL, 0x1.FEDCB90000004p+50))
-    return 1;
-  if (test__floattitf(0x0007FB72E4000000LL, 0x1.FEDCB9p+50))
+  if (test__floattitf(0x0007FB72E8000001LL, TF_C(0x1.FEDCBA0000004p+50)))
     return 1;
 
-  if (test__floattitf(0x023479FD0E092DC0LL, 0x1.1A3CFE870496Ep+57))
+  if (test__floattitf(0x0007FB72E6000000LL, TF_C(0x1.FEDCB98p+50)))
+    return 1;
+  if (test__floattitf(0x0007FB72E7000000LL, TF_C(0x1.FEDCB9Cp+50)))
+    return 1;
+  if (test__floattitf(0x0007FB72E7FFFFFFLL, TF_C(0x1.FEDCB9FFFFFFCp+50)))
+    return 1;
+  if (test__floattitf(0x0007FB72E4000001LL, TF_C(0x1.FEDCB90000004p+50)))
+    return 1;
+  if (test__floattitf(0x0007FB72E4000000LL, TF_C(0x1.FEDCB9p+50)))
+    return 1;
+
+  if (test__floattitf(0x023479FD0E092DC0LL, TF_C(0x1.1A3CFE870496Ep+57)))
     return 1;
   if (test__floattitf(0x023479FD0E092DA1LL, TF_C(0x1.1A3CFE870496D08p+57)))
     return 1;
@@ -135,7 +144,7 @@ int main() {
     return 1;
   if (test__floattitf(0x023479FD0E092DDFLL, TF_C(0x1.1A3CFE870496EF8p+57)))
     return 1;
-  if (test__floattitf(0x023479FD0E092DE0LL, 0x1.1A3CFE870496Fp+57))
+  if (test__floattitf(0x023479FD0E092DE0LL, TF_C(0x1.1A3CFE870496Fp+57)))
     return 1;
 
   if (test__floattitf(make_ti(0x023479FD0E092DC0LL, 0),
@@ -215,8 +224,12 @@ int main() {
   if (test__floattitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC57FFLL),
                       TF_C(0x1.23456789ABCDEF0123456789ABC5p+124)))
     return 1;
-#else
-  printf("skipped\n");
-#endif
   return 0;
 }
+
+#else
+int main() {
+  printf("skipped\n");
+  return 0;
+}
+#endif

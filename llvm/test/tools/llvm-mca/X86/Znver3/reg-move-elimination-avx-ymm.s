@@ -180,12 +180,12 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -407,7 +407,7 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovaps	%ymm13, %ymm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovaps	%ymm14, %ymm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovaps	%ymm15, %ymm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -474,12 +474,12 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -701,7 +701,7 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovups	%ymm13, %ymm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovups	%ymm14, %ymm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovups	%ymm15, %ymm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
@@ -768,12 +768,12 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -995,7 +995,7 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovapd	%ymm13, %ymm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovapd	%ymm14, %ymm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovapd	%ymm15, %ymm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
@@ -1062,12 +1062,12 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -1289,7 +1289,7 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovupd	%ymm13, %ymm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovupd	%ymm14, %ymm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovupd	%ymm15, %ymm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [4] Code Region
 
@@ -1356,12 +1356,12 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -1583,7 +1583,7 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovdqa	%ymm13, %ymm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovdqa	%ymm14, %ymm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovdqa	%ymm15, %ymm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 
@@ -1650,12 +1650,12 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -1877,4 +1877,4 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovdqu	%ymm13, %ymm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovdqu	%ymm14, %ymm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovdqu	%ymm15, %ymm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>

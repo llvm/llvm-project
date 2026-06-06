@@ -11,17 +11,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include <optional>
 #include <type_traits>
 
 using namespace llvm;
 
-static_assert(std::is_pod<MCSchedModel>::value,
-              "We shouldn't have a static constructor here");
+cl::OptionCategory llvm::MCScheduleOptions("Machine scheduling model options");
+
+static constexpr float DefaultReservationStationScaleFactor = 1.0f;
+
+static cl::opt<float> ReservationStationScaleFactor(
+    "sched-model-reservation-station-scale-factor", cl::Hidden,
+    cl::init(DefaultReservationStationScaleFactor), cl::cat(MCScheduleOptions),
+    cl::desc("Scale the buffer size of all reservation stations by a positive "
+             "factor. Buffer sizes of -1/0/1 (unlimited/unbuffered/in-order) "
+             "are preserved. Likewise, if the scaled result is <= 1, the "
+             "original size is kept. Computed sizes "
+             "are truncated towards zero."));
+
+static_assert(std::is_trivial_v<MCSchedModel>,
+              "MCSchedModel is required to be a trivial type");
 const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             DefaultMicroOpBufferSize,
                                             DefaultLoopMicroOpBufferSize,
@@ -30,12 +46,13 @@ const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             DefaultMispredictPenalty,
                                             false,
                                             true,
-                                            false /*EnableIntervals*/,
+                                            /*EnableIntervals=*/false,
                                             0,
                                             nullptr,
                                             nullptr,
                                             0,
                                             0,
+                                            nullptr,
                                             nullptr,
                                             nullptr};
 
@@ -69,39 +86,49 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
                                       const MCInstrInfo &MCII,
                                       const MCInst &Inst) const {
-  unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
-  const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
-  if (!SCDesc->isValid())
-    return 0;
+  return MCSchedModel::computeInstrLatency<MCSubtargetInfo, MCInstrInfo,
+                                           InstrItineraryData, MCInst>(
+      STI, MCII, Inst,
+      [&](const MCSchedClassDesc *SCDesc) -> const MCSchedClassDesc * {
+        if (!SCDesc->isValid())
+          return nullptr;
 
-  unsigned CPUID = getProcessorID();
-  while (SCDesc->isVariant()) {
-    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
-    SCDesc = getSchedClassDesc(SchedClass);
-  }
+        unsigned CPUID = getProcessorID();
+        unsigned SchedClass = 0;
+        while (SCDesc->isVariant()) {
+          SchedClass =
+              STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
+          SCDesc = getSchedClassDesc(SchedClass);
+        }
 
-  if (SchedClass)
-    return MCSchedModel::computeInstrLatency(STI, *SCDesc);
+        if (!SchedClass) {
+          assert(false && "unsupported variant scheduling class");
+          return nullptr;
+        }
 
-  llvm_unreachable("unsupported variant scheduling class");
+        return SCDesc;
+      });
 }
 
 double
 MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
                                       const MCSchedClassDesc &SCDesc) {
-  std::optional<double> Throughput;
+  std::optional<double> MinThroughput;
   const MCSchedModel &SM = STI.getSchedModel();
   const MCWriteProcResEntry *I = STI.getWriteProcResBegin(&SCDesc);
   const MCWriteProcResEntry *E = STI.getWriteProcResEnd(&SCDesc);
   for (; I != E; ++I) {
-    if (!I->ReleaseAtCycle)
+    if (!I->ReleaseAtCycle || I->ReleaseAtCycle == I->AcquireAtCycle)
       continue;
+    assert(I->ReleaseAtCycle > I->AcquireAtCycle && "invalid resource segment");
     unsigned NumUnits = SM.getProcResource(I->ProcResourceIdx)->NumUnits;
-    double Temp = NumUnits * 1.0 / I->ReleaseAtCycle;
-    Throughput = Throughput ? std::min(*Throughput, Temp) : Temp;
+    double Throughput =
+        double(NumUnits) / double(I->ReleaseAtCycle - I->AcquireAtCycle);
+    MinThroughput =
+        MinThroughput ? std::min(*MinThroughput, Throughput) : Throughput;
   }
-  if (Throughput)
-    return 1.0 / *Throughput;
+  if (MinThroughput)
+    return 1.0 / *MinThroughput;
 
   // If no throughput value was calculated, assume that we can execute at the
   // maximum issue width scaled by number of micro-ops for the schedule class.
@@ -166,4 +193,77 @@ MCSchedModel::getForwardingDelayCycles(ArrayRef<MCReadAdvanceEntry> Entries,
   }
 
   return std::abs(DelayCycles);
+}
+
+unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
+                                            const MCSchedClassDesc &SCDesc) {
+
+  ArrayRef<MCReadAdvanceEntry> Entries = STI.getReadAdvanceEntries(SCDesc);
+  if (Entries.empty())
+    return 0;
+
+  unsigned MaxLatency = 0;
+  unsigned WriteResourceID = 0;
+  unsigned DefEnd = SCDesc.NumWriteLatencyEntries;
+
+  for (unsigned DefIdx = 0; DefIdx != DefEnd; ++DefIdx) {
+    // Lookup the definition's write latency in SubtargetInfo.
+    const MCWriteLatencyEntry *WLEntry =
+        STI.getWriteLatencyEntry(&SCDesc, DefIdx);
+    unsigned Cycles = 0;
+    // If latency is Invalid (<0), consider 0 cycle latency
+    if (WLEntry->Cycles > 0)
+      Cycles = (unsigned)WLEntry->Cycles;
+    if (Cycles > MaxLatency) {
+      MaxLatency = Cycles;
+      WriteResourceID = WLEntry->WriteResourceID;
+    }
+  }
+
+  for (const MCReadAdvanceEntry &E : Entries) {
+    if (E.WriteResourceID == WriteResourceID)
+      return E.Cycles;
+  }
+
+  // Unable to find WriteResourceID in MCReadAdvanceEntry Entries
+  return 0;
+}
+
+/// Return the buffer size of the resource. If a positive scale factor
+/// is provided and the original buffer size is > 1, the size is scaled
+/// accordingly.
+int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
+  int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
+
+  // Skip scaling when factor is 1 (the default).
+  // Use native float comparison to avoid overhead on the hot fast
+  // path, as 1.0f is exactly representable
+  if (LLVM_LIKELY(ReservationStationScaleFactor ==
+                  DefaultReservationStationScaleFactor))
+    return BufferSize;
+
+  // Skip scaling for special buffer sizes (-1,0,1)
+  if (BufferSize <= 1)
+    return BufferSize;
+
+  // Skip invalid (non-positive) scale factors
+  APFloat Scale(ReservationStationScaleFactor);
+  if (Scale.isNegative() || Scale.isZero())
+    return BufferSize;
+
+  // Scale and truncate the positive computed size towards zero
+  APFloat Product(static_cast<float>(BufferSize));
+  Product.multiply(Scale, APFloat::rmTowardZero);
+  APSInt Result(32, /*IsUnsigned=*/false);
+  bool IsExact;
+  if (Product.convertToInteger(Result, APFloat::rmTowardZero, &IsExact) &
+      APFloat::opInvalidOp)
+    return BufferSize;
+  int Scaled = static_cast<int>(Result.getExtValue());
+
+  // Avoid producing special buffer sizes (-1,0,1)
+  if (Scaled <= 1)
+    return BufferSize;
+
+  return Scaled;
 }

@@ -1,11 +1,12 @@
-; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOOPT %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,OPT %s
+; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,NOOPT %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,OPT %s
+
 
 ; GCN-LABEL: {{^}}test_debug_value:
 ; NOOPT: .loc	1 1 42 prologue_end     ; /tmp/test_debug_value.cl:1:42
-; NOOPT-NEXT: s_load_dwordx2 s[4:5], s[8:9], 0x0
-; NOOPT-NEXT: .Ltmp
-; NOOPT-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- $sgpr4_sgpr5
+; NOOPT: s_load_dwordx2 s[4:5], s[8:9], 0x0
+; NOOPT: .Ltmp
+; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- $sgpr4_sgpr5
 
 ; GCN: flat_store_dword
 ; GCN: s_endpgm
@@ -21,22 +22,24 @@ entry:
 
 ; GCN-LABEL: {{^}}only_undef_dbg_value:
 ; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
+; NOOPT-NEXT: .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ; CFA is 0 in private_wave aspace
+; NOOPT-NEXT: .cfi_undefined 16
 ; NOOPT-NEXT: s_endpgm
 
 ; OPT: s_endpgm
 define amdgpu_kernel void @only_undef_dbg_value() #1 {
 bb:
-  call void @llvm.dbg.value(metadata <4 x float> undef, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
+  call void @llvm.dbg.value(metadata <4 x float> poison, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
   ret void, !dbg !14
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind  }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!11, !12}
+!llvm.module.flags = !{!11, !12, !15}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 244715) (llvm/trunk 244718)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "/tmp/test_debug_value.cl", directory: "/Users/matt/src/llvm/build_debug")
@@ -52,3 +55,4 @@ attributes #1 = { nounwind readnone }
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !DIExpression()
 !14 = !DILocation(line: 1, column: 42, scope: !4)
+!15 = !{i32 1, !"amdhsa_code_object_version", i32 500}

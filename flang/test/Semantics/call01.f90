@@ -1,14 +1,17 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Confirm enforcement of constraints and restrictions in 15.6.2.1
 
 non_recursive function f01(n) result(res)
   integer, value :: n
   integer :: res
+  entry f01b(n) result(res)
   if (n <= 0) then
     res = n
   else
     !ERROR: NON_RECURSIVE procedure 'f01' cannot call itself
     res = n * f01(n-1) ! 15.6.2.1(3)
+    !ERROR: NON_RECURSIVE procedure 'f01b' cannot call itself
+    res = n * f01b(n-1) ! 15.6.2.1(3)
   end if
 end function
 
@@ -21,7 +24,7 @@ non_recursive function f02(n) result(res)
     res = nested()
   end if
  contains
-  integer function nested
+  integer function nested()
     !ERROR: NON_RECURSIVE procedure 'f02' cannot call itself
     nested = n * f02(n-1) ! 15.6.2.1(3)
   end function nested
@@ -111,7 +114,7 @@ function f14(n) result(res)
     res = nested()
   end if
  contains
-  character(1) function nested
+  character(1) function nested()
     !ERROR: Assumed-length CHARACTER(*) function 'f14' cannot call itself
     !ERROR: Assumed-length character function must be defined with a length to be called
     nested = f14(n-1) ! 15.6.2.1(3)
@@ -119,16 +122,16 @@ function f14(n) result(res)
 end function
 
 subroutine s01(f1, f2, fp1, fp2, fp3)
-  !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
+  !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type [-Wportability]
   character*(*) :: f1, f3, fp1
   external :: f1, f3
   pointer :: fp1, fp3
-  !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
+  !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type [-Wportability]
   procedure(character*(*)), pointer :: fp2
   interface
     character*(*) function f2()
     end function
-    !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
+    !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type [-Wportability]
     character*(*) function fp3()
     end function
     !ERROR: A function interface may not declare an assumed-length CHARACTER(*) result

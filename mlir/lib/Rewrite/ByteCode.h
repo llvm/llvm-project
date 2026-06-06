@@ -16,6 +16,8 @@
 
 #include "mlir/IR/PatternMatch.h"
 
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+
 namespace mlir {
 namespace pdl_interp {
 class RecordMatchOp;
@@ -28,7 +30,6 @@ class PDLByteCode;
 /// entries. ByteCodeAddr refers to size of indices into the bytecode.
 using ByteCodeField = uint16_t;
 using ByteCodeAddr = uint32_t;
-using OwningOpRange = llvm::OwningArrayRef<Operation *>;
 
 //===----------------------------------------------------------------------===//
 // PDLByteCodePattern
@@ -92,21 +93,21 @@ private:
   /// the bytecode to store ranges of operations. These are always stored by
   /// owning references, because at no point in the execution of the byte code
   /// we get an indexed range (view) of operations.
-  std::vector<OwningOpRange> opRangeMemory;
+  std::vector<std::vector<Operation *>> opRangeMemory;
 
   /// A mutable block of memory used during the matching and rewriting phase of
   /// the bytecode to store ranges of types.
   std::vector<TypeRange> typeRangeMemory;
   /// A set of type ranges that have been allocated by the byte code interpreter
   /// to provide a guaranteed lifetime.
-  std::vector<llvm::OwningArrayRef<Type>> allocatedTypeRangeMemory;
+  std::vector<std::vector<Type>> allocatedTypeRangeMemory;
 
   /// A mutable block of memory used during the matching and rewriting phase of
   /// the bytecode to store ranges of values.
   std::vector<ValueRange> valueRangeMemory;
   /// A set of value ranges that have been allocated by the byte code
   /// interpreter to provide a guaranteed lifetime.
-  std::vector<llvm::OwningArrayRef<Value>> allocatedValueRangeMemory;
+  std::vector<std::vector<Value>> allocatedValueRangeMemory;
 
   /// The current index of ranges being iterated over for each level of nesting.
   /// These are always maintained at 0 for the loops that are not active, so we
@@ -223,5 +224,39 @@ private:
 
 } // namespace detail
 } // namespace mlir
+
+#else
+
+namespace mlir::detail {
+
+class PDLByteCodeMutableState {
+public:
+  void cleanupAfterMatchAndRewrite() {}
+  void updatePatternBenefit(unsigned patternIndex, PatternBenefit benefit) {}
+};
+
+class PDLByteCodePattern : public Pattern {};
+
+class PDLByteCode {
+public:
+  struct MatchResult {
+    const PDLByteCodePattern *pattern = nullptr;
+    PatternBenefit benefit;
+  };
+
+  void initializeMutableState(PDLByteCodeMutableState &state) const {}
+  void match(Operation *op, PatternRewriter &rewriter,
+             SmallVectorImpl<MatchResult> &matches,
+             PDLByteCodeMutableState &state) const {}
+  LogicalResult rewrite(PatternRewriter &rewriter, const MatchResult &match,
+                        PDLByteCodeMutableState &state) const {
+    return failure();
+  }
+  ArrayRef<PDLByteCodePattern> getPatterns() const { return {}; }
+};
+
+} // namespace mlir::detail
+
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 #endif // MLIR_REWRITE_BYTECODE_H_

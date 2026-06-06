@@ -10,8 +10,6 @@
 // with freestanding compilation. See `darwin_add_builtin_libraries`.
 
 #include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "InstrProfiling.h"
@@ -59,6 +57,10 @@ COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
   char ResetValue =
       (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE) ? 0xFF : 0;
   memset(I, ResetValue, E - I);
+
+  I = __llvm_profile_begin_bitmap();
+  E = __llvm_profile_end_bitmap();
+  memset(I, 0x0, E - I);
 
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();

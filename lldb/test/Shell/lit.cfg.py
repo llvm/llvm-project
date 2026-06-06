@@ -1,5 +1,6 @@
 # -*- Python -*-
 
+import json
 import os
 import platform
 import re
@@ -20,11 +21,19 @@ from helper import toolchain
 config.name = "lldb-shell"
 
 # testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+# We prefer the lit internal shell which provides a better user experience on
+# failures and is faster unless the user explicitly disables it with
+# LIT_USE_INTERNAL_SHELL=0 env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
+config.test_format = toolchain.ShTestLldb(not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
-config.suffixes = [".test", ".cpp", ".s", ".m"]
+config.suffixes = [".test", ".cpp", ".s", ".m", ".ll", ".c"]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
@@ -49,17 +58,17 @@ llvm_config.with_system_environment(
 )
 
 # Enable sanitizer runtime flags.
-config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+if config.llvm_use_sanitizer:
+    config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
+    config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+    config.environment["MallocNanoZone"] = "0"
 
-# Support running the test suite under the lldb-repro wrapper. This makes it
-# possible to capture a test suite run and then rerun all the test from the
-# just captured reproducer.
-lldb_repro_mode = lit_config.params.get("lldb-run-with-repro", None)
-if lldb_repro_mode:
-    config.available_features.add("lldb-repro")
-    lit_config.note("Running Shell tests in {} mode.".format(lldb_repro_mode))
-    toolchain.use_lldb_repro_substitutions(config, lldb_repro_mode)
+if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:
+    if re.match(r".*-linux.*", config.target_triple):
+        config.available_features.add("remote-linux")
+else:
+    # After this, enable_remote == True iff remote testing is going to be used.
+    config.enable_remote = False
 
 llvm_config.use_default_substitutions()
 toolchain.use_lldb_substitutions(config)
@@ -67,6 +76,9 @@ toolchain.use_support_substitutions(config)
 
 if re.match(r"^arm(hf.*-linux)|(.*-linux-gnuabihf)", config.target_triple):
     config.available_features.add("armhf-linux")
+
+if re.match(r".*-(windows|mingw32)", config.target_triple):
+    config.available_features.add("target-windows")
 
 if re.match(r".*-(windows-msvc)$", config.target_triple):
     config.available_features.add("windows-msvc")
@@ -108,7 +120,7 @@ for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    lit_config.maxIndividualTestTime = 600
+    config.maxIndividualTestTime = 600
 else:
     lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
@@ -132,13 +144,16 @@ if "native" in config.available_features:
 if config.lldb_enable_python:
     config.available_features.add("python")
 
+if getattr(config, "lldb_enable_mte", False):
+    config.available_features.add("lldb-mte")
+
 if config.lldb_enable_lua:
     config.available_features.add("lua")
 
 if config.lldb_enable_lzma:
     config.available_features.add("lzma")
 
-if shutil.which("xz") != None:
+if shutil.which("xz") is not None:
     config.available_features.add("xz")
 
 if config.lldb_system_debugserver:
@@ -157,6 +172,17 @@ if config.objc_gnustep_dir:
                 config.environment.get("PATH", ""),
             )
         )
+
+if config.have_dia_sdk:
+    config.available_features.add("diasdk")
+
+if platform.system() == "Windows":
+    if getattr(config, "lldb_use_lldb_server", False):
+        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
+    # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
+    # escape sequences into the output stream, which breaks tests that check
+    # for specific stdout/stderr content.
+    config.environment["LLDB_LAUNCH_FLAG_USE_PIPES"] = "1"
 
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled
@@ -179,3 +205,26 @@ if can_set_dbregs:
 
 if "LD_PRELOAD" in os.environ:
     config.available_features.add("ld_preload-present")
+
+# Determine if a specific version of Xcode's linker contains a bug. We want to
+# skip affected tests if they contain this bug.
+if platform.system() == "Darwin":
+    try:
+        raw_version_details = subprocess.check_output(
+            ("xcrun", "ld", "-version_details")
+        )
+        version_details = json.loads(raw_version_details)
+        version = version_details.get("version", "0")
+        version_tuple = tuple(int(x) for x in version.split("."))
+        if (1000,) <= version_tuple <= (1109,):
+            config.available_features.add("ld_new-bug")
+    except:
+        pass
+
+# Some shell tests dynamically link with python.dll and need to know the
+# location of the Python libraries. This ensures that we use the same
+# version of Python that was used to build lldb to run our tests.
+config.environment["PYTHONHOME"] = config.python_root_dir
+config.environment["PATH"] = os.path.pathsep.join(
+    (config.python_root_dir, config.environment.get("PATH", ""))
+)

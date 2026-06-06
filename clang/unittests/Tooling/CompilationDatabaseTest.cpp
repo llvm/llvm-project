@@ -402,7 +402,6 @@ TEST(findCompileArgsInJsonDatabase, FindsEntry) {
 TEST(findCompileArgsInJsonDatabase, ParsesCompilerWrappers) {
   std::vector<std::pair<std::string, std::string>> Cases = {
       {"distcc gcc foo.c", "gcc foo.c"},
-      {"gomacc clang++ foo.c", "clang++ foo.c"},
       {"sccache clang++ foo.c", "clang++ foo.c"},
       {"ccache gcc foo.c", "gcc foo.c"},
       {"ccache.exe gcc foo.c", "gcc foo.c"},
@@ -647,12 +646,30 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgs) {
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
   ASSERT_TRUE((bool)Database);
   ASSERT_TRUE(ErrorMsg.empty());
+  std::vector<CompileCommand> Result = Database->getCompileCommands("source");
+  ASSERT_EQ(1ul, Result.size());
+  ASSERT_EQ(".", Result[0].Directory);
+  ASSERT_THAT(Result[0].CommandLine,
+              ElementsAre(EndsWith("clang-tool"), "-c", "-DDEF3", "source"));
+  EXPECT_EQ(2, Argc);
+}
+
+TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsHeader) {
+  const char *Argv[] = {"1",  "2",          "--",    "-xc++-header",
+                        "-c", "somefile.h", "-DDEF3"};
+  int Argc = std::size(Argv);
+  std::string ErrorMsg;
+  std::unique_ptr<FixedCompilationDatabase> Database =
+      FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
+  ASSERT_TRUE((bool)Database);
+  ASSERT_TRUE(ErrorMsg.empty());
   std::vector<CompileCommand> Result =
     Database->getCompileCommands("source");
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
   ASSERT_THAT(Result[0].CommandLine,
-              ElementsAre(EndsWith("clang-tool"), "-c", "-DDEF3", "source"));
+              ElementsAre(EndsWith("clang-tool"), "-xc++-header", "-c",
+                          "-DDEF3", "source"));
   EXPECT_EQ(2, Argc);
 }
 
@@ -686,7 +703,6 @@ TEST(ParseFixedCompilationDatabase, HandlesArgv0) {
     Database->getCompileCommands("source");
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
-  std::vector<std::string> Expected;
   ASSERT_THAT(Result[0].CommandLine,
               ElementsAre(EndsWith("clang-tool"), "source"));
   EXPECT_EQ(2, Argc);
@@ -831,6 +847,30 @@ TEST_F(InterpolateTest, Language) {
             "clang -D dir/aux.cpp -x objective-c++-header -std=c++17");
 }
 
+TEST_F(InterpolateTest, StdTransferSameFamily) {
+  // ObjC++ → C++ .hpp header: same standard family, -std should survive.
+  add("dir/foo.mm", "-std=c++20");
+  EXPECT_EQ(getCommand("dir/foo.hh"), "clang -D dir/foo.mm -std=c++20");
+
+  // Explicit -x objective-c++ on .cpp → C++ header: same family.
+  add("dir/bar.cpp", "-x objective-c++ -std=c++20");
+  EXPECT_EQ(getCommand("dir/bar.hh"), "clang -D dir/bar.cpp -std=c++20");
+
+  // ObjC++ → C++ .h header: same standard family, -std should survive.
+  add("dir/qux.mm", "-std=c++20");
+  EXPECT_EQ(getCommand("dir/qux.h"),
+            "clang -D dir/qux.mm -x objective-c++-header -std=c++20");
+
+  // ObjC → C: same standard family, -std should survive.
+  add("dir/baz.m", "-std=c17");
+  EXPECT_EQ(getCommand("dir/baz.c"), "clang -D dir/baz.m -std=c17");
+}
+
+TEST_F(InterpolateTest, CXX20Modules) {
+  add("dir/foo.cpp", "-std=c++20");
+  EXPECT_EQ(getCommand("dir/foo.cppm"), "clang -D dir/foo.cpp -std=c++20");
+}
+
 TEST_F(InterpolateTest, Strip) {
   add("dir/foo.cpp", "-o foo.o -Wall");
   // the -o option and the input file are removed, but -Wall is preserved.
@@ -955,7 +995,8 @@ TEST_F(TargetAndModeTest, TargetAndMode) {
 
 class ExpandResponseFilesTest : public MemDBTest {
 public:
-  ExpandResponseFilesTest() : FS(new llvm::vfs::InMemoryFileSystem) {}
+  ExpandResponseFilesTest()
+      : FS(llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()) {}
 
 protected:
   void addFile(StringRef File, StringRef Content) {

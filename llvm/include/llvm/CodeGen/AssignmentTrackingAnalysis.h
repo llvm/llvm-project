@@ -1,13 +1,21 @@
+//===-- llvm/CodeGen/AssignmentTrackingAnalysis.h --------------*- C++ -*--===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CODEGEN_ASSIGNMENTTRACKINGANALYSIS_H
 #define LLVM_CODEGEN_ASSIGNMENTTRACKINGANALYSIS_H
 
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
-class Function;
 class Instruction;
 class raw_ostream;
 } // namespace llvm
@@ -84,17 +92,36 @@ public:
   }
   ///@}
 
-  void print(raw_ostream &OS, const Function &Fn) const;
+  LLVM_ABI void print(raw_ostream &OS, const Function &Fn) const;
 
   ///@{
   /// Non-const methods used by AssignmentTrackingAnalysis (which invalidate
   /// analysis results if called incorrectly).
-  void init(FunctionVarLocsBuilder &Builder);
-  void clear();
+  LLVM_ABI void init(FunctionVarLocsBuilder &Builder);
+  LLVM_ABI void clear();
   ///@}
 };
 
-class AssignmentTrackingAnalysis : public FunctionPass {
+class DebugAssignmentTrackingAnalysis
+    : public AnalysisInfoMixin<DebugAssignmentTrackingAnalysis> {
+  friend AnalysisInfoMixin<DebugAssignmentTrackingAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = FunctionVarLocs;
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+class DebugAssignmentTrackingPrinterPass
+    : public RequiredPassInfoMixin<DebugAssignmentTrackingPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  DebugAssignmentTrackingPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+class LLVM_ABI AssignmentTrackingAnalysis : public FunctionPass {
   std::unique_ptr<FunctionVarLocs> Results;
 
 public:
@@ -103,8 +130,6 @@ public:
   AssignmentTrackingAnalysis();
 
   bool runOnFunction(Function &F) override;
-
-  static bool isRequired() { return true; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

@@ -57,6 +57,7 @@ public:
     LanguageRuntimeDescriptionDisplayVerbosity m_verbosity;
     LazyBool auto_apply_fixits;
     LazyBool suppress_persistent_result;
+    bool cpp_ignore_context_qualifiers;
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);
@@ -75,7 +76,7 @@ protected:
   bool IOHandlerIsInputComplete(IOHandler &io_handler,
                                 StringList &lines) override;
 
-  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
+  void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
   /// Evaluates the given expression.
   /// \param output_stream The stream to which the evaluation result will be

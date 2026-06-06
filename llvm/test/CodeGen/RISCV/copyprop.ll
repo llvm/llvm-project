@@ -2,7 +2,7 @@
 ; RUN: llc < %s -O3 -mtriple=riscv64 -riscv-enable-copy-propagation=false | FileCheck %s --check-prefix=NOPROP
 ; RUN: llc < %s -O3 -mtriple=riscv64 -riscv-enable-copy-propagation=true | FileCheck %s --check-prefix=PROP
 
-define void @copyprop_after_mbp(i32 %v, i32* %a, i32* %b, i32* %c, i32* %d) {
+define void @copyprop_after_mbp(i32 %v, ptr %a, ptr %b, ptr %c, ptr %d) {
 ; NOPROP-LABEL: copyprop_after_mbp:
 ; NOPROP:       # %bb.0:
 ; NOPROP-NEXT:    sext.w a0, a0
@@ -49,16 +49,16 @@ define void @copyprop_after_mbp(i32 %v, i32* %a, i32* %b, i32* %c, i32* %d) {
   br i1 %1, label %bb.0, label %bb.1
 
 bb.0:
-  store i32 15, i32* %b, align 4
+  store i32 15, ptr %b, align 4
   br label %bb.2
 
 bb.1:
-  store i32 25, i32* %c, align 4
+  store i32 25, ptr %c, align 4
   br label %bb.2
 
 bb.2:
   %2 = phi i32 [ 1, %bb.0 ], [ 0, %bb.1 ]
-  store i32 %2, i32* %a, align 4
-  store i32 12, i32* %d, align 4
+  store i32 %2, ptr %a, align 4
+  store i32 12, ptr %d, align 4
   ret void
 }

@@ -54,20 +54,20 @@ llvm::StringRef TraceIntelPT::PluginProperties::GetSettingName() {
 
 TraceIntelPT::PluginProperties::PluginProperties() : Properties() {
   m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-  m_collection_sp->Initialize(g_traceintelpt_properties);
+  m_collection_sp->Initialize(g_traceintelpt_properties_def);
 }
 
 uint64_t
 TraceIntelPT::PluginProperties::GetInfiniteDecodingLoopVerificationThreshold() {
   const uint32_t idx = ePropertyInfiniteDecodingLoopVerificationThreshold;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_traceintelpt_properties[idx].default_uint_value);
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_traceintelpt_properties[idx].default_uint_value);
 }
 
 uint64_t TraceIntelPT::PluginProperties::GetExtremelyLargeDecodingThreshold() {
   const uint32_t idx = ePropertyExtremelyLargeDecodingThreshold;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_traceintelpt_properties[idx].default_uint_value);
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_traceintelpt_properties[idx].default_uint_value);
 }
 
 TraceIntelPT::PluginProperties &TraceIntelPT::GetGlobalProperties() {

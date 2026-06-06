@@ -133,6 +133,7 @@ static const EnumEntry<uint8_t> CallingConventions[] = {
     ENUM_ENTRY(CallingConvention, ClrCall),
     ENUM_ENTRY(CallingConvention, Inline),
     ENUM_ENTRY(CallingConvention, NearVector),
+    ENUM_ENTRY(CallingConvention, Swift),
 };
 
 static const EnumEntry<uint8_t> FunctionOptionEnum[] = {

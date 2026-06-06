@@ -13,6 +13,7 @@
 
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/JsonSupport.h"
 
 using namespace clang;
@@ -20,27 +21,27 @@ using namespace clang;
 ProgramPointTag::~ProgramPointTag() {}
 
 ProgramPoint ProgramPoint::getProgramPoint(const Stmt *S, ProgramPoint::Kind K,
-                                           const LocationContext *LC,
-                                           const ProgramPointTag *tag){
+                                           const StackFrame *SF,
+                                           const ProgramPointTag *tag) {
   switch (K) {
     default:
       llvm_unreachable("Unhandled ProgramPoint kind");
     case ProgramPoint::PreStmtKind:
-      return PreStmt(S, LC, tag);
+      return PreStmt(S, SF, tag);
     case ProgramPoint::PostStmtKind:
-      return PostStmt(S, LC, tag);
+      return PostStmt(S, SF, tag);
     case ProgramPoint::PreLoadKind:
-      return PreLoad(S, LC, tag);
+      return PreLoad(S, SF, tag);
     case ProgramPoint::PostLoadKind:
-      return PostLoad(S, LC, tag);
+      return PostLoad(S, SF, tag);
     case ProgramPoint::PreStoreKind:
-      return PreStore(S, LC, tag);
+      return PreStore(S, SF, tag);
     case ProgramPoint::PostLValueKind:
-      return PostLValue(S, LC, tag);
+      return PostLValue(S, SF, tag);
     case ProgramPoint::PostStmtPurgeDeadSymbolsKind:
-      return PostStmtPurgeDeadSymbols(S, LC, tag);
+      return PostStmtPurgeDeadSymbols(S, SF, tag);
     case ProgramPoint::PreStmtPurgeDeadSymbolsKind:
-      return PreStmtPurgeDeadSymbols(S, LC, tag);
+      return PreStmtPurgeDeadSymbols(S, SF, tag);
   }
 }
 
@@ -48,9 +49,124 @@ LLVM_DUMP_METHOD void ProgramPoint::dump() const {
   return printJson(llvm::errs());
 }
 
+StringRef ProgramPoint::getProgramPointKindName(Kind K) {
+  switch (K) {
+  case BlockEdgeKind:
+    return "BlockEdge";
+  case BlockEntranceKind:
+    return "BlockEntrance";
+  case BlockExitKind:
+    return "BlockExit";
+  case PreStmtKind:
+    return "PreStmt";
+  case PreStmtPurgeDeadSymbolsKind:
+    return "PreStmtPurgeDeadSymbols";
+  case PostStmtPurgeDeadSymbolsKind:
+    return "PostStmtPurgeDeadSymbols";
+  case PostStmtKind:
+    return "PostStmt";
+  case PreLoadKind:
+    return "PreLoad";
+  case PostLoadKind:
+    return "PostLoad";
+  case PreStoreKind:
+    return "PreStore";
+  case PostStoreKind:
+    return "PostStore";
+  case PostConditionKind:
+    return "PostCondition";
+  case PostLValueKind:
+    return "PostLValue";
+  case PostAllocatorCallKind:
+    return "PostAllocatorCall";
+  case PostInitializerKind:
+    return "PostInitializer";
+  case CallEnterKind:
+    return "CallEnter";
+  case CallExitBeginKind:
+    return "CallExitBegin";
+  case CallExitEndKind:
+    return "CallExitEnd";
+  case FunctionExitKind:
+    return "FunctionExit";
+  case PreImplicitCallKind:
+    return "PreImplicitCall";
+  case PostImplicitCallKind:
+    return "PostImplicitCall";
+  case LoopExitKind:
+    return "LoopExit";
+  case EpsilonKind:
+    return "Epsilon";
+  }
+  llvm_unreachable("Unknown ProgramPoint kind");
+}
+
+std::optional<SourceLocation> ProgramPoint::getSourceLocation() const {
+  switch (getKind()) {
+  case BlockEdgeKind:
+    // If needed, the source and or destination beginning can be used to get
+    // source location.
+    return std::nullopt;
+  case BlockEntranceKind:
+    // If needed, first statement of the block can be used.
+    return std::nullopt;
+  case BlockExitKind:
+    if (const auto *B = castAs<BlockExit>().getBlock()) {
+      if (const auto *T = B->getTerminatorStmt()) {
+        return T->getBeginLoc();
+      }
+    }
+    return std::nullopt;
+  case PreStmtKind:
+  case PreStmtPurgeDeadSymbolsKind:
+  case PostStmtPurgeDeadSymbolsKind:
+  case PostStmtKind:
+  case PreLoadKind:
+  case PostLoadKind:
+  case PreStoreKind:
+  case PostStoreKind:
+  case PostConditionKind:
+  case PostLValueKind:
+  case PostAllocatorCallKind:
+    if (const Stmt *S = castAs<StmtPoint>().getStmt())
+      return S->getBeginLoc();
+    return std::nullopt;
+  case PostInitializerKind:
+    if (const auto *Init = castAs<PostInitializer>().getInitializer())
+      return Init->getSourceLocation();
+    return std::nullopt;
+  case CallEnterKind:
+    if (const Stmt *S = castAs<CallEnter>().getCallExpr())
+      return S->getBeginLoc();
+    return std::nullopt;
+  case CallExitBeginKind:
+    if (const Stmt *S = castAs<CallExitBegin>().getReturnStmt())
+      return S->getBeginLoc();
+    return std::nullopt;
+  case CallExitEndKind:
+    return std::nullopt;
+  case FunctionExitKind:
+    if (const auto *B = castAs<FunctionExitPoint>().getBlock();
+        B && B->getTerminatorStmt())
+      return B->getTerminatorStmt()->getBeginLoc();
+    return std::nullopt;
+  case PreImplicitCallKind:
+    return castAs<ImplicitCallPoint>().getLocation();
+  case PostImplicitCallKind:
+    return castAs<ImplicitCallPoint>().getLocation();
+  case LoopExitKind:
+    if (const Stmt *S = castAs<LoopExit>().getLoopStmt())
+      return S->getBeginLoc();
+    return std::nullopt;
+  case EpsilonKind:
+    return std::nullopt;
+  }
+  llvm_unreachable("Unknown ProgramPoint kind");
+}
+
 void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
   const ASTContext &Context =
-      getLocationContext()->getAnalysisDeclContext()->getASTContext();
+      getStackFrame()->getAnalysisDeclContext()->getASTContext();
   const SourceManager &SM = Context.getSourceManager();
   const PrintingPolicy &PP = Context.getPrintingPolicy();
   const bool AddQuotes = true;
@@ -81,7 +197,10 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
     llvm_unreachable("BlockExitKind");
     break;
   case ProgramPoint::CallEnterKind:
-    Out << "CallEnter\"";
+    Out << "CallEnter\", \"callee_decl\": \"";
+    Out << AnalysisDeclContext::getFunctionName(
+               castAs<CallEnter>().getCalleeStackFrame()->getDecl())
+        << '\"';
     break;
   case ProgramPoint::CallExitBeginKind:
     Out << "CallExitBegin\"";
@@ -157,7 +276,7 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
             LHS->printJson(Out, nullptr, PP, AddQuotes);
           } else {
             Out << "null";
-	  }
+          }
 
           Out << ", \"rhs\": ";
           if (const Stmt *RHS = C->getRHS()) {
@@ -238,6 +357,4 @@ SimpleProgramPointTag::SimpleProgramPointTag(StringRef MsgProvider,
                                              StringRef Msg)
   : Desc((MsgProvider + " : " + Msg).str()) {}
 
-StringRef SimpleProgramPointTag::getTagDescription() const {
-  return Desc;
-}
+StringRef SimpleProgramPointTag::getDebugTag() const { return Desc; }

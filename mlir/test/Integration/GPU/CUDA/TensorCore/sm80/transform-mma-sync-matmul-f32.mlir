@@ -1,18 +1,18 @@
 // RUN: mlir-opt %s \
-// RUN:   -test-transform-dialect-interpreter \
+// RUN:   -transform-interpreter \
 // RUN: | FileCheck %s --check-prefix=CHECK-MMA-SYNC
 
 // CHECK-MMA-SYNC-LABEL: func @main() {
-//       CHECK-MMA-SYNC:   nvgpu.mma.sync(%{{.*}}) {mmaShape = [16, 8, 4], tf32Enabled} 
+//       CHECK-MMA-SYNC:   nvgpu.mma.sync(%{{.*}}) {mmaShape = [16, 8, 4], tf32Enabled}
 //  CHECK-MMA-SYNC-SAME:     : (vector<2x1xf32>, vector<1x1xf32>, vector<2x2xf32>) -> vector<2x2xf32>
 
 // Tested to run locally in 1.7s.
 
 // RUN: mlir-opt %s \
-// RUN:   -test-transform-dialect-interpreter \
+// RUN:   -transform-interpreter \
 // RUN:   -test-transform-dialect-erase-schedule \
-// RUN:   -test-lower-to-nvvm="kernel-index-bitwidth=32 cubin-chip=sm_80 cubin-features=+ptx76 cubin-format=%gpu_compilation_format" \
-// RUN: | mlir-cpu-runner \
+// RUN:   -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_80 cubin-features=+ptx76 cubin-format=%gpu_compilation_format" \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -47,21 +47,21 @@ func.func @main() {
   %f0 = arith.constant 0.0e+00 : f32
   %c32 = arith.constant 32 : index
 
-  // Intialize the lhs matrix with a linspace function.
+  // Initialize the lhs matrix with a linspace function.
   scf.for %r = %c0 to %M step %c1 {
     scf.for %c = %c0 to %K step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %K) : (index, index, index) -> f32
       memref.store %idx, %lhs[%r, %c] : !lhs_memref_type
     }
   }
-  // Intialize the rhs matrix with a linspace function.
+  // Initialize the rhs matrix with a linspace function.
   scf.for %r = %c0 to %K step %c1 {
     scf.for %c = %c0 to %N step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %N) : (index, index, index) -> f32
       memref.store %idx, %rhs[%r, %c] : !rhs_memref_type
     }
   }
-  // Intialize the rhs matrix with a linspace function.
+  // Initialize the rhs matrix with a linspace function.
   scf.for %r = %c0 to %M step %c1 {
     scf.for %c = %c0 to %N step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %N) : (index, index, index) -> f32
@@ -154,10 +154,12 @@ func.func @main() {
 
 func.func private @printMemrefF32(memref<*xf32>)
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  transform.nvgpu.rewrite_matmul_as_mma_sync %matmul 
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.nvgpu.rewrite_matmul_as_mma_sync %matmul
+      : (!transform.any_op) -> ()
+    transform.yield
+  }
 }

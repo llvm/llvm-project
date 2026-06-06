@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}global_truncstore_f64_to_f16:
 ; GCN: s_endpgm
@@ -51,5 +51,19 @@ define amdgpu_kernel void @global_truncstore_v16f64_to_v16f16(ptr addrspace(1) %
   %val = load <16 x double>, ptr addrspace(1) %in
   %cvt = fptrunc <16 x double> %val to <16 x half>
   store <16 x half> %cvt, ptr addrspace(1) %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}global_truncstore_v6f64_to_v6f16:
+define void @global_truncstore_v6f64_to_v6f16(ptr addrspace(1) %ptr, <6 x double> %src) {
+  %trunc = fptrunc <6 x double> %src to <6 x half>
+  store <6 x half> %trunc, ptr addrspace(1) %ptr
+  ret void
+}
+
+; GCN-LABEL: {{^}}global_truncstore_v6f64_to_v6bf16:
+define void @global_truncstore_v6f64_to_v6bf16(ptr addrspace(1) %ptr, <6 x double> %src) {
+  %trunc = fptrunc <6 x double> %src to <6 x bfloat>
+  store <6 x bfloat> %trunc, ptr addrspace(1) %ptr
   ret void
 }

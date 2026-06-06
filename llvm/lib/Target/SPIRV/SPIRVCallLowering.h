@@ -26,6 +26,17 @@ private:
   // Used to create and assign function, argument, and return type information.
   SPIRVGlobalRegistry *GR;
 
+  // Used to postpone producing of indirect function pointer types
+  // after all indirect calls info is collected
+  struct SPIRVIndirectCall {
+    const Type *RetTy = nullptr;
+    SmallVector<Type *> ArgTys;
+    SmallVector<Register> ArgRegs;
+    Register Callee;
+  };
+  void produceIndirectPtrType(MachineIRBuilder &MIRBuilder,
+                              const SPIRVIndirectCall &IC) const;
+
 public:
   SPIRVCallLowering(const SPIRVTargetLowering &TLI, SPIRVGlobalRegistry *GR);
 

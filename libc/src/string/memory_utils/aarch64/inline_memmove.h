@@ -8,18 +8,16 @@
 #ifndef LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMMOVE_H
 #define LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMMOVE_H
 
-#include "src/__support/macros/config.h"        // LIBC_INLINE
-#include "src/string/memory_utils/op_aarch64.h" // aarch64::kNeon
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE void inline_memmove_aarch64(Ptr dst, CPtr src, size_t count) {
-  static_assert(aarch64::kNeon, "aarch64 supports vector types");
   using uint128_t = generic_v128;
   using uint256_t = generic_v256;
   using uint512_t = generic_v512;
@@ -48,6 +46,6 @@ LIBC_INLINE void inline_memmove_aarch64(Ptr dst, CPtr src, size_t count) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMMOVE_H

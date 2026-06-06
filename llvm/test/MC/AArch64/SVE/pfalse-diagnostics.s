@@ -15,3 +15,8 @@ pfalse pn16.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: pfalse pn16.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+pfalse pn5.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register
+// CHECK-NEXT: pfalse pn5.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

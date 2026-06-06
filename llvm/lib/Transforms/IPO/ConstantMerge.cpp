@@ -29,6 +29,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO.h"
 #include <algorithm>
 #include <cassert>
@@ -62,16 +63,10 @@ static bool IsBetterCanonical(const GlobalVariable &A,
   if (A.hasLocalLinkage() && !B.hasLocalLinkage())
     return false;
 
-  return A.hasGlobalUnnamedAddr();
-}
+  if (A.hasGlobalUnnamedAddr() != B.hasGlobalUnnamedAddr())
+    return A.hasGlobalUnnamedAddr();
 
-static bool hasMetadataOtherThanDebugLoc(const GlobalVariable *GV) {
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  GV->getAllMetadata(MDs);
-  for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg)
-      return true;
-  return false;
+  return !A.hasComdat();
 }
 
 static void copyDebugLocMetadata(const GlobalVariable *From,
@@ -84,7 +79,7 @@ static void copyDebugLocMetadata(const GlobalVariable *From,
 
 static Align getAlign(GlobalVariable *GV) {
   return GV->getAlign().value_or(
-      GV->getParent()->getDataLayout().getPreferredAlign(GV));
+      GV->getDataLayout().getPreferredAlign(GV));
 }
 
 static bool
@@ -103,9 +98,19 @@ enum class CanMerge { No, Yes };
 static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
   if (!Old->hasGlobalUnnamedAddr() && !New->hasGlobalUnnamedAddr())
     return CanMerge::No;
-  if (hasMetadataOtherThanDebugLoc(Old))
+  if (Old->hasMetadataOtherThanDebugLoc())
     return CanMerge::No;
-  assert(!hasMetadataOtherThanDebugLoc(New));
+  assert(!New->hasMetadataOtherThanDebugLoc());
+
+  // Merging constants with different comdats means one group cannot in general
+  // be dropped independently without the other group now having an invalid
+  // reference to the dropped constant.
+  // If we merge into a constant that does not have comdat, we can merge even
+  // when the old constant has a comdat group because it has local linkage and
+  // is therefore not the comdat key.
+  if (Old->getComdat() != New->getComdat() && New->hasComdat())
+    return CanMerge::No;
+
   if (!Old->hasGlobalUnnamedAddr())
     New->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
   return CanMerge::Yes;
@@ -171,7 +176,7 @@ static bool mergeConstants(Module &M) {
         continue;
 
       // Don't touch globals with metadata other then !dbg.
-      if (hasMetadataOtherThanDebugLoc(&GV))
+      if (GV.hasMetadataOtherThanDebugLoc())
         continue;
 
       Constant *Init = GV.getInitializer();
@@ -225,9 +230,7 @@ static bool mergeConstants(Module &M) {
     // Now that we have figured out which replacements must be made, do them all
     // now.  This avoid invalidating the pointers in CMap, which are unneeded
     // now.
-    for (unsigned i = 0, e = SameContentReplacements.size(); i != e; ++i) {
-      GlobalVariable *Old = SameContentReplacements[i].first;
-      GlobalVariable *New = SameContentReplacements[i].second;
+    for (const auto &[Old, New] : SameContentReplacements) {
       replace(M, Old, New);
       ++ChangesMade;
       ++NumIdenticalMerged;

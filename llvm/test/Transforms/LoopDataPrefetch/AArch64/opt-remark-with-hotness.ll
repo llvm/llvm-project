@@ -78,5 +78,5 @@ for.body:                                         ; preds = %for.body, %for.body
 !19 = !{!"int", !13, i64 0}
 !20 = !DILocation(line: 9, column: 11, scope: !6)
 !21 = !{!"function_entry_count", i64 6}
-!22 = !{!"branch_weights", i32 99, i32 1}
+!22 = !{!"branch_weights", i32 2000, i32 1}
 !23 = !{!"branch_weights", i32 1, i32 99}

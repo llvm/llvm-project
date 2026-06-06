@@ -120,9 +120,10 @@ CompUnitSP SymbolFileSymtab::ParseCompileUnitAtIndex(uint32_t idx) {
     const Symbol *cu_symbol =
         m_objfile_sp->GetSymtab()->SymbolAtIndex(m_source_indexes[idx]);
     if (cu_symbol)
-      cu_sp = std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr,
-                                            cu_symbol->GetName().AsCString(), 0,
-                                            eLanguageTypeUnknown, eLazyBoolNo);
+      cu_sp =
+          std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr,
+                                        cu_symbol->GetName().AsCString(nullptr),
+                                        0, eLanguageTypeUnknown, eLazyBoolNo);
   }
   return cu_sp;
 }
@@ -179,14 +180,14 @@ size_t SymbolFileSymtab::ParseFunctions(CompileUnit &comp_unit) {
               }
             }
 
-            FunctionSP func_sp(
-                new Function(&comp_unit,
-                             symbol_idx,       // UserID is the DIE offset
-                             LLDB_INVALID_UID, // We don't have any type info
-                                               // for this function
-                             curr_symbol->GetMangled(), // Linker/mangled name
-                             nullptr, // no return type for a code symbol...
-                             func_range)); // first address range
+            FunctionSP func_sp(new Function(
+                &comp_unit,
+                symbol_idx,                // UserID is the DIE offset
+                LLDB_INVALID_UID,          // We don't have any type info
+                                           // for this function
+                curr_symbol->GetMangled(), // Linker/mangled name
+                nullptr, // no return type for a code symbol...
+                curr_symbol->GetAddress(), AddressRanges{func_range}));
 
             if (func_sp.get() != nullptr) {
               comp_unit.AddFunction(func_sp);
@@ -211,7 +212,7 @@ bool SymbolFileSymtab::ParseDebugMacros(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileSymtab::ParseSupportFiles(CompileUnit &comp_unit,
-                                         FileSpecList &support_files) {
+                                         SupportFileList &support_files) {
   return false;
 }
 

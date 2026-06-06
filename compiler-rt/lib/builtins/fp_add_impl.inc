@@ -91,7 +91,7 @@ static __inline fp_t __addXf3__(fp_t a, fp_t b) {
 
   // Shift the significand of b by the difference in exponents, with a sticky
   // bottom bit to get rounding correct.
-  const unsigned int align = aExponent - bExponent;
+  const unsigned int align = (unsigned int)(aExponent - bExponent);
   if (align) {
     if (align < typeWidth) {
       const bool sticky = (bSignificand << (typeWidth - align)) != 0;
@@ -106,7 +106,7 @@ static __inline fp_t __addXf3__(fp_t a, fp_t b) {
     if (aSignificand == 0)
       return fromRep(0);
 
-    // If partial cancellation occured, we need to left-shift the result
+    // If partial cancellation occurred, we need to left-shift the result
     // and adjust the exponent.
     if (aSignificand < implicitBit << 3) {
       const int shift = rep_clz(aSignificand) - rep_clz(implicitBit << 3);

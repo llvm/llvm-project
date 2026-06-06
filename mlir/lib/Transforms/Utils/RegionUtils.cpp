@@ -7,23 +7,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/RegionUtils.h"
+
+#include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Transforms/TopologicalSortUtils.h"
-
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Support/DebugLog.h"
 
 #include <deque>
+#include <iterator>
 
 using namespace mlir;
+
+#define DEBUG_TYPE "region-utils"
 
 void mlir::replaceAllUsesInRegionWith(Value orig, Value replacement,
                                       Region &region) {
@@ -133,8 +141,8 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
   Block *entryBlock = &region.front();
   SmallVector<Type> newArgTypes =
       llvm::to_vector(entryBlock->getArgumentTypes());
-  SmallVector<Location> newArgLocs = llvm::to_vector(llvm::map_range(
-      entryBlock->getArguments(), [](BlockArgument b) { return b.getLoc(); }));
+  SmallVector<Location> newArgLocs = llvm::map_to_vector(
+      entryBlock->getArguments(), [](BlockArgument b) { return b.getLoc(); });
 
   // Append the types of the captured values.
   for (auto value : finalCapturedValues) {
@@ -150,8 +158,9 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
   // Create a mapping between the captured values and the new arguments added.
   IRMapping map;
   auto replaceIfFn = [&](OpOperand &use) {
-    return use.getOwner()->getBlock()->getParent() == &region;
+    return region.isAncestor(use.getOwner()->getParentRegion());
   };
+
   for (auto [arg, capturedVal] :
        llvm::zip(newEntryBlockArgs.take_back(finalCapturedValues.size()),
                  finalCapturedValues)) {
@@ -159,9 +168,9 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
     rewriter.replaceUsesWithIf(capturedVal, arg, replaceIfFn);
   }
   rewriter.setInsertionPointToStart(newEntryBlock);
-  for (auto clonedOp : clonedOperations) {
+  for (auto *clonedOp : clonedOperations) {
     Operation *newOp = rewriter.clone(*clonedOp, map);
-    rewriter.replaceOpWithIf(clonedOp, newOp->getResults(), replaceIfFn);
+    rewriter.replaceOpUsesWithIf(clonedOp, newOp->getResults(), replaceIfFn);
   }
   rewriter.mergeBlocks(
       entryBlock, newEntryBlock,
@@ -177,26 +186,43 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
 /// if any blocks were erased, failure otherwise.
 // TODO: We could likely merge this with the DCE algorithm below.
 LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
-                                           MutableArrayRef<Region> regions) {
+                                           MutableArrayRef<Region> regions,
+                                           bool recurse) {
+  LDBG() << "Starting eraseUnreachableBlocks with " << regions.size()
+         << " regions";
+
   // Set of blocks found to be reachable within a given region.
   llvm::df_iterator_default_set<Block *, 16> reachable;
   // If any blocks were found to be dead.
-  bool erasedDeadBlocks = false;
+  int erasedDeadBlocks = 0;
 
   SmallVector<Region *, 1> worklist;
   worklist.reserve(regions.size());
   for (Region &region : regions)
     worklist.push_back(&region);
+
+  LDBG(2) << "Initial worklist size: " << worklist.size();
+
   while (!worklist.empty()) {
     Region *region = worklist.pop_back_val();
-    if (region->empty())
+    if (region->empty()) {
+      LDBG(2) << "Skipping empty region";
       continue;
+    }
+
+    LDBG(2) << "Processing region with " << region->getBlocks().size()
+            << " blocks";
+    if (region->getParentOp())
+      LDBG(2) << " -> for operation:  "
+              << OpWithFlags(region->getParentOp(),
+                             OpPrintingFlags().skipRegions());
 
     // If this is a single block region, just collect the nested regions.
-    if (std::next(region->begin()) == region->end()) {
-      for (Operation &op : region->front())
-        for (Region &region : op.getRegions())
-          worklist.push_back(&region);
+    if (region->hasOneBlock()) {
+      if (recurse)
+        for (Operation &op : region->front())
+          for (Region &region : op.getRegions())
+            worklist.push_back(&region);
       continue;
     }
 
@@ -205,24 +231,32 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
     for (Block *block : depth_first_ext(&region->front(), reachable))
       (void)block /* Mark all reachable blocks */;
 
+    LDBG(2) << "Found " << reachable.size() << " reachable blocks out of "
+            << region->getBlocks().size() << " total blocks";
+
     // Collect all of the dead blocks and push the live regions onto the
     // worklist.
     for (Block &block : llvm::make_early_inc_range(*region)) {
       if (!reachable.count(&block)) {
+        LDBG() << "Erasing unreachable block: " << &block;
         block.dropAllDefinedValueUses();
         rewriter.eraseBlock(&block);
-        erasedDeadBlocks = true;
+        ++erasedDeadBlocks;
         continue;
       }
 
       // Walk any regions within this block.
-      for (Operation &op : block)
-        for (Region &region : op.getRegions())
-          worklist.push_back(&region);
+      if (recurse)
+        for (Operation &op : block)
+          for (Region &region : op.getRegions())
+            worklist.push_back(&region);
     }
   }
 
-  return success(erasedDeadBlocks);
+  LDBG() << "Finished eraseUnreachableBlocks, erased " << erasedDeadBlocks
+         << " dead blocks";
+
+  return success(erasedDeadBlocks > 0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -413,7 +447,7 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
   for (Region &region : regions) {
     if (region.empty())
       continue;
-    bool hasSingleBlock = llvm::hasSingleElement(region);
+    bool hasSingleBlock = region.hasOneBlock();
 
     // Delete every operation that is not live. Graph regions may have cycles
     // in the use-def graph, so we must explicitly dropAllUses() from each
@@ -476,12 +510,143 @@ LogicalResult mlir::runRegionDCE(RewriterBase &rewriter,
   return deleteDeadness(rewriter, regions, liveMap);
 }
 
+bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
+                                     bool includeNestedRegions) {
+  LDBG() << "Starting eliminateTriviallyDeadOps with "
+         << region.getBlocks().size()
+         << " blocks, includeNestedRegions=" << includeNestedRegions;
+  if (Operation *parentOp = region.getParentOp())
+    LDBG(2) << " -> parent operation: "
+            << OpWithFlags(parentOp, OpPrintingFlags().skipRegions());
+
+  bool changed = false;
+  unsigned erasedOps = 0;
+  unsigned seededOps = 0;
+  unsigned enqueuedDefs = 0;
+
+  // Step 1: walk each op in reverse program order. If the op is already
+  // trivially dead, erase it outright — there's no point recursing into
+  // regions that will be destroyed with it. Otherwise, if
+  // `includeNestedRegions` is set, recurse into its nested regions so values
+  // defined in `region` may lose their last user and show up as dead in
+  // step 2's seed. Reverse iteration lets dead chains propagate within this
+  // single pass.
+  for (Block &block : llvm::reverse(region)) {
+    LDBG(2) << "Scanning block " << &block << " with "
+            << block.getOperations().size() << " operations";
+    for (Operation &op :
+         llvm::make_early_inc_range(llvm::reverse(block.getOperations()))) {
+      LDBG(3) << "Visiting operation: "
+              << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+      if (isOpTriviallyDead(&op)) {
+        LDBG() << "Erasing trivially dead operation: "
+               << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+        rewriter.eraseOp(&op);
+        changed = true;
+        ++erasedOps;
+        continue;
+      }
+      if (includeNestedRegions) {
+        unsigned regionIdx = 0;
+        for (Region &nested : op.getRegions()) {
+          LDBG(2) << "Recursing into nested region #" << regionIdx
+                  << " of operation " << op.getName();
+          bool nestedChanged =
+              eliminateTriviallyDeadOps(rewriter, nested, includeNestedRegions);
+          LDBG(2) << "Finished nested region #" << regionIdx << " of operation "
+                  << op.getName() << ", changed=" << nestedChanged;
+          changed |= nestedChanged;
+          ++regionIdx;
+        }
+      }
+    }
+  }
+
+  // Step 2: worklist over ops in this region only.
+  //
+  // Worklist invariant: an op is pushed only once we have verified it is
+  // trivially dead. No speculative enqueues: every op on the worklist will
+  // be erased when popped. Two things enforce this:
+  //   - the initial seed below calls isOpTriviallyDead before enqueueing,
+  //   - the propagation inside the loop drops the erasing op's use of
+  //     `defOp` *before* re-checking isOpTriviallyDead(defOp), so the check
+  //     sees the post-erase use count and only enqueues when actually dead.
+  // Deadness is monotonic within this pass (we never add users, only remove
+  // them), so an op that was dead at enqueue time is still dead at pop time.
+  SmallVector<Operation *> worklist;
+
+  LDBG(2) << "Stage 2: Seeding trivially dead operation worklist";
+  for (Operation &op : region.getOps()) {
+    if (isOpTriviallyDead(&op)) {
+      LDBG(2) << "Seeded worklist with operation: "
+              << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+      worklist.push_back(&op);
+      changed = true;
+      ++seededOps;
+    }
+  }
+  LDBG(2) << "Initial worklist size: " << worklist.size();
+
+  while (!worklist.empty()) {
+    Operation *op = worklist.pop_back_val();
+    LDBG(2) << "Popped operation from worklist: "
+            << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    /// Erase each operand to drop its use count before checking its defining
+    /// op: by the time we call isOpTriviallyDead on defOp, the
+    /// about-to-be-erased `op` is no longer counted as a user. Only
+    /// actually-dead ops enter the worklist.
+    ///
+    /// Walk nested operations as well because erasing `op` also implicitly
+    /// erases every operation nested under it and therefore drops their operand
+    /// uses.
+    op->walk([&](Operation *erasedOp) {
+      LDBG(3) << "Processing operands of operation erased: "
+              << OpWithFlags(erasedOp, OpPrintingFlags().skipRegions());
+      for (OpOperand &opOperand : erasedOp->getOpOperands()) {
+        Operation *defOp = opOperand.get().getDefiningOp();
+        if (!defOp) {
+          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
+                  << ": value has no defining operation";
+          continue;
+        }
+        if (defOp->getParentRegion() != &region) {
+          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
+                  << ": defining operation is outside the current region";
+          continue;
+        }
+        LDBG(4) << "Dropping operand #" << opOperand.getOperandNumber()
+                << " from defining operation: "
+                << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+        opOperand.drop();
+        if (isOpTriviallyDead(defOp)) {
+          LDBG(2) << "Enqueued newly trivially dead defining operation: "
+                  << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+          worklist.push_back(defOp);
+          ++enqueuedDefs;
+        } else {
+          LDBG(4) << "Defining operation is still not trivially dead: "
+                  << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+        }
+      }
+    });
+    LDBG() << "Erasing trivially dead worklist operation: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    rewriter.eraseOp(op);
+    ++erasedOps;
+  }
+  LDBG() << "Finished eliminateTriviallyDeadOps, erased " << erasedOps
+         << " operations, seeded " << seededOps << " operations, enqueued "
+         << enqueuedDefs << " defining operations, changed=" << changed;
+  return changed;
+}
+
 //===----------------------------------------------------------------------===//
 // Block Merging
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // BlockEquivalenceData
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class contains the information for comparing the equivalencies of two
@@ -550,6 +715,7 @@ unsigned BlockEquivalenceData::getOrderOf(Value value) const {
 
 //===----------------------------------------------------------------------===//
 // BlockMergeCluster
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents a cluster of blocks to be merged together.
@@ -675,6 +841,93 @@ static bool ableToUpdatePredOperands(Block *block) {
   return true;
 }
 
+/// Prunes the redundant list of new arguments. E.g., if we are passing an
+/// argument list like [x, y, z, x] this would return [x, y, z] and it would
+/// update the `block` (to whom the argument are passed to) accordingly. The new
+/// arguments are passed as arguments at the back of the block, hence we need to
+/// know how many `numOldArguments` were before, in order to correctly replace
+/// the new arguments in the block
+static SmallVector<SmallVector<Value, 8>, 2> pruneRedundantArguments(
+    const SmallVector<SmallVector<Value, 8>, 2> &newArguments,
+    RewriterBase &rewriter, unsigned numOldArguments, Block *block) {
+
+  SmallVector<SmallVector<Value, 8>, 2> newArgumentsPruned(
+      newArguments.size(), SmallVector<Value, 8>());
+
+  if (newArguments.empty())
+    return newArguments;
+
+  // `newArguments` is a 2D array of size `numLists` x `numArgs`
+  unsigned numLists = newArguments.size();
+  unsigned numArgs = newArguments[0].size();
+
+  // Map that for each arg index contains the index that we can use in place of
+  // the original index. E.g., if we have newArgs = [x, y, z, x], we will have
+  // idxToReplacement[3] = 0
+  llvm::DenseMap<unsigned, unsigned> idxToReplacement;
+
+  // This is a useful data structure to track the first appearance of a Value
+  // on a given list of arguments
+  DenseMap<Value, unsigned> firstValueToIdx;
+  for (unsigned j = 0; j < numArgs; ++j) {
+    Value newArg = newArguments[0][j];
+    firstValueToIdx.try_emplace(newArg, j);
+  }
+
+  // Go through the first list of arguments (list 0).
+  for (unsigned j = 0; j < numArgs; ++j) {
+    // Look back to see if there are possible redundancies in list 0. Please
+    // note that we are using a map to annotate when an argument was seen first
+    // to avoid a O(N^2) algorithm. This has the drawback that if we have two
+    // lists like:
+    // list0: [%a, %a, %a]
+    // list1: [%c, %b, %b]
+    // We cannot simplify it, because firstValueToIdx[%a] = 0, but we cannot
+    // point list1[1](==%b) or list1[2](==%b) to list1[0](==%c).  However, since
+    // the number of arguments can be potentially unbounded we cannot afford a
+    // O(N^2) algorithm (to search to all the possible pairs) and we need to
+    // accept the trade-off.
+    unsigned k = firstValueToIdx[newArguments[0][j]];
+    if (k == j)
+      continue;
+
+    bool shouldReplaceJ = true;
+    unsigned replacement = k;
+    // If a possible redundancy is found, then scan the other lists: we
+    // can prune the arguments if and only if they are redundant in every
+    // list.
+    for (unsigned i = 1; i < numLists; ++i)
+      shouldReplaceJ =
+          shouldReplaceJ && (newArguments[i][k] == newArguments[i][j]);
+    // Save the replacement.
+    if (shouldReplaceJ)
+      idxToReplacement[j] = replacement;
+  }
+
+  // Populate the pruned argument list.
+  for (unsigned i = 0; i < numLists; ++i)
+    for (unsigned j = 0; j < numArgs; ++j)
+      if (!idxToReplacement.contains(j))
+        newArgumentsPruned[i].push_back(newArguments[i][j]);
+
+  // Replace the block's redundant arguments.
+  SmallVector<unsigned> toErase;
+  for (auto [idx, arg] : llvm::enumerate(block->getArguments())) {
+    if (idxToReplacement.contains(idx)) {
+      Value oldArg = block->getArgument(numOldArguments + idx);
+      Value newArg =
+          block->getArgument(numOldArguments + idxToReplacement[idx]);
+      rewriter.replaceAllUsesWith(oldArg, newArg);
+      toErase.push_back(numOldArguments + idx);
+    }
+  }
+
+  // Erase the block's redundant arguments.
+  for (unsigned idxToErase : llvm::reverse(toErase))
+    block->eraseArgument(idxToErase);
+  return newArgumentsPruned;
+}
+
 LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
   // Don't consider clusters that don't have blocks to merge.
   if (blocksToMerge.empty())
@@ -704,6 +957,7 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
         1 + blocksToMerge.size(),
         SmallVector<Value, 8>(operandsToMerge.size()));
     unsigned curOpIndex = 0;
+    unsigned numOldArguments = leaderBlock->getNumArguments();
     for (const auto &it : llvm::enumerate(operandsToMerge)) {
       unsigned nextOpOffset = it.value().first - curOpIndex;
       curOpIndex = it.value().first;
@@ -723,6 +977,11 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
         }
       }
     }
+
+    // Prune redundant arguments and update the leader block argument list
+    newArguments = pruneRedundantArguments(newArguments, rewriter,
+                                           numOldArguments, leaderBlock);
+
     // Update the predecessors for each of the blocks.
     auto updatePredecessors = [&](Block *block, unsigned clusterIndex) {
       for (auto predIt = block->pred_begin(), predE = block->pred_end();
@@ -751,7 +1010,7 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
 /// failure otherwise.
 static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
                                           Region &region) {
-  if (region.empty() || llvm::hasSingleElement(region))
+  if (region.empty() || region.hasOneBlock())
     return failure();
 
   // Identify sets of blocks, other than the entry block, that branch to the
@@ -777,6 +1036,15 @@ static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
                             [](Region &region) { return !region.empty(); });
       });
       if (hasNonEmptyRegion)
+        continue;
+
+      // Don't allow merging if this block's arguments are used outside of the
+      // original block.
+      bool argHasExternalUsers = llvm::any_of(
+          block->getArguments(), [block](mlir::BlockArgument &arg) {
+            return arg.isUsedOutsideOfBlock(block);
+          });
+      if (argHasExternalUsers)
         continue;
 
       // Try to add this block to an existing cluster.
@@ -819,6 +1087,122 @@ static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
   return success(anyChanged);
 }
 
+/// If a block's argument is always the same across different invocations, then
+/// drop the argument and use the value directly inside the block
+static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
+                                            Block &block) {
+  SmallVector<size_t> argsToErase;
+
+  // Go through the arguments of the block.
+  for (auto [argIdx, blockOperand] : llvm::enumerate(block.getArguments())) {
+    bool sameArg = true;
+    Value commonValue;
+
+    // Go through the block predecessor and flag if they pass to the block
+    // different values for the same argument.
+    for (Block::pred_iterator predIt = block.pred_begin(),
+                              predE = block.pred_end();
+         predIt != predE; ++predIt) {
+      auto branch = dyn_cast<BranchOpInterface>((*predIt)->getTerminator());
+      if (!branch) {
+        sameArg = false;
+        break;
+      }
+      unsigned succIndex = predIt.getSuccessorIndex();
+      SuccessorOperands succOperands = branch.getSuccessorOperands(succIndex);
+
+      // Produced operands are generated by the terminator operation itself
+      // (e.g., results of an async call) and cannot be forwarded or dropped.
+      if (succOperands.isOperandProduced(argIdx)) {
+        sameArg = false;
+        break;
+      }
+
+      // Get the forwarded operand value using operator[] which correctly
+      // adjusts for the produced operand offset.
+      Value operandValue = succOperands[argIdx];
+      if (!commonValue) {
+        commonValue = operandValue;
+        continue;
+      }
+      if (operandValue != commonValue) {
+        sameArg = false;
+        break;
+      }
+    }
+
+    // If they are passing the same value, drop the argument.
+    if (commonValue && sameArg) {
+      argsToErase.push_back(argIdx);
+
+      // Remove the argument from the block.
+      rewriter.replaceAllUsesWith(blockOperand, commonValue);
+    }
+  }
+
+  // Remove the arguments.
+  for (size_t argIdx : llvm::reverse(argsToErase)) {
+    block.eraseArgument(argIdx);
+
+    // Remove the argument from the branch ops.
+    for (auto predIt = block.pred_begin(), predE = block.pred_end();
+         predIt != predE; ++predIt) {
+      auto branch = cast<BranchOpInterface>((*predIt)->getTerminator());
+      unsigned succIndex = predIt.getSuccessorIndex();
+      SuccessorOperands succOperands = branch.getSuccessorOperands(succIndex);
+      succOperands.erase(argIdx);
+    }
+  }
+  return success(!argsToErase.empty());
+}
+
+/// This optimization drops redundant argument to blocks. I.e., if a given
+/// argument to a block receives the same value from each of the block
+/// predecessors, we can remove the argument from the block and use directly the
+/// original value. This is a simple example:
+///
+/// %cond = llvm.call @rand() : () -> i1
+/// %val0 = llvm.mlir.constant(1 : i64) : i64
+/// %val1 = llvm.mlir.constant(2 : i64) : i64
+/// %val2 = llvm.mlir.constant(3 : i64) : i64
+/// llvm.cond_br %cond, ^bb1(%val0 : i64, %val1 : i64), ^bb2(%val0 : i64, %val2
+/// : i64)
+///
+/// ^bb1(%arg0 : i64, %arg1 : i64):
+///    llvm.call @foo(%arg0, %arg1)
+///
+/// The previous IR can be rewritten as:
+/// %cond = llvm.call @rand() : () -> i1
+/// %val0 = llvm.mlir.constant(1 : i64) : i64
+/// %val1 = llvm.mlir.constant(2 : i64) : i64
+/// %val2 = llvm.mlir.constant(3 : i64) : i64
+/// llvm.cond_br %cond, ^bb1(%val1 : i64), ^bb2(%val2 : i64)
+///
+/// ^bb1(%arg0 : i64):
+///    llvm.call @foo(%val0, %arg0)
+///
+static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
+                                            MutableArrayRef<Region> regions) {
+  llvm::SmallSetVector<Region *, 1> worklist;
+  for (Region &region : regions)
+    worklist.insert(&region);
+  bool anyChanged = false;
+  while (!worklist.empty()) {
+    Region *region = worklist.pop_back_val();
+
+    // Add any nested regions to the worklist.
+    for (Block &block : *region) {
+      anyChanged =
+          succeeded(dropRedundantArguments(rewriter, block)) || anyChanged;
+
+      for (Operation &op : block)
+        for (Region &nestedRegion : op.getRegions())
+          worklist.insert(&nestedRegion);
+    }
+  }
+  return success(anyChanged);
+}
+
 //===----------------------------------------------------------------------===//
 // Region Simplification
 //===----------------------------------------------------------------------===//
@@ -828,27 +1212,291 @@ static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
 /// elimination, as well as some other DCE. This function returns success if any
 /// of the regions were simplified, failure otherwise.
 LogicalResult mlir::simplifyRegions(RewriterBase &rewriter,
-                                    MutableArrayRef<Region> regions) {
+                                    MutableArrayRef<Region> regions,
+                                    bool mergeBlocks) {
   bool eliminatedBlocks = succeeded(eraseUnreachableBlocks(rewriter, regions));
   bool eliminatedOpsOrArgs = succeeded(runRegionDCE(rewriter, regions));
-  bool mergedIdenticalBlocks =
-      succeeded(mergeIdenticalBlocks(rewriter, regions));
+  bool mergedIdenticalBlocks = false;
+  bool droppedRedundantArguments = false;
+  if (mergeBlocks) {
+    mergedIdenticalBlocks = succeeded(mergeIdenticalBlocks(rewriter, regions));
+    droppedRedundantArguments =
+        succeeded(dropRedundantArguments(rewriter, regions));
+  }
   return success(eliminatedBlocks || eliminatedOpsOrArgs ||
-                 mergedIdenticalBlocks);
+                 mergedIdenticalBlocks || droppedRedundantArguments);
 }
 
-SetVector<Block *> mlir::getTopologicallySortedBlocks(Region &region) {
-  // For each block that has not been visited yet (i.e. that has no
-  // predecessors), add it to the list as well as its successors.
-  SetVector<Block *> blocks;
-  for (Block &b : region) {
-    if (blocks.count(&b) == 0) {
-      llvm::ReversePostOrderTraversal<Block *> traversal(&b);
-      blocks.insert(traversal.begin(), traversal.end());
+//===---------------------------------------------------------------------===//
+// Move operation dependencies
+//===---------------------------------------------------------------------===//
+
+/// Check if moving operations in the slice before `insertionPoint` would break
+/// dominance due to block argument operands. Returns true if all block args
+/// dominate the insertion point (no issue), false otherwise. If `failingOp` is
+/// provided, it will be set to the first problematic op.
+///
+/// For operands defined by ops: either the defining op is in the slice (so
+/// dominance preserved), or it already dominates insertionPoint (otherwise it
+/// would be in the slice). So we only need to check block argument operands,
+/// both as direct operands and as values captured inside regions.
+static bool blockArgsDominateInsertionPoint(
+    const llvm::SetVector<Operation *> &slice, Operation *insertionPoint,
+    DominanceInfo &dominance, Operation **failingOp = nullptr) {
+  Block *insertionBlock = insertionPoint->getBlock();
+
+  // Returns true if the block arg dominates, false otherwise. Sets failingOp
+  // on failure.
+  auto argDominates = [&](BlockArgument arg, Operation *op) {
+    Block *argBlock = arg.getOwner();
+    bool dominates = argBlock == insertionBlock ||
+                     dominance.dominates(argBlock, insertionBlock);
+    if (!dominates && failingOp)
+      *failingOp = op;
+    return dominates;
+  };
+
+  for (Operation *op : slice) {
+    // Check direct operands.
+    for (Value operand : op->getOperands()) {
+      auto arg = dyn_cast<BlockArgument>(operand);
+      if (!arg)
+        continue;
+      if (!argDominates(arg, op))
+        return false;
+    }
+
+    // Check block arguments captured inside regions. Process one region at a
+    // time to enable early exit without collecting values from all regions.
+    for (Region &region : op->getRegions()) {
+      SetVector<Value> capturedValues;
+      getUsedValuesDefinedAbove(region, region, capturedValues);
+      for (Value val : capturedValues) {
+        auto arg = dyn_cast<BlockArgument>(val);
+        if (!arg)
+          continue;
+        if (!argDominates(arg, op))
+          return false;
+      }
     }
   }
-  assert(blocks.size() == region.getBlocks().size() &&
-         "some blocks are not sorted");
+  return true;
+}
 
-  return blocks;
+/// Check if any region between an operation and an ancestor block is
+/// isolated from above. If so, moving the operation out would break
+/// the isolation semantics.
+static bool hasIsolatedRegionBetween(Operation *op, Block *ancestorBlock) {
+  Region *ancestorRegion = ancestorBlock->getParent();
+
+  // Walk up from the op's region to find if there's an isolated region
+  // between the op and the ancestor.
+  Region *region = op->getParentRegion();
+  while (region && region != ancestorRegion) {
+    Operation *parentOp = region->getParentOp();
+    if (!parentOp)
+      break;
+
+    if (parentOp->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      return true;
+
+    region = parentOp->getParentRegion();
+  }
+  return false;
+}
+
+LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
+                                              Operation *op,
+                                              Operation *insertionPoint,
+                                              DominanceInfo &dominance) {
+  Block *insertionBlock = insertionPoint->getBlock();
+
+  // If `insertionPoint` does not dominate `op`, do nothing.
+  if (!dominance.properlyDominates(insertionPoint, op)) {
+    return rewriter.notifyMatchFailure(op,
+                                       "insertion point does not dominate op");
+  }
+
+  // Verify we're not crossing an isolated region.
+  if (hasIsolatedRegionBetween(op, insertionBlock)) {
+    return rewriter.notifyMatchFailure(
+        op, "cannot move operation across isolated-from-above region");
+  }
+
+  // Find the backward slice of operation for each `Value` the operation
+  // depends on. Prune the slice to only include operations not already
+  // dominated by the `insertionPoint`.
+  BackwardSliceOptions options;
+  options.inclusive = false;
+  options.omitUsesFromAbove = false;
+  // Block arguments cannot be moved; dominance check handles this case.
+  options.omitBlockArguments = true;
+  bool dependsOnSideEffectingOp = false;
+  options.filter = [&](Operation *sliceBoundaryOp) {
+    // Skip the root op - we're moving its dependencies, not the op itself.
+    // The root op is filtered out by options.inclusive = false anyway.
+    if (sliceBoundaryOp == op)
+      return true;
+    bool dominated =
+        dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+    // Op is already before insertion point, no need to include in slice.
+    if (dominated)
+      return false;
+    // Op needs to move but is side-effecting - stop traversal early.
+    if (!isPure(sliceBoundaryOp)) {
+      dependsOnSideEffectingOp = true;
+      return false;
+    }
+    return true;
+  };
+  llvm::SetVector<Operation *> slice;
+  LogicalResult result = getBackwardSlice(op, &slice, options);
+  assert(result.succeeded() && "expected a backward slice");
+  (void)result;
+
+  // Check if any operation in the slice is side-effecting.
+  if (dependsOnSideEffectingOp) {
+    return rewriter.notifyMatchFailure(
+        op, "cannot move operation with side-effecting dependencies");
+  }
+
+  // If the slice contains `insertionPoint` cannot move the dependencies.
+  if (slice.contains(insertionPoint)) {
+    return rewriter.notifyMatchFailure(
+        op,
+        "cannot move dependencies before operation in backward slice of op");
+  }
+
+  // Verify no operation in the slice uses a block argument that wouldn't
+  // dominate at the new location.
+  Operation *badOp = nullptr;
+  if (!blockArgsDominateInsertionPoint(slice, insertionPoint, dominance,
+                                       &badOp)) {
+    return rewriter.notifyMatchFailure(
+        badOp, "moving op would break dominance for block argument operand");
+  }
+
+  // We should move the slice in topological order, but `getBackwardSlice`
+  // already does that. So no need to sort again.
+  for (Operation *op : slice) {
+    rewriter.moveOpBefore(op, insertionPoint);
+  }
+  return success();
+}
+
+LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
+                                              Operation *op,
+                                              Operation *insertionPoint) {
+  DominanceInfo dominance(op);
+  return moveOperationDependencies(rewriter, op, insertionPoint, dominance);
+}
+
+LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
+                                         ValueRange values,
+                                         Operation *insertionPoint,
+                                         DominanceInfo &dominance) {
+  // Remove the values that already dominate the insertion point.
+  SmallVector<Value> prunedValues;
+  for (auto value : values) {
+    if (dominance.properlyDominates(value, insertionPoint))
+      continue;
+    // Block arguments are not supported.
+    if (isa<BlockArgument>(value)) {
+      return rewriter.notifyMatchFailure(
+          insertionPoint,
+          "unsupported case of moving block argument before insertion point");
+    }
+
+    Block *insertionBlock = insertionPoint->getBlock();
+    Operation *definingOp = value.getDefiningOp();
+    Block *definingBlock = definingOp->getBlock();
+
+    // Verify we're not crossing an isolated region.
+    if (hasIsolatedRegionBetween(definingOp, insertionBlock)) {
+      return rewriter.notifyMatchFailure(
+          insertionPoint,
+          "cannot move value definition across isolated-from-above region");
+    }
+
+    // Verify the insertion point's block dominates the defining block,
+    // otherwise we're trying to move "backwards" in the CFG which doesn't
+    // make sense.
+    if (!dominance.dominates(insertionBlock, definingBlock)) {
+      return rewriter.notifyMatchFailure(
+          insertionPoint,
+          "insertion point block does not dominate the value's defining "
+          "block");
+    }
+    prunedValues.push_back(value);
+  }
+
+  // Find the backward slice of operation for each `Value` the operation
+  // depends on. Prune the slice to only include operations not already
+  // dominated by the `insertionPoint`
+  BackwardSliceOptions options;
+  options.inclusive = true;
+  options.omitUsesFromAbove = false;
+  // Block arguments cannot be moved, so we stop the slice computation there.
+  // If an op uses a block argument that wouldn't dominate at the new location,
+  // the dominance check will catch it.
+  options.omitBlockArguments = true;
+  bool dependsOnSideEffectingOp = false;
+  options.filter = [&](Operation *sliceBoundaryOp) {
+    bool dominated =
+        dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+    // Op is already before insertion point, no need to include in slice.
+    if (dominated)
+      return false;
+    // Op needs to move but is side-effecting - stop traversal early.
+    if (!isPure(sliceBoundaryOp)) {
+      dependsOnSideEffectingOp = true;
+      return false;
+    }
+    return true;
+  };
+  llvm::SetVector<Operation *> slice;
+  for (auto value : prunedValues) {
+    LogicalResult result = getBackwardSlice(value, &slice, options);
+    assert(result.succeeded() && "expected a backward slice");
+    (void)result;
+  }
+
+  // Check if any operation in the slice is side-effecting.
+  if (dependsOnSideEffectingOp) {
+    return rewriter.notifyMatchFailure(
+        insertionPoint, "cannot move value definitions with side-effecting "
+                        "operations in the slice");
+  }
+
+  // If the slice contains `insertionPoint` cannot move the dependencies.
+  if (slice.contains(insertionPoint)) {
+    return rewriter.notifyMatchFailure(
+        insertionPoint,
+        "cannot move dependencies before operation in backward slice of op");
+  }
+
+  // Sort operations topologically. This is needed because we call
+  // getBackwardSlice multiple times (once per value), and the combined slice
+  // may not be in topological order when independent subgraphs interleave.
+  mlir::topologicalSort(slice);
+
+  // Verify no operation in the slice uses a block argument that wouldn't
+  // dominate at the new location.
+  Operation *badOp = nullptr;
+  if (!blockArgsDominateInsertionPoint(slice, insertionPoint, dominance,
+                                       &badOp)) {
+    return rewriter.notifyMatchFailure(
+        badOp, "moving op would break dominance for block argument operand");
+  }
+
+  for (Operation *op : slice)
+    rewriter.moveOpBefore(op, insertionPoint);
+  return success();
+}
+
+LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
+                                         ValueRange values,
+                                         Operation *insertionPoint) {
+  DominanceInfo dominance(insertionPoint);
+  return moveValueDefinitions(rewriter, values, insertionPoint, dominance);
 }

@@ -13,6 +13,8 @@ from lldbsuite.test import lldbutil
 
 
 class targetCommandTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -74,7 +76,7 @@ class targetCommandTestCase(TestBase):
             # Find the largest index of the existing list.
             import re
 
-            pattern = re.compile("target #(\d+):")
+            pattern = re.compile(r"target #(\d+):")
             for line in reversed(output.split(os.linesep)):
                 match = pattern.search(line)
                 if match:
@@ -417,7 +419,7 @@ class targetCommandTestCase(TestBase):
         )
 
     # Write only files don't seem to be supported on Windows.
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_unreadable_core_file(self):
         tf = tempfile.NamedTemporaryFile()
@@ -440,18 +442,18 @@ class targetCommandTestCase(TestBase):
             ],
         )
 
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_invalid_core_file(self):
         invalid_core_path = os.path.join(self.getSourceDir(), "invalid_core_file")
         self.expect(
             "target create -c '" + invalid_core_path + "'",
             error=True,
-            substrs=["Unable to find process plug-in for core file '"],
+            substrs=["Unknown core file format '"],
         )
 
     # Write only files don't seem to be supported on Windows.
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_unreadable_sym_file(self):
         tf = tempfile.NamedTemporaryFile()

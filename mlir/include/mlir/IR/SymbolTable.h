@@ -103,6 +103,24 @@ public:
     Nested,
   };
 
+  /// Generate a unique symbol name. Iteratively increase uniquingCounter
+  /// and use it as a suffix for symbol names until uniqueChecker does not
+  /// detect any conflict.
+  template <unsigned N, typename UniqueChecker>
+  static SmallString<N> generateSymbolName(StringRef name,
+                                           UniqueChecker uniqueChecker,
+                                           unsigned &uniquingCounter) {
+    SmallString<N> nameBuffer(name);
+    unsigned originalLength = nameBuffer.size();
+    do {
+      nameBuffer.resize(originalLength);
+      nameBuffer += '_';
+      nameBuffer += std::to_string(uniquingCounter++);
+    } while (uniqueChecker(nameBuffer));
+
+    return nameBuffer;
+  }
+
   /// Returns the name of the given symbol operation, aborting if no symbol is
   /// present.
   static StringAttr getSymbolName(Operation *symbol);
@@ -264,10 +282,14 @@ raw_ostream &operator<<(raw_ostream &os, SymbolTable::Visibility visibility);
 /// unnecessary tables.
 class SymbolTableCollection {
 public:
+  virtual ~SymbolTableCollection() = default;
+
   /// Look up a symbol with the specified name within the specified symbol table
   /// operation, returning null if no such name exists.
-  Operation *lookupSymbolIn(Operation *symbolTableOp, StringAttr symbol);
-  Operation *lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name);
+  virtual Operation *lookupSymbolIn(Operation *symbolTableOp,
+                                    StringAttr symbol);
+  virtual Operation *lookupSymbolIn(Operation *symbolTableOp,
+                                    SymbolRefAttr name);
   template <typename T, typename NameT>
   T lookupSymbolIn(Operation *symbolTableOp, NameT &&name) {
     return dyn_cast_or_null<T>(
@@ -277,15 +299,18 @@ public:
   /// by a given SymbolRefAttr when resolved within the provided symbol table
   /// operation. Returns failure if any of the nested references could not be
   /// resolved.
-  LogicalResult lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name,
-                               SmallVectorImpl<Operation *> &symbols);
+  virtual LogicalResult lookupSymbolIn(Operation *symbolTableOp,
+                                       SymbolRefAttr name,
+                                       SmallVectorImpl<Operation *> &symbols);
 
   /// Returns the operation registered with the given symbol name within the
   /// closest parent operation of, or including, 'from' with the
   /// 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol was
   /// found.
-  Operation *lookupNearestSymbolFrom(Operation *from, StringAttr symbol);
-  Operation *lookupNearestSymbolFrom(Operation *from, SymbolRefAttr symbol);
+  virtual Operation *lookupNearestSymbolFrom(Operation *from,
+                                             StringAttr symbol);
+  virtual Operation *lookupNearestSymbolFrom(Operation *from,
+                                             SymbolRefAttr symbol);
   template <typename T>
   T lookupNearestSymbolFrom(Operation *from, StringAttr symbol) {
     return dyn_cast_or_null<T>(lookupNearestSymbolFrom(from, symbol));
@@ -296,7 +321,14 @@ public:
   }
 
   /// Lookup, or create, a symbol table for an operation.
-  SymbolTable &getSymbolTable(Operation *op);
+  virtual SymbolTable &getSymbolTable(Operation *op);
+
+  /// Invalidate the cached symbol table for an operation.
+  /// This is important when doing IR modifications that erase and also create
+  /// operations having the 'OpTrait::SymbolTable' trait. If a symbol table of
+  /// an erased operation is not invalidated, a new operation sharing the same
+  /// address would be associated with outdated, and wrong, information.
+  virtual void invalidateSymbolTable(Operation *op);
 
 private:
   friend class LockedSymbolTableCollection;
@@ -323,13 +355,15 @@ public:
 
   /// Look up a symbol with the specified name within the specified symbol table
   /// operation, returning null if no such name exists.
-  Operation *lookupSymbolIn(Operation *symbolTableOp, StringAttr symbol);
+  Operation *lookupSymbolIn(Operation *symbolTableOp,
+                            StringAttr symbol) override;
   /// Look up a symbol with the specified name within the specified symbol table
   /// operation, returning null if no such name exists.
   Operation *lookupSymbolIn(Operation *symbolTableOp, FlatSymbolRefAttr symbol);
   /// Look up a potentially nested symbol within the specified symbol table
   /// operation, returning null if no such symbol exists.
-  Operation *lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name);
+  Operation *lookupSymbolIn(Operation *symbolTableOp,
+                            SymbolRefAttr name) override;
 
   /// Lookup a symbol of a particular kind within the specified symbol table,
   /// returning null if the symbol was not found.
@@ -344,14 +378,14 @@ public:
   /// operation. Returns failure if any of the nested references could not be
   /// resolved.
   LogicalResult lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name,
-                               SmallVectorImpl<Operation *> &symbols);
+                               SmallVectorImpl<Operation *> &symbols) override;
 
 private:
   /// Get the symbol table for the symbol table operation, constructing if it
   /// does not exist. This function provides thread safety over `collection`
   /// by locking when performing the lookup and when inserting
   /// lazily-constructed symbol tables.
-  SymbolTable &getSymbolTable(Operation *symbolTableOp);
+  SymbolTable &getSymbolTable(Operation *symbolTableOp) override;
 
   /// The symbol tables to manage.
   SymbolTableCollection &collection;
@@ -377,7 +411,8 @@ public:
   /// Return the users of the provided symbol operation.
   ArrayRef<Operation *> getUsers(Operation *symbol) const {
     auto it = symbolToUsers.find(symbol);
-    return it != symbolToUsers.end() ? it->second.getArrayRef() : std::nullopt;
+    return it != symbolToUsers.end() ? it->second.getArrayRef()
+                                     : ArrayRef<Operation *>();
   }
 
   /// Return true if the given symbol has no uses.
@@ -464,5 +499,6 @@ ParseResult parseOptionalVisibilityKeyword(OpAsmParser &parser,
 
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.h.inc"
+#include "mlir/IR/SymbolInterfacesAttrInterface.h.inc"
 
 #endif // MLIR_IR_SYMBOLTABLE_H

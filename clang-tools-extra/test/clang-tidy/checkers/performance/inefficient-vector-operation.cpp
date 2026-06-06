@@ -2,55 +2,16 @@
 // RUN: -format-style=llvm \
 // RUN: -config='{CheckOptions: \
 // RUN:  {performance-inefficient-vector-operation.EnableProto: true}}'
+#include <vector>
 
 namespace std {
 
-typedef int size_t;
-
-template<class E> class initializer_list {
-public:
-  using value_type = E;
-  using reference = E&;
-  using const_reference = const E&;
-  using size_type = size_t;
-  using iterator = const E*;
-  using const_iterator = const E*;
-  initializer_list();
-  size_t size() const; // number of elements
-  const E* begin() const; // first element
-  const E* end() const; // one past the last element
-};
+typedef decltype(sizeof 0) size_t;
 
 // initializer list range access
 template<class E> const E* begin(initializer_list<E> il);
 template<class E> const E* end(initializer_list<E> il);
 
-template <class T>
-class vector {
- public:
-  typedef T* iterator;
-  typedef const T* const_iterator;
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef size_t size_type;
-
-  explicit vector();
-  explicit vector(size_type n);
-
-  void push_back(const T& val);
-
-  template <class... Args> void emplace_back(Args &&... args);
-
-  void reserve(size_t n);
-  void resize(size_t n);
-
-  size_t size() const;
-  const_reference operator[] (size_type) const;
-  reference operator[] (size_type);
-
-  const_iterator begin() const;
-  const_iterator end() const;
-};
 } // namespace std
 
 class Foo {
@@ -387,3 +348,38 @@ void foo(const StructWithFieldContainer &Src) {
     B.push_back(Number);
   }
 }
+
+namespace gh95596 {
+
+void f(std::vector<int>& t) {
+  {
+    std::vector<int> gh95596_0;
+    // CHECK-FIXES: gh95596_0.reserve(10);
+    for (unsigned i = 0; i < 10; ++i)
+      gh95596_0.push_back(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+  }
+  {
+    std::vector<int> gh95596_1;
+    // CHECK-FIXES: gh95596_1.reserve(10);
+    for (int i = 0U; i < 10; ++i)
+      gh95596_1.push_back(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+  }
+  {
+    std::vector<int> gh95596_2;
+    // CHECK-FIXES: gh95596_2.reserve(10);
+    for (unsigned i = 0U; i < 10; ++i)
+      gh95596_2.push_back(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+  }
+  {
+    std::vector<int> gh95596_3;
+    // CHECK-FIXES: gh95596_3.reserve(10U);
+    for (int i = 0; i < 10U; ++i)
+      gh95596_3.push_back(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+  }
+}
+
+} // namespace gh95596

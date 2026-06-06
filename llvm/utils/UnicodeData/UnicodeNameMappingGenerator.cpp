@@ -8,14 +8,13 @@
 //
 // This file is used to generate lib/Support/UnicodeNameToCodepointGenerated.cpp
 // using UnicodeData.txt and NameAliases.txt available at
-// https://unicode.org/Public/15.0.0/ucd/
+// https://unicode.org/Public/15.1.0/ucd/
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
-#include <array>
 #include <deque>
 #include <fstream>
 #include <memory>
@@ -355,9 +354,9 @@ int main(int argc, char **argv) {
          "Usage: %s UnicodeData.txt NameAliases.txt output\n\n",
          argv[0]);
   printf("NameAliases.txt can be found at "
-         "https://unicode.org/Public/15.0.0/ucd/NameAliases.txt\n"
+         "https://unicode.org/Public/15.1.0/ucd/NameAliases.txt\n"
          "UnicodeData.txt can be found at "
-         "https://unicode.org/Public/15.0.0/ucd/UnicodeData.txt\n\n");
+         "https://unicode.org/Public/15.1.0/ucd/UnicodeData.txt\n\n");
 
   if (argc != 4)
     return EXIT_FAILURE;
@@ -418,15 +417,15 @@ int main(int argc, char **argv) {
 
   fprintf(Out,
           "namespace llvm { namespace sys { namespace unicode { \n"
-          "extern const char *UnicodeNameToCodepointDict;\n"
-          "extern const uint8_t *UnicodeNameToCodepointIndex;\n"
+          "extern const char *const UnicodeNameToCodepointDict;\n"
+          "extern const uint8_t *const UnicodeNameToCodepointIndex;\n"
           "extern const std::size_t UnicodeNameToCodepointIndexSize;\n"
           "extern const std::size_t UnicodeNameToCodepointLargestNameSize;\n");
 
-  fprintf(Out, "const char* UnicodeNameToCodepointDict = \"%s\";\n",
+  fprintf(Out, "const char *const UnicodeNameToCodepointDict = \"%s\";\n",
           Dict.c_str());
 
-  fprintf(Out, "uint8_t UnicodeNameToCodepointIndex_[%zu] = {\n",
+  fprintf(Out, "const uint8_t UnicodeNameToCodepointIndex_[%zu] = {\n",
           Tree.size() + 1);
 
   for (auto Byte : Tree) {
@@ -434,7 +433,7 @@ int main(int argc, char **argv) {
   }
 
   fprintf(Out, "0};");
-  fprintf(Out, "const uint8_t* UnicodeNameToCodepointIndex = "
+  fprintf(Out, "const uint8_t *const UnicodeNameToCodepointIndex = "
                "UnicodeNameToCodepointIndex_; \n");
   fprintf(Out, "const std::size_t UnicodeNameToCodepointIndexSize = %zu;\n",
           Tree.size() + 1);

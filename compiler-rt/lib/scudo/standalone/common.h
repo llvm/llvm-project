@@ -28,7 +28,11 @@ template <class Dest, class Source> inline Dest bit_cast(const Source &S) {
   return D;
 }
 
-inline constexpr bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
+inline constexpr bool isPowerOfTwo(uptr X) {
+  if (X == 0)
+    return false;
+  return (X & (X - 1)) == 0;
+}
 
 inline constexpr uptr roundUp(uptr X, uptr Boundary) {
   DCHECK(isPowerOfTwo(Boundary));
@@ -112,19 +116,60 @@ template <typename T> inline void shuffle(T *A, u32 N, u32 *RandState) {
   *RandState = State;
 }
 
+inline void computePercentage(uptr Numerator, uptr Denominator, uptr *Integral,
+                              uptr *Fractional) {
+  constexpr uptr Digits = 100;
+  if (Denominator == 0) {
+    *Integral = 100;
+    *Fractional = 0;
+    return;
+  }
+
+  *Integral = Numerator * Digits / Denominator;
+  *Fractional =
+      (((Numerator * Digits) % Denominator) * Digits + Denominator / 2) /
+      Denominator;
+}
+
 // Platform specific functions.
 
+#if defined(SCUDO_PAGE_SIZE)
+
+inline constexpr uptr getPageSizeCached() { return SCUDO_PAGE_SIZE; }
+
+inline constexpr uptr getPageSizeSlow() { return getPageSizeCached(); }
+
+inline constexpr uptr getPageSizeLogCached() {
+  return static_cast<uptr>(__builtin_ctzl(SCUDO_PAGE_SIZE));
+}
+
+#else
+
 extern uptr PageSizeCached;
+extern uptr PageSizeLogCached;
+
+// Must be defined in platform specific code.
+uptr getPageSize();
+
+// Always calls getPageSize(), but caches the results for get*Cached(), below.
 uptr getPageSizeSlow();
+
 inline uptr getPageSizeCached() {
-#if SCUDO_ANDROID && defined(PAGE_SIZE)
-  // Most Android builds have a build-time constant page size.
-  return PAGE_SIZE;
-#endif
   if (LIKELY(PageSizeCached))
     return PageSizeCached;
   return getPageSizeSlow();
 }
+
+inline uptr getPageSizeLogCached() {
+  if (LIKELY(PageSizeLogCached))
+    return PageSizeLogCached;
+  // PageSizeLogCached and PageSizeCached are both set in getPageSizeSlow()
+  getPageSizeSlow();
+  DCHECK_NE(PageSizeLogCached, 0);
+  return PageSizeLogCached;
+}
+
+#endif
 
 // Returns 0 if the number of CPUs could not be determined.
 u32 getNumberOfCPUs();
@@ -199,8 +244,11 @@ enum class Option : u8 {
 enum class ReleaseToOS : u8 {
   Normal, // Follow the normal rules for releasing pages to the OS
   Force,  // Force release pages to the OS, but avoid cases that take too long.
-  ForceAll, // Force release every page possible regardless of how long it will
-            // take.
+  ForceAll,  // Force release every page possible regardless of how long it will
+             // take.
+  ForceFast, // Force release pages to the OS, but do it quickly and skip any
+             // cases where a lock is held by another thread.
+  Last = ForceFast, // Must be set to the last entry in the enum.
 };
 
 constexpr unsigned char PatternFillByte = 0xAB;

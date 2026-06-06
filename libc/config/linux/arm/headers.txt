@@ -1,10 +1,35 @@
 set(TARGET_PUBLIC_HEADERS
+    libc.include.complex
+    libc.include.cpio
     libc.include.ctype
-    libc.include.fenv
     libc.include.errno
+    libc.include.fenv
+    libc.include.float
     libc.include.inttypes
+    libc.include.malloc
     libc.include.math
+    libc.include.search
+    libc.include.setjmp
+    libc.include.stdbit
+    libc.include.stdckdint
+    libc.include.stdint
     libc.include.stdlib
     libc.include.string
     libc.include.strings
+    libc.include.uchar
+    libc.include.wchar
+    libc.include.wctype
+
+    libc.include.sys_param
+    libc.include.sys_personality
+
+    # Disabled due to epoll_wait syscalls not being available on this platform.
+    # libc.include.sys_epoll
 )
+
+if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_PUBLIC_HEADERS
+    libc.include.regex
+    libc.include.sys_ptrace
+  )
+endif()

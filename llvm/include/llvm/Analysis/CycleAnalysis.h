@@ -17,13 +17,12 @@
 
 #include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/SSAContext.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
 /// Legacy analysis pass which computes a \ref CycleInfo.
-class CycleInfoWrapperPass : public FunctionPass {
+class LLVM_ABI CycleInfoWrapperPass : public FunctionPass {
   Function *F = nullptr;
   CycleInfo CI;
 
@@ -55,19 +54,26 @@ public:
   using LegacyWrapper = CycleInfoWrapperPass;
 
   /// Run the analysis pass over a function and produce a dominator tree.
-  CycleInfo run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI CycleInfo run(Function &F, FunctionAnalysisManager &);
+
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
 
   // TODO: verify analysis?
 };
 
-/// Printer pass for the \c DominatorTree.
-class CycleInfoPrinterPass : public PassInfoMixin<CycleInfoPrinterPass> {
+class CycleInfoPrinterPass
+    : public RequiredPassInfoMixin<CycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit CycleInfoPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit CycleInfoPrinterPass(raw_ostream &OS);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+struct CycleInfoVerifierPass
+    : public RequiredPassInfoMixin<CycleInfoVerifierPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

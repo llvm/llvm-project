@@ -6,7 +6,7 @@ define void @merge_store(ptr nocapture %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rcx, (%rdi,%rax,4)
@@ -23,13 +23,13 @@ entry:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
   store i32 1, ptr %arrayidx, align 4
-  %0 = or i64 %indvars.iv, 1
+  %0 = or disjoint i64 %indvars.iv, 1
   %arrayidx2 = getelementptr inbounds i32, ptr %a, i64 %0
   store i32 1, ptr %arrayidx2, align 4
-  %1 = or i64 %indvars.iv, 2
+  %1 = or disjoint i64 %indvars.iv, 2
   %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %1
   store i32 1, ptr %arrayidx5, align 4
-  %2 = or i64 %indvars.iv, 3
+  %2 = or disjoint i64 %indvars.iv, 3
   %arrayidx8 = getelementptr inbounds i32, ptr %a, i64 %2
   store i32 1, ptr %arrayidx8, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 4

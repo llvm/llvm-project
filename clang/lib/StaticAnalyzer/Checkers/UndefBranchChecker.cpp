@@ -27,14 +27,14 @@ using namespace ento;
 namespace {
 
 class UndefBranchChecker : public Checker<check::BranchCondition> {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Branch condition evaluates to a garbage value"};
 
   struct FindUndefExpr {
     ProgramStateRef St;
-    const LocationContext *LCtx;
+    const StackFrame *SF;
 
-    FindUndefExpr(ProgramStateRef S, const LocationContext *L)
-        : St(std::move(S)), LCtx(L) {}
+    FindUndefExpr(ProgramStateRef S, const StackFrame *SF)
+        : St(std::move(S)), SF(SF) {}
 
     const Expr *FindExpr(const Expr *Ex) {
       if (!MatchesCriteria(Ex))
@@ -49,7 +49,7 @@ class UndefBranchChecker : public Checker<check::BranchCondition> {
     }
 
     bool MatchesCriteria(const Expr *Ex) {
-      return St->getSVal(Ex, LCtx).isUndef();
+      return St->getSVal(Ex, SF).isUndef();
     }
   };
 
@@ -64,52 +64,48 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
   // ObjCForCollection is a loop, but has no actual condition.
   if (isa<ObjCForCollectionStmt>(Condition))
     return;
-  SVal X = Ctx.getSVal(Condition);
-  if (X.isUndef()) {
-    // Generate a sink node, which implicitly marks both outgoing branches as
-    // infeasible.
-    ExplodedNode *N = Ctx.generateErrorNode();
-    if (N) {
-      if (!BT)
-        BT.reset(
-            new BugType(this, "Branch condition evaluates to a garbage value"));
 
-      // What's going on here: we want to highlight the subexpression of the
-      // condition that is the most likely source of the "uninitialized
-      // branch condition."  We do a recursive walk of the condition's
-      // subexpressions and roughly look for the most nested subexpression
-      // that binds to Undefined.  We then highlight that expression's range.
+  const auto *Ex = cast<Expr>(Condition);
+  if (!Ctx.getSVal(Ex).isUndef())
+    return;
 
-      // Get the predecessor node and check if is a PostStmt with the Stmt
-      // being the terminator condition.  We want to inspect the state
-      // of that node instead because it will contain main information about
-      // the subexpressions.
+  // Generate a sink node, which implicitly marks both outgoing branches as
+  // infeasible.
+  ExplodedNode *N = Ctx.generateErrorNode();
+  if (!N)
+    return;
+  // What's going on here: we want to highlight the subexpression of the
+  // condition that is the most likely source of the "uninitialized
+  // branch condition."  We do a recursive walk of the condition's
+  // subexpressions and roughly look for the most nested subexpression
+  // that binds to Undefined.  We then highlight that expression's range.
 
-      // Note: any predecessor will do.  They should have identical state,
-      // since all the BlockEdge did was act as an error sink since the value
-      // had to already be undefined.
-      assert (!N->pred_empty());
-      const Expr *Ex = cast<Expr>(Condition);
-      ExplodedNode *PrevN = *N->pred_begin();
-      ProgramPoint P = PrevN->getLocation();
-      ProgramStateRef St = N->getState();
+  // Get the predecessor node and check if is a PostStmt with the Stmt
+  // being the terminator condition.  We want to inspect the state
+  // of that node instead because it will contain main information about
+  // the subexpressions.
 
-      if (std::optional<PostStmt> PS = P.getAs<PostStmt>())
-        if (PS->getStmt() == Ex)
-          St = PrevN->getState();
+  // Note: any predecessor will do.  They should have identical state,
+  // since all the BlockEdge did was act as an error sink since the value
+  // had to already be undefined.
+  assert(!N->pred_empty());
+  ExplodedNode *PrevN = *N->pred_begin();
+  ProgramPoint P = PrevN->getLocation();
+  ProgramStateRef St = N->getState();
 
-      FindUndefExpr FindIt(St, Ctx.getLocationContext());
-      Ex = FindIt.FindExpr(Ex);
+  if (std::optional<PostStmt> PS = P.getAs<PostStmt>())
+    if (PS->getStmt() == Ex)
+      St = PrevN->getState();
 
-      // Emit the bug report.
-      auto R = std::make_unique<PathSensitiveBugReport>(
-          *BT, BT->getDescription(), N);
-      bugreporter::trackExpressionValue(N, Ex, *R);
-      R->addRange(Ex->getSourceRange());
+  FindUndefExpr FindIt(St, Ctx.getStackFrame());
+  Ex = FindIt.FindExpr(Ex);
 
-      Ctx.emitReport(std::move(R));
-    }
-  }
+  // Emit the bug report.
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, BT.getDescription(), N);
+  bugreporter::trackExpressionValue(N, Ex, *R);
+  R->addRange(Ex->getSourceRange());
+
+  Ctx.emitReport(std::move(R));
 }
 
 void ento::registerUndefBranchChecker(CheckerManager &mgr) {

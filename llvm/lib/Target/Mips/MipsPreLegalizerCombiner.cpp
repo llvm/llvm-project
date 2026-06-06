@@ -16,11 +16,9 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "mips-prelegalizer-combiner"
 
@@ -38,17 +36,16 @@ public:
 class MipsPreLegalizerCombinerImpl : public Combiner {
 protected:
   const MipsSubtarget &STI;
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
 
 public:
   MipsPreLegalizerCombinerImpl(MachineFunction &MF, CombinerInfo &CInfo,
-                               const TargetPassConfig *TPC, GISelKnownBits &KB,
-                               GISelCSEInfo *CSEInfo, const MipsSubtarget &STI,
+                               GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+                               const MipsSubtarget &STI,
                                MachineDominatorTree *MDT,
                                const LegalizerInfo *LI)
-      : Combiner(MF, CInfo, TPC, &KB, CSEInfo), STI(STI),
-        Helper(Observer, B, /*IsPreLegalize*/ true, &KB, MDT, LI) {}
+      : Combiner(MF, CInfo, &VT, CSEInfo), STI(STI),
+        Helper(Observer, B, /*IsPreLegalize*/ true, &VT, MDT, LI) {}
 
   static const char *getName() { return "MipsPreLegalizerCombiner"; }
 
@@ -57,7 +54,6 @@ public:
   }
 
   bool tryCombineAll(MachineInstr &MI) const override {
-
     switch (MI.getOpcode()) {
     default:
       return false;
@@ -70,9 +66,10 @@ public:
       // subtarget doesn't support them.
       auto MMO = *MI.memoperands_begin();
       const MipsSubtarget &STI = MI.getMF()->getSubtarget<MipsSubtarget>();
-      if (!isPowerOf2_64(MMO->getSize()))
+      if (!MMO->getSize().hasValue() ||
+          !isPowerOf2_64(MMO->getSize().getValue()))
         return false;
-      bool isUnaligned = MMO->getAlign() < MMO->getSize();
+      bool isUnaligned = MMO->getAlign() < MMO->getSize().getValue();
       if (!STI.systemSupportsUnalignedAccess() && isUnaligned)
         return false;
 
@@ -102,32 +99,29 @@ public:
 } // end anonymous namespace
 
 void MipsPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MipsPreLegalizerCombiner::MipsPreLegalizerCombiner() : MachineFunctionPass(ID) {
-  initializeMipsPreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-}
+MipsPreLegalizerCombiner::MipsPreLegalizerCombiner()
+    : MachineFunctionPass(ID) {}
 
 bool MipsPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const MipsSubtarget &ST = MF.getSubtarget<MipsSubtarget>();
   const MipsLegalizerInfo *LI =
       static_cast<const MipsLegalizerInfo *>(ST.getLegalizerInfo());
 
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MipsPreLegalizerCombinerInfo PCInfo;
-  MipsPreLegalizerCombinerImpl Impl(MF, PCInfo, TPC, *KB, /*CSEInfo*/ nullptr,
-                                    ST, /*MDT*/ nullptr, LI);
+  MipsPreLegalizerCombinerImpl Impl(MF, PCInfo, *VT, /*CSEInfo*/ nullptr, ST,
+                                    /*MDT*/ nullptr, LI);
   return Impl.combineMachineInstrs();
 }
 
@@ -135,14 +129,11 @@ char MipsPreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(MipsPreLegalizerCombiner, DEBUG_TYPE,
                       "Combine Mips machine instrs before legalization", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(MipsPreLegalizerCombiner, DEBUG_TYPE,
                     "Combine Mips machine instrs before legalization", false,
                     false)
 
-namespace llvm {
-FunctionPass *createMipsPreLegalizeCombiner() {
+FunctionPass *llvm::createMipsPreLegalizeCombiner() {
   return new MipsPreLegalizerCombiner();
 }
-} // end namespace llvm

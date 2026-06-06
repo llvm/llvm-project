@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
+; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
 
 ; EG-LABEL: {{^}}test_fmin_f32:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]

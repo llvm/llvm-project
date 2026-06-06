@@ -30,7 +30,14 @@ namespace tblgen {
 class Constraint {
 public:
   // Constraint kind
-  enum Kind { CK_Attr, CK_Region, CK_Successor, CK_Type, CK_Uncategorized };
+  enum Kind {
+    CK_Attr,
+    CK_Prop,
+    CK_Region,
+    CK_Successor,
+    CK_Type,
+    CK_Uncategorized
+  };
 
   // Create a constraint with a TableGen definition and a kind.
   Constraint(const llvm::Record *record, Kind kind) : def(record), kind(kind) {}
@@ -68,6 +75,10 @@ public:
   /// def is anonymous, the name of the base def is attached (to provide more
   /// context on the def).
   std::string getUniqueDefName() const;
+
+  /// Returns the name of the C++ function that should be generated for this
+  /// constraint, or std::nullopt if no C++ function should be generated.
+  std::optional<StringRef> getCppFunctionName() const;
 
   Kind getKind() const { return kind; }
 
@@ -111,7 +122,6 @@ struct DenseMapInfo<mlir::tblgen::Constraint> {
   using RecordDenseMapInfo = llvm::DenseMapInfo<const llvm::Record *>;
 
   static mlir::tblgen::Constraint getEmptyKey();
-  static mlir::tblgen::Constraint getTombstoneKey();
   static unsigned getHashValue(mlir::tblgen::Constraint constraint);
   static bool isEqual(mlir::tblgen::Constraint lhs,
                       mlir::tblgen::Constraint rhs);

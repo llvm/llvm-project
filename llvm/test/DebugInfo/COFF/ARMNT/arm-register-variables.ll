@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
+; RUN: llc < %s -filetype=obj -arm-atomic-cfg-tidy=0 | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; Generated from:
 
@@ -57,7 +57,6 @@ target triple = "thumbv7-pc-windows-msvc19.11.0"
 
 @x = dso_local global i32 0, align 4, !dbg !0
 
-; Function Attrs: noinline nounwind optnone
 define dso_local arm_aapcs_vfpcc void @f(i32 %p) !dbg !14 {
 entry:
   %p.addr = alloca i32, align 4
@@ -65,56 +64,51 @@ entry:
   %b = alloca i32, align 4
   %c = alloca i32, align 4
   store i32 %p, ptr %p.addr, align 4
-  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !17, metadata !DIExpression()), !dbg !18
+    #dbg_declare(ptr %p.addr, !17, !DIExpression(), !18)
   %0 = load i32, ptr %p.addr, align 4, !dbg !19
   %tobool = icmp ne i32 %0, 0, !dbg !19
+  %call = call arm_aapcs_vfpcc i32 @getint(), !dbg !20
   br i1 %tobool, label %if.then, label %if.else, !dbg !19
 
 if.then:                                          ; preds = %entry
-  call void @llvm.dbg.declare(metadata ptr %a, metadata !20, metadata !DIExpression()), !dbg !23
-  %call = call arm_aapcs_vfpcc i32 @getint(), !dbg !23
-  store i32 %call, ptr %a, align 4, !dbg !23
-  call void @llvm.dbg.declare(metadata ptr %b, metadata !24, metadata !DIExpression()), !dbg !25
-  %1 = load i32, ptr %a, align 4, !dbg !25
-  %call1 = call arm_aapcs_vfpcc i32 @inlineinc(i32 %1), !dbg !25
-  store i32 %call1, ptr %b, align 4, !dbg !25
-  %2 = load i32, ptr %b, align 4, !dbg !26
-  call arm_aapcs_vfpcc void @putint(i32 %2), !dbg !26
-  br label %if.end, !dbg !27
+    #dbg_declare(ptr %a, !22, !DIExpression(), !24)
+  store i32 %call, ptr %a, align 4, !dbg !24
+    #dbg_declare(ptr %b, !25, !DIExpression(), !26)
+  %1 = load i32, ptr %a, align 4, !dbg !26
+  %call1 = call arm_aapcs_vfpcc i32 @inlineinc(i32 %1), !dbg !26
+  store i32 %call1, ptr %b, align 4, !dbg !26
+  %2 = load i32, ptr %b, align 4, !dbg !27
+  br label %if.end, !dbg !28
 
 if.else:                                          ; preds = %entry
-  call void @llvm.dbg.declare(metadata ptr %c, metadata !28, metadata !DIExpression()), !dbg !30
-  %call2 = call arm_aapcs_vfpcc i32 @getint(), !dbg !30
-  store i32 %call2, ptr %c, align 4, !dbg !30
-  %3 = load i32, ptr %c, align 4, !dbg !31
-  call arm_aapcs_vfpcc void @putint(i32 %3), !dbg !31
-  br label %if.end, !dbg !32
+    #dbg_declare(ptr %c, !29, !DIExpression(), !31)
+  store i32 %call, ptr %c, align 4, !dbg !31
+  %3 = load i32, ptr %c, align 4, !dbg !32
+  br label %if.end, !dbg !33
 
 if.end:                                           ; preds = %if.else, %if.then
-  ret void, !dbg !33
+  %.sink = phi i32 [ %3, %if.else ], [ %2, %if.then ]
+  call arm_aapcs_vfpcc void @putint(i32 %.sink), !dbg !20
+  ret void, !dbg !34
 }
-
-; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 declare dso_local arm_aapcs_vfpcc i32 @getint()
 
-; Function Attrs: noinline nounwind optnone
-define internal arm_aapcs_vfpcc i32 @inlineinc(i32 %a) !dbg !34 {
+define internal arm_aapcs_vfpcc i32 @inlineinc(i32 %a) !dbg !35 {
 entry:
   %a.addr = alloca i32, align 4
   %b = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4
-  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !37, metadata !DIExpression()), !dbg !38
-  call void @llvm.dbg.declare(metadata ptr %b, metadata !39, metadata !DIExpression()), !dbg !40
-  %0 = load i32, ptr %a.addr, align 4, !dbg !40
-  %add = add nsw i32 %0, 1, !dbg !40
-  store i32 %add, ptr %b, align 4, !dbg !40
-  %1 = load volatile i32, ptr @x, align 4, !dbg !41
-  %inc = add nsw i32 %1, 1, !dbg !41
-  store volatile i32 %inc, ptr @x, align 4, !dbg !41
-  %2 = load i32, ptr %b, align 4, !dbg !42
-  ret i32 %2, !dbg !42
+    #dbg_declare(ptr %a.addr, !38, !DIExpression(), !39)
+    #dbg_declare(ptr %b, !40, !DIExpression(), !41)
+  %0 = load i32, ptr %a.addr, align 4, !dbg !41
+  %add = add nsw i32 %0, 1, !dbg !41
+  store i32 %add, ptr %b, align 4, !dbg !41
+  %1 = load volatile i32, ptr @x, align 4, !dbg !42
+  %inc = add nsw i32 %1, 1, !dbg !42
+  store volatile i32 %inc, ptr @x, align 4, !dbg !42
+  %2 = load i32, ptr %b, align 4, !dbg !43
+  ret i32 %2, !dbg !43
 }
 
 declare dso_local arm_aapcs_vfpcc void @putint(i32)
@@ -143,26 +137,27 @@ declare dso_local arm_aapcs_vfpcc void @putint(i32)
 !17 = !DILocalVariable(name: "p", arg: 1, scope: !14, file: !6, line: 9, type: !8)
 !18 = !DILocation(line: 9, scope: !14)
 !19 = !DILocation(line: 10, scope: !14)
-!20 = !DILocalVariable(name: "a", scope: !21, file: !6, line: 11, type: !8)
-!21 = distinct !DILexicalBlock(scope: !22, file: !6, line: 10)
-!22 = distinct !DILexicalBlock(scope: !14, file: !6, line: 10)
-!23 = !DILocation(line: 11, scope: !21)
-!24 = !DILocalVariable(name: "b", scope: !21, file: !6, line: 12, type: !8)
-!25 = !DILocation(line: 12, scope: !21)
-!26 = !DILocation(line: 13, scope: !21)
-!27 = !DILocation(line: 14, scope: !21)
-!28 = !DILocalVariable(name: "c", scope: !29, file: !6, line: 15, type: !8)
-!29 = distinct !DILexicalBlock(scope: !22, file: !6, line: 14)
-!30 = !DILocation(line: 15, scope: !29)
-!31 = !DILocation(line: 16, scope: !29)
-!32 = !DILocation(line: 17, scope: !29)
-!33 = !DILocation(line: 18, scope: !14)
-!34 = distinct !DISubprogram(name: "inlineinc", scope: !6, file: !6, line: 4, type: !35, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !4)
-!35 = !DISubroutineType(types: !36)
-!36 = !{!8, !8}
-!37 = !DILocalVariable(name: "a", arg: 1, scope: !34, file: !6, line: 4, type: !8)
-!38 = !DILocation(line: 4, scope: !34)
-!39 = !DILocalVariable(name: "b", scope: !34, file: !6, line: 5, type: !8)
-!40 = !DILocation(line: 5, scope: !34)
-!41 = !DILocation(line: 6, scope: !34)
-!42 = !DILocation(line: 7, scope: !34)
+!20 = !DILocation(line: 0, scope: !21)
+!21 = distinct !DILexicalBlock(scope: !14, file: !6, line: 10)
+!22 = !DILocalVariable(name: "a", scope: !23, file: !6, line: 11, type: !8)
+!23 = distinct !DILexicalBlock(scope: !21, file: !6, line: 10)
+!24 = !DILocation(line: 11, scope: !23)
+!25 = !DILocalVariable(name: "b", scope: !23, file: !6, line: 12, type: !8)
+!26 = !DILocation(line: 12, scope: !23)
+!27 = !DILocation(line: 13, scope: !23)
+!28 = !DILocation(line: 14, scope: !23)
+!29 = !DILocalVariable(name: "c", scope: !30, file: !6, line: 15, type: !8)
+!30 = distinct !DILexicalBlock(scope: !21, file: !6, line: 14)
+!31 = !DILocation(line: 15, scope: !30)
+!32 = !DILocation(line: 16, scope: !30)
+!33 = !DILocation(line: 17, scope: !30)
+!34 = !DILocation(line: 18, scope: !14)
+!35 = distinct !DISubprogram(name: "inlineinc", scope: !6, file: !6, line: 4, type: !36, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !4)
+!36 = !DISubroutineType(types: !37)
+!37 = !{!8, !8}
+!38 = !DILocalVariable(name: "a", arg: 1, scope: !35, file: !6, line: 4, type: !8)
+!39 = !DILocation(line: 4, scope: !35)
+!40 = !DILocalVariable(name: "b", scope: !35, file: !6, line: 5, type: !8)
+!41 = !DILocation(line: 5, scope: !35)
+!42 = !DILocation(line: 6, scope: !35)
+!43 = !DILocation(line: 7, scope: !35)

@@ -308,8 +308,7 @@ namespace TypeId {
   static_assert(&B2().ti1 == &typeid(B));
   static_assert(&B2().ti2 == &typeid(B2));
   extern B2 extern_b2;
-  // expected-note@+1 {{typeid applied to object 'extern_b2' whose dynamic type is not constant}}
-  static_assert(&typeid(extern_b2) == &typeid(B2)); // expected-error {{constant expression}}
+  static_assert(&typeid(extern_b2) == &typeid(B2));
 
   constexpr B2 b2;
   constexpr const B &b1 = b2;
@@ -373,7 +372,7 @@ namespace Union {
     return *p; // expected-note {{read of member 'a' of union with active member 'b'}}
   }
   constexpr int read_uninitialized() {
-    B b = {.b = 1};
+    B b = {.b = 1}; // expected-note {{declared here}}
     int *p = &b.a.y;
     b.a.x = 1;
     return *p; // expected-note {{read of uninitialized object}}
@@ -543,7 +542,7 @@ namespace TwosComplementShifts {
 
 namespace Uninit {
   constexpr int f(bool init) {
-    int a;
+    int a; // expected-note {{declared here}}
     if (init)
       a = 1;
     return a; // expected-note {{read of uninitialized object}}
@@ -577,20 +576,26 @@ namespace Uninit {
   };
   // FIXME: This is working around clang not implementing DR2026. With that
   // fixed, we should be able to test this without the injected copy.
-  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} expected-note {{subobject 'n' is not initialized}}
+  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} \
+                                      // expected-note {{subobject 'n' is not initialized}} \
+                                      // expected-note {{declared here}}
   constexpr Y y1 = copy(Y());
   static_assert(y1.z1.n == 1 && y1.z2.n == 2 && y1.z3.n == 3);
 
   constexpr Y y2 = copy(Y(0)); // expected-error {{constant expression}} expected-note {{in call}}
 
   static_assert(Y(0,0).z2.n == 0);
-  static_assert(Y(0,0).z1.n == 0); // expected-error {{constant expression}} expected-note {{read of uninitialized object}}
-  static_assert(Y(0,0).z3.n == 0); // expected-error {{constant expression}} expected-note {{read of uninitialized object}}
+  static_assert(Y(0,0).z1.n == 0); // expected-error {{constant expression}} \
+                                   // expected-note {{read of uninitialized object}} \
+                                   // expected-note {{temporary created here}}
+  static_assert(Y(0,0).z3.n == 0); // expected-error {{constant expression}} \
+                                   // expected-note {{read of uninitialized object}} \
+                                   // expected-note {{temporary created here}}
 
   static_assert(copy(Y(0,0)).z2.n == 0); // expected-error {{constant expression}} expected-note {{in call}}
 
   constexpr unsigned char not_even_unsigned_char() {
-    unsigned char c;
+    unsigned char c; // expected-note {{declared here}}
     return c; // expected-note {{read of uninitialized object}}
   }
   constexpr unsigned char x = not_even_unsigned_char(); // expected-error {{constant expression}} expected-note {{in call}}
@@ -928,7 +933,7 @@ namespace dynamic_alloc {
   constexpr void use_after_free() { // expected-error {{never produces a constant expression}}
     int *p = new int;
     delete p;
-    *p = 1; // expected-note {{assignment to heap allocated object that has been deleted}}
+    *p = 1; // expected-note {{read of heap allocated object that has been deleted}}
   }
   constexpr void use_after_free_2() { // expected-error {{never produces a constant expression}}
     struct X { constexpr void f() {} };
@@ -994,7 +999,7 @@ namespace placement_new_delete {
   constexpr bool bad(int which) {
     switch (which) {
     case 0:
-      delete new (placement_new_arg{}) int; // expected-note {{call to placement 'operator new'}}
+      delete new (placement_new_arg{}) int; // expected-note {{this placement new expression is not supported in constant expressions}}
       break;
 
     case 1:
@@ -1012,7 +1017,7 @@ namespace placement_new_delete {
     case 4:
       // FIXME: This technically follows the standard's rules, but it seems
       // unreasonable to expect implementations to support this.
-      delete new (std::align_val_t{64}) Overaligned; // expected-note {{placement new expression is not yet supported}}
+      delete new (std::align_val_t{64}) Overaligned; // expected-note {{this placement new expression is not supported in constant expressions}}
       break;
     }
 
@@ -1087,7 +1092,8 @@ namespace dtor_call {
 
   constexpr bool pseudo(bool read, bool recreate) {
     using T = bool;
-    bool b = false; // expected-note {{lifetime has already ended}}
+    bool b = false; // expected-note {{lifetime has already ended}} \
+                    // expected-note {{declared here}}
     // This evaluates the store to 'b'...
     (b = true).~T();
     // ... and ends the lifetime of the object.
@@ -1103,14 +1109,14 @@ namespace dtor_call {
   static_assert(pseudo(false, true));
 
   constexpr void use_after_destroy() {
-    A a;
+    A a; // expected-note {{declared here}}
     a.~A();
     A b = a; // expected-note {{in call}} expected-note {{read of object outside its lifetime}}
   }
   static_assert((use_after_destroy(), true)); // expected-error {{}} expected-note {{in call}}
 
   constexpr void double_destroy() {
-    A a;
+    A a; // expected-note {{declared here}}
     a.~A();
     a.~A(); // expected-note {{destruction of object outside its lifetime}}
   }
@@ -1177,7 +1183,7 @@ namespace dtor_call {
 
   constexpr void use_after_virt_destroy() {
     char buff[4] = {};
-    VU vu;
+    VU vu; // expected-note {{declared here}}
     vu.z.p = buff;
     ((Y&)vu.z).~Y();
     ((Z&)vu.z).z = 1; // expected-note {{assignment to object outside its lifetime}}
@@ -1187,7 +1193,7 @@ namespace dtor_call {
   constexpr void destroy_after_lifetime() {
     A *p;
     {
-      A a;
+      A a; // expected-note {{declared here}}
       p = &a;
     }
     p->~A(); // expected-note {{destruction of object outside its lifetime}}
@@ -1196,13 +1202,13 @@ namespace dtor_call {
 
   constexpr void destroy_after_lifetime2() {
     A *p = []{ A a; return &a; }(); // expected-warning {{}} expected-note {{declared here}}
-    p->~A(); // expected-note {{destruction of variable whose lifetime has ended}}
+    p->~A(); // expected-note {{destruction of object outside its lifetime}}
   }
   static_assert((destroy_after_lifetime2(), true)); // expected-error {{}} expected-note {{in call}}
 
   constexpr void destroy_after_lifetime3() {
     A *p = []{ return &(A&)(A&&)A(); }(); // expected-warning {{}} expected-note {{temporary created here}}
-    p->~A(); // expected-note {{destruction of temporary whose lifetime has ended}}
+    p->~A(); // expected-note {{destruction of object outside its lifetime}}
   }
   static_assert((destroy_after_lifetime3(), true)); // expected-error {{}} expected-note {{in call}}
 
@@ -1242,8 +1248,9 @@ namespace dtor_call {
   }
 
   constexpr void destroy_past_end_array() { // expected-error {{never produces a constant expression}}
-    A a[2];
-    a[2].~A(); // expected-note {{destruction of dereferenced one-past-the-end pointer}}
+    A a[2]; // expected-note {{array 'a' declared here}}
+    a[2].~A(); // expected-note {{destruction of dereferenced one-past-the-end pointer}} \
+             // expected-warning {{array index 2 is past the end of the array}}
   }
 
   union As {
@@ -1491,4 +1498,23 @@ class B{
 
 class D : B{}; // expected-error {{deleted function '~D' cannot override a non-deleted function}}
 // expected-note@-1 {{destructor of 'D' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+}
+
+namespace GH67317 {
+  constexpr unsigned char a = // expected-error {{constexpr variable 'a' must be initialized by a constant expression}} \
+                              // expected-note {{subobject of type 'const unsigned char' is not initialized}}
+    __builtin_bit_cast(unsigned char, *new char[3][1]);
+};
+
+namespace GH150705 {
+  struct A { };
+  struct B : A { };
+  struct C : A {
+    constexpr virtual int foo() const { return 0; }
+  };
+  constexpr auto p = &C::foo;
+  constexpr auto q = static_cast<int (A::*)() const>(p);
+  constexpr B b;
+  constexpr const A& a = b;
+  constexpr auto x = (a.*q)(); // expected-error {{constant expression}}
 }

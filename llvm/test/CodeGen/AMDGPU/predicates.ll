@@ -1,4 +1,4 @@
-; RUN: llc -spec-exec-max-speculation-cost=0 -march=r600 -r600-ir-structurize=0 -mcpu=redwood < %s | FileCheck %s
+; RUN: llc -spec-exec-max-speculation-cost=0 -mtriple=r600 -r600-ir-structurize=0 -mcpu=redwood < %s | FileCheck %s
 
 ; These tests make sure the compiler is optimizing branches using predicates
 ; when it is legal to do so.

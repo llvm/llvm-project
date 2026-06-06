@@ -4,7 +4,7 @@ modernize-deprecated-headers
 ============================
 
 Some headers from C library were deprecated in C++ and are no longer welcome in
-C++ codebases. Some have no effect in C++. For more details refer to the C++ 14
+C++ codebases. Some have no effect in C++. For more details refer to the C++14
 Standard [depr.c.headers] section.
 
 This check replaces C standard library headers with their C++ alternatives and
@@ -79,5 +79,5 @@ Options
    analyzed C++ source file is not included by any other C source files.
    Hence, to omit false-positives and wrong fixit-hints, we ignore emitting
    reports into header files. One can set this option to `true` if they know
-   that the header files in the project are only used by C++ source file.
+   that the header files in the project are only used by C++ source files.
    Default is `false`.

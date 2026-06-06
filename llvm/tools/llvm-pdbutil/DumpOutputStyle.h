@@ -17,8 +17,6 @@
 #include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 
-#include <string>
-
 namespace llvm {
 namespace object {
 class COFFObjectFile;
@@ -31,7 +29,7 @@ class TypeReferenceTracker;
 
 struct StatCollection {
   struct Stat {
-    Stat() {}
+    Stat() = default;
     Stat(uint32_t Count, uint32_t Size) : Count(Count), Size(Size) {}
     uint32_t Count = 0;
     uint32_t Size = 0;

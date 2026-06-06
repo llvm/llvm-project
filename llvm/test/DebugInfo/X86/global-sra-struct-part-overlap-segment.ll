@@ -26,7 +26,7 @@
 
 @.BSS3 = internal unnamed_addr global %struct.BSS3 zeroinitializer, align 32, !dbg !0, !dbg !7, !dbg !29
 ;CHECK: @.BSS3.0 = internal unnamed_addr global double 0.000000e+00, align 32, !dbg ![[GVE1:.*]], !dbg ![[GVE2:.*]]
-;CHECK: @.BSS3.1 = internal unnamed_addr global double 0.000000e+00, align 32, !dbg ![[GVE3:.*]], !dbg ![[GVE4:.*]], !dbg ![[GVE6:.*]]
+;CHECK: @.BSS3.1 = internal unnamed_addr global double 0.000000e+00, align 8, !dbg ![[GVE3:.*]], !dbg ![[GVE4:.*]], !dbg ![[GVE6:.*]]
 ;CHECK: @.BSS3.2 = internal unnamed_addr global double 0.000000e+00, align 16, !dbg ![[GVE5:.*]]
 
 @.C363_mymod_bar_ = internal constant [2 x i8] c"IF"
@@ -40,101 +40,101 @@ define float @mymod_() local_unnamed_addr {
   ret float undef
 }
 
-define void @mymod_foo_(i64* noalias nocapture writeonly %foo, i64* noalias nocapture readonly %arg) local_unnamed_addr !dbg !22 {
+define void @mymod_foo_(ptr noalias nocapture writeonly %foo, ptr noalias nocapture readonly %arg) local_unnamed_addr !dbg !22 {
 L.entry:
   tail call void @llvm.experimental.noalias.scope.decl(metadata !23)
   tail call void @llvm.experimental.noalias.scope.decl(metadata !26)
-  %0 = bitcast i64* %arg to double*
-  %1 = load double, double* %0, align 8, !noalias !23
-  store double %1, double* bitcast (%struct.BSS3* @.BSS3 to double*), align 32, !noalias !28
-  %2 = getelementptr i64, i64* %arg, i64 3
-  %3 = bitcast i64* %2 to double*
-  %4 = load double, double* %3, align 8, !alias.scope !26, !noalias !23
-  store double %4, double* bitcast (i8* getelementptr inbounds (%struct.BSS3, %struct.BSS3* @.BSS3, i64 0, i32 0, i64 8) to double*), align 8, !noalias !28
-  %5 = getelementptr i64, i64* %arg, i64 6
-  %6 = bitcast i64* %5 to double*
-  %7 = load double, double* %6, align 8, !alias.scope !26, !noalias !23
-  store double %7, double* bitcast (i8* getelementptr inbounds (%struct.BSS3, %struct.BSS3* @.BSS3, i64 0, i32 0, i64 16) to double*), align 16, !noalias !28
+  %0 = bitcast ptr %arg to ptr
+  %1 = load double, ptr %0, align 8, !noalias !23
+  store double %1, ptr @.BSS3, align 32, !noalias !28
+  %2 = getelementptr i64, ptr %arg, i64 3
+  %3 = bitcast ptr %2 to ptr
+  %4 = load double, ptr %3, align 8, !alias.scope !26, !noalias !23
+  store double %4, ptr getelementptr inbounds (%struct.BSS3, ptr @.BSS3, i64 0, i32 0, i64 8), align 8, !noalias !28
+  %5 = getelementptr i64, ptr %arg, i64 6
+  %6 = bitcast ptr %5 to ptr
+  %7 = load double, ptr %6, align 8, !alias.scope !26, !noalias !23
+  store double %7, ptr getelementptr inbounds (%struct.BSS3, ptr @.BSS3, i64 0, i32 0, i64 16), align 16, !noalias !28
   %8 = fcmp une double %1, 0.000000e+00
   br i1 %8, label %L.LB3_377.i, label %L.LB3_417.i
 
 L.LB3_417.i:                                      ; preds = %L.entry
-  tail call void (i8*, i8*, i64, ...) bitcast (void (...)* @f90io_src_info03a to void (i8*, i8*, i64, ...)*)(i8* bitcast (i32* @.C359_mymod_bar_ to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.C357_mymod_bar_, i64 0, i64 0), i64 9), !noalias !28
-  %9 = tail call i32 (i8*, i8*, i8*, i8*, ...) bitcast (i32 (...)* @f90io_print_init to i32 (i8*, i8*, i8*, i8*, ...)*)(i8* bitcast (i32* @.C360_mymod_bar_ to i8*), i8* null, i8* bitcast (i32* @.C330_mymod_bar_ to i8*), i8* bitcast (i32* @.C330_mymod_bar_ to i8*)), !noalias !28
-  %10 = tail call i32 (i8*, i32, i64, ...) bitcast (i32 (...)* @f90io_sc_ch_ldw to i32 (i8*, i32, i64, ...)*)(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.C363_mymod_bar_, i64 0, i64 0), i32 14, i64 2), !noalias !28
+  tail call void (ptr, ptr, i64, ...) @f90io_src_info03a(ptr @.C359_mymod_bar_, ptr @.C357_mymod_bar_, i64 9), !noalias !28
+  %9 = tail call i32 (ptr, ptr, ptr, ptr, ...) @f90io_print_init(ptr @.C360_mymod_bar_, ptr null, ptr @.C330_mymod_bar_, ptr @.C330_mymod_bar_), !noalias !28
+  %10 = tail call i32 (ptr, i32, i64, ...) @f90io_sc_ch_ldw(ptr @.C363_mymod_bar_, i32 14, i64 2), !noalias !28
   %11 = tail call i32 (...) @f90io_ldw_end(), !noalias !28
-  %.pre = load double, double* bitcast (%struct.BSS3* @.BSS3 to double*), align 32, !noalias !28
-  %.pre1 = load double, double* bitcast (i8* getelementptr inbounds (%struct.BSS3, %struct.BSS3* @.BSS3, i64 0, i32 0, i64 8) to double*), align 8, !noalias !28
-  %.pre2 = load double, double* bitcast (i8* getelementptr inbounds (%struct.BSS3, %struct.BSS3* @.BSS3, i64 0, i32 0, i64 16) to double*), align 16, !noalias !28
+  %.pre = load double, ptr @.BSS3, align 32, !noalias !28
+  %.pre1 = load double, ptr getelementptr inbounds (%struct.BSS3, ptr @.BSS3, i64 0, i32 0, i64 8), align 8, !noalias !28
+  %.pre2 = load double, ptr getelementptr inbounds (%struct.BSS3, ptr @.BSS3, i64 0, i32 0, i64 16), align 16, !noalias !28
   br label %L.LB3_377.i
 
 L.LB3_377.i:                                      ; preds = %L.LB3_417.i, %L.entry
   %12 = phi double [ %.pre2, %L.LB3_417.i ], [ %7, %L.entry ]
   %13 = phi double [ %.pre1, %L.LB3_417.i ], [ %4, %L.entry ]
   %14 = phi double [ %.pre, %L.LB3_417.i ], [ %1, %L.entry ]
-  %15 = bitcast i64* %foo to i8*
+  %15 = bitcast ptr %foo to ptr
   %16 = tail call double @llvm.floor.f64(double %14)
   %17 = fptosi double %16 to i32
-  %18 = bitcast i64* %foo to i32*
-  store i32 %17, i32* %18, align 4, !alias.scope !23, !noalias !26
+  %18 = bitcast ptr %foo to ptr
+  store i32 %17, ptr %18, align 4, !alias.scope !23, !noalias !26
   %19 = tail call double @llvm.floor.f64(double %13)
   %20 = fptosi double %19 to i32
-  %21 = getelementptr i8, i8* %15, i64 4
-  %22 = bitcast i8* %21 to i32*
-  store i32 %20, i32* %22, align 4, !alias.scope !23, !noalias !26
+  %21 = getelementptr i8, ptr %15, i64 4
+  %22 = bitcast ptr %21 to ptr
+  store i32 %20, ptr %22, align 4, !alias.scope !23, !noalias !26
   %23 = tail call double @llvm.floor.f64(double %12)
   %24 = fptosi double %23 to i32
-  %25 = getelementptr i64, i64* %foo, i64 1
-  %26 = bitcast i64* %25 to i32*
-  store i32 %24, i32* %26, align 4, !alias.scope !23, !noalias !26
+  %25 = getelementptr i64, ptr %foo, i64 1
+  %26 = bitcast ptr %25 to ptr
+  store i32 %24, ptr %26, align 4, !alias.scope !23, !noalias !26
   ret void
 }
 
-define void @mymod_bar_(i64* noalias nocapture writeonly %bar, i64* noalias nocapture readonly %arg) local_unnamed_addr !dbg !9 {
+define void @mymod_bar_(ptr noalias nocapture writeonly %bar, ptr noalias nocapture readonly %arg) local_unnamed_addr !dbg !9 {
 L.entry:
-  %0 = bitcast i64* %arg to double*
-  %1 = load double, double* %0, align 8
-  store double %1, double* bitcast (%struct.BSS3* @.BSS3 to double*), align 32
-  %2 = getelementptr i64, i64* %arg, i64 3
-  %3 = bitcast i64* %2 to double*
-  %4 = load double, double* %3, align 8
-  store double %4, double* bitcast (i8* getelementptr inbounds (%struct.BSS3, %struct.BSS3* @.BSS3, i64 0, i32 0, i64 8) to double*), align 8
-  %5 = getelementptr i64, i64* %arg, i64 6
-  %6 = bitcast i64* %5 to double*
-  %7 = load double, double* %6, align 8
-  store double %7, double* bitcast (i8* getelementptr inbounds (%struct.BSS3, %struct.BSS3* @.BSS3, i64 0, i32 0, i64 16) to double*), align 16
+  %0 = bitcast ptr %arg to ptr
+  %1 = load double, ptr %0, align 8
+  store double %1, ptr @.BSS3, align 32
+  %2 = getelementptr i64, ptr %arg, i64 3
+  %3 = bitcast ptr %2 to ptr
+  %4 = load double, ptr %3, align 8
+  store double %4, ptr getelementptr inbounds (%struct.BSS3, ptr @.BSS3, i64 0, i32 0, i64 8), align 8
+  %5 = getelementptr i64, ptr %arg, i64 6
+  %6 = bitcast ptr %5 to ptr
+  %7 = load double, ptr %6, align 8
+  store double %7, ptr getelementptr inbounds (%struct.BSS3, ptr @.BSS3, i64 0, i32 0, i64 16), align 16
   %8 = fcmp une double %1, 0.000000e+00
   br i1 %8, label %L.LB3_377, label %L.LB3_417
 
 L.LB3_417:                                        ; preds = %L.entry
-  tail call void (i8*, i8*, i64, ...) bitcast (void (...)* @f90io_src_info03a to void (i8*, i8*, i64, ...)*)(i8* bitcast (i32* @.C359_mymod_bar_ to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.C357_mymod_bar_, i64 0, i64 0), i64 9)
-  %9 = tail call i32 (i8*, i8*, i8*, i8*, ...) bitcast (i32 (...)* @f90io_print_init to i32 (i8*, i8*, i8*, i8*, ...)*)(i8* bitcast (i32* @.C360_mymod_bar_ to i8*), i8* null, i8* bitcast (i32* @.C330_mymod_bar_ to i8*), i8* bitcast (i32* @.C330_mymod_bar_ to i8*))
-  %10 = tail call i32 (i8*, i32, i64, ...) bitcast (i32 (...)* @f90io_sc_ch_ldw to i32 (i8*, i32, i64, ...)*)(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.C363_mymod_bar_, i64 0, i64 0), i32 14, i64 2)
+  tail call void (ptr, ptr, i64, ...) @f90io_src_info03a(ptr @.C359_mymod_bar_, ptr @.C357_mymod_bar_, i64 9)
+  %9 = tail call i32 (ptr, ptr, ptr, ptr, ...) @f90io_print_init(ptr @.C360_mymod_bar_, ptr null, ptr @.C330_mymod_bar_, ptr @.C330_mymod_bar_)
+  %10 = tail call i32 (ptr, i32, i64, ...) @f90io_sc_ch_ldw(ptr @.C363_mymod_bar_, i32 14, i64 2)
   %11 = tail call i32 (...) @f90io_ldw_end()
-  %.pre = load double, double* bitcast (%struct.BSS3* @.BSS3 to double*), align 32
-  %.pre1 = load double, double* bitcast (i8* getelementptr inbounds (%struct.BSS3, %struct.BSS3* @.BSS3, i64 0, i32 0, i64 8) to double*), align 8
-  %.pre2 = load double, double* bitcast (i8* getelementptr inbounds (%struct.BSS3, %struct.BSS3* @.BSS3, i64 0, i32 0, i64 16) to double*), align 16
+  %.pre = load double, ptr @.BSS3, align 32
+  %.pre1 = load double, ptr getelementptr inbounds (%struct.BSS3, ptr @.BSS3, i64 0, i32 0, i64 8), align 8
+  %.pre2 = load double, ptr getelementptr inbounds (%struct.BSS3, ptr @.BSS3, i64 0, i32 0, i64 16), align 16
   br label %L.LB3_377
 
 L.LB3_377:                                        ; preds = %L.LB3_417, %L.entry
   %12 = phi double [ %.pre2, %L.LB3_417 ], [ %7, %L.entry ]
   %13 = phi double [ %.pre1, %L.LB3_417 ], [ %4, %L.entry ]
   %14 = phi double [ %.pre, %L.LB3_417 ], [ %1, %L.entry ]
-  %15 = bitcast i64* %bar to i8*
+  %15 = bitcast ptr %bar to ptr
   %16 = tail call double @llvm.floor.f64(double %14)
   %17 = fptosi double %16 to i32
-  %18 = bitcast i64* %bar to i32*
-  store i32 %17, i32* %18, align 4
+  %18 = bitcast ptr %bar to ptr
+  store i32 %17, ptr %18, align 4
   %19 = tail call double @llvm.floor.f64(double %13)
   %20 = fptosi double %19 to i32
-  %21 = getelementptr i8, i8* %15, i64 4
-  %22 = bitcast i8* %21 to i32*
-  store i32 %20, i32* %22, align 4
+  %21 = getelementptr i8, ptr %15, i64 4
+  %22 = bitcast ptr %21 to ptr
+  store i32 %20, ptr %22, align 4
   %23 = tail call double @llvm.floor.f64(double %12)
   %24 = fptosi double %23 to i32
-  %25 = getelementptr i64, i64* %bar, i64 1
-  %26 = bitcast i64* %25 to i32*
-  store i32 %24, i32* %26, align 4
+  %25 = getelementptr i64, ptr %bar, i64 1
+  %26 = bitcast ptr %25 to ptr
+  store i32 %24, ptr %26, align 4
   ret void
 }
 

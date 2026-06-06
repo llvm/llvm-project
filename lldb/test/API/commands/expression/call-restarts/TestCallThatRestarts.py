@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test calling a function that hits a signal set to auto-restart, make sure the call completes.
 """
 
@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSignals
 class ExprCommandThatRestartsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -75,7 +76,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
         value = frame.EvaluateExpression("call_me (%d)" % (num_sigchld), options)
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
+        self.assertEqual(value.GetValueAsSigned(-1), num_sigchld)
 
         self.check_after_call(num_sigchld)
 
@@ -84,7 +85,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
         handler_bkpt = target.BreakpointCreateBySourceRegex(
             "Got sigchld %d.", self.main_source_spec
         )
-        self.assertTrue(handler_bkpt.GetNumLocations() > 0)
+        self.assertGreater(handler_bkpt.GetNumLocations(), 0)
         options.SetIgnoreBreakpoints(True)
         options.SetUnwindOnError(True)
 
@@ -92,7 +93,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
 
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
+        self.assertEqual(value.GetValueAsSigned(-1), num_sigchld)
         self.check_after_call(num_sigchld)
 
         # Now set the signal to print but not stop and make sure that calling
@@ -103,7 +104,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
 
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
+        self.assertEqual(value.GetValueAsSigned(-1), num_sigchld)
         self.check_after_call(num_sigchld)
 
         # Now set this unwind on error to false, and make sure that we still
@@ -113,7 +114,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
 
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
+        self.assertEqual(value.GetValueAsSigned(-1), num_sigchld)
         self.check_after_call(num_sigchld)
 
         # Okay, now set UnwindOnError to true, and then make the signal behavior to stop

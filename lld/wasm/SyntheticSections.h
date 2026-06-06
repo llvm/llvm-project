@@ -56,7 +56,6 @@ public:
 
   void finalizeContents() override {
     writeBody();
-    bodyOutputStream.flush();
     createHeader(body.size());
   }
 
@@ -103,7 +102,7 @@ protected:
  */
 template <typename T> struct ImportKey {
 public:
-  enum class State { Plain, Empty, Tombstone };
+  enum class State { Plain, Empty };
 
 public:
   T type;
@@ -126,7 +125,7 @@ inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
          lhs.importName == rhs.importName && lhs.type == rhs.type;
 }
 
-} // namespace wasm::lld
+} // namespace lld::wasm
 
 // `ImportKey<T>` can be used as a key in a `DenseMap` if `T` can be used as a
 // key in a `DenseMap`.
@@ -135,11 +134,6 @@ template <typename T> struct DenseMapInfo<lld::wasm::ImportKey<T>> {
   static lld::wasm::ImportKey<T> getEmptyKey() {
     typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
     key.state = lld::wasm::ImportKey<T>::State::Empty;
-    return key;
-  }
-  static lld::wasm::ImportKey<T> getTombstoneKey() {
-    typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
-    key.state = lld::wasm::ImportKey<T>::State::Tombstone;
     return key;
   }
   static unsigned getHashValue(const lld::wasm::ImportKey<T> &key) {
@@ -229,7 +223,7 @@ class MemorySection : public SyntheticSection {
 public:
   MemorySection() : SyntheticSection(llvm::wasm::WASM_SEC_MEMORY) {}
 
-  bool isNeeded() const override { return !config->memoryImport.has_value(); }
+  bool isNeeded() const override { return !ctx.arg.memoryImport.has_value(); }
   void writeBody() override;
 
   uint64_t numMemoryPages = 0;
@@ -287,7 +281,7 @@ public:
   // transform a `global.get` to an `i32.const`.
   void addInternalGOTEntry(Symbol *sym);
   bool needsRelocations() {
-    if (config->extendedConst)
+    if (ctx.arg.extendedConst)
       return false;
     return llvm::any_of(internalGotSymbols,
                         [=](Symbol *sym) { return !sym->isTLS(); });
@@ -325,8 +319,7 @@ public:
 
 class ElemSection : public SyntheticSection {
 public:
-  ElemSection()
-      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
+  ElemSection() : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
   bool isNeeded() const override { return indirectFunctions.size() > 0; };
   void writeBody() override;
   void addEntry(FunctionSymbol *sym);
@@ -355,7 +348,7 @@ public:
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "linking"),
         initFunctions(initFunctions), dataSegments(dataSegments) {}
   bool isNeeded() const override {
-    return config->relocatable || config->emitRelocs;
+    return ctx.arg.relocatable || ctx.arg.emitRelocs;
   }
   void writeBody() override;
   void addToSymtab(Symbol *sym);
@@ -373,7 +366,11 @@ public:
   NameSection(ArrayRef<OutputSegment *> segments)
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "name"),
         segments(segments) {}
-  bool isNeeded() const override { return !config->stripAll && numNames() > 0; }
+  bool isNeeded() const override {
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
+      return false;
+    return numNames() > 0;
+  }
   void writeBody() override;
   unsigned numNames() const {
     // We always write at least one name which is the name of the
@@ -393,7 +390,9 @@ public:
   ProducersSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "producers") {}
   bool isNeeded() const override {
-    return !config->stripAll && fieldCount() > 0;
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
+      return false;
+    return fieldCount() > 0;
   }
   void writeBody() override;
   void addInfo(const llvm::wasm::WasmProducerInfo &info);
@@ -412,7 +411,9 @@ public:
   TargetFeaturesSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "target_features") {}
   bool isNeeded() const override {
-    return !config->stripAll && features.size() > 0;
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
+      return false;
+    return features.size() > 0;
   }
   void writeBody() override;
 
@@ -436,7 +437,7 @@ public:
   BuildIdSection();
   void writeBody() override;
   bool isNeeded() const override {
-    return config->buildId != BuildIdKind::None;
+    return ctx.arg.buildId != BuildIdKind::None;
   }
   void writeBuildId(llvm::ArrayRef<uint8_t> buf);
   void writeTo(uint8_t *buf) override {

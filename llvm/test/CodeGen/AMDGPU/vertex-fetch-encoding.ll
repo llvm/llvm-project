@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=r600 -show-mc-encoding -mcpu=cypress | FileCheck --check-prefix=EG --check-prefix=FUNC %s
-; RUN: llc < %s -march=r600 -show-mc-encoding -mcpu=barts | FileCheck --check-prefix=EG --check-prefix=FUNC %s
-; RUN: llc < %s -march=r600 -show-mc-encoding -mcpu=cayman | FileCheck --check-prefix=CM --check-prefix=FUNC %s
+; RUN: llc < %s -mtriple=r600 -show-mc-encoding -mcpu=cypress | FileCheck --check-prefix=EG --check-prefix=FUNC %s
+; RUN: llc < %s -mtriple=r600 -show-mc-encoding -mcpu=barts | FileCheck --check-prefix=EG --check-prefix=FUNC %s
+; RUN: llc < %s -mtriple=r600 -show-mc-encoding -mcpu=cayman | FileCheck --check-prefix=CM --check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}vtx_fetch32:
 ; EG: VTX_READ_32 T[[GPR:[0-9]]].X, T[[GPR]].X, 0, #1 ; encoding: [0x40,0x01,0x0[[GPR]],0x10,0x0[[GPR]],0xf0,0x5f,0x13,0x00,0x00,0x08,0x00

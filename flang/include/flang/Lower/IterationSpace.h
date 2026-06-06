@@ -56,7 +56,7 @@ public:
   explicit IterationSpace(const IterationSpace &from,
                           llvm::ArrayRef<mlir::Value> idxs)
       : inArg(from.inArg), outRes(from.outRes), element(from.element),
-        indices(idxs.begin(), idxs.end()) {}
+        indices(idxs) {}
 
   /// Create a copy of the \p from IterationSpace and prepend the \p prefix
   /// values and append the \p suffix values, respectively.
@@ -296,9 +296,6 @@ template <>
 struct DenseMapInfo<Fortran::lower::ExplicitSpaceArrayBases> {
   static inline Fortran::lower::ExplicitSpaceArrayBases getEmptyKey() {
     return reinterpret_cast<Fortran::lower::FrontEndSymbol>(~0);
-  }
-  static inline Fortran::lower::ExplicitSpaceArrayBases getTombstoneKey() {
-    return reinterpret_cast<Fortran::lower::FrontEndSymbol>(~0 - 1);
   }
   static unsigned
   getHashValue(const Fortran::lower::ExplicitSpaceArrayBases &v) {

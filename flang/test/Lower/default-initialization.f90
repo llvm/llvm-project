@@ -1,16 +1,16 @@
 ! Test default initialization of local and dummy variables (dynamic initialization)
-! RUN: bbc -emit-fir -polymorphic-type %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 module test_dinit
   type t
-    integer :: i = 42 
+    integer :: i = 42
   end type
   type t_alloc_comp
     real, allocatable :: i(:)
   end type
   type tseq
     sequence
-    integer :: i = 42 
+    integer :: i = 42
   end type
 contains
 
@@ -21,67 +21,71 @@ contains
   ! Test local scalar is default initialized
   ! CHECK-LABEL: func @_QMtest_dinitPlocal()
   subroutine local
-    ! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{i:i32}>
-    ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
-    ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}> {bindc_name = "x", uniq_name = "_QMtest_dinitFlocalEx"}
+    !CHECK: %[[x:.*]]:2 = hlfir.declare %[[xalloc]] {uniq_name = "_QMtest_dinitFlocalEx"}
+    !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
+    !CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>, !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
     type(t) :: x
     print *, x%i
-  end subroutine 
+  end subroutine
 
   ! Test local array is default initialized
   ! CHECK-LABEL: func @_QMtest_dinitPlocal_array()
   subroutine local_array()
-    ! CHECK: %[[x:.*]] = fir.alloca !fir.array<4x!fir.type<_QMtest_dinitTt{i:i32}>>
-    ! CHECK: %[[xshape:.*]] = fir.shape %c4{{.*}} : (index) -> !fir.shape<1>
-    ! CHECK: %[[xbox:.*]] = fir.embox %[[x]](%[[xshape]]) : (!fir.ref<!fir.array<4x!fir.type<_QMtest_dinitTt{i:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.type<_QMtest_dinitTt{i:i32}>>>
+    ! CHECK: %[[xalloc:.*]] = fir.alloca !fir.array<4x!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
+    ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[xalloc]](%{{.*}}) {uniq_name = "_QMtest_dinitFlocal_arrayEx"}
+    ! CHECK: %[[xbox:.*]] = fir.embox %[[x]]#0(%{{.*}}) : (!fir.ref<!fir.array<4x!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>>
     ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> ()
     type(t) :: x(4)
     print *, x(2)%i
-  end subroutine 
+  end subroutine
 
   ! Test allocatable component triggers default initialization of local
   ! scalars.
   ! CHECK-LABEL: func @_QMtest_dinitPlocal_alloc_comp()
   subroutine local_alloc_comp
-    ! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
-    ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.box<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-    ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt_alloc_comp{{(,sequence)?}}{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QMtest_dinitFlocal_alloc_compEx"}
+    !CHECK: %[[x:.*]]:2 = hlfir.declare %[[xalloc]] {uniq_name = "_QMtest_dinitFlocal_alloc_compEx"}
+    !CHECK: %[[COORD:.*]] = fir.coordinate_of %[[x]]#0, i : (!fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    !CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+    !CHECK: %[[SHAPE:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
+    !CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+    !CHECK: fir.store %[[EMBOX]] to %[[COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     type(t_alloc_comp) :: x
-  end subroutine 
+  end subroutine
 
   ! Test function results are default initialized.
-  ! CHECK-LABEL: func @_QMtest_dinitPresult() -> !fir.type<_QMtest_dinitTt{i:i32}>
+  ! CHECK-LABEL: func @_QMtest_dinitPresult() -> !fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>
   function result()
-    ! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{i:i32}>
-    ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
-    ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}> {bindc_name = "result", uniq_name = "_QMtest_dinitFresultEresult"}
+    !CHECK: %[[x:.*]]:2 = hlfir.declare %[[xalloc]] {uniq_name = "_QMtest_dinitFresultEresult"}
+    !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
+    !CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>, !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
     type(t) :: result
   end function
 
   ! Test intent(out) dummies are default initialized
   ! CHECK-LABEL: func @_QMtest_dinitPintent_out(
-  ! CHECK-SAME: %[[x:.*]]: !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>
+  ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
   subroutine intent_out(x)
-    ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
-    ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    !CHECK: %[[x:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QMtest_dinitFintent_outEx"}
+    !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
+    !CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>, !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
     type(t), intent(out) :: x
   end subroutine
 
   ! Test that optional intent(out) are default initialized only when
   ! present.
   ! CHECK-LABEL: func @_QMtest_dinitPintent_out_optional(
-  ! CHECK-SAME: %[[x:.*]]: !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>> {fir.bindc_name = "x", fir.optional})
+  ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>> {fir.bindc_name = "x", fir.optional})
   subroutine intent_out_optional(x)
-    ! CHECK: %[[isPresent:.*]] = fir.is_present %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> i1
+    ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {fortran_attrs = #fir.var_attrs<intent_out, optional>, uniq_name = "_QMtest_dinitFintent_out_optionalEx"}
+    ! CHECK: %[[isPresent:.*]] = fir.is_present %[[x]]#0 : (!fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>) -> i1
     ! CHECK: fir.if %[[isPresent]] {
-      ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
+      ! CHECK: %[[xbox:.*]] = fir.embox %[[x]]#0 : (!fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
       ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-      ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+      ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> ()
     ! CHECK: }
     type(t), intent(out), optional :: x
   end subroutine
@@ -93,10 +97,10 @@ contains
     integer :: zi
     ! CHECK: %[[equiv:.*]] = fir.alloca !fir.array<4xi8>
     ! CHECK: %[[xcoor:.*]] = fir.coordinate_of %[[equiv]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-    ! CHECK: %[[x:.*]] = fir.convert %[[xcoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: %[[xptr:.*]] = fir.convert %[[xcoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
+    ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[xptr]] storage(%[[equiv]][0]) {uniq_name = "_QMtest_dinitFlocal_eqEx"}
+    ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTtseq.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
+    ! CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>, !fir.ptr<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
     equivalence (x, zi)
     print *, i
   end subroutine
@@ -111,17 +115,17 @@ contains
     type(tseq) :: y
     ! CHECK: %[[equiv:.*]] = fir.alloca !fir.array<4xi8>
     ! CHECK: %[[xcoor:.*]] = fir.coordinate_of %[[equiv]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-    ! CHECK: %[[x:.*]] = fir.convert %[[xcoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: %[[xptr:.*]] = fir.convert %[[xcoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
+    ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[xptr]] storage(%[[equiv]][0]) {uniq_name = "_QMtest_dinitFlocal_eq2Ex"}
+    ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTtseq.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
+    ! CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>, !fir.ptr<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
 
-  
+
     ! CHECK: %[[ycoor:.*]] = fir.coordinate_of %[[equiv]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-    ! CHECK: %[[y:.*]] = fir.convert %[[ycoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[ybox:.*]] = fir.embox %[[y]] : (!fir.ptr<!fir.type<_QMtest_dinitTtseq{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTtseq{i:i32}>>
-    ! CHECK: %[[yboxNone:.*]] = fir.convert %[[ybox]]
-    ! CHECK: fir.call @_FortranAInitialize(%[[yboxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> none
+    ! CHECK: %[[yptr:.*]] = fir.convert %[[ycoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
+    ! CHECK: %[[y:.*]]:2 = hlfir.declare %[[yptr]] storage(%[[equiv]][0]) {uniq_name = "_QMtest_dinitFlocal_eq2Ey"}
+    ! CHECK: %[[ADDR2:.*]] = fir.address_of(@_QQ_QMtest_dinitTtseq.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
+    ! CHECK: fir.copy %[[ADDR2]] to %[[y]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>, !fir.ptr<!fir.type<_QMtest_dinitTtseq{{(,sequence)?}}{i:i32}>>
     equivalence (x, y)
     print *, y%i
   end subroutine
@@ -136,14 +140,14 @@ contains
     ! CHECK-NOT: fir.call @_FortranAInitialize
     type(t), allocatable :: x
     ! CHECK: return
-  end subroutine 
+  end subroutine
 
   ! CHECK-LABEL: func @_QMtest_dinitPnoinit_local_pointer
   subroutine noinit_local_pointer
     ! CHECK-NOT: fir.call @_FortranAInitialize
     type(t), pointer :: x
     ! CHECK: return
-  end subroutine 
+  end subroutine
 
   ! CHECK-LABEL: func @_QMtest_dinitPnoinit_normal_dummy
   subroutine noinit_normal_dummy(x)
@@ -157,7 +161,7 @@ contains
     ! CHECK-NOT: fir.call @_FortranAInitialize
     type(t), intent(inout) :: x
     ! CHECK: return
-  end subroutine 
+  end subroutine
 
 
   subroutine test_pointer_intentout(a, b)

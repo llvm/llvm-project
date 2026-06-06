@@ -377,7 +377,7 @@ static int greedy_search(isl_ctx *ctx, struct isl_tab *tab,
  * When ctx->opt->gbr is set to ISL_GBR_ALWAYS, then we allow the basis
  * reduction computation to return early.  That is, as soon as it
  * finds a reasonable first direction.
- */ 
+ */
 __isl_give isl_vec *isl_tab_sample(struct isl_tab *tab)
 {
 	unsigned dim;
@@ -623,7 +623,7 @@ error:
  * After handling some trivial cases, we construct a tableau
  * and then use isl_tab_sample to find a sample, passing it
  * the identity matrix as initial basis.
- */ 
+ */
 static __isl_give isl_vec *sample_bounded(__isl_take isl_basic_set *bset)
 {
 	isl_size dim;
@@ -1019,7 +1019,7 @@ static void vec_sum_of_neg(__isl_keep isl_vec *v, isl_int *s)
  * entries in the last elements of "a U".
  *
  * Since we are not interested in the first entries of any of the "a U",
- * we first drop the columns of U that correpond to bounded directions.
+ * we first drop the columns of U that correspond to bounded directions.
  */
 static int tab_shift_cone(struct isl_tab *tab,
 	struct isl_tab *tab_cone, struct isl_mat *U)
@@ -1071,8 +1071,8 @@ error:
 	return -1;
 }
 
-/* Compute and return an initial basis for the possibly
- * unbounded tableau "tab".  "tab_cone" is a tableau
+/* Compute an initial basis for the possibly unbounded tableau "tab"
+ * (storing it in tab->basis).  "tab_cone" is a tableau
  * for the corresponding recession cone.
  * Additionally, add constraints to "tab" that ensure
  * that any rational value for the unbounded directions

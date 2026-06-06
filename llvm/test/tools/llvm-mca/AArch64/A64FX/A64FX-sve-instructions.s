@@ -3092,10 +3092,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     1.00                        fmaxnm	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  1      4     1.00                        fmaxnm	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  1      4     1.00                        fmaxnm	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  11     54    5.50                        fmaxnmv	d0, p7, z31.d
+# CHECK-NEXT:  7      34    3.50                        fmaxnmv	d0, p7, z31.d
 # CHECK-NEXT:  11     54    5.50                        fmaxnmv	h0, p7, z31.h
 # CHECK-NEXT:  9      44    4.50                        fmaxnmv	s0, p7, z31.s
-# CHECK-NEXT:  11     54    5.50                        fmaxv	d0, p7, z31.d
+# CHECK-NEXT:  7      34    3.50                        fmaxv	d0, p7, z31.d
 # CHECK-NEXT:  11     54    5.50                        fmaxv	h0, p7, z31.h
 # CHECK-NEXT:  9      44    4.50                        fmaxv	s0, p7, z31.s
 # CHECK-NEXT:  1      4     1.00                        fmin	z0.d, p0/m, z0.d, #0.0
@@ -3116,10 +3116,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     1.00                        fminnm	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  1      4     1.00                        fminnm	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  1      4     1.00                        fminnm	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  11     54    5.50                        fminnmv	d0, p7, z31.d
+# CHECK-NEXT:  7      34    3.50                        fminnmv	d0, p7, z31.d
 # CHECK-NEXT:  11     54    5.50                        fminnmv	h0, p7, z31.h
 # CHECK-NEXT:  9      44    4.50                        fminnmv	s0, p7, z31.s
-# CHECK-NEXT:  11     54    5.50                        fminv	d0, p7, z31.d
+# CHECK-NEXT:  7      34    3.50                        fminv	d0, p7, z31.d
 # CHECK-NEXT:  11     54    5.50                        fminv	h0, p7, z31.h
 # CHECK-NEXT:  9      44    4.50                        fminv	s0, p7, z31.s
 # CHECK-NEXT:  1      9     0.50                        fmla	z0.d, p7/m, z1.d, z31.d
@@ -3338,18 +3338,18 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      6     1.00                        lasta	d0, p7, z31.d
 # CHECK-NEXT:  1      6     1.00                        lasta	h0, p7, z31.h
 # CHECK-NEXT:  1      6     1.00                        lasta	s0, p7, z31.s
-# CHECK-NEXT:  1      29    1.00                        lasta	w0, p7, z31.b
-# CHECK-NEXT:  1      29    1.00                        lasta	w0, p7, z31.h
-# CHECK-NEXT:  1      29    1.00                        lasta	w0, p7, z31.s
-# CHECK-NEXT:  1      29    1.00                        lasta	x0, p7, z31.d
+# CHECK-NEXT:  1      25    1.00                        lasta	w0, p7, z31.b
+# CHECK-NEXT:  1      25    1.00                        lasta	w0, p7, z31.h
+# CHECK-NEXT:  1      25    1.00                        lasta	w0, p7, z31.s
+# CHECK-NEXT:  1      25    1.00                        lasta	x0, p7, z31.d
 # CHECK-NEXT:  1      6     1.00                        lastb	b0, p7, z31.b
 # CHECK-NEXT:  1      6     1.00                        lastb	d0, p7, z31.d
 # CHECK-NEXT:  1      6     1.00                        lastb	h0, p7, z31.h
 # CHECK-NEXT:  1      6     1.00                        lastb	s0, p7, z31.s
-# CHECK-NEXT:  1      29    1.00                        lastb	w0, p7, z31.b
-# CHECK-NEXT:  1      29    1.00                        lastb	w0, p7, z31.h
-# CHECK-NEXT:  1      29    1.00                        lastb	w0, p7, z31.s
-# CHECK-NEXT:  1      29    1.00                        lastb	x0, p7, z31.d
+# CHECK-NEXT:  1      25    1.00                        lastb	w0, p7, z31.b
+# CHECK-NEXT:  1      25    1.00                        lastb	w0, p7, z31.h
+# CHECK-NEXT:  1      25    1.00                        lastb	w0, p7, z31.s
+# CHECK-NEXT:  1      25    1.00                        lastb	x0, p7, z31.d
 # CHECK-NEXT:  1      11    0.50    *                   ld1b	{ z0.b }, p0/z, [sp, x0]
 # CHECK-NEXT:  1      11    0.50    *                   ld1b	{ z0.b }, p0/z, [x0, x0]
 # CHECK-NEXT:  1      11    0.50    *                   ld1b	{ z0.b }, p0/z, [x0]
@@ -4240,10 +4240,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     0.50                        rbit	z0.d, p7/m, z31.d
 # CHECK-NEXT:  1      4     0.50                        rbit	z0.h, p7/m, z31.h
 # CHECK-NEXT:  1      4     0.50                        rbit	z0.s, p7/m, z31.s
-# CHECK-NEXT:  1      3     1.00                  U     rdffr	p0.b
-# CHECK-NEXT:  1      3     1.00                  U     rdffr	p0.b, p0/z
-# CHECK-NEXT:  1      3     1.00                  U     rdffr	p15.b
-# CHECK-NEXT:  1      3     1.00                  U     rdffr	p15.b, p15/z
+# CHECK-NEXT:  1      3     1.00    *             U     rdffr	p0.b
+# CHECK-NEXT:  1      3     1.00    *             U     rdffr	p0.b, p0/z
+# CHECK-NEXT:  1      3     1.00    *             U     rdffr	p15.b
+# CHECK-NEXT:  1      3     1.00    *             U     rdffr	p15.b, p15/z
 # CHECK-NEXT:  1      3     1.00                  U     rdffrs	p0.b, p0/z
 # CHECK-NEXT:  1      3     1.00                  U     rdffrs	p15.b, p15/z
 # CHECK-NEXT:  1      1     0.50                        rdvl	x0, #0
@@ -5014,7 +5014,7 @@ zip2	z31.s, z31.s, z31.s
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -     1390.00 1376.00 599.00 256.00 4631.00 681.00 340.00
+# CHECK-NEXT:  -     1390.00 1376.00 599.00 256.00 4623.00 673.00 340.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -5604,10 +5604,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fmaxnm	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fmaxnm	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fmaxnm	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  -      -      -      -      -     5.50   5.50    -     fmaxnmv	d0, p7, z31.d
+# CHECK-NEXT:  -      -      -      -      -     3.50   3.50    -     fmaxnmv	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -     5.50   5.50    -     fmaxnmv	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -     4.50   4.50    -     fmaxnmv	s0, p7, z31.s
-# CHECK-NEXT:  -      -      -      -      -     5.50   5.50    -     fmaxv	d0, p7, z31.d
+# CHECK-NEXT:  -      -      -      -      -     3.50   3.50    -     fmaxv	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -     5.50   5.50    -     fmaxv	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -     4.50   4.50    -     fmaxv	s0, p7, z31.s
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fmin	z0.d, p0/m, z0.d, #0.0
@@ -5628,10 +5628,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fminnm	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fminnm	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     fminnm	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  -      -      -      -      -     5.50   5.50    -     fminnmv	d0, p7, z31.d
+# CHECK-NEXT:  -      -      -      -      -     3.50   3.50    -     fminnmv	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -     5.50   5.50    -     fminnmv	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -     4.50   4.50    -     fminnmv	s0, p7, z31.s
-# CHECK-NEXT:  -      -      -      -      -     5.50   5.50    -     fminv	d0, p7, z31.d
+# CHECK-NEXT:  -      -      -      -      -     3.50   3.50    -     fminv	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -     5.50   5.50    -     fminv	h0, p7, z31.h
 # CHECK-NEXT:  -      -      -      -      -     4.50   4.50    -     fminv	s0, p7, z31.s
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     fmla	z0.d, p7/m, z1.d, z31.d

@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefixes=GFX908,NOT-GFX90A --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GFX1010,NOT-GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GFX908,NOT-GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GFX1010,NOT-GFX90A --implicit-check-not=error: %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck --check-prefix=GFX90A %s
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -955,17 +955,17 @@ v_xor_b32 v6, v29, v27 row_newbcast:15
 
 // GFX90A: buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x34,0xe1,0x02,0x00,0x01,0x80]
 // GFX1010: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX908: :[[@LINE+1]]:{{[0-9]+}}: error: instruction must not use glc
+// GFX908: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x34,0xe1,0x02,0x00,0x01,0x80]
 // GFX1010: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX908: :[[@LINE+1]]:{{[0-9]+}}: error: instruction must not use glc
+// GFX908: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 buffer_atomic_add_f32 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: buffer_atomic_pk_add_f16 v0, v2, s[4:7], 0 idxen glc ; encoding: [0x00,0x60,0x38,0xe1,0x02,0x00,0x01,0x80]
 // GFX1010: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX908: :[[@LINE+1]]:{{[0-9]+}}: error: instruction must not use glc
+// GFX908: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 buffer_atomic_pk_add_f16 v0, v2, s[4:7], 0 idxen glc
 
 // GFX90A: global_atomic_add_f32 v0, v[0:1], v2, off glc ; encoding: [0x00,0x80,0x35,0xdd,0x00,0x02,0x7f,0x00]

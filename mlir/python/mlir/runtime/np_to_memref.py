@@ -7,6 +7,12 @@
 import numpy as np
 import ctypes
 
+try:
+    import ml_dtypes
+except ModuleNotFoundError:
+    # The third-party ml_dtypes provides some optional low precision data-types for NumPy.
+    ml_dtypes = None
+
 
 class C128(ctypes.Structure):
     """A ctype representation for MLIR's Double Complex."""
@@ -26,6 +32,30 @@ class F16(ctypes.Structure):
     _fields_ = [("f16", ctypes.c_int16)]
 
 
+class BF16(ctypes.Structure):
+    """A ctype representation for MLIR's BFloat16."""
+
+    _fields_ = [("bf16", ctypes.c_int16)]
+
+
+class F8E5M2(ctypes.Structure):
+    """A ctype representation for MLIR's Float8E5M2."""
+
+    _fields_ = [("f8E5M2", ctypes.c_int8)]
+
+
+class F8E3M4(ctypes.Structure):
+    """A ctype representation for MLIR's Float8E3M4."""
+
+    _fields_ = [("f8E3M4", ctypes.c_int8)]
+
+
+class F8E4M3(ctypes.Structure):
+    """A ctype representation for MLIR's Float8E4M3."""
+
+    _fields_ = [("f8E4M3", ctypes.c_int8)]
+
+
 # https://stackoverflow.com/questions/26921836/correct-way-to-test-for-numpy-dtype
 def as_ctype(dtp):
     """Converts dtype to ctype."""
@@ -35,6 +65,14 @@ def as_ctype(dtp):
         return C64
     if dtp == np.dtype(np.float16):
         return F16
+    if ml_dtypes is not None and dtp == ml_dtypes.bfloat16:
+        return BF16
+    if ml_dtypes is not None and dtp == ml_dtypes.float8_e5m2:
+        return F8E5M2
+    if ml_dtypes is not None and dtp == ml_dtypes.float8_e3m4:
+        return F8E3M4
+    if ml_dtypes is not None and dtp == ml_dtypes.float8_e4m3:
+        return F8E4M3
     return np.ctypeslib.as_ctypes_type(dtp)
 
 
@@ -46,6 +84,18 @@ def to_numpy(array):
         return array.view("complex64")
     if array.dtype == F16:
         return array.view("float16")
+    assert not (
+        array.dtype in (BF16, F8E5M2, F8E3M4, F8E4M3) and ml_dtypes is None
+    ), f"{array.dtype=} requires the ml_dtypes package, please run:\n\npip install ml_dtypes\n"
+    if array.dtype == BF16:
+        return array.view("bfloat16")
+    if array.dtype == F8E5M2:
+        return array.view("float8_e5m2")
+    if array.dtype == F8E3M4:
+        return array.view("float8_e3m4")
+    if array.dtype == F8E4M3:
+        return array.view("float8_e4m3")
+
     return array
 
 
@@ -114,6 +164,7 @@ def get_unranked_memref_descriptor(nparray):
     d.descriptor = ctypes.cast(ctypes.pointer(x), ctypes.c_void_p)
     return d
 
+
 def move_aligned_ptr_by_offset(aligned_ptr, offset):
     """Moves the supplied ctypes pointer ahead by `offset` elements."""
     aligned_addr = ctypes.addressof(aligned_ptr.contents)
@@ -121,6 +172,7 @@ def move_aligned_ptr_by_offset(aligned_ptr, offset):
     shift = offset * elem_size
     content_ptr = ctypes.cast(aligned_addr + shift, type(aligned_ptr))
     return content_ptr
+
 
 def unranked_memref_to_numpy(unranked_memref, np_dtype):
     """Converts unranked memrefs to numpy arrays."""
@@ -139,10 +191,10 @@ def unranked_memref_to_numpy(unranked_memref, np_dtype):
 
 def ranked_memref_to_numpy(ranked_memref):
     """Converts ranked memrefs to numpy arrays."""
-    content_ptr = move_aligned_ptr_by_offset(ranked_memref[0].aligned, ranked_memref[0].offset)
-    np_arr = np.ctypeslib.as_array(
-        content_ptr, shape=ranked_memref[0].shape
+    content_ptr = move_aligned_ptr_by_offset(
+        ranked_memref[0].aligned, ranked_memref[0].offset
     )
+    np_arr = np.ctypeslib.as_array(content_ptr, shape=ranked_memref[0].shape)
     strided_arr = np.lib.stride_tricks.as_strided(
         np_arr,
         np.ctypeslib.as_array(ranked_memref[0].shape),

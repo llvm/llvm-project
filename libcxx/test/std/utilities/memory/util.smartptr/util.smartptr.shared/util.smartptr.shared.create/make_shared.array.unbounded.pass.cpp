@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test requires support for aligned allocation to test overaligned types.
-// XFAIL: availability-aligned_allocation-missing
-
 // <memory>
 
 // shared_ptr
@@ -106,6 +103,17 @@ int main(int, char**) {
         assert(ptr[i][1][1] == 0);
         assert(ptr[i][2][0] == 0);
         assert(ptr[i][2][1] == 0);
+      }
+    }
+    {
+      // https://llvm.org/PR169765
+      // Ensure that the allocated size is properly rounded up
+      using Array                = char[][3];
+      std::shared_ptr<Array> ptr = std::make_shared<Array>(3);
+      for (unsigned i = 0; i < 3; ++i) {
+        assert(ptr[i][0] == '\0');
+        assert(ptr[i][1] == '\0');
+        assert(ptr[i][2] == '\0');
       }
     }
 

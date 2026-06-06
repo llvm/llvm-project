@@ -7,16 +7,19 @@ They can also be useful for general purpose lldb scripting.
 # System modules
 import errno
 import io
+import json
 import os
 import re
 import sys
 import subprocess
-from typing import Dict
+import time
+from typing import Dict, Tuple
 
 # LLDB modules
 import lldb
 from . import lldbtest_config
 from . import configuration
+from lldbsuite.test.gdbclientutils import escape_binary
 
 # How often failed simulator process launches are retried.
 SIMULATOR_RETRY = 3
@@ -318,13 +321,28 @@ def sort_stopped_threads(
 # Utility functions for setting breakpoints
 # ==================================================
 
+g_use_break_add = True
+
+
+def set_use_break_add(use_it):
+    global g_use_break_add
+    g_use_break_add = use_it
+
+
+def get_use_break_add():
+    global g_use_break_add
+    return g_use_break_add
+
 
 def run_break_set_by_script(
     test, class_name, extra_options=None, num_expected_locations=1
 ):
     """Set a scripted breakpoint.  Check that it got the right number of locations."""
     test.assertTrue(class_name is not None, "Must pass in a class name.")
-    command = "breakpoint set -P " + class_name
+    if get_use_break_add():
+        command = f"breakpoint add scripted -P {class_name}"
+    else:
+        command = "breakpoint set -P " + class_name
     if extra_options is not None:
         command += " " + extra_options
 
@@ -352,10 +370,16 @@ def run_break_set_by_file_and_line(
     If loc_exact is true, we check that there is one location, and that location must be at the input file and line number.
     """
 
-    if file_name is None:
-        command = "breakpoint set -l %d" % (line_number)
+    if get_use_break_add():
+        if file_name is None:
+            command = f"breakpoint add file {line_number} "
+        else:
+            command = f"breakpoint add file -f {file_name} -l {line_number} "
     else:
-        command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
+        if file_name is None:
+            command = "breakpoint set -l %d" % (line_number)
+        else:
+            command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
@@ -394,13 +418,19 @@ def run_break_set_by_symbol(
 
     If sym_exact is true, then the output symbol must match the input exactly, otherwise we do a substring match.
     """
-    command = 'breakpoint set -n "%s"' % (symbol)
+    if get_use_break_add():
+        command = f"breakpoint add name"
+    else:
+        command = 'breakpoint set -n "%s"' % (symbol)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
 
     if extra_options:
         command += " " + extra_options
+
+    if get_use_break_add():
+        command += f" -- '{symbol}'"
 
     break_results = run_break_set_command(test, command)
 
@@ -425,7 +455,10 @@ def run_break_set_by_selector(
 ):
     """Set a breakpoint by selector.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -S "%s"' % (selector)
+    if get_use_break_add():
+        command = f"breakpoint add name --match-style selector '{selector}'"
+    else:
+        command = 'breakpoint set -S "%s"' % (selector)
 
     if module_name:
         command += ' --shlib "%s"' % (module_name)
@@ -457,7 +490,10 @@ def run_break_set_by_regexp(
 ):
     """Set a breakpoint by regular expression match on symbol name.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -r "%s"' % (regexp)
+    if get_use_break_add():
+        command = f"breakpoint add name --match-style regex '{regexp}'"
+    else:
+        command = 'breakpoint set -r "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
 
@@ -472,9 +508,15 @@ def run_break_set_by_source_regexp(
     test, regexp, extra_options=None, num_expected_locations=-1
 ):
     """Set a breakpoint by source regular expression.  Common options are the same as run_break_set_by_file_and_line."""
-    command = 'breakpoint set -p "%s"' % (regexp)
+    if get_use_break_add():
+        command = "breakpoint add pattern"
+    else:
+        command = 'breakpoint set -p "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
+
+    if get_use_break_add():
+        command += f" -- {regexp}"
 
     break_results = run_break_set_command(test, command)
 
@@ -492,7 +534,11 @@ def run_break_set_by_file_colon_line(
     extra_options=None,
     num_expected_locations=-1,
 ):
-    command = 'breakpoint set -y "%s"' % (specifier)
+    if get_use_break_add():
+        command = f"breakpoint add file '{specifier}'"
+    else:
+        command = 'breakpoint set -y "%s"' % (specifier)
+
     if extra_options:
         command += " " + extra_options
 
@@ -696,24 +742,24 @@ def check_breakpoint(
     test.assertTrue(bkpt.IsValid(), "Breakpoint is not valid.")
 
     if expected_locations is not None:
-        test.assertEquals(expected_locations, bkpt.GetNumLocations())
+        test.assertEqual(expected_locations, bkpt.GetNumLocations())
 
     if expected_resolved_count is not None:
-        test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+        test.assertEqual(expected_resolved_count, bkpt.GetNumResolvedLocations())
     else:
         expected_resolved_count = bkpt.GetNumLocations()
         if location_id is None:
-            test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+            test.assertEqual(expected_resolved_count, bkpt.GetNumResolvedLocations())
 
     if expected_hit_count is not None:
-        test.assertEquals(expected_hit_count, bkpt.GetHitCount())
+        test.assertEqual(expected_hit_count, bkpt.GetHitCount())
 
     if location_id is not None:
         loc_bkpt = bkpt.FindLocationByID(location_id)
         test.assertTrue(loc_bkpt.IsValid(), "Breakpoint location is not valid.")
-        test.assertEquals(loc_bkpt.IsResolved(), expected_location_resolved)
+        test.assertEqual(loc_bkpt.IsResolved(), expected_location_resolved)
         if expected_location_hit_count is not None:
-            test.assertEquals(expected_location_hit_count, loc_bkpt.GetHitCount())
+            test.assertEqual(expected_location_hit_count, loc_bkpt.GetHitCount())
 
 
 # ==================================================
@@ -773,9 +819,16 @@ def get_threads_stopped_at_breakpoint_id(process, bpid):
         return threads
 
     for thread in stopped_threads:
-        # Make sure we've hit our breakpoint...
-        break_id = thread.GetStopReasonDataAtIndex(0)
-        if break_id == bpid:
+        # Make sure we've hit our breakpoint.
+        # From the docs of GetStopReasonDataAtIndex: "Breakpoint stop reasons
+        # will have data that consists of pairs of breakpoint IDs followed by
+        # the breakpoint location IDs".
+        # Iterate over all such pairs looking for `bpid`.
+        break_ids = [
+            thread.GetStopReasonDataAtIndex(idx)
+            for idx in range(0, thread.GetStopReasonDataCount(), 2)
+        ]
+        if bpid in break_ids:
             threads.append(thread)
 
     return threads
@@ -809,7 +862,7 @@ def is_thread_crashed(test, thread):
             thread.GetStopReason() == lldb.eStopReasonException
             and "EXC_BAD_ACCESS" in thread.GetStopDescription(100)
         )
-    elif test.getPlatform() == "linux":
+    elif test.getPlatform() in ["linux", "freebsd"]:
         return (
             thread.GetStopReason() == lldb.eStopReasonSignal
             and thread.GetStopReasonDataAtIndex(0)
@@ -852,7 +905,7 @@ def run_to_breakpoint_make_target(test, exe_name="a.out", in_cwd=True):
 
 def run_to_breakpoint_do_run(
     test, target, bkpt, launch_info=None, only_one_thread=True, extra_images=None
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     # Launch the process, and do not stop at the entry point.
     if not launch_info:
         launch_info = target.GetLaunchInfo()
@@ -935,7 +988,7 @@ def run_to_name_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by name on bkpt_name restricted to bkpt_module.
 
@@ -988,7 +1041,7 @@ def run_to_source_breakpoint(
     only_one_thread=True,
     extra_images=None,
     has_locations_before_run=True,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by source regex bkpt_pattern.
 
@@ -1022,7 +1075,7 @@ def run_to_line_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
-):
+) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by (source_spec, line_number(, column)).
 
@@ -1151,17 +1204,6 @@ def get_module_names(thread):
     return list(map(GetModuleName, list(range(thread.GetNumFrames()))))
 
 
-def get_stack_frames(thread):
-    """
-    Returns a sequence of stack frames for this thread.
-    """
-
-    def GetStackFrame(i):
-        return thread.GetFrameAtIndex(i)
-
-    return list(map(GetStackFrame, list(range(thread.GetNumFrames()))))
-
-
 def print_stacktrace(thread, string_buffer=False):
     """Prints a simple stack trace of this thread."""
 
@@ -1217,9 +1259,11 @@ def print_stacktrace(thread, string_buffer=False):
                     func="%s [inlined]" % funcs[i] if frame.IsInlined() else funcs[i],
                     file=files[i],
                     line=lines[i],
-                    args=get_args_as_string(frame, showFuncName=False)
-                    if not frame.IsInlined()
-                    else "()",
+                    args=(
+                        get_args_as_string(frame, showFuncName=False)
+                        if not frame.IsInlined()
+                        else "()"
+                    ),
                 ),
                 file=output,
             )
@@ -1357,33 +1401,6 @@ def get_args_as_string(frame, showFuncName=True):
         return "(%s)" % (", ".join(args))
 
 
-def print_registers(frame, string_buffer=False):
-    """Prints all the register sets of the frame."""
-
-    output = io.StringIO() if string_buffer else sys.stdout
-
-    print("Register sets for " + str(frame), file=output)
-
-    registerSet = frame.GetRegisters()  # Return type of SBValueList.
-    print(
-        "Frame registers (size of register set = %d):" % registerSet.GetSize(),
-        file=output,
-    )
-    for value in registerSet:
-        # print(value, file=output)
-        print(
-            "%s (number of children = %d):" % (value.GetName(), value.GetNumChildren()),
-            file=output,
-        )
-        for child in value:
-            print(
-                "Name: %s, Value: %s" % (child.GetName(), child.GetValue()), file=output
-            )
-
-    if string_buffer:
-        return output.getvalue()
-
-
 def get_registers(frame, kind):
     """Returns the registers given the frame and the kind of registers desired.
 
@@ -1494,8 +1511,8 @@ class ChildVisitingFormatter(BasicFormatter):
         return output.getvalue()
 
 
-class RecursiveDecentFormatter(BasicFormatter):
-    """The recursive decent formatter prints the value and the decendents.
+class RecursiveDescentFormatter(BasicFormatter):
+    """The recursive descent formatter prints the value and the descendents.
 
     The constructor takes two keyword args: indent_level, which defaults to 0,
     and indent_child, which defaults to 2.  The current indentation level is
@@ -1512,7 +1529,6 @@ class RecursiveDecentFormatter(BasicFormatter):
             output = io.StringIO()
         else:
             output = buffer
-
         BasicFormatter.format(self, value, buffer=output, indent=self.lindent)
         new_indent = self.lindent + self.cindent
         for child in value:
@@ -1520,7 +1536,7 @@ class RecursiveDecentFormatter(BasicFormatter):
                 BasicFormatter.format(self, child, buffer=output, indent=new_indent)
             else:
                 if child.GetNumChildren() > 0:
-                    rdf = RecursiveDecentFormatter(indent_level=new_indent)
+                    rdf = RecursiveDescentFormatter(indent_level=new_indent)
                     rdf.format(child, buffer=output)
                 else:
                     BasicFormatter.format(self, child, buffer=output, indent=new_indent)
@@ -1594,11 +1610,11 @@ def set_actions_for_signal(
 ):
     return_obj = lldb.SBCommandReturnObject()
     command = "process handle {0}".format(signal_name)
-    if pass_action != None:
+    if pass_action is not None:
         command += " -p {0}".format(pass_action)
-    if stop_action != None:
+    if stop_action is not None:
         command += " -s {0}".format(stop_action)
-    if notify_action != None:
+    if notify_action is not None:
         command += " -n {0}".format(notify_action)
 
     testcase.dbg.GetCommandInterpreter().HandleCommand(command, return_obj)
@@ -1607,21 +1623,6 @@ def set_actions_for_signal(
         return_obj.Succeeded(),
         "Setting signal handling for {0} worked as expected".format(signal_name),
     )
-
-
-class PrintableRegex(object):
-    def __init__(self, text):
-        self.regex = re.compile(text)
-        self.text = text
-
-    def match(self, str):
-        return self.regex.match(str)
-
-    def __str__(self):
-        return "%s" % (self.text)
-
-    def __repr__(self):
-        return "re.compile(%s) -> %s" % (self.text, self.regex)
 
 
 def skip_if_callable(test, mycallable, reason):
@@ -1654,6 +1655,22 @@ def skip_if_library_missing(test, target, library):
     )
 
 
+def install_to_target(test, path):
+    if lldb.remote_platform:
+        filename = os.path.basename(path)
+        remote_path = append_to_process_working_directory(test, filename)
+        err = lldb.remote_platform.Install(
+            lldb.SBFileSpec(path, True), lldb.SBFileSpec(remote_path, False)
+        )
+        if err.Fail():
+            raise Exception(
+                "remote_platform.Install('%s', '%s') failed: %s"
+                % (path, remote_path, err)
+            )
+        path = remote_path
+    return path
+
+
 def read_file_on_target(test, remote):
     if lldb.remote_platform:
         local = test.getBuildArtifact("file_from_target")
@@ -1674,22 +1691,20 @@ def read_file_from_process_wd(test, name):
     return read_file_on_target(test, path)
 
 
-def wait_for_file_on_target(testcase, file_path, max_attempts=6):
-    for i in range(max_attempts):
-        err, retcode, msg = testcase.run_platform_command("ls %s" % file_path)
+def wait_for_file_on_target(testcase, file_path: str):
+    timeout_seconds = 600 if "ASAN_OPTIONS" in os.environ else 120
+    sleep_interval_seconds = 0.5
+    deadline_seconds = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline_seconds:
+        command = f"ls {file_path}"
+        err, retcode, _ = testcase.run_platform_command(command)
         if err.Success() and retcode == 0:
-            break
-        if i < max_attempts:
-            # Exponential backoff!
-            import time
+            return read_file_on_target(testcase, file_path)
 
-            time.sleep(pow(2, i) * 0.25)
-    else:
-        testcase.fail(
-            "File %s not found even after %d attempts." % (file_path, max_attempts)
-        )
+        time.sleep(sleep_interval_seconds)
 
-    return read_file_on_target(testcase, file_path)
+    testcase.fail(f"File {file_path} not found after {timeout_seconds} seconds.")
 
 
 def packetlog_get_process_info(log):
@@ -1718,19 +1733,159 @@ def packetlog_get_dylib_info(log):
     dylib_info = None
     with open(log, "r") as logfile:
         dylib_info = None
+        fetched_all_binary_addresses = False
         expect_dylib_info_response = False
         for line in logfile:
+            # We've seen a jGetLoadedDynamicLibrariesInfos
+            # We may have a response with *only* addresses, or
+            # it may include detailed information.  If it is
+            # addresses-only, set fetched_all_binary_addresses to
+            # True, and when we send another jGetLoadedDynamicLibrariesInfos
+            # getting the detailed information for these, we'll have
+            # what we want.
             if expect_dylib_info_response:
                 while line[0] != "$":
                     line = line[1:]
                 line = line[1:]
                 # Unescape '}'.
                 dylib_info = json.loads(line.replace("}]", "}")[:-4])
-                expect_dylib_info_response = False
+                # See if this is an addresses-only response.
+                if "images" in dylib_info:
+                    if len(dylib_info["images"]) > 0:
+                        if not ("mach_header" in dylib_info["images"][0]):
+                            fetched_all_binary_addresses = True
+                            expect_dylib_info_response = False
+                            dylib_info = None
+                            continue
+                break
+
             if (
-                'send packet: $jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}'
+                'send packet: $jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true'
                 in line
             ):
                 expect_dylib_info_response = True
+                continue
+
+            # We had an addresses-only jGetLoadedDynamicLibrariesInfos
+            # and now we're getting the detailed information for a group
+            # of the binaries.
+            if (
+                fetched_all_binary_addresses
+                and 'send packet: $jGetLoadedDynamicLibrariesInfos:{"information-level":"full","solib_addresses"'
+                in line
+            ):
+                fetched_all_binary_addresses = False
+                expect_dylib_info_response = True
+                continue
 
     return dylib_info
+
+
+# ========================
+# Utilities for simulators
+# ========================
+
+
+def get_latest_apple_simulator(platform_name, log=None):
+    # Run simctl to list all simulators
+    cmd = ["xcrun", "simctl", "list", "-j", "devices"]
+    cmd_str = " ".join(cmd)
+    if log:
+        log(cmd_str)
+    sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
+    sim_devices = json.loads(sim_devices_str)["devices"]
+
+    # Find an available simulator for the requested platform
+    device_uuid = None
+    device_runtime = None
+    for simulator in sim_devices:
+        if isinstance(simulator, dict):
+            runtime = simulator["name"]
+            devices = simulator["devices"]
+        else:
+            runtime = simulator
+            devices = sim_devices[simulator]
+        if not platform_name in runtime.lower():
+            continue
+        for device in devices:
+            if "availability" in device and device["availability"] != "(available)":
+                continue
+            if "isAvailable" in device and not device["isAvailable"]:
+                continue
+            if device_runtime and runtime < device_runtime:
+                continue
+            device_uuid = device["udid"]
+            device_runtime = runtime
+            # Stop searching in this runtime
+            break
+
+    return device_uuid
+
+
+def launch_exe_in_apple_simulator(
+    device_uuid,
+    exe_path,
+    exe_args=[],
+    stderr_patterns=[],
+    log=None,
+):
+    exe_path = os.path.realpath(exe_path)
+    cmd = [
+        "xcrun",
+        "simctl",
+        "spawn",
+        "-s",
+        device_uuid,
+        exe_path,
+    ] + exe_args
+    if log:
+        log(" ".join(cmd))
+    sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+
+    # Read stderr to try to find matches.
+    # Each pattern will return the value of group[1] of the first match in the stderr.
+    # Will read at most stderr_lines_to_read lines.
+    # Will early terminate when all matches have been found.
+    total_patterns = len(stderr_patterns)
+    matches_found = 0
+    matched_strings = [None] * total_patterns
+    if len(stderr_patterns) != 0:
+        while True:
+            stderr = sim_launcher.stderr.readline().decode("utf-8")
+            if not stderr:
+                continue
+            if log:
+                log(f"searching stderr line: {stderr}")
+            for i, pattern in enumerate(stderr_patterns):
+                if matched_strings[i] is not None:
+                    continue
+                match = re.match(pattern, stderr)
+                if match:
+                    matched_strings[i] = str(match.group(1))
+                    matches_found += 1
+            if matches_found == total_patterns:
+                break
+
+    return exe_path, matched_strings
+
+
+# Binary escapes `packet_str`, sends it to the remote and returns the reply.
+def send_packet_get_reply(test, packet_str):
+    packet_str = escape_binary(packet_str)
+    test.runCmd(f"proc plugin packet send '{packet_str}'", check=False)
+    # The output is of the form:
+    #  packet: <packet_str>
+    #  response: <response>
+    output = test.res.GetOutput()
+    reply = output.split("\n")
+    packet = reply[0].strip()
+    response = reply[1].strip()
+
+    test.assertTrue(packet.startswith("packet: "), output)
+    test.assertTrue(response.startswith("response: "), output)
+    return response[len("response: ") :].strip()
+
+
+def get_qsupported_capabilities(test):
+    reply = send_packet_get_reply(test, "qSupported")
+    return reply.strip().split(";")

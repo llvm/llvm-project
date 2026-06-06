@@ -17,26 +17,30 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/Sequence.h"
 
 namespace mlir {
 
 //===----------------------------------------------------------------------===//
 // TypeRange
+//===----------------------------------------------------------------------===//
 
 /// This class provides an abstraction over the various different ranges of
 /// value types. In many cases, this prevents the need to explicitly materialize
 /// a SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class TypeRange : public llvm::detail::indexed_accessor_range_base<
-                      TypeRange,
-                      llvm::PointerUnion<const Value *, const Type *,
-                                         OpOperand *, detail::OpResultImpl *>,
-                      Type, Type, Type> {
+class TypeRange
+    : public llvm::detail::indexed_accessor_range_base<
+          TypeRange,
+          llvm::PointerUnion<const Value *, const Type *, OpOperand *,
+                             detail::OpResultImpl *, const Repeated<Type> *,
+                             const Repeated<Value> *>,
+          Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
-  TypeRange(ArrayRef<Type> types = std::nullopt);
+  TypeRange(ArrayRef<Type> types = {});
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
@@ -46,9 +50,14 @@ public:
                                          values.end().getCurrent()))) {}
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<Type>, Arg>::value>>
-  TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
-  TypeRange(std::initializer_list<Type> types)
+  TypeRange(Arg &&arg LLVM_LIFETIME_BOUND)
+      : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
+  TypeRange(std::initializer_list<Type> types LLVM_LIFETIME_BOUND)
       : TypeRange(ArrayRef<Type>(types)) {}
+  /// Constructs a range from a repeated type. The Repeated object must outlive
+  /// this range.
+  TypeRange(const Repeated<Type> &repeatedValue LLVM_LIFETIME_BOUND)
+      : RangeBaseT(&repeatedValue, repeatedValue.count) {}
 
 private:
   /// The owner of the range is either:
@@ -56,8 +65,13 @@ private:
   /// * A pointer to the first element of an array of types.
   /// * A pointer to the first element of an array of operands.
   /// * A pointer to the first element of an array of results.
-  using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *,
-                                    detail::OpResultImpl *>;
+  /// * A pointer to a Repeated<Type> (single type repeated N times).
+  /// * A pointer to a Repeated<Value> (single value repeated N times,
+  ///   dereferenced via getType()).
+  using OwnerT =
+      llvm::PointerUnion<const Value *, const Type *, OpOperand *,
+                         detail::OpResultImpl *, const Repeated<Type> *,
+                         const Repeated<Value> *>;
 
   /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(OwnerT object, ptrdiff_t index);
@@ -70,7 +84,7 @@ private:
 
 /// Make TypeRange hashable.
 inline ::llvm::hash_code hash_value(TypeRange arg) {
-  return ::llvm::hash_combine_range(arg.begin(), arg.end());
+  return ::llvm::hash_combine_range(arg);
 }
 
 /// Emit a type range to the given output stream.
@@ -81,6 +95,7 @@ inline raw_ostream &operator<<(raw_ostream &os, const TypeRange &types) {
 
 //===----------------------------------------------------------------------===//
 // TypeRangeRange
+//===----------------------------------------------------------------------===//
 
 using TypeRangeRangeIterator =
     llvm::mapped_iterator<llvm::iota_range<unsigned>::iterator,
@@ -110,6 +125,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ValueTypeRange
+//===----------------------------------------------------------------------===//
 
 /// This class implements iteration on the types of a given range of values.
 template <typename ValueIteratorT>
@@ -193,17 +209,11 @@ struct DenseMapInfo<mlir::TypeRange> {
     return mlir::TypeRange(getEmptyKeyPointer(), 0);
   }
 
-  static mlir::TypeRange getTombstoneKey() {
-    return mlir::TypeRange(getTombstoneKeyPointer(), 0);
-  }
-
   static unsigned getHashValue(mlir::TypeRange val) { return hash_value(val); }
 
   static bool isEqual(mlir::TypeRange lhs, mlir::TypeRange rhs) {
     if (isEmptyKey(rhs))
       return isEmptyKey(lhs);
-    if (isTombstoneKey(rhs))
-      return isTombstoneKey(lhs);
     return lhs == rhs;
   }
 
@@ -212,21 +222,10 @@ private:
     return DenseMapInfo<mlir::Type *>::getEmptyKey();
   }
 
-  static const mlir::Type *getTombstoneKeyPointer() {
-    return DenseMapInfo<mlir::Type *>::getTombstoneKey();
-  }
-
   static bool isEmptyKey(mlir::TypeRange range) {
     if (const auto *type =
             llvm::dyn_cast_if_present<const mlir::Type *>(range.getBase()))
       return type == getEmptyKeyPointer();
-    return false;
-  }
-
-  static bool isTombstoneKey(mlir::TypeRange range) {
-    if (const auto *type =
-            llvm::dyn_cast_if_present<const mlir::Type *>(range.getBase()))
-      return type == getTombstoneKeyPointer();
     return false;
   }
 };

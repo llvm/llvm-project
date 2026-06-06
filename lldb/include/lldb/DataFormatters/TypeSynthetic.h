@@ -20,50 +20,58 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/ErrorExtras.h"
 
 namespace lldb_private {
 class SyntheticChildrenFrontEnd {
 protected:
   ValueObject &m_backend;
 
-  void SetValid(bool valid) { m_valid = valid; }
-
-  bool IsValid() { return m_valid; }
-
 public:
-  SyntheticChildrenFrontEnd(ValueObject &backend)
-      : m_backend(backend), m_valid(true) {}
+  SyntheticChildrenFrontEnd(ValueObject &backend) : m_backend(backend) {}
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
-  virtual size_t CalculateNumChildren() = 0;
+  virtual llvm::Expected<uint32_t> CalculateNumChildren() = 0;
 
-  virtual size_t CalculateNumChildren(uint32_t max) {
+  virtual llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) {
     auto count = CalculateNumChildren();
-    return count <= max ? count : max;
+    if (!count)
+      return count;
+    return *count <= max ? *count : max;
   }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx) = 0;
+  uint32_t CalculateNumChildrenIgnoringErrors(uint32_t max = UINT32_MAX);
 
-  virtual size_t GetIndexOfChildWithName(ConstString name) = 0;
+  virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) = 0;
 
-  // this function is assumed to always succeed and it if fails, the front-end
-  // should know to deal with it in the correct way (most probably, by refusing
-  // to return any children) the return value of Update() should actually be
-  // interpreted as "ValueObjectSyntheticFilter cache is good/bad" if =true,
-  // ValueObjectSyntheticFilter is allowed to use the children it fetched
-  // previously and cached if =false, ValueObjectSyntheticFilter must throw
-  // away its cache, and query again for children
-  virtual bool Update() = 0;
+  /// Determine the index of a named child. Subscript names ("[N]") are, by
+  /// default, handled automatically. For data types which need custom
+  /// subscripting behavior - for example a sparse array, disable automatic
+  /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+  }
+
+  /// This function is assumed to always succeed and if it fails, the front-end
+  /// should know to deal with it in the correct way (most probably, by refusing
+  /// to return any children). The return value of \ref Update should actually
+  /// be interpreted as "ValueObjectSynthetic cache is good/bad". If this
+  /// function returns \ref lldb::ChildCacheState::eReuse, \ref
+  /// ValueObjectSynthetic is allowed to use the children it fetched
+  /// previously and cached. Otherwise, \ref ValueObjectSynthetic must
+  /// throw away its cache, and query again for children.
+  virtual lldb::ChildCacheState Update() = 0;
 
   // if this function returns false, then CalculateNumChildren() MUST return 0
   // since UI frontends might validly decide not to inquire for children given
   // a false return value from this call if it returns true, then
   // CalculateNumChildren() can return any number >= 0 (0 being valid) it
   // should if at all possible be more efficient than CalculateNumChildren()
-  virtual bool MightHaveChildren() = 0;
+  virtual bool MightHaveChildren() { return true; }
 
   // if this function returns a non-null ValueObject, then the returned
   // ValueObject will stand for this ValueObject whenever a "value" request is
@@ -76,26 +84,24 @@ public:
   virtual ConstString GetSyntheticTypeName() { return ConstString(); }
 
   typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
-  typedef std::unique_ptr<SyntheticChildrenFrontEnd> AutoPointer;
+  typedef std::unique_ptr<SyntheticChildrenFrontEnd> UniquePointer;
 
 protected:
   lldb::ValueObjectSP
-  CreateValueObjectFromExpression(llvm::StringRef name,
-                                  llvm::StringRef expression,
-                                  const ExecutionContext &exe_ctx);
+  CreateChildValueObjectFromExpression(llvm::StringRef name,
+                                       llvm::StringRef expression,
+                                       const ExecutionContext &exe_ctx);
 
   lldb::ValueObjectSP
-  CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
-                               const ExecutionContext &exe_ctx,
-                               CompilerType type);
+  CreateChildValueObjectFromAddress(llvm::StringRef name, uint64_t address,
+                                    const ExecutionContext &exe_ctx,
+                                    CompilerType type, bool do_deref = true);
 
-  lldb::ValueObjectSP CreateValueObjectFromData(llvm::StringRef name,
-                                                const DataExtractor &data,
-                                                const ExecutionContext &exe_ctx,
-                                                CompilerType type);
+  lldb::ValueObjectSP CreateChildValueObjectFromData(
+      llvm::StringRef name, const DataExtractor &data,
+      const ExecutionContext &exe_ctx, CompilerType type);
 
 private:
-  bool m_valid;
   SyntheticChildrenFrontEnd(const SyntheticChildrenFrontEnd &) = delete;
   const SyntheticChildrenFrontEnd &
   operator=(const SyntheticChildrenFrontEnd &) = delete;
@@ -108,15 +114,17 @@ public:
 
   ~SyntheticValueProviderFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return 0; }
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return 0; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override { return nullptr; }
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return UINT32_MAX;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   }
 
-  bool Update() override { return false; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eRefetch;
+  }
 
   bool MightHaveChildren() override { return false; }
 
@@ -220,6 +228,18 @@ public:
       return *this;
     }
 
+    bool GetCustomSubscripting() const {
+      return m_flags & lldb::eTypeOptionCustomSubscripting;
+    }
+
+    Flags &SetCustomSubscripting(bool value = true) {
+      if (value)
+        m_flags |= lldb::eTypeOptionCustomSubscripting;
+      else
+        m_flags &= ~lldb::eTypeOptionCustomSubscripting;
+      return *this;
+    }
+
     uint32_t GetValue() { return m_flags; }
 
     void SetValue(uint32_t value) { m_flags = value; }
@@ -242,6 +262,8 @@ public:
 
   bool WantsDereference() const { return m_flags.GetFrontEndWantsDereference();}
 
+  bool CustomSubscripting() const { return m_flags.GetCustomSubscripting(); }
+
   void SetCascades(bool value) { m_flags.SetCascades(value); }
 
   void SetSkipsPointers(bool value) { m_flags.SetSkipPointers(value); }
@@ -258,16 +280,21 @@ public:
 
   virtual std::string GetDescription() = 0;
 
-  virtual SyntheticChildrenFrontEnd::AutoPointer
+  virtual SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) = 0;
 
   typedef std::shared_ptr<SyntheticChildren> SharedPointer;
 
   uint32_t &GetRevision() { return m_my_revision; }
 
+  uint32_t GetPtrMatchDepth() { return m_ptr_match_depth; }
+
+  void SetPtrMatchDepth(uint32_t value) { m_ptr_match_depth = value; }
+
 protected:
   uint32_t m_my_revision = 0;
   Flags m_flags;
+  uint32_t m_ptr_match_depth = 1;
 
 private:
   SyntheticChildren(const SyntheticChildren &) = delete;
@@ -319,20 +346,24 @@ public:
 
     ~FrontEnd() override = default;
 
-    size_t CalculateNumChildren() override { return filter->GetCount(); }
+    llvm::Expected<uint32_t> CalculateNumChildren() override {
+      return filter->GetCount();
+    }
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
       if (idx >= filter->GetCount())
         return lldb::ValueObjectSP();
       return m_backend.GetSyntheticExpressionPathChild(
           filter->GetExpressionPathAtIndex(idx), true);
     }
 
-    bool Update() override { return false; }
+    lldb::ChildCacheState Update() override {
+      return lldb::ChildCacheState::eRefetch;
+    }
 
     bool MightHaveChildren() override { return filter->GetCount() > 0; }
 
-    size_t GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 
@@ -343,9 +374,10 @@ public:
     const FrontEnd &operator=(const FrontEnd &) = delete;
   };
 
-  SyntheticChildrenFrontEnd::AutoPointer
+  SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
-    return SyntheticChildrenFrontEnd::AutoPointer(new FrontEnd(this, backend));
+    return SyntheticChildrenFrontEnd::UniquePointer(
+        new FrontEnd(this, backend));
   }
 
   typedef std::shared_ptr<TypeFilterImpl> SharedPointer;
@@ -369,9 +401,9 @@ public:
 
   std::string GetDescription() override;
 
-  SyntheticChildrenFrontEnd::AutoPointer
+  SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
-    return SyntheticChildrenFrontEnd::AutoPointer(
+    return SyntheticChildrenFrontEnd::UniquePointer(
         m_create_callback(this, backend.GetSP()));
   }
 
@@ -421,17 +453,17 @@ public:
 
     bool IsValid();
 
-    size_t CalculateNumChildren() override;
+    llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-    size_t CalculateNumChildren(uint32_t max) override;
+    llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-    bool Update() override;
+    lldb::ChildCacheState Update() override;
 
     bool MightHaveChildren() override;
 
-    size_t GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
     lldb::ValueObjectSP GetSyntheticValue() override;
 
@@ -448,9 +480,9 @@ public:
     const FrontEnd &operator=(const FrontEnd &) = delete;
   };
 
-  SyntheticChildrenFrontEnd::AutoPointer
+  SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
-    auto synth_ptr = SyntheticChildrenFrontEnd::AutoPointer(
+    auto synth_ptr = SyntheticChildrenFrontEnd::UniquePointer(
         new FrontEnd(m_python_class, backend));
     if (synth_ptr && ((FrontEnd *)synth_ptr.get())->IsValid())
       return synth_ptr;
@@ -462,6 +494,57 @@ private:
   const ScriptedSyntheticChildren &
   operator=(const ScriptedSyntheticChildren &) = delete;
 };
+
+/// A synthetic formatter that is defined in LLDB formmater bytecode.
+///
+/// See `BytecodeSummaryFormat` for the corresponding summary formatter.
+///
+/// Formatter bytecode documentation can be found in
+/// lldb/docs/resources/formatterbytecode.rst
+class BytecodeSyntheticChildren : public SyntheticChildren {
+public:
+  struct SyntheticBytecodeImplementation {
+    std::unique_ptr<llvm::MemoryBuffer> init;
+    std::unique_ptr<llvm::MemoryBuffer> update;
+    std::unique_ptr<llvm::MemoryBuffer> num_children;
+    std::unique_ptr<llvm::MemoryBuffer> get_child_at_index;
+    std::unique_ptr<llvm::MemoryBuffer> get_child_index;
+  };
+
+private:
+  class FrontEnd : public SyntheticChildrenFrontEnd {
+  public:
+    FrontEnd(ValueObject &backend, SyntheticBytecodeImplementation &impl);
+
+    lldb::ChildCacheState Update() override;
+    llvm::Expected<uint32_t> CalculateNumChildren() override;
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+
+  private:
+    const SyntheticBytecodeImplementation &m_impl;
+    FormatterBytecode::DataStack m_init_results;
+    FormatterBytecode::DataStack m_self;
+  };
+
+public:
+  BytecodeSyntheticChildren(SyntheticBytecodeImplementation &&impl)
+      : SyntheticChildren({}), m_impl(std::move(impl)) {}
+
+  bool IsScripted() override { return false; }
+
+  std::string GetDescription() override;
+
+  SyntheticChildrenFrontEnd::UniquePointer
+  GetFrontEnd(ValueObject &backend) override {
+    return SyntheticChildrenFrontEnd::UniquePointer(
+        new FrontEnd(backend, m_impl));
+  }
+
+private:
+  SyntheticBytecodeImplementation m_impl;
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_DATAFORMATTERS_TYPESYNTHETIC_H

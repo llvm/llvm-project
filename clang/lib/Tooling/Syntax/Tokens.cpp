@@ -23,9 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>
@@ -383,12 +381,13 @@ llvm::ArrayRef<syntax::Token> TokenBuffer::spelledTokens(FileID FID) const {
   return It->second.SpelledTokens;
 }
 
-const syntax::Token *TokenBuffer::spelledTokenAt(SourceLocation Loc) const {
+const syntax::Token *
+TokenBuffer::spelledTokenContaining(SourceLocation Loc) const {
   assert(Loc.isFileID());
   const auto *Tok = llvm::partition_point(
       spelledTokens(SourceMgr->getFileID(Loc)),
-      [&](const syntax::Token &Tok) { return Tok.location() < Loc; });
-  if (!Tok || Tok->location() != Loc)
+      [&](const syntax::Token &Tok) { return Tok.endLocation() <= Loc; });
+  if (!Tok || Loc < Tok->location())
     return nullptr;
   return Tok;
 }
@@ -401,6 +400,12 @@ std::string TokenBuffer::Mapping::str() const {
 
 std::optional<llvm::ArrayRef<syntax::Token>>
 TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
+  // In cases of invalid code, AST nodes can have source ranges that include
+  // the `eof` token. As there's no spelling for this token, exclude it from
+  // the range.
+  if (!Expanded.empty() && Expanded.back().kind() == tok::eof) {
+    Expanded = Expanded.drop_back();
+  }
   // Mapping an empty range is ambiguous in case of empty mappings at either end
   // of the range, bail out in that case.
   if (Expanded.empty())
@@ -676,8 +681,18 @@ private:
 TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
   // Collect the expanded token stream during preprocessing.
   PP.setTokenWatcher([this](const clang::Token &T) {
-    if (T.isAnnotation())
+    if (T.is(tok::annot_module_name)) {
+      auto &SM = this->PP.getSourceManager();
+      StringRef Text = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(T.getAnnotationRange()), SM,
+          this->PP.getLangOpts());
+      Expanded.push_back(
+          syntax::Token(T.getLocation(), Text.size(), tok::annot_module_name));
+    } else if (T.isAnnotation()) {
       return;
+    } else {
+      Expanded.push_back(syntax::Token(T));
+    }
     DEBUG_WITH_TYPE("collect-tokens", llvm::dbgs()
                                           << "Token: "
                                           << syntax::Token(T).dumpForTests(
@@ -685,7 +700,6 @@ TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
                                           << "\n"
 
     );
-    Expanded.push_back(syntax::Token(T));
   });
   // And locations of macro calls, to properly recover boundaries of those in
   // case of empty expansions.
@@ -707,7 +721,15 @@ public:
 
   TokenBuffer build() && {
     assert(!Result.ExpandedTokens.empty());
-    assert(Result.ExpandedTokens.back().kind() == tok::eof);
+
+    // When the parser hits a hard limit (e.g. bracket depth or function scope
+    // depth), it halts prematurely and leaves the expanded token stream
+    // truncated with no final `eof` token. To keep the invariant, synthesize an
+    // `eof` at the location of the last collected token.
+    if (Result.ExpandedTokens.back().kind() != tok::eof) {
+      SourceLocation Loc = Result.ExpandedTokens.back().location();
+      Result.ExpandedTokens.emplace_back(Loc, 0, tok::eof);
+    }
 
     // Tokenize every file that contributed tokens to the expanded stream.
     buildSpelledTokens();

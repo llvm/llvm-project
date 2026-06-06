@@ -1,5 +1,5 @@
-; RUN: llc -march=mips64el -O0 -mcpu=mips64r6 < %s | FileCheck %s
-; RUN: llc -march=mips64 -O0 -mcpu=mips64r6 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64el -O0 -mcpu=mips64r6 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64 -O0 -mcpu=mips64r6 < %s | FileCheck %s
 
 @boo = global i32 0, align 4
 
@@ -18,15 +18,15 @@ sw.bb:                                            ; preds = %entry
   br label %sw.epilog
 ; CHECK: beqzc
 ; CHECK-NEXT: nop
-; CHECK-NEXT: .LBB
+; CHECK-NEXT: # %bb.1
 ; CHECK-NEXT: j
 
 sw.bb1:                                           ; preds = %entry, %entry
   store volatile i32 2, ptr @boo, align 4
   br label %sw.epilog
-; CHECK: bnezc
+; CHECK: bltuc
 ; CHECK-NEXT: nop
-; CHECK-NEXT: .LBB
+; CHECK-NEXT: # %bb.3
 ; CHECK-NEXT: j
 
 sw.epilog:                                        ; preds = %entry, %sw.bb1, %sw.bb

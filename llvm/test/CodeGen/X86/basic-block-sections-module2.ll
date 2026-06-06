@@ -27,12 +27,12 @@
 define dso_local i32 @test1(i32 noundef %0) #0 !dbg !10 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %3, align 4
-  %4 = load i32, i32* %3, align 4
+  store i32 %0, ptr %3, align 4
+  %4 = load i32, ptr %3, align 4
   %5 = icmp slt i32 %4, 0
   br i1 %5, label %6, label %7
 6:                                                ; preds = %1
-  store i32 -1, i32* %2, align 4
+  store i32 -1, ptr %2, align 4
   ret i32 0
 7:
   ret i32 1
@@ -41,12 +41,12 @@ define dso_local i32 @test1(i32 noundef %0) #0 !dbg !10 {
 define dso_local i32 @test2(i32 noundef %0) #0 !dbg !11 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %3, align 4
-  %4 = load i32, i32* %3, align 4
+  store i32 %0, ptr %3, align 4
+  %4 = load i32, ptr %3, align 4
   %5 = icmp slt i32 %4, 0
   br i1 %5, label %6, label %7
 6:                                                ; preds = %1
-  store i32 -1, i32* %2, align 4
+  store i32 -1, ptr %2, align 4
   ret i32 0
 7:
   ret i32 1
@@ -55,12 +55,12 @@ define dso_local i32 @test2(i32 noundef %0) #0 !dbg !11 {
 define dso_local i32 @test3(i32 noundef %0) #0 !dbg !12 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %3, align 4
-  %4 = load i32, i32* %3, align 4
+  store i32 %0, ptr %3, align 4
+  %4 = load i32, ptr %3, align 4
   %5 = icmp slt i32 %4, 0
   br i1 %5, label %6, label %7
 6:                                                ; preds = %1
-  store i32 -1, i32* %2, align 4
+  store i32 -1, ptr %2, align 4
   ret i32 0
 7:
   ret i32 1
@@ -69,12 +69,12 @@ define dso_local i32 @test3(i32 noundef %0) #0 !dbg !12 {
 define dso_local i32 @test4(i32 noundef %0) #0 !dbg !13 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %3, align 4
-  %4 = load i32, i32* %3, align 4
+  store i32 %0, ptr %3, align 4
+  %4 = load i32, ptr %3, align 4
   %5 = icmp slt i32 %4, 0
   br i1 %5, label %6, label %7
 6:                                                ; preds = %1
-  store i32 -1, i32* %2, align 4
+  store i32 -1, ptr %2, align 4
   ret i32 0
 7:
   ret i32 1
@@ -83,18 +83,20 @@ define dso_local i32 @test4(i32 noundef %0) #0 !dbg !13 {
 define dso_local i32 @test5(i32 noundef %0) #0 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %3, align 4
-  %4 = load i32, i32* %3, align 4
+  store i32 %0, ptr %3, align 4
+  %4 = load i32, ptr %3, align 4
   %5 = icmp slt i32 %4, 0
   br i1 %5, label %6, label %7
 6:                                                ; preds = %1
-  store i32 -1, i32* %2, align 4
+  store i32 -1, ptr %2, align 4
   ret i32 0
 7:
   ret i32 1
 }
 
 !llvm.dbg.cu = !{!0, !1, !2, !3}
+!14 = !{null}
+!15 = !DISubroutineType(types: !14)
 !llvm.module.flags = !{!8, !9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !4)
@@ -107,10 +109,10 @@ define dso_local i32 @test5(i32 noundef %0) #0 {
 !7 = !DIFile(filename: "/test_dirname4/test_filename4", directory: "/test_dirname4")
 !8 = !{i32 7, !"Dwarf Version", i32 5}
 !9 = !{i32 2, !"Debug Info Version", i32 3}
-!10 = distinct !DISubprogram(name: "test1", scope: !4, unit: !0)
-!11 = distinct !DISubprogram(name: "test2", scope: !5, unit: !1)
-!12 = distinct !DISubprogram(name: "test3", scope: !6, unit: !2)
-!13 = distinct !DISubprogram(name: "test4", scope: !7, unit: !3)
+!10 = distinct !DISubprogram(name: "test1", scope: !4, type: !15, unit: !0)
+!11 = distinct !DISubprogram(name: "test2", scope: !5, type: !15, unit: !1)
+!12 = distinct !DISubprogram(name: "test3", scope: !6, type: !15, unit: !2)
+!13 = distinct !DISubprogram(name: "test4", scope: !7, type: !15, unit: !3)
 
 ;; Check that the split section is created when using the correct module name, or no module name.
 ;

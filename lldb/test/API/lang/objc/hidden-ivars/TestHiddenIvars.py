@@ -1,15 +1,18 @@
 """Test that hidden ivars in a shared library are visible from the main executable."""
 
-
 import subprocess
 
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class HiddenIvarsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -57,7 +60,7 @@ class HiddenIvarsTestCase(TestBase):
             self.build()
             self.frame_var(False)
 
-    @expectedFailure("rdar://18683637")
+    @unittest.expectedFailure  # rdar://18683637
     def test_frame_variable_across_modules(self):
         if self.getArchitecture() == "i386":
             self.skipTest("requires modern objc runtime")

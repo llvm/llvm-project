@@ -1193,7 +1193,7 @@ vzeroupper
 # CHECK-NEXT:  7      15    4.00                        vdpps	$22, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  8      22    4.00    *                   vdpps	$22, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      4     1.00                        vextractf128	$1, %ymm0, %xmm2
-# CHECK-NEXT:  2      8     1.00           *            vextractf128	$1, %ymm0, (%rax)
+# CHECK-NEXT:  2      11    1.00           *            vextractf128	$1, %ymm0, (%rax)
 # CHECK-NEXT:  2      1     1.00                        vextractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      2     1.00           *            vextractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  4      6     2.00                        vhaddpd	%xmm0, %xmm1, %xmm2
@@ -1213,7 +1213,7 @@ vzeroupper
 # CHECK-NEXT:  3      6     2.00                        vhsubps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  4      13    2.00    *                   vhsubps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     1.00                        vinsertf128	$1, %xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     1.00    *                   vinsertf128	$1, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      11    1.00    *                   vinsertf128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vinsertps	$1, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vinsertps	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vlddqu	(%rax), %xmm2
@@ -1430,7 +1430,7 @@ vzeroupper
 # CHECK-NEXT:  3      6     2.00                        vpcmpistrm	$1, %xmm0, %xmm2
 # CHECK-NEXT:  4      13    2.00    *                   vpcmpistrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        vperm2f128	$1, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      7     1.00    *                   vperm2f128	$1, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    1.00    *                   vperm2f128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpermilpd	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpermilpd	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      3     0.50                        vpermilpd	%xmm0, %xmm1, %xmm2
@@ -1731,12 +1731,12 @@ vzeroupper
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU

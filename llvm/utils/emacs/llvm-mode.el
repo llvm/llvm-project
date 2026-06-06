@@ -1,7 +1,9 @@
-;;; llvm-mode.el --- Major mode for the LLVM assembler language.
+;;; llvm-mode.el --- Major mode for the LLVM assembler language -*- lexical-binding: t -*-
 
 ;; Maintainer:  The LLVM team, http://llvm.org/
 ;; Version: 1.0
+;; Homepage: http://llvm.org/
+;; Package-Requires: ((emacs "24.3"))
 
 ;;; Commentary:
 
@@ -18,15 +20,24 @@
     table)
   "Syntax table used while in LLVM mode.")
 
+(defconst llvm-mode-primitive-type-regexp
+  (concat
+   "\\(i[0-9]+\\|"
+   (regexp-opt
+    '("void" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128"
+      "x86_mmx" "x86_amx" "ptr" "type" "label" "opaque" "token")
+    'symbols)
+   "\\)"))
+
 (defvar llvm-font-lock-keywords
   (list
    ;; Attributes
    `(,(regexp-opt
        '("alwaysinline" "argmemonly" "allocsize" "builtin" "cold" "convergent" "dereferenceable" "dereferenceable_or_null" "hot" "immarg" "inaccessiblememonly"
          "inaccessiblemem_or_argmemonly" "inalloca" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin" "nonnull" "nocapture"
-         "nocallback" "nocf_check" "noduplicate" "nofree" "noimplicitfloat" "noinline" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
-         "norecurse" "nosync" "noundef" "nounwind" "nosanitize_bounds" "nosanitize_coverage" "null_pointer_is_valid" "optforfuzzing" "optnone" "optsize" "preallocated" "readnone" "readonly" "returned" "returns_twice"
-         "shadowcallstack" "signext" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
+         "nocallback" "nocf_check" "noduplicate" "noext" "nofree" "noimplicitfloat" "noinline" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
+         "norecurse" "nosync" "noundef" "nounwind" "nosanitize_bounds" "nosanitize_coverage" "null_pointer_is_valid" "optdebug" "optforfuzzing" "optnone" "optsize" "preallocated" "readnone" "readonly" "returned" "returns_twice"
+         "shadowcallstack" "signext" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_alloc_token" "sanitize_hwaddress" "sanitize_memtag"
          "sanitize_thread" "sanitize_memory" "strictfp" "swifterror" "uwtable" "vscale_range" "willreturn" "writeonly" "zeroext") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
@@ -34,12 +45,27 @@
    '("[-a-zA-Z$._0-9]+:" . font-lock-variable-name-face)
    ;; Unnamed variable slots
    '("%[-]?[0-9]+" . font-lock-variable-name-face)
-   ;; Types
-   `(,(regexp-opt
-       '("void" "i1" "i8" "i16" "i32" "i64" "i128" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128" "x86_mmx" "x86_amx" "ptr"
-         "type" "label" "opaque" "token") 'symbols) . font-lock-type-face)
+   ;; Function names
+   '("@[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-function-name-face)
+   ;; Fixed vector types
+   `(,(concat "<[ \t]*\\([0-9]+\\)[ \t]*x[ \t]+"
+	      llvm-mode-primitive-type-regexp
+	      "[ \t]*>")
+     (1 'font-lock-type-face)
+     (2 'font-lock-type-face))
+   ;; Scalable vector types
+   `(,(concat "<[ \t]*\\(vscale[ \t]\\)+x[ \t]+\\([0-9]+\\)[ \t]*x[ \t]+"
+	      llvm-mode-primitive-type-regexp
+	      "[ \t]*>")
+     (1 'font-lock-keyword-face)
+     (2 'font-lock-type-face)
+     (3 'font-lock-type-face))
+   ;; Primitive types
+   `(,(concat "\\<" llvm-mode-primitive-type-regexp "\\>") . font-lock-type-face)
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)
+   ;; Values that can appear in a vec
+   '("\\b\\(true\\|false\\|null\\|undef\\|poison\\|none\\)\\b" . font-lock-keyword-face)
    ;; Floating point constants
    '("\\b[-+]?[0-9]+.[0-9]*\\([eE][-+]?[0-9]+\\)?\\b" . font-lock-preprocessor-face)
    ;; Hex constants
@@ -48,15 +74,15 @@
    `(,(regexp-opt
        '(;; Toplevel entities
          "declare" "define" "module" "target" "source_filename" "global" "constant" "const" "alias" "ifunc" "comdat"
-         "attributes" "uselistorder" "uselistorder_bb"
+         "attributes" "uselistorder"
          ;; Linkage types
          "private" "internal" "weak" "weak_odr" "linkonce" "linkonce_odr" "available_externally" "appending" "common" "extern_weak" "external"
          "uninitialized" "implementation" "..."
          ;; Values
-         "true" "false" "null" "undef" "zeroinitializer" "none" "c" "asm" "blockaddress" "poison"
+         "zeroinitializer" "c" "asm" "blockaddress"
 
          ;; Calling conventions
-         "ccc" "fastcc" "coldcc" "webkit_jscc" "anyregcc" "preserve_mostcc" "preserve_allcc"
+         "ccc" "fastcc" "coldcc" "anyregcc" "preserve_mostcc" "preserve_allcc"
          "cxx_fast_tlscc" "swiftcc" "tailcc" "swifttailcc" "cfguard_checkcc"
          ;; Visibility styles
          "default" "hidden" "protected"
@@ -87,12 +113,14 @@
    `(,(regexp-opt '("extractvalue" "insertvalue") 'symbols) . font-lock-keyword-face)
    ;; Metadata types
    `(,(regexp-opt '("distinct") 'symbols) . font-lock-keyword-face)
+   ;; Debug records
+   `(,(concat "#" (regexp-opt '("dbg_assign" "dbg_declare" "dbg_label" "dbg_value") 'symbols)) . font-lock-keyword-face)
    ;; Atomic memory ordering constraints
    `(,(regexp-opt '("unordered" "monotonic" "acquire" "release" "acq_rel" "seq_cst") 'symbols) . font-lock-keyword-face)
    ;; Fast-math flags
    `(,(regexp-opt '("nnan" "ninf" "nsz" "arcp" "contract" "afn" "reassoc" "fast") 'symbols) . font-lock-keyword-face)
    ;; Use-list order directives
-   `(,(regexp-opt '("uselistorder" "uselistorder_bb") 'symbols) . font-lock-keyword-face))
+   `(,(regexp-opt '("uselistorder") 'symbols) . font-lock-keyword-face))
   "Syntax highlighting for LLVM.")
 
 (defun llvm-current-defun-name ()

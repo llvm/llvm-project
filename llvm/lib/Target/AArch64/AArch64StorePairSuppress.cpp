@@ -38,9 +38,7 @@ class AArch64StorePairSuppress : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64StorePairSuppress() : MachineFunctionPass(ID) {
-    initializeAArch64StorePairSuppressPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64StorePairSuppress() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return STPSUPPRESS_PASS_NAME; }
 
@@ -53,8 +51,8 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineTraceMetrics>();
-    AU.addPreserved<MachineTraceMetrics>();
+    AU.addRequired<MachineTraceMetricsWrapperPass>();
+    AU.addPreserved<MachineTraceMetricsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -81,15 +79,23 @@ bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) 
   MachineTraceMetrics::Trace BBTrace = MinInstr->getTrace(BB);
   unsigned ResLength = BBTrace.getResourceLength();
 
-  // Get the machine model's scheduling class for STPQi.
+  // Get the machine model's scheduling class for STPDi and STRDui.
   // Bypass TargetSchedule's SchedClass resolution since we only have an opcode.
   unsigned SCIdx = TII->get(AArch64::STPDi).getSchedClass();
-  const MCSchedClassDesc *SCDesc =
+  const MCSchedClassDesc *PairSCDesc =
       SchedModel.getMCSchedModel()->getSchedClassDesc(SCIdx);
 
-  // If a subtarget does not define resources for STPQi, bail here.
-  if (SCDesc->isValid() && !SCDesc->isVariant()) {
-    unsigned ResLenWithSTP = BBTrace.getResourceLength(std::nullopt, SCDesc);
+  unsigned SCIdx2 = TII->get(AArch64::STRDui).getSchedClass();
+  const MCSchedClassDesc *SingleSCDesc =
+      SchedModel.getMCSchedModel()->getSchedClassDesc(SCIdx2);
+
+  // If a subtarget does not define resources for STPDi, bail here.
+  if (PairSCDesc->isValid() && !PairSCDesc->isVariant() &&
+      SingleSCDesc->isValid() && !SingleSCDesc->isVariant()) {
+    // Compute the new critical resource length after replacing 2 separate
+    // STRDui with one STPDi.
+    unsigned ResLenWithSTP =
+        BBTrace.getResourceLength({}, PairSCDesc, {SingleSCDesc, SingleSCDesc});
     if (ResLenWithSTP > ResLength) {
       LLVM_DEBUG(dbgs() << "  Suppress STP in BB: " << BB->getNumber()
                         << " resources " << ResLength << " -> " << ResLenWithSTP
@@ -127,11 +133,11 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.enableStorePairSuppress())
     return false;
 
-  TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
-  Traces = &getAnalysis<MachineTraceMetrics>();
+  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   MinInstr = nullptr;
 
   LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << MF.getName() << '\n');

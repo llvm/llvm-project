@@ -1,4 +1,4 @@
-//===- ExpandModularHeadersPPCallbacks.h - clang-tidy -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_EXPANDMODULARHEADERSPPCALLBACKS_H_
-#define LLVM_CLANG_TOOLING_EXPANDMODULARHEADERSPPCALLBACKS_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPANDMODULARHEADERSPPCALLBACKS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPANDMODULARHEADERSPPCALLBACKS_H
 
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseSet.h"
@@ -34,16 +35,15 @@ namespace tooling {
 /// including the contents of the modular headers and all their transitive
 /// includes.
 ///
-/// This allows existing tools based on PPCallbacks to retain their functionality
-/// when running with C++ modules enabled. This only works in the backwards
-/// compatible modules mode, i.e. when code can still be parsed in non-modular
-/// way.
+/// This allows existing tools based on PPCallbacks to retain their
+/// functionality when running with C++ modules enabled. This only works in the
+/// backwards compatible modules mode, i.e. when code can still be parsed in
+/// non-modular way.
 class ExpandModularHeadersPPCallbacks : public PPCallbacks {
 public:
-  ExpandModularHeadersPPCallbacks(
-      CompilerInstance *CI,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
-  ~ExpandModularHeadersPPCallbacks();
+  ExpandModularHeadersPPCallbacks(CompilerInstance *CI,
+                                  llvm::vfs::OverlayFileSystem &OverlayFS);
+  ~ExpandModularHeadersPPCallbacks() override;
 
   /// Returns the preprocessor that provides callbacks for the whole
   /// translation unit, including the main file, textual headers, and modular
@@ -69,7 +69,7 @@ private:
                           bool IsAngled, CharSourceRange FilenameRange,
                           OptionalFileEntryRef IncludedFile,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          const Module *SuggestedModule, bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override;
@@ -127,18 +127,20 @@ private:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFs;
 
   SourceManager &Sources;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   LangOptions LangOpts;
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModuleLoader;
 
   std::unique_ptr<HeaderSearch> HeaderInfo;
   std::unique_ptr<Preprocessor> PP;
   bool EnteredMainFile = false;
   bool StartedLexing = false;
-  Token CurrentToken;
+  Token CurrentToken = Token();
 };
 
 } // namespace tooling
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_EXPANDMODULARHEADERSPPCALLBACKS_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPANDMODULARHEADERSPPCALLBACKS_H

@@ -1,0 +1,174 @@
+# For manual usage, not as a part of lit tests. Used for generating the following tests:
+
+from string import Template
+from itertools import product
+
+TEST_SM_ARCH_PAIRS = [(60, 50), (70, 63), (90, 87)]
+
+SCOPE_LLVM_TO_PTX = {"": "sys", "block": "cta", "cluster": "cluster", "device": "gpu"}
+
+ORDERINGS = ["monotonic", "acquire", "release", "acq_rel", "seq_cst"]
+
+INTEGER_OPERATIONS = [
+    "xchg",
+    "add",
+    "sub",
+    "and",
+    "nand",
+    "or",
+    "xor",
+    "max",
+    "min",
+    "umax",
+    "umin",
+    "uinc_wrap",
+    "udec_wrap",
+    "usub_cond",
+    "usub_sat",
+]
+
+FLOATING_POINT_OPERATIONS = ["fadd", "fsub", "fmin", "fmax", "fminimum", "fmaximum"]
+
+ADDRSPACE_NUM_TO_ADDRSPACE = {0: "generic", 1: "global", 3: "shared"}
+
+# A small spread of operations used to exercise the scope and address-space
+# qualifiers, which are emitted orthogonally to the operation: a native integer op
+# at two sizes, signed/unsigned variants, an always-emulated op (lowers to a cas
+# loop), and floating-point add.
+REPRESENTATIVE_OPS = [
+    ("add", "i32"),
+    ("add", "i64"),
+    ("min", "i32"),
+    ("umax", "i32"),
+    ("nand", "i32"),
+    ("nand", "i64"),
+    ("fadd", "float"),
+    ("fadd", "double"),
+]
+
+atomicrmw_func = Template(
+    """define ${datatype} @${operation}_${ordering}_${datatype}_${addrspace}_${ptx_scope}(ptr${addrspace_cast} %addr, ${datatype} %val) {
+        %retval = atomicrmw ${operation} ptr ${addrspace_cast} %addr, ${datatype} %val syncscope(\"${llvm_scope}\") ${ordering} 
+        ret $datatype %retval
+}
+"""
+)
+
+# atomicrmw fadd's lowering depends on the function's FTZ (denormal) mode, so we
+# check codegen both with and without it. Lines common to both runs collapse to
+# the SM${sm} prefix; only the FTZ-sensitive ops diverge into SM${sm}-NOFTZ /
+# SM${sm}-FTZ. (-nvptx-allow-ftz-atomics is covered separately in
+# atomicrmw-allow-ftz-atomics.ll.)
+run_statement = Template(
+    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_${sm} %}
+"""
+)
+
+
+def get_addrspace_cast(addrspace):
+    if addrspace == 0:
+        return ""
+    else:
+        return " addrspace({})".format(str(addrspace))
+
+
+if __name__ == "__main__":
+    for sm, ptx in TEST_SM_ARCH_PAIRS:
+        # Slice 1: Keep addrspace, llvm_scope, ordering fixed, generate all possible operations and sizes
+        with open("atomicrmw-sm{}.ll".format(str(sm)), "w") as fp:
+            print(run_statement.substitute(sm=sm, ptx=ptx, ptxfp=ptx / 10.0), file=fp)
+            # Integer operations
+            addrspace, llvm_scope, ordering = 1, "block", "acq_rel"
+            for operation, datatype in product(
+                INTEGER_OPERATIONS, ["i8", "i16", "i32", "i64"]
+            ):
+                print(
+                    atomicrmw_func.substitute(
+                        operation=operation,
+                        ordering=ordering,
+                        datatype=datatype,
+                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                        llvm_scope=llvm_scope,
+                        addrspace_cast=get_addrspace_cast(addrspace),
+                    ),
+                    file=fp,
+                )
+
+            # Floating point add
+            for datatype, operation in product(
+                ["float", "double", "half", "bfloat"], FLOATING_POINT_OPERATIONS
+            ):
+                print(
+                    atomicrmw_func.substitute(
+                        operation=operation,
+                        ordering=ordering,
+                        datatype=datatype,
+                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                        llvm_scope=llvm_scope,
+                        addrspace_cast=get_addrspace_cast(addrspace),
+                    ),
+                    file=fp,
+                )
+
+            # Slice 2: Keep addrspace, llvm_scope fixed, and generate all possible orderings for operations add and nand.
+            # add is natively supported for larger bitwidths, while nand is emulated always
+            addrspace, llvm_scope = 1, "block"
+            for operation, datatype, ordering in product(
+                ["add", "nand"], ["i8", "i32"], ORDERINGS
+            ):
+                if addrspace == 1 and llvm_scope == "block" and ordering == "acq_rel":
+                    # These are a part of Slice 1
+                    continue
+                print(
+                    atomicrmw_func.substitute(
+                        operation=operation,
+                        ordering=ordering,
+                        datatype=datatype,
+                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                        addrspace_cast=get_addrspace_cast(addrspace),
+                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                        llvm_scope=llvm_scope,
+                    ),
+                    file=fp,
+                )
+
+            # Slice 3: Keep addrspace (global) and ordering fixed, vary the scope
+            # qualifier. block/global is already covered by Slice 1.
+            addrspace, ordering = 1, "acq_rel"
+            for llvm_scope in [s for s in SCOPE_LLVM_TO_PTX if s != "block"]:
+                for operation, datatype in REPRESENTATIVE_OPS:
+                    print(
+                        atomicrmw_func.substitute(
+                            operation=operation,
+                            ordering=ordering,
+                            datatype=datatype,
+                            addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                            addrspace_cast=get_addrspace_cast(addrspace),
+                            ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                            llvm_scope=llvm_scope,
+                        ),
+                        file=fp,
+                    )
+
+            # Slice 4: Keep scope (block) and ordering fixed, vary the address-space
+            # qualifier. global is already covered by Slice 1.
+            llvm_scope, ordering = "block", "acq_rel"
+            for addrspace in [a for a in ADDRSPACE_NUM_TO_ADDRSPACE if a != 1]:
+                for operation, datatype in REPRESENTATIVE_OPS:
+                    print(
+                        atomicrmw_func.substitute(
+                            operation=operation,
+                            ordering=ordering,
+                            datatype=datatype,
+                            addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                            addrspace_cast=get_addrspace_cast(addrspace),
+                            ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                            llvm_scope=llvm_scope,
+                        ),
+                        file=fp,
+                    )

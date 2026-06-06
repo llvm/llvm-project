@@ -1,3 +1,11 @@
+; Remove 'S' Scalar Dependencies #119345
+; Scalar dependencies are not handled correctly, so they were removed to avoid
+; miscompiles. The loop nest in this test case used to be interchanged, but it's
+; no longer triggering. XFAIL'ing this test to indicate that this test should
+; interchanged if scalar deps are handled correctly.
+;
+; XFAIL: *
+
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-output=%t -verify-dom-info -verify-loop-info \
 ; RUN:     -pass-remarks=loop-interchange -pass-remarks-missed=loop-interchange
 ; RUN: FileCheck -input-file %t %s
@@ -203,13 +211,13 @@ for2.preheader:
 for2:
   %j = phi i64 [ %i.next, %for2 ], [ 1, %for2.preheader ]
   %j.prev = add nsw i64 %j,  -1
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %j, i64 0
-  %lv1 = load i32, i32* %arrayidx5
-  %arrayidx9 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @B, i64 0, i64 %j,  i64 %i30
-  %lv2 = load i32, i32* %arrayidx9
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %j, i64 0
+  %lv1 = load i32, ptr %arrayidx5
+  %arrayidx9 = getelementptr inbounds [100 x [100 x i32]], ptr @B, i64 0, i64 %j,  i64 %i30
+  %lv2 = load i32, ptr %arrayidx9
   %add = add nsw i32 %lv1, %lv2
-  %arrayidx13 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %j,  i64 0
-  store i32 %add, i32* %arrayidx13
+  %arrayidx13 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %j,  i64 0
+  store i32 %add, ptr %arrayidx13
   %i.next = add nuw nsw i64 %j,  1
   %exitcond = icmp eq i64 %j,  99
   br i1 %exitcond, label %for1.inc14, label %for2

@@ -12,11 +12,8 @@
 
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -24,12 +21,33 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instcount"
 
-STATISTIC(TotalInsts, "Number of instructions (of all types)");
+STATISTIC(TotalInsts, "Number of instructions of all types");
 STATISTIC(TotalBlocks, "Number of basic blocks");
 STATISTIC(TotalFuncs, "Number of non-external functions");
 
+STATISTIC(LargestFunctionSize,
+          "Largest number of instructions in a single function");
+STATISTIC(LargestFunctionBBCount,
+          "Largest number of basic blocks in a single function");
+
+STATISTIC(TotalInstsPreOptimization,
+          "Number of instructions of all types (before optimizations)");
+STATISTIC(TotalBlocksPreOptimization,
+          "Number of basic blocks (before optimizations)");
+STATISTIC(TotalFuncsPreOptimization,
+          "Number of non-external functions (before optimizations)");
+
+STATISTIC(LargestFunctionSizePreOptimization,
+          "Largest number of instructions in a single function (before "
+          "optimizations)");
+STATISTIC(LargestFunctionBBCountPreOptimization,
+          "Largest number of basic blocks in a single function (before "
+          "optimizations)");
+
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
-  STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");
+  STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");                 \
+  STATISTIC(Num##OPCODE##InstPreOptimization,                                  \
+            "Number of " #OPCODE " insts (before optimizations)");
 
 #include "llvm/IR/Instruction.def"
 
@@ -37,13 +55,36 @@ namespace {
 class InstCount : public InstVisitor<InstCount> {
   friend class InstVisitor<InstCount>;
 
-  void visitFunction(Function &F) { ++TotalFuncs; }
-  void visitBasicBlock(BasicBlock &BB) { ++TotalBlocks; }
+  bool IsPreOptimization;
+
+  void visitFunction(Function &F) {
+    if (IsPreOptimization) {
+      ++TotalFuncsPreOptimization;
+      LargestFunctionSizePreOptimization.updateMax(F.getInstructionCount());
+      LargestFunctionBBCountPreOptimization.updateMax(F.size());
+    } else {
+      ++TotalFuncs;
+      LargestFunctionSize.updateMax(F.getInstructionCount());
+      LargestFunctionBBCount.updateMax(F.size());
+    }
+  }
+
+  void visitBasicBlock(BasicBlock &BB) {
+    if (IsPreOptimization)
+      ++TotalBlocksPreOptimization;
+    else
+      ++TotalBlocks;
+  }
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
   void visit##OPCODE(CLASS &) {                                                \
-    ++Num##OPCODE##Inst;                                                       \
-    ++TotalInsts;                                                              \
+    if (IsPreOptimization) {                                                   \
+      ++Num##OPCODE##InstPreOptimization;                                      \
+      ++TotalInstsPreOptimization;                                             \
+    } else {                                                                   \
+      ++Num##OPCODE##Inst;                                                     \
+      ++TotalInsts;                                                            \
+    }                                                                          \
   }
 
 #include "llvm/IR/Instruction.def"
@@ -52,6 +93,10 @@ class InstCount : public InstVisitor<InstCount> {
     errs() << "Instruction Count does not know about " << I;
     llvm_unreachable(nullptr);
   }
+
+public:
+  InstCount(bool IsPreOptimization = false)
+      : IsPreOptimization(IsPreOptimization) {}
 };
 } // namespace
 
@@ -59,36 +104,7 @@ PreservedAnalyses InstCountPass::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   LLVM_DEBUG(dbgs() << "INSTCOUNT: running on function " << F.getName()
                     << "\n");
-  InstCount().visit(F);
+  InstCount(this->IsPreOptimization).visit(F);
 
   return PreservedAnalyses::all();
 }
-
-namespace {
-class InstCountLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  InstCountLegacyPass() : FunctionPass(ID) {
-    initializeInstCountLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    LLVM_DEBUG(dbgs() << "INSTCOUNT: running on function " << F.getName()
-                      << "\n");
-    InstCount().visit(F);
-    return false;
-  };
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-  void print(raw_ostream &O, const Module *M) const override {}
-};
-} // namespace
-
-char InstCountLegacyPass::ID = 0;
-INITIALIZE_PASS(InstCountLegacyPass, "instcount",
-                "Counts the various types of Instructions", false, true)
-
-FunctionPass *llvm::createInstCountPass() { return new InstCountLegacyPass(); }

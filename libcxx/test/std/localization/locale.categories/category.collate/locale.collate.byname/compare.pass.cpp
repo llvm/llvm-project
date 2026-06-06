@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // REQUIRES: locale.en_US.UTF-8
 
 // <locale>
@@ -50,14 +53,7 @@ int main(int, char**)
             ASSERT_COMPARE(std::string, "AAA", "BBB", -1);
             ASSERT_COMPARE(std::string, "bbb", "aaa", 1);
             ASSERT_COMPARE(std::string, "ccc", "ccc", 0);
-
-#if defined(__APPLE__)
-            // Apple's default collation is case-sensitive
-            ASSERT_COMPARE(std::string, "aaaaaaA", "BaaaaaA", 1);
-#else
-            // Glibc, Windows, and FreeBSD's default collation is case-insensitive
             ASSERT_COMPARE(std::string, "aaaaaaA", "BaaaaaA", -1);
-#endif
         }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
@@ -67,13 +63,7 @@ int main(int, char**)
             ASSERT_COMPARE(std::wstring, L"AAA", L"BBB", -1);
             ASSERT_COMPARE(std::wstring, L"bbb", L"aaa", 1);
             ASSERT_COMPARE(std::wstring, L"ccc", L"ccc", 0);
-#if defined(__APPLE__)
-            // Apple's default collation is case-sensitive
-            ASSERT_COMPARE(std::wstring, L"aaaaaaA", L"BaaaaaA", 1);
-#else
-            // Glibc, Windows, and FreeBSD's default collation is case-insensitive
             ASSERT_COMPARE(std::wstring, L"aaaaaaA", L"BaaaaaA", -1);
-#endif
         }
 #endif
     }

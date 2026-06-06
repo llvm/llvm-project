@@ -15,7 +15,6 @@
 #include "CSKYELFStreamer.h"
 #include "CSKYInstPrinter.h"
 #include "CSKYMCAsmInfo.h"
-#include "CSKYMCCodeEmitter.h"
 #include "CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -40,7 +39,7 @@ using namespace llvm;
 static MCAsmInfo *createCSKYMCAsmInfo(const MCRegisterInfo &MRI,
                                       const Triple &TT,
                                       const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new CSKYMCAsmInfo(TT);
+  MCAsmInfo *MAI = new CSKYMCAsmInfo(TT, Options);
 
   // Initial state of the frame pointer is SP.
   unsigned Reg = MRI.getDwarfRegNum(CSKY::R14, true);
@@ -88,20 +87,16 @@ createCSKYObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                     bool RelaxAll) {
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
   CSKYELFStreamer *S = new CSKYELFStreamer(Ctx, std::move(MAB), std::move(OW),
                                            std::move(Emitter));
 
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }
 
-static MCTargetStreamer *createCSKYAsmTargetStreamer(MCStreamer &S,
-                                                     formatted_raw_ostream &OS,
-                                                     MCInstPrinter *InstPrinter,
-                                                     bool isVerboseAsm) {
+static MCTargetStreamer *
+createCSKYAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                            MCInstPrinter *InstPrinter) {
   return new CSKYTargetAsmStreamer(S, OS);
 }
 

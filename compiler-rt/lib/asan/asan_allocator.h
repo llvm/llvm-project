@@ -40,17 +40,18 @@ struct AllocatorOptions {
   u8 alloc_dealloc_mismatch;
   s32 release_to_os_interval_ms;
 
-  void SetFrom(const Flags *f, const CommonFlags *cf);
-  void CopyTo(Flags *f, CommonFlags *cf);
+  void SetFrom(const Flags* f, const CommonFlags* cf);
+  void CopyTo(Flags* f, CommonFlags* cf);
 };
 
-void InitializeAllocator(const AllocatorOptions &options);
-void ReInitializeAllocator(const AllocatorOptions &options);
-void GetAllocatorOptions(AllocatorOptions *options);
+void InitializeAllocator(const AllocatorOptions& options);
+void ReInitializeAllocator(const AllocatorOptions& options);
+void GetAllocatorOptions(AllocatorOptions* options);
+void ApplyAllocatorOptions(const AllocatorOptions& options);
 
 class AsanChunkView {
  public:
-  explicit AsanChunkView(AsanChunk *chunk) : chunk_(chunk) {}
+  explicit AsanChunkView(AsanChunk* chunk) : chunk_(chunk) {}
   bool IsValid() const;        // Checks if AsanChunkView points to a valid
                                // allocated or quarantined chunk.
   bool IsAllocated() const;    // Checks if the memory is currently allocated.
@@ -61,18 +62,18 @@ class AsanChunkView {
   u32 UserRequestedAlignment() const;  // Originally requested alignment.
   uptr AllocTid() const;
   uptr FreeTid() const;
-  bool Eq(const AsanChunkView &c) const { return chunk_ == c.chunk_; }
+  bool Eq(const AsanChunkView& c) const { return chunk_ == c.chunk_; }
   u32 GetAllocStackId() const;
   u32 GetFreeStackId() const;
   AllocType GetAllocType() const;
-  bool AddrIsInside(uptr addr, uptr access_size, sptr *offset) const {
+  bool AddrIsInside(uptr addr, uptr access_size, sptr* offset) const {
     if (addr >= Beg() && (addr + access_size) <= End()) {
       *offset = addr - Beg();
       return true;
     }
     return false;
   }
-  bool AddrIsAtLeft(uptr addr, uptr access_size, sptr *offset) const {
+  bool AddrIsAtLeft(uptr addr, uptr access_size, sptr* offset) const {
     (void)access_size;
     if (addr < Beg()) {
       *offset = Beg() - addr;
@@ -80,7 +81,7 @@ class AsanChunkView {
     }
     return false;
   }
-  bool AddrIsAtRight(uptr addr, uptr access_size, sptr *offset) const {
+  bool AddrIsAtRight(uptr addr, uptr access_size, sptr* offset) const {
     if (addr + access_size > End()) {
       *offset = addr - End();
       return true;
@@ -89,25 +90,26 @@ class AsanChunkView {
   }
 
  private:
-  AsanChunk *const chunk_;
+  AsanChunk* const chunk_;
 };
 
 AsanChunkView FindHeapChunkByAddress(uptr address);
 AsanChunkView FindHeapChunkByAllocBeg(uptr address);
 
 // List of AsanChunks with total size.
-class AsanChunkFifoList: public IntrusiveList<AsanChunk> {
+class AsanChunkFifoList : public IntrusiveList<AsanChunk> {
  public:
-  explicit AsanChunkFifoList(LinkerInitialized) { }
+  explicit AsanChunkFifoList(LinkerInitialized) {}
   AsanChunkFifoList() { clear(); }
-  void Push(AsanChunk *n);
-  void PushList(AsanChunkFifoList *q);
-  AsanChunk *Pop();
+  void Push(AsanChunk* n);
+  void PushList(AsanChunkFifoList* q);
+  AsanChunk* Pop();
   uptr size() { return size_; }
   void clear() {
     IntrusiveList<AsanChunk>::clear();
     size_ = 0;
   }
+
  private:
   uptr size_;
 };
@@ -119,7 +121,7 @@ struct AsanMapUnmapCallback {
 };
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
-# if SANITIZER_FUCHSIA
+#  if SANITIZER_FUCHSIA
 // This is a sentinel indicating we do not want the primary allocator arena to
 // be placed at a fixed address. It will be anonymously mmap'd.
 const uptr kAllocatorSpace = ~(uptr)0;
@@ -182,42 +184,54 @@ static_assert(SizeClassMap::kNumClassesRounded <= 32,
               "allocator size and SizeClassMap tunings that allows us to "
               "reliably run all bringup tests in a sanitized environment.");
 
-#    else
+#    else   // SANITIZER_RISCV64
 // These are the default allocator tunings for non-RISCV environments where the
 // VMA is usually 48 bits and we have lots of space.
 const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
-#    endif
-#  elif defined(__powerpc64__)
+#    endif  // SANITIZER_RISCV64
+#  else     // SANITIZER_FUCHSIA
+
+#    if SANITIZER_APPLE
+const uptr kAllocatorSpace = 0x600000000000ULL;
+#    else   // SANITIZER_APPLE
 const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
+#    endif  // SANITIZER_APPLE
+
+#    if defined(__powerpc64__)
+#      if SANITIZER_AIX
+const uptr kAllocatorSize = 1ULL << 38;  // 256G.
+#      else
+const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
+#      endif
 typedef DefaultSizeClassMap SizeClassMap;
-#  elif defined(__aarch64__) && SANITIZER_ANDROID
+#    elif defined(__aarch64__) && \
+        (SANITIZER_ANDROID || defined(SANITIZER_AARCH64_39BIT_VA))
 // Android needs to support 39, 42 and 48 bit VMA.
-const uptr kAllocatorSpace =  ~(uptr)0;
-const uptr kAllocatorSize  =  0x2000000000ULL;  // 128G.
+const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
 typedef VeryCompactSizeClassMap SizeClassMap;
-#  elif SANITIZER_RISCV64
-const uptr kAllocatorSpace = ~(uptr)0;
+#    elif SANITIZER_RISCV64
 const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
 typedef VeryDenseSizeClassMap SizeClassMap;
-#  elif defined(__sparc__)
-const uptr kAllocatorSpace = ~(uptr)0;
+#    elif defined(__sparc__)
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
-#  elif SANITIZER_WINDOWS
-const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
+#    elif SANITIZER_ALPHA
+// Alpha has a 42-bit user VAS (TASK_SIZE = 0x40000000000).  Use 512G so the
+// allocator fits comfortably within the 2.5T HighMem region.
+const uptr kAllocatorSize = 0x8000000000ULL;  // 512G.
 typedef DefaultSizeClassMap SizeClassMap;
-#  elif SANITIZER_APPLE
-const uptr kAllocatorSpace = 0x600000000000ULL;
-const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
+#    elif SANITIZER_WINDOWS
+const uptr kAllocatorSize = 0x8000000000ULL;  // 500G
 typedef DefaultSizeClassMap SizeClassMap;
-#  else
-const uptr kAllocatorSpace = 0x500000000000ULL;
+#    elif SANITIZER_APPLE
 const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
-#  endif
+#    else
+const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
+typedef DefaultSizeClassMap SizeClassMap;
+#    endif  // defined(__powerpc64__) etc.
+#  endif    // SANITIZER_FUCHSIA
 template <typename AddressSpaceViewTy>
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;
@@ -232,11 +246,11 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
-#else  // Fallback to SizeClassAllocator32.
+#else   // SANITIZER_CAN_USE_ALLOCATOR64. Fallback to SizeClassAllocator32.
 typedef CompactSizeClassMap SizeClassMap;
 template <typename AddressSpaceViewTy>
 struct AP32 {
-  static const uptr kSpaceBeg = 0;
+  static const uptr kSpaceBeg = SANITIZER_MMAP_BEGIN;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = 0;
   typedef __asan::SizeClassMap SizeClassMap;
@@ -246,7 +260,7 @@ struct AP32 {
   static const uptr kFlags = 0;
 };
 template <typename AddressSpaceView>
-using PrimaryAllocatorASVT = SizeClassAllocator32<AP32<AddressSpaceView> >;
+using PrimaryAllocatorASVT = SizeClassAllocator32<AP32<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
@@ -262,31 +276,53 @@ struct AsanThreadLocalMallocStorage {
   uptr quarantine_cache[16];
   AllocatorCache allocator_cache;
   void CommitBack();
+
  private:
   // These objects are allocated via mmap() and are zero-initialized.
   AsanThreadLocalMallocStorage() {}
 };
 
-void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack,
-                    AllocType alloc_type);
-void asan_free(void *ptr, BufferedStackTrace *stack, AllocType alloc_type);
-void asan_delete(void *ptr, uptr size, uptr alignment,
-                 BufferedStackTrace *stack, AllocType alloc_type);
+void* asan_memalign(uptr alignment, uptr size, BufferedStackTrace* stack);
+void asan_free(void* ptr, BufferedStackTrace* stack);
+void asan_free_sized(void* ptr, uptr size, BufferedStackTrace* stack);
+void asan_free_aligned_sized(void* ptr, uptr alignment, uptr size,
+                             BufferedStackTrace* stack);
 
-void *asan_malloc(uptr size, BufferedStackTrace *stack);
-void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
-void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack);
-void *asan_reallocarray(void *p, uptr nmemb, uptr size,
-                        BufferedStackTrace *stack);
-void *asan_valloc(uptr size, BufferedStackTrace *stack);
-void *asan_pvalloc(uptr size, BufferedStackTrace *stack);
+void* asan_malloc(uptr size, BufferedStackTrace* stack);
+void* asan_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack);
+#if SANITIZER_AIX
+void* asan_vec_malloc(uptr size, BufferedStackTrace* stack);
+void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack);
+#endif
+void* asan_realloc(void* p, uptr size, BufferedStackTrace* stack);
+void* asan_reallocarray(void* p, uptr nmemb, uptr size,
+                        BufferedStackTrace* stack);
+void* asan_valloc(uptr size, BufferedStackTrace* stack);
+void* asan_pvalloc(uptr size, BufferedStackTrace* stack);
 
-void *asan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack);
-int asan_posix_memalign(void **memptr, uptr alignment, uptr size,
-                        BufferedStackTrace *stack);
-uptr asan_malloc_usable_size(const void *ptr, uptr pc, uptr bp);
+void* asan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace* stack);
+int asan_posix_memalign(void** memptr, uptr alignment, uptr size,
+                        BufferedStackTrace* stack);
+uptr asan_malloc_usable_size(const void* ptr, uptr pc, uptr bp);
 
-uptr asan_mz_size(const void *ptr);
+void* asan_new(uptr size, BufferedStackTrace* stack);
+void* asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace* stack);
+void* asan_new_array(uptr size, BufferedStackTrace* stack);
+void* asan_new_array_aligned(uptr size, uptr alignment,
+                             BufferedStackTrace* stack);
+void asan_delete(void* ptr, BufferedStackTrace* stack);
+void asan_delete_aligned(void* ptr, uptr alignment, BufferedStackTrace* stack);
+void asan_delete_sized(void* ptr, uptr size, BufferedStackTrace* stack);
+void asan_delete_sized_aligned(void* ptr, uptr size, uptr alignment,
+                               BufferedStackTrace* stack);
+void asan_delete_array(void* ptr, BufferedStackTrace* stack);
+void asan_delete_array_aligned(void* ptr, uptr alignment,
+                               BufferedStackTrace* stack);
+void asan_delete_array_sized(void* ptr, uptr size, BufferedStackTrace* stack);
+void asan_delete_array_sized_aligned(void* ptr, uptr size, uptr alignment,
+                                     BufferedStackTrace* stack);
+
+uptr asan_mz_size(const void* ptr);
 void asan_mz_force_lock();
 void asan_mz_force_unlock();
 

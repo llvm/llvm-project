@@ -1,11 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-avoid-const-or-ref-data-members %t
-namespace std {
-template <typename T>
-struct unique_ptr {};
 
-template <typename T>
-struct shared_ptr {};
-} // namespace std
+#include <memory>
 
 namespace gsl {
 template <typename T>
@@ -18,7 +13,7 @@ struct Ok {
   const int *pc;
   std::unique_ptr<int> up;
   std::shared_ptr<int> sp;
-  gsl::not_null<int> n;
+  gsl::not_null<int*> n;
 };
 
 struct ConstMember {
@@ -60,7 +55,7 @@ struct Ok2 {
   const Foo *pc;
   std::unique_ptr<Foo> up;
   std::shared_ptr<Foo> sp;
-  gsl::not_null<Foo> n;
+  gsl::not_null<Foo*> n;
 };
 
 struct ConstMember2 {
@@ -281,6 +276,28 @@ struct InheritFromNonCopyableNonMovable : NonCopyableNonMovable
 };
 
 struct InheritBothFromNonCopyableAndNonMovable : NonCopyable, NonMovable
+{
+  int& x;  // OK, non copyable nor movable
+};
+
+template<class T> struct TemplateInheritFromNonCopyable : NonCopyable
+{
+  int& x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'x' of type 'int &' is a reference
+};
+
+template<class T> struct TemplateInheritFromNonMovable : NonMovable
+{
+  int& x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'x' of type 'int &' is a reference
+};
+
+template<class T> struct TemplateInheritFromNonCopyableNonMovable : NonCopyableNonMovable
+{
+  int& x;  // OK, non copyable nor movable
+};
+
+template<class T> struct TemplateInheritBothFromNonCopyableAndNonMovable : NonCopyable, NonMovable
 {
   int& x;  // OK, non copyable nor movable
 };

@@ -142,8 +142,9 @@ llvm::parseCachePruningPolicy(StringRef PolicyStr) {
 }
 
 /// Prune the cache of files that haven't been accessed in a long time.
-bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
-                      const std::vector<std::unique_ptr<MemoryBuffer>> &Files) {
+Expected<bool>
+llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
+                 const std::vector<std::unique_ptr<MemoryBuffer>> &Files) {
   using namespace std::chrono;
 
   if (Path.empty())
@@ -218,7 +219,7 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
     // This acts as a safeguard against data loss if the user specifies the
     // wrong directory as their cache directory.
     StringRef filename = sys::path::filename(File->path());
-    if (!filename.startswith("llvmcache-") && !filename.startswith("Thin-"))
+    if (!filename.starts_with("llvmcache-") && !filename.starts_with("Thin-"))
       continue;
 
     // Look at this file. If we can't stat it, there's nothing interesting
@@ -278,11 +279,14 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
 
   // Prune for size now if needed
   if (Policy.MaxSizePercentageOfAvailableSpace > 0 || Policy.MaxSizeBytes > 0) {
-    auto ErrOrSpaceInfo = sys::fs::disk_space(Path);
-    if (!ErrOrSpaceInfo) {
-      report_fatal_error("Can't get available size");
+    auto SpaceInfoOrErr = sys::fs::disk_space(Path);
+    if (!SpaceInfoOrErr) {
+      auto EC = SpaceInfoOrErr.getError();
+      return createStringError(EC,
+                               "cannot get available disk space for '%s': '%s'",
+                               Path.str().c_str(), EC.message().c_str());
     }
-    sys::fs::space_info SpaceInfo = ErrOrSpaceInfo.get();
+    sys::fs::space_info SpaceInfo = SpaceInfoOrErr.get();
     auto AvailableSpace = TotalSize + SpaceInfo.free;
 
     if (Policy.MaxSizePercentageOfAvailableSpace == 0)

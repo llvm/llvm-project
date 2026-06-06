@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace clang {
 class Decl;
@@ -123,10 +124,6 @@ template <> struct DenseMapInfo<clang::tooling::stdlib::Header> {
     return clang::tooling::stdlib::Header(-1,
                                           clang::tooling::stdlib::Lang::CXX);
   }
-  static inline clang::tooling::stdlib::Header getTombstoneKey() {
-    return clang::tooling::stdlib::Header(-2,
-                                          clang::tooling::stdlib::Lang::CXX);
-  }
   static unsigned getHashValue(const clang::tooling::stdlib::Header &H) {
     return hash_value(H.ID);
   }
@@ -139,10 +136,6 @@ template <> struct DenseMapInfo<clang::tooling::stdlib::Header> {
 template <> struct DenseMapInfo<clang::tooling::stdlib::Symbol> {
   static inline clang::tooling::stdlib::Symbol getEmptyKey() {
     return clang::tooling::stdlib::Symbol(-1,
-                                          clang::tooling::stdlib::Lang::CXX);
-  }
-  static inline clang::tooling::stdlib::Symbol getTombstoneKey() {
-    return clang::tooling::stdlib::Symbol(-2,
                                           clang::tooling::stdlib::Lang::CXX);
   }
   static unsigned getHashValue(const clang::tooling::stdlib::Symbol &S) {

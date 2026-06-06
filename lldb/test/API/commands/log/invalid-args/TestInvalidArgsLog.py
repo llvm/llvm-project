@@ -9,9 +9,7 @@ class InvalidArgsLogTestCase(TestBase):
         self.expect(
             "log enable",
             error=True,
-            substrs=[
-                "error: log enable takes a log channel and one or more log types."
-            ],
+            substrs=["error: log enable takes a log channel and one or more log types"],
         )
 
     @no_debug_info_test
@@ -20,12 +18,12 @@ class InvalidArgsLogTestCase(TestBase):
             "log disable",
             error=True,
             substrs=[
-                "error: log disable takes a log channel and one or more log types."
+                "error: log disable takes a log channel and one or more log types"
             ],
         )
 
     @no_debug_info_test
-    def test_enable_empty(self):
+    def test_enable_invalid_path(self):
         invalid_path = os.path.join("this", "is", "not", "a", "valid", "path")
         self.expect(
             "log enable lldb all -f " + invalid_path,

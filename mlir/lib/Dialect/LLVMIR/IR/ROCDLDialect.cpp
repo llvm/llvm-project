@@ -23,215 +23,30 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace ROCDL;
 
 #include "mlir/Dialect/LLVMIR/ROCDLOpsDialect.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// Parsing for ROCDL ops
-//===----------------------------------------------------------------------===//
-
-// <operation> ::=
-//     `llvm.amdgcn.buffer.load.* %rsrc, %vindex, %offset, %glc, %slc :
-//     result_type`
-ParseResult MubufLoadOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
-      parser.addTypeToList(type, result.types))
-    return failure();
-
-  MLIRContext *context = parser.getContext();
-  auto int32Ty = IntegerType::get(context, 32);
-  auto int1Ty = IntegerType::get(context, 1);
-  auto i32x4Ty = LLVM::getFixedVectorType(int32Ty, 4);
-  return parser.resolveOperands(ops,
-                                {i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
-                                parser.getNameLoc(), result.operands);
-}
-
-void MubufLoadOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << (*this)->getResultTypes();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.buffer.store.* %vdata, %rsrc, %vindex, %offset, %glc, %slc :
-//     result_type`
-ParseResult MubufStoreOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 6) || parser.parseColonType(type))
-    return failure();
-
-  MLIRContext *context = parser.getContext();
-  auto int32Ty = IntegerType::get(context, 32);
-  auto int1Ty = IntegerType::get(context, 1);
-  auto i32x4Ty = LLVM::getFixedVectorType(int32Ty, 4);
-
-  if (parser.resolveOperands(ops,
-                             {type, i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
-                             parser.getNameLoc(), result.operands))
-    return failure();
-  return success();
-}
-
-void MubufStoreOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getVdata().getType();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.raw.buffer.load.* %rsrc, %offset, %soffset, %aux
-//     : result_type`
-ParseResult RawBufferLoadOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 4) || parser.parseColonType(type) ||
-      parser.addTypeToList(type, result.types))
-    return failure();
-
-  auto bldr = parser.getBuilder();
-  auto int32Ty = bldr.getI32Type();
-  auto i32x4Ty = VectorType::get({4}, int32Ty);
-  return parser.resolveOperands(ops, {i32x4Ty, int32Ty, int32Ty, int32Ty},
-                                parser.getNameLoc(), result.operands);
-}
-
-void RawBufferLoadOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getRes().getType();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.raw.buffer.store.* %vdata, %rsrc,  %offset,
-//     %soffset, %aux : result_type`
-ParseResult RawBufferStoreOp::parse(OpAsmParser &parser,
-                                    OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
-    return failure();
-
-  auto bldr = parser.getBuilder();
-  auto int32Ty = bldr.getI32Type();
-  auto i32x4Ty = VectorType::get({4}, int32Ty);
-
-  if (parser.resolveOperands(ops, {type, i32x4Ty, int32Ty, int32Ty, int32Ty},
-                             parser.getNameLoc(), result.operands))
-    return failure();
-  return success();
-}
-
-void RawBufferStoreOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getVdata().getType();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.raw.buffer.atomic.fadd.* %vdata, %rsrc,  %offset,
-//     %soffset, %aux : result_type`
-ParseResult RawBufferAtomicFAddOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
-    return failure();
-
-  auto bldr = parser.getBuilder();
-  auto int32Ty = bldr.getI32Type();
-  auto i32x4Ty = VectorType::get({4}, int32Ty);
-
-  if (parser.resolveOperands(ops, {type, i32x4Ty, int32Ty, int32Ty, int32Ty},
-                             parser.getNameLoc(), result.operands))
-    return failure();
-  return success();
-}
-
-void RawBufferAtomicFAddOp::print(mlir::OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getVdata().getType();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.raw.buffer.atomic.fmax.* %vdata, %rsrc,  %offset,
-//     %soffset, %aux : result_type`
-ParseResult RawBufferAtomicFMaxOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
-    return failure();
-
-  auto bldr = parser.getBuilder();
-  auto int32Ty = bldr.getI32Type();
-  auto i32x4Ty = VectorType::get({4}, int32Ty);
-
-  if (parser.resolveOperands(ops, {type, i32x4Ty, int32Ty, int32Ty, int32Ty},
-                             parser.getNameLoc(), result.operands))
-    return failure();
-  return success();
-}
-
-void RawBufferAtomicFMaxOp::print(mlir::OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getVdata().getType();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.raw.buffer.atomic.smax.* %vdata, %rsrc,  %offset,
-//     %soffset, %aux : result_type`
-ParseResult RawBufferAtomicSMaxOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
-    return failure();
-
-  auto bldr = parser.getBuilder();
-  auto int32Ty = bldr.getI32Type();
-  auto i32x4Ty = VectorType::get({4}, int32Ty);
-
-  if (parser.resolveOperands(ops, {type, i32x4Ty, int32Ty, int32Ty, int32Ty},
-                             parser.getNameLoc(), result.operands))
-    return failure();
-  return success();
-}
-
-void RawBufferAtomicSMaxOp::print(mlir::OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getVdata().getType();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.raw.buffer.atomic.umin.* %vdata, %rsrc,  %offset,
-//     %soffset, %aux : result_type`
-ParseResult RawBufferAtomicUMinOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
-    return failure();
-
-  auto bldr = parser.getBuilder();
-  auto int32Ty = bldr.getI32Type();
-  auto i32x4Ty = VectorType::get({4}, int32Ty);
-
-  if (parser.resolveOperands(ops, {type, i32x4Ty, int32Ty, int32Ty, int32Ty},
-                             parser.getNameLoc(), result.operands))
-    return failure();
-  return success();
-}
-
-void RawBufferAtomicUMinOp::print(mlir::OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getVdata().getType();
-}
+#include "mlir/Dialect/LLVMIR/ROCDLOpsEnums.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // ROCDLDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
+
+namespace {
+struct ROCDLInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
 
 // TODO: This should be the llvm.rocdl dialect once this is supported.
 void ROCDLDialect::initialize() {
@@ -247,19 +62,100 @@ void ROCDLDialect::initialize() {
 
   // Support unknown operations because not all ROCDL operations are registered.
   allowUnknownOperations();
-  declarePromisedInterface<ROCDLTargetAttr, gpu::TargetAttrInterface>();
+  addInterfaces<ROCDLInlinerInterface>();
+  declarePromisedInterface<gpu::TargetAttrInterface, ROCDLTargetAttr>();
 }
 
 LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,
                                                      NamedAttribute attr) {
   // Kernel function attribute should be attached to functions.
-  if (attr.getName() == ROCDLDialect::getKernelFuncAttrName()) {
+  if (kernelAttrName.getName() == attr.getName()) {
     if (!isa<LLVM::LLVMFuncOp>(op)) {
-      return op->emitError() << "'" << ROCDLDialect::getKernelFuncAttrName()
+      return op->emitError() << "'" << kernelAttrName.getName()
                              << "' attribute attached to unexpected op";
     }
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ROCDL op custom parsers/printers.
+//===----------------------------------------------------------------------===//
+
+template <typename EnumAttrT, typename EnumT>
+static ParseResult parseCachePolicyEnum(OpAsmParser &parser,
+                                        Attribute &cachePolicy) {
+  if (parser.parseLess())
+    return failure();
+  FailureOr<EnumT> parsed = FieldParser<EnumT>::parse(parser);
+  if (failed(parsed))
+    return failure();
+  if (parser.parseGreater())
+    return failure();
+  cachePolicy = EnumAttrT::get(parser.getContext(), *parsed);
+  return success();
+}
+
+static ParseResult parseCachePolicy(OpAsmParser &parser,
+                                    Attribute &cachePolicy) {
+  uint32_t rawValue;
+  OptionalParseResult rawValueParseResult =
+      parser.parseOptionalInteger(rawValue);
+  if (rawValueParseResult.has_value()) {
+    if (failed(*rawValueParseResult))
+      return failure();
+    cachePolicy =
+        IntegerAttr::get(IntegerType::get(parser.getContext(), 32), rawValue);
+    return success();
+  }
+
+  StringRef policyFamily;
+  auto loc = parser.getCurrentLocation();
+  if (failed(parser.parseOptionalKeyword(
+          &policyFamily, {"pre_gfx12", "gfx942", "gfx12", "gfx12_atomic"}))) {
+    return parser.emitError(loc)
+           << "expected cache policy family 'pre_gfx12', 'gfx942', 'gfx12', "
+              "'gfx12_atomic', or a 32-bit integer";
+  }
+
+  if (policyFamily == "pre_gfx12")
+    return parseCachePolicyEnum<PreGfx12CachePolicyAttr, PreGfx12CachePolicy>(
+        parser, cachePolicy);
+  if (policyFamily == "gfx942")
+    return parseCachePolicyEnum<Gfx942CachePolicyAttr, Gfx942CachePolicy>(
+        parser, cachePolicy);
+  if (policyFamily == "gfx12")
+    return parseCachePolicyEnum<Gfx12CachePolicyAttr, Gfx12CachePolicy>(
+        parser, cachePolicy);
+  return parseCachePolicyEnum<Gfx12AtomicCachePolicyAttr,
+                              Gfx12AtomicCachePolicy>(parser, cachePolicy);
+}
+
+template <typename EnumAttrT>
+static void printCachePolicyEnum(OpAsmPrinter &printer, EnumAttrT cachePolicy,
+                                 StringRef family) {
+  printer << family << "<" << cachePolicy.getValue() << ">";
+}
+
+static void printCachePolicy(OpAsmPrinter &printer, Operation *,
+                             Attribute cachePolicy) {
+  llvm::TypeSwitch<Attribute>(cachePolicy)
+      .Case<IntegerAttr>([&](IntegerAttr rawPolicy) {
+        printer << rawPolicy.getValue().getZExtValue();
+      })
+      .Case<PreGfx12CachePolicyAttr>([&](PreGfx12CachePolicyAttr policy) {
+        printCachePolicyEnum(printer, policy, "pre_gfx12");
+      })
+      .Case<Gfx942CachePolicyAttr>([&](Gfx942CachePolicyAttr policy) {
+        printCachePolicyEnum(printer, policy, "gfx942");
+      })
+      .Case<Gfx12CachePolicyAttr>([&](Gfx12CachePolicyAttr policy) {
+        printCachePolicyEnum(printer, policy, "gfx12");
+      })
+      .Case<Gfx12AtomicCachePolicyAttr>([&](Gfx12AtomicCachePolicyAttr policy) {
+        printCachePolicyEnum(printer, policy, "gfx12_atomic");
+      })
+      .DefaultUnreachable("unknown ROCDL cache policy attribute");
 }
 
 //===----------------------------------------------------------------------===//
@@ -282,12 +178,12 @@ ROCDLTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     emitError() << "The target chip cannot be empty.";
     return failure();
   }
-  if (abiVersion != "400" && abiVersion != "500") {
-    emitError() << "Invalid ABI version, it must be either `400` or `500`.";
+  if (abiVersion != "400" && abiVersion != "500" && abiVersion != "600") {
+    emitError() << "Invalid ABI version, it must be `400`, `500` or '600'.";
     return failure();
   }
   if (files && !llvm::all_of(files, [](::mlir::Attribute attr) {
-        return attr && mlir::isa<StringAttr>(attr);
+        return mlir::isa_and_nonnull<StringAttr>(attr);
       })) {
     emitError() << "All the elements in the `link` array must be strings.";
     return failure();

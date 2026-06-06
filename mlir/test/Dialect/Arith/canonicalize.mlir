@@ -23,6 +23,73 @@ func.func @select_cmp_ne_select(%arg0: i64, %arg1: i64) -> i64 {
   return %1 : i64
 }
 
+// CHECK-LABEL: @select_cmp_signed_min_max
+//  CHECK-SAME:   (%[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64)
+//  CHECK-DAG:    %[[MIN0:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN1:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN2:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN3:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX0:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX1:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX2:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX3:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//      CHECK:    return %[[MIN0]], %[[MIN1]], %[[MIN2]], %[[MIN3]], %[[MAX0]], %[[MAX1]], %[[MAX2]], %[[MAX3]]
+func.func @select_cmp_signed_min_max(%arg0: i64, %arg1: i64) -> (i64, i64, i64, i64, i64, i64, i64, i64) {
+  %slt = arith.cmpi slt, %arg0, %arg1 : i64
+  %sle = arith.cmpi sle, %arg0, %arg1 : i64
+  %sgt = arith.cmpi sgt, %arg0, %arg1 : i64
+  %sge = arith.cmpi sge, %arg0, %arg1 : i64
+  %min0 = arith.select %slt, %arg0, %arg1 : i64
+  %min1 = arith.select %sle, %arg0, %arg1 : i64
+  %min2 = arith.select %sgt, %arg1, %arg0 : i64
+  %min3 = arith.select %sge, %arg1, %arg0 : i64
+  %max0 = arith.select %slt, %arg1, %arg0 : i64
+  %max1 = arith.select %sle, %arg1, %arg0 : i64
+  %max2 = arith.select %sgt, %arg0, %arg1 : i64
+  %max3 = arith.select %sge, %arg0, %arg1 : i64
+  return %min0, %min1, %min2, %min3, %max0, %max1, %max2, %max3 : i64, i64, i64, i64, i64, i64, i64, i64
+}
+
+// CHECK-LABEL: @select_cmp_unsigned_min_max
+//  CHECK-SAME:   (%[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64)
+//  CHECK-DAG:    %[[MIN0:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN1:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN2:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN3:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX0:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX1:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX2:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX3:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//      CHECK:    return %[[MIN0]], %[[MIN1]], %[[MIN2]], %[[MIN3]], %[[MAX0]], %[[MAX1]], %[[MAX2]], %[[MAX3]]
+func.func @select_cmp_unsigned_min_max(%arg0: i64, %arg1: i64) -> (i64, i64, i64, i64, i64, i64, i64, i64) {
+  %ult = arith.cmpi ult, %arg0, %arg1 : i64
+  %ule = arith.cmpi ule, %arg0, %arg1 : i64
+  %ugt = arith.cmpi ugt, %arg0, %arg1 : i64
+  %uge = arith.cmpi uge, %arg0, %arg1 : i64
+  %min0 = arith.select %ult, %arg0, %arg1 : i64
+  %min1 = arith.select %ule, %arg0, %arg1 : i64
+  %min2 = arith.select %ugt, %arg1, %arg0 : i64
+  %min3 = arith.select %uge, %arg1, %arg0 : i64
+  %max0 = arith.select %ult, %arg1, %arg0 : i64
+  %max1 = arith.select %ule, %arg1, %arg0 : i64
+  %max2 = arith.select %ugt, %arg0, %arg1 : i64
+  %max3 = arith.select %uge, %arg0, %arg1 : i64
+  return %min0, %min1, %min2, %min3, %max0, %max1, %max2, %max3 : i64, i64, i64, i64, i64, i64, i64, i64
+}
+
+// CHECK-LABEL: @select_cmp_min_max_index_vector
+//  CHECK-SAME:   (%[[IDX0:.+]]: index, %[[IDX1:.+]]: index, %[[VEC0:.+]]: vector<4xi32>, %[[VEC1:.+]]: vector<4xi32>)
+//  CHECK-DAG:    %[[IDX:.+]] = arith.minsi %[[IDX0]], %[[IDX1]] : index
+//  CHECK-DAG:    %[[VEC:.+]] = arith.maxui %[[VEC0]], %[[VEC1]] : vector<4xi32>
+//      CHECK:    return %[[IDX]], %[[VEC]]
+func.func @select_cmp_min_max_index_vector(%arg0: index, %arg1: index, %arg2: vector<4xi32>, %arg3: vector<4xi32>) -> (index, vector<4xi32>) {
+  %cmp0 = arith.cmpi sle, %arg0, %arg1 : index
+  %res0 = arith.select %cmp0, %arg0, %arg1 : index
+  %cmp1 = arith.cmpi ult, %arg2, %arg3 : vector<4xi32>
+  %res1 = arith.select %cmp1, %arg3, %arg2 : vector<4xi1>, vector<4xi32>
+  return %res0, %res1 : index, vector<4xi32>
+}
+
 // CHECK-LABEL: @select_extui
 //       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
 //       CHECK:   return %[[res]]
@@ -52,6 +119,18 @@ func.func @select_extui_i1(%arg0: i1) -> i1 {
   %c1_i1 = arith.constant true
   %res = arith.select %arg0, %c1_i1, %c0_i1 : i1
   return %res : i1
+}
+
+// CHECK-LABEL: @select_no_fold_ui1
+//       CHECK:  %[[CONST_0:.+]] = "test.constant"() <{value = 0 : i32}> : () -> ui1
+//       CHECK:  %[[CONST_1:.+]] = "test.constant"() <{value = 1 : i32}> : () -> ui1
+//  CHECK-NEXT:  %[[RES:.+]] = arith.select %arg0, %[[CONST_1]], %[[CONST_0]] : ui1
+//  CHECK-NEXT:   return %[[RES]]
+func.func @select_no_fold_ui1(%arg0: i1) -> ui1 {
+  %c0_i1 = "test.constant"() {value = 0 : i32} : () -> ui1
+  %c1_i1 = "test.constant"() {value = 1 : i32} : () -> ui1
+  %res = arith.select %arg0, %c1_i1, %c0_i1 : ui1
+  return %res : ui1
 }
 
 // CHECK-LABEL: @select_cst_false_scalar
@@ -116,18 +195,6 @@ func.func @selToNot(%arg0: i1) -> i1 {
   return %res : i1
 }
 
-// CHECK-LABEL: @selToArith
-//       CHECK-NEXT:       %[[trueval:.+]] = arith.constant true
-//       CHECK-NEXT:       %[[notcmp:.+]] = arith.xori %arg0, %[[trueval]] : i1
-//       CHECK-NEXT:       %[[condtrue:.+]] = arith.andi %arg0, %arg1 : i1
-//       CHECK-NEXT:       %[[condfalse:.+]] = arith.andi %[[notcmp]], %arg2 : i1
-//       CHECK-NEXT:       %[[res:.+]] = arith.ori %[[condtrue]], %[[condfalse]] : i1
-//       CHECK:   return %[[res]]
-func.func @selToArith(%arg0: i1, %arg1 : i1, %arg2 : i1) -> i1 {
-  %res = arith.select %arg0, %arg1, %arg2 : i1
-  return %res : i1
-}
-
 // CHECK-LABEL: @redundantSelectTrue
 //       CHECK-NEXT: %[[res:.+]] = arith.select %arg0, %arg1, %arg3
 //       CHECK-NEXT: return %[[res]]
@@ -160,72 +227,76 @@ func.func @selNotCond(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32, %arg4 : 
   return %res1, %res2 : i32, i32
 }
 
-// CHECK-LABEL: @selAndCond
-//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %arg0
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg2, %arg3
-//       CHECK-NEXT: return %[[res]]
-func.func @selAndCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
-  %sel = arith.select %arg0, %arg2, %arg3 : i32
-  %res = arith.select %arg1, %sel, %arg3 : i32
-  return %res : i32
+// CHECK-LABEL: @cmpiI1eq
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eq(%arg0: i1) -> i1 {
+  %one = arith.constant 1 : i1
+  %res = arith.cmpi eq, %arg0, %one : i1
+  return %res : i1
 }
 
-// CHECK-LABEL: @selAndNotCond
-//       CHECK-NEXT: %[[one:.+]] = arith.constant true
-//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
-//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %[[not]]
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg3, %arg2
-//       CHECK-NEXT: return %[[res]]
-func.func @selAndNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
-  %sel = arith.select %arg0, %arg2, %arg3 : i32
-  %res = arith.select %arg1, %sel, %arg2 : i32
-  return %res : i32
+// CHECK-LABEL: @cmpiI1eqVec
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqVec(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %one = arith.constant dense<1> : vector<4xi1>
+  %res = arith.cmpi eq, %arg0, %one : vector<4xi1>
+  return %res : vector<4xi1>
 }
 
-// CHECK-LABEL: @selAndNotCondVec
-//       CHECK-NEXT: %[[one:.+]] = arith.constant dense<true> : vector<4xi1>
-//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
-//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %[[not]]
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg3, %arg2
-//       CHECK-NEXT: return %[[res]]
-func.func @selAndNotCondVec(%arg0: vector<4xi1>, %arg1: vector<4xi1>, %arg2 : vector<4xi32>, %arg3 : vector<4xi32>) -> vector<4xi32> {
-  %sel = arith.select %arg0, %arg2, %arg3 : vector<4xi1>, vector<4xi32>
-  %res = arith.select %arg1, %sel, %arg2 : vector<4xi1>, vector<4xi32>
-  return %res : vector<4xi32>
+// CHECK-LABEL: @cmpiI1ne
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1ne(%arg0: i1) -> i1 {
+  %zero = arith.constant 0 : i1
+  %res = arith.cmpi ne, %arg0, %zero : i1
+  return %res : i1
 }
 
-// CHECK-LABEL: @selOrCond
-//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %arg0
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg2, %arg3
-//       CHECK-NEXT: return %[[res]]
-func.func @selOrCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
-  %sel = arith.select %arg0, %arg2, %arg3 : i32
-  %res = arith.select %arg1, %arg2, %sel : i32
-  return %res : i32
+// CHECK-LABEL: @cmpiI1neVec
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neVec(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %zero = arith.constant dense<0> : vector<4xi1>
+  %res = arith.cmpi ne, %arg0, %zero : vector<4xi1>
+  return %res : vector<4xi1>
 }
 
-// CHECK-LABEL: @selOrNotCond
-//       CHECK-NEXT: %[[one:.+]] = arith.constant true
-//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
-//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %[[not]]
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg3, %arg2
-//       CHECK-NEXT: return %[[res]]
-func.func @selOrNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
-  %sel = arith.select %arg0, %arg2, %arg3 : i32
-  %res = arith.select %arg1, %arg3, %sel : i32
-  return %res : i32
+// CHECK-LABEL: @cmpiI1eqLhs
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqLhs(%arg0: i1) -> i1 {
+  %one = arith.constant 1 : i1
+  %res = arith.cmpi eq, %one, %arg0  : i1
+  return %res : i1
 }
 
-// CHECK-LABEL: @selOrNotCondVec
-//       CHECK-NEXT: %[[one:.+]] = arith.constant dense<true> : vector<4xi1>
-//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
-//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %[[not]]
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg3, %arg2
-//       CHECK-NEXT: return %[[res]]
-func.func @selOrNotCondVec(%arg0: vector<4xi1>, %arg1: vector<4xi1>, %arg2 : vector<4xi32>, %arg3 : vector<4xi32>) -> vector<4xi32> {
-  %sel = arith.select %arg0, %arg2, %arg3 : vector<4xi1>, vector<4xi32>
-  %res = arith.select %arg1, %arg3, %sel : vector<4xi1>, vector<4xi32>
-  return %res : vector<4xi32>
+// CHECK-LABEL: @cmpiI1eqVecLhs
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqVecLhs(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %one = arith.constant dense<1> : vector<4xi1>
+  %res = arith.cmpi eq, %one, %arg0 : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
+// CHECK-LABEL: @cmpiI1neLhs
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neLhs(%arg0: i1) -> i1 {
+  %zero = arith.constant 0 : i1
+  %res = arith.cmpi ne, %zero, %arg0 : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1neVecLhs
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neVecLhs(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %zero = arith.constant dense<0> : vector<4xi1>
+  %res = arith.cmpi ne, %zero, %arg0 : vector<4xi1>
+  return %res : vector<4xi1>
 }
 
 // Test case: Folding of comparisons with equal operands.
@@ -362,6 +433,15 @@ func.func @extSIOfExtUI(%arg0: i1) -> i64 {
   return %ext2 : i64
 }
 
+// CHECK-LABEL: @extSIOfExtUI_nneg
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 nneg : i1 to i64
+//       CHECK:   return %[[res]]
+func.func @extSIOfExtUI_nneg(%arg0: i1) -> i64 {
+  %ext1 = arith.extui %arg0 nneg : i1 to i8
+  %ext2 = arith.extsi %ext1 : i8 to i64
+  return %ext2 : i64
+}
+
 // CHECK-LABEL: @extUIOfExtUI
 //       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
 //       CHECK:   return %[[res]]
@@ -486,6 +566,39 @@ func.func @andOfExtUI(%arg0: i8, %arg1: i8) -> i64 {
   return %res : i64
 }
 
+// CHECK-LABEL: @andOfExtUI_nneg_lhs
+//       CHECK:  %[[comb:.+]] = arith.andi %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] nneg : i8 to i64
+//       CHECK:   return %[[ext]]
+func.func @andOfExtUI_nneg_lhs(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 nneg : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.andi %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @andOfExtUI_nneg_rhs
+//       CHECK:  %[[comb:.+]] = arith.andi %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] nneg : i8 to i64
+//       CHECK:   return %[[ext]]
+func.func @andOfExtUI_nneg_rhs(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 : i8 to i64
+  %ext1 = arith.extui %arg1 nneg : i8 to i64
+  %res = arith.andi %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @andOfExtUI_nneg_both
+//       CHECK:  %[[comb:.+]] = arith.andi %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] nneg : i8 to i64
+//       CHECK:   return %[[ext]]
+func.func @andOfExtUI_nneg_both(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 nneg : i8 to i64
+  %ext1 = arith.extui %arg1 nneg : i8 to i64
+  %res = arith.andi %ext0, %ext1 : i64
+  return %res : i64
+}
+
 // CHECK-LABEL: @orOfExtSI
 //       CHECK:  %[[comb:.+]] = arith.ori %arg0, %arg1 : i8
 //       CHECK:  %[[ext:.+]] = arith.extsi %[[comb]] : i8 to i64
@@ -508,6 +621,177 @@ func.func @orOfExtUI(%arg0: i8, %arg1: i8) -> i64 {
   return %res : i64
 }
 
+// CHECK-LABEL: @orOfExtUI_nneg_both
+//       CHECK:  %[[comb:.+]] = arith.ori %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] nneg : i8 to i64
+//       CHECK:   return %[[ext]]
+func.func @orOfExtUI_nneg_both(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 nneg : i8 to i64
+  %ext1 = arith.extui %arg1 nneg : i8 to i64
+  %res = arith.ori %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @orOfExtUI_nneg_mixed
+//       CHECK:  %[[comb:.+]] = arith.ori %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] : i8 to i64
+//   CHECK-NOT:  nneg
+//       CHECK:   return %[[ext]]
+func.func @orOfExtUI_nneg_mixed(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 nneg : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.ori %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[and:.+]] = arith.andi %arg0, %[[cres]] : i32
+//       CHECK:   return %[[and]]
+func.func @andOfAndConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %a1 = arith.andi %arg0, %c12 : i32
+  %a2 = arith.andi %a1, %c10 : i32
+  return %a2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 8 : index
+//       CHECK:   %[[and:.+]] = arith.andi %arg0, %[[cres]] : index
+//       CHECK:   return %[[and]]
+func.func @andOfAndConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %a1 = arith.andi %arg0, %c12 : index
+  %a2 = arith.andi %a1, %c10 : index
+  return %a2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantMultiUse
+//       CHECK:   %[[C8:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[A1:.+]] = arith.andi %arg0, %[[C12]] : i32
+//       CHECK:   %[[A2:.+]] = arith.andi %arg0, %[[C8]] : i32
+//       CHECK:   return %[[A1]], %[[A2]]
+func.func @andOfAndConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %a1 = arith.andi %arg0, %c12 : i32
+  %a2 = arith.andi %a1, %c10 : i32
+  return %a1, %a2 : i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantChain
+//       CHECK:   %[[C8:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[A1:.+]] = arith.andi %arg0, %[[C14]] : i32
+//       CHECK:   %[[A2:.+]] = arith.andi %arg0, %[[C12]] : i32
+//       CHECK:   %[[A3:.+]] = arith.andi %arg0, %[[C8]] : i32
+//       CHECK:   return %[[A1]], %[[A2]], %[[A3]]
+func.func @andOfAndConstantChain(%arg0: i32) -> (i32, i32, i32) {
+  %c14 = arith.constant 14 : i32
+  %c13 = arith.constant 13 : i32
+  %c11 = arith.constant 11 : i32
+  %a1 = arith.andi %arg0, %c14 : i32
+  %a2 = arith.andi %a1, %c13 : i32
+  %a3 = arith.andi %a2, %c11 : i32
+  return %a1, %a2, %a3 : i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[or:.+]] = arith.ori %arg0, %[[cres]] : i32
+//       CHECK:   return %[[or]]
+func.func @orOfOrConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %o1 = arith.ori %arg0, %c12 : i32
+  %o2 = arith.ori %o1, %c10 : i32
+  return %o2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 14 : index
+//       CHECK:   %[[or:.+]] = arith.ori %arg0, %[[cres]] : index
+//       CHECK:   return %[[or]]
+func.func @orOfOrConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %o1 = arith.ori %arg0, %c12 : index
+  %o2 = arith.ori %o1, %c10 : index
+  return %o2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstantMultiUse
+//       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[O1:.+]] = arith.ori %arg0, %[[C12]] : i32
+//       CHECK:   %[[O2:.+]] = arith.ori %arg0, %[[C14]] : i32
+//       CHECK:   return %[[O1]], %[[O2]]
+func.func @orOfOrConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %o1 = arith.ori %arg0, %c12 : i32
+  %o2 = arith.ori %o1, %c10 : i32
+  return %o1, %o2 : i32, i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_andi() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.andi %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.andi %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_andi() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.andi %0, %1 : i32
+  %5 = arith.andi %4, %2 : i32
+  return %5 : i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_ori() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.ori %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.ori %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_ori() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.ori %0, %1 : i32
+  %5 = arith.ori %4, %2 : i32
+  return %5 : i32
+}
+
 // -----
 
 // CHECK-LABEL: @indexCastOfSignExtend
@@ -525,6 +809,25 @@ func.func @indexCastOfSignExtend(%arg0: i8) -> index {
 func.func @indexCastUIOfUnsignedExtend(%arg0: i8) -> index {
   %ext = arith.extui %arg0 : i8 to i16
   %idx = arith.index_castui %ext : i16 to index
+  return %idx : index
+}
+
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_on_extui
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 nneg : i8 to index
+//       CHECK:   return %[[res]]
+func.func @indexCastUIOfUnsignedExtend_nneg_on_extui(%arg0: i8) -> index {
+  %ext = arith.extui %arg0 nneg : i8 to i16
+  %idx = arith.index_castui %ext : i16 to index
+  return %idx : index
+}
+
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_on_castui
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
+//   CHECK-NOT:   nneg
+//       CHECK:   return %[[res]]
+func.func @indexCastUIOfUnsignedExtend_nneg_on_castui(%arg0: i8) -> index {
+  %ext = arith.extui %arg0 : i8 to i16
+  %idx = arith.index_castui %ext nneg : i16 to index
   return %idx : index
 }
 
@@ -636,6 +939,113 @@ func.func @indexCastUIFoldVectorIndexToInt() -> vector<3xi32> {
   return %int : vector<3xi32>
 }
 
+// CHECK-LABEL: @indexCastOfIndexCast_lossless
+// The intermediate index type (64 bits) is at least as wide as i64 (64 bits),
+// so the round-trip is lossless and the chain folds away.
+//       CHECK:   return %arg0
+func.func @indexCastOfIndexCast_lossless(%arg0: i64) -> i64 {
+  %0 = arith.index_cast %arg0 : i64 to index
+  %1 = arith.index_cast %0 : index to i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_lossy
+// The intermediate i8 type (8 bits) is narrower than index (64 bits), so
+// folding would drop the truncation — must be preserved.
+//       CHECK:   %[[a:.+]] = arith.index_cast %arg0 : index to i8
+//       CHECK:   %[[b:.+]] = arith.index_cast %[[a]] : i8 to index
+//       CHECK:   return %[[b]]
+func.func @indexCastOfIndexCast_lossy(%arg0: index) -> index {
+  %0 = arith.index_cast %arg0 : index to i8
+  %1 = arith.index_cast %0 : i8 to index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_lossless
+// The intermediate index type is at least as wide as i64, so the chain folds.
+//       CHECK:   return %arg0
+func.func @indexCastUIOfIndexCastUI_lossless(%arg0: i64) -> i64 {
+  %0 = arith.index_castui %arg0 : i64 to index
+  %1 = arith.index_castui %0 : index to i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_lossy
+// The intermediate i8 is narrower than index, so the truncation must be kept.
+//       CHECK:   %[[a:.+]] = arith.index_castui %arg0 : index to i8
+//       CHECK:   %[[b:.+]] = arith.index_castui %[[a]] : i8 to index
+//       CHECK:   return %[[b]]
+func.func @indexCastUIOfIndexCastUI_lossy(%arg0: index) -> index {
+  %0 = arith.index_castui %arg0 : index to i8
+  %1 = arith.index_castui %0 : i8 to index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_3way_lossy
+// Regression test for the original bug: a 3-element chain where the outermost
+// cast pair would be incorrectly folded away, dropping the i8 truncation.
+//       CHECK:   %[[a:.*]] = arith.index_castui %arg0 : i64 to index
+//       CHECK:   %[[b:.*]] = arith.index_castui %[[a]] : index to i8
+//       CHECK:   %[[c:.*]] = arith.index_castui %[[b]] : i8 to index
+//       CHECK:   return %[[c]]
+func.func @indexCastUIOfIndexCastUI_3way_lossy(%arg0: i64) -> index {
+  %0 = arith.index_castui %arg0 : i64 to index
+  %1 = arith.index_castui %0 : index to i8
+  %2 = arith.index_castui %1 : i8 to index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_3way_lossy
+// Signed 3-way chain where the outermost pair folds (i64->index is lossless
+// since 64 >= 64) but the inner i8 truncation is preserved.  The net result
+// is that %2 becomes %0 directly, collapsing the last two casts.
+//       CHECK:   %[[a:.*]] = arith.index_cast %arg0 : i8 to index
+//       CHECK:   return %[[a]]
+func.func @indexCastOfIndexCast_3way_lossy(%arg0: i8) -> index {
+  %0 = arith.index_cast %arg0 : i8 to index
+  %1 = arith.index_cast %0 : index to i64
+  %2 = arith.index_cast %1 : i64 to index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_i8_roundtrip
+// i8 -> index -> i8: the intermediate index is at least as wide as i8 (64 >= 8),
+// so the round-trip is lossless and the chain folds away.
+//       CHECK:   return %arg0
+func.func @indexCastOfIndexCast_i8_roundtrip(%arg0: i8) -> i8 {
+  %0 = arith.index_cast %arg0 : i8 to index
+  %1 = arith.index_cast %0 : index to i8
+  return %1 : i8
+}
+
+// -----
+
+// CHECK-LABEL: @indexCastOfIndexCast_vector_lossy
+// vector<3xi128> -> vector<3xindex> -> vector<3xi128>: i128 (128 bits) is wider
+// than the 64-bit index, so the cast is lossy and must NOT fold.
+//       CHECK:   %[[a:.+]] = arith.index_cast %arg0 : vector<3xi128> to vector<3xindex>
+//       CHECK:   %[[b:.+]] = arith.index_cast %[[a]] : vector<3xindex> to vector<3xi128>
+//       CHECK:   return %[[b]]
+func.func @indexCastOfIndexCast_vector_lossy(%arg0: vector<3xi128>) -> vector<3xi128> {
+  %0 = arith.index_cast %arg0 : vector<3xi128> to vector<3xindex>
+  %1 = arith.index_cast %0 : vector<3xindex> to vector<3xi128>
+  return %1 : vector<3xi128>
+}
+
+// -----
+
 // CHECK-LABEL: @signExtendConstant
 //       CHECK:   %[[cres:.+]] = arith.constant -2 : i16
 //       CHECK:   return %[[cres]]
@@ -650,7 +1060,7 @@ func.func @signExtendConstant() -> i16 {
 //       CHECK:   return %[[cres]]
 func.func @signExtendConstantSplat() -> vector<4xi16> {
   %c-2 = arith.constant -2 : i8
-  %splat = vector.splat %c-2 : vector<4xi8>
+  %splat = vector.broadcast %c-2 : i8 to vector<4xi8>
   %ext = arith.extsi %splat : vector<4xi8> to vector<4xi16>
   return %ext : vector<4xi16>
 }
@@ -678,7 +1088,7 @@ func.func @unsignedExtendConstant() -> i16 {
 //       CHECK:   return %[[cres]]
 func.func @unsignedExtendConstantSplat() -> vector<4xi16> {
   %c2 = arith.constant 2 : i8
-  %splat = vector.splat %c2 : vector<4xi8>
+  %splat = vector.broadcast %c2 : i8 to vector<4xi8>
   %ext = arith.extui %splat : vector<4xi8> to vector<4xi16>
   return %ext : vector<4xi16>
 }
@@ -700,6 +1110,130 @@ func.func @extFPConstant() -> f64 {
   %0 = arith.extf %cst : f32 to f64
   return %0 : f64
 }
+
+// CHECK-LABEL: @extFPVectorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xf128>
+//       CHECK:   return %[[cres]]
+func.func @extFPVectorConstant() -> vector<2xf128> {
+  %cst = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xf80>
+  %0 = arith.extf %cst : vector<2xf80> to vector<2xf128>
+  return %0 : vector<2xf128>
+}
+
+// CHECK-LABEL: @truncExtf
+//       CHECK-NOT:  truncf
+//       CHECK:   return  %arg0
+func.func @truncExtf(%arg0: f32) -> f32 {
+  %extf = arith.extf %arg0 : f32 to f64
+  %trunc = arith.truncf %extf : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncExtf1
+//       CHECK-NOT:  truncf
+//       CHECK:   return  %arg0
+func.func @truncExtf1(%arg0: bf16) -> bf16 {
+  %extf = arith.extf %arg0 : bf16 to f32
+  %trunc = arith.truncf %extf : f32 to bf16
+  return %trunc : bf16
+}
+
+// CHECK-LABEL: @truncExtf2
+//       CHECK:  %[[ARG0:.+]]: bf16
+//       CHECK:  %[[EXTF:.*]] = arith.extf %[[ARG0:.+]] : bf16 to f32
+//       CHECK:  %[[TRUNCF:.*]] = arith.truncf %[[EXTF:.*]] : f32 to f16
+//       CHECK:   return  %[[TRUNCF:.*]]
+func.func @truncExtf2(%arg0: bf16) -> f16 {
+  %extf = arith.extf %arg0 : bf16 to f32
+  %trunc = arith.truncf %extf : f32 to f16
+  return %trunc : f16
+}
+
+// CHECK-LABEL: @truncExtf3
+//       CHECK:  %[[ARG0:.+]]: f32
+//       CHECK:  %[[CST:.*]] = arith.truncf %[[ARG0:.+]] : f32 to f16
+//       CHECK:   return  %[[CST:.*]]
+func.func @truncExtf3(%arg0: f32) -> f16 {
+  %extf = arith.extf %arg0 : f32 to f64
+  %truncf = arith.truncf %extf : f64 to f16
+  return %truncf : f16
+}
+
+// CHECK-LABEL: @truncSitofp
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i32 to f32
+//       CHECK-NOT: truncf
+//       CHECK:     return %[[SITOFP]]
+func.func @truncSitofp(%arg0: i32) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i32 to f64
+  %trunc = arith.truncf %sitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncSitofpConstrained
+//       CHECK: truncf
+func.func @truncSitofpConstrained(%arg0: i32) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i32 to f64
+  %trunc = arith.truncf %sitofp to_nearest_even : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncUitofp
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i32 to f32
+//       CHECK-NOT: truncf
+//       CHECK:     return %[[UITOFP]]
+func.func @truncUitofp(%arg0: i32) -> f32 {
+  %uitofp = arith.uitofp %arg0 : i32 to f64
+  %trunc = arith.truncf %uitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncUitofp_nneg
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] nneg : i32 to f32
+//       CHECK-NOT: truncf
+//       CHECK:     return %[[UITOFP]]
+func.func @truncUitofp_nneg(%arg0: i32) -> f32 {
+  %uitofp = arith.uitofp %arg0 nneg : i32 to f64
+  %trunc = arith.truncf %uitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @sitofpExtsi
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i8 to bf16
+//       CHECK:     return %[[SITOFP]]
+func.func @sitofpExtsi(%arg0: i8) -> bf16 {
+  %extsi = arith.extsi %arg0 : i8 to i32
+  %sitofp = arith.sitofp %extsi : i32 to bf16
+  return %sitofp : bf16
+}
+
+// CHECK-LABEL: @sitofpExtui
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i4 to bf16
+//       CHECK-NOT: sitofp
+//       CHECK:     return %[[UITOFP]]
+func.func @sitofpExtui(%arg0: i4) -> bf16 {
+  %extui = arith.extui %arg0 : i4 to i8
+  %sitofp = arith.sitofp %extui : i8 to bf16
+  return %sitofp : bf16
+}
+
+// CHECK-LABEL: @uitofpExtui
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i8 to bf16
+//       CHECK:     return %[[UITOFP]]
+func.func @uitofpExtui(%arg0: i8) -> bf16 {
+  %extui = arith.extui %arg0 : i8 to i32
+  %uitofp = arith.uitofp %extui : i32 to bf16
+  return %uitofp : bf16
+}
+
+// CHECK-LABEL: @sitofpExtui_nneg
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] nneg : i4 to bf16
+//       CHECK:     return %[[UITOFP]]
+func.func @sitofpExtui_nneg(%arg0: i4) -> bf16 {
+  %extui = arith.extui %arg0 nneg : i4 to i8
+  %sitofp = arith.sitofp %extui : i8 to bf16
+  return %sitofp : bf16
+}
+// This may happen when extending f8E5M2FNUZ to f16.
 
 // CHECK-LABEL: @truncConstant
 //       CHECK:   %[[cres:.+]] = arith.constant -2 : i16
@@ -735,6 +1269,16 @@ func.func @truncExtui2(%arg0: i32) -> i16 {
 //       CHECK:   return  %[[CST:.*]] : i16
 func.func @truncExtui3(%arg0: i8) -> i16 {
   %extui = arith.extui %arg0 : i8 to i32
+  %trunci = arith.trunci %extui : i32 to i16
+  return %trunci : i16
+}
+
+// CHECK-LABEL: @truncExtui3_nneg
+//       CHECK:  %[[ARG0:.+]]: i8
+//       CHECK:  %[[CST:.*]] = arith.extui %[[ARG0:.+]] nneg : i8 to i16
+//       CHECK:   return  %[[CST:.*]] : i16
+func.func @truncExtui3_nneg(%arg0: i8) -> i16 {
+  %extui = arith.extui %arg0 nneg : i8 to i32
   %trunci = arith.trunci %extui : i32 to i16
   return %trunci : i16
 }
@@ -793,7 +1337,7 @@ func.func @truncExtsiVector(%arg0: vector<2xi32>) -> vector<2xi16> {
 //       CHECK:   return %[[cres]]
 func.func @truncConstantSplat() -> vector<4xi8> {
   %c-2 = arith.constant -2 : i16
-  %splat = vector.splat %c-2 : vector<4xi16>
+  %splat = vector.broadcast %c-2 : i16 to vector<4xi16>
   %trunc = arith.trunci %splat : vector<4xi16> to vector<4xi8>
   return %trunc : vector<4xi8>
 }
@@ -825,6 +1369,60 @@ func.func @truncFPConstant() -> bf16 {
   return %0 : bf16
 }
 
+// CHECK-LABEL: @truncFPToNearestEvenConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPToNearestEvenConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst to_nearest_even : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPDownwardConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPDownwardConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst downward : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPUpwardConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPUpwardConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst upward : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPTowardZeroConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPTowardZeroConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst toward_zero : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPToNearestAwayConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPToNearestAwayConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst to_nearest_away : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPVectorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xbf16>
+//       CHECK:   return %[[cres]]
+func.func @truncFPVectorConstant() -> vector<2xbf16> {
+  %cst = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xf32>
+  %0 = arith.truncf %cst : vector<2xf32> to vector<2xbf16>
+  return %0 : vector<2xbf16>
+}
+
 // Test that cases with rounding are NOT propagated
 // CHECK-LABEL: @truncFPConstantRounding
 //       CHECK:   arith.constant 1.444000e+25 : f32
@@ -847,6 +1445,51 @@ func.func @tripleAddAdd(%arg0: index) -> index {
   return %add2 : index
 }
 
+// CHECK-LABEL: @tripleAddAddOvf1
+//       CHECK:   %[[cres:.+]] = arith.constant 59 : index
+//       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @tripleAddAddOvf1(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.addi %c17, %arg0 overflow<nsw, nuw> : index
+  %add2 = arith.addi %c42, %add1 overflow<nsw, nuw> : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleAddAddOvf2
+//       CHECK:   %[[cres:.+]] = arith.constant 59 : index
+//       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] : index
+//       CHECK:   return %[[add]]
+func.func @tripleAddAddOvf2(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.addi %c17, %arg0 overflow<nsw> : index
+  %add2 = arith.addi %c42, %add1 overflow<nuw> : index
+  return %add2 : index
+}
+
+
+// CHECK-LABEL: @foldSubXX_tensor
+//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32>
+//       CHECK:   %[[sub:.+]] = arith.subi
+//       CHECK:   return %[[c0]], %[[sub]]
+func.func @foldSubXX_tensor(%static : tensor<10xi32>, %dyn : tensor<?x?xi32>) -> (tensor<10xi32>, tensor<?x?xi32>) {
+  %static_sub = arith.subi %static, %static : tensor<10xi32>
+  %dyn_sub = arith.subi %dyn, %dyn : tensor<?x?xi32>
+  return %static_sub, %dyn_sub : tensor<10xi32>, tensor<?x?xi32>
+}
+
+// CHECK-LABEL: @foldSubXX_vector
+//       CHECK-DAG:  %[[c0:.+]] = arith.constant dense<0> : vector<8xi32>
+//       CHECK-DAG:  %[[c0_scalable:.+]] = arith.constant dense<0> : vector<[4]xi32>
+//       CHECK:   return %[[c0]], %[[c0_scalable]]
+func.func @foldSubXX_vector(%static : vector<8xi32>, %dyn : vector<[4]xi32>) -> (vector<8xi32>, vector<[4]xi32>) {
+  %static_sub = arith.subi %static, %static : vector<8xi32>
+  %dyn_sub = arith.subi %dyn, %dyn : vector<[4]xi32>
+  return %static_sub, %dyn_sub : vector<8xi32>, vector<[4]xi32>
+}
+
 // CHECK-LABEL: @tripleAddSub0
 //       CHECK:   %[[cres:.+]] = arith.constant 59 : index
 //       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 : index
@@ -856,6 +1499,18 @@ func.func @tripleAddSub0(%arg0: index) -> index {
   %c42 = arith.constant 42 : index
   %add1 = arith.subi %c17, %arg0 : index
   %add2 = arith.addi %c42, %add1 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleAddSub0Ovf
+//       CHECK:   %[[cres:.+]] = arith.constant 59 : index
+//       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @tripleAddSub0Ovf(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.subi %c17, %arg0 overflow<nsw, nuw> : index
+  %add2 = arith.addi %c42, %add1 overflow<nsw, nuw> : index
   return %add2 : index
 }
 
@@ -871,6 +1526,18 @@ func.func @tripleAddSub1(%arg0: index) -> index {
   return %add2 : index
 }
 
+// CHECK-LABEL: @tripleAddSub1Ovf
+//       CHECK:   %[[cres:.+]] = arith.constant 25 : index
+//       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @tripleAddSub1Ovf(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.subi %arg0, %c17 overflow<nsw, nuw> : index
+  %add2 = arith.addi %c42, %add1 overflow<nsw, nuw> : index
+  return %add2 : index
+}
+
 // CHECK-LABEL: @tripleSubAdd0
 //       CHECK:   %[[cres:.+]] = arith.constant 25 : index
 //       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 : index
@@ -880,6 +1547,18 @@ func.func @tripleSubAdd0(%arg0: index) -> index {
   %c42 = arith.constant 42 : index
   %add1 = arith.addi %c17, %arg0 : index
   %add2 = arith.subi %c42, %add1 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubAdd0Ovf
+//       CHECK:   %[[cres:.+]] = arith.constant 25 : index
+//       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @tripleSubAdd0Ovf(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.addi %c17, %arg0 overflow<nsw, nuw> : index
+  %add2 = arith.subi %c42, %add1 overflow<nsw, nuw> : index
   return %add2 : index
 }
 
@@ -905,6 +1584,26 @@ func.func @subSub0(%arg0: index, %arg1: index) -> index {
   return %sub2 : index
 }
 
+// CHECK-LABEL: @subSub1
+// CHECK-SAME:    %[[ARG0:.*]]: index,
+// CHECK-SAME:    %[[ARG1:.*]]: index)
+//      CHECK:    return %[[ARG1]] : index
+func.func @subSub1(%arg0: index, %arg1: index) -> index {
+  %sub1 = arith.subi %arg0, %arg1 : index
+  %sub2 = arith.subi %arg0, %sub1 : index
+  return %sub2 : index
+}
+
+// CHECK-LABEL: @subSub0Ovf
+//       CHECK:   %[[c0:.+]] = arith.constant 0 : index
+//       CHECK:   %[[add:.+]] = arith.subi %[[c0]], %arg1 overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @subSub0Ovf(%arg0: index, %arg1: index) -> index {
+  %sub1 = arith.subi %arg0, %arg1 overflow<nsw, nuw> : index
+  %sub2 = arith.subi %sub1, %arg0 overflow<nsw, nuw> : index
+  return %sub2 : index
+}
+
 // CHECK-LABEL: @tripleSubSub0
 //       CHECK:   %[[cres:.+]] = arith.constant 25 : index
 //       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] : index
@@ -917,6 +1616,19 @@ func.func @tripleSubSub0(%arg0: index) -> index {
   return %add2 : index
 }
 
+// CHECK-LABEL: @tripleSubSub0Ovf
+//       CHECK:   %[[cres:.+]] = arith.constant 25 : index
+//       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @tripleSubSub0Ovf(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.subi %c17, %arg0 overflow<nsw, nuw> : index
+  %add2 = arith.subi %c42, %add1 overflow<nsw, nuw> : index
+  return %add2 : index
+}
+
+
 // CHECK-LABEL: @tripleSubSub1
 //       CHECK:   %[[cres:.+]] = arith.constant -25 : index
 //       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 : index
@@ -926,6 +1638,18 @@ func.func @tripleSubSub1(%arg0: index) -> index {
   %c42 = arith.constant 42 : index
   %add1 = arith.subi %c17, %arg0 : index
   %add2 = arith.subi %add1, %c42 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubSub1Ovf
+//       CHECK:   %[[cres:.+]] = arith.constant -25 : index
+//       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @tripleSubSub1Ovf(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.subi %c17, %arg0 overflow<nsw, nuw> : index
+  %add2 = arith.subi %add1, %c42 overflow<nsw, nuw> : index
   return %add2 : index
 }
 
@@ -941,6 +1665,18 @@ func.func @tripleSubSub2(%arg0: index) -> index {
   return %add2 : index
 }
 
+// CHECK-LABEL: @tripleSubSub2Ovf
+//       CHECK:   %[[cres:.+]] = arith.constant 59 : index
+//       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @tripleSubSub2Ovf(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.subi %arg0, %c17 overflow<nsw, nuw> : index
+  %add2 = arith.subi %c42, %add1 overflow<nsw, nuw> : index
+  return %add2 : index
+}
+
 // CHECK-LABEL: @tripleSubSub3
 //       CHECK:   %[[cres:.+]] = arith.constant 59 : index
 //       CHECK:   %[[add:.+]] = arith.subi %arg0, %[[cres]] : index
@@ -950,6 +1686,18 @@ func.func @tripleSubSub3(%arg0: index) -> index {
   %c42 = arith.constant 42 : index
   %add1 = arith.subi %arg0, %c17 : index
   %add2 = arith.subi %add1, %c42 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubSub3Ovf
+//       CHECK:   %[[cres:.+]] = arith.constant 59 : index
+//       CHECK:   %[[add:.+]] = arith.subi %arg0, %[[cres]] overflow<nsw, nuw> : index
+//       CHECK:   return %[[add]]
+func.func @tripleSubSub3Ovf(%arg0: index) -> index {
+  %c17 = arith.constant 17 : index
+  %c42 = arith.constant 42 : index
+  %add1 = arith.subi %arg0, %c17 overflow<nsw, nuw> : index
+  %add2 = arith.subi %add1, %c42 overflow<nsw, nuw> : index
   return %add2 : index
 }
 
@@ -983,6 +1731,24 @@ func.func @doubleAddSub2(%arg0: index, %arg1 : index) -> index {
   %sub = arith.subi %arg0, %arg1 : index
   %add = arith.addi %arg1, %sub : index
   return %add : index
+}
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_muli() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.muli %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.muli %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_muli() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.muli %0, %1 : i32
+  %5 = arith.muli %4, %2 : i32
+  return %5 : i32
 }
 
 // CHECK-LABEL: @tripleMulIMulIIndex
@@ -1186,6 +1952,137 @@ func.func @adduiExtendedConstantsSplatVector() -> (vector<4xi32>, vector<4xi1>) 
   return %sum, %overflow : vector<4xi32>, vector<4xi1>
 }
 
+// CHECK-LABEL: @adduiExtendedPoisonLhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @adduiExtendedPoisonLhs() -> (i32, i1) {
+  %poison = ub.poison : i32
+  %c5 = arith.constant 5 : i32
+  %sum, %overflow = arith.addui_extended %poison, %c5 : i32, i1
+  return %sum, %overflow : i32, i1
+}
+
+// CHECK-LABEL: @adduiExtendedPoisonRhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @adduiExtendedPoisonRhs() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %poison = ub.poison : i32
+  %sum, %overflow = arith.addui_extended %c5, %poison : i32, i1
+  return %sum, %overflow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedZeroRhs
+//  CHECK-NEXT:   %[[false:.+]] = arith.constant false
+//  CHECK-NEXT:   return %arg0, %[[false]]
+func.func @subuiExtendedZeroRhs(%arg0: i32) -> (i32, i1) {
+  %zero = arith.constant 0 : i32
+  %diff, %borrow = arith.subui_extended %arg0, %zero: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedZeroRhsSplat
+//  CHECK-NEXT:   %[[false:.+]] = arith.constant dense<false> : vector<4xi1>
+//  CHECK-NEXT:   return %arg0, %[[false]]
+func.func @subuiExtendedZeroRhsSplat(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %zero = arith.constant dense<0> : vector<4xi32>
+  %diff, %borrow = arith.subui_extended %arg0, %zero: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedSameOperand
+//  CHECK-DAG:    %[[zero:.+]] = arith.constant 0 : i32
+//  CHECK-DAG:    %[[false:.+]] = arith.constant false
+//  CHECK-NEXT:   return %[[zero]], %[[false]]
+func.func @subuiExtendedSameOperand(%arg0: i32) -> (i32, i1) {
+  %diff, %borrow = arith.subui_extended %arg0, %arg0: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedSameOperandVector
+//  CHECK-DAG:    %[[zero:.+]] = arith.constant dense<0> : vector<4xi32>
+//  CHECK-DAG:    %[[false:.+]] = arith.constant dense<false> : vector<4xi1>
+//  CHECK-NEXT:   return %[[zero]], %[[false]]
+func.func @subuiExtendedSameOperandVector(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %diff, %borrow = arith.subui_extended %arg0, %arg0: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedUnusedBorrowScalar
+//  CHECK-SAME:   (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32) -> i32
+//  CHECK-NEXT:   %[[RES:.+]] = arith.subi %[[LHS]], %[[RHS]] : i32
+//  CHECK-NEXT:   return %[[RES]] : i32
+func.func @subuiExtendedUnusedBorrowScalar(%arg0: i32, %arg1: i32) -> i32 {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1: i32, i1
+  return %diff : i32
+}
+
+// CHECK-LABEL: @subuiExtendedUnusedBorrowVector
+//  CHECK-SAME:   (%[[LHS:.+]]: vector<3xi32>, %[[RHS:.+]]: vector<3xi32>) -> vector<3xi32>
+//  CHECK-NEXT:   %[[RES:.+]] = arith.subi %[[LHS]], %[[RHS]] : vector<3xi32>
+//  CHECK-NEXT:   return %[[RES]] : vector<3xi32>
+func.func @subuiExtendedUnusedBorrowVector(%arg0: vector<3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1: vector<3xi32>, vector<3xi1>
+  return %diff : vector<3xi32>
+}
+
+// CHECK-LABEL: @subuiExtendedConstants
+//  CHECK-DAG:    %[[false:.+]] = arith.constant false
+//  CHECK-DAG:    %[[c2:.+]] = arith.constant 2 : i32
+//  CHECK-NEXT:   return %[[c2]], %[[false]]
+func.func @subuiExtendedConstants() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %c3 = arith.constant 3 : i32
+  %diff, %borrow = arith.subui_extended %c5, %c3: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedConstantsBorrow
+//  CHECK-DAG:    %[[true:.+]] = arith.constant true
+//  CHECK-DAG:    %[[c_2:.+]] = arith.constant -2 : i32
+//  CHECK-NEXT:   return %[[c_2]], %[[true]]
+func.func @subuiExtendedConstantsBorrow() -> (i32, i1) {
+  %c3 = arith.constant 3 : i32
+  %c5 = arith.constant 5 : i32
+  %diff, %borrow = arith.subui_extended %c3, %c5: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedConstantsBorrowVector
+//  CHECK-DAG:    %[[diff:.+]] = arith.constant dense<[1, 0, -1, 0]> : vector<4xi32>
+//  CHECK-DAG:    %[[borrow:.+]] = arith.constant dense<[false, false, true, false]> : vector<4xi1>
+//  CHECK-NEXT:   return %[[diff]], %[[borrow]]
+func.func @subuiExtendedConstantsBorrowVector() -> (vector<4xi32>, vector<4xi1>) {
+  %v1 = arith.constant dense<[1, 3, 3, 7]> : vector<4xi32>
+  %v2 = arith.constant dense<[0, 3, 4, 7]> : vector<4xi32>
+  %diff, %borrow = arith.subui_extended %v1, %v2 : vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedPoisonLhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @subuiExtendedPoisonLhs() -> (i32, i1) {
+  %poison = ub.poison : i32
+  %c5 = arith.constant 5 : i32
+  %diff, %borrow = arith.subui_extended %poison, %c5 : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedPoisonRhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @subuiExtendedPoisonRhs() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %poison = ub.poison : i32
+  %diff, %borrow = arith.subui_extended %c5, %poison : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
 // CHECK-LABEL: @mulsiExtendedZeroRhs
 //  CHECK-NEXT:   %[[zero:.+]] = arith.constant 0 : i32
 //  CHECK-NEXT:   return %[[zero]], %[[zero]]
@@ -1235,6 +2132,28 @@ func.func @mulsiExtendedOneRhsSplat(%arg0: vector<3xi32>) -> (vector<3xi32>, vec
   %one = arith.constant dense<1> : vector<3xi32>
   %low, %high = arith.mulsi_extended %arg0, %one: vector<3xi32>
   return %low, %high : vector<3xi32>, vector<3xi32>
+}
+
+// CHECK-LABEL: @mulsiExtendedOneRhsI1
+//  CHECK-SAME:   (%[[ARG:.+]]: i1) -> (i1, i1)
+//  CHECK-NEXT:   %[[T:.+]]  = arith.constant true
+//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[ARG]], %[[T]] : i1
+//  CHECK-NEXT:   return %[[LOW]], %[[HIGH]] : i1, i1
+func.func @mulsiExtendedOneRhsI1(%arg0: i1) -> (i1, i1) {
+  %one = arith.constant true
+  %low, %high = arith.mulsi_extended %arg0, %one: i1
+  return %low, %high : i1, i1
+}
+
+// CHECK-LABEL: @mulsiExtendedOneRhsSplatI1
+//  CHECK-SAME:   (%[[ARG:.+]]: vector<3xi1>) -> (vector<3xi1>, vector<3xi1>)
+//  CHECK-NEXT:   %[[TS:.+]]  = arith.constant dense<true> : vector<3xi1>
+//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[ARG]], %[[TS]] : vector<3xi1>
+//  CHECK-NEXT:   return %[[LOW]], %[[HIGH]] : vector<3xi1>, vector<3xi1>
+func.func @mulsiExtendedOneRhsSplatI1(%arg0: vector<3xi1>) -> (vector<3xi1>, vector<3xi1>) {
+  %one = arith.constant dense<true> : vector<3xi1>
+  %low, %high = arith.mulsi_extended %arg0, %one: vector<3xi1>
+  return %low, %high : vector<3xi1>, vector<3xi1>
 }
 
 // CHECK-LABEL: @mulsiExtendedUnusedHigh
@@ -1510,6 +2429,93 @@ func.func @xorOfExtUI(%arg0: i8, %arg1: i8) -> i64 {
   return %res : i64
 }
 
+// CHECK-LABEL: @xorOfExtUI_nneg_both
+//       CHECK:  %[[comb:.+]] = arith.xori %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] nneg : i8 to i64
+//       CHECK:   return %[[ext]]
+func.func @xorOfExtUI_nneg_both(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 nneg : i8 to i64
+  %ext1 = arith.extui %arg1 nneg : i8 to i64
+  %res = arith.xori %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @xorOfExtUI_nneg_mixed
+//       CHECK:  %[[comb:.+]] = arith.xori %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] : i8 to i64
+//   CHECK-NOT:  nneg
+//       CHECK:   return %[[ext]]
+func.func @xorOfExtUI_nneg_mixed(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 nneg : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.xori %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 6 : i32
+//       CHECK:   %[[xor:.+]] = arith.xori %arg0, %[[cres]] : i32
+//       CHECK:   return %[[xor]]
+func.func @xorOfXorConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %x1 = arith.xori %arg0, %c12 : i32
+  %x2 = arith.xori %x1, %c10 : i32
+  return %x2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 6 : index
+//       CHECK:   %[[xor:.+]] = arith.xori %arg0, %[[cres]] : index
+//       CHECK:   return %[[xor]]
+func.func @xorOfXorConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %x1 = arith.xori %arg0, %c12 : index
+  %x2 = arith.xori %x1, %c10 : index
+  return %x2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstantMultiUse
+//       CHECK:   %[[C6:.+]] = arith.constant 6 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[X1:.+]] = arith.xori %arg0, %[[C12]] : i32
+//       CHECK:   %[[X2:.+]] = arith.xori %arg0, %[[C6]] : i32
+//       CHECK:   return %[[X1]], %[[X2]]
+func.func @xorOfXorConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %x1 = arith.xori %arg0, %c12 : i32
+  %x2 = arith.xori %x1, %c10 : i32
+  return %x1, %x2 : i32, i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_xori() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.xori %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.xori %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_xori() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.xori %0, %1 : i32
+  %5 = arith.xori %4, %2 : i32
+  return %5 : i32
+}
+
 // -----
 
 // CHECK-LABEL: @bitcastSameType(
@@ -1607,6 +2613,40 @@ func.func @bitcastOfBitcast(%arg : i16) -> i16 {
   %bf = arith.bitcast %f : f16 to bf16
   %res = arith.bitcast %bf : bf16 to i16
   return %res : i16
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastPoisonItoFP(
+func.func @bitcastPoisonItoFP() -> f32 {
+  // CHECK: %[[P:.+]] = ub.poison : f32
+  // CHECK: return %[[P]] : f32
+  %p = ub.poison : i32
+  %res = arith.bitcast %p : i32 to f32
+  return %res : f32
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastPoisonFPtoI(
+func.func @bitcastPoisonFPtoI() -> i32 {
+  // CHECK: %[[P:.+]] = ub.poison : i32
+  // CHECK: return %[[P]] : i32
+  %p = ub.poison : f32
+  %res = arith.bitcast %p : f32 to i32
+  return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: func @bitcastChain(
+//  CHECK-SAME:     %[[arg:.*]]: i16)
+//       CHECK:   %[[cast:.*]] = arith.bitcast %[[arg]] : i16 to f16
+//       CHECK:   return %[[cast]]
+func.func @bitcastChain(%arg: i16) -> f16 {
+  %0 = arith.bitcast %arg : i16 to bf16
+  %1 = arith.bitcast %0 : bf16 to f16
+  return %1 : f16
 }
 
 // -----
@@ -1778,31 +2818,39 @@ func.func @test_maximumf(%arg0 : f32) -> (f32, f32, f32) {
 // -----
 
 // CHECK-LABEL: @test_minnumf(
-func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32) {
+func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
   // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-DAG:   %[[INF:.+]] = arith.constant
   // CHECK-NEXT:  %[[X:.+]] = arith.minnumf %arg0, %[[C0]]
-  // CHECK-NEXT:  return %[[X]], %arg0, %arg0
+  // CHECK-NEXT:  %[[Y:.+]] = arith.minnumf %arg0, %[[INF]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %[[Y]], %arg0
   %c0 = arith.constant 0.0 : f32
   %inf = arith.constant 0x7F800000 : f32
+  %nan = arith.constant 0x7FC00000 : f32
   %0 = arith.minnumf %c0, %arg0 : f32
   %1 = arith.minnumf %arg0, %arg0 : f32
   %2 = arith.minnumf %inf, %arg0 : f32
-  return %0, %1, %2 : f32, f32, f32
+  %3 = arith.minnumf %nan, %arg0 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----
 
 // CHECK-LABEL: @test_maxnumf(
-func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32) {
-  // CHECK-DAG:   %[[C0:.+]] = arith.constant
+func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-DAG:   %[[NINF:.+]] = arith.constant
   // CHECK-NEXT:  %[[X:.+]] = arith.maxnumf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %[[X]], %arg0, %arg0
+  // CHECK-NEXT:  %[[Y:.+]] = arith.maxnumf %arg0, %[[NINF]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %[[Y]], %arg0
   %c0 = arith.constant 0.0 : f32
   %-inf = arith.constant 0xFF800000 : f32
+  %nan = arith.constant 0x7FC00000 : f32
   %0 = arith.maxnumf %c0, %arg0 : f32
   %1 = arith.maxnumf %arg0, %arg0 : f32
   %2 = arith.maxnumf %-inf, %arg0 : f32
-  return %0, %1, %2 : f32, f32, f32
+  %3 = arith.maxnumf %nan, %arg0 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----
@@ -1840,6 +2888,38 @@ func.func @test_subf(%arg0 : f16) -> (f16, f16, f16) {
   return %0, %1, %2 : f16, f16, f16
 }
 
+// CHECK-LABEL: @test_subf_negzero(
+//  CHECK-SAME: %[[ARG0:.+]]: f16
+func.func @test_subf_negzero(%arg0 : f16) -> f16 {
+  // CHECK-NEXT:  %[[X:.+]] = arith.negf %[[ARG0]] : f16
+  // CHECK-NEXT:  return %[[X]] : f16
+  %c-0 = arith.constant -0.0 : f16
+  %0 = arith.subf %c-0, %arg0 : f16
+  return %0 : f16
+}
+
+// subf(+0, x) must NOT fold to negf(x)
+// CHECK-LABEL: @test_subf_poszero_no_negf(
+//  CHECK-SAME: %[[ARG0:.+]]: f16
+func.func @test_subf_poszero_no_negf(%arg0 : f16) -> f16 {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.subf %[[C0]], %[[ARG0]] : f16
+  // CHECK-NEXT:  return %[[X]] : f16
+  %c0 = arith.constant 0.0 : f16
+  %0 = arith.subf %c0, %arg0 : f16
+  return %0 : f16
+}
+
+// CHECK-LABEL: @test_subf_negzero_splat(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<4xf32>
+func.func @test_subf_negzero_splat(%arg0 : vector<4xf32>) -> vector<4xf32> {
+  // CHECK-NEXT:  %[[X:.+]] = arith.negf %[[ARG0]] : vector<4xf32>
+  // CHECK-NEXT:  return %[[X]] : vector<4xf32>
+  %c-0 = arith.constant dense<-0.0> : vector<4xf32>
+  %0 = arith.subf %c-0, %arg0 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 // -----
 
 // CHECK-LABEL: @test_mulf(
@@ -1867,6 +2947,18 @@ func.func @test_mulf1(%arg0 : f32, %arg1 : f32) -> (f32) {
   return %2 : f32
 }
 
+// CHECK-LABEL: @test_mulf2(
+func.func @test_mulf2(%arg0 : f32) -> (f32, f32) {
+  // CHECK-DAG:  %[[C0:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK-DAG:  %[[C0n:.+]] = arith.constant -0.000000e+00 : f32
+  // CHECK-NEXT:  return %[[C0]], %[[C0n]]
+  %c0 = arith.constant 0.0 : f32
+  %c0n = arith.constant -0.0 : f32
+  %0 = arith.mulf %c0, %arg0 fastmath<nnan,nsz> : f32
+  %1 = arith.mulf %c0n, %arg0 fastmath<nnan,nsz> : f32
+  return %0, %1 : f32, f32
+}
+
 // -----
 
 // CHECK-LABEL: @test_divf(
@@ -1889,6 +2981,150 @@ func.func @test_divf1(%arg0 : f32, %arg1 : f32) -> (f32) {
   %2 = arith.divf %0, %1 : f32
   return %2 : f32
 }
+
+// -----
+
+// Verify that constant folding respects rounding modes. 1.0000001 + 1.0 is not
+// exactly representable in f32. With upward rounding, the result is rounded up,
+// and with downward rounding it is rounded down.
+// CHECK-LABEL: @test_addf_rounding_mode(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @test_addf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:  %[[UP:.+]] = arith.constant 2.00000024 : f32
+  // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 2.000000e+00 : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  %a = arith.constant 1.0000001 : f32
+  %b = arith.constant 1.0 : f32
+  // addf(x, -0) folds even with a rounding mode.
+  %c_neg0 = arith.constant -0.0 : f32
+  %0 = arith.addf %arg0, %c_neg0 to_nearest_even : f32
+  %1 = arith.addf %a, %b upward : f32
+  %2 = arith.addf %a, %b downward : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_subf_rounding_mode(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:  %[[NZ:.+]] = arith.constant -0.000000e+00 : f32
+  // CHECK-DAG:  %[[UP:.+]] = arith.constant 2.00000024 : f32
+  // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 2.000000e+00 : f32
+  // CHECK:      %[[NEG:.+]] = arith.subf %[[NZ]], %[[ARG0]] downward : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]], %[[NEG]]
+  %a = arith.constant 1.0000001 : f32
+  %b = arith.constant -1.0 : f32
+  // subf(x, +0) folds even with a rounding mode.
+  %c0 = arith.constant 0.0 : f32
+  %0 = arith.subf %arg0, %c0 downward : f32
+  %1 = arith.subf %a, %b upward : f32
+  %2 = arith.subf %a, %b downward : f32
+  // subf(-0, x) must NOT fold to negf when a custom rounding mode is set.
+  %c-0 = arith.constant -0.0 : f32
+  %3 = arith.subf %c-0, %arg0 downward : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_mulf_rounding_mode(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @test_mulf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:  %[[UP:.+]] = arith.constant 3.00000048 : f32
+  // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 3.00000024 : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  %a = arith.constant 1.0000001 : f32
+  %b = arith.constant 3.0 : f32
+  // mulf(x, 1) folds even with a rounding mode.
+  %c1 = arith.constant 1.0 : f32
+  %0 = arith.mulf %arg0, %c1 upward : f32
+  %1 = arith.mulf %a, %b upward : f32
+  %2 = arith.mulf %a, %b downward : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_divf_rounding_mode(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @test_divf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:  %[[UP:.+]] = arith.constant 0.333333343 : f32
+  // CHECK-DAG:  %[[DOWN:.+]] = arith.constant 0.333333313 : f32
+  // CHECK-NEXT: return %[[ARG0]], %[[UP]], %[[DOWN]]
+  %a = arith.constant 1.0 : f32
+  %b = arith.constant 3.0 : f32
+  // divf(x, 1) folds even with a rounding mode.
+  %c1 = arith.constant 1.0 : f32
+  %0 = arith.divf %arg0, %c1 toward_zero : f32
+  %1 = arith.divf %a, %b upward : f32
+  %2 = arith.divf %a, %b downward : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+func.func @fold_divui_of_muli_0(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nuw> : index
+  %1 = arith.divui %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divui_of_muli_0(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG1]]
+
+func.func @fold_divui_of_muli_1(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nuw> : index
+  %1 = arith.divui %0, %arg1 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divui_of_muli_1(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG0]]
+
+func.func @fold_divsi_of_muli_0(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nsw> : index
+  %1 = arith.divsi %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divsi_of_muli_0(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG1]]
+
+func.func @fold_divsi_of_muli_1(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nsw> : index
+  %1 = arith.divsi %0, %arg1 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divsi_of_muli_1(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG0]]
+
+// Do not fold divui(mul(a, v), v) -> a with nuw attribute.
+func.func @no_fold_divui_of_muli(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 : index
+  %1 = arith.divui %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @no_fold_divui_of_muli
+//       CHECK:   %[[T0:.+]] = arith.muli
+//       CHECK:   %[[T1:.+]] = arith.divui %[[T0]],
+//       CHECK:   return %[[T1]]
+
+// Do not fold divsi(mul(a, v), v) -> a with nuw attribute.
+func.func @no_fold_divsi_of_muli(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 : index
+  %1 = arith.divsi %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @no_fold_divsi_of_muli
+//       CHECK:   %[[T0:.+]] = arith.muli
+//       CHECK:   %[[T1:.+]] = arith.divsi %[[T0]],
+//       CHECK:   return %[[T1]]
 
 // -----
 
@@ -1921,7 +3157,7 @@ func.func @constant_FPtoUI_splat() -> vector<4xi32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2> : vector<4xi32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2.0 : f32
-  %splat = vector.splat %c0 : vector<4xf32>
+  %splat = vector.broadcast %c0 : f32 to vector<4xf32>
   %res = arith.fptoui %splat : vector<4xf32> to vector<4xi32>
   return %res : vector<4xi32>
 }
@@ -1961,7 +3197,7 @@ func.func @constant_FPtoSI_splat() -> vector<4xi32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<-2> : vector<4xi32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant -2.0 : f32
-  %splat = vector.splat %c0 : vector<4xf32>
+  %splat = vector.broadcast %c0 : f32 to vector<4xf32>
   %res = arith.fptosi %splat : vector<4xf32> to vector<4xi32>
   return %res : vector<4xi32>
 }
@@ -2000,7 +3236,7 @@ func.func @constant_SItoFP_splat() -> vector<4xf32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2 : i32
-  %splat = vector.splat %c0 : vector<4xi32>
+  %splat = vector.broadcast %c0 : i32 to vector<4xi32>
   %res = arith.sitofp %splat : vector<4xi32> to vector<4xf32>
   return %res : vector<4xf32>
 }
@@ -2029,7 +3265,7 @@ func.func @constant_UItoFP_splat() -> vector<4xf32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2 : i32
-  %splat = vector.splat %c0 : vector<4xi32>
+  %splat = vector.broadcast %c0 : i32 to vector<4xi32>
   %res = arith.uitofp %splat : vector<4xi32> to vector<4xf32>
   return %res : vector<4xf32>
 }
@@ -2158,6 +3394,17 @@ func.func @nofoldShl2() -> i64 {
   return %r : i64
 }
 
+// CHECK-LABEL: @nofoldShl3(
+// CHECK: %[[res:.+]] = arith.shli
+// CHECK: return %[[res]]
+func.func @nofoldShl3() -> i64 {
+  %c1 = arith.constant 1 : i64
+  %c64 = arith.constant 64 : i64
+  // Note that this should return Poison in the future.
+  %r = arith.shli %c1, %c64 : i64
+  return %r : i64
+}
+
 // CHECK-LABEL: @foldShru(
 // CHECK: %[[res:.+]] = arith.constant 2 : i64
 // CHECK: return %[[res]]
@@ -2195,6 +3442,17 @@ func.func @nofoldShru2() -> i64 {
   %c1 = arith.constant 8 : i64
   %cm32 = arith.constant -32 : i64
   %r = arith.shrui %c1, %cm32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShru3(
+// CHECK: %[[res:.+]] = arith.shrui
+// CHECK: return %[[res]]
+func.func @nofoldShru3() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %c64 = arith.constant 64 : i64
+  // Note that this should return Poison in the future.
+  %r = arith.shrui %c1, %c64 : i64
   return %r : i64
 }
 
@@ -2238,6 +3496,17 @@ func.func @nofoldShrs2() -> i64 {
   return %r : i64
 }
 
+// CHECK-LABEL: @nofoldShrs3(
+// CHECK: %[[res:.+]] = arith.shrsi
+// CHECK: return %[[res]]
+func.func @nofoldShrs3() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %c64 = arith.constant 64 : i64
+  // Note that this should return Poison in the future.
+  %r = arith.shrsi %c1, %c64 : i64
+  return %r : i64
+}
+
 // -----
 
 // CHECK-LABEL: @test_negf(
@@ -2256,6 +3525,29 @@ func.func @test_negf1(%f : f32) -> (f32) {
   %0 = arith.negf %f : f32
   %1 = arith.negf %0 : f32
   return %1: f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_flush_denormals_const(
+// CHECK: %[[res:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK: return %[[res]]
+func.func @test_flush_denormals_const() -> (f32) {
+  %c = arith.constant 1.0e-40 : f32
+  %0 = arith.flush_denormals %c : f32
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_flush_denormals_idempotent(
+// CHECK-SAME: %[[arg0:.+]]:
+// CHECK: %[[res:.+]] = arith.flush_denormals %[[arg0]] : f32
+// CHECK: return %[[res]]
+func.func @test_flush_denormals_idempotent(%f : f32) -> (f32) {
+  %0 = arith.flush_denormals %f : f32
+  %1 = arith.flush_denormals %0 : f32
+  return %1 : f32
 }
 
 // -----
@@ -2307,7 +3599,7 @@ func.func @test_remsi_1(%arg : vector<4xi32>) -> (vector<4xi32>) {
 // -----
 
 // CHECK-LABEL: @test_remf(
-// CHECK: %[[res:.+]] = arith.constant -1.000000e+00 : f32
+// CHECK: %[[res:.+]] = arith.constant 1.000000e+00 : f32
 // CHECK: return %[[res]]
 func.func @test_remf() -> (f32) {
   %v1 = arith.constant 3.0 : f32
@@ -2316,11 +3608,24 @@ func.func @test_remf() -> (f32) {
   return %0 : f32
 }
 
+// CHECK-LABEL: @test_remf2(
+// CHECK: %[[respos:.+]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[resneg:.+]] = arith.constant -1.000000e+00 : f32
+// CHECK: return %[[respos]], %[[resneg]]
+func.func @test_remf2() -> (f32, f32) {
+  %v1 = arith.constant 3.0 : f32
+  %v2 = arith.constant -2.0 : f32
+  %v3 = arith.constant -3.0 : f32
+  %0 = arith.remf %v1, %v2 : f32
+  %1 = arith.remf %v3, %v2 : f32
+  return %0, %1 : f32, f32
+}
+
 // CHECK-LABEL: @test_remf_vec(
 // CHECK: %[[res:.+]] = arith.constant dense<[1.000000e+00, 0.000000e+00, -1.000000e+00, 0.000000e+00]> : vector<4xf32>
 // CHECK: return %[[res]]
 func.func @test_remf_vec() -> (vector<4xf32>) {
-  %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
+  %v1 = arith.constant dense<[1.0, 2.0, -3.0, 4.0]> : vector<4xf32>
   %v2 = arith.constant dense<[2.0, 2.0, 2.0, 2.0]> : vector<4xf32>
   %0 = arith.remf %v1, %v2 : vector<4xf32>
   return %0 : vector<4xf32>
@@ -2487,6 +3792,19 @@ func.func @truncIShrSIToTrunciShrUI(%a: i64) -> i32 {
   return %hi : i32
 }
 
+// CHECK-LABEL: @truncIShrSIExactToTrunciShrUIExact
+//  CHECK-SAME:   (%[[A:.+]]: i64)
+//  CHECK-NEXT:   %[[C32:.+]] = arith.constant 32 : i64
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C32]] exact : i64
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : i64 to i32
+//  CHECK-NEXT:   return %[[TRU]] : i32
+func.func @truncIShrSIExactToTrunciShrUIExact(%a: i64) -> i32 {
+  %c32 = arith.constant 32: i64
+  %sh = arith.shrsi %a, %c32 exact : i64
+  %hi = arith.trunci %sh: i64 to i32
+  return %hi : i32
+}
+
 // CHECK-LABEL: @truncIShrSIToTrunciShrUIBadShiftAmt1
 //       CHECK:   arith.shrsi
 func.func @truncIShrSIToTrunciShrUIBadShiftAmt1(%a: i64) -> i32 {
@@ -2501,118 +3819,6 @@ func.func @truncIShrSIToTrunciShrUIBadShiftAmt1(%a: i64) -> i32 {
 func.func @truncIShrSIToTrunciShrUIBadShiftAmt2(%a: i64) -> i32 {
   %c31 = arith.constant 31: i64
   %sh = arith.shrsi %a, %c31 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtended
-//  CHECK-SAME:   (%[[A:.+]]: i32, %[[B:.+]]: i32)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[A]], %[[B]] : i32
-//  CHECK-NEXT:   return %[[HIGH]] : i32
-func.func @wideMulToMulSIExtended(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedVector
-//  CHECK-SAME:   (%[[A:.+]]: vector<3xi32>, %[[B:.+]]: vector<3xi32>)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[A]], %[[B]] : vector<3xi32>
-//  CHECK-NEXT:   return %[[HIGH]] : vector<3xi32>
-func.func @wideMulToMulSIExtendedVector(%a: vector<3xi32>, %b: vector<3xi32>) -> vector<3xi32> {
-  %x = arith.extsi %a: vector<3xi32> to vector<3xi64>
-  %y = arith.extsi %b: vector<3xi32> to vector<3xi64>
-  %m = arith.muli %x, %y: vector<3xi64>
-  %c32 = arith.constant dense<32>: vector<3xi64>
-  %sh = arith.shrui %m, %c32 : vector<3xi64>
-  %hi = arith.trunci %sh: vector<3xi64> to vector<3xi32>
-  return %hi : vector<3xi32>
-}
-
-// CHECK-LABEL: @wideMulToMulUIExtended
-//  CHECK-SAME:   (%[[A:.+]]: i32, %[[B:.+]]: i32)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mului_extended %[[A]], %[[B]] : i32
-//  CHECK-NEXT:   return %[[HIGH]] : i32
-func.func @wideMulToMulUIExtended(%a: i32, %b: i32) -> i32 {
-  %x = arith.extui %a: i32 to i64
-  %y = arith.extui %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulUIExtendedVector
-//  CHECK-SAME:   (%[[A:.+]]: vector<3xi32>, %[[B:.+]]: vector<3xi32>)
-//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mului_extended %[[A]], %[[B]] : vector<3xi32>
-//  CHECK-NEXT:   return %[[HIGH]] : vector<3xi32>
-func.func @wideMulToMulUIExtendedVector(%a: vector<3xi32>, %b: vector<3xi32>) -> vector<3xi32> {
-  %x = arith.extui %a: vector<3xi32> to vector<3xi64>
-  %y = arith.extui %b: vector<3xi32> to vector<3xi64>
-  %m = arith.muli %x, %y: vector<3xi64>
-  %c32 = arith.constant dense<32>: vector<3xi64>
-  %sh = arith.shrui %m, %c32 : vector<3xi64>
-  %hi = arith.trunci %sh: vector<3xi64> to vector<3xi32>
-  return %hi : vector<3xi32>
-}
-
-// CHECK-LABEL: @wideMulToMulIExtendedMixedExt
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulIExtendedMixedExt(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extui %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadExt
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadExt(%a: i16, %b: i16) -> i32 {
-  %x = arith.extsi %a: i16 to i64
-  %y = arith.extsi %b: i16 to i64
-  %m = arith.muli %x, %y: i64
-  %c32 = arith.constant 32: i64
-  %sh = arith.shrui %m, %c32 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadShift1
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadShift1(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c33 = arith.constant 33: i64
-  %sh = arith.shrui %m, %c33 : i64
-  %hi = arith.trunci %sh: i64 to i32
-  return %hi : i32
-}
-
-// CHECK-LABEL: @wideMulToMulSIExtendedBadShift2
-//       CHECK:   arith.muli
-//       CHECK:   arith.shrui
-//       CHECK:   arith.trunci
-func.func @wideMulToMulSIExtendedBadShift2(%a: i32, %b: i32) -> i32 {
-  %x = arith.extsi %a: i32 to i64
-  %y = arith.extsi %b: i32 to i64
-  %m = arith.muli %x, %y: i64
-  %c31 = arith.constant 31: i64
-  %sh = arith.shrui %m, %c31 : i64
   %hi = arith.trunci %sh: i64 to i32
   return %hi : i32
 }
@@ -2790,6 +3996,143 @@ func.func @unsignedExtendConstantResource() -> tensor<i16> {
   return %ext : tensor<i16>
 }
 
+// CHECK-LABEL: @sequences_fastmath_contract
+// CHECK-SAME: ([[ARG0:%.+]]: bf16)
+// CHECK: [[EXTF:%.+]] = arith.extf [[ARG0]]
+// CHECK: [[ABSF:%.+]] = math.absf [[EXTF]]
+// CHECK: [[SIN:%.+]] = math.sin [[ABSF]]
+// CHECK: [[TRUNCF:%.+]] = arith.truncf [[SIN]]
+// CHECK: return [[TRUNCF]] : bf16
+func.func @sequences_fastmath_contract(%arg0: bf16) -> bf16 {
+  %0 = arith.extf %arg0 fastmath<contract> : bf16 to f32
+  %1 = math.absf %0 : f32
+  %2 = arith.truncf %1 fastmath<contract> : f32 to bf16
+  %3 = arith.extf %2 fastmath<contract> : bf16 to f32
+  %4 = math.sin %3 : f32
+  %5 = arith.truncf %4 fastmath<contract> : f32 to bf16
+  return %5 : bf16
+}
+
+// CHECK-LABEL: @sequences_no_fastmath
+// CHECK-SAME: ([[ARG0:%.+]]: bf16)
+// CHECK: [[EXTF:%.+]] = arith.extf [[ARG0]]
+// CHECK: [[ABSF:%.+]] = math.absf [[EXTF]]
+// CHECK: [[TRUNCF1:%.+]] = arith.truncf [[ABSF]]
+// CHECK: [[EXTF1:%.+]] = arith.extf [[TRUNCF1]]
+// CHECK: [[SIN:%.+]] = math.sin [[EXTF1]]
+// CHECK: [[TRUNCF:%.+]] = arith.truncf [[SIN]]
+// CHECK: return [[TRUNCF]] : bf16
+func.func @sequences_no_fastmath(%arg0: bf16) -> bf16 {
+  %0 = arith.extf %arg0 : bf16 to f32
+  %1 = math.absf %0 : f32
+  %2 = arith.truncf %1 : f32 to bf16
+  %3 = arith.extf %2 : bf16 to f32
+  %4 = math.sin %3 : f32
+  %5 = arith.truncf %4 : f32 to bf16
+  return %5 : bf16
+}
+
+// CHECK-LABEL: @eliminate_cast_to_f16
+// CHECK: return [[arg0:%.+]] : f32
+func.func @eliminate_cast_to_f16(%arg0: f32) -> f32 {
+  %0 = arith.truncf %arg0 fastmath<contract> : f32 to f16
+  %1 = arith.extf %0 fastmath<contract> : f16 to f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: @eliminate_cast_to_bf16
+// CHECK: return [[arg0:%.+]] : f32
+func.func @eliminate_cast_to_bf16(%arg0: f32) -> f32 {
+  %0 = arith.truncf %arg0 fastmath<contract> : f32 to bf16
+  %1 = arith.extf %0 fastmath<contract> : bf16 to f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: @bf16_sin_vector
+// CHECK-SAME: ([[ARG0:%.+]]: vector<32x32x32xbf16>)
+// CHECK: [[EXTF:%.+]] = arith.extf [[ARG0]]
+// CHECK: [[ABSF:%.+]] = math.absf [[EXTF]]
+// CHECK: [[SIN:%.+]] = math.sin [[ABSF]]
+// CHECK: [[TRUNCF:%.+]] = arith.truncf [[SIN]]
+// CHECK: return [[TRUNCF]] : vector<32x32x32xbf16>
+func.func @bf16_sin_vector(%arg0: vector<32x32x32xbf16>) -> vector<32x32x32xbf16> {
+  %0 = arith.extf %arg0 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %1 = math.absf %0 : vector<32x32x32xf32>
+  %2 = arith.truncf %1 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  %3 = arith.extf %2 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %4 = math.sin %3 : vector<32x32x32xf32>
+  %5 = arith.truncf %4 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  return %5 : vector<32x32x32xbf16>
+}
+
+// CHECK-LABEL: @f16_sin_vector
+// CHECK-SAME: ([[ARG0:%.+]]: vector<32x32x32xf16>)
+// CHECK: [[EXTF:%.+]] = arith.extf [[ARG0]]
+// CHECK: [[ABSF:%.+]] = math.absf [[EXTF]]
+// CHECK: [[SIN:%.+]] = math.sin [[ABSF]]
+// CHECK: [[TRUNCF:%.+]] = arith.truncf [[SIN]]
+// CHECK: return [[TRUNCF]] : vector<32x32x32xf16>
+func.func @f16_sin_vector(%arg0: vector<32x32x32xf16>) -> vector<32x32x32xf16> {
+  %0 = arith.extf %arg0 fastmath<contract> : vector<32x32x32xf16> to vector<32x32x32xf32>
+  %1 = math.absf %0 : vector<32x32x32xf32>
+  %2 = arith.truncf %1 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xf16>
+  %3 = arith.extf %2 fastmath<contract> : vector<32x32x32xf16> to vector<32x32x32xf32>
+  %4 = math.sin %3 : vector<32x32x32xf32>
+  %5 = arith.truncf %4 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xf16>
+  return %5 : vector<32x32x32xf16>
+}
+
+// CHECK-LABEL: @bf16_branch_vector
+// CHECK-SAME: ([[ARG0:%.+]]: vector<32x32x32xbf16>)
+// CHECK: [[EXTF:%.+]] = arith.extf [[ARG0]]
+// CHECK: [[ABSF:%.+]] = math.absf [[EXTF]]
+// CHECK-DAG: [[SIN:%.+]] = math.sin [[ABSF]]
+// CHECK-DAG: [[COS:%.+]] = math.cos [[ABSF]]
+// CHECK: [[ADDF:%.+]] = arith.addf [[SIN]], [[COS]]
+// CHECK: [[TRUNCF:%.+]] = arith.truncf [[ADDF]]
+// CHECK: return [[TRUNCF]] : vector<32x32x32xbf16>
+func.func @bf16_branch_vector(%arg0: vector<32x32x32xbf16>) -> vector<32x32x32xbf16> {
+  %0 = arith.extf %arg0 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %1 = math.absf %0 : vector<32x32x32xf32>
+  %2 = arith.truncf %1 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  %3 = arith.extf %2 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %4 = math.sin %3 : vector<32x32x32xf32>
+  %5 = arith.truncf %4 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  %6 = arith.extf %5 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %7 = math.cos %3 : vector<32x32x32xf32>
+  %8 = arith.truncf %7 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  %9 = arith.extf %8 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %10 = arith.addf %6, %9 : vector<32x32x32xf32>
+  %11 = arith.truncf %10 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  return %11 : vector<32x32x32xbf16>
+}
+
+// CHECK-LABEL: @bf16_fma
+// CHECK-SAME: ([[ARG0:%.+]]: vector<32x32x32xbf16>, [[ARG1:%.+]]: vector<32x32x32xbf16>, [[ARG2:%.+]]: vector<32x32x32xbf16>)
+// CHECK: [[EXTF0:%.+]] = arith.extf [[ARG0]]
+// CHECK: [[ABSF:%.+]] = math.absf [[EXTF0]]
+// CHECK-DAG: [[SIN:%.+]] = math.sin [[ABSF]]
+// CHECK: [[TRUNCF0:%.+]] = arith.truncf [[SIN]]
+// CHECK-DAG: [[FMA:%.+]] = math.fma [[TRUNCF0]], [[ARG1]], [[ARG2]]
+// CHECK: [[EXTF1:%.+]] = arith.extf [[FMA]]
+// CHECK: [[ADDF:%.+]] = arith.addf [[EXTF1]], [[SIN]]
+// CHECK: [[TRUNCF1:%.+]] = arith.truncf [[ADDF]]
+// CHECK: return [[TRUNCF1]] : vector<32x32x32xbf16>
+func.func @bf16_fma(%arg0: vector<32x32x32xbf16>, %arg1: vector<32x32x32xbf16>, %arg2: vector<32x32x32xbf16>) -> vector<32x32x32xbf16> {
+  %0 = arith.extf %arg0 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %1 = math.absf %0 : vector<32x32x32xf32>
+  %2 = arith.truncf %1 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  %3 = arith.extf %2 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %4 = math.sin %3 : vector<32x32x32xf32>
+  %5 = arith.truncf %4 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  %6 = arith.extf %5 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %7 = math.fma %5, %arg1, %arg2 : vector<32x32x32xbf16>
+  %8 = arith.extf %7 fastmath<contract> : vector<32x32x32xbf16> to vector<32x32x32xf32>
+  %9 = arith.addf %8, %6 : vector<32x32x32xf32>
+  %10 = arith.truncf %9 fastmath<contract> : vector<32x32x32xf32> to vector<32x32x32xbf16>
+  return %10 : vector<32x32x32xbf16>
+}
+
 {-#
   dialect_resources: {
     builtin: {
@@ -2798,3 +4141,66 @@ func.func @unsignedExtendConstantResource() -> tensor<i16> {
     }
   }
 #-}
+
+// CHECK-LABEL: func @unreachable()
+// CHECK-NEXT: return
+// CHECK-NOT: arith
+func.func @unreachable() {
+  return
+^unreachable:
+  %c1_i64 = arith.constant 1 : i64
+  // This self referencing operation is legal in an unreachable block.
+  // Many patterns are unsafe with respect to this kind of situation,
+  // check that we don't infinite loop here.
+  %add = arith.addi %add, %c1_i64 : i64
+  cf.br ^unreachable
+}
+
+// -----
+
+// Verify that cmpi with dynamic-shaped tensors does not crash during folding.
+// The fold cannot create a DenseElementsAttr for dynamic shapes.
+// CHECK-LABEL: @cmpi_dynamic_shape_no_fold
+//       CHECK:   arith.cmpi eq
+func.func @cmpi_dynamic_shape_no_fold(%arg0: tensor<?xi32>) -> tensor<?xi1> {
+  %0 = arith.cmpi eq, %arg0, %arg0 : tensor<?xi32>
+  return %0 : tensor<?xi1>
+}
+
+// -----
+
+// arith.truncf of infinity to a FiniteOnly float type (f4E2M1FN) must not fold,
+// since the type has no infinity representation. Previously this would crash
+// inside APFloat::convert with llvm_unreachable("semantics don't support inf!").
+
+// CHECK-LABEL: @truncf_inf_to_finite_only_no_fold
+//       CHECK:   arith.truncf
+func.func @truncf_inf_to_finite_only_no_fold() -> f4E2M1FN {
+  %inf = arith.constant 0x7F800000 : f32
+  %result = arith.truncf %inf : f32 to f4E2M1FN
+  return %result : f4E2M1FN
+}
+
+// -----
+
+// arith.truncf of negative infinity to a FiniteOnly float type must not fold.
+
+// CHECK-LABEL: @truncf_neg_inf_to_finite_only_no_fold
+//       CHECK:   arith.truncf
+func.func @truncf_neg_inf_to_finite_only_no_fold() -> f4E2M1FN {
+  %neg_inf = arith.constant 0xFF800000 : f32
+  %result = arith.truncf %neg_inf : f32 to f4E2M1FN
+  return %result : f4E2M1FN
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_fold_f8
+//       CHECK:   %[[C:.*]] = arith.constant 2.000000e+00 : f8E5M2
+//       CHECK:   return %[[C]]
+func.func @convertf_fold_f8() -> f8E5M2 {
+  %c = arith.constant 2.0 : f8E4M3FN
+  %result = arith.convertf %c : f8E4M3FN to f8E5M2
+  return %result : f8E5M2
+}
+

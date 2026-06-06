@@ -9,7 +9,10 @@
 // Main header include
 #include "DynamicLoaderPOSIXDYLD.h"
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -18,12 +21,15 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include <memory>
 #include <optional>
@@ -38,7 +44,9 @@ void DynamicLoaderPOSIXDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void DynamicLoaderPOSIXDYLD::Terminate() {}
+void DynamicLoaderPOSIXDYLD::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef DynamicLoaderPOSIXDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
@@ -53,7 +61,8 @@ DynamicLoader *DynamicLoaderPOSIXDYLD::CreateInstance(Process *process,
         process->GetTarget().GetArchitecture().GetTriple();
     if (triple_ref.getOS() == llvm::Triple::FreeBSD ||
         triple_ref.getOS() == llvm::Triple::Linux ||
-        triple_ref.getOS() == llvm::Triple::NetBSD)
+        triple_ref.getOS() == llvm::Triple::NetBSD ||
+        triple_ref.getOS() == llvm::Triple::OpenBSD)
       create = true;
   }
 
@@ -106,21 +115,6 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
 
   // if we dont have a load address we cant re-base
   bool rebase_exec = load_offset != LLDB_INVALID_ADDRESS;
-
-  // if we have a valid executable
-  if (executable_sp.get()) {
-    lldb_private::ObjectFile *obj = executable_sp->GetObjectFile();
-    if (obj) {
-      // don't rebase if the module already has a load address
-      Target &target = m_process->GetTarget();
-      Address addr = obj->GetImageInfoAddress(&target);
-      if (addr.GetLoadAddress(&target) != LLDB_INVALID_ADDRESS)
-        rebase_exec = false;
-    }
-  } else {
-    // no executable, nothing to re-base
-    rebase_exec = false;
-  }
 
   // if the target executable should be re-based
   if (rebase_exec) {
@@ -197,16 +191,37 @@ void DynamicLoaderPOSIXDYLD::DidLaunch() {
 
 Status DynamicLoaderPOSIXDYLD::CanLoadImage() { return Status(); }
 
+void DynamicLoaderPOSIXDYLD::SetLoadedModule(const ModuleSP &module_sp,
+                                             addr_t link_map_addr) {
+  llvm::sys::ScopedWriter lock(m_loaded_modules_rw_mutex);
+  m_loaded_modules[module_sp] = link_map_addr;
+}
+
+void DynamicLoaderPOSIXDYLD::UnloadModule(const ModuleSP &module_sp) {
+  llvm::sys::ScopedWriter lock(m_loaded_modules_rw_mutex);
+  m_loaded_modules.erase(module_sp);
+}
+
+std::optional<lldb::addr_t>
+DynamicLoaderPOSIXDYLD::GetLoadedModuleLinkAddr(const ModuleSP &module_sp) {
+  llvm::sys::ScopedReader lock(m_loaded_modules_rw_mutex);
+  auto it = m_loaded_modules.find(module_sp);
+  if (it != m_loaded_modules.end())
+    return it->second;
+  return std::nullopt;
+}
+
 void DynamicLoaderPOSIXDYLD::UpdateLoadedSections(ModuleSP module,
                                                   addr_t link_map_addr,
                                                   addr_t base_addr,
                                                   bool base_addr_is_offset) {
-  m_loaded_modules[module] = link_map_addr;
+  SetLoadedModule(module, link_map_addr);
+
   UpdateLoadedSectionsCommon(module, base_addr, base_addr_is_offset);
 }
 
 void DynamicLoaderPOSIXDYLD::UnloadSections(const ModuleSP module) {
-  m_loaded_modules.erase(module);
+  UnloadModule(module);
 
   UnloadSectionsCommon(module);
 }
@@ -337,29 +352,20 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
     };
 
     ModuleSP interpreter = LoadInterpreterModule();
-    if (!interpreter) {
-      FileSpecList containingModules;
+    FileSpecList containingModules;
+    if (interpreter)
+      containingModules.Append(interpreter->GetFileSpec());
+    else
       containingModules.Append(
           m_process->GetTarget().GetExecutableModulePointer()->GetFileSpec());
 
-      dyld_break = target.CreateBreakpoint(
-          &containingModules, /*containingSourceFiles=*/nullptr,
-          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-          /*m_offset=*/0,
-          /*skip_prologue=*/eLazyBoolNo,
-          /*internal=*/true,
-          /*request_hardware=*/false);
-    } else {
-      FileSpecList containingModules;
-      containingModules.Append(interpreter->GetFileSpec());
-      dyld_break = target.CreateBreakpoint(
-          &containingModules, /*containingSourceFiles=*/nullptr,
-          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-          /*m_offset=*/0,
-          /*skip_prologue=*/eLazyBoolNo,
-          /*internal=*/true,
-          /*request_hardware=*/false);
-    }
+    dyld_break = target.CreateBreakpoint(
+        &containingModules, /*containingSourceFiles=*/nullptr,
+        DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
+        /*m_offset=*/0,
+        /*skip_prologue=*/eLazyBoolNo,
+        /*internal=*/true,
+        /*request_hardware=*/false);
   }
 
   if (dyld_break->GetNumResolvedLocations() != 1) {
@@ -423,7 +429,7 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
   // The rendezvous class doesn't enumerate the main module, so track that
   // ourselves here.
   ModuleSP executable = GetTargetExecutable();
-  m_loaded_modules[executable] = m_rendezvous.GetLinkMapAddress();
+  SetLoadedModule(executable, m_rendezvous.GetLinkMapAddress());
 
   DYLDRendezvous::iterator I;
   DYLDRendezvous::iterator E;
@@ -445,35 +451,71 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
       E = m_rendezvous.end();
       m_initial_modules_added = true;
     }
-    for (; I != E; ++I) {
-      ModuleSP module_sp =
-          LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);
-      if (!module_sp.get())
-        continue;
 
-      if (module_sp->GetObjectFile()->GetBaseAddress().GetLoadAddress(
-              &m_process->GetTarget()) == m_interpreter_base) {
-        ModuleSP interpreter_sp = m_interpreter_module.lock();
-        if (m_interpreter_module.lock() == nullptr) {
-          m_interpreter_module = module_sp;
-        } else if (module_sp == interpreter_sp) {
-          // Module already loaded.
-          continue;
-        } else {
-          // If this is a duplicate instance of ld.so, unload it.  We may end
-          // up with it if we load it via a different path than before
-          // (symlink vs real path).
-          // TODO: remove this once we either fix library matching or avoid
-          // loading the interpreter when setting the rendezvous breakpoint.
-          UnloadSections(module_sp);
-          loaded_modules.Remove(module_sp);
-          continue;
-        }
-      }
+    // Synchronize reading and writing of `m_interpreter_module`.
+    std::mutex interpreter_module_mutex;
+    // We should be able to take SOEntry as reference since the data
+    // exists for the duration of this call in `m_rendezvous`.
+    auto load_module_fn =
+        [this, &loaded_modules, &new_modules,
+         &interpreter_module_mutex](const DYLDRendezvous::SOEntry &so_entry) {
+          // Don't load a duplicate copy of ld.so if we have already loaded it
+          // earlier in LoadInterpreterModule. If we instead loaded then
+          // unloaded it later, the section information for ld.so would be
+          // removed. That information is required for placing breakpoints on
+          // Arm/Thumb systems.
+          {
+            // `m_interpreter_module` may be modified by another thread at the
+            // same time, so we guard the access here.
+            std::lock_guard<std::mutex> lock(interpreter_module_mutex);
+            if ((m_interpreter_module.lock() != nullptr) &&
+                (so_entry.base_addr == m_interpreter_base))
+              return;
+          }
 
-      loaded_modules.AppendIfNeeded(module_sp);
-      new_modules.Append(module_sp);
+          ModuleSP module_sp = LoadModuleAtAddress(
+              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr,
+              /*base_addr_is_offset=*/true);
+          if (!module_sp.get())
+            return;
+
+          {
+            // `m_interpreter_module` may be modified by another thread at the
+            // same time, so we guard the access here.
+            std::lock_guard<std::mutex> lock(interpreter_module_mutex);
+            // Set the interpreter module, if this is the interpreter.
+            if (module_sp->GetObjectFile()->GetBaseAddress().GetLoadAddress(
+                    &m_process->GetTarget()) == m_interpreter_base) {
+              ModuleSP interpreter_sp = m_interpreter_module.lock();
+              if (m_interpreter_module.lock() == nullptr) {
+                m_interpreter_module = module_sp;
+              } else if (module_sp == interpreter_sp) {
+                // Module already loaded.
+                return;
+              }
+            }
+          }
+
+          // Note: in a multi-threaded environment, these module lists may be
+          // appended to out-of-order. This is fine, since there's no
+          // expectation for `loaded_modules` or `new_modules` to be in any
+          // particular order, and appending to each module list is thread-safe.
+          // Also, `new_modules` is only used for the `ModulesDidLoad` call at
+          // the end of this function.
+          loaded_modules.AppendIfNeeded(module_sp);
+          new_modules.Append(module_sp);
+        };
+
+    if (m_process->GetTarget().GetParallelModuleLoad()) {
+      llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
+      for (; I != E; ++I)
+        task_group.async(load_module_fn, *I);
+      task_group.wait();
+    } else {
+      for (; I != E; ++I)
+        load_module_fn(*I);
     }
+
     m_process->GetTarget().ModulesDidLoad(new_modules);
   }
 
@@ -502,7 +544,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
   StackFrame *frame = thread.GetStackFrameAtIndex(0).get();
   const SymbolContext &context = frame->GetSymbolContext(eSymbolContextSymbol);
-  Symbol *sym = context.symbol;
+  const Symbol *sym = context.symbol;
 
   if (sym == nullptr || !sym->IsTrampoline())
     return thread_plan_sp;
@@ -515,6 +557,19 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   Target &target = thread.GetProcess()->GetTarget();
   const ModuleList &images = target.GetImages();
 
+  llvm::StringRef target_name = sym_name.GetStringRef();
+  // On AArch64, the trampoline name has a prefix (__AArch64ADRPThunk_ or
+  // __AArch64AbsLongThunk_) added to the function name. If we detect a
+  // trampoline with the prefix, we need to remove the prefix to find the
+  // function symbol.
+  if (target_name.consume_front("__AArch64ADRPThunk_") ||
+      target_name.consume_front("__AArch64AbsLongThunk_")) {
+    // An empty target name can happen for trampolines generated for
+    // section-referencing relocations.
+    if (!target_name.empty()) {
+      sym_name = ConstString(target_name);
+    }
+  }
   images.FindSymbolsWithNameAndType(sym_name, eSymbolTypeCode, target_symbols);
   if (!target_symbols.GetSize())
     return thread_plan_sp;
@@ -522,9 +577,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   typedef std::vector<lldb::addr_t> AddressVector;
   AddressVector addrs;
   for (const SymbolContext &context : target_symbols) {
-    AddressRange range;
-    context.GetAddressRange(eSymbolContextEverything, 0, false, range);
-    lldb::addr_t addr = range.GetBaseAddress().GetLoadAddress(&target);
+    addr_t addr = context.GetFunctionOrSymbolAddress().GetLoadAddress(&target);
     if (addr != LLDB_INVALID_ADDRESS)
       addrs.push_back(addr);
   }
@@ -548,16 +601,20 @@ void DynamicLoaderPOSIXDYLD::LoadVDSO() {
 
   FileSpec file("[vdso]");
 
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   MemoryRegionInfo info;
   Status status = m_process->GetMemoryRegionInfo(m_vdso_base, info);
   if (status.Fail()) {
-    Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOG(log, "Failed to get vdso region info: {0}", status);
     return;
   }
 
-  if (ModuleSP module_sp = m_process->ReadModuleFromMemory(
-          file, m_vdso_base, info.GetRange().GetByteSize())) {
+  llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
+      file, m_vdso_base, info.GetRange().GetByteSize());
+  if (auto err = module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "Failed to read module from memory: {0}");
+  } else if (ModuleSP module_sp = *module_sp_or_err) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_vdso_base, false);
     m_process->GetTarget().GetImages().AppendIfNeeded(module_sp);
   }
@@ -570,7 +627,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
   MemoryRegionInfo info;
   Target &target = m_process->GetTarget();
   Status status = m_process->GetMemoryRegionInfo(m_interpreter_base, info);
-  if (status.Fail() || info.GetMapped() != MemoryRegionInfo::eYes ||
+  if (status.Fail() || info.GetMapped() != eLazyBoolYes ||
       info.GetName().IsEmpty()) {
     Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOG(log, "Failed to get interpreter region info: {0}", status);
@@ -580,10 +637,17 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
   FileSpec file(info.GetName().GetCString());
   ModuleSpec module_spec(file, target.GetArchitecture());
 
-  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec,
-                                                    true /* notify */)) {
+  // Don't notify that module is added here because its loading section
+  // addresses are not updated yet. We manually notify it below.
+  if (ModuleSP module_sp =
+          target.GetOrCreateModule(module_spec, /*notify=*/false)) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_interpreter_base,
                          false);
+    // Manually notify that dynamic linker is loaded after updating load section
+    // addersses so that breakpoints can be resolved.
+    ModuleList module_list;
+    module_list.Append(module_sp);
+    target.ModulesDidLoad(module_list);
     m_interpreter_module = module_sp;
     return module_sp;
   }
@@ -641,28 +705,52 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   // The rendezvous class doesn't enumerate the main module, so track that
   // ourselves here.
   ModuleSP executable = GetTargetExecutable();
-  m_loaded_modules[executable] = m_rendezvous.GetLinkMapAddress();
+  SetLoadedModule(executable, m_rendezvous.GetLinkMapAddress());
 
+  Target &target = m_process->GetTarget();
   std::vector<FileSpec> module_names;
   for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
     module_names.push_back(I->file_spec);
-  m_process->PrefetchModuleSpecs(
-      module_names, m_process->GetTarget().GetArchitecture().GetTriple());
+  m_process->PrefetchModuleSpecs(module_names,
+                                 target.GetArchitecture().GetTriple());
 
-  for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
-    ModuleSP module_sp =
-        LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);
+  auto load_module_fn = [this, &module_list, &target,
+                         &log](const DYLDRendezvous::SOEntry &so_entry) {
+    ModuleSP module_sp = LoadModuleAtAddress(
+        so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
+    if (!module_sp && !m_process->IsLiveDebugSession()) {
+      // Create placeholder modules for any modules we couldn't load from disk
+      // or from memory.
+      ModuleSpec module_spec(so_entry.file_spec, target.GetArchitecture());
+      if (UUID uuid = m_process->FindModuleUUID(so_entry.file_spec.GetPath()))
+        module_spec.GetUUID() = uuid;
+      module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
+          module_spec, so_entry.base_addr, 512);
+      bool load_addr_changed = false;
+      target.GetImages().Append(module_sp, false);
+      module_sp->SetLoadAddress(target, so_entry.base_addr, false,
+                                load_addr_changed);
+    }
     if (module_sp.get()) {
       LLDB_LOG(log, "LoadAllCurrentModules loading module: {0}",
-               I->file_spec.GetFilename());
+               so_entry.file_spec.GetFilename());
       module_list.Append(module_sp);
     } else {
-      Log *log = GetLog(LLDBLog::DynamicLoader);
       LLDB_LOGF(
           log,
           "DynamicLoaderPOSIXDYLD::%s failed loading module %s at 0x%" PRIx64,
-          __FUNCTION__, I->file_spec.GetPath().c_str(), I->base_addr);
+          __FUNCTION__, so_entry.file_spec.GetPath().c_str(),
+          so_entry.base_addr);
     }
+  };
+  if (m_process->GetTarget().GetParallelModuleLoad()) {
+    llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
+      task_group.async(load_module_fn, *I);
+    task_group.wait();
+  } else {
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
+      load_module_fn(*I);
   }
 
   m_process->GetTarget().ModulesDidLoad(module_list);
@@ -728,20 +816,41 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   return m_entry_point;
 }
 
+static lldb::addr_t GetPTTLSVAddr(const lldb::ModuleSP &module_sp) {
+  if (!module_sp)
+    return LLDB_INVALID_ADDRESS;
+
+  ObjectFile *objfile = module_sp->GetObjectFile();
+  if (!objfile)
+    return LLDB_INVALID_ADDRESS;
+
+  auto *elf_obj = llvm::dyn_cast<ObjectFileELF>(objfile);
+  if (!elf_obj)
+    return LLDB_INVALID_ADDRESS;
+
+  for (const auto &phdr : elf_obj->ProgramHeaders()) {
+    if (phdr.p_type == llvm::ELF::PT_TLS)
+      return phdr.p_vaddr;
+  }
+
+  return LLDB_INVALID_ADDRESS;
+}
+
 lldb::addr_t
 DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
                                            const lldb::ThreadSP thread,
                                            lldb::addr_t tls_file_addr) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  auto it = m_loaded_modules.find(module_sp);
-  if (it == m_loaded_modules.end()) {
-    LLDB_LOGF(
-        log, "GetThreadLocalData error: module(%s) not found in loaded modules",
-        module_sp->GetObjectName().AsCString());
+  std::optional<addr_t> link_map_addr_opt = GetLoadedModuleLinkAddr(module_sp);
+  if (!link_map_addr_opt.has_value()) {
+    LLDB_LOG(
+        log,
+        "GetThreadLocalData error: module({0}) not found in loaded modules",
+        module_sp->GetObjectName());
     return LLDB_INVALID_ADDRESS;
   }
 
-  addr_t link_map = it->second;
+  addr_t link_map = link_map_addr_opt.value();
   if (link_map == LLDB_INVALID_ADDRESS || link_map == 0) {
     LLDB_LOGF(log,
               "GetThreadLocalData error: invalid link map address=0x%" PRIx64,
@@ -759,10 +868,11 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   LLDB_LOGF(log,
             "GetThreadLocalData info: link_map=0x%" PRIx64
             ", thread info metadata: "
-            "modid_offset=0x%" PRIx32 ", dtv_offset=0x%" PRIx32
-            ", tls_offset=0x%" PRIx32 ", dtv_slot_size=%" PRIx32 "\n",
-            link_map, metadata.modid_offset, metadata.dtv_offset,
-            metadata.tls_offset, metadata.dtv_slot_size);
+            "modid_offset=0x%" PRIx32 ", pthread_size=0x%" PRIx32
+            ", dtv_offset=0x%" PRIx32 ", tls_offset=0x%" PRIx32
+            ", dtv_slot_size=%" PRIx32 "\n",
+            link_map, metadata.modid_offset, metadata.pthread_size,
+            metadata.dtv_offset, metadata.tls_offset, metadata.dtv_slot_size);
 
   // Get the thread pointer.
   addr_t tp = thread->GetThreadPointer();
@@ -781,8 +891,45 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   }
 
   // Lookup the DTV structure for this thread.
-  addr_t dtv_ptr = tp + metadata.dtv_offset;
-  addr_t dtv = ReadPointer(dtv_ptr);
+  addr_t dtv_ptr = LLDB_INVALID_ADDRESS;
+  if (metadata.dtv_offset < metadata.pthread_size) {
+    // The DTV pointer field lies within `pthread`. This indicates that `libc`
+    // placed `tcbhead_t header`, which contains the `dtv` field, inside
+    // `pthread`, so, for this architecture, `TLS_TCB_AT_TP` is set to `1` and
+    // `TLS_DTV_AT_TP` is `0`. This corresponds to the "Variant II" memory
+    // layout described in Ulrich Drepper's ELF TLS document
+    // (https://akkadia.org/drepper/tls.pdf). The thread pointer points to the
+    // start of `pthread`, and the address of the `dtv` field can be calculated
+    // by adding its offset.
+    dtv_ptr = tp + metadata.dtv_offset;
+  } else if (metadata.dtv_offset == metadata.pthread_size) {
+    // The DTV pointer field is located right after `pthread`. This means that,
+    // for this architecture, `TLS_DTV_AT_TP` is set to `1` in `libc`, which may
+    // correspond to the "Variant I" memory layout, in which the thread pointer
+    // points directly to the `dtv` field. However, for different architectures,
+    // the position of the `dtv` field relative to the thread pointer may vary,
+    // so the following calculations must be adjusted for each platform.
+    //
+    // On AArch64 and ARM, `tp` is known to point directly to `dtv`.
+    const llvm::Triple &triple = module_sp->GetArchitecture().GetTriple();
+    if (triple.isAArch64() || triple.isARM()) {
+      dtv_ptr = tp;
+    }
+  }
+  const llvm::Triple &triple = module_sp->GetArchitecture().GetTriple();
+
+  // On RISC-V with glibc the TLS layout uses Variant I (TLS_DTV_AT_TP).
+  // The thread pointer (tp) points just past a tcbhead_t header which
+  // contains two pointers: { dtv, private }. This means the DTV pointer
+  // itself is located two pointer-sized slots before tp, so dtv_ptr must
+  // be computed as tp - 2 * sizeof(void*). See MaskRay, “All about
+  // thread-local storage” (RISC-V/glibc section) and glibc's RISC-V
+  // TLS port (__tls_get_addr / THREAD_DTV).
+  if (triple.isRISCV())
+    dtv_ptr = tp - 2 * triple.getArchPointerBitWidth() / 8;
+
+  addr_t dtv = (dtv_ptr != LLDB_INVALID_ADDRESS) ? ReadPointer(dtv_ptr)
+                                                 : LLDB_INVALID_ADDRESS;
   if (dtv == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read dtv");
     return LLDB_INVALID_ADDRESS;
@@ -802,8 +949,26 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   if (tls_block == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read tls_block");
     return LLDB_INVALID_ADDRESS;
-  } else
-    return tls_block + tls_file_addr;
+  }
+
+  // DW_OP_GNU_push_tls_address gives us a value in tls_file_addr that can be
+  // either:
+  //   - a pure offset inside the TLS block (e.g. x86_64/glibc), or
+  //   - a virtual address inside the PT_TLS segment (e.g. RISC-V/glibc),
+  //     roughly PT_TLS.p_vaddr + TPOFF(sym).
+  // To handle both cases, we try to normalize it to a plain offset (tpoff)
+  // by subtracting PT_TLS.p_vaddr when available.
+  addr_t pt_tls_vaddr = GetPTTLSVAddr(module_sp);
+  addr_t tpoff = tls_file_addr;
+
+  // If the module has a PT_TLS segment and the DWARF value lies at or above
+  // its p_vaddr, treat tls_file_addr as a VMA within PT_TLS and convert it
+  // to an offset. Otherwise, keep the original value (it is already an offset
+  // on targets like x86_64).
+  if (pt_tls_vaddr != LLDB_INVALID_ADDRESS && tls_file_addr >= pt_tls_vaddr)
+    tpoff = tls_file_addr - pt_tls_vaddr;
+
+  return tls_block + tpoff;
 }
 
 void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
@@ -835,10 +1000,9 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
   if (module_sp && module_sp->MatchesModuleSpec(module_spec))
     return;
 
+  module_spec.SetTarget(target.shared_from_this());
   const auto executable_search_paths(Target::GetDefaultExecutableSearchPaths());
-  auto error = platform_sp->ResolveExecutable(
-      module_spec, module_sp,
-      !executable_search_paths.IsEmpty() ? &executable_search_paths : nullptr);
+  auto error = platform_sp->ResolveExecutable(module_spec, module_sp);
   if (error.Fail()) {
     StreamString stream;
     module_spec.Dump(stream);
@@ -859,8 +1023,7 @@ bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(
   if (sym_ctx.symbol)
     module_sp = sym_ctx.symbol->GetAddressRef().GetModule();
   if (!module_sp && sym_ctx.function)
-    module_sp =
-        sym_ctx.function->GetAddressRange().GetBaseAddress().GetModule();
+    module_sp = sym_ctx.function->GetAddress().GetModule();
   if (!module_sp)
     return false;
 
@@ -869,4 +1032,83 @@ bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(
 
 bool DynamicLoaderPOSIXDYLD::IsCoreFile() const {
   return !m_process->IsLiveDebugSession();
+}
+
+// For our ELF/POSIX builds save off the fs_base/gs_base regions
+static void AddThreadLocalMemoryRegions(Process &process, ThreadSP &thread_sp,
+                                        std::vector<MemoryRegionInfo> &ranges) {
+  lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
+  if (!reg_ctx)
+    return;
+
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
+      lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_TP);
+  if (!reg_info)
+    return;
+
+  lldb_private::RegisterValue thread_local_register_value;
+  bool success = reg_ctx->ReadRegister(reg_info, thread_local_register_value);
+  if (!success)
+    return;
+
+  const uint64_t fail_value = UINT64_MAX;
+  bool readSuccess = false;
+  const lldb::addr_t reg_value_addr =
+      thread_local_register_value.GetAsUInt64(fail_value, &readSuccess);
+  if (!readSuccess || reg_value_addr == fail_value)
+    return;
+
+  MemoryRegionInfo thread_local_region;
+  Status err = process.GetMemoryRegionInfo(reg_value_addr, thread_local_region);
+  if (err.Fail())
+    return;
+
+  ranges.push_back(thread_local_region);
+}
+
+// Save off the link map for core files.
+static void AddLinkMapSections(Process &process,
+                               std::vector<MemoryRegionInfo> &ranges) {
+  ModuleList &module_list = process.GetTarget().GetImages();
+  Target *target = &process.GetTarget();
+  for (size_t idx = 0; idx < module_list.GetSize(); idx++) {
+    ModuleSP module_sp = module_list.GetModuleAtIndex(idx);
+    if (!module_sp)
+      continue;
+
+    ObjectFile *obj = module_sp->GetObjectFile();
+    if (!obj)
+      continue;
+    Address addr = obj->GetImageInfoAddress(target);
+    addr_t load_addr = addr.GetLoadAddress(target);
+    if (load_addr == LLDB_INVALID_ADDRESS)
+      continue;
+
+    MemoryRegionInfo link_map_section;
+    Status err = process.GetMemoryRegionInfo(load_addr, link_map_section);
+    if (err.Fail())
+      continue;
+
+    ranges.push_back(link_map_section);
+  }
+}
+
+void DynamicLoaderPOSIXDYLD::CalculateDynamicSaveCoreRanges(
+    lldb_private::Process &process,
+    std::vector<lldb_private::MemoryRegionInfo> &ranges,
+    llvm::function_ref<bool(const lldb_private::Thread &)>
+        save_thread_predicate) {
+  ThreadList &thread_list = process.GetThreadList();
+  for (size_t idx = 0; idx < thread_list.GetSize(); idx++) {
+    ThreadSP thread_sp = thread_list.GetThreadAtIndex(idx);
+    if (!thread_sp)
+      continue;
+
+    if (!save_thread_predicate(*thread_sp))
+      continue;
+
+    AddThreadLocalMemoryRegions(process, thread_sp, ranges);
+  }
+
+  AddLinkMapSections(process, ranges);
 }

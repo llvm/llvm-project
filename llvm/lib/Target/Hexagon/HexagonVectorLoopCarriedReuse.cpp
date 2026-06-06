@@ -14,11 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonVectorLoopCarriedReuse.h"
+#include "Hexagon.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -28,7 +30,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/Use.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -39,9 +40,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
-#include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
@@ -57,13 +56,6 @@ static cl::opt<int> HexagonVLCRIterationLim(
     "hexagon-vlcr-iteration-lim", cl::Hidden,
     cl::desc("Maximum distance of loop carried dependences that are handled"),
     cl::init(2));
-
-namespace llvm {
-
-void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
-Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
-
-} // end namespace llvm
 
 namespace {
 
@@ -120,7 +112,7 @@ namespace {
    friend raw_ostream &operator<< (raw_ostream &OS, const DepChain &D);
   };
 
-  LLVM_ATTRIBUTE_UNUSED
+  [[maybe_unused]]
   raw_ostream &operator<<(raw_ostream &OS, const DepChain &D) {
     const ChainOfDependences &CD = D.Chain;
     int ChainSize = CD.size();
@@ -153,7 +145,7 @@ namespace {
     bool isDefined() { return Inst2Replace != nullptr; }
   };
 
-  LLVM_ATTRIBUTE_UNUSED
+  [[maybe_unused]]
   raw_ostream &operator<<(raw_ostream &OS, const ReuseValue &RU) {
     OS << "** ReuseValue ***\n";
     OS << "Instruction to Replace: " << *(RU.Inst2Replace) << "\n";
@@ -165,10 +157,7 @@ namespace {
   public:
     static char ID;
 
-    explicit HexagonVectorLoopCarriedReuseLegacyPass() : LoopPass(ID) {
-      PassRegistry *PR = PassRegistry::getPassRegistry();
-      initializeHexagonVectorLoopCarriedReuseLegacyPassPass(*PR);
-    }
+    explicit HexagonVectorLoopCarriedReuseLegacyPass() : LoopPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon-specific loop carried reuse for HVX vectors";
@@ -177,6 +166,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequiredID(LoopSimplifyID);
       AU.addRequiredID(LCSSAID);
+      AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
       AU.addPreservedID(LCSSAID);
       AU.setPreservesCFG();
     }
@@ -186,7 +176,8 @@ namespace {
 
   class HexagonVectorLoopCarriedReuse {
   public:
-    HexagonVectorLoopCarriedReuse(Loop *L) : CurLoop(L){};
+    HexagonVectorLoopCarriedReuse(Loop *L, OptimizationRemarkEmitter &ORE)
+        : CurLoop(L), ORE(ORE) {};
 
     bool run();
 
@@ -194,6 +185,7 @@ namespace {
     SetVector<DepChain *> Dependences;
     std::set<Instruction *> ReplacedInsts;
     Loop *CurLoop;
+    OptimizationRemarkEmitter &ORE;
     ReuseValue ReuseCandidate;
 
     bool doVLCR();
@@ -217,6 +209,7 @@ INITIALIZE_PASS_BEGIN(HexagonVectorLoopCarriedReuseLegacyPass, "hexagon-vlcr",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(HexagonVectorLoopCarriedReuseLegacyPass, "hexagon-vlcr",
                     "Hexagon-specific predictive commoning for HVX vectors",
                     false, false)
@@ -225,7 +218,8 @@ PreservedAnalyses
 HexagonVectorLoopCarriedReusePass::run(Loop &L, LoopAnalysisManager &LAM,
                                        LoopStandardAnalysisResults &AR,
                                        LPMUpdater &U) {
-  HexagonVectorLoopCarriedReuse Vlcr(&L);
+  OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
+  HexagonVectorLoopCarriedReuse Vlcr(&L, ORE);
   if (!Vlcr.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -237,21 +231,43 @@ bool HexagonVectorLoopCarriedReuseLegacyPass::runOnLoop(Loop *L,
                                                         LPPassManager &LPM) {
   if (skipLoop(L))
     return false;
-  HexagonVectorLoopCarriedReuse Vlcr(L);
+  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+  HexagonVectorLoopCarriedReuse Vlcr(L, ORE);
   return Vlcr.run();
 }
 
 bool HexagonVectorLoopCarriedReuse::run() {
-  if (!CurLoop->getLoopPreheader())
+  if (!CurLoop->getLoopPreheader()) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NoPreheader",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+             << "loop has no preheader";
+    });
     return false;
+  }
 
   // Work only on innermost loops.
-  if (!CurLoop->getSubLoops().empty())
+  if (!CurLoop->getSubLoops().empty()) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NotInnermostLoop",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+             << "pass only works on innermost loops";
+    });
     return false;
+  }
 
   // Work only on single basic blocks loops.
-  if (CurLoop->getNumBlocks() != 1)
+  if (CurLoop->getNumBlocks() != 1) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "MultipleBlocks",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+             << "loop has multiple basic blocks";
+    });
     return false;
+  }
 
   return doVLCR();
 }
@@ -326,7 +342,7 @@ bool HexagonVectorLoopCarriedReuse::isEquivalentOperation(Instruction *I1,
     return false;
   // This check is in place specifically for intrinsics. isSameOperationAs will
   // return two for any two hexagon intrinsics because they are essentially the
-  // same instruciton (CallInst). We need to scratch the surface to see if they
+  // same instruction (CallInst). We need to scratch the surface to see if they
   // are calls to the same function.
   if (CallInst *C1 = dyn_cast<CallInst>(I1)) {
     if (CallInst *C2 = dyn_cast<CallInst>(I2)) {
@@ -498,7 +514,7 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
           LLVM_DEBUG(dbgs() << "Found Value for reuse.\n");
           ReuseCandidate.Inst2Replace = I;
           ReuseCandidate.BackedgeInst = BEUser;
-          ReuseCandidate.DepChains = DepChains;
+          ReuseCandidate.DepChains = std::move(DepChains);
           ReuseCandidate.Iterations = Iters;
           return;
         }
@@ -531,7 +547,6 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
   SmallVector<Instruction *, 4> InstsInPreheader;
   for (int i = 0; i < Iterations; ++i) {
     Instruction *InstInPreheader = Inst2Replace->clone();
-    SmallVector<Value *, 4> Ops;
     for (int j = 0; j < NumOperands; ++j) {
       Instruction *I = dyn_cast<Instruction>(Inst2Replace->getOperand(j));
       if (!I)
@@ -546,7 +561,7 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
     }
     InstsInPreheader.push_back(InstInPreheader);
     InstInPreheader->setName(Inst2Replace->getName() + ".hexagon.vlcr");
-    InstInPreheader->insertBefore(LoopPH->getTerminator());
+    InstInPreheader->insertBefore(LoopPH->getTerminator()->getIterator());
     LLVM_DEBUG(dbgs() << "Added " << *InstInPreheader << " to "
                       << LoopPH->getName() << "\n");
   }
@@ -569,6 +584,12 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
   Inst2Replace->replaceAllUsesWith(NewPhi);
   ReplacedInsts.insert(Inst2Replace);
   ++HexagonNumVectorLoopCarriedReuse;
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "VectorReuse",
+                              Inst2Replace->getDebugLoc(),
+                              Inst2Replace->getParent())
+           << "reused loop-carried vector value";
+  });
 }
 
 bool HexagonVectorLoopCarriedReuse::doVLCR() {
@@ -592,6 +613,13 @@ bool HexagonVectorLoopCarriedReuse::doVLCR() {
       reuseValue();
       Changed = true;
       Continue = true;
+    } else if (!Changed) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NoCandidateFound",
+                                        CurLoop->getStartLoc(),
+                                        CurLoop->getHeader())
+               << "no loop-carried reuse candidate found";
+      });
     }
     llvm::for_each(Dependences, std::default_delete<DepChain>());
   } while (Continue);

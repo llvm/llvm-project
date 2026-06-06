@@ -36,7 +36,7 @@ class Value;
 
 /// Eliminate dead arguments (and return values) from functions.
 class DeadArgumentEliminationPass
-    : public PassInfoMixin<DeadArgumentEliminationPass> {
+    : public OptionalPassInfoMixin<DeadArgumentEliminationPass> {
 public:
   /// Struct that represents (part of) either a return value or a function
   /// argument.  Used so that arguments and return values can be used
@@ -75,7 +75,7 @@ public:
   DeadArgumentEliminationPass(bool ShouldHackArguments = false)
       : ShouldHackArguments(ShouldHackArguments) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
   /// Convenience wrapper
   RetOrArg createRet(const Function *F, unsigned Idx) {
@@ -106,13 +106,16 @@ public:
   UseMap Uses;
 
   using LiveSet = std::set<RetOrArg>;
-  using LiveFuncSet = std::set<const Function *>;
+  using FuncSet = std::set<const Function *>;
 
   /// This set contains all values that have been determined to be live.
   LiveSet LiveValues;
 
-  /// This set contains all values that are cannot be changed in any way.
-  LiveFuncSet LiveFunctions;
+  /// This set contains all functions that cannot be changed in any way.
+  FuncSet FrozenFunctions;
+
+  /// This set contains all functions that cannot change return type;
+  FuncSet FrozenRetTyFunctions;
 
   using UseVector = SmallVector<RetOrArg, 5>;
 
@@ -131,12 +134,13 @@ private:
   void markValue(const RetOrArg &RA, Liveness L,
                  const UseVector &MaybeLiveUses);
   void markLive(const RetOrArg &RA);
-  void markLive(const Function &F);
+  void markFrozen(const Function &F);
+  void markRetTyFrozen(const Function &F);
+  bool markFnOrRetTyFrozenOnMusttail(const Function &F);
   void propagateLiveness(const RetOrArg &RA);
   bool removeDeadStuffFromFunction(Function *F);
   bool deleteDeadVarargs(Function &F);
   bool removeDeadArgumentsFromCallers(Function &F);
-  void propagateVirtMustcallLiveness(const Module &M);
 };
 
 } // end namespace llvm

@@ -61,6 +61,29 @@ template<typename T>
 void deduced_whole_type(T){}
 template<int I>
 void deduced_bound(_BitInt(I)){}
+template<int I>
+void deduced_bound_unsigned(unsigned _BitInt(I)){}
+
+using size_t = decltype(sizeof(0));
+
+#if __cplusplus >= 201703L
+template<auto X> void deduced_bound_auto(_BitInt(X)) {
+  static_assert(__is_same(decltype(X), size_t), "");
+  static_assert(X == 9, "");
+}
+template<auto X> void deduced_bound_auto_unsigned(unsigned _BitInt(X)) {
+  static_assert(__is_same(decltype(X), size_t), "");
+  static_assert(X == 11, "");
+}
+template<typename T, T V> void deduced_bound_dependent(_BitInt(V)) {
+  static_assert(__is_same(T, size_t), "");
+  static_assert(V == 9, "");
+}
+template<typename T, T V> void deduced_bound_dependent_unsigned(unsigned _BitInt(V)) {
+  static_assert(__is_same(T, size_t), "");
+  static_assert(V == 11, "");
+}
+#endif
 
 // Ensure ext-int can be used in template places.
 void Templates() {
@@ -69,40 +92,34 @@ void Templates() {
   ExtIntTemplParam<b> c;
   constexpr _BitInt(9) d = 1;
   ExtIntTemplParam<b> e;
+  constexpr unsigned _BitInt(11) f = 1;
 
   deduced_whole_type(b);
+  deduced_whole_type(f);
   deduced_bound(b);
+  deduced_bound_unsigned(f);
+#if __cplusplus >= 201703L
+  deduced_bound_auto(d);
+  deduced_bound_auto_unsigned(f);
+  deduced_bound_dependent(d);
+  deduced_bound_dependent_unsigned(f);
+#endif
 }
 
-template <typename T, typename U>
-struct is_same {
-  static constexpr bool value = false;
-};
-template <typename T>
-struct is_same<T,T> {
-  static constexpr bool value = true;
-};
-
 // Reject vector types:
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
-typedef _BitInt(2) __attribute__((vector_size(16))) VecTy;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
-typedef _BitInt(2) __attribute__((ext_vector_type(32))) OtherVecTy;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
-typedef _BitInt(4) __attribute__((vector_size(16))) VecTy2;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
-typedef _BitInt(4) __attribute__((ext_vector_type(32))) OtherVecTy2;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
+// expected-error@+1{{'_BitInt' vector element width must be a power of 2}}
 typedef _BitInt(5) __attribute__((vector_size(16))) VecTy3;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
+// expected-error@+1{{'_BitInt' vector element width must be a power of 2}}
 typedef _BitInt(5) __attribute__((ext_vector_type(32))) OtherVecTy3;
 // expected-error@+1{{'_BitInt' vector element width must be a power of 2}}
 typedef _BitInt(37) __attribute__((vector_size(16))) VecTy4;
 // expected-error@+1{{'_BitInt' vector element width must be a power of 2}}
 typedef _BitInt(37) __attribute__((ext_vector_type(32))) OtherVecTy4;
 
-// Allow _Complex:
+// expected-error@+1{{'_Complex _BitInt' is invalid}}
 _Complex _BitInt(3) Cmplx;
+// expected-error@+1{{'_Complex _BitInt' is invalid}}
+typedef _Complex _BitInt(3) Cmp;
 
 // Reject cases of _Atomic:
 // expected-error@+1{{_Atomic cannot be applied to integer type '_BitInt(4)'}}
@@ -149,16 +166,16 @@ void Ops() {
   x4_u - b;
   x43_s + b;
   x43_u - b;
-  static_assert(is_same<decltype(x43_s + x_int), _BitInt(43)>::value, "");
-  static_assert(is_same<decltype(x43_u + x_int), unsigned _BitInt(43)>::value, "");
-  static_assert(is_same<decltype(x32_s + x_int), int>::value, "");
-  static_assert(is_same<decltype(x32_u + x_int), unsigned int>::value, "");
-  static_assert(is_same<decltype(x32_s + x_uint), unsigned int>::value, "");
-  static_assert(is_same<decltype(x32_u + x_uint), unsigned int>::value, "");
-  static_assert(is_same<decltype(x4_s + x_int), int>::value, "");
-  static_assert(is_same<decltype(x4_u + x_int), int>::value, "");
-  static_assert(is_same<decltype(x4_s + x_uint), unsigned int>::value, "");
-  static_assert(is_same<decltype(x4_u + x_uint), unsigned int>::value, "");
+  static_assert(__is_same(decltype(x43_s + x_int), _BitInt(43)), "");
+  static_assert(__is_same(decltype(x43_u + x_int), unsigned _BitInt(43)), "");
+  static_assert(__is_same(decltype(x32_s + x_int), int), "");
+  static_assert(__is_same(decltype(x32_u + x_int), unsigned int), "");
+  static_assert(__is_same(decltype(x32_s + x_uint), unsigned int), "");
+  static_assert(__is_same(decltype(x32_u + x_uint), unsigned int), "");
+  static_assert(__is_same(decltype(x4_s + x_int), int), "");
+  static_assert(__is_same(decltype(x4_u + x_int), int), "");
+  static_assert(__is_same(decltype(x4_s + x_uint), unsigned int), "");
+  static_assert(__is_same(decltype(x4_u + x_uint), unsigned int), "");
 
   // Bitwise checks.
   x43_s % y4_u;
@@ -174,28 +191,28 @@ void Ops() {
   x4_s > 33; // expected-warning {{result of comparison of constant 33 with expression of type '_BitInt(4)' is always false}}
 
   // Same size/sign ops don't change type.
-  static_assert(is_same<decltype(x43_s + y43_s), _BitInt(43)>::value,"");
-  static_assert(is_same<decltype(x4_s - y4_s), _BitInt(4)>::value,"");
-  static_assert(is_same<decltype(x43_u * y43_u), unsigned _BitInt(43)>::value,"");
-  static_assert(is_same<decltype(x4_u / y4_u), unsigned _BitInt(4)>::value,"");
+  static_assert(__is_same(decltype(x43_s + y43_s), _BitInt(43)),"");
+  static_assert(__is_same(decltype(x4_s - y4_s), _BitInt(4)),"");
+  static_assert(__is_same(decltype(x43_u * y43_u), unsigned _BitInt(43)),"");
+  static_assert(__is_same(decltype(x4_u / y4_u), unsigned _BitInt(4)),"");
 
   // Unary ops shouldn't go through integer promotions.
-  static_assert(is_same<decltype(~x43_s), _BitInt(43)>::value,"");
-  static_assert(is_same<decltype(~x4_s), _BitInt(4)>::value,"");
-  static_assert(is_same<decltype(+x43_s), _BitInt(43)>::value,"");
-  static_assert(is_same<decltype(+x4_s), _BitInt(4)>::value,"");
-  static_assert(is_same<decltype(-x43_u), unsigned _BitInt(43)>::value,"");
-  static_assert(is_same<decltype(-x4_u), unsigned _BitInt(4)>::value,"");
+  static_assert(__is_same(decltype(~x43_s), _BitInt(43)),"");
+  static_assert(__is_same(decltype(~x4_s), _BitInt(4)),"");
+  static_assert(__is_same(decltype(+x43_s), _BitInt(43)),"");
+  static_assert(__is_same(decltype(+x4_s), _BitInt(4)),"");
+  static_assert(__is_same(decltype(-x43_u), unsigned _BitInt(43)),"");
+  static_assert(__is_same(decltype(-x4_u), unsigned _BitInt(4)),"");
   // expected-warning@+1{{expression with side effects has no effect in an unevaluated context}}
-  static_assert(is_same<decltype(++x43_s), _BitInt(43)&>::value,"");
+  static_assert(__is_same(decltype(++x43_s), _BitInt(43)&),"");
   // expected-warning@+1{{expression with side effects has no effect in an unevaluated context}}
-  static_assert(is_same<decltype(--x4_s), _BitInt(4)&>::value,"");
+  static_assert(__is_same(decltype(--x4_s), _BitInt(4)&),"");
   // expected-warning@+1{{expression with side effects has no effect in an unevaluated context}}
-  static_assert(is_same<decltype(x43_s--), _BitInt(43)>::value,"");
+  static_assert(__is_same(decltype(x43_s--), _BitInt(43)),"");
   // expected-warning@+1{{expression with side effects has no effect in an unevaluated context}}
-  static_assert(is_same<decltype(x4_s++), _BitInt(4)>::value,"");
-  static_assert(is_same<decltype(x4_s >> 1), _BitInt(4)>::value,"");
-  static_assert(is_same<decltype(x4_u << 1), unsigned _BitInt(4)>::value,"");
+  static_assert(__is_same(decltype(x4_s++), _BitInt(4)),"");
+  static_assert(__is_same(decltype(x4_s >> 1), _BitInt(4)),"");
+  static_assert(__is_same(decltype(x4_u << 1), unsigned _BitInt(4)),"");
 
   static_assert(sizeof(x43_s) == 8, "");
   static_assert(sizeof(x4_s) == 1, "");
@@ -208,11 +225,11 @@ constexpr int func() { return 42;}
 
 void ConstexprBitsize() {
   _BitInt(func()) F;
-  static_assert(is_same<decltype(F), _BitInt(42)>::value, "");
+  static_assert(__is_same(decltype(F), _BitInt(42)), "");
 }
 
-// Useable as an underlying type.
-enum AsEnumUnderlyingType : _BitInt(33) {
+// Not useable as an underlying type.
+enum AsEnumUnderlyingType : _BitInt(33) { // expected-error{{'_BitInt(33)' is an invalid underlying type}}
 };
 
 void overloaded(int);
@@ -279,9 +296,9 @@ void Ternary(_BitInt(30) s30, _BitInt(31) s31a, _BitInt(31) s31b,
   (void)(b ? s31a : s31b);
   (void)(s30 ? s31a : s31b);
 
-  static_assert(is_same<decltype(b ? s30 : s31a), _BitInt(31)>::value, "");
-  static_assert(is_same<decltype(b ? s32 : s30), _BitInt(32)>::value, "");
-  static_assert(is_same<decltype(b ? s30 : 0), int>::value, "");
+  static_assert(__is_same(decltype(b ? s30 : s31a), _BitInt(31)), "");
+  static_assert(__is_same(decltype(b ? s32 : s30), _BitInt(32)), "");
+  static_assert(__is_same(decltype(b ? s30 : 0), int), "");
 }
 
 void FromPaper1() {
@@ -291,11 +308,11 @@ void FromPaper1() {
   _BitInt(33) a33 = 1;
   char c = 3;
 
-  static_assert(is_same<decltype(a2 * a3), _BitInt(3)>::value, "");
-  static_assert(is_same<decltype(a2 * c), int>::value, "");
-  static_assert(is_same<decltype(a33 * c), _BitInt(33)>::value, "");
+  static_assert(__is_same(decltype(a2 * a3), _BitInt(3)), "");
+  static_assert(__is_same(decltype(a2 * c), int), "");
+  static_assert(__is_same(decltype(a33 * c), _BitInt(33)), "");
 }
 
 void FromPaper2(_BitInt(8) a1, _BitInt(24) a2) {
-  static_assert(is_same<decltype(a1 * (_BitInt(32))a2), _BitInt(32)>::value, "");
+  static_assert(__is_same(decltype(a1 * (_BitInt(32))a2), _BitInt(32)), "");
 }

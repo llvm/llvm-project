@@ -7,18 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/HostNativeThreadBase.h"
-#include "lldb/Host/windows/HostThreadWindows.h"
-#include "lldb/Host/windows/windows.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/State.h"
 
 #include "ProcessWindows.h"
-#include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
+#include "lldb/Host/windows/HostThreadWindows.h"
+#include <llvm/Support/ConvertUTF.h>
 
 #if defined(__x86_64__) || defined(_M_AMD64)
 #include "x64/RegisterContextWindows_x64.h"
@@ -167,11 +164,34 @@ Status TargetThreadWindows::DoResume() {
       // explicitly compare with -1.
       previous_suspend_count = ::ResumeThread(thread_handle);
 
-      if (previous_suspend_count == (DWORD)-1)
+      if (previous_suspend_count == static_cast<DWORD>(-1))
         return Status(::GetLastError(), eErrorTypeWin32);
 
     } while (previous_suspend_count > 1);
   }
 
   return Status();
+}
+
+const char *TargetThreadWindows::GetName() {
+  Log *log = GetLog(LLDBLog::Thread);
+  static LazyImport<HRESULT(WINAPI *)(HANDLE, PWSTR *)>
+      s_get_thread_description{L"Kernel32.dll", "GetThreadDescription"};
+  if (!s_get_thread_description)
+    return m_name.c_str();
+  auto GetThreadDescription = *s_get_thread_description;
+
+  PWSTR pszThreadName;
+  if (SUCCEEDED(GetThreadDescription(
+          m_host_thread.GetNativeThread().GetSystemHandle(), &pszThreadName))) {
+    LLDB_LOGF(log, "GetThreadDescription: %ls", pszThreadName);
+    m_name.clear();
+    llvm::convertUTF16ToUTF8String(
+        llvm::ArrayRef(reinterpret_cast<char *>(pszThreadName),
+                       wcslen(pszThreadName) * sizeof(wchar_t)),
+        m_name);
+    ::LocalFree(pszThreadName);
+  }
+
+  return m_name.c_str();
 }

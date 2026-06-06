@@ -3,6 +3,7 @@ add_custom_command(
   DEPENDS ${SWIG_SOURCES}
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
+  DEPENDS lldb-sbapi-dwarf-enums
   COMMAND ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
       -I${CMAKE_CURRENT_SOURCE_DIR}
@@ -28,19 +29,23 @@ endfunction()
 function(finish_swig_lua swig_target lldb_lua_bindings_dir lldb_lua_target_dir)
   add_custom_target(${swig_target} ALL VERBATIM
     COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_lua_target_dir}
-    DEPENDS swig_wrapper_lua
+    DEPENDS swig_wrapper_lua liblldb
     COMMENT "LLDB Lua API")
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/LLDB")
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    # The SWIG wrapper lives in the plugin library in this mode.
+    set(liblldb_filename "liblldbPluginScriptInterpreterLua${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  elseif (LLDB_BUILD_FRAMEWORK)
+    set(liblldb_filename "LLDB")
   else()
-    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(liblldb_filename "liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  endif()
+  if(LLDB_BUILD_FRAMEWORK)
+    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/${liblldb_filename}")
+  else()
+    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/${liblldb_filename}")
   endif()
   if(WIN32)
-    if(CMAKE_BUILD_TYPE STREQUAL Debug)
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb_d.pyd")
-    else()
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.pyd")
-    endif()
+    set(LIBLLDB_SYMLINK_OUTPUT_FILE "lldb.dll")
   else()
     set(LIBLLDB_SYMLINK_OUTPUT_FILE "lldb.so")
   endif()
@@ -54,7 +59,7 @@ function(finish_swig_lua swig_target lldb_lua_bindings_dir lldb_lua_target_dir)
   add_dependencies(lldb ${swig_target})
 
   if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_LUA_INSTALL_PATH ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Resources/Python)
+    set(LLDB_LUA_INSTALL_PATH ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Resources/Lua)
   else()
     set(LLDB_LUA_INSTALL_PATH ${LLDB_LUA_RELATIVE_PATH})
   endif()
@@ -67,5 +72,24 @@ function(finish_swig_lua swig_target lldb_lua_bindings_dir lldb_lua_target_dir)
     add_llvm_install_targets(${lldb_lua_library_install_target}
                             COMPONENT ${lldb_lua_library_target}
                             DEPENDS ${lldb_lua_library_target})
+    # Tools that link liblldb need the lua bindings installed alongside.
+    # The list is populated by add_lldb_executable.
+    get_property(lldb_liblldb_tools GLOBAL PROPERTY LLDB_TOOLS_LINKING_LIBLLDB)
+    foreach(tool ${lldb_liblldb_tools})
+      if(TARGET install-${tool})
+        add_dependencies(install-${tool} ${lldb_lua_library_install_target})
+      endif()
+      if(TARGET install-${tool}-stripped AND TARGET ${lldb_lua_library_install_target}-stripped)
+        add_dependencies(install-${tool}-stripped ${lldb_lua_library_install_target}-stripped)
+      endif()
+    endforeach()
   endif()
+endfunction()
+
+function(add_lua_wrapper target)
+  get_target_property(lua_bindings_dir swig_wrapper_lua BINARY_DIR)
+  set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
+
+  add_dependencies(${target} swig_wrapper_lua)
+  add_swig_wrapper(${target} ${lldb_lua_wrapper})
 endfunction()

@@ -1,15 +1,14 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: _QQmain
 program test1
-  ! CHECK-DAG: %[[TMP:.*]] = fir.alloca
-  ! CHECK-DAG: %[[TEN:.*]] = arith.constant
-  ! CHECK: fir.store %[[TEN]] to %[[TMP]]
-  ! CHECK-NEXT: fir.call @_QFPfoo
+  ! CHECK: %[[C10:.*]] = arith.constant 10 : i32
+  ! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[C10]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+  ! CHECK: fir.call @_QFPfoo(%[[ASSOC]]#0) {{.*}} : (!fir.ref<i32>) -> ()
   call foo(10)
 contains
 
-! CHECK-LABEL: func @_QFPfoo
+! CHECK-LABEL: func private @_QFPfoo
 subroutine foo(avar1)
   integer :: avar1
 !  integer :: my_data, my_data2
@@ -24,8 +23,9 @@ end program test1
 ! CHECK-LABEL: func @_QPsub2
 function sub2(r)
   real :: r(20)
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %arg0
-  ! CHECK: = fir.call @_QPf(%[[coor]]) {{.*}}: (!fir.ref<f32>) -> f32
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %arg0
+  ! CHECK: %[[ELT:.*]] = hlfir.designate %[[DECL]]#0 (%c1)  : (!fir.ref<!fir.array<20xf32>>, index) -> !fir.ref<f32>
+  ! CHECK: = fir.call @_QPf(%[[ELT]]) {{.*}}: (!fir.ref<f32>) -> f32
   sub2 = f(r(1))
   ! CHECK: return %{{.*}} : f32
 end function sub2

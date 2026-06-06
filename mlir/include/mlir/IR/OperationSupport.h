@@ -51,7 +51,6 @@ class OpAsmPrinter;
 class OperandRange;
 class OperandRangeRange;
 class OpFoldResult;
-class ParseResult;
 class Pattern;
 class Region;
 class ResultRange;
@@ -64,22 +63,33 @@ template <typename ValueRangeT>
 class ValueTypeRange;
 
 //===----------------------------------------------------------------------===//
-// OpaqueProperties
+// PropertyRef
 //===----------------------------------------------------------------------===//
 
-/// Simple wrapper around a void* in order to express generically how to pass
-/// in op properties through APIs.
-class OpaqueProperties {
+/// Type-safe wrapper around a void* for passing properties, including the
+/// properties structs of operations, generically through APIs. Pairs data with
+/// a TypeID for assert-based type checking. Note that the type in the type ID
+/// is the **storage** type of the property, and that the default object has a
+/// null data pointer and a type ID equal to the type ID for `void`.
+class PropertyRef {
 public:
-  OpaqueProperties(void *prop) : properties(prop) {}
-  operator bool() const { return properties != nullptr; }
+  PropertyRef() = default;
+  PropertyRef(TypeID typeID, void *data) : typeID(typeID), data(data) {}
+  operator bool() const { return data != nullptr; }
   template <typename Dest>
   Dest as() const {
-    return static_cast<Dest>(const_cast<void *>(properties));
+    static_assert(std::is_pointer_v<Dest>,
+                  "PropertyRef::as<T>() requires T to be a pointer type");
+    assert((typeID ==
+            TypeID::get<std::remove_cv_t<std::remove_pointer_t<Dest>>>()) &&
+           "Property type mismatch: TypeID does not match requested type");
+    return static_cast<Dest>(data);
   }
+  TypeID getTypeID() const { return typeID; }
 
 private:
-  void *properties;
+  TypeID typeID;
+  void *data = nullptr;
 };
 
 //===----------------------------------------------------------------------===//
@@ -131,18 +141,18 @@ public:
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
                         function_ref<InFlightDiagnostic()> emitError) = 0;
     virtual int getOpPropertyByteSize() = 0;
-    virtual void initProperties(OperationName opName, OpaqueProperties storage,
-                                OpaqueProperties init) = 0;
-    virtual void deleteProperties(OpaqueProperties) = 0;
+    virtual void initProperties(OperationName opName, PropertyRef storage,
+                                PropertyRef init) = 0;
+    virtual void deleteProperties(PropertyRef) = 0;
     virtual void populateDefaultProperties(OperationName opName,
-                                           OpaqueProperties properties) = 0;
+                                           PropertyRef properties) = 0;
     virtual LogicalResult
-    setPropertiesFromAttr(OperationName, OpaqueProperties, Attribute,
+    setPropertiesFromAttr(OperationName, PropertyRef, Attribute,
                           function_ref<InFlightDiagnostic()> emitError) = 0;
     virtual Attribute getPropertiesAsAttr(Operation *) = 0;
-    virtual void copyProperties(OpaqueProperties, OpaqueProperties) = 0;
-    virtual bool compareProperties(OpaqueProperties, OpaqueProperties) = 0;
-    virtual llvm::hash_code hashProperties(OpaqueProperties) = 0;
+    virtual void copyProperties(PropertyRef, PropertyRef) = 0;
+    virtual bool compareProperties(PropertyRef, PropertyRef) = 0;
+    virtual llvm::hash_code hashProperties(PropertyRef) = 0;
   };
 
 public:
@@ -161,6 +171,7 @@ public:
     Dialect *getDialect() const { return dialect; }
     StringAttr getName() const { return name; }
     TypeID getTypeID() const { return typeID; }
+    TypeID getPropertiesTypeID() const { return propertiesTypeID; }
     ArrayRef<StringAttr> getAttributeNames() const { return attributeNames; }
 
   protected:
@@ -187,13 +198,20 @@ public:
     /// lookup/creation/etc., as opposed to raw strings.
     ArrayRef<StringAttr> attributeNames;
 
+    /// The TypeID of the Properties struct for this operation.
+    TypeID propertiesTypeID;
+
     friend class RegisteredOperationName;
   };
 
 protected:
   /// Default implementation for unregistered operations.
   struct UnregisteredOpModel : public Impl {
-    using Impl::Impl;
+    UnregisteredOpModel(StringAttr name, Dialect *dialect, TypeID typeID,
+                        detail::InterfaceMap interfaceMap)
+        : Impl(name, dialect, typeID, std::move(interfaceMap)) {
+      propertiesTypeID = TypeID::get<Attribute>();
+    }
     LogicalResult foldHook(Operation *, ArrayRef<Attribute>,
                            SmallVectorImpl<OpFoldResult> &) final;
     void getCanonicalizationPatterns(RewritePatternSet &, MLIRContext *) final;
@@ -212,18 +230,18 @@ protected:
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
                         function_ref<InFlightDiagnostic()> emitError) final;
     int getOpPropertyByteSize() final;
-    void initProperties(OperationName opName, OpaqueProperties storage,
-                        OpaqueProperties init) final;
-    void deleteProperties(OpaqueProperties) final;
+    void initProperties(OperationName opName, PropertyRef storage,
+                        PropertyRef init) final;
+    void deleteProperties(PropertyRef) final;
     void populateDefaultProperties(OperationName opName,
-                                   OpaqueProperties properties) final;
+                                   PropertyRef properties) final;
     LogicalResult
-    setPropertiesFromAttr(OperationName, OpaqueProperties, Attribute,
+    setPropertiesFromAttr(OperationName, PropertyRef, Attribute,
                           function_ref<InFlightDiagnostic()> emitError) final;
     Attribute getPropertiesAsAttr(Operation *) final;
-    void copyProperties(OpaqueProperties, OpaqueProperties) final;
-    bool compareProperties(OpaqueProperties, OpaqueProperties) final;
-    llvm::hash_code hashProperties(OpaqueProperties) final;
+    void copyProperties(PropertyRef, PropertyRef) final;
+    bool compareProperties(PropertyRef, PropertyRef) final;
+    llvm::hash_code hashProperties(PropertyRef) final;
   };
 
 public:
@@ -250,12 +268,10 @@ public:
   ///  1. They can leave the operation alone and without changing the IR, and
   ///     return failure.
   ///  2. They can mutate the operation in place, without changing anything
-  ///  else
-  ///     in the IR.  In this case, return success.
+  ///     else in the IR. In this case, return success.
   ///  3. They can return a list of existing values that can be used instead
-  ///  of
-  ///     the operation.  In this case, fill in the results list and return
-  ///     success.  The caller will remove the operation and use those results
+  ///     of the operation. In this case, fill in the results list and return
+  ///     success. The caller will remove the operation and use those results
   ///     instead.
   ///
   /// This allows expression of some simple in-place canonicalizations (e.g.
@@ -416,18 +432,23 @@ public:
     return getImpl()->getOpPropertyByteSize();
   }
 
+  /// Return the TypeID of the op properties.
+  TypeID getOpPropertiesTypeID() const {
+    return getImpl()->getPropertiesTypeID();
+  }
+
   /// This hooks destroy the op properties.
-  void destroyOpProperties(OpaqueProperties properties) const {
+  void destroyOpProperties(PropertyRef properties) const {
     getImpl()->deleteProperties(properties);
   }
 
   /// Initialize the op properties.
-  void initOpProperties(OpaqueProperties storage, OpaqueProperties init) const {
+  void initOpProperties(PropertyRef storage, PropertyRef init) const {
     getImpl()->initProperties(*this, storage, init);
   }
 
   /// Set the default values on the ODS attribute in the properties.
-  void populateDefaultProperties(OpaqueProperties properties) const {
+  void populateDefaultProperties(PropertyRef properties) const {
     getImpl()->populateDefaultProperties(*this, properties);
   }
 
@@ -438,21 +459,21 @@ public:
 
   /// Define the op properties from the provided Attribute.
   LogicalResult setOpPropertiesFromAttribute(
-      OperationName opName, OpaqueProperties properties, Attribute attr,
+      OperationName opName, PropertyRef properties, Attribute attr,
       function_ref<InFlightDiagnostic()> emitError) const {
     return getImpl()->setPropertiesFromAttr(opName, properties, attr,
                                             emitError);
   }
 
-  void copyOpProperties(OpaqueProperties lhs, OpaqueProperties rhs) const {
+  void copyOpProperties(PropertyRef lhs, PropertyRef rhs) const {
     return getImpl()->copyProperties(lhs, rhs);
   }
 
-  bool compareOpProperties(OpaqueProperties lhs, OpaqueProperties rhs) const {
+  bool compareOpProperties(PropertyRef lhs, PropertyRef rhs) const {
     return getImpl()->compareProperties(lhs, rhs);
   }
 
-  llvm::hash_code hashOpProperties(OpaqueProperties properties) const {
+  llvm::hash_code hashOpProperties(PropertyRef properties) const {
     return getImpl()->hashProperties(properties);
   }
 
@@ -531,9 +552,13 @@ public:
   /// to a concrete op implementation.
   template <typename ConcreteOp>
   struct Model : public Impl {
+    using Properties = std::remove_reference_t<
+        decltype(std::declval<ConcreteOp>().getProperties())>;
     Model(Dialect *dialect)
         : Impl(ConcreteOp::getOperationName(), dialect,
-               TypeID::get<ConcreteOp>(), ConcreteOp::getInterfaceMap()) {}
+               TypeID::get<ConcreteOp>(), ConcreteOp::getInterfaceMap()) {
+      propertiesTypeID = TypeID::get<Properties>();
+    }
     LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
                            SmallVectorImpl<OpFoldResult> &results) final {
       return ConcreteOp::getFoldHookFn()(op, attrs, results);
@@ -563,9 +588,6 @@ public:
 
     /// Implementation for "Properties"
 
-    using Properties = std::remove_reference_t<
-        decltype(std::declval<ConcreteOp>().getProperties())>;
-
     std::optional<Attribute> getInherentAttr(Operation *op,
                                              StringRef name) final {
       if constexpr (hasProperties) {
@@ -573,9 +595,7 @@ public:
         return ConcreteOp::getInherentAttr(concreteOp->getContext(),
                                            concreteOp.getProperties(), name);
       }
-      // If the op does not have support for properties, we dispatch back to the
-      // dictionnary of discardable attributes for now.
-      return cast<ConcreteOp>(op)->getDiscardableAttr(name);
+      return std::nullopt;
     }
     void setInherentAttr(Operation *op, StringAttr name,
                          Attribute value) final {
@@ -584,9 +604,8 @@ public:
         return ConcreteOp::setInherentAttr(concreteOp.getProperties(), name,
                                            value);
       }
-      // If the op does not have support for properties, we dispatch back to the
-      // dictionnary of discardable attributes for now.
-      return cast<ConcreteOp>(op)->setDiscardableAttr(name, value);
+      llvm_unreachable(
+          "Can't call setInherentAttr on operation with empty properties");
     }
     void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
       if constexpr (hasProperties) {
@@ -612,8 +631,8 @@ public:
         return sizeof(Properties);
       return 0;
     }
-    void initProperties(OperationName opName, OpaqueProperties storage,
-                        OpaqueProperties init) final {
+    void initProperties(OperationName opName, PropertyRef storage,
+                        PropertyRef init) final {
       using Properties =
           typename ConcreteOp::template InferredProperties<ConcreteOp>;
       if (init)
@@ -624,25 +643,25 @@ public:
         ConcreteOp::populateDefaultProperties(opName,
                                               *storage.as<Properties *>());
     }
-    void deleteProperties(OpaqueProperties prop) final {
+    void deleteProperties(PropertyRef prop) final {
       prop.as<Properties *>()->~Properties();
     }
     void populateDefaultProperties(OperationName opName,
-                                   OpaqueProperties properties) final {
+                                   PropertyRef properties) final {
       if constexpr (hasProperties)
         ConcreteOp::populateDefaultProperties(opName,
                                               *properties.as<Properties *>());
     }
 
     LogicalResult
-    setPropertiesFromAttr(OperationName opName, OpaqueProperties properties,
+    setPropertiesFromAttr(OperationName opName, PropertyRef properties,
                           Attribute attr,
                           function_ref<InFlightDiagnostic()> emitError) final {
       if constexpr (hasProperties) {
         auto p = properties.as<Properties *>();
         return ConcreteOp::setPropertiesFromAttr(*p, attr, emitError);
       }
-      emitError() << "this operation does not support properties";
+      emitError() << "this operation has empty properties";
       return failure();
     }
     Attribute getPropertiesAsAttr(Operation *op) final {
@@ -653,17 +672,15 @@ public:
       }
       return {};
     }
-    bool compareProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
-      if constexpr (hasProperties) {
+    bool compareProperties(PropertyRef lhs, PropertyRef rhs) final {
+      if constexpr (hasProperties)
         return *lhs.as<Properties *>() == *rhs.as<Properties *>();
-      } else {
-        return true;
-      }
+      return true;
     }
-    void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
+    void copyProperties(PropertyRef lhs, PropertyRef rhs) final {
       *lhs.as<Properties *>() = *rhs.as<Properties *>();
     }
-    llvm::hash_code hashProperties(OpaqueProperties prop) final {
+    llvm::hash_code hashProperties(PropertyRef prop) final {
       if constexpr (hasProperties)
         return ConcreteOp::computePropertiesHash(*prop.as<Properties *>());
 
@@ -674,6 +691,11 @@ public:
   /// Lookup the registered operation information for the given operation.
   /// Returns std::nullopt if the operation isn't registered.
   static std::optional<RegisteredOperationName> lookup(StringRef name,
+                                                       MLIRContext *ctx);
+
+  /// Lookup the registered operation information for the given operation.
+  /// Returns std::nullopt if the operation isn't registered.
+  static std::optional<RegisteredOperationName> lookup(TypeID typeID,
                                                        MLIRContext *ctx);
 
   /// Register a new operation in a Dialect object.
@@ -690,9 +712,6 @@ public:
 
   /// Return the dialect this operation is registered to.
   Dialect &getDialect() const { return *getImpl()->getDialect(); }
-
-  /// Use the specified object to parse this ops custom assembly format.
-  ParseResult parseAssembly(OpAsmParser &parser, OperationState &result) const;
 
   /// Represent the operation name as an opaque pointer. (Used to support
   /// PointerLikeTypeTraits).
@@ -803,7 +822,6 @@ public:
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
-  NamedAttrList(std::nullopt_t none) : NamedAttrList() {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
   NamedAttrList(const_iterator inStart, const_iterator inEnd);
@@ -820,7 +838,9 @@ public:
   }
 
   /// Add an attribute with the specified name.
-  void append(StringRef name, Attribute attr);
+  void append(StringRef name, Attribute attr) {
+    append(NamedAttribute(name, attr));
+  }
 
   /// Add an attribute with the specified name.
   void append(StringAttr name, Attribute attr) {
@@ -955,17 +975,18 @@ struct OperationState {
   /// Regions that the op will hold.
   SmallVector<std::unique_ptr<Region>, 1> regions;
 
-  // If we're creating an unregistered operation, this Attribute is used to
-  // build the properties. Otherwise it is ignored. For registered operations
-  // see the `getOrAddProperties` method.
+  /// This Attribute is used to opaquely construct the properties of the
+  /// operation. If we're creating an unregistered operation, the Attribute is
+  /// used as-is as the Properties storage of the operation. Otherwise, the
+  /// operation properties are constructed opaquely using its
+  /// `setPropertiesFromAttr` hook. Note that `getOrAddProperties` is the
+  /// preferred method to construct properties from C++.
   Attribute propertiesAttr;
 
 private:
-  OpaqueProperties properties = nullptr;
-  TypeID propertiesId;
-  llvm::function_ref<void(OpaqueProperties)> propertiesDeleter;
-  llvm::function_ref<void(OpaqueProperties, const OpaqueProperties)>
-      propertiesSetter;
+  PropertyRef properties;
+  llvm::function_ref<void(PropertyRef)> propertiesDeleter;
+  llvm::function_ref<void(PropertyRef, const PropertyRef)> propertiesSetter;
   friend class Operation;
 
 public:
@@ -981,37 +1002,74 @@ public:
                  BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(OperationState &&other) = default;
-  OperationState(const OperationState &other) = default;
   OperationState &operator=(OperationState &&other) = default;
-  OperationState &operator=(const OperationState &other) = default;
+  OperationState(const OperationState &other) = delete;
+  OperationState &operator=(const OperationState &other) = delete;
   ~OperationState();
 
-  /// Get (or create) a properties of the provided type to be set on the
+  /// Get (or create) the properties of the provided type to be set on the
   /// operation on creation.
   template <typename T>
   T &getOrAddProperties() {
     if (!properties) {
       T *p = new T{};
-      properties = p;
-      propertiesDeleter = [](OpaqueProperties prop) {
-        delete prop.as<const T *>();
+      properties = PropertyRef(TypeID::get<T>(), p);
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
+      propertiesDeleter = [](PropertyRef prop) { delete prop.as<const T *>(); };
+      propertiesSetter = [](PropertyRef newProp, const PropertyRef prop) {
+        *newProp.as<T *>() = *prop.as<const T *>();
       };
-      propertiesSetter = [](OpaqueProperties new_prop,
-                            const OpaqueProperties prop) {
-        *new_prop.as<T *>() = *prop.as<const T *>();
-      };
-      propertiesId = TypeID::get<T>();
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
     }
-    assert(propertiesId == TypeID::get<T>() && "Inconsistent properties");
+    assert(properties.getTypeID() == TypeID::get<T>() &&
+           "Inconsistent properties");
     return *properties.as<T *>();
   }
-  OpaqueProperties getRawProperties() { return properties; }
+  PropertyRef getRawProperties() { return properties; }
 
   // Set the properties defined on this OpState on the given operation,
   // optionally emit diagnostics on error through the provided diagnostic.
   LogicalResult
   setProperties(Operation *op,
                 function_ref<InFlightDiagnostic()> emitError) const;
+
+  // Make `newProperties` the source of the properties that will be copied into
+  // the operation. The memory referenced by `newProperties` must remain live
+  // until after the `Operation` is created, at which time it may be
+  // deallocated. Calls to `getOrAddProperties<>()` will return references to
+  // this memory.
+  template <typename T>
+  void useProperties(T &newProperties) {
+    assert(!properties &&
+           "Can't provide a properties struct when one has been allocated");
+    properties = PropertyRef(TypeID::get<T>(), &newProperties);
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
+    propertiesDeleter = [](PropertyRef) {};
+    propertiesSetter = [](PropertyRef newProp, const PropertyRef prop) {
+      *newProp.as<T *>() = *prop.as<const T *>();
+    };
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
+  }
 
   void addOperands(ValueRange newOperands);
 
@@ -1029,8 +1087,11 @@ public:
     addAttribute(StringAttr::get(getContext(), name), attr);
   }
 
-  /// Add an attribute with the specified name.
+  /// Add an attribute with the specified name. `name` and `attr` must not be
+  /// null.
   void addAttribute(StringAttr name, Attribute attr) {
+    assert(name && "attribute name cannot be null");
+    assert(attr && "attribute cannot be null");
     attributes.append(name, attr);
   }
 
@@ -1039,7 +1100,11 @@ public:
     attributes.append(newAttributes);
   }
 
-  void addSuccessors(Block *successor) { successors.push_back(successor); }
+  /// Adds a successor to the operation sate. `successor` must not be null.
+  void addSuccessors(Block *successor) {
+    assert(successor && "successor cannot be null");
+    successors.push_back(successor);
+  }
   void addSuccessors(BlockRange newSuccessors);
 
   /// Create a region that should be attached to the operation.  These regions
@@ -1122,7 +1187,6 @@ private:
 class OpPrintingFlags {
 public:
   OpPrintingFlags();
-  OpPrintingFlags(std::nullopt_t) : OpPrintingFlags() {}
 
   /// Enables the elision of large elements attributes by printing a lexically
   /// valid but otherwise meaningless form instead of the element data. The
@@ -1130,6 +1194,19 @@ public:
   /// "large" ElementsAttr by providing an upper limit to the number of
   /// elements.
   OpPrintingFlags &elideLargeElementsAttrs(int64_t largeElementLimit = 16);
+
+  /// Enables the printing of large element attributes with a hex string. The
+  /// `largeElementLimit` is used to configure what is considered to be a
+  /// "large" ElementsAttr by providing an upper limit to the number of
+  /// elements. Use -1 to disable the hex printing.
+  OpPrintingFlags &
+  printLargeElementsAttrWithHex(int64_t largeElementLimit = 100);
+
+  /// Enables the elision of large resources strings by omitting them from the
+  /// `dialect_resources` section. The `largeResourceLimit` is used to configure
+  /// what is considered to be a "large" resource by providing an upper limit to
+  /// the string size.
+  OpPrintingFlags &elideLargeResourceString(int64_t largeResourceLimit = 64);
 
   /// Enable or disable printing of debug information (based on `enable`). If
   /// 'prettyForm' is set to true, debug information is printed in a more
@@ -1144,22 +1221,35 @@ public:
   OpPrintingFlags &skipRegions(bool skip = true);
 
   /// Do not verify the operation when using custom operation printers.
-  OpPrintingFlags &assumeVerified();
+  OpPrintingFlags &assumeVerified(bool enable = true);
 
   /// Use local scope when printing the operation. This allows for using the
   /// printer in a more localized and thread-safe setting, but may not
   /// necessarily be identical to what the IR will look like when dumping
   /// the full module.
-  OpPrintingFlags &useLocalScope();
+  OpPrintingFlags &useLocalScope(bool enable = true);
 
   /// Print users of values as comments.
-  OpPrintingFlags &printValueUsers();
+  OpPrintingFlags &printValueUsers(bool enable = true);
+
+  /// Print unique SSA ID numbers for values, block arguments and naming
+  /// conflicts across all regions
+  OpPrintingFlags &printUniqueSSAIDs(bool enable = true);
+
+  /// Print SSA IDs using their NameLoc, if provided, as prefix.
+  OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
 
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
+  /// Return if the given ElementsAttr should be printed as hex string.
+  bool shouldPrintElementsAttrWithHex(ElementsAttr attr) const;
+
   /// Return the size limit for printing large ElementsAttr.
   std::optional<int64_t> getLargeElementsAttrLimit() const;
+
+  /// Return the size limit for printing large ElementsAttr as hex string.
+  int64_t getLargeElementsAttrHexLimit() const;
 
   /// Return the size limit in chars for printing large resources.
   std::optional<uint64_t> getLargeResourceStringLimit() const;
@@ -1185,6 +1275,13 @@ public:
   /// Return if the printer should print users of values.
   bool shouldPrintValueUsers() const;
 
+  /// Return if printer should use unique SSA IDs.
+  bool shouldPrintUniqueSSAIDs() const;
+
+  /// Return if the printer should use NameLocs as prefixes when printing SSA
+  /// IDs
+  bool shouldUseNameLocAsPrefix() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1192,6 +1289,10 @@ private:
 
   /// Elide printing large resources based on size of string.
   std::optional<uint64_t> resourceStringCharLimit;
+
+  /// Print large element attributes with hex strings if the number of elements
+  /// is larger than the upper limit.
+  int64_t elementsAttrHexElementLimit = 100;
 
   /// Print debug information.
   bool printDebugInfoFlag : 1;
@@ -1211,6 +1312,12 @@ private:
 
   /// Print users of values.
   bool printValueUsersFlag : 1;
+
+  /// Print unique SSA IDs for values, block arguments and naming conflicts
+  bool printUniqueSSAIDsFlag : 1;
+
+  /// Print SSA IDs using NameLocs as prefixes
+  bool useNameLocAsPrefix : 1;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1226,7 +1333,18 @@ struct OperationEquivalence {
     // When provided, the location attached to the operation are ignored.
     IgnoreLocations = 1,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreLocations)
+    // When provided, the discardable attributes attached to the operation are
+    // ignored.
+    IgnoreDiscardableAttrs = 2,
+
+    // When provided, the properties attached to the operation are ignored.
+    IgnoreProperties = 4,
+
+    // When provided, the commutativity of the operation is ignored, and
+    // operands are compared in an order-sensitive way.
+    IgnoreCommutativity = 8,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreCommutativity)
   };
 
   /// Compute a hash for the given operation.
@@ -1243,8 +1361,8 @@ struct OperationEquivalence {
   /// Helper that can be used with `computeHash` above to ignore operation
   /// operands/result mapping.
   static llvm::hash_code ignoreHashValue(Value) { return llvm::hash_code{}; }
-  /// Helper that can be used with `computeHash` above to ignore operation
-  /// operands/result mapping.
+  /// Helper that can be used with `computeHash` to compute the hash value
+  /// of operands/results directly.
   static llvm::hash_code directHashValue(Value v) { return hash_value(v); }
 
   /// Compare two operations (including their regions) and return if they are
@@ -1255,6 +1373,10 @@ struct OperationEquivalence {
   ///   value or this callback must return `success`.
   /// * `markEquivalent` is a callback to inform the caller that the analysis
   ///   determined that two values are equivalent.
+  /// * `checkCommutativeEquivalent` is an optional callback to check for
+  ///   equivalence across two ranges for a commutative operation. If not passed
+  ///   in, then equivalence is checked pairwise. This callback is needed to be
+  ///   able to query the optional equivalence classes.
   ///
   /// Note: Additional information regarding value equivalence can be injected
   /// into the analysis via `checkEquivalent`. Typically, callers may want
@@ -1265,7 +1387,9 @@ struct OperationEquivalence {
   isEquivalentTo(Operation *lhs, Operation *rhs,
                  function_ref<LogicalResult(Value, Value)> checkEquivalent,
                  function_ref<void(Value, Value)> markEquivalent = nullptr,
-                 Flags flags = Flags::None);
+                 Flags flags = Flags::None,
+                 function_ref<LogicalResult(ValueRange, ValueRange)>
+                     checkCommutativeEquivalent = nullptr);
 
   /// Compare two operations and return if they are equivalent.
   static bool isEquivalentTo(Operation *lhs, Operation *rhs, Flags flags);
@@ -1276,7 +1400,9 @@ struct OperationEquivalence {
       Region *lhs, Region *rhs,
       function_ref<LogicalResult(Value, Value)> checkEquivalent,
       function_ref<void(Value, Value)> markEquivalent,
-      OperationEquivalence::Flags flags);
+      OperationEquivalence::Flags flags,
+      function_ref<LogicalResult(ValueRange, ValueRange)>
+          checkCommutativeEquivalent = nullptr);
 
   /// Compare two regions and return if they are equivalent.
   static bool isRegionEquivalentTo(Region *lhs, Region *rhs,
@@ -1302,10 +1428,10 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 //===----------------------------------------------------------------------===//
 
 /// A unique fingerprint for a specific operation, and all of it's internal
-/// operations.
+/// operations (if `includeNested` is set).
 class OperationFingerPrint {
 public:
-  OperationFingerPrint(Operation *topOp);
+  OperationFingerPrint(Operation *topOp, bool includeNested = true);
   OperationFingerPrint(const OperationFingerPrint &) = default;
   OperationFingerPrint &operator=(const OperationFingerPrint &) = default;
 
@@ -1329,10 +1455,6 @@ struct DenseMapInfo<mlir::OperationName> {
     void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::OperationName::getFromOpaquePointer(pointer);
   }
-  static mlir::OperationName getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::OperationName::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::OperationName val) {
     return DenseMapInfo<void *>::getHashValue(val.getAsOpaquePointer());
   }
@@ -1345,10 +1467,6 @@ struct DenseMapInfo<mlir::RegisteredOperationName>
     : public DenseMapInfo<mlir::OperationName> {
   static mlir::RegisteredOperationName getEmptyKey() {
     void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::RegisteredOperationName::getFromOpaquePointer(pointer);
-  }
-  static mlir::RegisteredOperationName getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::RegisteredOperationName::getFromOpaquePointer(pointer);
   }
 };

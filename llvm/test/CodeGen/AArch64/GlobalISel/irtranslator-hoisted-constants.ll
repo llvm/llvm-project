@@ -14,61 +14,60 @@ define i32 @test(i32 %a, i1 %c) {
   ; TRANSLATED-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; TRANSLATED-NEXT:   liveins: $w0, $w1
   ; TRANSLATED-NEXT: {{  $}}
-  ; TRANSLATED-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; TRANSLATED-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; TRANSLATED-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
-  ; TRANSLATED-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TRUNC]], 1
-  ; TRANSLATED-NEXT:   [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_ZEXT]](s8)
-  ; TRANSLATED-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 100000
-  ; TRANSLATED-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; TRANSLATED-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(s32) = G_CONSTANT_FOLD_BARRIER [[C]]
-  ; TRANSLATED-NEXT:   G_BRCOND [[TRUNC1]](s1), %bb.3
+  ; TRANSLATED-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; TRANSLATED-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; TRANSLATED-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY1]](i32)
+  ; TRANSLATED-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i8) = G_ASSERT_ZEXT [[TRUNC]], 1
+  ; TRANSLATED-NEXT:   [[TRUNC1:%[0-9]+]]:_(i1) = G_TRUNC [[ASSERT_ZEXT]](i8)
+  ; TRANSLATED-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 100000
+  ; TRANSLATED-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; TRANSLATED-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(i32) = G_CONSTANT_FOLD_BARRIER [[C]]
+  ; TRANSLATED-NEXT:   G_BRCOND [[TRUNC1]](i1), %bb.3
   ; TRANSLATED-NEXT:   G_BR %bb.2
   ; TRANSLATED-NEXT: {{  $}}
   ; TRANSLATED-NEXT: bb.2.common.ret:
-  ; TRANSLATED-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI %7(s32), %bb.3, [[C1]](s32), %bb.1
-  ; TRANSLATED-NEXT:   $w0 = COPY [[PHI]](s32)
+  ; TRANSLATED-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI %7(i32), %bb.3, [[C1]](i32), %bb.1
+  ; TRANSLATED-NEXT:   $w0 = COPY [[PHI]](i32)
   ; TRANSLATED-NEXT:   RET_ReallyLR implicit $w0
   ; TRANSLATED-NEXT: {{  $}}
   ; TRANSLATED-NEXT: bb.3.cont:
   ; TRANSLATED-NEXT:   successors: %bb.2(0x80000000)
   ; TRANSLATED-NEXT: {{  $}}
-  ; TRANSLATED-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
+  ; TRANSLATED-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
   ; TRANSLATED-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; TRANSLATED-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; TRANSLATED-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; TRANSLATED-NEXT:   G_BR %bb.2
+  ;
   ; PRESELECTION-LABEL: name: test
   ; PRESELECTION: bb.1.entry:
   ; PRESELECTION-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; PRESELECTION-NEXT:   liveins: $w0, $w1
   ; PRESELECTION-NEXT: {{  $}}
-  ; PRESELECTION-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-  ; PRESELECTION-NEXT:   [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
-  ; PRESELECTION-NEXT:   [[TRUNC:%[0-9]+]]:gpr(s8) = G_TRUNC [[COPY1]](s32)
-  ; PRESELECTION-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:gpr(s8) = G_ASSERT_ZEXT [[TRUNC]], 1
-  ; PRESELECTION-NEXT:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
-  ; PRESELECTION-NEXT:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 100000
-  ; PRESELECTION-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:gpr(s32) = G_CONSTANT_FOLD_BARRIER [[C1]]
-  ; PRESELECTION-NEXT:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
-  ; PRESELECTION-NEXT:   [[ANYEXT:%[0-9]+]]:gpr(s32) = G_ANYEXT [[ASSERT_ZEXT]](s8)
-  ; PRESELECTION-NEXT:   [[AND:%[0-9]+]]:gpr(s32) = G_AND [[ANYEXT]], [[C2]]
-  ; PRESELECTION-NEXT:   G_BRCOND [[AND]](s32), %bb.3
+  ; PRESELECTION-NEXT:   [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+  ; PRESELECTION-NEXT:   [[COPY1:%[0-9]+]]:gpr(i32) = COPY $w1
+  ; PRESELECTION-NEXT:   [[C:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 100000
+  ; PRESELECTION-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:gpr(i32) = G_CONSTANT_FOLD_BARRIER [[C]]
+  ; PRESELECTION-NEXT:   [[C1:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 0
+  ; PRESELECTION-NEXT:   [[C2:%[0-9]+]]:gpr(i32) = G_CONSTANT i32 1
+  ; PRESELECTION-NEXT:   [[AND:%[0-9]+]]:gpr(i32) = G_AND [[COPY1]], [[C2]]
+  ; PRESELECTION-NEXT:   G_BRCOND [[AND]](i32), %bb.3
   ; PRESELECTION-NEXT:   G_BR %bb.2
   ; PRESELECTION-NEXT: {{  $}}
   ; PRESELECTION-NEXT: bb.2.common.ret:
-  ; PRESELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr(s32) = G_PHI %7(s32), %bb.3, [[C]](s32), %bb.1
-  ; PRESELECTION-NEXT:   $w0 = COPY [[PHI]](s32)
+  ; PRESELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr(i32) = G_PHI %7(i32), %bb.3, [[C1]](i32), %bb.1
+  ; PRESELECTION-NEXT:   $w0 = COPY [[PHI]](i32)
   ; PRESELECTION-NEXT:   RET_ReallyLR implicit $w0
   ; PRESELECTION-NEXT: {{  $}}
   ; PRESELECTION-NEXT: bb.3.cont:
   ; PRESELECTION-NEXT:   successors: %bb.2(0x80000000)
   ; PRESELECTION-NEXT: {{  $}}
-  ; PRESELECTION-NEXT:   [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
+  ; PRESELECTION-NEXT:   [[ADD:%[0-9]+]]:gpr(i32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
   ; PRESELECTION-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; PRESELECTION-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; PRESELECTION-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; PRESELECTION-NEXT:   G_BR %bb.2
+  ;
   ; POSTSELECTION-LABEL: name: test
   ; POSTSELECTION: bb.1.entry:
   ; POSTSELECTION-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -76,8 +75,8 @@ define i32 @test(i32 %a, i1 %c) {
   ; POSTSELECTION-NEXT: {{  $}}
   ; POSTSELECTION-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; POSTSELECTION-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-  ; POSTSELECTION-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
   ; POSTSELECTION-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 100000
+  ; POSTSELECTION-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
   ; POSTSELECTION-NEXT:   TBNZW [[COPY1]], 0, %bb.3
   ; POSTSELECTION-NEXT:   B %bb.2
   ; POSTSELECTION-NEXT: {{  $}}

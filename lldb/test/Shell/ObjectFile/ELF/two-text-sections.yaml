@@ -1,0 +1,48 @@
+# Test handling of object files that have duplicate sections.  This is legal,
+# according to the System V ABI (Edition 4.1); see 4-20 where it says:
+#
+#   Section names with a dot (.) prefix are reserved for the system,
+#   although applications may use these sections if their existing
+#   meanings are satisfactory. ... **An object file may have more than
+#   one section with the same name.**
+#
+# (See https://github.com/llvm/llvm-project/issues/88001)
+
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test symbols %t | FileCheck %s
+
+# CHECK: 0x0000000000400010 {{.*}} my_function
+# CHECK: 0x0000000000401020 {{.*}} my_other_function
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         '.text (1)'
+    VAddr:           0x400000
+    Align:           0x1000
+    Offset:          0x0
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x400010
+    AddressAlign:    0x10
+  - Name:            '.text (1)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GNU_RETAIN ]
+    Address:         0x401000
+    AddressAlign:    0x10
+Symbols:
+  - Name:            my_function
+    Section:         .text
+    Value:           0x400010
+  - Name:            my_other_function
+    Section:         '.text (1)'
+    Value:           0x401020

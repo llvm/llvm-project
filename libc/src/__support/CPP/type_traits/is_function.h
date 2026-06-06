@@ -14,10 +14,11 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_function
-#if LIBC_HAS_BUILTIN(__is_function)
+#if __has_builtin(__is_function)
 template <typename T>
 struct is_function : integral_constant<bool, __is_function(T)> {};
 #else
@@ -28,6 +29,7 @@ struct is_function
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_function_v = is_function<T>::value;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_FUNCTION_H

@@ -89,10 +89,10 @@ define i16 @test7() {
 ; Double load.
 define double @test8() {
 ; LE-LABEL: @test8(
-; LE-NEXT:    ret double 0xBADEADBEEF
+; LE-NEXT:    ret double f0x000000BADEADBEEF
 ;
 ; BE-LABEL: @test8(
-; BE-NEXT:    ret double 0xDEADBEEFBA000000
+; BE-NEXT:    ret double f0xDEADBEEFBA000000
 ;
   %r = load double, ptr @g1
   ret double %r
@@ -113,10 +113,10 @@ define i128 @test_i128() {
 
 define fp128 @test_fp128() {
 ; LE-LABEL: @test_fp128(
-; LE-NEXT:    ret fp128 0xL000000000000007B0000000006B1BFF8
+; LE-NEXT:    ret fp128 f0x0000000006B1BFF8000000000000007B
 ;
 ; BE-LABEL: @test_fp128(
-; BE-NEXT:    ret fp128 0xL0000000006B1BFF8000000000000007B
+; BE-NEXT:    ret fp128 f0x000000000000007B0000000006B1BFF8
 ;
   %r = load fp128, ptr @g3
   ret fp128 %r
@@ -135,10 +135,10 @@ define ppc_fp128 @test_ppc_fp128() {
 
 define x86_fp80 @test_x86_fp80() {
 ; LE-LABEL: @test_x86_fp80(
-; LE-NEXT:    ret x86_fp80 0xKFFFF000000000000007B
+; LE-NEXT:    ret x86_fp80 -snan(0x7B)
 ;
 ; BE-LABEL: @test_x86_fp80(
-; BE-NEXT:    ret x86_fp80 0xK000000000000007B0000
+; BE-NEXT:    ret x86_fp80 f0x000000000000007B0000
 ;
   %r = load x86_fp80, ptr @g3
   ret x86_fp80 %r
@@ -146,10 +146,10 @@ define x86_fp80 @test_x86_fp80() {
 
 define bfloat @test_bfloat() {
 ; LE-LABEL: @test_bfloat(
-; LE-NEXT:    ret bfloat 0xR007B
+; LE-NEXT:    ret bfloat 1.129580e-38
 ;
 ; BE-LABEL: @test_bfloat(
-; BE-NEXT:    ret bfloat 0xR0000
+; BE-NEXT:    ret bfloat 0.000000e+00
 ;
   %r = load bfloat, ptr @g3
   ret bfloat %r
@@ -335,19 +335,6 @@ define { i64, i64 } @test_load_struct() {
   ret { i64, i64 } %v
 }
 
-@m64 = internal constant [2 x i64] zeroinitializer
-@idx = external global i32
-
-; This should not try to create an x86_mmx null value.
-define x86_mmx @load_mmx() {
-; CHECK-LABEL: @load_mmx(
-; CHECK-NEXT:    [[TEMP:%.*]] = load x86_mmx, ptr getelementptr ([2 x i64], ptr @m64, i64 0, i64 ptrtoint (ptr @idx to i64)), align 8
-; CHECK-NEXT:    ret x86_mmx [[TEMP]]
-;
-  %temp = load x86_mmx, ptr getelementptr ([2 x i64], ptr @m64, i64 0, i64 ptrtoint (ptr @idx to i64))
-  ret x86_mmx %temp
-}
-
 @g_offset = external global i64
 
 @g_neg_one_vec = constant <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
@@ -407,10 +394,43 @@ define ptr addrspace(2) @load_non_integral_ptr_from_i8_data() {
 
 define i8 @load_i8_from_i1() {
 ; CHECK-LABEL: @load_i8_from_i1(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr @g_i1, align 1
+; CHECK-NEXT:    ret i8 [[V]]
 ;
   %v = load i8, ptr @g_i1
   ret i8 %v
+}
+
+@global9 = internal constant i9 -1
+
+; Reproducer for https://github.com/llvm/llvm-project/issues/81793
+define i8 @load_i8_from_i9() {
+; CHECK-LABEL: @load_i8_from_i9(
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr @global9, align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  %v = load i8, ptr @global9
+  ret i8 %v
+}
+
+define i9 @load_i9_from_i9() {
+; CHECK-LABEL: @load_i9_from_i9(
+; CHECK-NEXT:    ret i9 -1
+;
+  %v = load i9, ptr @global9
+  ret i9 %v
+}
+
+; Reproducer for https://github.com/llvm/llvm-project/issues/81793
+define i16 @load_i16_from_i17_store(ptr %p) {
+; CHECK-LABEL: @load_i16_from_i17_store(
+; CHECK-NEXT:    store i17 -1, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i16, ptr @global9, align 2
+; CHECK-NEXT:    ret i16 [[V]]
+;
+  store i17 -1, ptr %p
+  %v = load i16, ptr @global9
+  ret i16 %v
 }
 
 @global128 = internal constant i128 1125899906842625
@@ -420,4 +440,102 @@ define i128 @load-128bit(){
 ;
   %1 = load i128, ptr @global128, align 4
   ret i128 %1
+}
+
+
+@i40_struct = constant { i40, i8 } { i40 0, i8 1 }
+@i40_array = constant [2 x i40] [i40 0, i40 1]
+
+define i8 @load_i40_struct_padding() {
+; CHECK-LABEL: @load_i40_struct_padding(
+; CHECK-NEXT:    ret i8 0
+;
+  %v = load i8, ptr getelementptr (i8, ptr @i40_struct, i64 6)
+  ret i8 %v
+}
+
+define i16 @load_i40_struct_partial_padding() {
+; CHECK-LABEL: @load_i40_struct_partial_padding(
+; CHECK-NEXT:    ret i16 0
+;
+  %v = load i16, ptr getelementptr (i8, ptr @i40_struct, i64 4)
+  ret i16 %v
+}
+
+define i8 @load_i40_array_padding() {
+; CHECK-LABEL: @load_i40_array_padding(
+; CHECK-NEXT:    ret i8 0
+;
+  %v = load i8, ptr getelementptr (i8, ptr @i40_array, i64 6)
+  ret i8 %v
+}
+
+define i16 @load_i40_array_partial_padding() {
+; CHECK-LABEL: @load_i40_array_partial_padding(
+; CHECK-NEXT:    ret i16 0
+;
+  %v = load i16, ptr getelementptr (i8, ptr @i40_array, i64 4)
+  ret i16 %v
+}
+
+@g_double17 = private constant [17 x double] [double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0, double 9.0, double 10.0, double 11.0, double 12.0, double 13.0, double 14.0, double 15.0, double 16.0, double 17.0], align 128
+
+define double @load_large_vector() {
+; CHECK-LABEL: @load_large_vector(
+; CHECK-NEXT:    ret double 2.000000e+00
+;
+  %v = load <16 x double>, ptr @g_double17, align 128
+  %e = extractelement <16 x double> %v, i32 1
+  ret double %e
+}
+
+define double @load_over_limit_vector() {
+; CHECK-LABEL: @load_over_limit_vector(
+; CHECK-NEXT:    [[V:%.*]] = load <17 x double>, ptr @g_double17, align 16
+; CHECK-NEXT:    [[E:%.*]] = extractelement <17 x double> [[V]], i32 1
+; CHECK-NEXT:    ret double [[E]]
+;
+  %v = load <17 x double>, ptr @g_double17, align 16
+  %e = extractelement <17 x double> %v, i32 1
+  ret double %e
+}
+
+define i256 @load_large_integer() {
+; LE-LABEL: @load_large_integer(
+; LE-NEXT:    ret i256 28976291862365503006736120693800966795043933029805877287682190766152806825984
+;
+; BE-LABEL: @load_large_integer(
+; BE-NEXT:    ret i256 28919752756292594708188688926006760458108315909967150605051527249320239693824
+;
+  %v = load i256, ptr @g_double17, align 32
+  ret i256 %v
+}
+
+define i257 @load_over_limit_integer() {
+; CHECK-LABEL: @load_over_limit_integer(
+; CHECK-NEXT:    [[V:%.*]] = load i257, ptr @g_double17, align 64
+; CHECK-NEXT:    ret i257 [[V]]
+;
+  %v = load i257, ptr @g_double17, align 64
+  ret i257 %v
+}
+
+@g_str64 = private constant [64 x i8] c"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", align 1
+
+define i512 @load_large_integer_from_string() {
+; CHECK-LABEL: @load_large_integer_from_string(
+; CHECK-NEXT:    [[I:%.*]] = load i512, ptr @g_str64, align 1
+; CHECK-NEXT:    ret i512 [[I]]
+;
+  %i = load i512, ptr @g_str64, align 1
+  ret i512 %i
+}
+
+define i8 @load_vector_from_string() {
+; CHECK-LABEL: @load_vector_from_string(
+; CHECK-NEXT:    ret i8 49
+;
+  %v = load <64 x i8>, ptr @g_str64, align 1
+  %e = extractelement <64 x i8> %v, i32 1
+  ret i8 %e
 }

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify %s -fblocks
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify %s -fblocks -fexperimental-new-constant-interpreter
 void donotwarn(void);
 
 int (^IFP) ();
@@ -143,14 +144,14 @@ void test15(void) {
   foo(^{ return LESS; }); // expected-error {{incompatible block pointer types passing 'int (^)(void)' to parameter of type 'long (^)()'}}
 }
 
-__block int test16i;  // expected-error {{__block attribute not allowed, only allowed on local variables}}
+__block int test16i;  // expected-error {{'__block' is not allowed on a nonlocal variable}}
 
-void test16(__block int i) { // expected-error {{__block attribute not allowed, only allowed on local variables}}
+void test16(__block int i) { // expected-error {{'__block' is not allowed on a nonlocal variable}}
   int size = 5;
-  extern __block double extern_var; // expected-error {{__block attribute not allowed, only allowed on local variables}}
-  static __block char * pch; // expected-error {{__block attribute not allowed, only allowed on local variables}}
-  __block int a[size]; // expected-error {{__block attribute not allowed on declaration with a variably modified type}}
-  __block int (*ap)[size]; // expected-error {{__block attribute not allowed on declaration with a variably modified type}}
+  extern __block double extern_var; // expected-error {{'__block' is not allowed on a nonlocal variable}}
+  static __block char * pch; // expected-error {{'__block' is not allowed on a static local variable}}
+  __block int a[size]; // expected-error {{'__block' is not allowed on a declaration with a variably modified type}}
+  __block int (*ap)[size]; // expected-error {{'__block' is not allowed on a declaration with a variably modified type}}
 }
 
 void f();
@@ -218,3 +219,7 @@ void test21(void) {
 const char * (^func)(void) = ^{ return __func__; };
 const char * (^function)(void) = ^{ return __FUNCTION__; };
 const char * (^pretty)(void) = ^{ return __PRETTY_FUNCTION__; };
+
+void test22(void){
+  register __block int x; // expected-error {{'__block' is not allowed on a 'register' variable}}
+}

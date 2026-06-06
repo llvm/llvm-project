@@ -8,7 +8,6 @@
 
 #include "MachOObject.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include <unordered_set>
 
 using namespace llvm;
 using namespace llvm::objcopy::macho;
@@ -30,6 +29,19 @@ const SymbolEntry *SymbolTable::getSymbolByIndex(uint32_t Index) const {
 SymbolEntry *SymbolTable::getSymbolByIndex(uint32_t Index) {
   return const_cast<SymbolEntry *>(
       static_cast<const SymbolTable *>(this)->getSymbolByIndex(Index));
+}
+
+void SymbolTable::updateSymbols(function_ref<void(SymbolEntry &)> Callable) {
+  for (auto &Sym : Symbols)
+    Callable(*Sym);
+
+  // Partition symbols: local < defined external < undefined external.
+  auto ExternalBegin = std::stable_partition(
+      std::begin(Symbols), std::end(Symbols),
+      [](const auto &Sym) { return Sym->isLocalSymbol(); });
+  std::stable_partition(ExternalBegin, std::end(Symbols), [](const auto &Sym) {
+    return !Sym->isUndefinedSymbol();
+  });
 }
 
 void SymbolTable::removeSymbols(

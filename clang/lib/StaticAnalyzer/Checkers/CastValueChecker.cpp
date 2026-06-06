@@ -56,23 +56,23 @@ public:
 
 private:
   // These are known in the LLVM project. The pairs are in the following form:
-  // {{{namespace, call}, argument-count}, {callback, kind}}
+  // {{match-mode, {namespace, call}, argument-count}, {callback, kind}}
   const CallDescriptionMap<std::pair<CastCheck, CallKind>> CDM = {
-      {{{"llvm", "cast"}, 1},
+      {{CDM::SimpleFunc, {"llvm", "cast"}, 1},
        {&CastValueChecker::evalCast, CallKind::Function}},
-      {{{"llvm", "dyn_cast"}, 1},
+      {{CDM::SimpleFunc, {"llvm", "dyn_cast"}, 1},
        {&CastValueChecker::evalDynCast, CallKind::Function}},
-      {{{"llvm", "cast_or_null"}, 1},
+      {{CDM::SimpleFunc, {"llvm", "cast_or_null"}, 1},
        {&CastValueChecker::evalCastOrNull, CallKind::Function}},
-      {{{"llvm", "dyn_cast_or_null"}, 1},
+      {{CDM::SimpleFunc, {"llvm", "dyn_cast_or_null"}, 1},
        {&CastValueChecker::evalDynCastOrNull, CallKind::Function}},
-      {{{"clang", "castAs"}, 0},
+      {{CDM::CXXMethod, {"clang", "castAs"}, 0},
        {&CastValueChecker::evalCastAs, CallKind::Method}},
-      {{{"clang", "getAs"}, 0},
+      {{CDM::CXXMethod, {"clang", "getAs"}, 0},
        {&CastValueChecker::evalGetAs, CallKind::Method}},
-      {{{"llvm", "isa"}, 1},
+      {{CDM::SimpleFunc, {"llvm", "isa"}, 1},
        {&CastValueChecker::evalIsa, CallKind::InstanceOf}},
-      {{{"llvm", "isa_and_nonnull"}, 1},
+      {{CDM::SimpleFunc, {"llvm", "isa_and_nonnull"}, 1},
        {&CastValueChecker::evalIsaAndNonNull, CallKind::InstanceOf}}};
 
   void evalCast(const CallEvent &Call, DefinedOrUnknownSVal DV,
@@ -252,7 +252,7 @@ static void addCastTransition(const CallEvent &Call, DefinedOrUnknownSVal DV,
   SVal V = CastSucceeds ? C.getSValBuilder().evalCast(DV, CastToTy, CastFromTy)
                         : C.getSValBuilder().makeNullWithType(CastToTy);
   C.addTransition(
-      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(), V, false),
+      State->BindExpr(Call.getOriginExpr(), C.getStackFrame(), V, false),
       getNoteTag(C, CastInfo, CastToTy, Object, CastSucceeds, IsKnownCast));
 }
 
@@ -313,11 +313,11 @@ static void addInstanceOfTransition(const CallEvent &Call,
 
     if (CastSucceeds) {
       Success = true;
-      C.addTransition(
-          NewState->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
-                             C.getSValBuilder().makeTruthVal(true)),
-          getNoteTag(C, CastInfo, CastToTy, Call.getArgExpr(0), true,
-                     IsKnownCast));
+      C.addTransition(NewState->BindExpr(Call.getOriginExpr(),
+                                         C.getStackFrame(),
+                                         C.getSValBuilder().makeTruthVal(true)),
+                      getNoteTag(C, CastInfo, CastToTy, Call.getArgExpr(0),
+                                 true, IsKnownCast));
       if (IsKnownCast)
         return;
     } else if (CastInfo && CastInfo->succeeds()) {
@@ -327,10 +327,9 @@ static void addInstanceOfTransition(const CallEvent &Call,
   }
 
   if (!Success) {
-    C.addTransition(
-        State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
-                        C.getSValBuilder().makeTruthVal(false)),
-        getNoteTag(C, CastToTyVec, Call.getArgExpr(0), IsAnyKnown));
+    C.addTransition(State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
+                                    C.getSValBuilder().makeTruthVal(false)),
+                    getNoteTag(C, CastToTyVec, Call.getArgExpr(0), IsAnyKnown));
   }
 }
 
@@ -357,8 +356,7 @@ static void evalNullParamNullReturn(const CallEvent &Call,
                                     DefinedOrUnknownSVal DV,
                                     CheckerContext &C) {
   if (ProgramStateRef State = C.getState()->assume(DV, false))
-    C.addTransition(State->BindExpr(Call.getOriginExpr(),
-                                    C.getLocationContext(),
+    C.addTransition(State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
                                     C.getSValBuilder().makeNullWithType(
                                         Call.getOriginExpr()->getType()),
                                     false),

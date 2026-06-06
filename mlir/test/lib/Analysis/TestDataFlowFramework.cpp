@@ -8,12 +8,18 @@
 
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
 
 using namespace mlir;
 
 namespace {
+constexpr char kTagAttrName[] = "tag";
+constexpr char kFooAttrName[] = "foo";
+constexpr char kFooStateAttrName[] = "foo_state";
+constexpr char kBarStateAttrName[] = "bar_state";
+
 /// This analysis state represents an integer that is XOR'd with other states.
 class FooState : public AnalysisState {
 public:
@@ -32,7 +38,7 @@ public:
       os << "none";
   }
 
-  /// Join the state with another. If either is unintialized, take the
+  /// Join the state with another. If either is uninitialized, take the
   /// initialized value. Otherwise, XOR the integer values.
   ChangeResult join(const FooState &rhs) {
     if (rhs.isUninitialized())
@@ -74,8 +80,80 @@ public:
 
   using DataFlowAnalysis::DataFlowAnalysis;
 
+  static bool classof(const DataFlowAnalysis *a) {
+    return a->getTypeID() == TypeID::get<FooAnalysis>();
+  }
+
   LogicalResult initialize(Operation *top) override;
-  LogicalResult visit(ProgramPoint point) override;
+  LogicalResult visit(ProgramPoint *point) override;
+
+private:
+  void visitBlock(Block *block);
+  void visitOperation(Operation *op);
+};
+
+/// This analysis state stores whether all previously observed `FooState`
+/// values at tagged program points along the CFG leading to the current point
+/// have been non-multiples of 4. Once the state becomes false at some point,
+/// all later points reachable from it also remain false.
+class BarState : public AnalysisState {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(BarState)
+
+  using AnalysisState::AnalysisState;
+
+  bool isUninitialized() const { return !state; }
+
+  void print(raw_ostream &os) const override {
+    if (!state) {
+      os << "none";
+      return;
+    }
+    os << (*state ? "true" : "false");
+  }
+
+  ChangeResult join(const BarState &rhs) {
+    if (rhs.isUninitialized())
+      return ChangeResult::NoChange;
+    return join(rhs.getValue());
+  }
+
+  ChangeResult join(bool value) {
+    if (isUninitialized()) {
+      state = value;
+      return ChangeResult::Change;
+    }
+    bool newValue = *state && value;
+    if (newValue == *state)
+      return ChangeResult::NoChange;
+    state = newValue;
+    return ChangeResult::Change;
+  }
+
+  bool getValue() const { return *state; }
+
+private:
+  std::optional<bool> state;
+};
+
+/// This analysis is intended to be loaded after `FooAnalysis` has converged.
+/// It records whether every observed `FooState` on or before a given tagged
+/// program point has been non-divisible by 4. Because the state only ever
+/// transitions from true to false, observing a transient divisible-by-4
+/// `FooState` before `FooAnalysis` converges can permanently poison the
+/// result.
+class BarAnalysis : public DataFlowAnalysis {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(BarAnalysis)
+
+  using DataFlowAnalysis::DataFlowAnalysis;
+
+  static bool classof(const DataFlowAnalysis *a) {
+    return a->getTypeID() == TypeID::get<BarAnalysis>();
+  }
+
+  LogicalResult initialize(Operation *top) override;
+  LogicalResult visit(ProgramPoint *point) override;
 
 private:
   void visitBlock(Block *block);
@@ -90,6 +168,15 @@ struct TestFooAnalysisPass
 
   void runOnOperation() override;
 };
+
+struct TestStagedAnalysesPass
+    : public PassWrapper<TestStagedAnalysesPass, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestStagedAnalysesPass)
+
+  StringRef getArgument() const override { return "test-staged-analyses"; }
+
+  void runOnOperation() override;
+};
 } // namespace
 
 LogicalResult FooAnalysis::initialize(Operation *top) {
@@ -100,7 +187,8 @@ LogicalResult FooAnalysis::initialize(Operation *top) {
     return top->emitError("expected at least one block in the region");
 
   // Initialize the top-level state.
-  getOrCreate<FooState>(&top->getRegion(0).front())->join(0);
+  (void)getOrCreate<FooState>(getProgramPointBefore(&top->getRegion(0).front()))
+      ->join(0);
 
   // Visit all nested blocks and operations.
   for (Block &block : top->getRegion(0)) {
@@ -114,16 +202,12 @@ LogicalResult FooAnalysis::initialize(Operation *top) {
   return success();
 }
 
-LogicalResult FooAnalysis::visit(ProgramPoint point) {
-  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point)) {
-    visitOperation(op);
-    return success();
-  }
-  if (auto *block = llvm::dyn_cast_if_present<Block *>(point)) {
-    visitBlock(block);
-    return success();
-  }
-  return emitError(point.getLoc(), "unknown point kind");
+LogicalResult FooAnalysis::visit(ProgramPoint *point) {
+  if (!point->isBlockStart())
+    visitOperation(point->getPrevOp());
+  else
+    visitBlock(point->getBlock());
+  return success();
 }
 
 void FooAnalysis::visitBlock(Block *block) {
@@ -131,33 +215,95 @@ void FooAnalysis::visitBlock(Block *block) {
     // This is the initial state. Let the framework default-initialize it.
     return;
   }
-  FooState *state = getOrCreate<FooState>(block);
+  ProgramPoint *point = getProgramPointBefore(block);
+  FooState *state = getOrCreate<FooState>(point);
   ChangeResult result = ChangeResult::NoChange;
   for (Block *pred : block->getPredecessors()) {
     // Join the state at the terminators of all predecessors.
-    const FooState *predState =
-        getOrCreateFor<FooState>(block, pred->getTerminator());
+    const FooState *predState = getOrCreateFor<FooState>(
+        point, getProgramPointAfter(pred->getTerminator()));
     result |= state->join(*predState);
   }
   propagateIfChanged(state, result);
 }
 
 void FooAnalysis::visitOperation(Operation *op) {
-  FooState *state = getOrCreate<FooState>(op);
+  ProgramPoint *point = getProgramPointAfter(op);
+  FooState *state = getOrCreate<FooState>(point);
   ChangeResult result = ChangeResult::NoChange;
 
   // Copy the state across the operation.
   const FooState *prevState;
-  if (Operation *prev = op->getPrevNode())
-    prevState = getOrCreateFor<FooState>(op, prev);
-  else
-    prevState = getOrCreateFor<FooState>(op, op->getBlock());
+  prevState = getOrCreateFor<FooState>(point, getProgramPointBefore(op));
   result |= state->set(*prevState);
 
   // Modify the state with the attribute, if specified.
-  if (auto attr = op->getAttrOfType<IntegerAttr>("foo")) {
+  if (auto attr = op->getAttrOfType<IntegerAttr>(kFooAttrName)) {
     uint64_t value = attr.getUInt();
     result |= state->join(value);
+  }
+  propagateIfChanged(state, result);
+}
+
+LogicalResult BarAnalysis::initialize(Operation *top) {
+  if (top->getNumRegions() != 1)
+    return top->emitError("expected a single region top-level op");
+
+  if (top->getRegion(0).getBlocks().empty())
+    return top->emitError("expected at least one block in the region");
+
+  // Seed the entry state to true before observing any `FooState`.
+  (void)getOrCreate<BarState>(getProgramPointBefore(&top->getRegion(0).front()))
+      ->join(true);
+
+  for (Block &block : top->getRegion(0)) {
+    visitBlock(&block);
+    for (Operation &op : block) {
+      if (op.getNumRegions())
+        return op.emitError("unexpected op with regions");
+      visitOperation(&op);
+    }
+  }
+  return success();
+}
+
+LogicalResult BarAnalysis::visit(ProgramPoint *point) {
+  if (!point->isBlockStart())
+    visitOperation(point->getPrevOp());
+  else
+    visitBlock(point->getBlock());
+  return success();
+}
+
+void BarAnalysis::visitBlock(Block *block) {
+  if (block->isEntryBlock())
+    return;
+
+  ProgramPoint *point = getProgramPointBefore(block);
+  BarState *state = getOrCreate<BarState>(point);
+  ChangeResult result = ChangeResult::NoChange;
+  for (Block *pred : block->getPredecessors()) {
+    const BarState *predState = getOrCreateFor<BarState>(
+        point, getProgramPointAfter(pred->getTerminator()));
+    result |= state->join(*predState);
+  }
+  propagateIfChanged(state, result);
+}
+
+void BarAnalysis::visitOperation(Operation *op) {
+  ProgramPoint *point = getProgramPointAfter(op);
+  BarState *state = getOrCreate<BarState>(point);
+  ChangeResult result = ChangeResult::NoChange;
+
+  const BarState *prevState =
+      getOrCreateFor<BarState>(point, getProgramPointBefore(op));
+  result |= state->join(*prevState);
+
+  if (op->hasAttr(kTagAttrName)) {
+    const FooState *fooState = getOrCreateFor<FooState>(point, point);
+    if (fooState->isUninitialized())
+      return;
+    result |= state->join((fooState->getValue() & 0x3) != 0);
   }
   propagateIfChanged(state, result);
 }
@@ -173,17 +319,49 @@ void TestFooAnalysisPass::runOnOperation() {
   os << "function: @" << func.getSymName() << "\n";
 
   func.walk([&](Operation *op) {
-    auto tag = op->getAttrOfType<StringAttr>("tag");
+    auto tag = op->getAttrOfType<StringAttr>(kTagAttrName);
     if (!tag)
       return;
-    const FooState *state = solver.lookupState<FooState>(op);
+    const FooState *state =
+        solver.lookupState<FooState>(solver.getProgramPointAfter(op));
     assert(state && !state->isUninitialized());
     os << tag.getValue() << " -> " << state->getValue() << "\n";
+  });
+}
+
+void TestStagedAnalysesPass::runOnOperation() {
+  func::FuncOp func = getOperation();
+  Builder builder(func.getContext());
+
+  DataFlowSolver solver;
+  solver.load<FooAnalysis>();
+  if (failed(solver.initializeAndRun(func)))
+    return signalPassFailure();
+  solver.load<BarAnalysis>();
+  if (failed(solver.initializeAndRun(func, llvm::IsaPred<BarAnalysis>)))
+    return signalPassFailure();
+
+  func.walk([&](Operation *op) {
+    if (!op->hasAttr(kTagAttrName))
+      return;
+
+    ProgramPoint *point = solver.getProgramPointAfter(op);
+    const FooState *fooState = solver.lookupState<FooState>(point);
+    const BarState *barState = solver.lookupState<BarState>(point);
+    assert(fooState && !fooState->isUninitialized());
+    assert(barState && !barState->isUninitialized());
+
+    op->setAttr(kFooStateAttrName,
+                builder.getI64IntegerAttr(fooState->getValue()));
+    op->setAttr(kBarStateAttrName, builder.getBoolAttr(barState->getValue()));
   });
 }
 
 namespace mlir {
 namespace test {
 void registerTestFooAnalysisPass() { PassRegistration<TestFooAnalysisPass>(); }
+void registerTestStagedAnalysesPass() {
+  PassRegistration<TestStagedAnalysesPass>();
+}
 } // namespace test
 } // namespace mlir

@@ -48,7 +48,7 @@ double Str::foo1(double, invalid_type)
 { return 45; }
 }
 // CHECK: NamespaceDecl {{.*}} <{{.*}}> {{.*}} TestInvalidFunctionDecl
-// CHECK-NEXT: |-CXXRecordDecl {{.*}} <line:44:1, line:46:1> line:44:8 struct Str definition
+// CHECK-NEXT: |-CXXRecordDecl {{.*}} <line:44:1, line:46:1> line:44:8 referenced struct Str definition
 // CHECK:      | |-CXXRecordDecl {{.*}} <col:1, col:8> col:8 implicit struct Str
 // CHECK-NEXT: | `-CXXMethodDecl {{.*}} <line:45:4, col:36> col:11 invalid foo1 'double (double, int)'
 // CHECK-NEXT: |   |-ParmVarDecl {{.*}} <col:16> col:22 'double'
@@ -60,3 +60,12 @@ double Str::foo1(double, invalid_type)
 // CHECK-NEXT:     `-ReturnStmt {{.*}} <col:3, col:10>
 // CHECK-NEXT:       `-ImplicitCastExpr {{.*}} <col:10> 'double' <IntegralToFloating>
 // CHECK-NEXT:         `-IntegerLiteral {{.*}} <col:10> 'int' 45
+
+namespace TestAliasTemplateDecl {
+template<typename T> class A;
+
+template<typename T>
+template<typename U> using InvalidAlias = A<U>;
+// CHECK:      TypeAliasTemplateDecl {{.*}} invalid InvalidAlias
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 1 index 0 U
+}

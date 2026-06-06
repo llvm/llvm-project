@@ -39,38 +39,14 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-
-  unsigned getNumFixupKinds() const override {
-    return Mips::NumTargetFixupKinds;
-  }
-
-  /// @name Target Relaxation Interfaces
-  /// @{
-
-  /// fixupNeedsRelaxation - Target specific predicate for whether a given
-  /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    // FIXME.
-    llvm_unreachable("RelaxInstruction() unimplemented");
-    return false;
-  }
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
-
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
-
-  bool isMicroMips(const MCSymbol *Sym) const override;
 }; // class MipsAsmBackend
 
 } // namespace

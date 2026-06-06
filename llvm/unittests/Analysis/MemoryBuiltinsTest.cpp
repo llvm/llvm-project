@@ -26,7 +26,7 @@ TEST(AllocSize, AllocationBuiltinsTest) {
   IntegerType *ArgTy = Type::getInt32Ty(Context);
 
   Function *AllocSizeFn = Function::Create(
-      FunctionType::get(Type::getInt8PtrTy(Context), {ArgTy}, false),
+      FunctionType::get(PointerType::getUnqual(Context), {ArgTy}, false),
       GlobalValue::ExternalLinkage, "F", &M);
 
   AllocSizeFn->addFnAttr(

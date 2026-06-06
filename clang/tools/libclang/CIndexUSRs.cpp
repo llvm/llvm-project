@@ -15,8 +15,8 @@
 #include "CXString.h"
 #include "CXTranslationUnit.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/PreprocessingRecord.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,7 +28,7 @@ using namespace clang::index;
 //===----------------------------------------------------------------------===//
 
 static inline StringRef extractUSRSuffix(StringRef s) {
-  return s.startswith("c:") ? s.substr(2) : "";
+  return s.starts_with("c:") ? s.substr(2) : "";
 }
 
 bool cxcursor::getDeclCursorUSR(const Decl *D, SmallVectorImpl<char> &Buf) {

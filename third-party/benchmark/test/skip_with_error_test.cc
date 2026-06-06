@@ -10,17 +10,17 @@ namespace {
 
 class TestReporter : public benchmark::ConsoleReporter {
  public:
-  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
+  bool ReportContext(const Context& context) override {
     return ConsoleReporter::ReportContext(context);
   };
 
-  virtual void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
+  void ReportRuns(const std::vector<Run>& report) override {
     all_runs_.insert(all_runs_.end(), begin(report), end(report));
     ConsoleReporter::ReportRuns(report);
   }
 
   TestReporter() {}
-  virtual ~TestReporter() {}
+  ~TestReporter() override {}
 
   mutable std::vector<Run> all_runs_;
 };
@@ -35,8 +35,9 @@ struct TestCase {
   void CheckRun(Run const& run) const {
     BM_CHECK(name == run.benchmark_name())
         << "expected " << name << " got " << run.benchmark_name();
-    BM_CHECK(error_occurred == run.error_occurred);
-    BM_CHECK(error_message == run.error_message);
+    BM_CHECK_EQ(error_occurred,
+                benchmark::internal::SkippedWithError == run.skipped);
+    BM_CHECK(error_message == run.skip_message);
     if (error_occurred) {
       // BM_CHECK(run.iterations == 0);
     } else {
@@ -45,9 +46,11 @@ struct TestCase {
   }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::vector<TestCase> ExpectedResults;
 
-int AddCases(const char* base_name, std::initializer_list<TestCase> const& v) {
+int AddCases(const std::string& base_name,
+             std::initializer_list<TestCase> const& v) {
   for (auto TC : v) {
     TC.name = base_name + TC.name;
     ExpectedResults.push_back(std::move(TC));
@@ -57,9 +60,7 @@ int AddCases(const char* base_name, std::initializer_list<TestCase> const& v) {
 
 #define CONCAT(x, y) CONCAT2(x, y)
 #define CONCAT2(x, y) x##y
-#define ADD_CASES(...) int CONCAT(dummy, __LINE__) = AddCases(__VA_ARGS__)
-
-}  // end namespace
+#define ADD_CASES(...) const int CONCAT(dummy, __LINE__) = AddCases(__VA_ARGS__)
 
 void BM_error_no_running(benchmark::State& state) {
   state.SkipWithError("error message");
@@ -95,11 +96,11 @@ BENCHMARK(BM_error_before_running_range_for);
 ADD_CASES("BM_error_before_running_range_for", {{"", true, "error message"}});
 
 void BM_error_during_running(benchmark::State& state) {
-  int first_iter = true;
+  int first_iter = 1;
   while (state.KeepRunning()) {
     if (state.range(0) == 1 && state.thread_index() <= (state.threads() / 2)) {
       assert(first_iter);
-      first_iter = false;
+      first_iter = 0;
       state.SkipWithError("error message");
     } else {
       state.PauseTiming();
@@ -141,10 +142,13 @@ ADD_CASES("BM_error_during_running_ranged_for",
 
 void BM_error_after_running(benchmark::State& state) {
   for (auto _ : state) {
-    benchmark::DoNotOptimize(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
+    benchmark::DoNotOptimize(iterations);
   }
-  if (state.thread_index() <= (state.threads() / 2))
+  if (state.thread_index() <= (state.threads() / 2)) {
     state.SkipWithError("error message");
+  }
 }
 BENCHMARK(BM_error_after_running)->ThreadRange(1, 8);
 ADD_CASES("BM_error_after_running", {{"/threads:1", true, "error message"},
@@ -176,7 +180,18 @@ ADD_CASES("BM_error_while_paused", {{"/1/threads:1", true, "error message"},
                                     {"/2/threads:4", false, ""},
                                     {"/2/threads:8", false, ""}});
 
+void BM_malformed(benchmark::State& /*unused*/) {
+  // NOTE: empty body wanted. No thing else.
+}
+BENCHMARK(BM_malformed);
+ADD_CASES("BM_malformed",
+          {{"", true,
+            "The benchmark didn't run, nor was it explicitly skipped. Please "
+            "call 'SkipWithXXX` in your benchmark as appropriate."}});
+}  // end namespace
+
 int main(int argc, char* argv[]) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
   benchmark::Initialize(&argc, argv);
 
   TestReporter test_reporter;

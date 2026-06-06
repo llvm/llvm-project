@@ -2,8 +2,6 @@
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=8 -mvscale-max=8 -flax-vector-conversions=integer -ffreestanding -fsyntax-only -verify=lax-vector-integer %s
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=8 -mvscale-max=8 -flax-vector-conversions=all -ffreestanding -fsyntax-only -verify=lax-vector-all %s
 
-// lax-vector-all-no-diagnostics
-
 // REQUIRES: riscv-registered-target
 
 #define RVV_FIXED_ATTR __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)))
@@ -33,8 +31,12 @@ void rvv_allowed_with_integer_lax_conversions() {
   // -flax-vector-conversions={integer,all}.
   fi32 = si64;
   // lax-vector-none-error@-1 {{assigning to 'rvv_fixed_int32m1_t' (vector of 16 'int' values) from incompatible type}}
+  // lax-vector-integer-error@-2 {{assigning to 'rvv_fixed_int32m1_t' (vector of 16 'int' values) from incompatible type}}
+  // lax-vector-all-error@-3 {{assigning to 'rvv_fixed_int32m1_t' (vector of 16 'int' values) from incompatible type}}
   si64 = fi32;
   // lax-vector-none-error@-1 {{assigning to 'vint64m1_t' (aka '__rvv_int64m1_t') from incompatible type}}
+  // lax-vector-integer-error@-2 {{assigning to 'vint64m1_t' (aka '__rvv_int64m1_t') from incompatible type}}
+  // lax-vector-all-error@-3 {{assigning to 'vint64m1_t' (aka '__rvv_int64m1_t') from incompatible type}}
 }
 
 void rvv_allowed_with_all_lax_conversions() {
@@ -46,9 +48,11 @@ void rvv_allowed_with_all_lax_conversions() {
   ff32 = sf64;
   // lax-vector-none-error@-1 {{assigning to 'rvv_fixed_float32m1_t' (vector of 16 'float' values) from incompatible type}}
   // lax-vector-integer-error@-2 {{assigning to 'rvv_fixed_float32m1_t' (vector of 16 'float' values) from incompatible type}}
+  // lax-vector-all-error@-3 {{assigning to 'rvv_fixed_float32m1_t' (vector of 16 'float' values) from incompatible type}}
   sf64 = ff32;
   // lax-vector-none-error@-1 {{assigning to 'vfloat64m1_t' (aka '__rvv_float64m1_t') from incompatible type}}
   // lax-vector-integer-error@-2 {{assigning to 'vfloat64m1_t' (aka '__rvv_float64m1_t') from incompatible type}}
+  // lax-vector-all-error@-3 {{assigning to 'vfloat64m1_t' (aka '__rvv_float64m1_t') from incompatible type}}
 }
 
 void gnu_allowed_with_integer_lax_conversions() {

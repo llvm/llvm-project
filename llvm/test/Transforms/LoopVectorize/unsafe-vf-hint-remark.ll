@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 -pass-remarks-analysis=loop-vectorize -S < %s 2>&1 | FileCheck --check-prefix=CHECK-EPILOGUE %s
 
 ; Make sure the unsafe user specified vectorization factor is clamped.
 
@@ -14,8 +15,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; CHECK: LV: User VF=4 is unsafe, clamping to max safe VF=2.
 ; CHECK: remark: <unknown>:0:0: User-specified vectorization factor 4 is unsafe, clamping to maximum safe vectorization factor 2
+; CHECK: remark: <unknown>:0:0: UserVF ignored because it may be larger than the maximal safe VF
 ; CHECK-LABEL: @foo
 ; CHECK: <2 x i32>
+; CHECK-EPILOGUE: remark: <unknown>:0:0: UserVF ignored because it may be larger than the maximal safe VF
+; CHECK-EPILOGUE-LABEL: @foo
+; CHECK-EPILOGUE: <2 x i32>
 define void @foo(ptr %a, ptr %b) {
 entry:
   br label %loop.ph

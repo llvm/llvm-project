@@ -6,15 +6,9 @@
 
 ; CHECK-NOFP-GI:       warning: Instruction selection used fallback path for test_v11f16
 ; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v11f16_ninf
-; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32
-; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32_ninf
-; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v2f128
 ;
 ; CHECK-FP-GI:       warning: Instruction selection used fallback path for test_v11f16
 ; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v11f16_ninf
-; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32
-; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32_ninf
-; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v2f128
 
 declare half @llvm.vector.reduce.fmax.v1f16(<1 x half> %a)
 declare float @llvm.vector.reduce.fmax.v1f32(<1 x float> %a)
@@ -58,14 +52,12 @@ define float @test_v1f32(<1 x float> %a) nounwind {
 ;
 ; CHECK-NOFP-GI-LABEL: test_v1f32:
 ; CHECK-NOFP-GI:       // %bb.0:
-; CHECK-NOFP-GI-NEXT:    fmov x8, d0
-; CHECK-NOFP-GI-NEXT:    fmov s0, w8
+; CHECK-NOFP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-NOFP-GI-NEXT:    ret
 ;
 ; CHECK-FP-GI-LABEL: test_v1f32:
 ; CHECK-FP-GI:       // %bb.0:
-; CHECK-FP-GI-NEXT:    fmov x8, d0
-; CHECK-FP-GI-NEXT:    fmov s0, w8
+; CHECK-FP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-FP-GI-NEXT:    ret
   %b = call nnan float @llvm.vector.reduce.fmax.v1f32(<1 x float> %a)
   ret float %b
@@ -225,77 +217,69 @@ define half @test_v16f16(<16 x half> %a) nounwind {
 ; CHECK-NOFP-SD-NEXT:    fcvt s5, h0
 ; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcmp s3, s2
-; CHECK-NOFP-SD-NEXT:    fcsel s2, s3, s2, gt
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[2]
+; CHECK-NOFP-SD-NEXT:    fmaxnm s4, s5, s4
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[2]
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
-; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
-; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
-; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
 ; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s3, s2
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[3]
+; CHECK-NOFP-SD-NEXT:    mov h3, v1.h[2]
+; CHECK-NOFP-SD-NEXT:    fcvt h4, s4
+; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
+; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s3, s5, s3
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[3]
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s4, s2
+; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[3]
 ; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
 ; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
 ; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
-; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[4]
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s4, s5, s4
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[4]
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
-; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
-; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
-; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
 ; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[5]
+; CHECK-NOFP-SD-NEXT:    mov h3, v1.h[4]
+; CHECK-NOFP-SD-NEXT:    fcvt h4, s4
+; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
+; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s3, s5, s3
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[5]
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s4
+; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[5]
 ; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
 ; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
 ; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
-; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[6]
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s4, s5, s4
 ; CHECK-NOFP-SD-NEXT:    mov h5, v0.h[6]
-; CHECK-NOFP-SD-NEXT:    mov h1, v1.h[7]
 ; CHECK-NOFP-SD-NEXT:    mov h0, v0.h[7]
-; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
-; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
-; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
-; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
-; CHECK-NOFP-SD-NEXT:    fcvt s0, h0
-; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
-; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcmp s5, s4
 ; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, gt
-; CHECK-NOFP-SD-NEXT:    fcmp s0, s1
-; CHECK-NOFP-SD-NEXT:    fcsel s0, s0, s1, gt
+; CHECK-NOFP-SD-NEXT:    fcvt h3, s4
+; CHECK-NOFP-SD-NEXT:    mov h4, v1.h[6]
+; CHECK-NOFP-SD-NEXT:    fcvt s5, h5
+; CHECK-NOFP-SD-NEXT:    mov h1, v1.h[7]
+; CHECK-NOFP-SD-NEXT:    fcvt s0, h0
+; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
+; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
+; CHECK-NOFP-SD-NEXT:    fcvt s4, h4
+; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
+; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
+; CHECK-NOFP-SD-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
+; CHECK-NOFP-SD-NEXT:    fmaxnm s3, s5, s4
+; CHECK-NOFP-SD-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
 ; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcvt h0, s0
+; CHECK-NOFP-SD-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-SD-NEXT:    fmaxnm s2, s2, s3
 ; CHECK-NOFP-SD-NEXT:    fcvt h1, s2
 ; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
@@ -412,74 +396,46 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 ; CHECK-NOFP-LABEL: test_v11f16:
 ; CHECK-NOFP:       // %bb.0:
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #8]
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    ldr h17, [sp]
+; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
 ; CHECK-NOFP-NEXT:    fcvt s17, h17
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fcmp s1, s16
-; CHECK-NOFP-NEXT:    fcsel s1, s1, s16, gt
-; CHECK-NOFP-NEXT:    fcmp s0, s17
+; CHECK-NOFP-NEXT:    fmaxnm s1, s1, s16
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s17
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
-; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, gt
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s2, s16, gt
-; CHECK-NOFP-NEXT:    ldr h2, [x8, :lo12:.LCPI14_0]
-; CHECK-NOFP-NEXT:    mov w8, #-8388608 // =0xff800000
-; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    fmov s16, w8
+; CHECK-NOFP-NEXT:    fmaxnm s1, s2, s16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
-; CHECK-NOFP-NEXT:    fcvt s3, h4
+; CHECK-NOFP-NEXT:    fcvt s1, h3
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
-; CHECK-NOFP-NEXT:    fcvt s3, h5
+; CHECK-NOFP-NEXT:    fcvt s1, h4
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
-; CHECK-NOFP-NEXT:    fcvt s3, h6
+; CHECK-NOFP-NEXT:    fcvt s1, h5
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
-; CHECK-NOFP-NEXT:    fcvt s3, h7
+; CHECK-NOFP-NEXT:    fcvt s1, h6
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s1, h7
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    ret
@@ -519,75 +475,46 @@ define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 ; CHECK-NOFP-LABEL: test_v11f16_ninf:
 ; CHECK-NOFP:       // %bb.0:
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #8]
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    ldr h17, [sp]
+; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
 ; CHECK-NOFP-NEXT:    fcvt s17, h17
-; CHECK-NOFP-NEXT:    fcvt s3, h3
-; CHECK-NOFP-NEXT:    fcmp s1, s16
-; CHECK-NOFP-NEXT:    fcsel s1, s1, s16, gt
-; CHECK-NOFP-NEXT:    fcmp s0, s17
+; CHECK-NOFP-NEXT:    fmaxnm s1, s1, s16
+; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s17
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
-; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, gt
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s2, s16, gt
-; CHECK-NOFP-NEXT:    ldr h2, [x8, :lo12:.LCPI15_0]
-; CHECK-NOFP-NEXT:    mov w8, #57344 // =0xe000
-; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    movk w8, #51071, lsl #16
-; CHECK-NOFP-NEXT:    fmov s16, w8
+; CHECK-NOFP-NEXT:    fmaxnm s1, s2, s16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
-; CHECK-NOFP-NEXT:    fcvt s3, h4
+; CHECK-NOFP-NEXT:    fcvt s1, h3
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
-; CHECK-NOFP-NEXT:    fcvt s3, h5
+; CHECK-NOFP-NEXT:    fcvt s1, h4
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
-; CHECK-NOFP-NEXT:    fcvt s3, h6
+; CHECK-NOFP-NEXT:    fcvt s1, h5
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
-; CHECK-NOFP-NEXT:    fcvt s3, h7
+; CHECK-NOFP-NEXT:    fcvt s1, h6
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
-; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, gt
+; CHECK-NOFP-NEXT:    fcvt s1, h7
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
-; CHECK-NOFP-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    ret
@@ -624,33 +551,123 @@ define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 }
 
 define float @test_v3f32(<3 x float> %a) nounwind {
-; CHECK-LABEL: test_v3f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-8388608 // =0xff800000
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    fmaxnmv s0, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-NOFP-SD-LABEL: test_v3f32:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    mov w8, #-8388608 // =0xff800000
+; CHECK-NOFP-SD-NEXT:    fmov s1, w8
+; CHECK-NOFP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NOFP-SD-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v3f32:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    mov w8, #-8388608 // =0xff800000
+; CHECK-FP-SD-NEXT:    fmov s1, w8
+; CHECK-FP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-FP-SD-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v3f32:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-NOFP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-NOFP-GI-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-GI-NEXT:    fmaxnm s0, s0, s2
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v3f32:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-FP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-FP-GI-NEXT:    fmaxnm s0, s0, s1
+; CHECK-FP-GI-NEXT:    fmaxnm s0, s0, s2
+; CHECK-FP-GI-NEXT:    ret
   %b = call nnan float @llvm.vector.reduce.fmax.v3f32(<3 x float> %a)
   ret float %b
 }
 
 define float @test_v3f32_ninf(<3 x float> %a) nounwind {
-; CHECK-LABEL: test_v3f32_ninf:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-8388609 // =0xff7fffff
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    fmaxnmv s0, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-NOFP-SD-LABEL: test_v3f32_ninf:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    mov w8, #-8388609 // =0xff7fffff
+; CHECK-NOFP-SD-NEXT:    fmov s1, w8
+; CHECK-NOFP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NOFP-SD-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v3f32_ninf:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    mov w8, #-8388609 // =0xff7fffff
+; CHECK-FP-SD-NEXT:    fmov s1, w8
+; CHECK-FP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-FP-SD-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v3f32_ninf:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-NOFP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-NOFP-GI-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-GI-NEXT:    fmaxnm s0, s0, s2
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v3f32_ninf:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-FP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-FP-GI-NEXT:    fmaxnm s0, s0, s1
+; CHECK-FP-GI-NEXT:    fmaxnm s0, s0, s2
+; CHECK-FP-GI-NEXT:    ret
   %b = call nnan ninf float @llvm.vector.reduce.fmax.v3f32(<3 x float> %a)
   ret float %b
 }
 
 define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
-; CHECK-LABEL: test_v2f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    b fmaxl
+; CHECK-NOFP-SD-LABEL: test_v2f128:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    sub sp, sp, #48
+; CHECK-NOFP-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-NOFP-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NOFP-SD-NEXT:    bl __gttf2
+; CHECK-NOFP-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; CHECK-NOFP-SD-NEXT:    cmp w0, #0
+; CHECK-NOFP-SD-NEXT:    b.le .LBB18_2
+; CHECK-NOFP-SD-NEXT:  // %bb.1:
+; CHECK-NOFP-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NOFP-SD-NEXT:  .LBB18_2:
+; CHECK-NOFP-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; CHECK-NOFP-SD-NEXT:    add sp, sp, #48
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v2f128:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    sub sp, sp, #48
+; CHECK-FP-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-FP-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-FP-SD-NEXT:    bl __gttf2
+; CHECK-FP-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; CHECK-FP-SD-NEXT:    cmp w0, #0
+; CHECK-FP-SD-NEXT:    b.le .LBB18_2
+; CHECK-FP-SD-NEXT:  // %bb.1:
+; CHECK-FP-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-FP-SD-NEXT:  .LBB18_2:
+; CHECK-FP-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; CHECK-FP-SD-NEXT:    add sp, sp, #48
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v2f128:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NOFP-GI-NEXT:    bl fmaxl
+; CHECK-NOFP-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v2f128:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-FP-GI-NEXT:    bl fmaxl
+; CHECK-FP-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-FP-GI-NEXT:    ret
   %b = call nnan fp128 @llvm.vector.reduce.fmax.v2f128(<2 x fp128> %a)
   ret fp128 %b
 }

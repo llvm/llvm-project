@@ -15,9 +15,16 @@ import datetime
 
 
 class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_nsdate_with_run_command(self):
         """Test formatters for  NSDate."""
         self.appkit_tester_impl(self.nsdate_data_formatter_commands, False)
+
+    @skipIf(macos_version=[">=", "14.0"])
+    def test_timezone_with_run_command(self):
+        """Test formatters for NSTimeZone and CFTimeZone."""
+        self.appkit_tester_impl(self.timezone_data_formatter_commands, False)
 
     def nsdate_data_formatter_commands(self):
         self.expect(
@@ -35,7 +42,8 @@ class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
         self.expect("frame variable date5", substrs=[now_year])
 
         self.expect(
-            "frame variable date1_abs date2_abs", substrs=["1985-04", "2011-01"]
+            "frame variable date1_abs date2_abs",
+            patterns=["1985-04-10|1985-04-11", "2011-01-01|2010-12-31"],
         )
 
         self.expect("frame variable date3_abs", substrs=[now_year])
@@ -52,16 +60,6 @@ class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
         self.expect_expr("date_1970_plus_04", result_summary="1970-01-01 00:00:00 UTC")
 
         self.expect(
-            "frame variable cupertino home europe",
-            substrs=['@"America/Los_Angeles"', '@"Europe/Rome"', '@"Europe/Paris"'],
-        )
-
-        self.expect(
-            "frame variable cupertino_ns home_ns europe_ns",
-            substrs=['@"America/Los_Angeles"', '@"Europe/Rome"', '@"Europe/Paris"'],
-        )
-
-        self.expect(
             "frame variable mut_bv",
             substrs=[
                 "(CFMutableBitVectorRef) mut_bv = ",
@@ -71,3 +69,14 @@ class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
 
         self.expect_expr("distant_past", result_summary="0001-01-01 00:00:00 UTC")
         self.expect_expr("distant_future", result_summary="4001-01-01 00:00:00 UTC")
+
+    def timezone_data_formatter_commands(self):
+        self.expect(
+            "frame variable cupertino home europe",
+            substrs=['"America/Los_Angeles"', '"Europe/Rome"', '"Europe/Paris"'],
+        )
+
+        self.expect(
+            "frame variable cupertino_ns home_ns europe_ns",
+            substrs=['"America/Los_Angeles"', '"Europe/Rome"', '"Europe/Paris"'],
+        )

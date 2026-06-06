@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/Hugify.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "bolt-hugify"
 
@@ -16,10 +15,10 @@ using namespace llvm;
 namespace llvm {
 namespace bolt {
 
-void HugePage::runOnFunctions(BinaryContext &BC) {
+Error HugePage::runOnFunctions(BinaryContext &BC) {
   auto *RtLibrary = BC.getRuntimeLibrary();
   if (!RtLibrary || !BC.isELF() || !BC.StartFunctionAddress) {
-    return;
+    return Error::success();
   }
 
   auto createSimpleFunction =
@@ -43,8 +42,12 @@ void HugePage::runOnFunctions(BinaryContext &BC) {
       BC.getBinaryFunctionAtAddress(*BC.StartFunctionAddress);
   assert(Start && "Entry point function not found");
   const MCSymbol *StartSym = Start->getSymbol();
-  createSimpleFunction("__bolt_hugify_start_program",
-                       BC.MIB->createSymbolTrampoline(StartSym, BC.Ctx.get()));
+  InstructionListType Insts =
+      BC.MIB->createSymbolTrampoline(StartSym, BC.Ctx.get());
+  createSimpleFunction("__bolt_hugify_start_program", Insts);
+  if (BC.usesBTI())
+    BC.MIB->applyBTIFixupToSymbol(BC, StartSym, *(Insts.end() - 1));
+  return Error::success();
 }
 } // namespace bolt
 } // namespace llvm

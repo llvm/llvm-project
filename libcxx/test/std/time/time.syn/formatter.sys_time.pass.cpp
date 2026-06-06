@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -145,15 +146,9 @@ static void test_valid_values_month() {
         std::chrono::sys_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
 
   // Use the global locale (fr_FR)
-#if defined(__APPLE__)
-  check(SV("%b='jan'\t%h='jan'\t%B='janvier'\t%m='01'\t%Om='01'\n"),
-        lfmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#else
   check(SV("%b='janv.'\t%h='janv.'\t%B='janvier'\t%m='01'\t%Om='01'\n"),
         lfmt,
         std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#endif
 
   check(SV("%b='mai'\t%h='mai'\t%B='mai'\t%m='05'\t%Om='05'\n"),
         lfmt,
@@ -180,17 +175,7 @@ static void test_valid_values_month() {
         SV("%b='5月'\t%h='5月'\t%B='5月'\t%m='05'\t%Om='05'\n"),
         lfmt,
         std::chrono::sys_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
-#elif defined(__APPLE__)                           // _WIN32
-  check(loc,
-        SV("%b=' 1'\t%h=' 1'\t%B='1月'\t%m='01'\t%Om='01'\n"),
-        lfmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-
-  check(loc,
-        SV("%b=' 5'\t%h=' 5'\t%B='5月'\t%m='05'\t%Om='05'\n"),
-        lfmt,
-        std::chrono::sys_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
-#elif defined(__FreeBSD__)                         // _WIN32
+#elif defined(__FreeBSD__) || defined(__APPLE__)   // _WIN32
   check(loc,
         SV("%b=' 1月'\t%h=' 1月'\t%B='1月'\t%m='01'\t%Om='01'\n"),
         lfmt,
@@ -292,15 +277,6 @@ static void test_valid_values_weekday() {
         std::chrono::sys_seconds(4'294'967'295s)); // 06:28:15 UTC on Sunday, 7 February 2106
 
   // Use the global locale (fr_FR)
-#if defined(__APPLE__)
-  check(SV("%a='Jeu'\t%A='Jeudi'\t%u='4'\t%Ou='4'\t%w='4'\t%Ow='4'\n"),
-        lfmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-
-  check(SV("%a='Dim'\t%A='Dimanche'\t%u='7'\t%Ou='7'\t%w='0'\t%Ow='0'\n"),
-        lfmt,
-        std::chrono::sys_seconds(4'294'967'295s)); // 06:28:15 UTC on Sunday, 7 February 2106
-#else
   check(SV("%a='jeu.'\t%A='jeudi'\t%u='4'\t%Ou='4'\t%w='4'\t%Ow='4'\n"),
         lfmt,
         std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
@@ -308,7 +284,6 @@ static void test_valid_values_weekday() {
   check(SV("%a='dim.'\t%A='dimanche'\t%u='7'\t%Ou='7'\t%w='0'\t%Ow='0'\n"),
         lfmt,
         std::chrono::sys_seconds(4'294'967'295s)); // 06:28:15 UTC on Sunday, 7 February 2106
-#endif
 
   // Use supplied locale (ja_JP).
   // This locale has a different alternate, but not on all platforms
@@ -687,19 +662,11 @@ static void test_valid_values_time() {
            "%OM='00'\t"
            "%S='00'\t"
            "%OS='00'\t"
-#  if defined(__APPLE__)
-           "%p='AM'\t"
-#  else
            "%p='午前'\t"
-#  endif
            "%R='00:00'\t"
            "%T='00:00:00'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='12:00:00 AM'\t"
-#    else
            "%r='12:00:00 午前'\t"
-#    endif
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
 #  elif defined(_WIN32)
@@ -724,19 +691,11 @@ static void test_valid_values_time() {
            "%OM='31'\t"
            "%S='30.123'\t"
            "%OS='30.123'\t"
-#  if defined(__APPLE__)
-           "%p='PM'\t"
-#  else
            "%p='午後'\t"
-#  endif
            "%R='23:31'\t"
            "%T='23:31:30.123'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='11:31:30 PM'\t"
-#    else
            "%r='11:31:30 午後'\t"
-#    endif
            "%X='23時31分30秒'\t"
            "%EX='23時31分30秒'\t"
 #  elif defined(_WIN32)
@@ -817,15 +776,15 @@ static void test_valid_values_date_time() {
   // Use the global locale (fr_FR)
   check(
 // https://sourceware.org/bugzilla/show_bug.cgi?id=24054
-#if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
+#if defined(__powerpc__) && defined(__linux__)
+      SV("%c='jeu. 01 janv. 1970 00:00:00 UTC'\t%Ec='jeu. 01 janv. 1970 00:00:00 UTC'\n"),
+#elif defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
       SV("%c='jeu. 01 janv. 1970 00:00:00 GMT'\t%Ec='jeu. 01 janv. 1970 00:00:00 GMT'\n"),
 #elif defined(_AIX)
       SV("%c=' 1 janvier 1970 à 00:00:00 UTC'\t%Ec=' 1 janvier 1970 à 00:00:00 UTC'\n"),
-#elif defined(__APPLE__)
-      SV("%c='Jeu  1 jan 00:00:00 1970'\t%Ec='Jeu  1 jan 00:00:00 1970'\n"),
 #elif defined(_WIN32)
       SV("%c='01/01/1970 00:00:00'\t%Ec='01/01/1970 00:00:00'\n"),
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
       SV("%c='jeu.  1 janv. 00:00:00 1970'\t%Ec='jeu.  1 janv. 00:00:00 1970'\n"),
 #else
       SV("%c='jeu. 01 janv. 1970 00:00:00'\t%Ec='jeu. 01 janv. 1970 00:00:00'\n"),
@@ -835,15 +794,15 @@ static void test_valid_values_date_time() {
 
   check(
 // https://sourceware.org/bugzilla/show_bug.cgi?id=24054
-#if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
+#if defined(__powerpc__) && defined(__linux__)
+      SV("%c='ven. 13 févr. 2009 23:31:30 UTC'\t%Ec='ven. 13 févr. 2009 23:31:30 UTC'\n"),
+#elif defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
       SV("%c='ven. 13 févr. 2009 23:31:30 GMT'\t%Ec='ven. 13 févr. 2009 23:31:30 GMT'\n"),
 #elif defined(_AIX)
       SV("%c='13 février 2009 à 23:31:30 UTC'\t%Ec='13 février 2009 à 23:31:30 UTC'\n"),
-#elif defined(__APPLE__)
-      SV("%c='Ven 13 fév 23:31:30 2009'\t%Ec='Ven 13 fév 23:31:30 2009'\n"),
 #elif defined(_WIN32)
       SV("%c='13/02/2009 23:31:30'\t%Ec='13/02/2009 23:31:30'\n"),
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
       SV("%c='ven. 13 févr. 23:31:30 2009'\t%Ec='ven. 13 févr. 23:31:30 2009'\n"),
 #else
       SV("%c='ven. 13 févr. 2009 23:31:30'\t%Ec='ven. 13 févr. 2009 23:31:30'\n"),
@@ -896,12 +855,6 @@ static void test_valid_values_date_time() {
 
 template <class CharT>
 static void test_valid_values_time_zone() {
-// The Apple CI gives %z='-0700'	%Ez='-0700'	%Oz='-0700'	%Z='UTC'
-// -0700 looks like the local time where the CI happens to recide, therefore
-// omit this test on Apple.
-// The Windows CI gives %z='-0000', but on local machines set to a different
-// timezone, it gives e.g. %z='+0200'.
-#if !defined(__APPLE__) && !defined(_WIN32)
   using namespace std::literals::chrono_literals;
 
   constexpr std::basic_string_view<CharT> fmt  = SV("{:%%z='%z'%t%%Ez='%Ez'%t%%Oz='%Oz'%t%%Z='%Z'%n}");
@@ -910,48 +863,23 @@ static void test_valid_values_time_zone() {
   const std::locale loc(LOCALE_ja_JP_UTF_8);
   std::locale::global(std::locale(LOCALE_fr_FR_UTF_8));
 
-#  if defined(_AIX)
   // Non localized output using C-locale
-  check(SV("%z='UTC'\t%Ez='UTC'\t%Oz='UTC'\t%Z='UTC'\n"),
+  check(SV("%z='+0000'\t%Ez='+00:00'\t%Oz='+00:00'\t%Z='UTC'\n"),
         fmt,
         std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 
   // Use the global locale (fr_FR)
-  check(SV("%z='UTC'\t%Ez='UTC'\t%Oz='UTC'\t%Z='UTC'\n"),
+  check(SV("%z='+0000'\t%Ez='+00:00'\t%Oz='+00:00'\t%Z='UTC'\n"),
         lfmt,
         std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 
-  // Use supplied locale (ja_JP). This locale has a different alternate.a
+  // Use supplied locale (ja_JP).
   check(loc,
-        SV("%z='UTC'\t%Ez='UTC'\t%Oz='UTC'\t%Z='UTC'\n"),
-        lfmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#  else                                // defined(_AIX)
-  // Non localized output using C-locale
-  check(SV("%z='+0000'\t%Ez='+0000'\t%Oz='+0000'\t%Z='UTC'\n"),
-        fmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-
-  // Use the global locale (fr_FR)
-  check(SV("%z='+0000'\t%Ez='+0000'\t%Oz='+0000'\t%Z='UTC'\n"),
+        SV("%z='+0000'\t%Ez='+00:00'\t%Oz='+00:00'\t%Z='UTC'\n"),
         lfmt,
         std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 
-  // Use supplied locale (ja_JP). This locale has a different alternate.a
-#    if defined(__FreeBSD__)
-  check(loc,
-        SV("%z='+0000'\t%Ez='+0000'\t%Oz='+0000'\t%Z='UTC'\n"),
-        lfmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#    else
-  check(loc,
-        SV("%z='+0000'\t%Ez='+0000'\t%Oz='+〇'\t%Z='UTC'\n"),
-        lfmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#    endif
-#  endif                               // defined(_AIX)
   std::locale::global(std::locale::classic());
-#endif // !defined(__APPLE__) && !defined(_WIN32)
 }
 
 template <class CharT>

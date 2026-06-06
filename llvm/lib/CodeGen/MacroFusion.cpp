@@ -25,6 +25,9 @@
 #define DEBUG_TYPE "machine-scheduler"
 
 STATISTIC(NumFused, "Number of instr pairs fused");
+STATISTIC(NumFusionConflicts,
+          "Number of conflicts between a fusion pair and an already existing "
+          "cluster (either fusion or non-fusion)");
 
 using namespace llvm;
 
@@ -52,23 +55,34 @@ bool llvm::hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit) {
 
 bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
                                SUnit &SecondSU) {
-  // Check that neither instr is already paired with another along the edge
-  // between them.
-  for (SDep &SI : FirstSU.Succs)
-    if (SI.isCluster())
-      return false;
-
-  for (SDep &SI : SecondSU.Preds)
-    if (SI.isCluster())
-      return false;
-  // Though the reachability checks above could be made more generic,
-  // perhaps as part of ScheduleDAGInstrs::addEdge(), since such edges are valid,
-  // the extra computation cost makes it less interesting in general cases.
+  // Check that neither instr is already associated with a cluster (either
+  // fusion or non-fusion)
+  if (FirstSU.isClustered() || SecondSU.isClustered()) {
+    ++NumFusionConflicts;
+    LLVM_DEBUG({
+      dbgs() << "Fusion conflict: cannot fuse SU(" << FirstSU.NodeNum
+             << ") and SU(" << SecondSU.NodeNum << ")\n";
+      if (FirstSU.isClustered())
+        dbgs() << "  SU(" << FirstSU.NodeNum << ") already clustered\n";
+      if (SecondSU.isClustered())
+        dbgs() << "  SU(" << SecondSU.NodeNum << ") already clustered\n";
+    });
+    return false;
+  }
 
   // Create a single weak edge between the adjacent instrs. The only effect is
   // to cause bottom-up scheduling to heavily prioritize the clustered instrs.
   if (!DAG.addEdge(&SecondSU, SDep(&FirstSU, SDep::Cluster)))
     return false;
+
+  auto &Clusters = DAG.getClusters();
+
+  unsigned ClusterIdx = Clusters.size();
+  FirstSU.ParentClusterIdx = ClusterIdx;
+  SecondSU.ParentClusterIdx = ClusterIdx;
+
+  SmallPtrSet<SUnit *, 8> Cluster{{&FirstSU, &SecondSU}};
+  Clusters.push_back(Cluster);
 
   // TODO - If we want to chain more than two instructions, we need to create
   // artifical edges to make dependencies from the FirstSU also dependent
@@ -137,18 +151,33 @@ namespace {
 /// Post-process the DAG to create cluster edges between instrs that may
 /// be fused by the processor into a single operation.
 class MacroFusion : public ScheduleDAGMutation {
-  ShouldSchedulePredTy shouldScheduleAdjacent;
+  std::vector<MacroFusionPredTy> Predicates;
   bool FuseBlock;
   bool scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU);
 
 public:
-  MacroFusion(ShouldSchedulePredTy shouldScheduleAdjacent, bool FuseBlock)
-    : shouldScheduleAdjacent(shouldScheduleAdjacent), FuseBlock(FuseBlock) {}
+  MacroFusion(ArrayRef<MacroFusionPredTy> Predicates, bool FuseBlock)
+      : Predicates(Predicates.begin(), Predicates.end()), FuseBlock(FuseBlock) {
+  }
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
+
+  bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
+                              const TargetSubtargetInfo &STI,
+                              const MachineInstr *FirstMI,
+                              const MachineInstr &SecondMI);
 };
 
 } // end anonymous namespace
+
+bool MacroFusion::shouldScheduleAdjacent(const TargetInstrInfo &TII,
+                                         const TargetSubtargetInfo &STI,
+                                         const MachineInstr *FirstMI,
+                                         const MachineInstr &SecondMI) {
+  return llvm::any_of(Predicates, [&](MacroFusionPredTy Predicate) {
+    return Predicate(TII, STI, FirstMI, SecondMI);
+  });
+}
 
 void MacroFusion::apply(ScheduleDAGInstrs *DAG) {
   if (FuseBlock)
@@ -197,17 +226,9 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
 }
 
 std::unique_ptr<ScheduleDAGMutation>
-llvm::createMacroFusionDAGMutation(
-     ShouldSchedulePredTy shouldScheduleAdjacent) {
-  if(EnableMacroFusion)
-    return std::make_unique<MacroFusion>(shouldScheduleAdjacent, true);
-  return nullptr;
-}
-
-std::unique_ptr<ScheduleDAGMutation>
-llvm::createBranchMacroFusionDAGMutation(
-     ShouldSchedulePredTy shouldScheduleAdjacent) {
-  if(EnableMacroFusion)
-    return std::make_unique<MacroFusion>(shouldScheduleAdjacent, false);
+llvm::createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates,
+                                   bool BranchOnly) {
+  if (EnableMacroFusion)
+    return std::make_unique<MacroFusion>(Predicates, !BranchOnly);
   return nullptr;
 }

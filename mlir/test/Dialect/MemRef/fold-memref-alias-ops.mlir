@@ -171,10 +171,31 @@ func.func @fold_rank_reducing_subview_with_load
 // CHECK-SAME:   %[[ARG15:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG16:[a-zA-Z0-9_]+]]: index
 //  CHECK-DAG:   %[[I0:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG13]], %[[ARG7]]]
-//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG3]], %[[ARG14]], %[[ARG9]]]
-//  CHECK-DAG:   %[[I3:.+]] = affine.apply #[[MAP]]()[%[[ARG4]], %[[ARG15]], %[[ARG10]]]
-//  CHECK-DAG:   %[[I4:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG16]], %[[ARG11]]]
-//      CHECK:   memref.load %[[ARG0]][%[[I0]], %[[ARG2]], %[[I2]], %[[I3]], %[[I4]], %[[ARG6]]]
+//  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG14]], %[[ARG8]]]
+//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG4]], %[[ARG15]], %[[ARG10]]]
+//  CHECK-DAG:   %[[I3:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG16]], %[[ARG11]]]
+//      CHECK:   memref.load %[[ARG0]][%[[I0]], %[[I1]], %[[ARG3]], %[[I2]], %[[I3]], %[[ARG6]]]
+
+// -----
+
+func.func @fold_rank_reducing_subview_1x8x1x3_to_1x8x3_drop_middle_unit_dim(
+    %arg0 : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>,
+    %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
+  %c0 = arith.constant 0 : index
+  %0 = memref.subview %arg0[0, 0, 0, 0][1, 8, 1, 3][1, 1, 1, 1]
+      : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>> to
+        memref<1x8x3xf32, strided<[?, ?, ?], offset: ?>>
+  %1 = memref.load %0[%c0, %arg1, %arg2] : memref<1x8x3xf32, strided<[?, ?, ?], offset: ?>>
+  return %1 : f32
+}
+//      CHECK: func @fold_rank_reducing_subview_1x8x1x3_to_1x8x3_drop_middle_unit_dim
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//      CHECK:   memref.load %[[ARG0]][%[[C0]], %[[ARG1]], %[[C0]], %[[ARG2]]]
 
 // -----
 
@@ -266,164 +287,165 @@ func.func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
 
 // -----
 
-//  Test with affine.load/store ops. We only do a basic test here since the
-//  logic is identical to that with memref.load/store ops. The same affine.apply
-//  ops would be generated.
-
-// CHECK-LABEL: func @fold_static_stride_subview_with_affine_load_store
-func.func @fold_static_stride_subview_with_affine_load_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
-  %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] : memref<12x32xf32> to memref<4x4xf32, strided<[64, 3], offset: ?>>
-  %1 = affine.load %0[%arg3, %arg4] : memref<4x4xf32, strided<[64, 3], offset: ?>>
-  // CHECK-NEXT: affine.apply
-  // CHECK-NEXT: affine.apply
-  // CHECK-NEXT: affine.load
-  affine.store %1, %0[%arg3, %arg4] : memref<4x4xf32, strided<[64, 3], offset: ?>>
-  // CHECK-NEXT: affine.apply
-  // CHECK-NEXT: affine.apply
-  // CHECK-NEXT: affine.store
-  // CHECK-NEXT: return
-  return %1 : f32
+func.func @fold_masked_vector_transfer_read_with_subview(
+    %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>>,
+    %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
+    %arg6 : index, %mask : vector<4xi1>) -> vector<4xf32> {
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %arg0[%arg1, %arg2] [%arg3, %arg4] [1, 1]
+      : memref<?x?xf32, strided<[?, ?], offset: ?>> to
+        memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %1 = vector.transfer_read %0[%arg5, %arg6], %cst, %mask {in_bounds = [true]}
+      : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
+  return %1 : vector<4xf32>
 }
+//   CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+//       CHECK: func @fold_masked_vector_transfer_read_with_subview
+//  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32, strided<[?, ?], offset: ?>>
+//  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG3:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG4:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG5:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG6:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]: vector<4xi1>
+//   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG1]], %[[ARG5]]]
+//   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
+//       CHECK:    vector.transfer_read %[[ARG0]][%[[IDX0]], %[[IDX1]]], %{{.*}}, %[[MASK]] {{.*}} : memref<?x?xf32
 
 // -----
 
-// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 6 + s1)>
-// CHECK-LABEL: fold_static_stride_subview_with_affine_load_store_expand_shape
-// CHECK-SAME: (%[[ARG0:.*]]: memref<12x32xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index) -> f32 {
-func.func @fold_static_stride_subview_with_affine_load_store_expand_shape(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index) -> f32 {
-  %0 = memref.expand_shape %arg0 [[0, 1], [2]] : memref<12x32xf32> into memref<2x6x32xf32>
-  %1 = affine.load %0[%arg1, %arg2, %arg3] : memref<2x6x32xf32>
-  return %1 : f32
+func.func @fold_masked_vector_transfer_read_with_rank_reducing_subview(
+    %arg0 : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>,
+    %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
+    %arg6 : index, %mask : vector<4x3xi1>) -> vector<3x4xf32> {
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %arg0[0, %arg1, 0, %arg2] [1, %arg3, 1, %arg4] [1, 1, 1, 1]
+      : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>> to
+        memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %1 = vector.transfer_read %0[%arg5, %arg6], %cst, %mask {
+         permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]}
+      : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<3x4xf32>
+  return %1 : vector<3x4xf32>
 }
-// CHECK: %[[INDEX:.*]] = affine.apply #[[$MAP]]()[%[[ARG1]], %[[ARG2]]]
-// CHECK-NEXT: %[[RESULT:.*]] = affine.load %[[ARG0]][%[[INDEX]], %[[ARG3]]] : memref<12x32xf32>
-// CHECK-NEXT: return %[[RESULT]] : f32
+//   CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+//   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d1)>
+//       CHECK: func @fold_masked_vector_transfer_read_with_rank_reducing_subview
+//  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>
+//  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG3:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG4:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG5:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG6:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]: vector<4x3xi1>
+//   CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:    %[[PAD:.+]] = arith.constant 0.000000e+00 : f32
+//   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP0]]()[%[[ARG1]], %[[ARG5]]]
+//   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP0]]()[%[[ARG2]], %[[ARG6]]]
+//       CHECK:    vector.transfer_read %[[ARG0]][%[[C0]], %[[IDX0]], %[[C0]], %[[IDX1]]], %[[PAD]], %[[MASK]] {{.*}} permutation_map = #[[MAP1]]} : memref<?x?x?x?xf32
 
 // -----
 
-// CHECK-DAG: #[[$MAP0:.*]] = affine_map<()[s0] -> (s0 floordiv 6)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 mod 6)>
-// CHECK-LABEL: @fold_static_stride_subview_with_affine_load_store_collapse_shape
-// CHECK-SAME: (%[[ARG0:.*]]: memref<2x6x32xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
-func.func @fold_static_stride_subview_with_affine_load_store_collapse_shape(%arg0 : memref<2x6x32xf32>, %arg1 : index, %arg2 : index) -> f32 {
-  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<2x6x32xf32> into memref<12x32xf32>
-  %1 = affine.load %0[%arg1, %arg2] : memref<12x32xf32>
-  return %1 : f32
+func.func @fold_masked_vector_transfer_write_with_subview(
+    %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>>,
+    %arg1 : vector<4xf32>, %arg2: index, %arg3 : index, %arg4 : index,
+    %arg5: index, %arg6 : index, %arg7 : index, %mask : vector<4xi1>) {
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %arg0[%arg2, %arg3] [%arg4, %arg5] [1, 1]
+      : memref<?x?xf32, strided<[?, ?], offset: ?>> to
+        memref<?x?xf32, strided<[?, ?], offset: ?>>
+  vector.transfer_write %arg1, %0[%arg6, %arg7], %mask {in_bounds = [true]}
+      : vector<4xf32>, memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return
 }
-// CHECK-NEXT: %[[MODIFIED_INDEX0:.*]] = affine.apply #[[$MAP0]]()[%[[ARG1]]]
-// CHECK-NEXT: %[[MODIFIED_INDEX1:.*]] = affine.apply #[[$MAP1]]()[%[[ARG1]]]
-// CHECK-NEXT: %[[RESULT:.*]] = affine.load %[[ARG0]][%[[MODIFIED_INDEX0]], %[[MODIFIED_INDEX1]], %[[ARG2]]] : memref<2x6x32xf32>
-// CHECK-NEXT: return %[[RESULT]] : f32
+//   CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+//       CHECK: func @fold_masked_vector_transfer_write_with_subview
+//  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32, strided<[?, ?], offset: ?>>
+//  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: vector<4xf32>
+//  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG3:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG4:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG5:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG6:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG7:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]: vector<4xi1>
+//   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
+//   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG7]]]
+//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[IDX0]], %[[IDX1]]], %[[MASK]] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32
 
 // -----
 
-// CHECK-DAG: #[[$MAP0:.*]] = affine_map<()[s0] -> (s0 floordiv 6)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 mod 6)>
-// CHECK-LABEL: @fold_dynamic_size_collapse_shape_with_affine_load
-// CHECK-SAME: (%[[ARG0:.*]]: memref<?x6x32xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
-func.func @fold_dynamic_size_collapse_shape_with_affine_load(%arg0 : memref<?x6x32xf32>, %arg1 : index, %arg2 : index) -> f32 {
-  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<?x6x32xf32> into memref<?x32xf32>
-  %1 = affine.load %0[%arg1, %arg2] : memref<?x32xf32>
-  return %1 : f32
+func.func @fold_masked_vector_transfer_write_with_rank_reducing_subview(
+    %arg0 : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>,
+    %arg1 : vector<3x4xf32>, %arg2: index, %arg3 : index, %arg4 : index,
+    %arg5: index, %arg6 : index, %arg7 : index, %mask : vector<4x3xi1>) {
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %arg0[0, %arg2, 0, %arg3] [1, %arg4, 1, %arg5] [1, 1, 1, 1]
+      : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>> to
+        memref<?x?xf32, strided<[?, ?], offset: ?>>
+  vector.transfer_write %arg1, %0[%arg6, %arg7], %mask {
+        permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]}
+      : vector<3x4xf32>, memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return
 }
-// CHECK-NEXT: %[[MODIFIED_INDEX0:.*]] = affine.apply #[[$MAP0]]()[%[[ARG1]]]
-// CHECK-NEXT: %[[MODIFIED_INDEX1:.*]] = affine.apply #[[$MAP1]]()[%[[ARG1]]]
-// CHECK-NEXT: %[[RESULT:.*]] = affine.load %[[ARG0]][%[[MODIFIED_INDEX0]], %[[MODIFIED_INDEX1]], %[[ARG2]]] : memref<?x6x32xf32>
-// CHECK-NEXT: return %[[RESULT]] : f32
+//   CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+//   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d1)>
+//       CHECK: func @fold_masked_vector_transfer_write_with_rank_reducing_subview
+//  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>
+//  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: vector<3x4xf32>
+//  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG3:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG4:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG5:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG6:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG7:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]: vector<4x3xi1>
+//   CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP0]]()[%[[ARG2]], %[[ARG6]]]
+//   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP0]]()[%[[ARG3]], %[[ARG7]]]
+//   CHECK-DAG:    vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[IDX0]], %[[C0]], %[[IDX1]]], %[[ARG8]] {in_bounds = [true, true], permutation_map = #[[MAP1]]} : vector<3x4xf32>, memref<?x?x?x?xf32
 
 // -----
 
-// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0, s1, s2] -> (s0 * 6 + s1 * 3 + s2)>
-// CHECK-LABEL: fold_static_stride_subview_with_affine_load_store_expand_shape_3d
-// CHECK-SAME: (%[[ARG0:.*]]: memref<12x32xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index) -> f32 {
-func.func @fold_static_stride_subview_with_affine_load_store_expand_shape_3d(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4: index) -> f32 {
-  %0 = memref.expand_shape %arg0 [[0, 1, 2], [3]] : memref<12x32xf32> into memref<2x2x3x32xf32>
-  %1 = affine.load %0[%arg1, %arg2, %arg3, %arg4] : memref<2x2x3x32xf32>
-  return %1 : f32
-}
-// CHECK: %[[INDEX:.*]] = affine.apply #[[$MAP]]()[%[[ARG1]], %[[ARG2]], %[[ARG3]]]
-// CHECK-NEXT: %[[RESULT:.*]] = affine.load %[[ARG0]][%[[INDEX]], %[[ARG4]]] : memref<12x32xf32>
-// CHECK-NEXT: return %[[RESULT]] : f32
-
-// -----
-
-// CHECK-LABEL: fold_dynamic_subview_with_memref_load_store_expand_shape
-func.func @fold_dynamic_subview_with_memref_load_store_expand_shape(%arg0 : memref<16x?xf32, strided<[16, 1]>>, %arg1 : index, %arg2 : index) -> f32 {
+// CHECK-LABEL: fold_dynamic_subview_with_memref_load_expand_shape
+// CHECK-SAME: (%[[ARG0:.*]]: memref<16x?xf32, strided<[16, 1]>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index) -> f32
+func.func @fold_dynamic_subview_with_memref_load_expand_shape(%arg0 : memref<16x?xf32, strided<[16, 1]>>, %arg1 : index, %arg2 : index, %sz0: index) -> f32 {
   %c0 = arith.constant 0 : index
-  %expand_shape = memref.expand_shape %arg0 [[0, 1], [2, 3]] : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
-  %0 = memref.load %expand_shape[%c0, %arg1, %arg2, %c0] : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  %expand_shape = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [1, 16, %sz0, 1] : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  %0 = memref.load %expand_shape[%c0, %arg1, %arg2, %c0] {nontemporal = true} : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
   return %0 : f32
 }
-// CHECK: %[[EXPAND_SHAPE:.+]] = memref.expand_shape {{.+}} : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
-// CHECK: %[[LOAD:.+]] = memref.load %[[EXPAND_SHAPE]]
-// CHECK: return %[[LOAD]]
+// CHECK-NEXT: %[[C0:.*]] = arith.constant 0
+// CHECK-NEXT: %[[INDEX1:.*]] = affine.linearize_index disjoint [%[[C0]], %[[ARG1]]] by (1, 16)
+// CHECK-NEXT: %[[INDEX2:.*]] = affine.linearize_index disjoint [%[[ARG2]], %[[C0]]] by (%[[ARG3]], 1)
+// CHECK-NEXT: %[[VAL1:.*]] = memref.load %[[ARG0]][%[[INDEX1]], %[[INDEX2]]] {nontemporal = true} : memref<16x?xf32, strided<[16, 1]>>
+// CHECK-NEXT: return %[[VAL1]] : f32
 
 // -----
 
-// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0 * 1024 + d1)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
-// CHECK-LABEL: fold_static_stride_subview_with_affine_load_store_expand_shape
-// CHECK-SAME: (%[[ARG0:.*]]: memref<1024x1024xf32>, %[[ARG1:.*]]: memref<1xf32>, %[[ARG2:.*]]: index)
-func.func @fold_static_stride_subview_with_affine_load_store_expand_shape(%arg0: memref<1024x1024xf32>, %arg1: memref<1xf32>, %arg2: index) -> f32 {
-  %0 = memref.expand_shape %arg0 [[0, 1], [2, 3]] : memref<1024x1024xf32> into memref<1x1024x1024x1xf32>
-  affine.for %arg3 = 0 to 1 {
-    affine.for %arg4 = 0 to 1024 {
-      affine.for %arg5 = 0 to 1020 {
-        affine.for %arg6 = 0 to 1 {
-          %1 = affine.load %0[%arg3, %arg4, %arg5, %arg6] : memref<1x1024x1024x1xf32>
-          affine.store %1, %arg1[%arg2] : memref<1xf32>
-        }
-      }
-    }
-  }
-  %2 = affine.load %arg1[%arg2] : memref<1xf32>
-  return %2 : f32
+// CHECK-LABEL: fold_dynamic_subview_with_memref_store_expand_shape
+// CHECK-SAME: (%[[ARG0:.*]]: memref<16x?xf32, strided<[16, 1]>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
+func.func @fold_dynamic_subview_with_memref_store_expand_shape(%arg0 : memref<16x?xf32, strided<[16, 1]>>, %arg1 : index, %arg2 : index, %sz0 : index) {
+  %c0 = arith.constant 0 : index
+  %c1f32 = arith.constant 1.0 : f32
+  %expand_shape = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [1, 16, %sz0, 1] : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  memref.store %c1f32, %expand_shape[%c0, %arg1, %arg2, %c0] {nontemporal = true} : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  return
 }
-// CHECK-NEXT: affine.for %[[ARG3:.*]] = 0 to 1 {
-// CHECK-NEXT:  affine.for %[[ARG4:.*]] = 0 to 1024 {
-// CHECK-NEXT:   affine.for %[[ARG5:.*]] = 0 to 1020 {
-// CHECK-NEXT:    affine.for %[[ARG6:.*]] = 0 to 1 {
-// CHECK-NEXT:     %[[IDX1:.*]] = affine.apply #[[$MAP0]](%[[ARG3]], %[[ARG4]])
-// CHECK-NEXT:     %[[IDX2:.*]] = affine.apply #[[$MAP1]](%[[ARG5]], %[[ARG6]])
-// CHECK-NEXT:     affine.load %[[ARG0]][%[[IDX1]], %[[IDX2]]] : memref<1024x1024xf32>
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1F32:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-NEXT: %[[INDEX1:.*]] = affine.linearize_index disjoint [%[[C0]], %[[ARG1]]] by (1, 16)
+// CHECK-NEXT: %[[INDEX2:.*]] = affine.linearize_index disjoint [%[[ARG2]], %[[C0]]] by (%[[ARG3]], 1)
+// CHECK-NEXT: memref.store %[[C1F32]], %[[ARG0]][%[[INDEX1]], %[[INDEX2]]] {nontemporal = true} : memref<16x?xf32, strided<[16, 1]>>
+// CHECK-NEXT: return
 
 // -----
 
-// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0 * 1025 + d1)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
-// CHECK-LABEL: fold_static_stride_subview_with_affine_load_store_expand_shape_when_access_index_is_an_expression
+// CHECK-LABEL: fold_static_stride_subview_with_memref_expand_shape_with_constant_access_index
 // CHECK-SAME: (%[[ARG0:.*]]: memref<1024x1024xf32>, %[[ARG1:.*]]: memref<1xf32>, %[[ARG2:.*]]: index)
-func.func @fold_static_stride_subview_with_affine_load_store_expand_shape_when_access_index_is_an_expression(%arg0: memref<1024x1024xf32>, %arg1: memref<1xf32>, %arg2: index) -> f32 {
-  %0 = memref.expand_shape %arg0 [[0, 1], [2, 3]] : memref<1024x1024xf32> into memref<1x1024x1024x1xf32>
-  affine.for %arg3 = 0 to 1 {
-    affine.for %arg4 = 0 to 1024 {
-      affine.for %arg5 = 0 to 1020 {
-        affine.for %arg6 = 0 to 1 {
-          %1 = affine.load %0[%arg3, %arg4 + %arg3, %arg5, %arg6] : memref<1x1024x1024x1xf32>
-          affine.store %1, %arg1[%arg2] : memref<1xf32>
-        }
-      }
-    }
-  }
-  %2 = affine.load %arg1[%arg2] : memref<1xf32>
-  return %2 : f32
-}
-// CHECK-NEXT: affine.for %[[ARG3:.*]] = 0 to 1 {
-// CHECK-NEXT:  affine.for %[[ARG4:.*]] = 0 to 1024 {
-// CHECK-NEXT:   affine.for %[[ARG5:.*]] = 0 to 1020 {
-// CHECK-NEXT:    affine.for %[[ARG6:.*]] = 0 to 1 {
-// CHECK-NEXT:      %[[TMP1:.*]] = affine.apply #[[$MAP0]](%[[ARG3]], %[[ARG4]])
-// CHECK-NEXT:      %[[TMP3:.*]] = affine.apply #[[$MAP1]](%[[ARG5]], %[[ARG6]])
-// CHECK-NEXT:      affine.load %[[ARG0]][%[[TMP1]], %[[TMP3]]] : memref<1024x1024xf32>
-
-// -----
-
-// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0 * 1024)>
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
-// CHECK-LABEL: fold_static_stride_subview_with_affine_load_store_expand_shape_with_constant_access_index
-// CHECK-SAME: (%[[ARG0:.*]]: memref<1024x1024xf32>, %[[ARG1:.*]]: memref<1xf32>, %[[ARG2:.*]]: index)
-func.func @fold_static_stride_subview_with_affine_load_store_expand_shape_with_constant_access_index(%arg0: memref<1024x1024xf32>, %arg1: memref<1xf32>, %arg2: index) -> f32 {
-  %0 = memref.expand_shape %arg0 [[0, 1], [2, 3]] : memref<1024x1024xf32> into memref<1x1024x1024x1xf32>
+func.func @fold_static_stride_subview_with_memref_expand_shape_with_constant_access_index(%arg0: memref<1024x1024xf32>, %arg1: memref<1xf32>, %arg2: index) -> f32 {
+  %0 = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [1, 1024, 1024, 1] : memref<1024x1024xf32> into memref<1x1024x1024x1xf32>
   %cst = arith.constant 0 : index
   affine.for %arg3 = 0 to 1 {
     affine.for %arg4 = 0 to 1024 {
@@ -438,45 +460,30 @@ func.func @fold_static_stride_subview_with_affine_load_store_expand_shape_with_c
   %2 = memref.load %arg1[%arg2] : memref<1xf32>
   return %2 : f32
 }
+// CHECK-NEXT:   %[[C0:.*]] = arith.constant 0
 // CHECK-NEXT:   affine.for %[[ARG3:.*]] = 0 to 1 {
 // CHECK-NEXT:   affine.for %[[ARG4:.*]] = 0 to 1024 {
 // CHECK-NEXT:    affine.for %[[ARG5:.*]] = 0 to 1020 {
 // CHECK-NEXT:     affine.for %[[ARG6:.*]] = 0 to 1 {
-// CHECK-NEXT:      %[[TMP1:.*]] = affine.apply #[[$MAP0]](%[[ARG3]])
-// CHECK-NEXT:      %[[TMP2:.*]] = affine.apply #[[$MAP1]](%[[ARG5]], %[[ARG6]])
+// CHECK-NEXT:      %[[TMP1:.*]] = affine.linearize_index disjoint [%[[ARG3]], %[[C0]]] by (1, 1024)
+// CHECK-NEXT:      %[[TMP2:.*]] = affine.linearize_index disjoint [%[[ARG5]], %[[ARG6]]] by (1024, 1)
 // CHECK-NEXT:      memref.load %[[ARG0]][%[[TMP1]], %[[TMP2]]] : memref<1024x1024xf32>
-
-// -----
-
-// CHECK-LABEL: fold_static_stride_subview_with_affine_load_store_collapse_shape_with_0d_result
-// CHECK-SAME: (%[[ARG0:.*]]: memref<1xf32>, %[[ARG1:.*]]: memref<1xf32>)
-func.func @fold_static_stride_subview_with_affine_load_store_collapse_shape_with_0d_result(%arg0: memref<1xf32>, %arg1: memref<1xf32>) -> memref<1xf32> {
-  %0 = memref.collapse_shape %arg0 [] : memref<1xf32> into memref<f32>
-  affine.for %arg2 = 0 to 3 {
-    %1 = affine.load %0[] : memref<f32>
-    affine.store %1, %arg1[0] : memref<1xf32>
-  }
-  return %arg1 : memref<1xf32>
-}
-// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0 : index
-// CHECK-NEXT: affine.for %{{.*}} = 0 to 3 {
-// CHECK-NEXT:   affine.load %[[ARG0]][%[[ZERO]]] : memref<1xf32>
 
 // -----
 
 //       CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 + 2)>
 // CHECK-LABEL: func @subview_of_subview(
-//  CHECK-SAME:     %[[m:.*]]: memref<1x1024xf32, 3>, %[[pos:.*]]: index
+//  CHECK-SAME:     %[[m:.*]]: memref<8x1024xf32, 3>, %[[pos:.*]]: index
 //       CHECK:   %[[add:.*]] = affine.apply #[[$map]]()[%arg1]
-//       CHECK:   memref.subview %arg0[4, %[[add]]] [1, 1] [1, 1] : memref<1x1024xf32, 3> to memref<f32, strided<[], offset: ?>, 3>
-func.func @subview_of_subview(%m: memref<1x1024xf32, 3>, %pos: index)
+//       CHECK:   memref.subview %arg0[4, %[[add]]] [1, 1] [1, 1] : memref<8x1024xf32, 3> to memref<f32, strided<[], offset: ?>, 3>
+func.func @subview_of_subview(%m: memref<8x1024xf32, 3>, %pos: index)
     -> memref<f32, strided<[], offset: ?>, 3>
 {
-  %0 = memref.subview %m[3, %pos] [1, 2] [1, 1]
-      : memref<1x1024xf32, 3>
-        to memref<1x2xf32, strided<[1024, 2], offset: ?>, 3>
+  %0 = memref.subview %m[3, %pos] [5, 7] [1, 1]
+      : memref<8x1024xf32, 3>
+        to memref<5x7xf32, strided<[1024, 1], offset: ?>, 3>
   %1 = memref.subview %0[1, 2] [1, 1] [1, 1]
-      : memref<1x2xf32, strided<[1024, 2], offset: ?>, 3>
+      : memref<5x7xf32, strided<[1024, 1], offset: ?>, 3>
         to memref<f32, strided<[], offset: ?>, 3>
   return %1 : memref<f32, strided<[], offset: ?>, 3>
 }
@@ -492,11 +499,33 @@ func.func @subview_of_subview_rank_reducing(%m: memref<?x?x?xf32>,
 {
   %0 = memref.subview %m[3, 1, 8] [1, %sz, 1] [1, 1, 1]
       : memref<?x?x?xf32>
-        to memref<?xf32, strided<[1], offset: ?>>
+        to memref<?xf32, strided<[?], offset: ?>>
   %1 = memref.subview %0[6] [1] [1]
-      : memref<?xf32, strided<[1], offset: ?>>
+      : memref<?xf32, strided<[?], offset: ?>>
         to memref<f32, strided<[], offset: ?>>
   return %1 : memref<f32, strided<[], offset: ?>>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @subview_of_subview_no_unit_stride(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x8xf32, strided<[8, 1]>>)
+// CHECK:           %[[SUBVIEW_0:.*]] = memref.subview %[[ARG0]][3, 3] [2, 2] [4, 4] : memref<8x8xf32, strided<[8, 1]>> to memref<2x2xf32, strided<[32, 4], offset: 27>>
+func.func @subview_of_subview_no_unit_stride(%arg0: memref<8x8xf32, strided<[8, 1]>>) -> memref<2x2xf32, strided<[32, 4], offset: 27>> {
+  %subview = memref.subview %arg0[1, 1] [4, 4] [2, 2] : memref<8x8xf32, strided<[8, 1]>> to memref<4x4xf32, strided<[16, 2], offset: 9>>
+  %subview_0 = memref.subview %subview[1, 1] [2, 2] [2, 2] : memref<4x4xf32, strided<[16, 2], offset: 9>> to memref<2x2xf32, strided<[32, 4], offset: 27>>
+  return %subview_0 : memref<2x2xf32, strided<[32, 4], offset: 27>>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @subview_of_subview_rank_reducing_no_unit_stride(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x8xf32, strided<[8, 1]>>)
+// CHECK:           %[[SUBVIEW_0:.*]] = memref.subview %[[ARG0]][3, 3] [1, 2] [4, 4] : memref<8x8xf32, strided<[8, 1]>> to memref<2xf32, strided<[4], offset: 27>>
+func.func @subview_of_subview_rank_reducing_no_unit_stride(%arg0: memref<8x8xf32, strided<[8, 1]>>) -> memref<2xf32, strided<[4], offset: 27>> {
+  %subview = memref.subview %arg0[1, 1] [4, 4] [2, 2] : memref<8x8xf32, strided<[8, 1]>> to memref<4x4xf32, strided<[16, 2], offset: 9>>
+  %subview_0 = memref.subview %subview[1, 1] [1, 2] [2, 2] : memref<4x4xf32, strided<[16, 2], offset: 9>> to memref<2xf32, strided<[4], offset: 27>>
+  return %subview_0 : memref<2xf32, strided<[4], offset: 27>>
 }
 
 // -----
@@ -512,13 +541,27 @@ func.func @fold_load_keep_nontemporal(%arg0 : memref<12x32xf32>, %arg1 : index, 
 // -----
 
 // CHECK-LABEL: func @fold_store_keep_nontemporal(
-//      CHECK:   memref.store %{{.+}}, %{{.+}}[%{{.+}}, %{{.+}}]  {nontemporal = true} : memref<12x32xf32> 
+//      CHECK:   memref.store %{{.+}}, %{{.+}}[%{{.+}}, %{{.+}}]  {nontemporal = true} : memref<12x32xf32>
 func.func @fold_store_keep_nontemporal(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : f32) {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] :
     memref<12x32xf32> to memref<4x4xf32, strided<[64, 3], offset: ?>>
   memref.store %arg5, %0[%arg3, %arg4] {nontemporal=true}: memref<4x4xf32, strided<[64, 3], offset: ?>>
   return
 }
+
+// -----
+
+func.func @fold_prefetch_expand_shape(%src: memref<32xf32>, %i0: index, %i1: index) {
+  %expand = memref.expand_shape %src [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  memref.prefetch %expand[%i0, %i1], read, locality<2>, data : memref<4x8xf32>
+  return
+}
+
+//      CHECK: func.func @fold_prefetch_expand_shape
+// CHECK-SAME: (%[[SRC:.+]]: memref<32xf32>, %[[I0:.+]]: index, %[[I1:.+]]: index)
+//      CHECK: %[[LIN:.+]] = affine.linearize_index disjoint [%[[I0]], %[[I1]]] by (4, 8)
+//      CHECK: memref.prefetch %[[SRC]][%[[LIN]]], read, locality<2>, data : memref<32xf32>
+//  CHECK-NOT: memref.expand_shape
 
 // -----
 
@@ -554,9 +597,9 @@ func.func @fold_gpu_subgroup_mma_store_matrix_1d(%dst: memref<?xvector<4xf32>>, 
 // CHECK-LABEL: func.func @fold_gpu_subgroup_mma_load_matrix_2d
 //  CHECK-SAME: %[[SRC:.+]]: memref<128x128xf32>
 func.func @fold_gpu_subgroup_mma_load_matrix_2d(%arg0 : memref<128x128xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> !gpu.mma_matrix<16x16xf16, "COp"> {
-  %subview = memref.subview %arg0[%arg1, %arg2][64, 32][2, 1] : memref<128x128xf32> to memref<64x32xf32, strided<[64, 1], offset: ?>>
+  %subview = memref.subview %arg0[%arg1, %arg2][64, 32][2, 1] : memref<128x128xf32> to memref<64x32xf32, strided<[256, 1], offset: ?>>
   // CHECK: gpu.subgroup_mma_load_matrix %[[SRC]][{{.+}}] {leadDimension = 32 : index} : memref<128x128xf32> -> !gpu.mma_matrix<16x16xf16, "COp">
-  %matrix = gpu.subgroup_mma_load_matrix %subview[%arg3, %arg4] {leadDimension = 32 : index} : memref<64x32xf32, strided<[64, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "COp">
+  %matrix = gpu.subgroup_mma_load_matrix %subview[%arg3, %arg4] {leadDimension = 32 : index} : memref<64x32xf32, strided<[256, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "COp">
   return %matrix : !gpu.mma_matrix<16x16xf16, "COp">
 }
 
@@ -565,103 +608,780 @@ func.func @fold_gpu_subgroup_mma_load_matrix_2d(%arg0 : memref<128x128xf32>, %ar
 // CHECK-LABEL: func.func @fold_gpu_subgroup_mma_load_matrix_2d
 //  CHECK-SAME: %[[DST:.+]]: memref<128x128xf32>
 func.func @fold_gpu_subgroup_mma_load_matrix_2d(%arg0 : memref<128x128xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %matrix: !gpu.mma_matrix<16x16xf16, "COp">) {
-  %subview = memref.subview %arg0[%arg1, %arg2][64, 32][2, 1] : memref<128x128xf32> to memref<64x32xf32, strided<[64, 1], offset: ?>>
+  %subview = memref.subview %arg0[%arg1, %arg2][64, 32][2, 1] : memref<128x128xf32> to memref<64x32xf32, strided<[256, 1], offset: ?>>
   // CHECK: gpu.subgroup_mma_store_matrix %{{.+}}, %[[DST]][{{.+}}] {leadDimension = 32 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<128x128xf32>
-  gpu.subgroup_mma_store_matrix %matrix, %subview[%arg3, %arg4] {leadDimension = 32 : index} :  !gpu.mma_matrix<16x16xf16, "COp">, memref<64x32xf32, strided<[64, 1], offset: ?>>
+  gpu.subgroup_mma_store_matrix %matrix, %subview[%arg3, %arg4] {leadDimension = 32 : index} :  !gpu.mma_matrix<16x16xf16, "COp">, memref<64x32xf32, strided<[256, 1], offset: ?>>
   return
 }
 
 // -----
 
+func.func @fold_vector_load_subview(%src : memref<24x64xf32>,
+                                    %off1 : index,
+                                    %off2 : index,
+                                    %dim1 : index,
+                                    %dim2 : index,
+                                    %idx : index) -> vector<12x32xf32> {
 
-func.func @fold_nvgpu_device_async_copy_zero_sub_idx(%gmem_memref_3d : memref<2x128x768xf16>, %idx_1 : index, %idx_2 : index, %idx_3 : index) {
-
-  %c0 = arith.constant 0 : index
-  %smem_memref_4d = memref.alloc() : memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
-  %gmem_memref_subview_2d = memref.subview %gmem_memref_3d[%idx_1, %idx_2, %idx_3] [1, 1, 8] [1, 1, 1] : memref<2x128x768xf16> to memref<1x8xf16, strided<[98304, 1], offset: ?>>
-  %async_token = nvgpu.device_async_copy %gmem_memref_subview_2d[%c0, %c0], %smem_memref_4d[%c0, %c0, %c0, %c0], 8 {bypassL1} : memref<1x8xf16, strided<[98304, 1], offset: ?>> to memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
-  return
+    %0 = memref.subview %src[%off1, %off2][%dim1, %dim2][1, 1] : memref<24x64xf32> to memref<?x?xf32, strided<[64, 1], offset: ?>>
+    %1 = vector.load %0[%idx, %idx] :  memref<?x?xf32, strided<[64, 1], offset: ?>>, vector<12x32xf32>
+    return %1 : vector<12x32xf32>
 }
 
-// CHECK-LABEL: func.func @fold_nvgpu_device_async_copy_zero_sub_idx
-//  CHECK-SAME: (%[[GMEM_MEMREF_3d:.+]]: memref<2x128x768xf16>, %[[IDX_1:.+]]: index, %[[IDX_2:.+]]: index, %[[IDX_3:.+]]: index)
-//   CHECK-DAG: %[[c0:.+]] = arith.constant 0 : index
-//   CHECK-DAG: %[[SMEM_MEMREF_4d:.+]] = memref.alloc() : memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
-//       CHECK: nvgpu.device_async_copy %[[GMEM_MEMREF_3d]][%[[IDX_1]], %[[IDX_2]], %[[IDX_3]]], %[[SMEM_MEMREF_4d]][%[[c0]], %[[c0]], %[[c0]], %[[c0]]], 8 {bypassL1} : memref<2x128x768xf16> to memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
+// CHECK: #[[$ATTR_46:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL:   func.func @fold_vector_load_subview(
+// CHECK-SAME:      %[[SRC:[a-zA-Z0-9$._-]*]]: memref<24x64xf32>,
+// CHECK-SAME:      %[[OFF_1:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[OFF_2:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[DIM_1:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[DIM_2:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[IDX:[a-zA-Z0-9$._-]*]]: index) -> vector<12x32xf32> {
+// CHECK:           %[[VAL_6:.*]] = affine.apply #[[$ATTR_46]](){{\[}}%[[OFF_1]], %[[IDX]]]
+// CHECK:           %[[VAL_7:.*]] = affine.apply #[[$ATTR_46]](){{\[}}%[[OFF_2]], %[[IDX]]]
+// CHECK:           %[[VAL_8:.*]] = vector.load %[[SRC]]{{\[}}%[[VAL_6]], %[[VAL_7]]] : memref<24x64xf32>, vector<12x32xf32>
 
 // -----
 
-
-func.func @fold_src_nvgpu_device_async_copy(%gmem_memref_3d : memref<2x128x768xf16>, %src_idx_0 : index, %src_idx_1 : index, %src_idx_2 : index, %src_sub_idx_0 : index, %src_sub_idx_1 : index) {
-  %c0 = arith.constant 0 : index
-  %smem_memref_4d = memref.alloc() : memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
-  %gmem_memref_subview_2d = memref.subview %gmem_memref_3d[%src_idx_0, %src_idx_1, %src_idx_2] [1, 1, 8] [1, 1, 1] : memref<2x128x768xf16> to memref<1x8xf16, strided<[98304, 1], offset: ?>>
-  %async_token = nvgpu.device_async_copy %gmem_memref_subview_2d[%src_sub_idx_0, %src_sub_idx_1], %smem_memref_4d[%c0, %c0, %c0, %c0], 8 {bypassL1} : memref<1x8xf16, strided<[98304, 1], offset: ?>> to memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
-  return
+func.func @fold_scalar_equivalent_vector_load_subview(
+  %arg0 : memref<16xf32>, %off : index, %idx : index) -> vector<1xf32> {
+  %0 = memref.subview %arg0[%off][4][2] : memref<16xf32> to memref<4xf32, strided<[2], offset: ?>>
+  %1 = vector.load %0[%idx] : memref<4xf32, strided<[2], offset: ?>>, vector<1xf32>
+  return %1 : vector<1xf32>
 }
 
-//   CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
-//       CHECK: func.func @fold_src_nvgpu_device_async_copy
-//  CHECK-SAME: (%[[GMEM_MEMREF_3d:.+]]: memref<2x128x768xf16>, %[[SRC_IDX_0:.+]]: index, %[[SRC_IDX_1:.+]]: index, %[[SRC_IDX_2:.+]]: index, %[[SRC_SUB_IDX_0:.+]]: index, %[[SRC_SUB_IDX_1:.+]]: index)
-//   CHECK-DAG: %[[c0:.+]] = arith.constant 0 : index
-//   CHECK-DAG: %[[RESOLVED_SRC_IDX_0:.+]] = affine.apply #[[MAP]]()[%[[SRC_IDX_0]], %[[SRC_SUB_IDX_0]]]
-//   CHECK-DAG: %[[RESOLVED_SRC_IDX_1:.+]] = affine.apply #[[MAP]]()[%[[SRC_IDX_2]], %[[SRC_SUB_IDX_1]]]
-//   CHECK-DAG: nvgpu.device_async_copy %[[GMEM_MEMREF_3d]][%[[RESOLVED_SRC_IDX_0]], %[[SRC_IDX_1]], %[[RESOLVED_SRC_IDX_1]]], %[[SMEM_MEMREF_4d]][%[[c0]], %[[c0]], %[[c0]], %[[c0]]], 8 {bypassL1} : memref<2x128x768xf16> to memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
+// CHECK: #[[$STRIDED_INDEX:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 2)>
+// CHECK-LABEL: func @fold_scalar_equivalent_vector_load_subview
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<16xf32>
+//  CHECK-SAME:   %[[OFF:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[RESOLVED:.*]] = affine.apply #[[$STRIDED_INDEX]](){{\[}}%[[OFF]], %[[IDX]]]
+//       CHECK:   %[[LOAD:.*]] = vector.load %[[ARG0]][%[[RESOLVED]]] : memref<16xf32>, vector<1xf32>
+//       CHECK:   return %[[LOAD]] : vector<1xf32>
 
 // -----
 
-
-func.func @fold_src_fold_dest_nvgpu_device_async_copy(%gmem_memref_3d : memref<2x128x768xf16>, %src_idx_0 : index, %src_idx_1 : index, %src_idx_2 : index, %src_sub_idx_0 : index, %src_sub_idx_1 : index, %dest_idx_0 : index, %dest_idx_1 : index, %dest_idx_2 : index, %dest_idx_3 : index, %dest_sub_idx_0 : index, %dest_sub_idx_1 : index) {
-  %c0 = arith.constant 0 : index
-  %smem_memref_4d = memref.alloc() : memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
-  %gmem_memref_subview_2d = memref.subview %gmem_memref_3d[%src_idx_0, %src_idx_1, %src_idx_2] [1, 1, 8] [1, 1, 1] : memref<2x128x768xf16> to memref<1x8xf16, strided<[98304, 1], offset: ?>>
-  %smem_memref_2d = memref.subview %smem_memref_4d[%dest_idx_0, %dest_idx_1, %dest_idx_2, %dest_idx_3] [1, 1, 1, 8] [1, 1, 1, 1] : memref<5x1x64x64xf16, #gpu.address_space<workgroup>> to memref<1x8xf16, strided<[4096, 1], offset: ?>, #gpu.address_space<workgroup>>
-  %async_token = nvgpu.device_async_copy %gmem_memref_subview_2d[%src_sub_idx_0, %src_sub_idx_1], %smem_memref_2d[%dest_sub_idx_0, %dest_sub_idx_1], 8 {bypassL1} : memref<1x8xf16, strided<[98304, 1], offset: ?>> to memref<1x8xf16, strided<[4096, 1], offset: ?>, #gpu.address_space<workgroup>>
-  return
-}
-
-//   CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
-//       CHECK: func.func @fold_src_fold_dest_nvgpu_device_async_copy
-//  CHECK-SAME: (%[[GMEM_MEMREF_3d:.+]]: memref<2x128x768xf16>, %[[SRC_IDX_0:.+]]: index, %[[SRC_IDX_1:.+]]: index, %[[SRC_IDX_2:.+]]: index, %[[SRC_SUB_IDX_0:.+]]: index, %[[SRC_SUB_IDX_1:.+]]: index, %[[DEST_IDX_0:.+]]: index, %[[DEST_IDX_1:.+]]: index, %[[DEST_IDX_2:.+]]: index, %[[DEST_IDX_3:.+]]: index, %[[DEST_SUB_IDX_0:.+]]: index, %[[DEST_SUB_IDX_1:.+]]: index)
-//   CHECK-DAG: %[[RESOLVED_SRC_IDX_0:.+]] = affine.apply #[[MAP]]()[%[[SRC_IDX_0]], %[[SRC_SUB_IDX_0]]]
-//   CHECK-DAG: %[[RESOLVED_SRC_IDX_1:.+]] = affine.apply #[[MAP]]()[%[[SRC_IDX_2]], %[[SRC_SUB_IDX_1]]]
-//   CHECK-DAG: %[[RESOLVED_DST_IDX_1:.+]] = affine.apply #[[MAP]]()[%[[DEST_IDX_1]], %[[DEST_SUB_IDX_0]]]
-//   CHECK-DAG: %[[RESOLVED_DST_IDX_3:.+]] = affine.apply #[[MAP]]()[%[[DEST_IDX_3]], %[[DEST_SUB_IDX_1]]]
-//   CHECK-DAG: nvgpu.device_async_copy %[[GMEM_MEMREF_3d]][%[[RESOLVED_SRC_IDX_0]], %[[SRC_IDX_1]], %[[RESOLVED_SRC_IDX_1]]], %[[SMEM_MEMREF_4d]][%[[DEST_IDX_0]], %[[RESOLVED_DST_IDX_1]], %[[DEST_IDX_2]], %[[RESOLVED_DST_IDX_3]]], 8 {bypassL1} : memref<2x128x768xf16> to memref<5x1x64x64xf16, #gpu.address_space<workgroup>>
-
-// -----
-
-#map = affine_map<()[s0] -> (-s0 + 4)>
-#map1 = affine_map<()[s0] -> (-s0 + 32)>
-
-func.func @test_ldmatrix(%arg0: memref<4x32x32xf16, 3>, %arg1: index, %arg2: index, %arg3: index) -> vector<4x2xf16> {
-  %c0 = arith.constant 0 : index
-  %0 = affine.apply #map()[%arg1]
-  %1 = affine.apply #map1()[%arg2]
-  %2 = affine.apply #map1()[%arg3]
-  %subview = memref.subview %arg0[%arg1, %arg2, %arg3] [%0, %1, %2] [1, 1, 1] : memref<4x32x32xf16, 3> to memref<?x?x?xf16, strided<[1024, 32, 1], offset: ?>, 3>
-  %3 = nvgpu.ldmatrix %subview[%c0, %c0, %c0] {numTiles = 4 : i32, transpose = false} : memref<?x?x?xf16, strided<[1024, 32, 1], offset: ?>, 3> -> vector<4x2xf16>
-  return %3 : vector<4x2xf16>
-}
-
-//      CHECK: func @test_ldmatrix
-// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x32x32xf16, 3>
-// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: index
-//      CHECK:   nvgpu.ldmatrix %[[ARG0]][%[[ARG1]], %[[ARG2]], %[[ARG3]]] {numTiles = 4 : i32, transpose = false} : memref<4x32x32xf16, 3> -> vector<4x2xf16>
-
-// -----
-
-func.func @fold_vector_load(
-  %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index) -> vector<12x32xf32> {  
+func.func @fold_vector_maskedload_subview(
+  %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3: vector<32xi1>, %arg4: vector<32xf32>) -> vector<32xf32> {
   %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
-  %1 = vector.load %0[] : memref<f32, strided<[], offset: ?>>, vector<12x32xf32>
-  return %1 : vector<12x32xf32>
+  %1 = vector.maskedload %0[], %arg3, %arg4 : memref<f32, strided<[], offset: ?>>, vector<32xi1>, vector<32xf32> into vector<32xf32>
+  return %1 : vector<32xf32>
 }
 
-//      CHECK: func @fold_vector_load
+//      CHECK: func @fold_vector_maskedload_subview
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
-//      CHECK:   vector.load %[[ARG0]][%[[ARG1]], %[[ARG2]]] :  memref<12x32xf32>, vector<12x32xf32>
+// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<32xi1>
+// CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<32xf32>
+//      CHECK:   vector.maskedload %[[ARG0]][%[[ARG1]], %[[ARG2]]], %[[ARG3]], %[[ARG4]] : memref<12x32xf32>, vector<32xi1>, vector<32xf32> into vector<32xf32>
+
+// -----
+
+func.func @no_fold_vector_maskedload_subview_high_rank_vector(
+  %arg0 : memref<8xf32>, %idx : index,
+  %mask : vector<2x2x2xi1>, %pass : vector<2x2x2xf32>) -> vector<2x2x2xf32> {
+  %0 = memref.subview %arg0[%idx][1][1] : memref<8xf32> to memref<1xf32, strided<[1], offset: ?>>
+  %1 = vector.maskedload %0[%idx], %mask, %pass : memref<1xf32, strided<[1], offset: ?>>, vector<2x2x2xi1>, vector<2x2x2xf32> into vector<2x2x2xf32>
+  return %1 : vector<2x2x2xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_maskedload_subview_high_rank_vector
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<8xf32>
+//       CHECK:   %[[SUBVIEW:.*]] = memref.subview %[[ARG0]]
+//       CHECK:   vector.maskedload %[[SUBVIEW]]
+
+// -----
+
+func.func @fold_vector_store_subview(%src : memref<24x64xf32>,
+                                     %off1 : index,
+                                     %off2 : index,
+                                     %vec: vector<2x32xf32>,
+                                     %idx : index,
+                                     %dim1 : index,
+                                     %dim2 : index) -> () {
+
+    %0 = memref.subview %src[%off1, %off2][%dim1, %dim2][1, 1] : memref<24x64xf32> to memref<?x?xf32, strided<[64, 1], offset: ?>>
+    vector.store %vec, %0[%idx, %idx] : memref<?x?xf32, strided<[64, 1], offset: ?>> , vector<2x32xf32>
+    return
+}
+
+// CHECK: #[[$ATTR_47:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+
+// CHECK-LABEL:   func.func @fold_vector_store_subview(
+// CHECK-SAME:      %[[SRC:[a-zA-Z0-9$._-]*]]: memref<24x64xf32>,
+// CHECK-SAME:      %[[OFF1:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[OFF_2:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[VEC:[a-zA-Z0-9$._-]*]]: vector<2x32xf32>,
+// CHECK-SAME:      %[[IDX:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[VAL_5:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[VAL_6:[a-zA-Z0-9$._-]*]]: index) {
+//      CHECK:      %[[VAL_7:.*]] = affine.apply #[[$ATTR_47]](){{\[}}%[[OFF1]], %[[IDX]]]
+//      CHECK:      %[[VAL_8:.*]] = affine.apply #[[$ATTR_47]](){{\[}}%[[OFF_2]], %[[IDX]]]
+//      CHECK:      vector.store %[[VEC]], %[[SRC]]{{\[}}%[[VAL_7]], %[[VAL_8]]] : memref<24x64xf32>, vector<2x32xf32>
+
+// -----
+
+func.func @fold_vector_maskedstore_subview(
+  %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3: vector<32xi1>, %arg4: vector<32xf32>) -> () {
+  %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
+  vector.maskedstore %0[], %arg3, %arg4 : memref<f32, strided<[], offset: ?>>, vector<32xi1>, vector<32xf32>
+  return
+}
+
+//      CHECK: func @fold_vector_maskedstore_subview
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<32xi1>
+// CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<32xf32>
+//      CHECK:   vector.maskedstore %[[ARG0]][%[[ARG1]], %[[ARG2]]], %[[ARG3]], %[[ARG4]] : memref<12x32xf32>, vector<32xi1>, vector<32xf32>
+//      CHECK:   return
+
+// -----
+
+func.func @fold_vector_load_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.load %0[%arg1, %c0] {nontemporal = true} : memref<4x8xf32>, vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_load_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.load %[[ARG0]][%[[IDX]]] {nontemporal = true}
+
+// -----
+
+func.func @fold_vector_load_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index) -> vector<1x8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.load %0[%arg1, %c0] : memref<4x8xf32>, vector<1x8xf32>
+  return %1 : vector<1x8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_load_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[LOAD:.*]] = vector.load %[[ARG0]][%[[IDX]]] : memref<32xf32>, vector<8xf32>
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf32> to vector<1x8xf32>
+//       CHECK:   return %[[CAST]] : vector<1x8xf32>
+
+// -----
+
+func.func @fold_vector_load_expand_shape_all_unit(
+  %arg0 : memref<f32>) -> vector<1xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  %1 = vector.load %0[%c0] : memref<1xf32>, vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_load_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[LOAD:.*]] = vector.load %[[ARG0]][] : memref<f32>, vector<f32>
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<f32> to vector<1xf32>
+//       CHECK:   return %[[CAST]] : vector<1xf32>
+
+// -----
+
+func.func @fold_vector_maskedload_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.maskedload %0[%arg1, %c0], %arg3, %arg4 : memref<4x8xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_maskedload_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.maskedload %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_vector_maskedload_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index, %mask: vector<1x8xi1>,
+  %pass: vector<1x8xf32>) -> vector<1x8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.maskedload %0[%arg1, %c0], %mask, %pass : memref<4x8xf32>, vector<1x8xi1>, vector<1x8xf32> into vector<1x8xf32>
+  return %1 : vector<1x8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_maskedload_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[MASK:[a-zA-Z0-9_]+]]: vector<1x8xi1>
+//  CHECK-SAME:   %[[PASS:[a-zA-Z0-9_]+]]: vector<1x8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[MASK_CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x8xi1> to vector<8xi1>
+//       CHECK:   %[[PASS_CAST:.*]] = vector.shape_cast %[[PASS]] : vector<1x8xf32> to vector<8xf32>
+//       CHECK:   %[[LOAD:.*]] = vector.maskedload %[[ARG0]][%[[IDX]]], %[[MASK_CAST]], %[[PASS_CAST]] : memref<32xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf32> to vector<1x8xf32>
+//       CHECK:   return %[[CAST]] : vector<1x8xf32>
+
+// -----
+
+func.func @negative_fold_vector_maskedload_expand_shape_all_unit(
+  %arg0 : memref<f32>, %mask: vector<1xi1>, %pass: vector<1xf32>)
+  -> vector<1xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  %1 = vector.maskedload %0[%c0], %mask, %pass : memref<1xf32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// CHECK-LABEL: func @negative_fold_vector_maskedload_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.maskedload %[[EXPAND]]
+
+// -----
+
+func.func @no_fold_vector_maskedload_expand_shape_high_rank_vector(
+  %arg0 : memref<32xf32>, %arg1 : index,
+  %mask : vector<2x2x2xi1>, %pass : vector<2x2x2xf32>) -> vector<2x2x2xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.maskedload %0[%arg1, %c0], %mask, %pass : memref<4x8xf32>, vector<2x2x2xi1>, vector<2x2x2xf32> into vector<2x2x2xf32>
+  return %1 : vector<2x2x2xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_maskedload_expand_shape_high_rank_vector
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.maskedload %[[EXPAND]]
+
+// -----
+
+func.func @fold_vector_store_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %val : vector<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.store %val, %0[%arg1, %c0] {nontemporal = true} : memref<4x8xf32>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_store_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]]] {nontemporal = true}
+
+// -----
+
+func.func @fold_vector_store_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index, %val : vector<1x8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.store %val, %0[%arg1, %c0] : memref<4x8xf32>, vector<1x8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_store_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[VAL:[a-zA-Z0-9_]+]]: vector<1x8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[VAL]] : vector<1x8xf32> to vector<8xf32>
+//       CHECK:   vector.store %[[CAST]], %[[ARG0]][%[[IDX]]] : memref<32xf32>, vector<8xf32>
+
+// -----
+
+func.func @fold_vector_store_expand_shape_all_unit(
+  %arg0 : memref<f32>, %val : vector<1xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  vector.store %val, %0[%c0] : memref<1xf32>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_store_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//  CHECK-SAME:   %[[VAL:[a-zA-Z0-9_]+]]: vector<1xf32>
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[VAL]] : vector<1xf32> to vector<f32>
+//       CHECK:   vector.store %[[CAST]], %[[ARG0]][] : memref<f32>, vector<f32>
+
+// -----
+
+func.func @fold_vector_maskedstore_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.maskedstore %0[%arg1, %c0], %arg3, %arg4 : memref<4x8xf32>, vector<8xi1>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_maskedstore_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.maskedstore %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_vector_maskedstore_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index, %mask: vector<1x8xi1>,
+  %val: vector<1x8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.maskedstore %0[%arg1, %c0], %mask, %val : memref<4x8xf32>, vector<1x8xi1>, vector<1x8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_maskedstore_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[MASK:[a-zA-Z0-9_]+]]: vector<1x8xi1>
+//  CHECK-SAME:   %[[VAL:[a-zA-Z0-9_]+]]: vector<1x8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[MASK_CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x8xi1> to vector<8xi1>
+//       CHECK:   %[[VAL_CAST:.*]] = vector.shape_cast %[[VAL]] : vector<1x8xf32> to vector<8xf32>
+//       CHECK:   vector.maskedstore %[[ARG0]][%[[IDX]]], %[[MASK_CAST]], %[[VAL_CAST]] : memref<32xf32>, vector<8xi1>, vector<8xf32>
+
+// -----
+
+func.func @no_fold_vector_maskedstore_expand_shape_all_unit(
+  %arg0 : memref<f32>, %mask: vector<1xi1>, %val: vector<1xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  vector.maskedstore %0[%c0], %mask, %val : memref<1xf32>, vector<1xi1>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: func @no_fold_vector_maskedstore_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.maskedstore %[[EXPAND]]
+
+// -----
+
+func.func @fold_vector_expandload_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.expandload %0[%arg1, %c0], %arg3, %arg4 : memref<4x8xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_expandload_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.expandload %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @no_fold_vector_expandload_expand_shape_all_unit(
+  %arg0 : memref<f32>, %mask: vector<1xi1>, %pass: vector<1xf32>)
+  -> vector<1xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  %1 = vector.expandload %0[%c0], %mask, %pass : memref<1xf32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_expandload_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.expandload %[[EXPAND]]
+
+// -----
+
+func.func @fold_vector_compressstore_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.compressstore %0[%arg1, %c0], %arg3, %arg4 : memref<4x8xf32>, vector<8xi1>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_compressstore_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.compressstore %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @negative_fold_vector_compressstore_expand_shape_all_unit(
+  %arg0 : memref<f32>, %mask: vector<1xi1>, %val: vector<1xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  vector.compressstore %0[%c0], %mask, %val : memref<1xf32>, vector<1xi1>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: func @negative_fold_vector_compressstore_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.compressstore %[[EXPAND]]
+
+// -----
+
+func.func @fold_vector_transfer_read_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true]} : memref<4x8xf32>, vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_transfer_read_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[PAD:.*]] = ub.poison : f32
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index disjoint [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.transfer_read %[[ARG0]][%[[IDX]]], %[[PAD]] {in_bounds = [true]}
+
+// -----
+
+func.func @fold_vector_transfer_read_expand_shape_non_identity(
+  %arg0 : memref<32x32xf32>, %arg1 : index, %arg2 : index) -> vector<8x8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [4, 8, 4, 8] : memref<32x32xf32> into memref<4x8x4x8xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0, %arg2, %c0], %pad {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d3)>} : memref<4x8x4x8xf32>, vector<8x8xf32>
+  return %1 : vector<8x8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_transfer_read_expand_shape_non_identity
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32x32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[PAD:.*]] = ub.poison : f32
+//       CHECK:   %[[IDX1:.*]] = affine.linearize_index disjoint [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[IDX2:.*]] = affine.linearize_index disjoint [%[[ARG2]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.transfer_read %[[ARG0]][%[[IDX1]], %[[IDX2]]], %[[PAD]] {in_bounds = [true, true]}
+
+// -----
+
+func.func @fold_vector_transfer_read_expand_shape_non_identity_non_contiguous(
+  %arg0 : memref<32x32xf32>, %arg1 : index, %arg2 : index) -> vector<8x8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [4, 8, 4, 8] : memref<32x32xf32> into memref<4x8x4x8xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0, %arg2, %c0], %pad {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d0, d3)>} : memref<4x8x4x8xf32>, vector<8x8xf32>
+  return %1 : vector<8x8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_transfer_read_expand_shape_non_identity_non_contiguous
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32x32xf32>
+//       CHECK:   memref.expand_shape %[[ARG0]] {{\[}}[0, 1], [2, 3]] output_shape [4, 8, 4, 8] : memref<32x32xf32> into memref<4x8x4x8xf32>
+
+// -----
+
+func.func @fold_vector_transfer_read_with_perm_map(
+  %arg0 : memref<32xf32>, %arg1 : index) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0], %pad { permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : memref<4x8xf32>, vector<4x4xf32>
+  return %1 : vector<4x4xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_transfer_read_with_perm_map
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//       CHECK:   memref.expand_shape %[[ARG0]] {{\[}}[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+
+// -----
+
+func.func @fold_vector_transfer_read_rank_mismatch(
+  %arg0 : memref<32xf32>, %arg1 : index) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.expand_shape %arg0 [[0, 1, 2]] output_shape [2, 4, 4] : memref<32xf32> into memref<2x4x4xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0, %c0], %pad {in_bounds = [true, true]} : memref<2x4x4xf32>, vector<4x4xf32>
+  return %1 : vector<4x4xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_transfer_read_rank_mismatch
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//       CHECK:   memref.expand_shape %[[ARG0]] {{\[}}[0, 1, 2]] output_shape [2, 4, 4] : memref<32xf32> into memref<2x4x4xf32>
+
+// -----
+
+func.func @fold_memref_load_collapse_shape(
+  %arg0 : memref<4x8xf32>, %arg1 : index) -> f32 {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  %1 = memref.load %0[%arg1] {nontemporal = true} : memref<32xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: func @fold_memref_load_collapse_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
+//       CHECK:   memref.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+
+// -----
+
+func.func @fold_vector_load_collapse_shape(
+  %arg0 : memref<4x8xf32>, %arg1 : index) -> vector<8xf32> {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  %1 = vector.load %0[%arg1] {nontemporal = true} : memref<32xf32>, vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_load_collapse_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
+//       CHECK:   vector.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+
+// -----
+
+func.func @fold_vector_maskedload_collapse_shape(
+  %arg0 : memref<4x8xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) -> vector<8xf32> {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  %1 = vector.maskedload %0[%arg1], %arg3, %arg4 : memref<32xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_maskedload_collapse_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
+//       CHECK:   vector.maskedload %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_memref_store_collapse_shape(
+  %arg0 : memref<4x8xf32>, %arg1 : index, %val : f32) {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  memref.store %val, %0[%arg1] {nontemporal = true} : memref<32xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_memref_store_collapse_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
+//       CHECK:   memref.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+
+// -----
+
+func.func @fold_vector_store_collapse_shape(
+  %arg0 : memref<4x8xf32>, %arg1 : index, %val : vector<8xf32>) {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  vector.store %val, %0[%arg1] {nontemporal = true} : memref<32xf32>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_store_collapse_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
+//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+
+// -----
+
+func.func @fold_vector_maskedstore_collapse_shape(
+  %arg0 : memref<4x8xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  vector.maskedstore %0[%arg1], %arg3, %arg4 : memref<32xf32>, vector<8xi1>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_maskedstore_collapse_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
+//       CHECK:   vector.maskedstore %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @no_fold_collapse_shape_transfer_read(
+    %arg0 : memref<4x4x8xf32>, %arg1 : index) -> vector<4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<4x4x8xf32> into memref<16x8xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true, true]} : memref<16x8xf32>, vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
+// CHECK-LABEL: func @no_fold_collapse_shape_transfer_read
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x4x8xf32>
+//       CHECK:   memref.collapse_shape %[[ARG0]]
+//       CHECK:   vector.transfer_read
+
+// -----
+
+func.func @fold_collapse_shape_transfer_read(
+    %arg0 : memref<4x4x8xf32>, %arg1 : index) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<4x4x8xf32> into memref<16x8xf32>
+  %1 = vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true]} : memref<16x8xf32>, vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_collapse_shape_transfer_read
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x4x8xf32>
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[PAD:.*]] = ub.poison : f32
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 4)
+//       CHECK:   vector.transfer_read %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1, %[[C0]]], %[[PAD]] {in_bounds = [true]}
+
+// -----
+
+func.func @fold_dma_start_subview_src(
+    %src : memref<128x64xf32>, %dst : memref<32xf32, 1>, %tag : memref<1xi32>,
+    %off0 : index, %off1 : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 32 : index
+  %subview = memref.subview %src[%off0, %off1][32, 32][1, 1] : memref<128x64xf32> to memref<32x32xf32, strided<[64, 1], offset: ?>>
+  memref.dma_start %subview[%c0, %c0], %dst[%c0], %num_elements, %tag[%c0] : memref<32x32xf32, strided<[64, 1], offset: ?>>, memref<32xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_subview_src
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<128x64xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<32xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[OFF0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[OFF1:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 32
+//      CHECK:   memref.dma_start %[[SRC]][%[[OFF0]], %[[OFF1]]], %[[DST]][%[[C0]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_subview_dst(
+    %src : memref<32xf32>, %dst : memref<128x64xf32, 1>, %tag : memref<1xi32>,
+    %off0 : index, %off1 : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 32 : index
+  %subview = memref.subview %dst[%off0, %off1][32, 32][1, 1] : memref<128x64xf32, 1> to memref<32x32xf32, strided<[64, 1], offset: ?>, 1>
+  memref.dma_start %src[%c0], %subview[%c0, %c0], %num_elements, %tag[%c0] : memref<32xf32>, memref<32x32xf32, strided<[64, 1], offset: ?>, 1>, memref<1xi32>
+  return
+}
+// CHECK-LABEL: func @fold_dma_start_subview_dst
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<32xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<128x64xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[OFF0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[OFF1:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 32
+//      CHECK:   memref.dma_start %[[SRC]][%[[C0]]], %[[DST]][%[[OFF0]], %[[OFF1]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_expand_shape_src(
+    %src : memref<32xf32>, %dst : memref<8xf32, 1>, %tag : memref<1xi32>,
+    %idx : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 8 : index
+  %expand = memref.expand_shape %src [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  memref.dma_start %expand[%idx, %c0], %dst[%c0], %num_elements, %tag[%c0] : memref<4x8xf32>, memref<8xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_expand_shape_src
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<32xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<8xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 8
+//      CHECK:   %[[I:.*]] = affine.linearize_index disjoint [%[[IDX]], %[[C0]]] by (4, 8)
+//      CHECK:   memref.dma_start %[[SRC]][%[[I]]], %[[DST]][%[[C0]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_expand_shape_dst(
+    %src : memref<8xf32>, %dst : memref<32xf32, 1>, %tag : memref<1xi32>,
+    %idx : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 8 : index
+  %expand = memref.expand_shape %dst [[0, 1]] output_shape [4, 8] : memref<32xf32, 1> into memref<4x8xf32, 1>
+  memref.dma_start %src[%c0], %expand[%idx, %c0], %num_elements, %tag[%c0] : memref<8xf32>, memref<4x8xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_expand_shape_dst
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<8xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<32xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 8
+//      CHECK:   %[[I:.*]] = affine.linearize_index disjoint [%[[IDX]], %[[C0]]] by (4, 8)
+//      CHECK:   memref.dma_start %[[SRC]][%[[C0]]], %[[DST]][%[[I]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_collapse_shape_src(
+    %src : memref<4x8xf32>, %dst : memref<8xf32, 1>, %tag : memref<1xi32>,
+    %idx : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 8 : index
+  %collapse = memref.collapse_shape %src [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  memref.dma_start %collapse[%idx], %dst[%c0], %num_elements, %tag[%c0] : memref<32xf32>, memref<8xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_collapse_shape_src
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<8xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 8
+//      CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[IDX]] into (4, 8)
+//      CHECK:   memref.dma_start %[[SRC]][%[[IDXS]]#0, %[[IDXS]]#1], %[[DST]][%[[C0]]], %[[NUM]], %[[TAG]][%[[C0]]]
+
+// -----
+
+func.func @fold_dma_start_collapse_shape_dst(
+    %src : memref<8xf32>, %dst : memref<4x8xf32, 1>, %tag : memref<1xi32>,
+    %idx : index) {
+  %c0 = arith.constant 0 : index
+  %num_elements = arith.constant 8 : index
+  %collapse = memref.collapse_shape %dst [[0, 1]] : memref<4x8xf32, 1> into memref<32xf32, 1>
+  memref.dma_start %src[%c0], %collapse[%idx], %num_elements, %tag[%c0] : memref<8xf32>, memref<32xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK-LABEL: func @fold_dma_start_collapse_shape_dst
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: memref<8xf32>
+// CHECK-SAME:   %[[DST:[a-zA-Z0-9_]+]]: memref<4x8xf32, 1>
+// CHECK-SAME:   %[[TAG:[a-zA-Z0-9_]+]]: memref<1xi32>
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0
+//  CHECK-DAG:   %[[NUM:.*]] = arith.constant 8
+//      CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[IDX]] into (4, 8)
+//      CHECK:   memref.dma_start %[[SRC]][%[[C0]]], %[[DST]][%[[IDXS]]#0, %[[IDXS]]#1], %[[NUM]], %[[TAG]][%[[C0]]]

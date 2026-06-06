@@ -12,6 +12,7 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include <vector>
 
 namespace mlir {
 class Dialect;
@@ -86,7 +87,7 @@ class DialectInterfaceCollectionBase {
     }
 
     static bool isEqual(Dialect *lhs, const DialectInterface *rhs) {
-      if (rhs == getEmptyKey() || rhs == getTombstoneKey())
+      if (rhs == getEmptyKey())
         return false;
       return lhs == rhs->getDialect();
     }

@@ -27,8 +27,8 @@ size_t size_impl(const Head& head, const Tail&... tail) {
 }
 
 // Join a pack of std::strings using a delimiter
-// TODO: use absl::StrJoin
-void join_impl(std::string&, char) {}
+// TODO(dominic): use absl::StrJoin
+void join_impl(std::string& /*unused*/, char /*unused*/) {}
 
 template <typename Head, typename... Tail>
 void join_impl(std::string& s, const char delimiter, const Head& head,
@@ -51,8 +51,9 @@ std::string join(char delimiter, const Ts&... ts) {
 }
 }  // namespace
 
+BENCHMARK_EXPORT
 std::string BenchmarkName::str() const {
-  return join('/', function_name, args, min_time, iterations, repetitions,
-              time_type, threads);
+  return join('/', function_name, args, min_time, min_warmup_time, iterations,
+              repetitions, time_type, threads);
 }
 }  // namespace benchmark

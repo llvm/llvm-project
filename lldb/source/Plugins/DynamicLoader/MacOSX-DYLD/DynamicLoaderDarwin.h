@@ -42,7 +42,7 @@ public:
                                                   bool stop_others) override;
 
   void FindEquivalentSymbols(
-      lldb_private::Symbol *original_symbol,
+      const lldb_private::Symbol *original_symbol,
       lldb_private::ModuleList &module_list,
       lldb_private::SymbolContextList &equivalent_symbols) override;
 
@@ -55,6 +55,8 @@ public:
   virtual void DoInitialImageFetch() = 0;
 
   virtual bool NeedToDoInitialImageFetch() = 0;
+
+  std::optional<lldb_private::Address> GetStartAddress() override;
 
 protected:
   void PrivateInitialize(lldb_private::Process *process);
@@ -119,6 +121,12 @@ protected:
         llvm::Triple::EnvironmentType::UnknownEnvironment;
     /// LC_VERSION_MIN_... SDK.
     std::string min_version_os_sdk;
+    /// When we need to read a binary's mach header and load commands
+    /// out of memory, this specifies how much to read to get
+    /// everything in one read packet, if known.  Increase the
+    /// default 512 bytes to 8192 which is enough to include most
+    /// mach header + load commands.
+    uint32_t mh_and_load_cmd_size = 8192;
 
     ImageInfo() = default;
 
@@ -135,6 +143,7 @@ protected:
       os_type = llvm::Triple::OSType::UnknownOS;
       os_env = llvm::Triple::EnvironmentType::UnknownEnvironment;
       min_version_os_sdk.clear();
+      mh_and_load_cmd_size = 8192;
     }
 
     bool operator==(const ImageInfo &rhs) const {
@@ -142,7 +151,8 @@ protected:
              file_spec == rhs.file_spec && uuid == rhs.uuid &&
              memcmp(&header, &rhs.header, sizeof(header)) == 0 &&
              segments == rhs.segments && os_type == rhs.os_type &&
-             os_env == rhs.os_env;
+             os_env == rhs.os_env &&
+             mh_and_load_cmd_size == rhs.mh_and_load_cmd_size;
     }
 
     bool UUIDValid() const { return uuid.IsValid(); }
@@ -172,7 +182,7 @@ protected:
 
   bool UnloadModuleSections(lldb_private::Module *module, ImageInfo &info);
 
-  lldb::ModuleSP FindTargetModuleForImageInfo(ImageInfo &image_info,
+  lldb::ModuleSP FindTargetModuleForImageInfo(const ImageInfo &image_info,
                                               bool can_create,
                                               bool *did_create_ptr);
 
@@ -199,20 +209,29 @@ protected:
       lldb_private::StructuredData::ObjectSP image_details,
       ImageInfo::collection &image_infos);
 
-  // If image_infos contains / may contain dyld or executable image, call this
-  // method
-  // to keep our internal record keeping of the special binaries up-to-date.
-  void
-  UpdateSpecialBinariesFromNewImageInfos(ImageInfo::collection &image_infos);
+  // Finds/loads modules for a given `image_infos` and returns pairs
+  // (ImageInfo, ModuleSP).
+  // Prefer using this method rather than calling `FindTargetModuleForImageInfo`
+  // directly as this method may load the modules in parallel.
+  std::vector<std::pair<ImageInfo, lldb::ModuleSP>>
+  PreloadModulesFromImageInfos(const ImageInfo::collection &image_infos);
+
+  // If `images` contains / may contain dyld or executable image, call this
+  // method to keep our internal record keeping of the special binaries
+  // up-to-date.
+  void UpdateSpecialBinariesFromPreloadedModules(
+      std::vector<std::pair<ImageInfo, lldb::ModuleSP>> &images);
 
   // if image_info is a dyld binary, call this method
-  void UpdateDYLDImageInfoFromNewImageInfo(ImageInfo &image_info);
+  bool UpdateDYLDImageInfoFromNewImageInfo(ImageInfo &image_info);
 
   // If image_infos contains / may contain executable image, call this method
   // to keep our internal record keeping of the special dyld binary up-to-date.
   void AddExecutableModuleIfInImageInfos(ImageInfo::collection &image_infos);
 
   bool AddModulesUsingImageInfos(ImageInfo::collection &image_infos);
+  bool AddModulesUsingPreloadedModules(
+      std::vector<std::pair<ImageInfo, lldb::ModuleSP>> &images);
 
   // Whether we should use the new dyld SPI to get shared library information,
   // or read

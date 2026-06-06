@@ -71,6 +71,12 @@ macro(create_clangd_xpc_framework target name)
     ${CLANGD_FRAMEWORK_LOCATION}
   )
 
+  set_property(
+    TARGET ClangdXPC
+    APPEND
+    PROPERTY ADDITIONAL_CLEAN_FILES ${CLANGD_FRAMEWORK_LOCATION}
+  )
+
   # clangd is already signed as a standalone executable, so it must be forced.
   llvm_codesign(ClangdXPC BUNDLE_PATH "${CLANGD_FRAMEWORK_OUT_LOCATION}/XPCServices/${CLANGD_XPC_SERVICE_NAME}.xpc/" FORCE)
   # ClangdXPC library is already signed as a standalone library, so it must be forced.

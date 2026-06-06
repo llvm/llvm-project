@@ -16,6 +16,9 @@ class F<string name, string help>: Flag<["--"], name>, HelpText<help>;
 def grp_mach_o : OptionGroup<"kind">,
                  HelpText<"llvm-symbolizer Mach-O Specific Options">;
 
+def grp_gsym : OptionGroup<"kind">,
+               HelpText<"llvm-symbolizer GSYM Related Options">;
+
 def addresses : F<"addresses", "Show address before line information">;
 defm adjust_vma
     : Eq<"adjust-vma", "Add specified offset to object file addresses">,
@@ -28,12 +31,13 @@ def color_EQ : Joined<["--"], "color=">, HelpText<"Whether to use color when sym
 defm debug_file_directory : Eq<"debug-file-directory", "Path to directory where to look for debug files">, MetaVarName<"<dir>">;
 defm debuginfod : B<"debuginfod", "Use debuginfod to find debug binaries", "Don't use debuginfod to find debug binaries">;
 defm default_arch
-    : Eq<"default-arch", "Default architecture (for multi-arch objects)">,
-      Group<grp_mach_o>;
+    : Eq<"default-arch", "Default architecture for multi-arch containers (e.g. Mach-O objects or AIX archives)">;
 defm demangle : B<"demangle", "Demangle function names", "Don't demangle function names">;
+def disable_gsym : F<"disable-gsym", "Don't consider using GSYM files for symbolication">, Group<grp_gsym>;
 def filter_markup : Flag<["--"], "filter-markup">, HelpText<"Filter symbolizer markup from stdin.">;
 def functions : F<"functions", "Print function name for a given address">;
 def functions_EQ : Joined<["--"], "functions=">, HelpText<"Print function name for a given address">, Values<"none,short,linkage">;
+defm gsym_file_directory : Eq<"gsym-file-directory", "Path to directory where to look for GSYM files">, MetaVarName<"<dir>">, Group<grp_gsym>;
 def help : F<"help", "Display this help">;
 defm dwp : Eq<"dwp", "Path to DWP file to be use for any split CUs">, MetaVarName<"<file>">;
 defm dsym_hint
@@ -55,6 +59,7 @@ def pretty_print : F<"pretty-print", "Make the output more human friendly">;
 defm print_source_context_lines : Eq<"print-source-context-lines", "Print N lines of source file context">;
 def relative_address : F<"relative-address", "Interpret addresses as addresses relative to the image base">;
 def relativenames : F<"relativenames", "Strip the compilation directory from paths">;
+def skip_line_zero : F<"skip-line-zero","If an address does not have an associated line number, use the last line number from the current sequence in the line-table">;
 defm untag_addresses : B<"untag-addresses", "", "Remove memory tags from addresses before symbolization">;
 def use_dia: F<"dia", "Use the DIA library to access symbols (Windows only)">;
 def verbose : F<"verbose", "Print verbose line info">;
@@ -82,5 +87,3 @@ def : Flag<["--"], "inlining=false">, Alias<no_inlines>, HelpText<"Alias for --n
 // Compatibility aliases for pprof's symbolizer.
 def : Flag<["-"], "demangle=true">, Alias<demangle>, HelpText<"Alias for --demangle">;
 def : Flag<["-"], "demangle=false">, Alias<no_demangle>, HelpText<"Alias for --no-demangle">;
-// Compatibility no-op options.
-def : Flag<["--"], "use-symbol-table=true">;

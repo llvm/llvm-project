@@ -1,5 +1,5 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=x86_64-windows-msvc -relax-relocations=false \
+# RUN: llvm-mc -triple=x86_64-windows-msvc -x86-relax-relocations=false \
 # RUN:   -position-independent -filetype=obj -o %t/coff_sm_reloc.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:              -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \

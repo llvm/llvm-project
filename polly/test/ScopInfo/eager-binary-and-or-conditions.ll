@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output< %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -disable-output < %s
 ;
 ; void or(float *A, long n, long m) {
 ;   for (long i = 0; i < 100; i++) {

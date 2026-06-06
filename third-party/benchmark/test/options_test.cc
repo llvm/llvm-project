@@ -8,6 +8,7 @@
 #endif
 #include <cassert>
 
+namespace {
 void BM_basic(benchmark::State& state) {
   for (auto _ : state) {
   }
@@ -33,6 +34,8 @@ BENCHMARK(BM_basic)->DenseRange(10, 15);
 BENCHMARK(BM_basic)->Args({42, 42});
 BENCHMARK(BM_basic)->Ranges({{64, 512}, {64, 512}});
 BENCHMARK(BM_basic)->MinTime(0.7);
+BENCHMARK(BM_basic)->MinWarmUpTime(0.8);
+BENCHMARK(BM_basic)->MinTime(0.1)->MinWarmUpTime(0.2);
 BENCHMARK(BM_basic)->UseRealTime();
 BENCHMARK(BM_basic)->ThreadRange(2, 4);
 BENCHMARK(BM_basic)->ThreadPerCpu();
@@ -48,7 +51,7 @@ BENCHMARK(BM_basic)->RangeMultiplier(4)->Range(-8, 8);
 BENCHMARK(BM_basic)->DenseRange(-2, 2, 1);
 BENCHMARK(BM_basic)->Ranges({{-64, 1}, {-8, -1}});
 
-void CustomArgs(benchmark::internal::Benchmark* b) {
+void CustomArgs(benchmark::Benchmark* b) {
   for (int i = 0; i < 10; ++i) {
     b->Arg(i);
   }
@@ -65,11 +68,12 @@ void BM_explicit_iteration_count(benchmark::State& state) {
 
   // Test that the requested iteration count is respected.
   assert(state.max_iterations == 42);
-  size_t actual_iterations = 0;
-  for (auto _ : state) ++actual_iterations;
+  for (auto _ : state) {
+  }
   assert(state.iterations() == state.max_iterations);
   assert(state.iterations() == 42);
 }
 BENCHMARK(BM_explicit_iteration_count)->Iterations(42);
+}  // end namespace
 
 BENCHMARK_MAIN();

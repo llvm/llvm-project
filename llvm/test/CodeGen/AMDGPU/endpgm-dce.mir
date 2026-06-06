@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking-pre-ra %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking-pre-ra %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: kill_all
 # GCN:      bb.0:
@@ -353,6 +353,6 @@ body:             |
     %1 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     %2:sreg_64 = IMPLICIT_DEF
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     S_ENDPGM 0
 ...

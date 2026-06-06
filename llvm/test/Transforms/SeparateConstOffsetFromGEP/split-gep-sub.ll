@@ -31,11 +31,9 @@ define void @test_A_sub_B_add_ConstantInt(ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[REM]] to i64
 ; CHECK-NEXT:    [[SUB22:%.*]] = sub i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[SUB22]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 2044
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 2044
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP4]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
@@ -72,6 +70,44 @@ cond.end:
 
 for.end:
   ret void
+}
+
+; Check that the hoisted constant-offset GEP is not marked inbounds
+; when the offset clearly exceeds the underlying object: @g is 40
+; bytes, the hoisted offset is 800.
+
+@g = global [10 x i32] zeroinitializer
+
+define ptr @hoist_out_of_bounds_const(i64 %lim, i64 %step) {
+; CHECK-LABEL: @hoist_out_of_bounds_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ADDEND:%.*]] = mul i64 [[IV]], [[STEP:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[ADDEND]], 2
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr @g, i64 800
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP0]]
+; CHECK-NEXT:    [[NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[NEXT]], [[LIM:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret ptr [[UGLYGEP2]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %addend = mul i64 %iv, %step
+  %off = add i64 %addend, 200
+  %gep = getelementptr i32, ptr @g, i64 %off
+  %next = add i64 %iv, 1
+  %cmp = icmp slt i64 %next, %lim
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret ptr %gep
 }
 
 declare i32 @foo()

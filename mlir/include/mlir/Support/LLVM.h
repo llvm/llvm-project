@@ -21,15 +21,10 @@
 // We include this header because it cannot be practically forward
 // declared, and are effectively language features.
 #include "llvm/Support/Casting.h"
-#include <vector>
 
-// Workaround for clang-5 (PR41549)
-#if defined(__clang_major__)
-#if __clang_major__ <= 5
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/SmallVector.h"
-#endif
-#endif
+// We include this header because large portions of mlir would have to include
+// it anyway.
+#include "llvm/Support/LogicalResult.h"
 
 // Forward declarations.
 namespace llvm {
@@ -74,12 +69,15 @@ class StringSet;
 template <typename T, typename R>
 class StringSwitch;
 template <typename T>
+struct Repeated;
+template <typename T>
 class TinyPtrVector;
 template <typename T, typename ResultT>
 class TypeSwitch;
 
 // Other common classes.
 class APInt;
+class DynamicAPInt;
 class APSInt;
 class APFloat;
 template <typename Fn>
@@ -129,6 +127,7 @@ template <typename AllocatorTy = llvm::MallocAllocator>
 using StringSet = llvm::StringSet<AllocatorTy>;
 using llvm::MutableArrayRef;
 using llvm::PointerUnion;
+using llvm::Repeated;
 using llvm::SmallPtrSet;
 using llvm::SmallPtrSetImpl;
 using llvm::SmallVector;
@@ -143,12 +142,22 @@ using TypeSwitch = llvm::TypeSwitch<T, ResultT>;
 using llvm::APFloat;
 using llvm::APInt;
 using llvm::APSInt;
+using llvm::DynamicAPInt;
 template <typename Fn>
 using function_ref = llvm::function_ref<Fn>;
 using llvm::iterator_range;
 using llvm::raw_ostream;
 using llvm::SMLoc;
 using llvm::SMRange;
+
+// LogicalResult.
+using llvm::failed;
+using llvm::failure;
+using llvm::FailureOr;
+using llvm::LogicalResult;
+using llvm::ParseResult;
+using llvm::succeeded;
+using llvm::success;
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_LLVM_H

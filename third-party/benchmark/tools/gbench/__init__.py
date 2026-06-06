@@ -5,4 +5,4 @@ __email__ = "eric@efcs.ca"
 __versioninfo__ = (0, 5, 0)
 __version__ = ".".join(str(v) for v in __versioninfo__) + "dev"
 
-__all__ = []
+__all__ = []  # type: ignore

@@ -1,0 +1,9 @@
+RUN: %lldb-rpc-gen --output-dir=%t %S/../Inputs/SBDummy.h
+
+RUN: ls %t | FileCheck %s
+
+# We're just making sure that the tool emits the class names,
+# methods and skipped methods file in the output directory.
+CHECK: SBAPI.def
+CHECK: SBClasses.def
+CHECK: SkippedMethods.txt

@@ -25,10 +25,10 @@
 # RUN:        -platform_version iOS 1 2.a \
 # RUN:     | FileCheck --check-prefix=FAIL-MALFORM %s
 # RUN: not %no-arg-lld -arch x86_64 -o %t %t.o 2>&1 \
-# RUN:        -platform_version tvOS 1.2.3.4.5 10 \
+# RUN:        -platform_version tvOS 1.2.3.4 10 \
 # RUN:     | FileCheck --check-prefix=FAIL-MALFORM %s
 # RUN: not %no-arg-lld -arch x86_64 -o %t %t.o 2>&1 \
-# RUN:        -platform_version watchOS 10 1.2.3.4.5 \
+# RUN:        -platform_version watchOS 10 1.2.3.4 \
 # RUN:     | FileCheck --check-prefix=FAIL-MALFORM %s
 # FAIL-MALFORM-NOT: malformed platform: {{.*}}
 # FAIL-MALFORM: malformed {{minimum|sdk}} version: {{.*}}
@@ -40,7 +40,7 @@
 # RUN: %no-arg-lld -arch x86_64 -o %t %t.o 2>&1 \
 # RUN:        -platform_version "iOS Simulator" 1.2.3 5.6.7
 # RUN: %no-arg-lld -arch x86_64 -o %t %t.o 2>&1 \
-# RUN:        -platform_version tvOS-Simulator 1.2.3.4 5.6.7.8
+# RUN:        -platform_version tvOS-Simulator 1.2.3 5.6.7
 # RUN: %no-arg-lld -arch x86_64 -o %t %t.o 2>&1 \
 # RUN:        -platform_version watchOS-Simulator 1 5
 # RUN: %no-arg-lld -arch x86_64 -o %t %t.o 2>&1 \
@@ -55,7 +55,7 @@
 # RUN:        -platform_version 0 1 5 \
 # RUN:     | FileCheck --check-prefix=FAIL-PLATFORM %s
 # RUN: not %no-arg-lld -arch x86_64 -o %t %t.o 2>&1 \
-# RUN:        -platform_version 11 1 5 \
+# RUN:        -platform_version 13 1 5 \
 # RUN:     | FileCheck --check-prefix=FAIL-PLATFORM %s
 # FAIL-PLATFORM: malformed platform: {{.*}}
 # FAIL-PLATFORM-NOT: malformed {{minimum|sdk}} version: {{.*}}

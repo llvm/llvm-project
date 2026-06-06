@@ -52,7 +52,6 @@
 
 #include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
-#include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 #include "mlir/ExecutionEngine/SparseTensor/File.h"
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 
@@ -96,7 +95,7 @@ static inline void aliasIntoMemref(DataSizeT size, T *data,
                                    StridedMemRefType<T, 1> &ref) {
   ref.basePtr = ref.data = data;
   ref.offset = 0;
-  using MemrefSizeT = typename std::remove_reference_t<decltype(ref.sizes[0])>;
+  using MemrefSizeT = std::remove_reference_t<decltype(ref.sizes[0])>;
   ref.sizes[0] = detail::checkOverflowCast<MemrefSizeT>(size);
   ref.strides[0] = 1;
 }
@@ -117,36 +116,18 @@ extern "C" {
     switch (action) {                                                          \
     case Action::kEmpty: {                                                     \
       return SparseTensorStorage<P, C, V>::newEmpty(                           \
-          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
-          false);                                                              \
+          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim);   \
     }                                                                          \
-    case Action::kEmptyForward: {                                              \
-      return SparseTensorStorage<P, C, V>::newEmpty(                           \
-          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
-          true);                                                               \
-    }                                                                          \
-    case Action::kFromCOO: {                                                   \
-      assert(ptr && "Received nullptr for SparseTensorCOO object");            \
-      auto &coo = *static_cast<SparseTensorCOO<V> *>(ptr);                     \
-      return SparseTensorStorage<P, C, V>::newFromCOO(                         \
-          dimRank, dimSizes, lvlRank, lvlTypes, dim2lvl, lvl2dim, coo);        \
-    }                                                                          \
-    case Action::kSparseToSparse: {                                            \
-      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
-      auto &tensor = *static_cast<SparseTensorStorageBase *>(ptr);             \
-      return SparseTensorStorage<P, C, V>::newFromSparseTensor(                \
-          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
-          dimRank, tensor);                                                    \
-    }                                                                          \
-    case Action::kToCOO: {                                                     \
-      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
-      auto &tensor = *static_cast<SparseTensorStorage<P, C, V> *>(ptr);        \
-      return tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl, lvl2dim);       \
+    case Action::kFromReader: {                                                \
+      assert(ptr && "Received nullptr for SparseTensorReader object");         \
+      SparseTensorReader &reader = *static_cast<SparseTensorReader *>(ptr);    \
+      return static_cast<void *>(reader.readSparseTensor<P, C, V>(             \
+          lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim));                     \
     }                                                                          \
     case Action::kPack: {                                                      \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
       intptr_t *buffers = static_cast<intptr_t *>(ptr);                        \
-      return SparseTensorStorage<P, C, V>::packFromLvlBuffers(                 \
+      return SparseTensorStorage<P, C, V>::newFromBuffers(                     \
           dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
           dimRank, buffers);                                                   \
     }                                                                          \
@@ -157,8 +138,8 @@ extern "C" {
       return ptr;                                                              \
     }                                                                          \
     }                                                                          \
-    MLIR_SPARSETENSOR_FATAL("unknown action: %d\n",                            \
-                            static_cast<uint32_t>(action));                    \
+    fprintf(stderr, "unknown action %d\n", static_cast<uint32_t>(action));     \
+    exit(1);                                                                   \
   }
 
 #define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
@@ -173,7 +154,7 @@ static_assert(std::is_same<index_type, uint64_t>::value,
 void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<LevelType, 1> *lvlTypesRef,
     StridedMemRefType<index_type, 1> *dim2lvlRef,
     StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp, Action action, void *ptr) {
@@ -185,11 +166,11 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   const uint64_t dimRank = MEMREF_GET_USIZE(dimSizesRef);
   const uint64_t lvlRank = MEMREF_GET_USIZE(lvlSizesRef);
   ASSERT_USIZE_EQ(lvlTypesRef, lvlRank);
-  ASSERT_USIZE_EQ(dim2lvlRef, dimRank);
-  ASSERT_USIZE_EQ(lvl2dimRef, lvlRank);
+  ASSERT_USIZE_EQ(dim2lvlRef, lvlRank);
+  ASSERT_USIZE_EQ(lvl2dimRef, dimRank);
   const index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
   const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
-  const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
+  const LevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
   const index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);
   const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
 
@@ -301,10 +282,10 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   CASE_SECSAME(OverheadType::kU64, PrimaryType::kC32, uint64_t, complex32);
 
   // Unsupported case (add above if needed).
-  MLIR_SPARSETENSOR_FATAL(
-      "unsupported combination of types: <P=%d, C=%d, V=%d>\n",
-      static_cast<int>(posTp), static_cast<int>(crdTp),
-      static_cast<int>(valTp));
+  fprintf(stderr, "unsupported combination of types: <P=%d, C=%d, V=%d>\n",
+          static_cast<int>(posTp), static_cast<int>(crdTp),
+          static_cast<int>(valTp));
+  exit(1);
 }
 #undef CASE
 #undef CASE_SECSAME
@@ -330,6 +311,7 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_SPARSEVALUES)
     assert(v);                                                                 \
     aliasIntoMemref(v->size(), v->data(), *ref);                               \
   }
+
 #define IMPL_SPARSEPOSITIONS(PNAME, P)                                         \
   IMPL_GETOVERHEAD(sparsePositions##PNAME, P, getPositions)
 MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSEPOSITIONS)
@@ -339,22 +321,13 @@ MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSEPOSITIONS)
   IMPL_GETOVERHEAD(sparseCoordinates##CNAME, C, getCoordinates)
 MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSECOORDINATES)
 #undef IMPL_SPARSECOORDINATES
-#undef IMPL_GETOVERHEAD
 
-#define IMPL_FORWARDINGINSERT(VNAME, V)                                        \
-  void _mlir_ciface_forwardingInsert##VNAME(                                   \
-      void *t, StridedMemRefType<V, 0> *vref,                                  \
-      StridedMemRefType<index_type, 1> *dimCoordsRef) {                        \
-    assert(t &&vref);                                                          \
-    ASSERT_NO_STRIDE(dimCoordsRef);                                            \
-    const index_type *dimCoords = MEMREF_GET_PAYLOAD(dimCoordsRef);            \
-    assert(dimCoords);                                                         \
-    const V *value = MEMREF_GET_PAYLOAD(vref);                                 \
-    static_cast<SparseTensorStorageBase *>(t)->forwardingInsert(dimCoords,     \
-                                                                *value);       \
-  }
-MLIR_SPARSETENSOR_FOREVERY_V(IMPL_FORWARDINGINSERT)
-#undef IMPL_FORWARDINGINSERT
+#define IMPL_SPARSECOORDINATESBUFFER(CNAME, C)                                 \
+  IMPL_GETOVERHEAD(sparseCoordinatesBuffer##CNAME, C, getCoordinatesBuffer)
+MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSECOORDINATESBUFFER)
+#undef IMPL_SPARSECOORDINATESBUFFER
+
+#undef IMPL_GETOVERHEAD
 
 #define IMPL_LEXINSERT(VNAME, V)                                               \
   void _mlir_ciface_lexInsert##VNAME(                                          \
@@ -423,12 +396,12 @@ void _mlir_ciface_getSparseTensorReaderDimSizes(
     ASSERT_NO_STRIDE(cref);                                                    \
     ASSERT_NO_STRIDE(vref);                                                    \
     const uint64_t dimRank = reader.getRank();                                 \
-    const uint64_t lvlRank = MEMREF_GET_USIZE(lvl2dimRef);                     \
+    const uint64_t lvlRank = MEMREF_GET_USIZE(dim2lvlRef);                     \
     const uint64_t cSize = MEMREF_GET_USIZE(cref);                             \
     const uint64_t vSize = MEMREF_GET_USIZE(vref);                             \
-    ASSERT_USIZE_EQ(dim2lvlRef, dimRank);                                      \
-    assert(cSize >= lvlRank * vSize);                                          \
-    assert(vSize >= reader.getNSE() && "Not enough space in buffers");         \
+    ASSERT_USIZE_EQ(lvl2dimRef, dimRank);                                      \
+    assert(cSize >= lvlRank * reader.getNSE());                                \
+    assert(vSize >= reader.getNSE());                                          \
     (void)dimRank;                                                             \
     (void)cSize;                                                               \
     (void)vSize;                                                               \
@@ -442,113 +415,6 @@ void _mlir_ciface_getSparseTensorReaderDimSizes(
 MLIR_SPARSETENSOR_FOREVERY_V_O(IMPL_GETNEXT)
 #undef IMPL_GETNEXT
 
-void *_mlir_ciface_newSparseTensorFromReader(
-    void *p, StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
-    StridedMemRefType<index_type, 1> *dim2lvlRef,
-    StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
-    OverheadType crdTp, PrimaryType valTp) {
-  assert(p);
-  SparseTensorReader &reader = *static_cast<SparseTensorReader *>(p);
-  ASSERT_NO_STRIDE(lvlSizesRef);
-  ASSERT_NO_STRIDE(lvlTypesRef);
-  ASSERT_NO_STRIDE(dim2lvlRef);
-  ASSERT_NO_STRIDE(lvl2dimRef);
-  const uint64_t dimRank = reader.getRank();
-  const uint64_t lvlRank = MEMREF_GET_USIZE(lvlSizesRef);
-  ASSERT_USIZE_EQ(lvlTypesRef, lvlRank);
-  ASSERT_USIZE_EQ(dim2lvlRef, dimRank);
-  ASSERT_USIZE_EQ(lvl2dimRef, lvlRank);
-  (void)dimRank;
-  const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
-  const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
-  const index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);
-  const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
-#define CASE(p, c, v, P, C, V)                                                 \
-  if (posTp == OverheadType::p && crdTp == OverheadType::c &&                  \
-      valTp == PrimaryType::v)                                                 \
-    return static_cast<void *>(reader.readSparseTensor<P, C, V>(               \
-        lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim));
-#define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
-  // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
-  // This is safe because of the static_assert above.
-  if (posTp == OverheadType::kIndex)
-    posTp = OverheadType::kU64;
-  if (crdTp == OverheadType::kIndex)
-    crdTp = OverheadType::kU64;
-  // Double matrices with all combinations of overhead storage.
-  CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);
-  CASE(kU64, kU32, kF64, uint64_t, uint32_t, double);
-  CASE(kU64, kU16, kF64, uint64_t, uint16_t, double);
-  CASE(kU64, kU8, kF64, uint64_t, uint8_t, double);
-  CASE(kU32, kU64, kF64, uint32_t, uint64_t, double);
-  CASE(kU32, kU32, kF64, uint32_t, uint32_t, double);
-  CASE(kU32, kU16, kF64, uint32_t, uint16_t, double);
-  CASE(kU32, kU8, kF64, uint32_t, uint8_t, double);
-  CASE(kU16, kU64, kF64, uint16_t, uint64_t, double);
-  CASE(kU16, kU32, kF64, uint16_t, uint32_t, double);
-  CASE(kU16, kU16, kF64, uint16_t, uint16_t, double);
-  CASE(kU16, kU8, kF64, uint16_t, uint8_t, double);
-  CASE(kU8, kU64, kF64, uint8_t, uint64_t, double);
-  CASE(kU8, kU32, kF64, uint8_t, uint32_t, double);
-  CASE(kU8, kU16, kF64, uint8_t, uint16_t, double);
-  CASE(kU8, kU8, kF64, uint8_t, uint8_t, double);
-  // Float matrices with all combinations of overhead storage.
-  CASE(kU64, kU64, kF32, uint64_t, uint64_t, float);
-  CASE(kU64, kU32, kF32, uint64_t, uint32_t, float);
-  CASE(kU64, kU16, kF32, uint64_t, uint16_t, float);
-  CASE(kU64, kU8, kF32, uint64_t, uint8_t, float);
-  CASE(kU32, kU64, kF32, uint32_t, uint64_t, float);
-  CASE(kU32, kU32, kF32, uint32_t, uint32_t, float);
-  CASE(kU32, kU16, kF32, uint32_t, uint16_t, float);
-  CASE(kU32, kU8, kF32, uint32_t, uint8_t, float);
-  CASE(kU16, kU64, kF32, uint16_t, uint64_t, float);
-  CASE(kU16, kU32, kF32, uint16_t, uint32_t, float);
-  CASE(kU16, kU16, kF32, uint16_t, uint16_t, float);
-  CASE(kU16, kU8, kF32, uint16_t, uint8_t, float);
-  CASE(kU8, kU64, kF32, uint8_t, uint64_t, float);
-  CASE(kU8, kU32, kF32, uint8_t, uint32_t, float);
-  CASE(kU8, kU16, kF32, uint8_t, uint16_t, float);
-  CASE(kU8, kU8, kF32, uint8_t, uint8_t, float);
-  // Two-byte floats with both overheads of the same type.
-  CASE_SECSAME(kU64, kF16, uint64_t, f16);
-  CASE_SECSAME(kU64, kBF16, uint64_t, bf16);
-  CASE_SECSAME(kU32, kF16, uint32_t, f16);
-  CASE_SECSAME(kU32, kBF16, uint32_t, bf16);
-  CASE_SECSAME(kU16, kF16, uint16_t, f16);
-  CASE_SECSAME(kU16, kBF16, uint16_t, bf16);
-  CASE_SECSAME(kU8, kF16, uint8_t, f16);
-  CASE_SECSAME(kU8, kBF16, uint8_t, bf16);
-  // Integral matrices with both overheads of the same type.
-  CASE_SECSAME(kU64, kI64, uint64_t, int64_t);
-  CASE_SECSAME(kU64, kI32, uint64_t, int32_t);
-  CASE_SECSAME(kU64, kI16, uint64_t, int16_t);
-  CASE_SECSAME(kU64, kI8, uint64_t, int8_t);
-  CASE_SECSAME(kU32, kI64, uint32_t, int64_t);
-  CASE_SECSAME(kU32, kI32, uint32_t, int32_t);
-  CASE_SECSAME(kU32, kI16, uint32_t, int16_t);
-  CASE_SECSAME(kU32, kI8, uint32_t, int8_t);
-  CASE_SECSAME(kU16, kI64, uint16_t, int64_t);
-  CASE_SECSAME(kU16, kI32, uint16_t, int32_t);
-  CASE_SECSAME(kU16, kI16, uint16_t, int16_t);
-  CASE_SECSAME(kU16, kI8, uint16_t, int8_t);
-  CASE_SECSAME(kU8, kI64, uint8_t, int64_t);
-  CASE_SECSAME(kU8, kI32, uint8_t, int32_t);
-  CASE_SECSAME(kU8, kI16, uint8_t, int16_t);
-  CASE_SECSAME(kU8, kI8, uint8_t, int8_t);
-  // Complex matrices with wide overhead.
-  CASE_SECSAME(kU64, kC64, uint64_t, complex64);
-  CASE_SECSAME(kU64, kC32, uint64_t, complex32);
-
-  // Unsupported case (add above if needed).
-  MLIR_SPARSETENSOR_FATAL(
-      "unsupported combination of types: <P=%d, C=%d, V=%d>\n",
-      static_cast<int>(posTp), static_cast<int>(crdTp),
-      static_cast<int>(valTp));
-#undef CASE_SECSAME
-#undef CASE
-}
-
 void _mlir_ciface_outSparseTensorWriterMetaData(
     void *p, index_type dimRank, index_type nse,
     StridedMemRefType<index_type, 1> *dimSizesRef) {
@@ -556,11 +422,11 @@ void _mlir_ciface_outSparseTensorWriterMetaData(
   ASSERT_NO_STRIDE(dimSizesRef);
   assert(dimRank != 0);
   index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
-  SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);
-  file << dimRank << " " << nse << std::endl;
-  for (index_type d = 0; d < dimRank - 1; ++d)
+  std::ostream &file = *static_cast<std::ostream *>(p);
+  file << dimRank << " " << nse << '\n';
+  for (index_type d = 0; d < dimRank - 1; d++)
     file << dimSizes[d] << " ";
-  file << dimSizes[dimRank - 1] << std::endl;
+  file << dimSizes[dimRank - 1] << '\n';
 }
 
 #define IMPL_OUTNEXT(VNAME, V)                                                 \
@@ -571,11 +437,11 @@ void _mlir_ciface_outSparseTensorWriterMetaData(
     assert(p &&vref);                                                          \
     ASSERT_NO_STRIDE(dimCoordsRef);                                            \
     const index_type *dimCoords = MEMREF_GET_PAYLOAD(dimCoordsRef);            \
-    SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);          \
-    for (index_type d = 0; d < dimRank; ++d)                                   \
+    std::ostream &file = *static_cast<std::ostream *>(p);                      \
+    for (index_type d = 0; d < dimRank; d++)                                   \
       file << (dimCoords[d] + 1) << " ";                                       \
     V *value = MEMREF_GET_PAYLOAD(vref);                                       \
-    file << *value << std::endl;                                               \
+    file << *value << '\n';                                                    \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTNEXT)
 #undef IMPL_OUTNEXT
@@ -595,72 +461,28 @@ index_type sparseDimSize(void *tensor, index_type d) {
   return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
 }
 
-void endForwardingInsert(void *tensor) {
-  return static_cast<SparseTensorStorageBase *>(tensor)->endForwardingInsert();
-}
-
 void endLexInsert(void *tensor) {
   return static_cast<SparseTensorStorageBase *>(tensor)->endLexInsert();
 }
-
-#define IMPL_OUTSPARSETENSOR(VNAME, V)                                         \
-  void outSparseTensor##VNAME(void *coo, void *dest, bool sort) {              \
-    assert(coo);                                                               \
-    auto &coo_ = *static_cast<SparseTensorCOO<V> *>(coo);                      \
-    if (sort)                                                                  \
-      coo_.sort();                                                             \
-    return writeExtFROSTT(coo_, static_cast<char *>(dest));                    \
-  }
-MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTSPARSETENSOR)
-#undef IMPL_OUTSPARSETENSOR
 
 void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
 }
 
-#define IMPL_DELCOO(VNAME, V)                                                  \
-  void delSparseTensorCOO##VNAME(void *coo) {                                  \
-    delete static_cast<SparseTensorCOO<V> *>(coo);                             \
-  }
-MLIR_SPARSETENSOR_FOREVERY_V(IMPL_DELCOO)
-#undef IMPL_DELCOO
-
 char *getTensorFilename(index_type id) {
-  constexpr size_t BUF_SIZE = 80;
-  char var[BUF_SIZE];
-  snprintf(var, BUF_SIZE, "TENSOR%" PRIu64, id);
+  constexpr size_t bufSize = 80;
+  char var[bufSize];
+  snprintf(var, bufSize, "TENSOR%" PRIu64, id);
   char *env = getenv(var);
-  if (!env)
-    MLIR_SPARSETENSOR_FATAL("Environment variable %s is not set\n", var);
+  if (!env) {
+    fprintf(stderr, "Environment variable %s is not set\n", var);
+    exit(1);
+  }
   return env;
-}
-
-void readSparseTensorShape(char *filename, std::vector<uint64_t> *out) {
-  assert(out && "Received nullptr for out-parameter");
-  SparseTensorReader reader(filename);
-  reader.openFile();
-  reader.readHeader();
-  reader.closeFile();
-  const uint64_t dimRank = reader.getRank();
-  const uint64_t *dimSizes = reader.getDimSizes();
-  out->reserve(dimRank);
-  out->assign(dimSizes, dimSizes + dimRank);
-}
-
-index_type getSparseTensorReaderRank(void *p) {
-  return static_cast<SparseTensorReader *>(p)->getRank();
-}
-
-bool getSparseTensorReaderIsSymmetric(void *p) {
-  return static_cast<SparseTensorReader *>(p)->isSymmetric();
 }
 
 index_type getSparseTensorReaderNSE(void *p) {
   return static_cast<SparseTensorReader *>(p)->getNSE();
-}
-
-index_type getSparseTensorReaderDimSize(void *p, index_type d) {
-  return static_cast<SparseTensorReader *>(p)->getDimSize(d);
 }
 
 void delSparseTensorReader(void *p) {
@@ -668,14 +490,14 @@ void delSparseTensorReader(void *p) {
 }
 
 void *createSparseTensorWriter(char *filename) {
-  SparseTensorWriter *file =
+  std::ostream *file =
       (filename[0] == 0) ? &std::cout : new std::ofstream(filename);
   *file << "# extended FROSTT format\n";
   return static_cast<void *>(file);
 }
 
 void delSparseTensorWriter(void *p) {
-  SparseTensorWriter *file = static_cast<SparseTensorWriter *>(p);
+  std::ostream *file = static_cast<std::ostream *>(p);
   file->flush();
   assert(file->good());
   if (file != &std::cout)

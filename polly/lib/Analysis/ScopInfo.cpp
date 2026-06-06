@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/ScopInfo.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopBuilder.h"
 #include "polly/ScopDetection.h"
@@ -54,10 +53,8 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -73,6 +70,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-scops"
 
 STATISTIC(AssumptionsAliasing, "Number of aliasing assumptions taken.");
@@ -214,7 +212,7 @@ static const ScopArrayInfo *identifyBasePtrOriginSAI(Scop *S, Value *BasePtr) {
 
   ScalarEvolution &SE = *S->getSE();
 
-  auto *OriginBaseSCEV =
+  const SCEV *OriginBaseSCEV =
       SE.getPointerBase(SE.getSCEV(BasePtrLI->getPointerOperand()));
   if (!OriginBaseSCEV)
     return nullptr;
@@ -526,12 +524,15 @@ void MemoryAccess::updateDimensionality() {
   }
 }
 
-const std::string
+std::string
 MemoryAccess::getReductionOperatorStr(MemoryAccess::ReductionType RT) {
   switch (RT) {
   case MemoryAccess::RT_NONE:
     llvm_unreachable("Requested a reduction operator string for a memory "
                      "access which isn't a reduction");
+  case MemoryAccess::RT_BOTTOM:
+    llvm_unreachable("Requested a reduction operator string for a internal "
+                     "reduction type!");
   case MemoryAccess::RT_ADD:
     return "+";
   case MemoryAccess::RT_MUL:
@@ -709,11 +710,11 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
   if (!Ptr || !SE->isSCEVable(Ptr->getType()))
     return;
 
-  auto *PtrSCEV = SE->getSCEV(Ptr);
+  const SCEV *PtrSCEV = SE->getSCEV(Ptr);
   if (isa<SCEVCouldNotCompute>(PtrSCEV))
     return;
 
-  auto *BasePtrSCEV = SE->getPointerBase(PtrSCEV);
+  const SCEV *BasePtrSCEV = SE->getPointerBase(PtrSCEV);
   if (BasePtrSCEV && !isa<SCEVCouldNotCompute>(BasePtrSCEV))
     PtrSCEV = SE->getMinusSCEV(PtrSCEV, BasePtrSCEV);
 
@@ -906,7 +907,7 @@ void MemoryAccess::realignParams() {
   AccessRelation = AccessRelation.align_params(CtxSpace);
 }
 
-const std::string MemoryAccess::getReductionOperatorStr() const {
+std::string MemoryAccess::getReductionOperatorStr() const {
   return MemoryAccess::getReductionOperatorStr(getReductionType());
 }
 
@@ -914,10 +915,15 @@ isl::id MemoryAccess::getId() const { return Id; }
 
 raw_ostream &polly::operator<<(raw_ostream &OS,
                                MemoryAccess::ReductionType RT) {
-  if (RT == MemoryAccess::RT_NONE)
+  switch (RT) {
+  case MemoryAccess::RT_NONE:
+  case MemoryAccess::RT_BOTTOM:
     OS << "NONE";
-  else
+    break;
+  default:
     OS << MemoryAccess::getReductionOperatorStr(RT);
+    break;
+  }
   return OS;
 }
 
@@ -1375,10 +1381,10 @@ public:
   }
 
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
-    auto *Start = visit(E->getStart());
-    auto *AddRec = SE.getAddRecExpr(SE.getConstant(E->getType(), 0),
-                                    visit(E->getStepRecurrence(SE)),
-                                    E->getLoop(), SCEV::FlagAnyWrap);
+    const SCEV *Start = visit(E->getStart());
+    const SCEV *AddRec = SE.getAddRecExpr(SE.getConstant(E->getType(), 0),
+                                          visit(E->getStepRecurrence(SE)),
+                                          E->getLoop(), SCEV::FlagAnyWrap);
     return SE.getAddExpr(Start, AddRec);
   }
 
@@ -1484,14 +1490,6 @@ isl::id Scop::getIdForParam(const SCEV *Parameter) const {
 
 bool Scop::isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const {
   return DT.dominates(BB, getEntry());
-}
-
-void Scop::buildContext() {
-  isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
-  Context = isl::set::universe(Space);
-  InvalidContext = isl::set::empty(Space);
-  AssumedContext = isl::set::universe(Space);
-  DefinedBehaviorContext = isl::set::universe(Space);
 }
 
 void Scop::addParameterBounds() {
@@ -1624,8 +1622,20 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
                         IslParseFlags);
 
   if (IslOnErrorAbort)
-    isl_options_set_on_error(getIslCtx().get(), ISL_ON_ERROR_ABORT);
-  buildContext();
+    isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_ABORT);
+
+  isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
+  Context = isl::set::universe(Space);
+  InvalidContext = isl::set::empty(Space);
+  AssumedContext = isl::set::universe(Space);
+  DefinedBehaviorContext = isl::set::universe(Space);
+}
+
+std::unique_ptr<Scop> Scop::makeScop(Region &R, ScalarEvolution &SE,
+                                     LoopInfo &LI, DominatorTree &DT,
+                                     ScopDetection::DetectionContext &DC,
+                                     OptimizationRemarkEmitter &ORE, int ID) {
+  return std::unique_ptr<Scop>{new Scop(R, SE, LI, DT, DC, ORE, ID)};
 }
 
 Scop::~Scop() = default;
@@ -1647,9 +1657,7 @@ void Scop::removeFromStmtMap(ScopStmt &Stmt) {
   } else {
     auto StmtMapIt = StmtMap.find(Stmt.getBasicBlock());
     if (StmtMapIt != StmtMap.end())
-      StmtMapIt->second.erase(std::remove(StmtMapIt->second.begin(),
-                                          StmtMapIt->second.end(), &Stmt),
-                              StmtMapIt->second.end());
+      llvm::erase(StmtMapIt->second, &Stmt);
     for (Instruction *Inst : Stmt.getInstructions())
       InstStmtMap.erase(Inst);
   }
@@ -1811,11 +1819,9 @@ std::pair<std::string, std::string> Scop::getEntryExitStr() const {
   raw_string_ostream EntryStr(EntryName);
 
   R.getEntry()->printAsOperand(EntryStr, false);
-  EntryStr.str();
 
   if (R.getExit()) {
     R.getExit()->printAsOperand(ExitStr, false);
-    ExitStr.str();
   } else
     ExitName = "FunctionExit";
 
@@ -2044,7 +2050,7 @@ void Scop::intersectDefinedBehavior(isl::set Set, AssumptionSign Sign) {
 }
 
 void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
-  LLVM_DEBUG(dbgs() << "Invalidate SCoP because of reason " << Kind << "\n");
+  POLLY_DEBUG(dbgs() << "Invalidate SCoP because of reason " << Kind << "\n");
   addAssumption(Kind, isl::set::empty(getParamSpace()), Loc, AS_ASSUMPTION, BB);
 }
 
@@ -2167,13 +2173,14 @@ isl::ctx Scop::getIslCtx() const { return IslCtx.get(); }
 
 __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
                                  bool NonNegative,
-                                 RecordedAssumptionsTy *RecordedAssumptions) {
+                                 RecordedAssumptionsTy *RecordedAssumptions,
+                                 bool IsInsideDomain) {
   // First try to use the SCEVAffinator to generate a piecewise defined
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling code to all users of this function.
-  auto PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions);
+  PWACtx PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions, IsInsideDomain);
   if (!PWAC.first.is_null()) {
     // TODO: We could use a heuristic and either use:
     //         SCEVAffinator::takeNonNegativeAssumption
@@ -2424,15 +2431,13 @@ void Scop::removeAccessData(MemoryAccess *Access) {
     ValueDefAccs.erase(Access->getAccessValue());
   } else if (Access->isOriginalValueKind() && Access->isRead()) {
     auto &Uses = ValueUseAccs[Access->getScopArrayInfo()];
-    auto NewEnd = std::remove(Uses.begin(), Uses.end(), Access);
-    Uses.erase(NewEnd, Uses.end());
+    llvm::erase(Uses, Access);
   } else if (Access->isOriginalPHIKind() && Access->isRead()) {
     PHINode *PHI = cast<PHINode>(Access->getAccessInstruction());
     PHIReadAccs.erase(PHI);
   } else if (Access->isOriginalAnyPHIKind() && Access->isWrite()) {
     auto &Incomings = PHIIncomingAccs[Access->getScopArrayInfo()];
-    auto NewEnd = std::remove(Incomings.begin(), Incomings.end(), Access);
-    Incomings.erase(NewEnd, Incomings.end());
+    llvm::erase(Incomings, Access);
   }
 }
 
@@ -2541,19 +2546,6 @@ raw_ostream &polly::operator<<(raw_ostream &OS, const Scop &scop) {
   return OS;
 }
 
-//===----------------------------------------------------------------------===//
-void ScopInfoRegionPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<RegionInfoPass>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
-  AU.addRequiredTransitive<ScopDetectionWrapperPass>();
-  AU.addRequired<AAResultsWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.setPreservesAll();
-}
-
 void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
                               Scop::ScopStatistics ScopStats) {
   assert(Stats.NumLoops == ScopStats.NumAffineLoops + ScopStats.NumBoxedLoops);
@@ -2589,289 +2581,33 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
   NumSingletonWritesInLoops += ScopStats.NumSingletonWritesInLoops;
 }
 
-bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
-  auto &SD = getAnalysis<ScopDetectionWrapperPass>().getSD();
-
-  if (!SD.isMaxRegionInScop(*R))
-    return false;
-
-  Function *F = R->getEntry()->getParent();
-  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto const &DL = F->getParent()->getDataLayout();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F);
-  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-  ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE, ORE);
-  S = SB.getScop(); // take ownership of scop object
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
-  if (S) {
-    ScopDetection::LoopStats Stats =
-        ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
-    updateLoopCountStatistic(Stats, S->getStatistics());
-  }
-#endif
-
-  return false;
-}
-
-void ScopInfoRegionPass::print(raw_ostream &OS, const Module *) const {
-  if (S)
-    S->print(OS, PollyPrintInstructions);
-  else
-    OS << "Invalid Scop!\n";
-}
-
-char ScopInfoRegionPass::ID = 0;
-
-Pass *polly::createScopInfoRegionPassPass() { return new ScopInfoRegionPass(); }
-
-INITIALIZE_PASS_BEGIN(ScopInfoRegionPass, "polly-scops",
-                      "Polly - Create polyhedral description of Scops", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(ScopDetectionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_END(ScopInfoRegionPass, "polly-scops",
-                    "Polly - Create polyhedral description of Scops", false,
-                    false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-
-/// Print result from ScopInfoRegionPass.
-class ScopInfoPrinterLegacyRegionPass final : public RegionPass {
-public:
-  static char ID;
-
-  ScopInfoPrinterLegacyRegionPass() : ScopInfoPrinterLegacyRegionPass(outs()) {}
-
-  explicit ScopInfoPrinterLegacyRegionPass(llvm::raw_ostream &OS)
-      : RegionPass(ID), OS(OS) {}
-
-  bool runOnRegion(Region *R, RGPassManager &RGM) override {
-    ScopInfoRegionPass &P = getAnalysis<ScopInfoRegionPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
-       << R->getNameStr() << "' in function '"
-       << R->getEntry()->getParent()->getName() << "':\n";
-    P.print(OS);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    RegionPass::getAnalysisUsage(AU);
-    AU.addRequired<ScopInfoRegionPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char ScopInfoPrinterLegacyRegionPass::ID = 0;
-} // namespace
-
-Pass *polly::createScopInfoPrinterLegacyRegionPass(raw_ostream &OS) {
-  return new ScopInfoPrinterLegacyRegionPass(OS);
-}
-
-INITIALIZE_PASS_BEGIN(ScopInfoPrinterLegacyRegionPass, "polly-print-scops",
-                      "Polly - Print polyhedral description of Scops", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
-INITIALIZE_PASS_END(ScopInfoPrinterLegacyRegionPass, "polly-print-scops",
-                    "Polly - Print polyhedral description of Scops", false,
-                    false)
-
-//===----------------------------------------------------------------------===//
-
 ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
                    LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
                    AssumptionCache &AC, OptimizationRemarkEmitter &ORE)
-    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC), ORE(ORE) {
-  recompute();
-}
+    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC), ORE(ORE) {}
 
-void ScopInfo::recompute() {
-  RegionToScopMap.clear();
-  /// Create polyhedral description of scops for all the valid regions of a
-  /// function.
-  for (auto &It : SD) {
-    Region *R = const_cast<Region *>(It);
-    if (!SD.isMaxRegionInScop(*R))
-      continue;
+Scop *ScopInfo::getScop(const Region *R) {
+  auto &&[It, Inserted] = RegionToScopMap.try_emplace(R);
+  if (Inserted && SD.isMaxRegionInScop(*R)) {
+    ScopBuilder SB(const_cast<Region *>(R), AC, AA, DL, DT, LI, SD, SE, ORE);
+    It->second = SB.getScop();
+    Scop *S = It->second.get();
 
-    ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE, ORE);
-    std::unique_ptr<Scop> S = SB.getScop();
-    if (!S)
-      continue;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
-    ScopDetection::LoopStats Stats =
-        ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
-    updateLoopCountStatistic(Stats, S->getStatistics());
+    if (S) {
+      ScopDetection::LoopStats Stats =
+          ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
+      updateLoopCountStatistic(Stats, S->getStatistics());
+    }
 #endif
-    bool Inserted = RegionToScopMap.insert({R, std::move(S)}).second;
-    assert(Inserted && "Building Scop for the same region twice!");
-    (void)Inserted;
-  }
-}
 
-bool ScopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
-                          FunctionAnalysisManager::Invalidator &Inv) {
-  // Check whether the analysis, all analyses on functions have been preserved
-  // or anything we're holding references to is being invalidated
-  auto PAC = PA.getChecker<ScopInfoAnalysis>();
-  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
-         Inv.invalidate<ScopAnalysis>(F, PA) ||
-         Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
-         Inv.invalidate<LoopAnalysis>(F, PA) ||
-         Inv.invalidate<AAManager>(F, PA) ||
-         Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
-         Inv.invalidate<AssumptionAnalysis>(F, PA);
-}
-
-AnalysisKey ScopInfoAnalysis::Key;
-
-ScopInfoAnalysis::Result ScopInfoAnalysis::run(Function &F,
-                                               FunctionAnalysisManager &FAM) {
-  auto &SD = FAM.getResult<ScopAnalysis>(F);
-  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
-  auto &LI = FAM.getResult<LoopAnalysis>(F);
-  auto &AA = FAM.getResult<AAManager>(F);
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  auto &AC = FAM.getResult<AssumptionAnalysis>(F);
-  auto &DL = F.getParent()->getDataLayout();
-  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  return {DL, SD, SE, LI, AA, DT, AC, ORE};
-}
-
-PreservedAnalyses ScopInfoPrinterPass::run(Function &F,
-                                           FunctionAnalysisManager &FAM) {
-  auto &SI = FAM.getResult<ScopInfoAnalysis>(F);
-  // Since the legacy PM processes Scops in bottom up, we print them in reverse
-  // order here to keep the output persistent
-  for (auto &It : reverse(SI)) {
-    if (It.second)
-      It.second->print(Stream, PollyPrintInstructions);
-    else
-      Stream << "Invalid Scop!\n";
-  }
-  return PreservedAnalyses::all();
-}
-
-void ScopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<RegionInfoPass>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
-  AU.addRequiredTransitive<ScopDetectionWrapperPass>();
-  AU.addRequired<AAResultsWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.setPreservesAll();
-}
-
-bool ScopInfoWrapperPass::runOnFunction(Function &F) {
-  auto &SD = getAnalysis<ScopDetectionWrapperPass>().getSD();
-  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto const &DL = F.getParent()->getDataLayout();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-  Result.reset(new ScopInfo{DL, SD, SE, LI, AA, DT, AC, ORE});
-  return false;
-}
-
-void ScopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
-  for (auto &It : *Result) {
-    if (It.second)
-      It.second->print(OS, PollyPrintInstructions);
-    else
-      OS << "Invalid Scop!\n";
-  }
-}
-
-char ScopInfoWrapperPass::ID = 0;
-
-Pass *polly::createScopInfoWrapperPassPass() {
-  return new ScopInfoWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(
-    ScopInfoWrapperPass, "polly-function-scops",
-    "Polly - Create polyhedral description of all Scops of a function", false,
-    false);
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(ScopDetectionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_END(
-    ScopInfoWrapperPass, "polly-function-scops",
-    "Polly - Create polyhedral description of all Scops of a function", false,
-    false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from ScopInfoWrapperPass.
-class ScopInfoPrinterLegacyFunctionPass final : public FunctionPass {
-public:
-  static char ID;
-
-  ScopInfoPrinterLegacyFunctionPass()
-      : ScopInfoPrinterLegacyFunctionPass(outs()) {}
-  explicit ScopInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS)
-      : FunctionPass(ID), OS(OS) {}
-
-  bool runOnFunction(Function &F) override {
-    ScopInfoWrapperPass &P = getAnalysis<ScopInfoWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for function '"
-       << F.getName() << "':\n";
-    P.print(OS);
-
-    return false;
+    return S;
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<ScopInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char ScopInfoPrinterLegacyFunctionPass::ID = 0;
-} // namespace
-
-Pass *polly::createScopInfoPrinterLegacyFunctionPass(raw_ostream &OS) {
-  return new ScopInfoPrinterLegacyFunctionPass(OS);
+  return It->second.get();
 }
 
-INITIALIZE_PASS_BEGIN(
-    ScopInfoPrinterLegacyFunctionPass, "polly-print-function-scops",
-    "Polly - Print polyhedral description of all Scops of a function", false,
-    false);
-INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass);
-INITIALIZE_PASS_END(
-    ScopInfoPrinterLegacyFunctionPass, "polly-print-function-scops",
-    "Polly - Print polyhedral description of all Scops of a function", false,
-    false)
+void ScopInfo::invalidate() {
+  // Recompute all SCoPs on-demand
+  RegionToScopMap.clear();
+}

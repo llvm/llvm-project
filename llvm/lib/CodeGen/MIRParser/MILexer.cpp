@@ -212,7 +212,12 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("reassoc", MIToken::kw_reassoc)
       .Case("nuw", MIToken::kw_nuw)
       .Case("nsw", MIToken::kw_nsw)
+      .Case("nusw", MIToken::kw_nusw)
       .Case("exact", MIToken::kw_exact)
+      .Case("nneg", MIToken::kw_nneg)
+      .Case("disjoint", MIToken::kw_disjoint)
+      .Case("samesign", MIToken::kw_samesign)
+      .Case("inbounds", MIToken::kw_inbounds)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("unpredictable", MIToken::kw_unpredictable)
       .Case("debug-location", MIToken::kw_debug_location)
@@ -235,10 +240,18 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("window_save", MIToken::kw_cfi_window_save)
       .Case("negate_ra_sign_state",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state)
+      .Case("negate_ra_sign_state_with_pc",
+            MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc)
+      .Case("llvm_register_pair", MIToken::kw_cfi_llvm_register_pair)
+      .Case("llvm_vector_registers", MIToken::kw_cfi_llvm_vector_registers)
+      .Case("llvm_vector_offset", MIToken::kw_cfi_llvm_vector_offset)
+      .Case("llvm_vector_register_mask",
+            MIToken::kw_cfi_llvm_vector_register_mask)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
       .Case("half", MIToken::kw_half)
+      .Case("bfloat", MIToken::kw_bfloat)
       .Case("float", MIToken::kw_float)
       .Case("double", MIToken::kw_double)
       .Case("x86_fp80", MIToken::kw_x86_fp80)
@@ -258,10 +271,12 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("constant-pool", MIToken::kw_constant_pool)
       .Case("call-entry", MIToken::kw_call_entry)
       .Case("custom", MIToken::kw_custom)
+      .Case("lanemask", MIToken::kw_lanemask)
       .Case("liveout", MIToken::kw_liveout)
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("inlineasm-br-indirect-target",
             MIToken::kw_inlineasm_br_indirect_target)
+      .Case("ehscope-entry", MIToken::kw_ehscope_entry)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
@@ -273,6 +288,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("heap-alloc-marker", MIToken::kw_heap_alloc_marker)
       .Case("pcsections", MIToken::kw_pcsections)
       .Case("cfi-type", MIToken::kw_cfi_type)
+      .Case("deactivation-symbol", MIToken::kw_deactivation_symbol)
       .Case("bbsections", MIToken::kw_bbsections)
       .Case("bb_id", MIToken::kw_bb_id)
       .Case("unknown-size", MIToken::kw_unknown_size)
@@ -283,6 +299,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_machine_block_address_taken)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("noconvergent", MIToken::kw_noconvergent)
+      .Case("mmra", MIToken::kw_mmra)
       .Default(MIToken::Identifier);
 }
 
@@ -300,8 +317,8 @@ static Cursor maybeLexIdentifier(Cursor C, MIToken &Token) {
 
 static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
                                         ErrorCallbackType ErrorCallback) {
-  bool IsReference = C.remaining().startswith("%bb.");
-  if (!IsReference && !C.remaining().startswith("bb."))
+  bool IsReference = C.remaining().starts_with("%bb.");
+  if (!IsReference && !C.remaining().starts_with("bb."))
     return std::nullopt;
   auto Range = C;
   unsigned PrefixLength = IsReference ? 4 : 3;
@@ -335,7 +352,7 @@ static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
 
 static Cursor maybeLexIndex(Cursor C, MIToken &Token, StringRef Rule,
                             MIToken::TokenKind Kind) {
-  if (!C.remaining().startswith(Rule) || !isdigit(C.peek(Rule.size())))
+  if (!C.remaining().starts_with(Rule) || !isdigit(C.peek(Rule.size())))
     return std::nullopt;
   auto Range = C;
   C.advance(Rule.size());
@@ -348,7 +365,7 @@ static Cursor maybeLexIndex(Cursor C, MIToken &Token, StringRef Rule,
 
 static Cursor maybeLexIndexAndName(Cursor C, MIToken &Token, StringRef Rule,
                                    MIToken::TokenKind Kind) {
-  if (!C.remaining().startswith(Rule) || !isdigit(C.peek(Rule.size())))
+  if (!C.remaining().starts_with(Rule) || !isdigit(C.peek(Rule.size())))
     return std::nullopt;
   auto Range = C;
   C.advance(Rule.size());
@@ -388,7 +405,7 @@ static Cursor maybeLexConstantPoolItem(Cursor C, MIToken &Token) {
 static Cursor maybeLexSubRegisterIndex(Cursor C, MIToken &Token,
                                        ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "%subreg.";
-  if (!C.remaining().startswith(Rule))
+  if (!C.remaining().starts_with(Rule))
     return std::nullopt;
   return lexName(C, Token, MIToken::SubRegisterIndex, Rule.size(),
                  ErrorCallback);
@@ -397,7 +414,7 @@ static Cursor maybeLexSubRegisterIndex(Cursor C, MIToken &Token,
 static Cursor maybeLexIRBlock(Cursor C, MIToken &Token,
                               ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "%ir-block.";
-  if (!C.remaining().startswith(Rule))
+  if (!C.remaining().starts_with(Rule))
     return std::nullopt;
   if (isdigit(C.peek(Rule.size())))
     return maybeLexIndex(C, Token, Rule, MIToken::IRBlock);
@@ -407,7 +424,7 @@ static Cursor maybeLexIRBlock(Cursor C, MIToken &Token,
 static Cursor maybeLexIRValue(Cursor C, MIToken &Token,
                               ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "%ir.";
-  if (!C.remaining().startswith(Rule))
+  if (!C.remaining().starts_with(Rule))
     return std::nullopt;
   if (isdigit(C.peek(Rule.size())))
     return maybeLexIndex(C, Token, Rule, MIToken::IRValue);
@@ -501,7 +518,7 @@ static Cursor maybeLexExternalSymbol(Cursor C, MIToken &Token,
 static Cursor maybeLexMCSymbol(Cursor C, MIToken &Token,
                                ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "<mcsymbol ";
-  if (!C.remaining().startswith(Rule))
+  if (!C.remaining().starts_with(Rule))
     return std::nullopt;
   auto Start = C;
   C.advance(Rule.size());
@@ -587,6 +604,22 @@ static Cursor maybeLexHexadecimalLiteral(Cursor C, MIToken &Token) {
   return C;
 }
 
+static Cursor maybeLexFloatHexBits(Cursor C, MIToken &Token) {
+  if (C.peek() != 'f')
+    return std::nullopt;
+  if (C.peek(1) != '0' || (C.peek(2) != 'x' && C.peek(2) != 'X'))
+    return std::nullopt;
+  Cursor Range = C;
+  C.advance(3);
+  while (isxdigit(C.peek()))
+    C.advance();
+  StringRef StrVal = Range.upto(C);
+  if (StrVal.size() <= 3)
+    return std::nullopt;
+  Token.reset(MIToken::FloatingPointLiteral, Range.upto(C));
+  return C;
+}
+
 static Cursor maybeLexNumericalLiteral(Cursor C, MIToken &Token) {
   if (!isdigit(C.peek()) && (C.peek() != '-' || !isdigit(C.peek(1))))
     return std::nullopt;
@@ -609,6 +642,7 @@ static MIToken::TokenKind getMetadataKeywordKind(StringRef Identifier) {
       .Case("!range", MIToken::md_range)
       .Case("!DIExpression", MIToken::md_diexpr)
       .Case("!DILocation", MIToken::md_dilocation)
+      .Case("!noalias.addrspace", MIToken::md_noalias_addrspace)
       .Default(MIToken::Error);
 }
 
@@ -719,9 +753,11 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
     return C.remaining();
   }
 
-  C = skipMachineOperandComment(C);
+  C = skipWhitespace(skipMachineOperandComment(C));
 
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
+    return R.remaining();
+  if (Cursor R = maybeLexFloatHexBits(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexIdentifier(C, Token))
     return R.remaining();

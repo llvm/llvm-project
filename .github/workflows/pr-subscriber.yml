@@ -1,72 +1,52 @@
 name: PR Subscriber
 
 on:
-  workflow_run:
-    workflows: ["PR Receive Label"]
+  pull_request_target:
     types:
-      - completed
+      - labeled
 
 permissions:
-  actions: read
   contents: read
 
 jobs:
   auto-subscribe:
-    runs-on: ubuntu-latest
-    if: >
-      github.repository == 'llvm/llvm-project' &&
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'success'
+    # See https://github.blog/changelog/2025-11-07-actions-pull_request_target-and-environment-branch-protections-changes/
+    environment:
+      name: main-branch-only
+      deployment: false
+    runs-on: ubuntu-24.04
+    if: github.repository == 'llvm/llvm-project'
     steps:
-      - name: Setup Automation Script
-        run: |
-          curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/github-automation.py
-          curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
-          curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/.github/workflows/pr-subscriber-wait.py
-          chmod a+x github-automation.py
-          pip install -r requirements.txt
-
-      - name: 'Wait for other actions'
-        # We can't use the concurrency tag for these jobs, because it will
-        # cancel pending jobs if another job is running.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python3 pr-subscriber-wait.py
-
-
-      # From: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
-      # Updated version here: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
-      - name: 'Download artifact'
-        uses: actions/github-script@v6
+      - name: Checkout Automation Script
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          script: |
-            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               run_id: context.payload.workflow_run.id
-            });
-            const matchArtifact = artifacts.data.artifacts.find((artifact) =>
-              artifact.name === 'pr'
-            );
-            const download = await github.rest.actions.downloadArtifact({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               artifact_id: matchArtifact.id,
-               archive_format: 'zip'
-            });
-            const { writeFileSync } = require('node:fs');
-            writeFileSync('${{ github.workspace }}/pr.zip', Buffer.from(download.data));
+          persist-credentials: false
+          sparse-checkout: llvm/utils/git/
+          ref: main
 
-      - run: unzip pr.zip
+      - name: Setup Automation Script
+        working-directory: ./llvm/utils/git/
+        run: |
+          pip install --require-hashes -r requirements.txt
+
+      - id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        with:
+          client-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read
+          permission-contents: read
+          permission-pull-requests: write
 
       - name: Update watchers
-        # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+        working-directory: ./llvm/utils/git/
+        env:
+          LABEL_NAME: ${{ github.event.label.name }}
+          PR_SUBSCRIBER_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          PR_NUMBER=$(cat NR)
-          LABEL_NAME=$(cat LABEL)
-          ./github-automation.py \
-            --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
+          python3 ./github-automation.py \
+            --token "$PR_SUBSCRIBER_TOKEN" \
             pr-subscriber \
-            --issue-number "$PR_NUMBER" \
+            --issue-number "${{ github.event.number }}" \
             --label-name "$LABEL_NAME"

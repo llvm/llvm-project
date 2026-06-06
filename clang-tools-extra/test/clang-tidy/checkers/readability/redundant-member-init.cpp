@@ -146,7 +146,7 @@ WithCopyConstructor2::WithCopyConstructor2(const WithCopyConstructor2& other)
 {}
 // No warning in copy constructor about T since IgnoreBaseInCopyConstructors=1
 // CHECK-MESSAGES: :[[@LINE-3]]:10: warning: initializer for member 'a' is redundant
-// CHECK-FIXES: {{^}}  : T() {{$}}
+// CHECK-FIXES: : T()
 // CHECK-NEXT: {}
 
 // Initializer not written
@@ -249,4 +249,114 @@ struct NF15 {
     S s1;
     S s2;
   };
+};
+
+// Direct in-class initialization with default constructor
+struct D1 {
+  S f1 {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: initializer for member 'f1' is redundant
+  // CHECK-FIXES: S f1;
+};
+
+// Direct in-class initialization with constructor with default argument
+struct D2 {
+  T f2  {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: initializer for member 'f2' is redundant
+  // CHECK-FIXES: T f2;
+};
+
+// Direct in-class initialization with default constructor (assign)
+struct D3 {
+  S f3 = {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: initializer for member 'f3' is redundant
+  // CHECK-FIXES: S f3;
+};
+
+// Direct in-class initialization with constructor with default argument (assign)
+struct D4 {
+  T f4 = {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: initializer for member 'f4' is redundant
+  // CHECK-FIXES: T f4;
+};
+
+// Templated class independent type
+template <class V>
+struct D5 {
+  S f5 /*comment*/ = S();
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: initializer for member 'f5' is redundant
+  // CHECK-FIXES: S f5 /*comment*/;
+};
+D5<int> d5i;
+D5<S> d5s;
+
+struct D6 {
+  UsesCleanup uc2{};
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: initializer for member 'uc2' is redundant
+  // CHECK-FIXES: UsesCleanup uc2;
+};
+
+template<typename V>
+struct D7 {
+  V f7;
+};
+
+D7<int> d7i;
+D7<S> d7s;
+
+struct SS {
+  SS() = default;
+  SS(S s) : s(s) {}
+
+  S s;
+};
+
+struct D8 {
+  SS ss = S();
+};
+
+struct D9 {
+  D9() : ss(S()) {}
+  SS ss;
+};
+
+#define EMPTY
+#define BRACES {}
+
+struct WithMacro1 {
+  S s BRACES;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: initializer for member 's' is redundant
+};
+
+struct WithoutMacroCtor {
+  WithoutMacroCtor() : s(EMPTY) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: initializer for member 's' is redundant
+  // CHECK-FIXES: WithoutMacroCtor()  {};
+  S s;
+};
+
+struct WithBlockCommentInInit {
+  S s {/* default-construct */};
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: initializer for member 's' is redundant
+  // CHECK-FIXES: S s;
+};
+
+#define CTOR_INIT s(S())
+struct WithMacroCtorInit {
+  WithMacroCtorInit() : CTOR_INIT {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: initializer for member 's' is redundant
+  S s;
+};
+
+struct WithMacroBracesInCtorInit {
+  WithMacroBracesInCtorInit() : s BRACES {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: initializer for member 's' is redundant
+  // CHECK-FIXES: WithMacroBracesInCtorInit()  {}
+  S s;
+};
+
+#define MEMBER_NAME s
+struct WithMacroMemberName {
+  WithMacroMemberName() : MEMBER_NAME(S()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: initializer for member 's' is redundant
+  S s;
 };

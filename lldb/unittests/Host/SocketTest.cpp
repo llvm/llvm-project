@@ -9,9 +9,20 @@
 #include "TestingSupport/Host/SocketTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <chrono>
+#if LLDB_ENABLE_POSIX
+#include <cerrno>
+#include <csignal>
+#endif
+#if __linux__
+#include <lldb/Host/linux/AbstractSocket.h>
+#endif
 
 using namespace lldb_private;
 
@@ -32,27 +43,30 @@ protected:
   }
 };
 
-TEST_P(SocketTest, DecodeHostAndPort) {
+TEST_F(SocketTest, DecodeHostAndPort) {
   EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("localhost:1138"),
                        llvm::HasValue(Socket::HostAndPort{"localhost", 1138}));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:65536"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:65536'"));
+          "invalid host:port specification: 'google.com:65536', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:-1138"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:-1138'"));
+          "invalid host:port specification: 'google.com:-1138', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("google.com:65536"),
       llvm::FailedWithMessage(
-          "invalid host:port specification: 'google.com:65536'"));
-
-  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("12345"),
-                       llvm::HasValue(Socket::HostAndPort{"", 12345}));
+          "invalid host:port specification: 'google.com:65536', both IPv4 "
+          "(e.g., localhost:8080) or IPv6 (e.g, [2001:db8::1]:8080) formats "
+          "are supported"));
 
   EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:0"),
                        llvm::HasValue(Socket::HostAndPort{"*", 0}));
@@ -60,19 +74,61 @@ TEST_P(SocketTest, DecodeHostAndPort) {
   EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:65535"),
                        llvm::HasValue(Socket::HostAndPort{"*", 65535}));
 
-  EXPECT_THAT_EXPECTED(
-      Socket::DecodeHostAndPort("[::1]:12345"),
-      llvm::HasValue(Socket::HostAndPort{"::1", 12345}));
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("[::1]:12345"),
+                       llvm::HasValue(Socket::HostAndPort{"::1", 12345}));
 
   EXPECT_THAT_EXPECTED(
       Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345"),
       llvm::HasValue(Socket::HostAndPort{"abcd:12fg:AF58::1", 12345}));
 }
 
+TEST_F(SocketTest, CreatePair) {
+  std::vector<std::optional<Socket::SocketProtocol>> functional_protocols = {
+      std::nullopt,
+  };
+  if (HostSupportsIPv4() || HostSupportsIPv6())
+    functional_protocols.push_back(Socket::ProtocolTcp);
 #if LLDB_ENABLE_POSIX
-TEST_P(SocketTest, DomainListenConnectAccept) {
+  if (HostSupportsDomainSockets()) {
+    functional_protocols.push_back(Socket::ProtocolUnixDomain);
+    functional_protocols.push_back(Socket::ProtocolUnixAbstract);
+  }
+#endif
+
+  for (auto p : functional_protocols) {
+    auto expected_socket_pair = Socket::CreatePair(p);
+    ASSERT_THAT_EXPECTED(expected_socket_pair, llvm::Succeeded());
+    Socket &a = *expected_socket_pair->first;
+    Socket &b = *expected_socket_pair->second;
+    size_t num_bytes = 1;
+    ASSERT_THAT_ERROR(a.Write("a", num_bytes).takeError(), llvm::Succeeded());
+    ASSERT_EQ(num_bytes, 1U);
+    char c;
+    ASSERT_THAT_ERROR(b.Read(&c, num_bytes).takeError(), llvm::Succeeded());
+    ASSERT_EQ(num_bytes, 1U);
+    ASSERT_EQ(c, 'a');
+  }
+
+  std::vector<Socket::SocketProtocol> erroring_protocols = {
+#if !LLDB_ENABLE_POSIX
+      Socket::ProtocolUnixDomain,
+      Socket::ProtocolUnixAbstract,
+#endif
+  };
+  for (auto p : erroring_protocols) {
+    ASSERT_THAT_EXPECTED(Socket::CreatePair(p),
+                         llvm::FailedWithMessage("unsupported protocol"));
+  }
+}
+
+#if LLDB_ENABLE_POSIX
+TEST_F(SocketTest, DomainListenConnectAccept) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> Path;
-  std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(Path, "test");
 
@@ -84,6 +140,71 @@ TEST_P(SocketTest, DomainListenConnectAccept) {
   std::unique_ptr<DomainSocket> socket_b_up;
   CreateDomainConnectedSockets(Path, &socket_a_up, &socket_b_up);
 }
+
+TEST_F(SocketTest, DomainListenGetListeningConnectionURI) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
+  llvm::SmallString<64> Path;
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
+  ASSERT_FALSE(EC);
+  llvm::sys::path::append(Path, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (Path.size() > 107u)
+    return;
+
+  auto listen_socket_up = std::make_unique<DomainSocket>(
+      /*should_close=*/true);
+  Status error = listen_socket_up->Listen(Path, 5);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(listen_socket_up->IsValid());
+
+  ASSERT_THAT(
+      listen_socket_up->GetListeningConnectionURI(),
+      testing::ElementsAre(llvm::formatv("unix-connect://{0}", Path).str()));
+}
+
+TEST_F(SocketTest, DomainMainLoopAccept) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
+  llvm::SmallString<64> Path;
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
+  ASSERT_FALSE(EC);
+  llvm::sys::path::append(Path, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (Path.size() > 107u)
+    return;
+
+  auto listen_socket_up = std::make_unique<DomainSocket>(
+      /*should_close=*/true);
+  Status error = listen_socket_up->Listen(Path, 5);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(listen_socket_up->IsValid());
+
+  MainLoop loop;
+  std::unique_ptr<Socket> accepted_socket_up;
+  auto expected_handles = listen_socket_up->Accept(
+      loop, [&accepted_socket_up, &loop](std::unique_ptr<Socket> sock_up) {
+        accepted_socket_up = std::move(sock_up);
+        loop.RequestTermination();
+      });
+  ASSERT_THAT_EXPECTED(expected_handles, llvm::Succeeded());
+
+  auto connect_socket_up = std::make_unique<DomainSocket>(
+      /*should_close=*/true);
+  ASSERT_THAT_ERROR(connect_socket_up->Connect(Path).ToError(),
+                    llvm::Succeeded());
+  ASSERT_TRUE(connect_socket_up->IsValid());
+
+  loop.Run();
+  ASSERT_TRUE(accepted_socket_up);
+  ASSERT_TRUE(accepted_socket_up->IsValid());
+}
 #endif
 
 TEST_P(SocketTest, TCPListen0ConnectAccept) {
@@ -93,6 +214,59 @@ TEST_P(SocketTest, TCPListen0ConnectAccept) {
   std::unique_ptr<TCPSocket> socket_b_up;
   CreateTCPConnectedSockets(GetParam().localhost_ip, &socket_a_up,
                             &socket_b_up);
+}
+
+TEST_P(SocketTest, TCPAcceptTimeout) {
+  if (!HostSupportsProtocol())
+    return;
+
+  auto listen_socket_up = std::make_unique<TCPSocket>(true);
+  Status error = listen_socket_up->Listen(
+      llvm::formatv("[{0}]:0", GetParam().localhost_ip).str(), 5);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(listen_socket_up->IsValid());
+
+  Socket *socket;
+  ASSERT_THAT_ERROR(
+      listen_socket_up->Accept(std::chrono::milliseconds(10), socket)
+          .takeError(),
+      llvm::Failed<llvm::ErrorInfoBase>(
+          testing::Property(&llvm::ErrorInfoBase::convertToErrorCode,
+                            std::make_error_code(std::errc::timed_out))));
+}
+
+TEST_P(SocketTest, TCPMainLoopAccept) {
+  if (!HostSupportsProtocol())
+    return;
+
+  auto listen_socket_up = std::make_unique<TCPSocket>(true);
+  Status error = listen_socket_up->Listen(
+      llvm::formatv("[{0}]:0", GetParam().localhost_ip).str(), 5);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(listen_socket_up->IsValid());
+
+  MainLoop loop;
+  std::unique_ptr<Socket> accepted_socket_up;
+  auto expected_handles = listen_socket_up->Accept(
+      loop, [&accepted_socket_up, &loop](std::unique_ptr<Socket> sock_up) {
+        accepted_socket_up = std::move(sock_up);
+        loop.RequestTermination();
+      });
+  ASSERT_THAT_EXPECTED(expected_handles, llvm::Succeeded());
+
+  auto connect_socket_up = std::make_unique<TCPSocket>(true);
+  ASSERT_THAT_ERROR(
+      connect_socket_up
+          ->Connect(llvm::formatv("[{0}]:{1}", GetParam().localhost_ip,
+                                  listen_socket_up->GetLocalPortNumber())
+                        .str())
+          .ToError(),
+      llvm::Succeeded());
+  ASSERT_TRUE(connect_socket_up->IsValid());
+
+  loop.Run();
+  ASSERT_TRUE(accepted_socket_up);
+  ASSERT_TRUE(accepted_socket_up->IsValid());
 }
 
 TEST_P(SocketTest, TCPGetAddress) {
@@ -120,7 +294,7 @@ TEST_P(SocketTest, UDPConnect) {
   if (!HostSupportsIPv4())
     return;
   llvm::Expected<std::unique_ptr<UDPSocket>> socket =
-      UDPSocket::Connect("127.0.0.1:0", /*child_processes_inherit=*/false);
+      UDPSocket::CreateConnected("127.0.0.1:0");
 
   ASSERT_THAT_EXPECTED(socket, llvm::Succeeded());
   EXPECT_TRUE(socket.get()->IsValid());
@@ -130,10 +304,46 @@ TEST_P(SocketTest, TCPListen0GetPort) {
   if (!HostSupportsIPv4())
     return;
   llvm::Expected<std::unique_ptr<TCPSocket>> sock =
-      Socket::TcpListen("10.10.12.3:0", false);
+      Socket::TcpListen("10.10.12.3:0", 5);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_TRUE(sock.get()->IsValid());
   EXPECT_NE(sock.get()->GetLocalPortNumber(), 0);
+}
+
+TEST_P(SocketTest, TCPListen0GetListeningConnectionURI) {
+  if (!HostSupportsProtocol())
+    return;
+
+  std::string addr = llvm::formatv("[{0}]:0", GetParam().localhost_ip).str();
+  llvm::Expected<std::unique_ptr<TCPSocket>> sock = Socket::TcpListen(addr);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_TRUE(sock.get()->IsValid());
+
+  EXPECT_THAT(
+      sock.get()->GetListeningConnectionURI(),
+      testing::ElementsAre(llvm::formatv("connection://[{0}]:{1}",
+                                         GetParam().localhost_ip,
+                                         sock->get()->GetLocalPortNumber())
+                               .str()));
+}
+
+TEST_F(SocketTest, TCPListen0MultiListenerGetListeningConnectionURI) {
+  if (!HostSupportsLocalhostToIPv4() || !HostSupportsLocalhostToIPv6())
+    return;
+
+  llvm::Expected<std::unique_ptr<TCPSocket>> sock =
+      Socket::TcpListen("localhost:0", 5);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_TRUE(sock.get()->IsValid());
+
+  EXPECT_THAT(sock.get()->GetListeningConnectionURI(),
+              testing::UnorderedElementsAre(
+                  llvm::formatv("connection://[::1]:{0}",
+                                sock->get()->GetLocalPortNumber())
+                      .str(),
+                  llvm::formatv("connection://[127.0.0.1]:{0}",
+                                sock->get()->GetLocalPortNumber())
+                      .str()));
 }
 
 TEST_P(SocketTest, TCPGetConnectURI) {
@@ -155,7 +365,7 @@ TEST_P(SocketTest, UDPGetConnectURI) {
   if (!HostSupportsIPv4())
     return;
   llvm::Expected<std::unique_ptr<UDPSocket>> socket =
-      UDPSocket::Connect("127.0.0.1:0", /*child_processes_inherit=*/false);
+      UDPSocket::CreateConnected("127.0.0.1:0");
   ASSERT_THAT_EXPECTED(socket, llvm::Succeeded());
 
   std::string uri = socket.get()->GetRemoteConnectionURI();
@@ -163,10 +373,13 @@ TEST_P(SocketTest, UDPGetConnectURI) {
 }
 
 #if LLDB_ENABLE_POSIX
-TEST_P(SocketTest, DomainGetConnectURI) {
+TEST_F(SocketTest, DomainGetConnectURI) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> domain_path;
-  std::error_code EC =
-      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", domain_path);
+  std::error_code EC = llvm::sys::fs::createUniqueDirectory(
+      "DomainListenConnectAccept", domain_path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(domain_path, "test");
 
@@ -184,6 +397,86 @@ TEST_P(SocketTest, DomainGetConnectURI) {
 
   EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }
+
+TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
+  // Generate a name for the domain socket.
+  llvm::SmallString<64> name;
+  std::error_code EC = llvm::sys::fs::createUniqueDirectory(
+      "DomainSocketFromBoundNativeSocket", name);
+  ASSERT_FALSE(EC);
+  llvm::sys::path::append(name, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (name.size() > 107u)
+    GTEST_SKIP() << "$TMPDIR is too long to hold a domain socket";
+
+  DomainSocket socket(true);
+  Status error = socket.Listen(name, /*backlog=*/10);
+  ASSERT_THAT_ERROR(error.takeError(), llvm::Succeeded());
+  NativeSocket native_socket = socket.GetNativeSocket();
+
+  llvm::Expected<std::unique_ptr<DomainSocket>> sock =
+      DomainSocket::FromBoundNativeSocket(native_socket,
+                                          /*should_close=*/false);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_EQ(Socket::ProtocolUnixDomain, sock->get()->GetSocketProtocol());
+}
+#endif
+
+#if __linux__
+TEST_F(SocketTest, AbstractSocketFromBoundNativeSocket) {
+  // Generate a name for the abstract socket.
+  llvm::SmallString<100> name;
+  llvm::sys::fs::createUniquePath("AbstractSocketFromBoundNativeSocket-%%%%%%",
+                                  name, true);
+  llvm::sys::path::append(name, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (name.size() > 107u)
+    GTEST_SKIP() << "$TMPDIR is too long to hold a domain socket";
+
+  AbstractSocket socket;
+  Status error = socket.Listen(name, /*backlog=*/10);
+  ASSERT_THAT_ERROR(error.takeError(), llvm::Succeeded());
+  NativeSocket native_socket = socket.GetNativeSocket();
+
+  llvm::Expected<std::unique_ptr<DomainSocket>> sock =
+      DomainSocket::FromBoundNativeSocket(native_socket,
+                                          /*should_close=*/false);
+  ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
+  ASSERT_EQ(Socket::ProtocolUnixAbstract, sock->get()->GetSocketProtocol());
+}
+#endif
+
+#if LLDB_ENABLE_POSIX
+TEST_F(SocketTest, DontReceiveSIGPIPE) {
+  static volatile std::sig_atomic_t sigpipe_received;
+  sigpipe_received = 0;
+
+  struct sigaction new_action = {};
+  struct sigaction old_action = {};
+  new_action.sa_handler = [](int) { sigpipe_received = 1; };
+  sigemptyset(&new_action.sa_mask);
+  ASSERT_EQ(0, sigaction(SIGPIPE, &new_action, &old_action));
+  llvm::scope_exit restore_sigpipe(
+      [&] { sigaction(SIGPIPE, &old_action, nullptr); });
+
+  auto pair = Socket::CreatePair();
+  ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+  Socket &reader = *pair->first;
+  Socket &writer = *pair->second;
+
+  ASSERT_THAT_ERROR(reader.Close().takeError(), llvm::Succeeded());
+
+  size_t num_bytes = 1;
+  Status err = writer.Write("x", num_bytes);
+  EXPECT_TRUE(err.Fail());
+  EXPECT_EQ(EPIPE, static_cast<int>(err.GetError()));
+  EXPECT_EQ(0, sigpipe_received);
+}
 #endif
 
 INSTANTIATE_TEST_SUITE_P(
@@ -191,7 +484,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(SocketTestParams{/*is_ipv6=*/false,
                                      /*localhost_ip=*/"127.0.0.1"},
                     SocketTestParams{/*is_ipv6=*/true, /*localhost_ip=*/"::1"}),
-    // Prints "SocketTests/SocketTest.DecodeHostAndPort/ipv4" etc. in test logs.
+    // Prints "SocketTests/SocketTest.TCPGetAddress/ipv4" etc. in test logs.
     [](const testing::TestParamInfo<SocketTestParams> &info) {
       return info.param.is_ipv6 ? "ipv6" : "ipv4";
     });

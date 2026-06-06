@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
+
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
+#include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -96,6 +98,47 @@ void ErrorNewDeleteTypeMismatch::Print() {
   Report(
       "HINT: if you don't care about these errors you may set "
       "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
+}
+
+void ErrorFreeSizeMismatch::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: %s on %p in thread %s:\n",
+         scariness.GetDescription(), (void*)addr_description.addr,
+         AsanThreadIdAndName(tid).c_str());
+  Printf("%s  object passed to %s has wrong size or alignment:\n", d.Default(),
+         (isFreeAlignedSized() ? "free_aligned_sized" : "free_sized"));
+  if (delete_size != 0) {
+    Printf(
+        "  size of the allocation:   %zd bytes;\n"
+        "  size of the deallocation: %zd bytes.\n",
+        addr_description.chunk_access.chunk_size, delete_size);
+  }
+  const uptr user_alignment =
+      addr_description.chunk_access.user_requested_alignment;
+  if (isFreeAlignedSized() && delete_alignment != user_alignment) {
+    char user_alignment_str[32];
+    char delete_alignment_str[32];
+    internal_snprintf(user_alignment_str, sizeof(user_alignment_str),
+                      "%zd bytes", user_alignment);
+    internal_snprintf(delete_alignment_str, sizeof(delete_alignment_str),
+                      "%zd bytes", delete_alignment);
+    static const char* kDefaultAlignment = "default-aligned";
+    Printf(
+        "  alignment of the allocation:   %s;\n"
+        "  alignment of the deallocation: %s.\n",
+        user_alignment > 0 ? user_alignment_str : kDefaultAlignment,
+        delete_alignment > 0 ? delete_alignment_str : kDefaultAlignment);
+  }
+  CHECK_GT(free_stack->size, 0);
+  scariness.Print();
+  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
+  stack.Print();
+  addr_description.Print();
+  ReportErrorSummary(scariness.GetDescription(), &stack);
+  Report(
+      "HINT: if you don't care about these errors you may set "
+      "ASAN_OPTIONS=free_size_mismatch=0\n");
 }
 
 void ErrorFreeNotMalloced::Print() {
@@ -327,9 +370,6 @@ void ErrorBadParamsToAnnotateContiguousContainer::Print() {
       "      old_mid : %p\n"
       "      new_mid : %p\n",
       (void *)beg, (void *)end, (void *)old_mid, (void *)new_mid);
-  uptr granularity = ASAN_SHADOW_GRANULARITY;
-  if (!IsAligned(beg, granularity))
-    Report("ERROR: beg is not aligned by %zu\n", granularity);
   stack->Print();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
@@ -347,9 +387,6 @@ void ErrorBadParamsToAnnotateDoubleEndedContiguousContainer::Print() {
       (void *)storage_beg, (void *)storage_end, (void *)old_container_beg,
       (void *)old_container_end, (void *)new_container_beg,
       (void *)new_container_end);
-  uptr granularity = ASAN_SHADOW_GRANULARITY;
-  if (!IsAligned(storage_beg, granularity))
-    Report("ERROR: storage_beg is not aligned by %zu\n", granularity);
   stack->Print();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
@@ -362,8 +399,8 @@ void ErrorODRViolation::Print() {
   Printf("%s", d.Default());
   InternalScopedString g1_loc;
   InternalScopedString g2_loc;
-  PrintGlobalLocation(&g1_loc, global1);
-  PrintGlobalLocation(&g2_loc, global2);
+  PrintGlobalLocation(&g1_loc, global1, /*print_module_name=*/true);
+  PrintGlobalLocation(&g2_loc, global2, /*print_module_name=*/true);
   Printf("  [1] size=%zd '%s' %s\n", global1.size,
          MaybeDemangleGlobalName(global1.name), g1_loc.data());
   Printf("  [2] size=%zd '%s' %s\n", global2.size,
@@ -431,7 +468,8 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
       if (*shadow_addr == 0 && access_size > ASAN_SHADOW_GRANULARITY)
         shadow_addr++;
       // If we are in the partial right redzone, look at the next shadow byte.
-      if (*shadow_addr > 0 && *shadow_addr < 128) shadow_addr++;
+      if (*shadow_addr > 0 && *shadow_addr < 128 && shadow_addr[1] >= 128)
+        shadow_addr++;
       bool far_from_bounds = false;
       shadow_val = *shadow_addr;
       int bug_type_score = 0;
@@ -504,11 +542,15 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
 }
 
 static void PrintContainerOverflowHint() {
-  Printf("HINT: if you don't care about these errors you may set "
-         "ASAN_OPTIONS=detect_container_overflow=0.\n"
-         "If you suspect a false positive see also: "
-         "https://github.com/google/sanitizers/wiki/"
-         "AddressSanitizerContainerOverflow.\n");
+  Printf(
+      "HINT: if you don't care about these errors you may set "
+      "ASAN_OPTIONS=detect_container_overflow=0.\n"
+      "Or if supported by the container library, pass "
+      "-D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ to the compiler to disable "
+      " instrumentation.\n"
+      "If you suspect a false positive see also: "
+      "https://github.com/google/sanitizers/wiki/"
+      "AddressSanitizerContainerOverflow.\n");
 }
 
 static void PrintShadowByte(InternalScopedString *str, const char *before,
@@ -592,6 +634,36 @@ static void PrintShadowMemoryForAddress(uptr addr) {
   Printf("%s", str.data());
 }
 
+static void CheckPoisonRecords(uptr addr) {
+  Printf("\n");
+
+  if (flags()->poison_history_size <= 0) {
+    Printf(
+        "NOTE: the stack trace above identifies the code that *accessed* "
+        "the poisoned memory.\n");
+    Printf(
+        "HINT: To identify the code that *poisoned* the memory, try the "
+        "experimental setting ASAN_OPTIONS=poison_history_size=<size>.\n");
+    return;
+  }
+
+  PoisonRecord record;
+  bool is_full = false;
+  if (FindPoisonRecord(addr, record, is_full)) {
+    Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
+    StackTrace poison_stack = StackDepotGet(record.stack_id);
+    if (poison_stack.size > 0)
+      poison_stack.Print();
+  } else {
+    Printf("NOTE: no matching poison tracking record found.\n");
+    if (is_full) {
+      Printf(
+          "HINT: Try a larger value for "
+          "ASAN_OPTIONS=poison_history_size=<size>.\n");
+    }
+  }
+}
+
 void ErrorGeneric::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -615,6 +687,13 @@ void ErrorGeneric::Print() {
     PrintContainerOverflowHint();
   ReportErrorSummary(bug_descr, &stack);
   PrintShadowMemoryForAddress(addr);
+
+  // This is an experimental feature, hence we don't make a special handler.
+  if (shadow_val == kAsanUserPoisonedMemoryMagic ||
+      shadow_val == kAsanContiguousContainerOOBMagic ||
+      (shadow_val > 0 && shadow_val < ASAN_SHADOW_GRANULARITY)) {
+    CheckPoisonRecords(addr);
+  }
 }
 
 }  // namespace __asan

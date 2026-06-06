@@ -17,9 +17,10 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -100,6 +101,13 @@ std::string expectedResult(Annotations Test, llvm::StringRef NewName) {
     NextChar = R.End;
   }
   Result += Code.substr(NextChar);
+  return Result;
+}
+
+std::vector<SymbolRange> symbolRanges(llvm::ArrayRef<Range> Ranges) {
+  std::vector<SymbolRange> Result;
+  for (const auto &R : Ranges)
+    Result.emplace_back(R);
   return Result;
 }
 
@@ -207,7 +215,7 @@ TEST(RenameTest, WithinFileRename) {
         template<typename T>
         class Foo {
         public:
-          static T [[f^oo]]() {}
+          static T [[f^oo]]() { return T(); }
         };
 
         void bar() {
@@ -218,7 +226,7 @@ TEST(RenameTest, WithinFileRename) {
         template<typename T>
         class Foo {
         public:
-          T [[f^oo]]() {}
+          T [[f^oo]]() { return T(); }
         };
 
         void bar() {
@@ -820,7 +828,7 @@ TEST(RenameTest, WithinFileRename) {
 
       // Issue 170: Rename symbol introduced by UsingDecl
       R"cpp(
-        namespace ns { void [[f^oo]](); } 
+        namespace ns { void [[f^oo]](); }
 
         using ns::[[f^oo]];
 
@@ -854,6 +862,25 @@ TEST(RenameTest, WithinFileRename) {
 
         void func([[Fo^o]] *f) {}
       )cpp",
+
+      // rename with explicit object parameter
+      R"cpp(
+      struct Foo {
+        int [[memb^er]] {};
+        auto&& getter1(this auto&& self) {
+          auto local = [&] {
+            return self.[[memb^er]];
+          }();
+          return local + self.[[memb^er]];
+        }
+        auto&& getter2(this Foo&& self) {
+          return self.[[memb^er]];
+        }
+        int normal() {
+          return this->[[mem^ber]] + [[memb^er]];
+        }
+      };
+    )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -861,6 +888,7 @@ TEST(RenameTest, WithinFileRename) {
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-xobjective-c++");
+    TU.ExtraArgs.push_back("-std=c++23");
     auto AST = TU.build();
     auto Index = TU.index();
     for (const auto &RenamePos : Code.points()) {
@@ -872,6 +900,157 @@ TEST(RenameTest, WithinFileRename) {
       EXPECT_EQ(
           applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
           expectedResult(Code, NewName));
+    }
+  }
+}
+
+TEST(RenameTest, ObjCWithinFileRename) {
+  struct TestCase {
+    /// Annotated source code that should be renamed. Every point (indicated by
+    /// `^`) will be used as a rename location.
+    llvm::StringRef Input;
+    /// The new name that should be given to the rename locaitons.
+    llvm::StringRef NewName;
+    /// The expected rename source code or `nullopt` if we expect rename to
+    /// fail.
+    std::optional<llvm::StringRef> Expected;
+  };
+  TestCase Tests[] = {// Simple rename
+                      {
+                          // Input
+                          R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action w^ith:(int)value;
+        @end
+        @implementation Foo
+        - (int)performAc^tion:(int)action w^ith:(int)value {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action by:(int)value;
+        @end
+        @implementation Foo
+        - (int)performNewAction:(int)action by:(int)value {
+          return [self performNewAction:action by:value];
+        }
+        @end
+      )cpp",
+                      },
+                      // Rename selector with macro
+                      {
+                          // Input
+                          R"cpp(
+        #define mySelector - (int)performAction:(int)action with:(int)value
+        @interface Foo
+        ^mySelector;
+        @end
+        @implementation Foo
+        mySelector {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected error
+                          std::nullopt,
+                      },
+                      // Rename selector in macro definition
+                      {
+                          // Input
+                          R"cpp(
+        #define mySelector - (int)perform^Action:(int)action with:(int)value
+        @interface Foo
+        mySelector;
+        @end
+        @implementation Foo
+        mySelector {
+          return [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected error
+                          std::nullopt,
+                      },
+                      // Don't rename `@selector`
+                      // `@selector` is not tied to a single selector. Eg. there
+                      // might be multiple
+                      // classes in the codebase that implement that selector.
+                      // It's thus more like
+                      // a string literal and we shouldn't rename it.
+                      {
+                          // Input
+                          R"cpp(
+        @interface Foo
+        - (void)performA^ction:(int)action with:(int)value;
+        @end
+        @implementation Foo
+        - (void)performAction:(int)action with:(int)value {
+          SEL mySelector = @selector(performAction:with:);
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          R"cpp(
+        @interface Foo
+        - (void)performNewAction:(int)action by:(int)value;
+        @end
+        @implementation Foo
+        - (void)performNewAction:(int)action by:(int)value {
+          SEL mySelector = @selector(performAction:with:);
+        }
+        @end
+      )cpp",
+                      },
+                      // Fail if rename initiated inside @selector
+                      {
+                          // Input
+                          R"cpp(
+        @interface Foo
+        - (void)performAction:(int)action with:(int)value;
+        @end
+        @implementation Foo
+        - (void)performAction:(int)action with:(int)value {
+          SEL mySelector = @selector(perfo^rmAction:with:);
+        }
+        @end
+      )cpp",
+                          // New name
+                          "performNewAction:by:",
+                          // Expected
+                          std::nullopt,
+                      }};
+  for (TestCase T : Tests) {
+    SCOPED_TRACE(T.Input);
+    Annotations Code(T.Input);
+    auto TU = TestTU::withCode(Code.code());
+    TU.ExtraArgs.push_back("-xobjective-c");
+    auto AST = TU.build();
+    auto Index = TU.index();
+    for (const auto &RenamePos : Code.points()) {
+      auto RenameResult =
+          rename({RenamePos, T.NewName, AST, testPath(TU.Filename),
+                  getVFSFromAST(AST), Index.get()});
+      if (std::optional<StringRef> Expected = T.Expected) {
+        ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
+        ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
+        EXPECT_EQ(
+            applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
+            *Expected);
+      } else {
+        ASSERT_FALSE(bool(RenameResult));
+        consumeError(RenameResult.takeError());
+      }
     }
   }
 }
@@ -926,12 +1105,38 @@ TEST(RenameTest, Renameable) {
         void f(X x) {x+^+;})cpp",
           "no symbol", HeaderFile},
 
-      {R"cpp(// disallow rename on non-normal identifiers.
+      {R"cpp(
          @interface Foo {}
-         -(int) fo^o:(int)x; // Token is an identifier, but declaration name isn't a simple identifier.
+         - (int)[[fo^o]]:(int)x;
          @end
        )cpp",
-       "not a supported kind", HeaderFile},
+       nullptr, HeaderFile, "newName:"},
+      {R"cpp(//disallow as : count must match
+         @interface Foo {}
+         - (int)fo^o:(int)x;
+         @end
+       )cpp",
+       "invalid name: the chosen name \"MockName\" is not a valid identifier",
+       HeaderFile},
+      {R"cpp(
+         @interface Foo {}
+         - (int)[[o^ne]]:(int)one two:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "a:two:"},
+      {R"cpp(
+         @interface Foo {}
+         - (int)[[o^ne]]:(int)one [[two]]:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "a:b:"},
+      {R"cpp(
+         @interface Foo {}
+         - (int)o^ne:(int)one [[two]]:(int)two;
+         @end
+       )cpp",
+       nullptr, HeaderFile, "one:three:"},
+
       {R"cpp(
          void foo(int);
          void foo(char);
@@ -1086,6 +1291,39 @@ TEST(RenameTest, Renameable) {
        "conflict", !HeaderFile, "Conflict"},
 
       {R"cpp(
+        struct conflict {};
+        enum v^ar {};
+      )cpp",
+       "conflict", !HeaderFile, "conflict"},
+
+      {R"cpp(
+        struct conflict {};
+        int [[v^ar]];
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        enum conflict {};
+        int [[v^ar]];
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        void func(int conflict) {
+          struct [[t^ag]] {};
+        }
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        void func(void) {
+          struct conflict {};
+          int [[v^ar]];
+        }
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
         void func(int);
         void [[o^therFunc]](double);
       )cpp",
@@ -1123,7 +1361,7 @@ TEST(RenameTest, Renameable) {
        "no symbol", false},
 
       {R"cpp(// FIXME we probably want to rename both overloads here,
-             // but renaming currently assumes there's only a 
+             // but renaming currently assumes there's only a
              // single canonical declaration.
         namespace ns { int foo(int); char foo(char); }
         using ns::^foo;
@@ -1137,7 +1375,7 @@ TEST(RenameTest, Renameable) {
           int [[V^ar]];
         }
       )cpp",
-        nullptr, !HeaderFile},
+       nullptr, !HeaderFile},
   };
 
   for (const auto& Case : Cases) {
@@ -1364,7 +1602,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   std::string BarPath = testPath("bar.cc");
   // Build the index, the index has "Foo" references from foo.cc and "Bar"
   // references from bar.cc.
-  FileSymbols FSymbols(IndexContents::All);
+  FileSymbols FSymbols(IndexContents::All, true);
   FSymbols.update(FooPath, nullptr, buildRefSlab(FooCode, "Foo", FooPath),
                   nullptr, false);
   FSymbols.update(BarPath, nullptr, buildRefSlab(BarCode, "Bar", BarPath),
@@ -1417,6 +1655,12 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
       return true; // has more references
     }
 
+    bool containedRefs(const ContainedRefsRequest &Req,
+                       llvm::function_ref<void(const ContainedRefsResult &)>
+                           Callback) const override {
+      return false;
+    }
+
     bool fuzzyFind(
         const FuzzyFindRequest &Req,
         llvm::function_ref<void(const Symbol &)> Callback) const override {
@@ -1429,6 +1673,11 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
     void relations(const RelationsRequest &Req,
                    llvm::function_ref<void(const SymbolID &, const Symbol &)>
                        Callback) const override {}
+
+    void
+    reverseRelations(const RelationsRequest &Req,
+                     llvm::function_ref<void(const SymbolID &, const Symbol &)>
+                         Callback) const override {}
 
     llvm::unique_function<IndexContents(llvm::StringRef) const>
     indexedFiles() const override {
@@ -1468,6 +1717,12 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
       return false;
     }
 
+    bool containedRefs(const ContainedRefsRequest &Req,
+                       llvm::function_ref<void(const ContainedRefsResult &)>
+                           Callback) const override {
+      return false;
+    }
+
     bool fuzzyFind(const FuzzyFindRequest &,
                    llvm::function_ref<void(const Symbol &)>) const override {
       return false;
@@ -1477,6 +1732,11 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
 
     void relations(const RelationsRequest &,
                    llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+        const override {}
+
+    void
+    reverseRelations(const RelationsRequest &,
+                     llvm::function_ref<void(const SymbolID &, const Symbol &)>)
         const override {}
 
     llvm::unique_function<IndexContents(llvm::StringRef) const>
@@ -1580,7 +1840,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           void [[foo]]() override {};
         };
 
-        void func(Base* b, Derived1* d1, 
+        void func(Base* b, Derived1* d1,
                   Derived2* d2, NotDerived* nd) {
           b->[[foo]]();
           d1->[[foo]]();
@@ -1759,6 +2019,144 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
   }
 }
 
+TEST(CrossFileRenameTests, ObjC) {
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xobjective-c"};
+  // rename is runnning on all "^" points in FooH.
+  struct Case {
+    llvm::StringRef FooH;
+    llvm::StringRef FooM;
+    llvm::StringRef NewName;
+    llvm::StringRef ExpectedFooH;
+    llvm::StringRef ExpectedFooM;
+  };
+  Case Cases[] = {// --- Zero arg selector
+                  {
+                      // Input
+                      R"cpp(
+        @interface Foo
+        - (int)performA^ction;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performAction {
+          [self performAction];
+        }
+        @end
+      )cpp",
+                      // New name
+                      "performNewAction",
+                      // Expected
+                      R"cpp(
+        @interface Foo
+        - (int)performNewAction;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performNewAction {
+          [self performNewAction];
+        }
+        @end
+      )cpp",
+                  },
+                  // --- Single arg selector
+                  {
+                      // Input
+                      R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performAction:(int)action {
+          [self performAction:action];
+        }
+        @end
+      )cpp",
+                      // New name
+                      "performNewAction:",
+                      // Expected
+                      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performNewAction:(int)action {
+          [self performNewAction:action];
+        }
+        @end
+      )cpp",
+                  },
+                  // --- Multi arg selector
+                  {
+                      // Input
+                      R"cpp(
+        @interface Foo
+        - (int)performA^ction:(int)action with:(int)value;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performAction:(int)action with:(int)value {
+          [self performAction:action with:value];
+        }
+        @end
+      )cpp",
+                      // New name
+                      "performNewAction:by:",
+                      // Expected
+                      R"cpp(
+        @interface Foo
+        - (int)performNewAction:(int)action by:(int)value;
+        @end
+      )cpp",
+                      R"cpp(
+        @implementation Foo
+        - (int)performNewAction:(int)action by:(int)value {
+          [self performNewAction:action by:value];
+        }
+        @end
+      )cpp",
+                  }};
+
+  trace::TestTracer Tracer;
+  for (const auto &T : Cases) {
+    SCOPED_TRACE(T.FooH);
+    Annotations FooH(T.FooH);
+    Annotations FooM(T.FooM);
+    std::string FooHPath = testPath("foo.h");
+    std::string FooMPath = testPath("foo.m");
+
+    MockFS FS;
+    FS.Files[FooHPath] = std::string(FooH.code());
+    FS.Files[FooMPath] = std::string(FooM.code());
+
+    auto ServerOpts = ClangdServer::optsForTest();
+    ServerOpts.BuildDynamicSymbolIndex = true;
+    ClangdServer Server(CDB, FS, ServerOpts);
+
+    // Add all files to clangd server to make sure the dynamic index has been
+    // built.
+    runAddDocument(Server, FooHPath, FooH.code());
+    runAddDocument(Server, FooMPath, FooM.code());
+
+    for (const auto &RenamePos : FooH.points()) {
+      EXPECT_THAT(Tracer.takeMetric("rename_files"), SizeIs(0));
+      auto FileEditsList =
+          llvm::cantFail(runRename(Server, FooHPath, RenamePos, T.NewName, {}));
+      EXPECT_THAT(Tracer.takeMetric("rename_files"), ElementsAre(2));
+      EXPECT_THAT(applyEdits(std::move(FileEditsList.GlobalChanges)),
+                  UnorderedElementsAre(Pair(Eq(FooHPath), Eq(T.ExpectedFooH)),
+                                       Pair(Eq(FooMPath), Eq(T.ExpectedFooM))));
+    }
+  }
+}
+
 TEST(CrossFileRenameTests, CrossFileOnLocalSymbol) {
   // cross-file rename should work for function-local symbols, even there is no
   // index provided.
@@ -1778,8 +2176,8 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
   Annotations Code("[[😂]]");
   auto LSPRange = Code.range();
   llvm::StringRef FilePath = "/test/TestTU.cpp";
-  llvm::StringRef NewName = "abc";
-  auto Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewName);
+  llvm::SmallVector<llvm::StringRef, 2> NewNames = {"abc"};
+  auto Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewNames);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   ASSERT_EQ(1UL, Edit->Replacements.size());
   EXPECT_EQ(FilePath, Edit->Replacements.begin()->getFilePath());
@@ -1787,7 +2185,7 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
 
   // Test invalid range.
   LSPRange.end = {10, 0}; // out of range
-  Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewName);
+  Edit = buildRenameEdit(FilePath, Code.code(), {LSPRange}, NewNames);
   EXPECT_FALSE(Edit);
   EXPECT_THAT(llvm::toString(Edit.takeError()),
               testing::HasSubstr("fail to convert"));
@@ -1798,10 +2196,11 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
               [[range]]
       [[range]]
   )cpp");
-  Edit = buildRenameEdit(FilePath, T.code(), T.ranges(), NewName);
+  Edit =
+      buildRenameEdit(FilePath, T.code(), symbolRanges(T.ranges()), NewNames);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
   EXPECT_EQ(applyEdits(FileEdits{{T.code(), std::move(*Edit)}}).front().second,
-            expectedResult(T, NewName));
+            expectedResult(T, NewNames[0]));
 }
 
 TEST(CrossFileRenameTests, adjustRenameRanges) {
@@ -1856,7 +2255,8 @@ TEST(CrossFileRenameTests, adjustRenameRanges) {
     SCOPED_TRACE(T.DraftCode);
     Annotations Draft(T.DraftCode);
     auto ActualRanges = adjustRenameRanges(
-        Draft.code(), "x", Annotations(T.IndexedCode).ranges(), LangOpts);
+        Draft.code(), RenameSymbolName(ArrayRef<std::string>{"x"}),
+        Annotations(T.IndexedCode).ranges(), LangOpts);
     if (!ActualRanges)
        EXPECT_THAT(Draft.ranges(), testing::IsEmpty());
     else
@@ -1970,11 +2370,11 @@ TEST(RangePatchingHeuristic, GetMappedRanges) {
   for (const auto &T : Tests) {
     SCOPED_TRACE(T.IndexedCode);
     auto Lexed = Annotations(T.LexedCode);
-    auto LexedRanges = Lexed.ranges();
-    std::vector<Range> ExpectedMatches;
+    auto LexedRanges = symbolRanges(Lexed.ranges());
+    std::vector<SymbolRange> ExpectedMatches;
     for (auto P : Lexed.points()) {
-      auto Match = llvm::find_if(LexedRanges, [&P](const Range& R) {
-        return R.start == P;
+      auto Match = llvm::find_if(LexedRanges, [&P](const SymbolRange &R) {
+        return R.range().start == P;
       });
       ASSERT_NE(Match, LexedRanges.end());
       ExpectedMatches.push_back(*Match);
@@ -2093,8 +2493,8 @@ TEST(CrossFileRenameTests, adjustmentCost) {
     std::vector<size_t> MappedIndex;
     for (size_t I = 0; I < C.ranges("lex").size(); ++I)
       MappedIndex.push_back(I);
-    EXPECT_EQ(renameRangeAdjustmentCost(C.ranges("idx"), C.ranges("lex"),
-                                        MappedIndex),
+    EXPECT_EQ(renameRangeAdjustmentCost(
+                  C.ranges("idx"), symbolRanges(C.ranges("lex")), MappedIndex),
               T.ExpectedCost);
   }
 }

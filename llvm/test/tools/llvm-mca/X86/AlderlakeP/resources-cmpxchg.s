@@ -37,11 +37,11 @@ lock cmpxchg16b (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 21.40  10.40  1.33   1.33   2.00   10.40  17.40  2.00   2.00   2.00   4.40   1.33    -
+# CHECK-NEXT: 21.40  10.40  1.33   1.33   2.00   10.40  17.40  2.00   2.00   2.00   1.33   4.40    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT: 4.30   2.80   0.33   0.33   0.50   0.80   4.30   0.50   0.50   0.50   0.80   0.33    -     cmpxchg8b	(%rax)
-# CHECK-NEXT: 6.40   2.40   0.33   0.33   0.50   4.40   4.40   0.50   0.50   0.50   1.40   0.33    -     cmpxchg16b	(%rax)
-# CHECK-NEXT: 4.30   2.80   0.33   0.33   0.50   0.80   4.30   0.50   0.50   0.50   0.80   0.33    -     lock		cmpxchg8b	(%rax)
-# CHECK-NEXT: 6.40   2.40   0.33   0.33   0.50   4.40   4.40   0.50   0.50   0.50   1.40   0.33    -     lock		cmpxchg16b	(%rax)
+# CHECK-NEXT: 4.30   2.80   0.33   0.33   0.50   0.80   4.30   0.50   0.50   0.50   0.33   0.80    -     cmpxchg8b	(%rax)
+# CHECK-NEXT: 6.40   2.40   0.33   0.33   0.50   4.40   4.40   0.50   0.50   0.50   0.33   1.40    -     cmpxchg16b	(%rax)
+# CHECK-NEXT: 4.30   2.80   0.33   0.33   0.50   0.80   4.30   0.50   0.50   0.50   0.33   0.80    -     lock		cmpxchg8b	(%rax)
+# CHECK-NEXT: 6.40   2.40   0.33   0.33   0.50   4.40   4.40   0.50   0.50   0.50   0.33   1.40    -     lock		cmpxchg16b	(%rax)

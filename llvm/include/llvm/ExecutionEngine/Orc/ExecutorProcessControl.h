@@ -14,52 +14,57 @@
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/MSVCErrorWorkarounds.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <future>
 #include <mutex>
 #include <vector>
 
-namespace llvm {
-namespace orc {
+namespace llvm::jitlink {
 
+class JITLinkMemoryManager;
+
+} // namespace llvm::jitlink
+
+namespace llvm::orc {
+
+class DylibManager;
 class ExecutionSession;
-class SymbolLookupSet;
+class MemoryAccess;
 
 /// ExecutorProcessControl supports interaction with a JIT target process.
-class ExecutorProcessControl {
+class LLVM_ABI ExecutorProcessControl {
   friend class ExecutionSession;
 public:
 
-  /// A handler or incoming WrapperFunctionResults -- either return values from
+  /// A handler or incoming WrapperFunctionBuffers -- either return values from
   /// callWrapper* calls, or incoming JIT-dispatch requests.
   ///
   /// IncomingWFRHandlers are constructible from
-  /// unique_function<void(shared::WrapperFunctionResult)>s using the
+  /// unique_function<void(shared::WrapperFunctionBuffer)>s using the
   /// runInPlace function or a RunWithDispatch object.
   class IncomingWFRHandler {
     friend class ExecutorProcessControl;
   public:
     IncomingWFRHandler() = default;
     explicit operator bool() const { return !!H; }
-    void operator()(shared::WrapperFunctionResult WFR) { H(std::move(WFR)); }
+    void operator()(shared::WrapperFunctionBuffer WFR) { H(std::move(WFR)); }
   private:
     template <typename FnT> IncomingWFRHandler(FnT &&Fn)
       : H(std::forward<FnT>(Fn)) {}
 
-    unique_function<void(shared::WrapperFunctionResult)> H;
+    unique_function<void(shared::WrapperFunctionBuffer)> H;
   };
 
   /// Constructs an IncomingWFRHandler from a function object that is callable
-  /// as void(shared::WrapperFunctionResult). The function object will be called
+  /// as void(shared::WrapperFunctionBuffer). The function object will be called
   /// directly. This should be used with care as it may block listener threads
   /// in remote EPCs. It is only suitable for simple tasks (e.g. setting a
   /// future), or for performing some quick analysis before dispatching "real"
@@ -85,7 +90,7 @@ public:
     IncomingWFRHandler operator()(FnT &&Fn) {
       return IncomingWFRHandler(
           [&D = this->D, Fn = std::move(Fn)]
-          (shared::WrapperFunctionResult WFR) mutable {
+          (shared::WrapperFunctionBuffer WFR) mutable {
               D.dispatch(
                 makeGenericNamedTask(
                     [Fn = std::move(Fn), WFR = std::move(WFR)]() mutable {
@@ -97,89 +102,6 @@ public:
     TaskDispatcher &D;
   };
 
-  /// APIs for manipulating memory in the target process.
-  class MemoryAccess {
-  public:
-    /// Callback function for asynchronous writes.
-    using WriteResultFn = unique_function<void(Error)>;
-
-    virtual ~MemoryAccess();
-
-    virtual void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
-                                  WriteResultFn OnWriteComplete) = 0;
-
-    virtual void writeUInt16sAsync(ArrayRef<tpctypes::UInt16Write> Ws,
-                                   WriteResultFn OnWriteComplete) = 0;
-
-    virtual void writeUInt32sAsync(ArrayRef<tpctypes::UInt32Write> Ws,
-                                   WriteResultFn OnWriteComplete) = 0;
-
-    virtual void writeUInt64sAsync(ArrayRef<tpctypes::UInt64Write> Ws,
-                                   WriteResultFn OnWriteComplete) = 0;
-
-    virtual void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
-                                   WriteResultFn OnWriteComplete) = 0;
-
-    virtual void writePointersAsync(ArrayRef<tpctypes::PointerWrite> Ws,
-                                    WriteResultFn OnWriteComplete) = 0;
-
-    Error writeUInt8s(ArrayRef<tpctypes::UInt8Write> Ws) {
-      std::promise<MSVCPError> ResultP;
-      auto ResultF = ResultP.get_future();
-      writeUInt8sAsync(Ws,
-                       [&](Error Err) { ResultP.set_value(std::move(Err)); });
-      return ResultF.get();
-    }
-
-    Error writeUInt16s(ArrayRef<tpctypes::UInt16Write> Ws) {
-      std::promise<MSVCPError> ResultP;
-      auto ResultF = ResultP.get_future();
-      writeUInt16sAsync(Ws,
-                        [&](Error Err) { ResultP.set_value(std::move(Err)); });
-      return ResultF.get();
-    }
-
-    Error writeUInt32s(ArrayRef<tpctypes::UInt32Write> Ws) {
-      std::promise<MSVCPError> ResultP;
-      auto ResultF = ResultP.get_future();
-      writeUInt32sAsync(Ws,
-                        [&](Error Err) { ResultP.set_value(std::move(Err)); });
-      return ResultF.get();
-    }
-
-    Error writeUInt64s(ArrayRef<tpctypes::UInt64Write> Ws) {
-      std::promise<MSVCPError> ResultP;
-      auto ResultF = ResultP.get_future();
-      writeUInt64sAsync(Ws,
-                        [&](Error Err) { ResultP.set_value(std::move(Err)); });
-      return ResultF.get();
-    }
-
-    Error writeBuffers(ArrayRef<tpctypes::BufferWrite> Ws) {
-      std::promise<MSVCPError> ResultP;
-      auto ResultF = ResultP.get_future();
-      writeBuffersAsync(Ws,
-                        [&](Error Err) { ResultP.set_value(std::move(Err)); });
-      return ResultF.get();
-    }
-
-    Error writePointers(ArrayRef<tpctypes::PointerWrite> Ws) {
-      std::promise<MSVCPError> ResultP;
-      auto ResultF = ResultP.get_future();
-      writePointersAsync(Ws,
-                         [&](Error Err) { ResultP.set_value(std::move(Err)); });
-      return ResultF.get();
-    }
-  };
-
-  /// A pair of a dylib and a set of symbols to be looked up.
-  struct LookupRequest {
-    LookupRequest(tpctypes::DylibHandle Handle, const SymbolLookupSet &Symbols)
-        : Handle(Handle), Symbols(Symbols) {}
-    tpctypes::DylibHandle Handle;
-    const SymbolLookupSet &Symbols;
-  };
-
   /// Contains the address of the dispatch function and context that the ORC
   /// runtime can use to call functions in the JIT.
   struct JITDispatchInfo {
@@ -189,7 +111,7 @@ public:
 
   ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
                          std::unique_ptr<TaskDispatcher> D)
-    : SSP(std::move(SSP)), D(std::move(D)) {}
+      : SSP(std::move(SSP)), D(std::move(D)) {}
 
   virtual ~ExecutorProcessControl();
 
@@ -217,17 +139,16 @@ public:
   /// Get the JIT dispatch function and context address for the executor.
   const JITDispatchInfo &getJITDispatchInfo() const { return JDI; }
 
-  /// Return a MemoryAccess object for the target process.
-  MemoryAccess &getMemoryAccess() const {
-    assert(MemAccess && "No MemAccess object set.");
-    return *MemAccess;
-  }
+  /// Create a default JITLinkMemoryManager for the target process.
+  virtual Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() = 0;
 
-  /// Return a JITLinkMemoryManager for the target process.
-  jitlink::JITLinkMemoryManager &getMemMgr() const {
-    assert(MemMgr && "No MemMgr object set");
-    return *MemMgr;
-  }
+  /// Create a default DylibManager for the target process.
+  virtual Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() = 0;
+
+  /// Create a default MemoryAccess for the target process.
+  virtual Expected<std::unique_ptr<MemoryAccess>>
+  createDefaultMemoryAccess() = 0;
 
   /// Returns the bootstrap map.
   const StringMap<std::vector<char>> &getBootstrapMap() const {
@@ -235,8 +156,6 @@ public:
   }
 
   /// Look up and SPS-deserialize a bootstrap map value.
-  ///
-  ///
   template <typename T, typename SPSTagT>
   Error getBootstrapMapValue(StringRef Key, std::optional<T> &Val) const {
     Val = std::nullopt;
@@ -279,20 +198,6 @@ public:
     return Error::success();
   }
 
-  /// Load the dynamic library at the given path and return a handle to it.
-  /// If LibraryPath is null this function will return the global handle for
-  /// the target process.
-  virtual Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) = 0;
-
-  /// Search for symbols in the target process.
-  ///
-  /// The result of the lookup is a 2-dimensional array of target addresses
-  /// that correspond to the lookup order. If a required symbol is not
-  /// found then this method will return an error. If a weakly referenced
-  /// symbol is not found then it be assigned a '0' value.
-  virtual Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) = 0;
-
   /// Run function with a main-like signature.
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
@@ -312,7 +217,7 @@ public:
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
   virtual void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                 IncomingWFRHandler OnComplete,
@@ -340,15 +245,15 @@ public:
   /// callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  shared::WrapperFunctionResult callWrapper(ExecutorAddr WrapperFnAddr,
+  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
-    std::promise<shared::WrapperFunctionResult> RP;
+    std::promise<shared::WrapperFunctionBuffer> RP;
     auto RF = RP.get_future();
     callWrapperAsync(
         RunInPlace(), WrapperFnAddr,
-        [&](shared::WrapperFunctionResult R) {
+        [&](shared::WrapperFunctionBuffer R) {
           RP.set_value(std::move(R));
         }, ArgBuffer);
     return RF.get();
@@ -408,134 +313,10 @@ protected:
   Triple TargetTriple;
   unsigned PageSize = 0;
   JITDispatchInfo JDI;
-  MemoryAccess *MemAccess = nullptr;
-  jitlink::JITLinkMemoryManager *MemMgr = nullptr;
   StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
-class InProcessMemoryAccess : public ExecutorProcessControl::MemoryAccess {
-public:
-  InProcessMemoryAccess(bool IsArch64Bit) : IsArch64Bit(IsArch64Bit) {}
-  void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
-                        WriteResultFn OnWriteComplete) override;
-
-  void writeUInt16sAsync(ArrayRef<tpctypes::UInt16Write> Ws,
-                         WriteResultFn OnWriteComplete) override;
-
-  void writeUInt32sAsync(ArrayRef<tpctypes::UInt32Write> Ws,
-                         WriteResultFn OnWriteComplete) override;
-
-  void writeUInt64sAsync(ArrayRef<tpctypes::UInt64Write> Ws,
-                         WriteResultFn OnWriteComplete) override;
-
-  void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
-                         WriteResultFn OnWriteComplete) override;
-
-  void writePointersAsync(ArrayRef<tpctypes::PointerWrite> Ws,
-                          WriteResultFn OnWriteComplete) override;
-
-private:
-  bool IsArch64Bit;
-};
-
-/// A ExecutorProcessControl instance that asserts if any of its methods are
-/// used. Suitable for use is unit tests, and by ORC clients who haven't moved
-/// to ExecutorProcessControl-based APIs yet.
-class UnsupportedExecutorProcessControl : public ExecutorProcessControl,
-                                          private InProcessMemoryAccess {
-public:
-  UnsupportedExecutorProcessControl(
-      std::shared_ptr<SymbolStringPool> SSP = nullptr,
-      std::unique_ptr<TaskDispatcher> D = nullptr, const std::string &TT = "",
-      unsigned PageSize = 0)
-      : ExecutorProcessControl(
-            SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>(),
-            D ? std::move(D) : std::make_unique<InPlaceTaskDispatcher>()),
-        InProcessMemoryAccess(Triple(TT).isArch64Bit()) {
-    this->TargetTriple = Triple(TT);
-    this->PageSize = PageSize;
-    this->MemAccess = this;
-  }
-
-  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
-                              ArrayRef<std::string> Args) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
-                        IncomingWFRHandler OnComplete,
-                        ArrayRef<char> ArgBuffer) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Error disconnect() override { return Error::success(); }
-};
-
-/// A ExecutorProcessControl implementation targeting the current process.
-class SelfExecutorProcessControl : public ExecutorProcessControl,
-                                   private InProcessMemoryAccess {
-public:
-  SelfExecutorProcessControl(
-      std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
-      Triple TargetTriple, unsigned PageSize,
-      std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
-
-  /// Create a SelfExecutorProcessControl with the given symbol string pool and
-  /// memory manager.
-  /// If no symbol string pool is given then one will be created.
-  /// If no memory manager is given a jitlink::InProcessMemoryManager will
-  /// be created and used by default.
-  static Expected<std::unique_ptr<SelfExecutorProcessControl>>
-  Create(std::shared_ptr<SymbolStringPool> SSP = nullptr,
-         std::unique_ptr<TaskDispatcher> D = nullptr,
-         std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr = nullptr);
-
-  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
-
-  Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) override;
-
-  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
-                              ArrayRef<std::string> Args) override;
-
-  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override;
-
-  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override;
-
-  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
-                        IncomingWFRHandler OnComplete,
-                        ArrayRef<char> ArgBuffer) override;
-
-  Error disconnect() override;
-
-private:
-  static shared::CWrapperFunctionResult
-  jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,
-                                       const char *Data, size_t Size);
-
-  std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
-  char GlobalManglingPrefix = 0;
-};
-
-} // end namespace orc
-} // end namespace llvm
+} // namespace llvm::orc
 
 #endif // LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H

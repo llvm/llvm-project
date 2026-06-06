@@ -17,6 +17,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
@@ -27,7 +28,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -105,13 +105,19 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
     *Err = createMemberHeaderParseError(this, RawHeaderPtr, Size);
     return;
   }
-  if (ArMemHdr->Terminator[0] != '`' || ArMemHdr->Terminator[1] != '\n') {
+  // '\x79\x15' is the EBCDIC equivalent of '`\n' for the z/OS archive
+  // terminator.
+  bool ValidTerminator =
+      Parent->kind() == Archive::K_ZOS
+          ? (ArMemHdr->Terminator[0] == '\x79' &&
+             ArMemHdr->Terminator[1] == '\x15')
+          : (ArMemHdr->Terminator[0] == '`' && ArMemHdr->Terminator[1] == '\n');
+  if (!ValidTerminator) {
     if (Err) {
       std::string Buf;
       raw_string_ostream OS(Buf);
       OS.write_escaped(
           StringRef(ArMemHdr->Terminator, sizeof(ArMemHdr->Terminator)));
-      OS.flush();
       std::string Msg("terminator characters in archive member \"" + Buf +
                       "\" not the correct \"`\\n\" values for the archive "
                       "member header ");
@@ -120,8 +126,9 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
         consumeError(NameOrErr.takeError());
         uint64_t Offset = RawHeaderPtr - Parent->getData().data();
         *Err = malformedError(Msg + "at offset " + Twine(Offset));
-      } else
+      } else {
         *Err = malformedError(Msg + "for " + NameOrErr.get());
+      }
     }
     return;
   }
@@ -227,7 +234,7 @@ Expected<StringRef> BigArchiveMemberHeader::getRawName() const {
   StringRef NameTerminator = "`\n";
   StringRef NameStringWithNameTerminator =
       StringRef(ArMemHdr->Name, NameLenWithPadding + NameTerminator.size());
-  if (!NameStringWithNameTerminator.endswith(NameTerminator)) {
+  if (!NameStringWithNameTerminator.ends_with(NameTerminator)) {
     uint64_t Offset =
         reinterpret_cast<const char *>(ArMemHdr->Name + NameLenWithPadding) -
         Parent->getData().data();
@@ -269,11 +276,11 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       return Name;
     // System libraries from the Windows SDK for Windows 11 contain this symbol.
     // It looks like a CFG guard: we just skip it for now.
-    if (Name.equals("/<XFGHASHMAP>/"))
+    if (Name == "/<XFGHASHMAP>/")
       return Name;
     // Some libraries (e.g., arm64rt.lib) from the Windows WDK
     // (version 10.0.22000.0) contain this undocumented special member.
-    if (Name.equals("/<ECSYMBOLS>/"))
+    if (Name == "/<ECSYMBOLS>/")
       return Name;
     // It's a long name.
     // Get the string table offset.
@@ -282,7 +289,6 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       std::string Buf;
       raw_string_ostream OS(Buf);
       OS.write_escaped(Name.substr(1).rtrim(' '));
-      OS.flush();
       uint64_t ArchiveOffset =
           reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
       return malformedError("long name offset characters after the '/' are "
@@ -308,20 +314,19 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       if (End == StringRef::npos || End < 1 ||
           Parent->getStringTable()[End - 1] != '/') {
         return malformedError("string table at long name offset " +
-                              Twine(StringOffset) + "not terminated");
+                              Twine(StringOffset) + " not terminated");
       }
       return Parent->getStringTable().slice(StringOffset, End - 1);
     }
     return Parent->getStringTable().begin() + StringOffset;
   }
 
-  if (Name.startswith("#1/")) {
+  if (Name.starts_with("#1/")) {
     uint64_t NameLength;
     if (Name.substr(3).rtrim(' ').getAsInteger(10, NameLength)) {
       std::string Buf;
       raw_string_ostream OS(Buf);
       OS.write_escaped(Name.substr(3).rtrim(' '));
-      OS.flush();
       uint64_t ArchiveOffset =
           reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
       return malformedError("long name length characters after the #1/ are "
@@ -370,6 +375,118 @@ Expected<uint64_t> BigArchiveMemberHeader::getSize() const {
     return NameLenOrErr.takeError();
 
   return *SizeOrErr + alignTo(*NameLenOrErr, 2);
+}
+
+template <std::size_t N>
+std::string ebcdicFieldToASCII(const char (&Field)[N]) {
+  SmallString<64> Dst;
+  StringRef Src = StringRef(Field, N);
+  ConverterEBCDIC::convertToUTF8(Src, Dst);
+  return Dst.str().rtrim(" ").str();
+}
+
+ZOSArchiveMemberHeader::ZOSArchiveMemberHeader(const Archive *Parent,
+                                               const char *RawHeaderPtr,
+                                               uint64_t Size, Error *Err)
+    : ArchiveMemberHeader(Parent, RawHeaderPtr, Size, Err) {
+  ErrorAsOutParameter ErrAsOutParam(Err);
+  // If the base class constructor already detected an error
+  // do not attempt to read header fields
+  if (Err && *Err)
+    return;
+  setMemberHeaderStrings(Err, Size);
+}
+
+Expected<uint64_t> ZOSArchiveMemberHeader::getSize() const {
+  return getArchiveMemberDecField("size", ebcdicFieldToASCII(ArMemHdr->Size),
+                                  Parent, this);
+}
+
+Expected<StringRef> ZOSArchiveMemberHeader::getRawName() const {
+  return StringRef(RawMemberName);
+}
+
+Expected<StringRef> ZOSArchiveMemberHeader::getName(uint64_t /*Size*/) const {
+  return StringRef(MemberName);
+}
+
+StringRef ZOSArchiveMemberHeader::getRawAccessMode() const {
+  return StringRef(AccessMode);
+}
+
+StringRef ZOSArchiveMemberHeader::getRawLastModified() const {
+  return StringRef(LastModified);
+}
+
+StringRef ZOSArchiveMemberHeader::getRawUID() const { return StringRef(UID); }
+
+StringRef ZOSArchiveMemberHeader::getRawGID() const { return StringRef(GID); }
+
+void ZOSArchiveMemberHeader::setMemberHeaderStrings(Error *Err, uint64_t Size) {
+  uint64_t Offset =
+      reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
+
+  // Set RawMemberName
+  RawMemberName = ebcdicFieldToASCII(ArMemHdr->Name);
+  if (RawMemberName.empty() || RawMemberName[0] == ' ') {
+    *Err = malformedError("name contains a leading space for archive member "
+                          "header at offset " +
+                          Twine(Offset));
+    return;
+  }
+
+  // Set MemberName.
+  if (StringRef(RawMemberName).starts_with("#1/")) {
+    Expected<StringRef> NameOrErr = ArchiveMemberHeader::getName(Size);
+    if (!NameOrErr) {
+      *Err = NameOrErr.takeError();
+      return;
+    }
+    StringRef Name = NameOrErr.get();
+    SmallString<64> ConvertedName;
+    ConverterEBCDIC::convertToUTF8(Name, ConvertedName);
+    MemberName = std::string(ConvertedName);
+  } else {
+    MemberName = RawMemberName;
+  }
+
+  // LastModified
+  LastModified = ebcdicFieldToASCII(ArMemHdr->LastModified);
+  if (LastModified.empty()) {
+    *Err =
+        malformedError("LastModified field is empty or contains only spaces in "
+                       "archive member header at offset " +
+                       Twine(Offset));
+    return;
+  }
+
+  // UID
+  UID = ebcdicFieldToASCII(ArMemHdr->UID);
+  if (UID.empty()) {
+    *Err = malformedError("UID field is empty or contains only spaces in "
+                          "archive member header at offset " +
+                          Twine(Offset));
+    return;
+  }
+
+  // GID
+  GID = ebcdicFieldToASCII(ArMemHdr->GID);
+  if (GID.empty()) {
+    *Err = malformedError("GID field is empty or contains only spaces in "
+                          "archive member header at offset " +
+                          Twine(Offset));
+    return;
+  }
+
+  // AccessMode
+  AccessMode = ebcdicFieldToASCII(ArMemHdr->AccessMode);
+  if (AccessMode.empty()) {
+    *Err =
+        malformedError("AccessMode field is empty or contains only spaces in "
+                       "archive member header at offset " +
+                       Twine(Offset));
+    return;
+  }
 }
 
 Expected<uint64_t> BigArchiveMemberHeader::getRawNameSize() const {
@@ -474,9 +591,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
   }
 
   Header = Parent->createArchiveMemberHeader(
-      Start,
-      Parent ? Parent->getData().size() - (Start - Parent->getData().data())
-             : 0,
+      Start, Parent->getData().size() - (Start - Parent->getData().data()),
       Err);
 
   // If we are pointed to real data, Start is not a nullptr, then there must be
@@ -524,7 +639,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
     // The actual start of the file is after the name and any necessary
     // even-alignment padding.
     StartOfFile += ((Name.size() + 1) >> 1) << 1;
-  } else if (Name.startswith("#1/")) {
+  } else if (Name.starts_with("#1/")) {
     uint64_t NameSize;
     StringRef RawNameSize = Name.substr(3).rtrim(' ');
     if (RawNameSize.getAsInteger(10, NameSize)) {
@@ -567,7 +682,7 @@ Expected<std::string> Archive::Child::getFullName() const {
   SmallString<128> FullName = sys::path::parent_path(
       Parent->getMemoryBufferRef().getBufferIdentifier());
   sys::path::append(FullName, Name);
-  return std::string(FullName.str());
+  return std::string(FullName);
 }
 
 Expected<StringRef> Archive::Child::getBuffer() const {
@@ -585,7 +700,8 @@ Expected<StringRef> Archive::Child::getBuffer() const {
   if (!FullNameOrErr)
     return FullNameOrErr.takeError();
   const std::string &FullName = *FullNameOrErr;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(FullName);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+      MemoryBuffer::getFile(FullName, false, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = Buf.getError())
     return errorCodeToError(EC);
   Parent->ThinBuffers.push_back(std::move(*Buf));
@@ -671,8 +787,10 @@ Expected<std::unique_ptr<Archive>> Archive::create(MemoryBufferRef Source) {
   std::unique_ptr<Archive> Ret;
   StringRef Buffer = Source.getBuffer();
 
-  if (Buffer.startswith(BigArchiveMagic))
+  if (Buffer.starts_with(BigArchiveMagic))
     Ret = std::make_unique<BigArchive>(Source, Err);
+  else if (Buffer.starts_with(ZOSArchiveMagic))
+    Ret = std::make_unique<ZOSArchive>(Source, Err);
   else
     Ret = std::make_unique<Archive>(Source, Err);
 
@@ -685,6 +803,10 @@ std::unique_ptr<AbstractArchiveMemberHeader>
 Archive::createArchiveMemberHeader(const char *RawHeaderPtr, uint64_t Size,
                                    Error *Err) const {
   ErrorAsOutParameter ErrAsOutParam(Err);
+
+  if (kind() == K_ZOS)
+    return std::make_unique<ZOSArchiveMemberHeader>(this, RawHeaderPtr, Size,
+                                                    Err);
   if (kind() != K_AIXBIG)
     return std::make_unique<ArchiveMemberHeader>(this, RawHeaderPtr, Size, Err);
   return std::make_unique<BigArchiveMemberHeader>(this, RawHeaderPtr, Size,
@@ -708,15 +830,19 @@ void Archive::setFirstRegular(const Child &C) {
 
 Archive::Archive(MemoryBufferRef Source, Error &Err)
     : Binary(Binary::ID_Archive, Source) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   StringRef Buffer = Data.getBuffer();
   // Check for sufficient magic.
-  if (Buffer.startswith(ThinArchiveMagic)) {
+  if (Buffer.starts_with(ThinArchiveMagic)) {
     IsThin = true;
-  } else if (Buffer.startswith(ArchiveMagic)) {
+  } else if (Buffer.starts_with(ArchiveMagic)) {
     IsThin = false;
-  } else if (Buffer.startswith(BigArchiveMagic)) {
+  } else if (Buffer.starts_with(BigArchiveMagic)) {
     Format = K_AIXBIG;
+    IsThin = false;
+    return;
+  } else if (Buffer.starts_with(ZOSArchiveMagic)) {
+    Format = K_ZOS;
     IsThin = false;
     return;
   } else {
@@ -800,7 +926,7 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
     return;
   }
 
-  if (Name.startswith("#1/")) {
+  if (Name.starts_with("#1/")) {
     Format = K_BSD;
     // We know this is BSD, so getName will work since there is no string table.
     Expected<StringRef> NameOrErr = C->getName();
@@ -969,12 +1095,21 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   Err = Error::success();
 }
 
-object::Archive::Kind Archive::getDefaultKindForHost() {
-  Triple HostTriple(sys::getProcessTriple());
-  return HostTriple.isOSDarwin()
-             ? object::Archive::K_DARWIN
-             : (HostTriple.isOSAIX() ? object::Archive::K_AIXBIG
-                                     : object::Archive::K_GNU);
+object::Archive::Kind Archive::getDefaultKindForTriple(const Triple &T) {
+  if (T.isOSDarwin())
+    return object::Archive::K_DARWIN;
+  if (T.isOSAIX())
+    return object::Archive::K_AIXBIG;
+  if (T.isOSWindows())
+    return object::Archive::K_COFF;
+  if (T.isOSzOS())
+    return object::Archive::K_ZOS;
+  return object::Archive::K_GNU;
+}
+
+object::Archive::Kind Archive::getDefaultKind() {
+  Triple HostTriple(sys::getDefaultTargetTriple());
+  return getDefaultKindForTriple(HostTriple);
 }
 
 Archive::child_iterator Archive::child_begin(Error &Err,
@@ -1040,6 +1175,12 @@ Expected<Archive::Child> Archive::Symbol::getMember() const {
     // the archive of the member that defines the symbol.  Which is what
     // is needed here.
     Offset = read64le(Offsets + SymbolIndex * 16 + 8);
+  } else if (Parent->kind() == K_ZOS) {
+    // Each entry in the offset array is 8 bytes long:
+    // A 4-byte offset followed by 4 bytes of coded attributes.
+    // We multiply the SymbolIndex by 8 to reach the correct entry,
+    // and read the first 4 bytes (the offset).
+    Offset = read32be(Offsets + SymbolIndex * 8);
   } else {
     // Skip offsets.
     uint32_t MemberCount = read32le(Buf);
@@ -1169,6 +1310,15 @@ Archive::symbol_iterator Archive::symbol_begin() const {
     buf += ran_strx;
   } else if (kind() == K_AIXBIG) {
     buf = getStringTable().begin();
+  } else if (kind() == K_ZOS) {
+    // The contents of the z/OS symbol table member are:
+    // 1. The number of symbols, NS (4-byte integer).
+    // 2. NS pairs of 4-byte integers (offset and attributes). Length is NS*8
+    // bytes.
+    // 3. NS null terminated strings of corresponding symbol names.
+    // Here we skip parts 1 and 2 to reach the start of the string table.
+    uint32_t SymbolCount = read32be(buf);
+    buf += sizeof(uint32_t) + (SymbolCount * (sizeof(uint64_t)));
   } else {
     uint32_t member_count = 0;
     uint32_t symbol_count = 0;
@@ -1242,6 +1392,8 @@ uint32_t Archive::getNumberOfSymbols() const {
     return read32le(buf) / 8;
   if (kind() == K_DARWIN64)
     return read64le(buf) / 16;
+  if (kind() == K_ZOS)
+    return read32be(buf);
   uint32_t member_count = 0;
   member_count = read32le(buf);
   buf += 4 + (member_count * 4); // Skip offsets.
@@ -1445,4 +1597,76 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
   }
   setFirstRegular(*I);
   Err = Error::success();
+}
+
+ZOSArchive::ZOSArchive(MemoryBufferRef Source, Error &Err)
+    : Archive(Source, Err) {
+  ErrorAsOutParameter ErrAsOutParam(&Err);
+
+  // Get the special members.
+  child_iterator I = child_begin(Err, false);
+  if (Err)
+    return;
+  child_iterator E = child_end();
+
+  // See if this is a valid empty archive and if so return.
+  if (I == E) {
+    Err = Error::success();
+    return;
+  }
+  const Child *C = &*I;
+
+  Expected<StringRef> NameOrErr = C->getRawName();
+  if (!NameOrErr) {
+    Err = NameOrErr.takeError();
+    return;
+  }
+  StringRef Name = NameOrErr.get();
+
+  if (Name == "__.SYMDEF") {
+    // Copy symbol table converting embedded EBCDIC names to ASCII.
+    // getBuffer() cannot fail here because the Child constructor and
+    // getNext() already validate that the member's size fits within
+    // the archive.
+    StringRef EbcdicSymbolTable = cantFail(C->getBuffer());
+    if (EbcdicSymbolTable.size() < sizeof(uint32_t)) {
+      Err = malformedError(
+          "z/OS archive symbol table is too small to read the symbol count, "
+          "symbol table size is " +
+          Twine(EbcdicSymbolTable.size()));
+      return;
+    }
+    uint64_t EbcdicSymbolCount = read32be(EbcdicSymbolTable.data());
+    uint64_t OffsetToEbcdicNames =
+        sizeof(uint32_t) + (EbcdicSymbolCount * (sizeof(uint64_t)));
+    if (OffsetToEbcdicNames > EbcdicSymbolTable.size()) {
+      Err = malformedError("z/OS archive symbol table names offset " +
+                           Twine(OffsetToEbcdicNames) +
+                           " exceeds symbol table size " +
+                           Twine(EbcdicSymbolTable.size()));
+      return;
+    }
+    uint64_t EbcdicNamesSize = EbcdicSymbolTable.size() - OffsetToEbcdicNames;
+    const char *EbcdicNamesPtr = EbcdicSymbolTable.data() + OffsetToEbcdicNames;
+    StringRef EbcdicNames(EbcdicNamesPtr, EbcdicNamesSize);
+
+    SmallString<64> Dst;
+    ConverterEBCDIC::convertToUTF8(EbcdicNames, Dst);
+    SymbolTableBuf.append(EbcdicSymbolTable.data(), OffsetToEbcdicNames);
+    SymbolTableBuf.append(Dst.str());
+    SymbolTable = StringRef(SymbolTableBuf.data(), SymbolTableBuf.size());
+
+    ++I;
+    if (Err)
+      return;
+    C = &*I;
+
+    setFirstRegular(*C);
+    Err = Error::success();
+    return;
+  }
+
+  setFirstRegular(*C);
+  Err = Error::success();
+  return;
 }

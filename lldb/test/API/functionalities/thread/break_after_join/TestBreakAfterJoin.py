@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class BreakpointAfterJoinTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -73,8 +74,9 @@ class BreakpointAfterJoinTestCase(TestBase):
         num_threads = process.GetNumThreads()
 
         # Make sure we see at least six threads
-        self.assertTrue(
-            num_threads >= 6,
+        self.assertGreaterEqual(
+            num_threads,
+            6,
             "Number of expected threads and actual threads do not match.",
         )
 

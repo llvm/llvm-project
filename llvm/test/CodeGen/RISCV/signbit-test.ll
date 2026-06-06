@@ -303,7 +303,10 @@ define i16 @test_clear_mask_i16_i8(i16 %x) nounwind {
 ; RV32-NEXT:    bnez a1, .LBB10_2
 ; RV32-NEXT:  # %bb.1: # %t
 ; RV32-NEXT:    li a0, 42
-; RV32-NEXT:  .LBB10_2: # %f
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB10_2:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_clear_mask_i16_i8:
@@ -312,7 +315,10 @@ define i16 @test_clear_mask_i16_i8(i16 %x) nounwind {
 ; RV64-NEXT:    bnez a1, .LBB10_2
 ; RV64-NEXT:  # %bb.1: # %t
 ; RV64-NEXT:    li a0, 42
-; RV64-NEXT:  .LBB10_2: # %f
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB10_2:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    ret
 entry:
   %a = and i16 %x, 128
@@ -332,7 +338,10 @@ define i16 @test_set_mask_i16_i8(i16 %x) nounwind {
 ; RV32-NEXT:    beqz a1, .LBB11_2
 ; RV32-NEXT:  # %bb.1: # %t
 ; RV32-NEXT:    li a0, 42
-; RV32-NEXT:  .LBB11_2: # %f
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB11_2:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_set_mask_i16_i8:
@@ -341,7 +350,10 @@ define i16 @test_set_mask_i16_i8(i16 %x) nounwind {
 ; RV64-NEXT:    beqz a1, .LBB11_2
 ; RV64-NEXT:  # %bb.1: # %t
 ; RV64-NEXT:    li a0, 42
-; RV64-NEXT:  .LBB11_2: # %f
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB11_2:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    ret
 entry:
   %a = and i16 %x, 128
@@ -361,7 +373,10 @@ define i16 @test_set_mask_i16_i7(i16 %x) nounwind {
 ; RV32-NEXT:    beqz a1, .LBB12_2
 ; RV32-NEXT:  # %bb.1: # %t
 ; RV32-NEXT:    li a0, 42
-; RV32-NEXT:  .LBB12_2: # %f
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB12_2:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_set_mask_i16_i7:
@@ -370,7 +385,10 @@ define i16 @test_set_mask_i16_i7(i16 %x) nounwind {
 ; RV64-NEXT:    beqz a1, .LBB12_2
 ; RV64-NEXT:  # %bb.1: # %t
 ; RV64-NEXT:    li a0, 42
-; RV64-NEXT:  .LBB12_2: # %f
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB12_2:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    ret
 entry:
   %a = and i16 %x, 64

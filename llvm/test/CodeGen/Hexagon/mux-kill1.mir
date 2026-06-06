@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-gen-mux -o - %s -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-gen-mux -o - %s -verify-machineinstrs | FileCheck %s
 # CHECK: $r2 = C2_mux killed $p0, killed $r0, $r1
 ---
 name: fred

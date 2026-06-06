@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/MachineModuleSlotTracker.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -38,8 +39,8 @@ void MachineModuleSlotTracker::processMachineModule(
       if (&F != &TheFunction)
         continue;
       MDNStartSlot = AST->getNextMetadataSlot();
-      if (auto *MF = TheMMI.getMachineFunction(F))
-        processMachineFunctionMetadata(AST, *MF);
+      if (TheMF)
+        processMachineFunctionMetadata(AST, *TheMF);
       MDNEndSlot = AST->getNextMetadataSlot();
       break;
     }
@@ -51,8 +52,8 @@ void MachineModuleSlotTracker::processMachineFunction(
     bool ShouldInitializeAllMetadata) {
   if (!ShouldInitializeAllMetadata && F == &TheFunction) {
     MDNStartSlot = AST->getNextMetadataSlot();
-    if (auto *MF = TheMMI.getMachineFunction(*F))
-      processMachineFunctionMetadata(AST, *MF);
+    if (TheMF)
+      processMachineFunctionMetadata(AST, *TheMF);
     MDNEndSlot = AST->getNextMetadataSlot();
   }
 }
@@ -63,10 +64,10 @@ void MachineModuleSlotTracker::collectMachineMDNodes(
 }
 
 MachineModuleSlotTracker::MachineModuleSlotTracker(
-    const MachineFunction *MF, bool ShouldInitializeAllMetadata)
+    MFGetterFnT Fn, const MachineFunction *MF, bool ShouldInitializeAllMetadata)
     : ModuleSlotTracker(MF->getFunction().getParent(),
                         ShouldInitializeAllMetadata),
-      TheFunction(MF->getFunction()), TheMMI(MF->getMMI()) {
+      TheFunction(MF->getFunction()), TheMF(Fn(MF->getFunction())) {
   setProcessHook([this](AbstractSlotTrackerStorage *AST, const Module *M,
                         bool ShouldInitializeAllMetadata) {
     this->processMachineModule(AST, M, ShouldInitializeAllMetadata);

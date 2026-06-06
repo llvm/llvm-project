@@ -22,7 +22,15 @@ namespace Fortran::evaluate {
 
 class InitialImage {
 public:
-  enum Result { Ok, NotAConstant, OutOfRange, SizeMismatch };
+  enum Result {
+    Ok,
+    OkNoChange,
+    NotAConstant,
+    OutOfRange,
+    SizeMismatch,
+    LengthMismatch,
+    TooManyElems,
+  };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
   InitialImage(InitialImage &&that) = default;
@@ -45,11 +53,17 @@ public:
               x.values().size() * static_cast<std::size_t>(*elementBytes)) {
         return SizeMismatch;
       } else if (bytes == 0) {
-        return Ok;
+        return OkNoChange;
       } else {
         // TODO endianness
-        std::memcpy(&data_.at(offset), &x.values().at(0), bytes);
-        return Ok;
+        auto *to{&data_.at(offset)};
+        const auto *from{&x.values().at(0)};
+        if (std::memcmp(to, from, bytes) == 0) {
+          return OkNoChange;
+        } else {
+          std::memcpy(to, from, bytes);
+          return Ok;
+        }
       }
     }
   }
@@ -60,26 +74,37 @@ public:
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
-      auto elements{TotalElementCount(x.shape())};
+      auto optElements{TotalElementCount(x.shape())};
+      if (!optElements) {
+        return TooManyElems;
+      }
+      auto elements{*optElements};
       auto elementBytes{bytes > 0 ? bytes / elements : 0};
       if (elements * elementBytes != bytes) {
         return SizeMismatch;
       } else if (bytes == 0) {
-        return Ok;
+        return OkNoChange;
       } else {
-        Result result{Ok};
+        Result result{OkNoChange};
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
           auto scalar{x.At(at)}; // this is a std string; size() in chars
           auto scalarBytes{scalar.size() * KIND};
           if (scalarBytes != elementBytes) {
-            result = SizeMismatch;
+            result = LengthMismatch;
           }
           // Blank padding when short
           for (; scalarBytes < elementBytes; scalarBytes += KIND) {
             scalar += ' ';
           }
           // TODO endianness
-          std::memcpy(&data_.at(offset), scalar.data(), elementBytes);
+          auto *to{&data_.at(offset)};
+          const auto *from{scalar.data()};
+          if (std::memcmp(to, from, elementBytes) != 0) {
+            std::memcpy(to, from, elementBytes);
+            if (result == OkNoChange) {
+              result = Ok;
+            }
+          }
           offset += elementBytes;
         }
         return result;
@@ -95,9 +120,10 @@ public:
         [&](const auto &y) { return Add(offset, bytes, y, c); }, x.u);
   }
 
-  void AddPointer(ConstantSubscript, const Expr<SomeType> &);
+  Result AddPointer(ConstantSubscript, const Expr<SomeType> &);
 
-  void Incorporate(ConstantSubscript toOffset, const InitialImage &from,
+  // Returns true if anything changes
+  bool Incorporate(ConstantSubscript toOffset, const InitialImage &from,
       ConstantSubscript fromOffset, ConstantSubscript bytes);
 
   // Conversions to constant initializers

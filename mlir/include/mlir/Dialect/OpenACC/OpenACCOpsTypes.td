@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// =============================================================================
+//===----------------------------------------------------------------------===//
 //
 // Defines MLIR OpenACC operation types.
 //
@@ -22,6 +22,26 @@ class OpenACC_Type<string name, string typeMnemonic> : TypeDef<OpenACC_Dialect, 
 
 def OpenACC_DataBoundsType : OpenACC_Type<"DataBounds", "data_bounds_ty"> {
   let summary = "Type for representing acc data clause bounds information";
+}
+
+def OpenACC_DeclareTokenType : OpenACC_Type<"DeclareToken", "declare_token"> {
+  let summary = "declare token type";
+  let description = [{
+    `acc.declare_token` is a type returned by a `declare_enter` operation and
+    can be passed to a `declare_exit` operation to represent an implicit
+    data region.
+  }];
+}
+
+def OpenACC_PrivateType : OpenACC_Type<"Private", "private_type"> {
+  let summary = "Handle type for privatized storage across parallel dimensions";
+  let description = [{
+    A handle type for privatized memory used in OpenACC codegen. It is
+    produced by `acc.privatize` and accessed through `acc.private_local`, which
+    materializes the underlying storage for the current parallel execution context.
+  }];
+  let parameters = (ins "mlir::Type":$baseTy);
+  let assemblyFormat = "`<` $baseTy `>`";
 }
 
 #endif // OPENACC_OPS_TYPES

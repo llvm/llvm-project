@@ -18,14 +18,16 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -59,6 +61,8 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<DebugUnparseNoSemaAction>();
   case DebugUnparseWithSymbols:
     return std::make_unique<DebugUnparseWithSymbolsAction>();
+  case DebugUnparseWithModules:
+    return std::make_unique<DebugUnparseWithModulesAction>();
   case DebugDumpSymbols:
     return std::make_unique<DebugDumpSymbolsAction>();
   case DebugDumpParseTree:
@@ -131,7 +135,7 @@ updateDiagEngineForOptRemarks(clang::DiagnosticsEngine &diagsEng,
 
     // Check to see if this opt starts with "no-", if so, this is a
     // negative form of the option.
-    bool isPositive = !remarkOpt.startswith("no-");
+    bool isPositive = !remarkOpt.starts_with("no-");
     if (!isPositive)
       remarkOpt = remarkOpt.substr(3);
 
@@ -151,11 +155,10 @@ updateDiagEngineForOptRemarks(clang::DiagnosticsEngine &diagsEng,
 bool executeCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->getFrontendOpts().showHelp) {
-    clang::driver::getDriverOptTable().printHelp(
-        llvm::outs(), "flang-new -fc1 [options] file...",
-        "LLVM 'Flang' Compiler",
+    clang::getDriverOptTable().printHelp(
+        llvm::outs(), "flang -fc1 [options] file...", "LLVM 'Flang' Compiler",
         /*ShowHidden=*/false, /*ShowAllAliases=*/false,
-        llvm::opt::Visibility(clang::driver::options::FC1Option));
+        llvm::opt::Visibility(clang::options::FC1Option));
     return true;
   }
 
@@ -176,6 +179,20 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
     }
   }
 
+  // Load and store LLVM pass plugins.
+  for (const std::string &path :
+       flang->getInvocation().getCodeGenOpts().LLVMPassPlugins) {
+    if (llvm::Expected<llvm::PassPlugin> passPlugin =
+            llvm::PassPlugin::Load(path)) {
+      flang->addPassPlugin(std::make_unique<llvm::PassPlugin>(*passPlugin));
+    } else {
+      unsigned diagID = flang->getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "unable to load plugin '%0': '%1'");
+      flang->getDiagnostics().Report(diagID)
+          << path << toString(passPlugin.takeError());
+    }
+  }
+
   // Honor -mllvm. This should happen AFTER plugins have been loaded!
   if (!flang->getFrontendOpts().llvmArgs.empty()) {
     unsigned numArgs = flang->getFrontendOpts().llvmArgs.size();
@@ -191,6 +208,8 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
 
   // Honor -mmlir. This should happen AFTER plugins have been loaded!
   if (!flang->getFrontendOpts().mlirArgs.empty()) {
+    fir::registerFlangPipelinePasses(); // Must be called before
+                                        // mlir::registerPassManagerCLOptions()
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
     mlir::registerAsmPrinterCLOptions();

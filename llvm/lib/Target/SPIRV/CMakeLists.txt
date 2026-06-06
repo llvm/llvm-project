@@ -10,30 +10,50 @@ tablegen(LLVM SPIRVGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM SPIRVGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM SPIRVGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM SPIRVGenTables.inc -gen-searchable-tables)
+tablegen(LLVM SPIRVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="SPIRVPreLegalizerCombiner")
 
 add_public_tablegen_target(SPIRVCommonTableGen)
 
 add_llvm_target(SPIRVCodeGen
+  SPIRVAPI.cpp
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
-  SPIRVDuplicatesTracker.cpp
+  SPIRVInlineAsmLowering.cpp
+  SPIRVCommandLine.cpp
+  SPIRVCtorDtorLowering.cpp
   SPIRVEmitIntrinsics.cpp
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
+  SPIRVLegalizeImplicitBinding.cpp
+  SPIRVLegalizeZeroSizeArrays.cpp
+  SPIRVLegalizePointerCast.cpp
+  SPIRVMergeRegionExitTargets.cpp
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
   SPIRVMCInstLower.cpp
+  SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
+  SPIRVStructurizer.cpp
+  SPIRVCombinerHelper.cpp
   SPIRVPreLegalizer.cpp
+  SPIRVPreLegalizerCombiner.cpp
+  SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
+  SPIRVPrepareGlobals.cpp
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
+  SPIRVTargetTransformInfo.cpp
+  SPIRVTypeInst.cpp
   SPIRVUtils.cpp
+  SPIRVNonSemanticDebugHandler.cpp
+  SPIRVCBufferAccess.cpp
+  SPIRVPushConstantAccess.cpp
 
   LINK_COMPONENTS
   Analysis
@@ -43,9 +63,13 @@ add_llvm_target(SPIRVCodeGen
   Core
   Demangle
   GlobalISel
+  FrontendHLSL
+  IPO
   MC
+  SPIRVAnalysis
   SPIRVDesc
   SPIRVInfo
+  ScalarOpts
   SelectionDAG
   Support
   Target
@@ -58,3 +82,4 @@ add_llvm_target(SPIRVCodeGen
 
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(Analysis)

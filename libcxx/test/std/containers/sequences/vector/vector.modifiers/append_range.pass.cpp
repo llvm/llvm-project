@@ -27,16 +27,17 @@ constexpr bool test() {
   static_assert(test_constraints_append_range<std::vector, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_append_range<std::vector<int, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_append_range<std::vector<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
       LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
     });
   });
   test_sequence_append_range_move_only<std::vector>();
+  test_sequence_append_range_emplace_constructible_and_move_insertable<std::vector>();
 
-  { // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
+  {   // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
     { // Ensure reallocation happens.
-      int in[] = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
+      int in[]           = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
       std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
       v.shrink_to_fit();
       assert(v.capacity() < v.size() + std::ranges::size(in));
@@ -45,14 +46,25 @@ constexpr bool test() {
       assert(std::ranges::equal(v, std::array{1, 2, 3, 4, 5, 6, 7, 8, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10}));
     }
 
-    { // Ensure no reallocation happens.
-      int in[] = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
+    { // Ensure no reallocation happens, and that we don't invalidate iterators-
+      int in[]           = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
       std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
       v.reserve(v.size() + std::ranges::size(in));
-      assert(v.capacity() >= v.size() + std::ranges::size(in));
+
+      auto ptr     = v.data();
+      auto old_cap = v.capacity();
 
       v.append_range(in);
+      assert(v.capacity() == old_cap);
       assert(std::ranges::equal(v, std::array{1, 2, 3, 4, 5, 6, 7, 8, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10}));
+
+      // vector is allowed to overallocate. Make sure it doesn't reallocate until the new capacity is reached.
+      while (v.size() < old_cap) {
+        int in2[] = {0};
+        v.append_range(in2);
+        assert(v.capacity() == old_cap);
+      }
+      assert(v.data() == ptr);
     }
   }
 

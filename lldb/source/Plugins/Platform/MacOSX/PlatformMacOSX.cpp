@@ -15,6 +15,7 @@
 #include "PlatformRemoteAppleBridge.h"
 #include "PlatformRemoteAppleTV.h"
 #include "PlatformRemoteAppleWatch.h"
+#include "PlatformRemoteAppleXR.h"
 #endif
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
@@ -53,6 +54,7 @@ void PlatformMacOSX::Initialize() {
   PlatformRemoteAppleTV::Initialize();
   PlatformRemoteAppleWatch::Initialize();
   PlatformRemoteAppleBridge::Initialize();
+  PlatformRemoteAppleXR::Initialize();
 #endif
 
   if (g_initialize_count++ == 0) {
@@ -75,13 +77,14 @@ void PlatformMacOSX::Terminate() {
   }
 
 #if defined(__APPLE__)
+  PlatformRemoteAppleXR::Terminate();
   PlatformRemoteAppleBridge::Terminate();
   PlatformRemoteAppleWatch::Terminate();
   PlatformRemoteAppleTV::Terminate();
   PlatformDarwinKernel::Terminate();
   PlatformAppleSimulator::Terminate();
 #endif
-  PlatformRemoteMacOSX::Initialize();
+  PlatformRemoteMacOSX::Terminate();
   PlatformRemoteiOS::Terminate();
   PlatformDarwin::Terminate();
 }
@@ -125,18 +128,14 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
 
   // Use the default SDK as a fallback.
   auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK::GetAnyMacOS()});
+      PlatformDarwin::ResolveXcodeSDK(XcodeSDK::GetAnyMacOS());
   if (!sdk_path_or_err) {
-    Debugger::ReportError("Error while searching for Xcode SDK: " +
-                          toString(sdk_path_or_err.takeError()));
+    Debugger::ReportError(toString(sdk_path_or_err.takeError()));
     return {};
   }
 
-  FileSpec fspec(*sdk_path_or_err);
-  if (fspec) {
-    if (FileSystem::Instance().Exists(fspec))
-      return ConstString(fspec.GetPath());
-  }
+  if (FileSystem::Instance().Exists(*sdk_path_or_err))
+    return ConstString(sdk_path_or_err->GetPath());
 
   return {};
 }
@@ -179,11 +178,9 @@ PlatformMacOSX::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
 lldb_private::Status PlatformMacOSX::GetSharedModule(
     const lldb_private::ModuleSpec &module_spec, Process *process,
     lldb::ModuleSP &module_sp,
-    const lldb_private::FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
-  Status error = GetSharedModuleWithLocalCache(module_spec, module_sp,
-                                               module_search_paths_ptr,
-                                               old_modules, did_create_ptr);
+  Status error = GetSharedModuleWithLocalCache(
+      module_spec, module_sp, old_modules, did_create_ptr, process);
 
   if (module_sp) {
     if (module_spec.GetArchitecture().GetCore() ==
@@ -197,8 +194,8 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
         llvm::SmallVector<lldb::ModuleSP, 1> old_x86_64_modules;
         bool did_create = false;
         Status x86_64_error = GetSharedModuleWithLocalCache(
-            module_spec_x86_64, x86_64_module_sp, module_search_paths_ptr,
-            &old_x86_64_modules, &did_create);
+            module_spec_x86_64, x86_64_module_sp, &old_x86_64_modules,
+            &did_create, process);
         if (x86_64_module_sp && x86_64_module_sp->GetObjectFile()) {
           module_sp = x86_64_module_sp;
           if (old_modules)
@@ -214,7 +211,6 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
 
   if (!module_sp) {
     error = FindBundleBinaryInExecSearchPaths(module_spec, process, module_sp,
-                                              module_search_paths_ptr,
                                               old_modules, did_create_ptr);
   }
   return error;

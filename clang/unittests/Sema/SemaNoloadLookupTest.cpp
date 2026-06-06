@@ -10,6 +10,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -57,14 +58,15 @@ public:
     std::string FileName = llvm::Twine(ModuleName + ".cppm").str();
     addFile(FileName, Contents);
 
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
-    CIOpts.Diags = Diags;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+    DiagnosticOptions DiagOpts;
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+    CIOpts.Diags = Diags;
 
     std::string CacheBMIPath =
-        llvm::Twine(TestDir + "/" + ModuleName + " .pcm").str();
+        llvm::Twine(TestDir + "/" + ModuleName + ".pcm").str();
     std::string PrebuiltModulePath =
         "-fprebuilt-module-path=" + TestDir.str().str();
     const char *Args[] = {"clang++",
@@ -75,17 +77,15 @@ public:
                           TestDir.c_str(),
                           "-I",
                           TestDir.c_str(),
-                          FileName.c_str(),
-                          "-o",
-                          CacheBMIPath.c_str()};
+                          FileName.c_str()};
     std::shared_ptr<CompilerInvocation> Invocation =
         createInvocation(Args, CIOpts);
     EXPECT_TRUE(Invocation);
 
-    CompilerInstance Instance;
-    Instance.setDiagnostics(Diags.get());
-    Instance.setInvocation(Invocation);
-    GenerateModuleInterfaceAction Action;
+    CompilerInstance Instance(std::move(Invocation));
+    Instance.setDiagnostics(Diags);
+    Instance.getFrontendOpts().OutputFile = CacheBMIPath;
+    GenerateReducedModuleInterfaceAction Action;
     EXPECT_TRUE(Instance.ExecuteAction(Action));
     EXPECT_FALSE(Diags->hasErrorOccurred());
 
@@ -118,7 +118,7 @@ public:
     if (!ID)
       return true;
 
-    Module *M = ID->getImportedModule();
+    clang::Module *M = ID->getImportedModule();
     assert(M);
     if (M->Name != "R")
       return true;

@@ -10,6 +10,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/RegionInfoImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -75,18 +76,17 @@ void MachineRegionInfo::recalculate(MachineFunction &F,
 // MachineRegionInfoPass implementation
 //
 
-MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {
-  initializeMachineRegionInfoPassPass(*PassRegistry::getPassRegistry());
-}
+MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {}
 
 MachineRegionInfoPass::~MachineRegionInfoPass() = default;
 
 bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
   releaseMemory();
 
-  auto DT = &getAnalysis<MachineDominatorTree>();
-  auto PDT = &getAnalysis<MachinePostDominatorTree>();
-  auto DF = &getAnalysis<MachineDominanceFrontier>();
+  auto DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto PDT =
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  auto DF = &getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
 
   RI.recalculate(F, DT, PDT, DF);
 
@@ -109,9 +109,9 @@ void MachineRegionInfoPass::verifyAnalysis() const {
 
 void MachineRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addRequired<MachinePostDominatorTree>();
-  AU.addRequired<MachineDominanceFrontier>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+  AU.addRequired<MachineDominanceFrontierWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -126,13 +126,13 @@ LLVM_DUMP_METHOD void MachineRegionInfoPass::dump() const {
 #endif
 
 char MachineRegionInfoPass::ID = 0;
-char &MachineRegionInfoPassID = MachineRegionInfoPass::ID;
+char &llvm::MachineRegionInfoPassID = MachineRegionInfoPass::ID;
 
 INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, DEBUG_TYPE,
                       "Detect single entry single exit regions", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(MachineRegionInfoPass, DEBUG_TYPE,
                     "Detect single entry single exit regions", true, true)
 

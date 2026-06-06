@@ -41,6 +41,10 @@ if (CLANG_LINK_CLANG_DYLIB)
   set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
 endif()
 
+if (HAIKU)
+  list(APPEND _DEPS network)
+endif()
+
 add_clang_library(clang-cpp
                   SHARED
                   ${INSTALL_WITH_TOOLCHAIN}
@@ -48,9 +52,16 @@ add_clang_library(clang-cpp
                   ${_OBJECTS}
                   LINK_LIBS
                   ${_DEPS})
+
+configure_file(simple_version_script.map.in simple_version_script.map)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_options(clang-cpp PRIVATE LINKER:--version-script,${CMAKE_CURRENT_BINARY_DIR}/simple_version_script.map)
+endif()
+
 # Optimize function calls for default visibility definitions to avoid PLT and
 # reduce dynamic relocations.
-if (NOT APPLE AND NOT MINGW)
+if (NOT APPLE AND LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
   target_link_options(clang-cpp PRIVATE LINKER:-Bsymbolic-functions)
 endif()
 if (MINGW OR CYGWIN)

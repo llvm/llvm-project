@@ -202,6 +202,14 @@ llvm::json::Value toJSON(const TextEdit &P) {
   return Result;
 }
 
+llvm::json::Value toJSON(const InsertReplaceEdit &P) {
+  return llvm::json::Object{
+      {"newText", P.newText},
+      {"insert", P.insert},
+      {"replace", P.replace},
+  };
+}
+
 bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
@@ -295,8 +303,11 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
   }
 }
 
-SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
-  switch (Kind) {
+SymbolKind indexSymbolKindToSymbolKind(const index::SymbolInfo &Info) {
+  switch (Info.Kind) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case index::SymbolKind::IncludeDirective:
   case index::SymbolKind::Unknown:
     return SymbolKind::Variable;
   case index::SymbolKind::Module:
@@ -319,8 +330,16 @@ SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
     return SymbolKind::Interface;
   case index::SymbolKind::Union:
     return SymbolKind::Class;
-  case index::SymbolKind::TypeAlias:
-    return SymbolKind::Class;
+  case index::SymbolKind::TypeAlias: {
+    switch (Info.SubKind) {
+    case index::SymbolSubKind::UsingStruct:
+      return SymbolKind::Struct;
+    case index::SymbolSubKind::UsingClass:
+      return SymbolKind::Class;
+    default:
+      return SymbolKind::Class;
+    }
+  }
   case index::SymbolKind::Function:
     return SymbolKind::Function;
   case index::SymbolKind::Variable:
@@ -403,6 +422,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
               break;
           }
         }
+        if (auto IRSupport = Item->getBoolean("insertReplaceSupport"))
+          R.InsertReplace = *IRSupport;
       }
       if (auto *ItemKind = Completion->getObject("completionItemKind")) {
         if (auto *ValueSet = ItemKind->get("valueSet")) {
@@ -497,13 +518,64 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       if (auto Cancel = StaleRequestSupport->getBoolean("cancel"))
         R.CancelsStaleRequests = *Cancel;
     }
+    if (auto *PositionEncodings = General->get("positionEncodings")) {
+      R.PositionEncodings.emplace();
+      if (!fromJSON(*PositionEncodings, *R.PositionEncodings,
+                    P.field("general").field("positionEncodings")))
+        return false;
+    }
   }
   if (auto *OffsetEncoding = O->get("offsetEncoding")) {
-    R.offsetEncoding.emplace();
-    if (!fromJSON(*OffsetEncoding, *R.offsetEncoding,
+    R.PositionEncodings.emplace();
+    elog("offsetEncoding capability is a deprecated clangd extension that'll "
+         "go away with clangd 23. Migrate to standard positionEncodings "
+         "capability introduced by LSP 3.17");
+    if (!fromJSON(*OffsetEncoding, *R.PositionEncodings,
                   P.field("offsetEncoding")))
       return false;
   }
+
+  if (auto *Experimental = O->getObject("experimental")) {
+    if (auto *TextDocument = Experimental->getObject("textDocument")) {
+      if (auto *Completion = TextDocument->getObject("completion")) {
+        if (auto EditsNearCursor = Completion->getBoolean("editsNearCursor"))
+          R.CompletionFixes |= *EditsNearCursor;
+      }
+      if (auto *References = TextDocument->getObject("references")) {
+        if (auto ContainerSupport = References->getBoolean("container")) {
+          R.ReferenceContainer |= *ContainerSupport;
+        }
+      }
+      if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
+        if (auto CodeActions = Diagnostics->getBoolean("codeActionsInline")) {
+          R.DiagnosticFixes |= *CodeActions;
+        }
+      }
+      if (auto *InactiveRegions =
+              TextDocument->getObject("inactiveRegionsCapabilities")) {
+        if (auto InactiveRegionsSupport =
+                InactiveRegions->getBoolean("inactiveRegions")) {
+          R.InactiveRegions |= *InactiveRegionsSupport;
+        }
+      }
+    }
+    if (auto *Window = Experimental->getObject("window")) {
+      if (auto Implicit =
+              Window->getBoolean("implicitWorkDoneProgressCreate")) {
+        R.ImplicitProgressCreation |= *Implicit;
+      }
+    }
+    if (auto *OffsetEncoding = Experimental->get("offsetEncoding")) {
+      R.PositionEncodings.emplace();
+      elog("offsetEncoding capability is a deprecated clangd extension that'll "
+           "go away with clangd 23. Migrate to standard positionEncodings "
+           "capability introduced by LSP 3.17");
+      if (!fromJSON(*OffsetEncoding, *R.PositionEncodings,
+                    P.field("offsetEncoding")))
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -633,6 +705,15 @@ bool fromJSON(const llvm::json::Value &Params, DocumentRangeFormattingParams &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("textDocument", R.textDocument) && O.map("range", R.range);
+  ;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              DocumentRangesFormattingParams &R, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument) &&
+         O.map("ranges", R.ranges);
+  ;
 }
 
 bool fromJSON(const llvm::json::Value &Params,
@@ -844,7 +925,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const SymbolDetails &S) {
   if (!S.containerName.empty()) {
     O << S.containerName;
     llvm::StringRef ContNameRef;
-    if (!ContNameRef.endswith("::")) {
+    if (!ContNameRef.ends_with("::")) {
       O << " ";
     }
   }
@@ -901,6 +982,8 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
     Result["children"] = S.children;
   if (S.deprecated)
     Result["deprecated"] = true;
+  if (!S.tags.empty())
+    Result["tags"] = S.tags;
   // FIXME: workaround for older gcc/clang
   return std::move(Result);
 }
@@ -1111,7 +1194,8 @@ llvm::json::Value toJSON(const CompletionItem &CI) {
   if (CI.insertTextFormat != InsertTextFormat::Missing)
     Result["insertTextFormat"] = static_cast<int>(CI.insertTextFormat);
   if (CI.textEdit)
-    Result["textEdit"] = *CI.textEdit;
+    Result["textEdit"] = std::visit(
+        [](const auto &V) { return llvm::json::Value(V); }, *CI.textEdit);
   if (!CI.additionalTextEdits.empty())
     Result["additionalTextEdits"] = llvm::json::Array(CI.additionalTextEdits);
   if (CI.deprecated)
@@ -1185,6 +1269,23 @@ bool fromJSON(const llvm::json::Value &Params, RenameParams &R,
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("textDocument", R.textDocument) &&
          O.map("position", R.position) && O.map("newName", R.newName);
+}
+
+llvm::json::Value toJSON(const RenameParams &R) {
+  return llvm::json::Object{
+      {"textDocument", R.textDocument},
+      {"position", R.position},
+      {"newName", R.newName},
+  };
+}
+
+llvm::json::Value toJSON(const PrepareRenameResult &PRR) {
+  if (PRR.placeholder.empty())
+    return toJSON(PRR.range);
+  return llvm::json::Object{
+      {"range", toJSON(PRR.range)},
+      {"placeholder", PRR.placeholder},
+  };
 }
 
 llvm::json::Value toJSON(const DocumentHighlight &DH) {
@@ -1395,7 +1496,7 @@ bool fromJSON(const llvm::json::Value &Params, ReferenceParams &R,
 }
 
 llvm::json::Value toJSON(SymbolTag Tag) {
-  return llvm::json::Value{static_cast<int>(Tag)};
+  return llvm::json::Value(static_cast<int>(Tag));
 }
 
 llvm::json::Value toJSON(const CallHierarchyItem &I) {
@@ -1429,7 +1530,7 @@ bool fromJSON(const llvm::json::Value &Params, CallHierarchyItem &I,
 bool fromJSON(const llvm::json::Value &Params,
               CallHierarchyIncomingCallsParams &C, llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O.map("item", C.item);
+  return O && O.map("item", C.item);
 }
 
 llvm::json::Value toJSON(const CallHierarchyIncomingCall &C) {
@@ -1439,7 +1540,7 @@ llvm::json::Value toJSON(const CallHierarchyIncomingCall &C) {
 bool fromJSON(const llvm::json::Value &Params,
               CallHierarchyOutgoingCallsParams &C, llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O.map("item", C.item);
+  return O && O.map("item", C.item);
 }
 
 llvm::json::Value toJSON(const CallHierarchyOutgoingCall &C) {
@@ -1460,6 +1561,7 @@ llvm::json::Value toJSON(const InlayHintKind &Kind) {
     return 2;
   case InlayHintKind::Designator:
   case InlayHintKind::BlockEnd:
+  case InlayHintKind::DefaultArgument:
     // This is an extension, don't serialize.
     return nullptr;
   }
@@ -1484,6 +1586,10 @@ bool operator<(const InlayHint &A, const InlayHint &B) {
   return std::tie(A.position, A.range, A.kind, A.label) <
          std::tie(B.position, B.range, B.kind, B.label);
 }
+std::string InlayHint::joinLabels() const {
+  return llvm::join(llvm::map_range(label, [](auto &L) { return L.value; }),
+                    "");
+}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
   auto ToString = [](InlayHintKind K) {
@@ -1496,10 +1602,39 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
       return "designator";
     case InlayHintKind::BlockEnd:
       return "block-end";
+    case InlayHintKind::DefaultArgument:
+      return "default-argument";
     }
     llvm_unreachable("Unknown clang.clangd.InlayHintKind");
   };
   return OS << ToString(Kind);
+}
+
+llvm::json::Value toJSON(const InlayHintLabelPart &L) {
+  llvm::json::Object Result{{"value", L.value}};
+  if (L.tooltip)
+    Result["tooltip"] = *L.tooltip;
+  if (L.location)
+    Result["location"] = *L.location;
+  if (L.command)
+    Result["command"] = *L.command;
+  return Result;
+}
+
+bool operator==(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) == std::tie(RHS.value, RHS.location);
+}
+
+bool operator<(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) < std::tie(RHS.value, RHS.location);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const InlayHintLabelPart &L) {
+  OS << L.value;
+  if (L.location)
+    OS << " (" << L.location << ")";
+  return OS;
 }
 
 static const char *toString(OffsetEncoding OE) {

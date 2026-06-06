@@ -12,7 +12,6 @@
 #include "llvm/TextAPI/TextAPIWriter.h"
 #include "gtest/gtest.h"
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -100,6 +99,7 @@ TEST(TBDv4, ReadFile) {
   EXPECT_EQ(5U, File->getSwiftABIVersion());
   EXPECT_FALSE(File->isTwoLevelNamespace());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
+  EXPECT_FALSE(File->isOSLibNotForSharedCache());
   InterfaceFileRef client("ClientA", Targets);
   InterfaceFileRef reexport("/System/Library/Frameworks/A.framework/A",
                             {Targets[0]});
@@ -132,19 +132,19 @@ TEST(TBDv4, ReadFile) {
   llvm::sort(Undefineds);
 
   static ExportedSymbol ExpectedExportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symA", false, false},
-      {SymbolKind::GlobalSymbol, "_symAB", false, false},
-      {SymbolKind::GlobalSymbol, "_symB", false, false},
+      {EncodeKind::GlobalSymbol, "_symA", false, false},
+      {EncodeKind::GlobalSymbol, "_symAB", false, false},
+      {EncodeKind::GlobalSymbol, "_symB", false, false},
   };
 
   static ExportedSymbol ExpectedReexportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symC", false, false},
-      {SymbolKind::GlobalSymbol, "weakReexport", true, false},
+      {EncodeKind::GlobalSymbol, "_symC", false, false},
+      {EncodeKind::GlobalSymbol, "weakReexport", true, false},
   };
 
   static ExportedSymbol ExpectedUndefinedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symD", false, false},
-      {SymbolKind::GlobalSymbol, "weakReference", true, false},
+      {EncodeKind::GlobalSymbol, "_symD", false, false},
+      {EncodeKind::GlobalSymbol, "weakReference", true, false},
   };
 
   EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
@@ -289,16 +289,16 @@ TEST(TBDv4, ReadMultipleDocuments) {
   llvm::sort(Undefineds);
 
   static ExportedSymbol ExpectedExportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symA", false, false},
-      {SymbolKind::GlobalSymbol, "_symAB", false, false},
+      {EncodeKind::GlobalSymbol, "_symA", false, false},
+      {EncodeKind::GlobalSymbol, "_symAB", false, false},
   };
 
   static ExportedSymbol ExpectedReexportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symC", false, false},
+      {EncodeKind::GlobalSymbol, "_symC", false, false},
   };
 
   static ExportedSymbol ExpectedUndefinedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symD", false, false},
+      {EncodeKind::GlobalSymbol, "_symD", false, false},
   };
 
   EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
@@ -351,11 +351,11 @@ TEST(TBDv4, WriteFile) {
   File.addAllowableClient("ClientA", Targets[0]);
   File.addParentUmbrella(Targets[0], "System");
   File.addParentUmbrella(Targets[1], "System");
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symA", {Targets[0]});
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symB", {Targets[1]});
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symC", {Targets[0]},
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symA", {Targets[0]});
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symB", {Targets[1]});
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symC", {Targets[0]},
                  SymbolFlags::WeakDefined);
-  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", {Targets[0]});
+  File.addSymbol(EncodeKind::ObjectiveCClass, "Class1", {Targets[0]});
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -419,11 +419,11 @@ TEST(TBDv4, WriteMultipleDocuments) {
   Document.setCurrentVersion(PackedVersion(1, 0, 0));
   Document.setTwoLevelNamespace();
   Document.setApplicationExtensionSafe(true);
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symA", Targets);
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symAB", {Targets[1]});
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symC", {Targets[0]},
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symA", Targets);
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symAB", {Targets[1]});
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symC", {Targets[0]},
                      SymbolFlags::WeakDefined);
-  Document.addSymbol(SymbolKind::ObjectiveCClass, "Class1", Targets);
+  Document.addSymbol(EncodeKind::ObjectiveCClass, "Class1", Targets);
   File.addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
 
   SmallString<4096> Buffer;
@@ -540,6 +540,22 @@ TEST(TBDv4, Target_maccatalyst) {
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4TargetMacCatalyst),
             stripWhitespace(Buffer.c_str()));
+}
+
+TEST(TBDv4, Target_maccatalyst2) {
+  static const char TBDv4TargetMacCatalyst[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [  x86_64-maccatalyst ]\n"
+      "install-name: Test.dylib\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4TargetMacCatalyst, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(getPlatformFromName("ios-macabi"), *File->getPlatforms().begin());
 }
 
 TEST(TBDv4, Target_x86_ios) {
@@ -734,6 +750,35 @@ TEST(TBDv4, Target_i386_driverkit) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv4, Target_arm64_xros) {
+  static const char TBDv4ArchArm64e[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [ arm64e-xros, arm64e-xros-simulator ]\n"
+      "install-name: Test.dylib\n"
+      "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4ArchArm64e, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V4, File->getFileType());
+  PlatformSet ExpectedSet;
+  ExpectedSet.insert(PLATFORM_XROS);
+  ExpectedSet.insert(PLATFORM_XROS_SIMULATOR);
+  EXPECT_EQ(File->getPlatforms().size(), 2U);
+  for (auto Platform : File->getPlatforms())
+    EXPECT_EQ(ExpectedSet.count(Platform), 1U);
+
+  EXPECT_EQ(ArchitectureSet(AK_arm64e), File->getArchitectures());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(TBDv4ArchArm64e), stripWhitespace(Buffer.c_str()));
+}
+
 TEST(TBDv4, Swift_1) {
   static const char TBDv4SwiftVersion1[] = "--- !tapi-tbd\n"
                                            "tbd-version: 4\n"
@@ -816,6 +861,29 @@ TEST(TBDv4, Swift_99) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv4, NotForSharedCache) {
+
+  static const char TBDv4NotForSharedCache[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [  arm64-macos ]\n"
+      "flags: [ not_for_dyld_shared_cache ]\n"
+      "install-name: /S/L/F/Foo.framework/Foo\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4NotForSharedCache, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_arm64, PLATFORM_MACOS);
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V4, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+  EXPECT_TRUE(ReadFile->isOSLibNotForSharedCache());
+}
+
 TEST(TBDv4, InvalidArchitecture) {
   static const char TBDv4UnknownArch[] = "--- !tapi-tbd\n"
                                          "tbd-version: 4\n"
@@ -828,7 +896,7 @@ TEST(TBDv4, InvalidArchitecture) {
   EXPECT_FALSE(!!Result);
   std::string ErrorMessage = toString(Result.takeError());
   EXPECT_EQ("malformed file\nTest.tbd:3:12: error: unknown "
-            "architecture\ntargets: [ foo-macos ]\n"
+            "target\ntargets: [ foo-macos ]\n"
             "           ^~~~~~~~~~\n",
             ErrorMessage);
 }
@@ -844,7 +912,7 @@ TEST(TBDv4, InvalidPlatform) {
       TextAPIReader::get(MemoryBufferRef(TBDv4FInvalidPlatform, "Test.tbd"));
   EXPECT_FALSE(!!Result);
   std::string ErrorMessage = toString(Result.takeError());
-  EXPECT_EQ("malformed file\nTest.tbd:3:12: error: unknown platform\ntargets: "
+  EXPECT_EQ("malformed file\nTest.tbd:3:12: error: unknown target\ntargets: "
             "[ x86_64-maos ]\n"
             "           ^~~~~~~~~~~~\n",
             ErrorMessage);
@@ -1094,7 +1162,7 @@ TEST(TBDv4, InterfaceInequality) {
                                Target(AK_i386, PLATFORM_MACOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addSymbol(SymbolKind::GlobalSymbol, "_symA",
+    File->addSymbol(EncodeKind::GlobalSymbol, "_symA",
                     {Target(AK_x86_64, PLATFORM_MACOS)});
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
@@ -1105,6 +1173,176 @@ TEST(TBDv4, InterfaceInequality) {
     Document.setInstallName("/System/Library/Frameworks/A.framework/A");
     File->addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
   }));
+}
+
+TEST(TBDv4, SkipUnknownArch) {
+  static const char TBDv4WithUnknownArch[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [ x86_64-macos, foo-macos ]\n"
+      "install-name: Test.dylib\n"
+      "exports:\n"
+      "  - targets: [ x86_64-macos ]\n"
+      "    symbols: [ _knownSym ]\n"
+      "  - targets: [ foo-bar ]\n"
+      "    symbols: [ _unknownSym ]\n"
+      "  - targets: [ x86_64-macos, foo-macos ]\n"
+      "    symbols: [ _mixedSym ]\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4WithUnknownArch, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_EQ(1U, llvm::size(File->targets()));
+  EXPECT_EQ(Target(AK_x86_64, PLATFORM_MACOS), *File->targets().begin());
+
+  llvm::DenseSet<StringRef> SymbolNames;
+  for (const auto *Sym : File->exports())
+    SymbolNames.insert(Sym->getName());
+
+  EXPECT_TRUE(SymbolNames.count("_knownSym"));
+  EXPECT_TRUE(SymbolNames.count("_mixedSym"));
+  EXPECT_FALSE(SymbolNames.count("_unknownSym"));
+}
+
+TEST(TBDv4, SkipUnknownPlatform) {
+  static const char TBDv4WithUnknownPlatform[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [ x86_64-macos, x86_64-windows ]\n"
+      "install-name: Test.dylib\n"
+      "exports:\n"
+      "  - targets: [ x86_64-macos ]\n"
+      "    symbols: [ _knownSym ]\n"
+      "  - targets: [ x86_64-unknownos ]\n"
+      "    symbols: [ _unknownSym ]\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4WithUnknownPlatform, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_EQ(1U, llvm::size(File->targets()));
+  EXPECT_EQ(Target(AK_x86_64, PLATFORM_MACOS), *File->targets().begin());
+
+  DenseSet<StringRef> SymbolNames;
+  for (const auto *Sym : File->exports())
+    SymbolNames.insert(Sym->getName());
+
+  EXPECT_TRUE(SymbolNames.count("_knownSym"));
+  EXPECT_FALSE(SymbolNames.count("_unknownSym"));
+}
+
+TEST(TBDv4, SkipAllUnknownTargets) {
+  static const char TBDv4AllUnknown[] = "--- !tapi-tbd\n"
+                                        "tbd-version: 4\n"
+                                        "targets: [ foo-macos, bar-ios ]\n"
+                                        "install-name: Test.dylib\n"
+                                        "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4AllUnknown, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  // All targets should be filtered out.
+  EXPECT_EQ(0U, llvm::size(File->targets()));
+}
+
+TEST(TBDv4, SkipUnknownWithLoadCommands) {
+  static const char TBDv4WithMetadata[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [ x86_64-macos, foo-macos ]\n"
+      "install-name: Test.dylib\n"
+      "parent-umbrella:\n"
+      "  - targets: [ x86_64-macos, foo-macos ]\n"
+      "    umbrella: System\n"
+      "allowable-clients:\n"
+      "  - targets: [ foo-macos ]\n"
+      "    clients: [ UnknownClient ]\n"
+      "  - targets: [ x86_64-macos ]\n"
+      "    clients: [ KnownClient ]\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4WithMetadata, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_EQ(1U, llvm::size(File->targets()));
+
+  auto &Umbrellas = File->umbrellas();
+  EXPECT_EQ(1U, std::distance(Umbrellas.begin(), Umbrellas.end()));
+  EXPECT_EQ(Target(AK_x86_64, PLATFORM_MACOS), Umbrellas.begin()->first);
+
+  auto &Clients = File->allowableClients();
+  EXPECT_EQ(1U, Clients.size());
+  EXPECT_EQ("KnownClient", Clients.front().getInstallName());
+}
+
+TEST(TBDv4, SkipUnknownInFullFile) {
+  static const char TBDv4FullFile[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [ arm64-macos, x86_64-macos, arm64-linux ]\n"
+      "install-name: Test.dylib\n"
+      "current-version: 1.2.3\n"
+      "compatibility-version: 1.2\n"
+      "parent-umbrella:\n"
+      "  - targets: [ arm64-macos, x86_64-macos, arm64-linux ]\n"
+      "    umbrella: System\n"
+      "allowable-clients:\n"
+      "  - targets: [ arm64-macos, x86_64-macos, arm64-linux ]\n"
+      "    clients: [ ClientA ]\n"
+      "reexported-libraries:\n"
+      "  - targets: [ arm64-macos, x86_64-macos, arm64-linux ]\n"
+      "    libraries: [ /System/Library/Frameworks/A.framework/A ]\n"
+      "exports:\n"
+      "  - targets: [ arm64-macos, x86_64-macos, arm64-linux ]\n"
+      "    symbols: [ _sym ]\n"
+      "...\n";
+  Expected<TBDFile> Result = TextAPIReader::get(
+      MemoryBufferRef(TBDv4FullFile, "Test.tbd"), /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  TargetList ExpectedTargets = {
+      Target(AK_x86_64, PLATFORM_MACOS),
+      Target(AK_arm64, PLATFORM_MACOS),
+  };
+  EXPECT_EQ(2U, llvm::size(File->targets()));
+  for (const auto &T : File->targets())
+    EXPECT_TRUE(llvm::is_contained(ExpectedTargets, T));
+
+  auto &Umbrellas = File->umbrellas();
+  EXPECT_EQ(2U, std::distance(Umbrellas.begin(), Umbrellas.end()));
+  for (const auto &U : Umbrellas)
+    EXPECT_TRUE(llvm::is_contained(ExpectedTargets, U.first));
+
+  InterfaceFileRef ExpectedClient("ClientA", ExpectedTargets);
+  EXPECT_EQ(1U, File->allowableClients().size());
+  EXPECT_EQ(ExpectedClient, File->allowableClients().front());
+
+  InterfaceFileRef ExpectedReexport("/System/Library/Frameworks/A.framework/A",
+                                    ExpectedTargets);
+  EXPECT_EQ(1U, File->reexportedLibraries().size());
+  EXPECT_EQ(ExpectedReexport, File->reexportedLibraries().front());
+
+  auto Exports = File->exports();
+  EXPECT_EQ(1, std::distance(Exports.begin(), Exports.end()));
+  const Symbol *Sym = *Exports.begin();
+  EXPECT_EQ("_sym", Sym->getName());
+  EXPECT_EQ(2U, llvm::size(Sym->targets()));
+  for (const auto &T : Sym->targets())
+    EXPECT_TRUE(llvm::is_contained(ExpectedTargets, T));
 }
 
 } // end namespace TBDv4

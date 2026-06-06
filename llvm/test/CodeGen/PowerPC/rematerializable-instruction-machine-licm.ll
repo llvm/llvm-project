@@ -460,13 +460,13 @@ define zeroext i32 @test1(i64 %0, ptr %1) {
   %23 = phi i64 [ 0, %20 ], [ %107, %22 ]
   %24 = mul i64 %23, 400000
   %25 = getelementptr i64, ptr %3, i64 %24
-  %26 = or i64 %23, 1
+  %26 = or disjoint i64 %23, 1
   %27 = mul i64 %26, 400000
   %28 = getelementptr i64, ptr %3, i64 %27
-  %29 = or i64 %23, 2
+  %29 = or disjoint i64 %23, 2
   %30 = mul i64 %29, 400000
   %31 = getelementptr i64, ptr %3, i64 %30
-  %32 = or i64 %23, 3
+  %32 = or disjoint i64 %23, 3
   %33 = mul i64 %32, 400000
   %34 = getelementptr i64, ptr %3, i64 %33
   %35 = mul i64 %23, 400000

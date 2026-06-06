@@ -21,326 +21,375 @@
 
 typedef std::num_put<char, cpp17_output_iterator<char*> > F;
 
-class my_facet
-    : public F
-{
+class my_facet : public F {
 public:
-    explicit my_facet(std::size_t refs = 0)
-        : F(refs) {}
+  explicit my_facet(std::size_t refs = 0) : F(refs) {}
 };
 
-class my_numpunct
-    : public std::numpunct<char>
-{
+class my_numpunct : public std::numpunct<char> {
 public:
-    my_numpunct() : std::numpunct<char>() {}
+  my_numpunct() : std::numpunct<char>() {}
 
 protected:
-    virtual char_type do_thousands_sep() const {return '_';}
-    virtual std::string do_grouping() const {return std::string("\1\2\3");}
+  virtual char_type do_thousands_sep() const { return '_'; }
+  virtual std::string do_grouping() const { return std::string("\1\2\3"); }
 };
 
-int main(int, char**)
-{
-    const my_facet f(1);
+int main(int, char**) {
+  const my_facet f(1);
+  { // test decimal
     {
-        std::ios ios(0);
-        long v = 0;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0");
+      std::ios ios(0);
+      long v = 0;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0");
     }
     {
-        std::ios ios(0);
-        long v = 1;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "1");
+      std::ios ios(0);
+      long v = 1;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "1");
     }
     {
-        std::ios ios(0);
-        long v = -1;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "-1");
+      std::ios ios(0);
+      long v = -1;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "-1");
     }
     {
-        std::ios ios(0);
-        long v = -1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "-1000");
+      std::ios ios(0);
+      long v = -1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "-1000");
     }
     {
-        std::ios ios(0);
-        long v = 1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "1000");
+      std::ios ios(0);
+      long v = 1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "1000");
     }
     {
-        std::ios ios(0);
-        std::showpos(ios);
-        long v = 1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "+1000");
+      std::ios ios(0);
+      std::showpos(ios);
+      long v = 1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "+1000");
+    }
+    { // Ensure that std::showpos always prints the +
+      std::ios ios(0);
+      std::showpos(ios);
+      long v = 0;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "+0");
+    }
+  }
+  { // test octal
+    {
+      std::ios ios(0);
+      std::oct(ios);
+      long v = 1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "1750");
     }
     {
-        std::ios ios(0);
-        std::oct(ios);
-        long v = 1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "1750");
+      std::ios ios(0);
+      std::oct(ios);
+      std::showbase(ios);
+      long v = 1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "01750");
+    }
+    { // Ensure that std::showbase doesn't print a prefix for 0
+      std::ios ios(0);
+      std::oct(ios);
+      std::showbase(ios);
+      long v = 0;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0");
+    }
+    { // Ensure that std::showpos doesn't print a '+' when printing octal
+      std::ios ios(0);
+      std::oct(ios);
+      std::showpos(ios);
+      long v = 0;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0");
+    }
+  }
+  { // test hexadecimal
+    {
+      std::ios ios(0);
+      std::hex(ios);
+      long v = 1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "3e8");
     }
     {
-        std::ios ios(0);
-        std::oct(ios);
-        std::showbase(ios);
-        long v = 1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "01750");
+      std::ios ios(0);
+      std::hex(ios);
+      std::showbase(ios);
+      long v = 1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0x3e8");
     }
     {
-        std::ios ios(0);
-        std::hex(ios);
-        long v = 1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "3e8");
+      std::ios ios(0);
+      std::hex(ios);
+      std::showbase(ios);
+      std::uppercase(ios);
+      long v = 1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0X3E8");
     }
     {
-        std::ios ios(0);
-        std::hex(ios);
-        std::showbase(ios);
-        long v = 1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0x3e8");
+      std::ios ios(0);
+      ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+      std::hex(ios);
+      std::showbase(ios);
+      std::uppercase(ios);
+      long v = 1000;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0X3E_8");
     }
     {
-        std::ios ios(0);
-        std::hex(ios);
-        std::showbase(ios);
-        std::uppercase(ios);
-        long v = 1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0X3E8");
+      std::ios ios(0);
+      ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+      std::hex(ios);
+      std::showbase(ios);
+      long v = 2147483647;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0x7f_fff_ff_f");
     }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::hex(ios);
-        std::showbase(ios);
-        std::uppercase(ios);
-        long v = 1000;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0X3E_8");
+    { // Ensure that std::showbase doesn't print a prefix for 0
+      std::ios ios(0);
+      std::hex(ios);
+      std::showbase(ios);
+      long v = 0;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0");
     }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::hex(ios);
-        std::showbase(ios);
-        long v = 2147483647;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0x7f_fff_ff_f");
+    { // Ensure that std::showpos doesn't print a '+' when printing hexadecimal
+      std::ios ios(0);
+      std::hex(ios);
+      std::showpos(ios);
+      long v = 0;
+      char str[50];
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex == "0");
     }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::oct(ios);
-        long v = 0123467;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "123_46_7");
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::oct(ios);
-        std::showbase(ios);
-        long v = 0123467;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0_123_46_7");
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::oct(ios);
-        std::showbase(ios);
-        std::right(ios);
-        ios.width(15);
-        long v = 0123467;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "*****0_123_46_7");
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::oct(ios);
-        std::showbase(ios);
-        std::left(ios);
-        ios.width(15);
-        long v = 0123467;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0_123_46_7*****");
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::oct(ios);
-        std::showbase(ios);
-        std::internal(ios);
-        ios.width(15);
-        long v = 0123467;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "*****0_123_46_7");
-        assert(ios.width() == 0);
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::hex(ios);
-        std::showbase(ios);
-        std::right(ios);
-        ios.width(15);
-        long v = 2147483647;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "**0x7f_fff_ff_f");
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::hex(ios);
-        std::showbase(ios);
-        std::left(ios);
-        ios.width(15);
-        long v = 2147483647;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0x7f_fff_ff_f**");
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::hex(ios);
-        std::showbase(ios);
-        std::internal(ios);
-        ios.width(15);
-        long v = 2147483647;
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "0x**7f_fff_ff_f");
-        assert(ios.width() == 0);
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::showpos(ios);
-        long v = 1000;
-        std::right(ios);
-        ios.width(10);
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "***+1_00_0");
-        assert(ios.width() == 0);
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::showpos(ios);
-        long v = 1000;
-        std::left(ios);
-        ios.width(10);
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "+1_00_0***");
-        assert(ios.width() == 0);
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        std::showpos(ios);
-        long v = 1000;
-        std::internal(ios);
-        ios.width(10);
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "+***1_00_0");
-        assert(ios.width() == 0);
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        long v = -1000;
-        std::right(ios);
-        std::showpos(ios);
-        ios.width(10);
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "***-1_00_0");
-        assert(ios.width() == 0);
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        long v = -1000;
-        std::left(ios);
-        ios.width(10);
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "-1_00_0***");
-        assert(ios.width() == 0);
-    }
-    {
-        std::ios ios(0);
-        ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        long v = -1000;
-        std::internal(ios);
-        ios.width(10);
-        char str[50];
-        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
-        std::string ex(str, base(iter));
-        assert(ex == "-***1_00_0");
-        assert(ios.width() == 0);
-    }
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::oct(ios);
+    long v = 0123467;
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "123_46_7");
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::oct(ios);
+    std::showbase(ios);
+    long v = 0123467;
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "0_123_46_7");
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::oct(ios);
+    std::showbase(ios);
+    std::right(ios);
+    ios.width(15);
+    long v = 0123467;
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "*****0_123_46_7");
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::oct(ios);
+    std::showbase(ios);
+    std::left(ios);
+    ios.width(15);
+    long v = 0123467;
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "0_123_46_7*****");
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::oct(ios);
+    std::showbase(ios);
+    std::internal(ios);
+    ios.width(15);
+    long v = 0123467;
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "*****0_123_46_7");
+    assert(ios.width() == 0);
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::hex(ios);
+    std::showbase(ios);
+    std::right(ios);
+    ios.width(15);
+    long v = 2147483647;
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "**0x7f_fff_ff_f");
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::hex(ios);
+    std::showbase(ios);
+    std::left(ios);
+    ios.width(15);
+    long v = 2147483647;
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "0x7f_fff_ff_f**");
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::hex(ios);
+    std::showbase(ios);
+    std::internal(ios);
+    ios.width(15);
+    long v = 2147483647;
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "0x**7f_fff_ff_f");
+    assert(ios.width() == 0);
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::showpos(ios);
+    long v = 1000;
+    std::right(ios);
+    ios.width(10);
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "***+1_00_0");
+    assert(ios.width() == 0);
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::showpos(ios);
+    long v = 1000;
+    std::left(ios);
+    ios.width(10);
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "+1_00_0***");
+    assert(ios.width() == 0);
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    std::showpos(ios);
+    long v = 1000;
+    std::internal(ios);
+    ios.width(10);
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "+***1_00_0");
+    assert(ios.width() == 0);
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    long v = -1000;
+    std::right(ios);
+    std::showpos(ios);
+    ios.width(10);
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "***-1_00_0");
+    assert(ios.width() == 0);
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    long v = -1000;
+    std::left(ios);
+    ios.width(10);
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "-1_00_0***");
+    assert(ios.width() == 0);
+  }
+  {
+    std::ios ios(0);
+    ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
+    long v = -1000;
+    std::internal(ios);
+    ios.width(10);
+    char str[50];
+    cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+    std::string ex(str, base(iter));
+    assert(ex == "-***1_00_0");
+    assert(ios.width() == 0);
+  }
 
   return 0;
 }

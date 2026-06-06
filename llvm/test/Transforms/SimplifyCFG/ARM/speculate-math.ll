@@ -51,24 +51,24 @@ define void @sqrt_test(ptr addrspace(1) noalias nocapture %out, float %a) nounwi
 ; CHECK-MVE-LABEL: @sqrt_test(
 ; CHECK-MVE-NEXT:  entry:
 ; CHECK-MVE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #3
-; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #[[ATTR3:[0-9]+]]
+; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-MVE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: @sqrt_test(
 ; CHECK-V8M-MAIN-NEXT:  entry:
 ; CHECK-V8M-MAIN-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #2
-; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #[[ATTR2:[0-9]+]]
+; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-MAIN-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-MAIN-NEXT:    ret void
 ;
 ; CHECK-V8M-BASE-LABEL: @sqrt_test(
 ; CHECK-V8M-BASE-NEXT:  entry:
 ; CHECK-V8M-BASE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #2
-; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #[[ATTR2:[0-9]+]]
+; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-BASE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-BASE-NEXT:    ret void
 ;
@@ -90,24 +90,24 @@ define void @fabs_test(ptr addrspace(1) noalias nocapture %out, float %a) nounwi
 ; CHECK-MVE-LABEL: @fabs_test(
 ; CHECK-MVE-NEXT:  entry:
 ; CHECK-MVE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #3
-; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #[[ATTR3]]
+; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-MVE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: @fabs_test(
 ; CHECK-V8M-MAIN-NEXT:  entry:
 ; CHECK-V8M-MAIN-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #2
-; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #[[ATTR2]]
+; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-MAIN-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-MAIN-NEXT:    ret void
 ;
 ; CHECK-V8M-BASE-LABEL: @fabs_test(
 ; CHECK-V8M-BASE-NEXT:  entry:
 ; CHECK-V8M-BASE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #2
-; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #[[ATTR2]]
+; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-BASE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-BASE-NEXT:    ret void
 ;
@@ -129,24 +129,24 @@ define void @fma_test(ptr addrspace(1) noalias nocapture %out, float %a, float %
 ; CHECK-MVE-LABEL: @fma_test(
 ; CHECK-MVE-NEXT:  entry:
 ; CHECK-MVE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #3
-; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR3]]
+; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-MVE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: @fma_test(
 ; CHECK-V8M-MAIN-NEXT:  entry:
 ; CHECK-V8M-MAIN-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #2
-; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR2]]
+; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-MAIN-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-MAIN-NEXT:    ret void
 ;
 ; CHECK-V8M-BASE-LABEL: @fma_test(
 ; CHECK-V8M-BASE-NEXT:  entry:
 ; CHECK-V8M-BASE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #2
-; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR2]]
+; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-BASE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-BASE-NEXT:    ret void
 ;
@@ -168,24 +168,24 @@ define void @fmuladd_test(ptr addrspace(1) noalias nocapture %out, float %a, flo
 ; CHECK-MVE-LABEL: @fmuladd_test(
 ; CHECK-MVE-NEXT:  entry:
 ; CHECK-MVE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #3
-; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR3]]
+; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-MVE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: @fmuladd_test(
 ; CHECK-V8M-MAIN-NEXT:  entry:
 ; CHECK-V8M-MAIN-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #2
-; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR2]]
+; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-MAIN-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-MAIN-NEXT:    ret void
 ;
 ; CHECK-V8M-BASE-LABEL: @fmuladd_test(
 ; CHECK-V8M-BASE-NEXT:  entry:
 ; CHECK-V8M-BASE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #2
-; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #[[ATTR2]]
+; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-BASE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-BASE-NEXT:    ret void
 ;
@@ -207,24 +207,24 @@ define void @minnum_test(ptr addrspace(1) noalias nocapture %out, float %a, floa
 ; CHECK-MVE-LABEL: @minnum_test(
 ; CHECK-MVE-NEXT:  entry:
 ; CHECK-MVE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minnum.f32(float [[A]], float [[B:%.*]]) #3
-; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minnum.f32(float [[A]], float [[B:%.*]]) #[[ATTR3]]
+; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-MVE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: @minnum_test(
 ; CHECK-V8M-MAIN-NEXT:  entry:
 ; CHECK-V8M-MAIN-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minnum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minnum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-MAIN-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-MAIN-NEXT:    ret void
 ;
 ; CHECK-V8M-BASE-LABEL: @minnum_test(
 ; CHECK-V8M-BASE-NEXT:  entry:
 ; CHECK-V8M-BASE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minnum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minnum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-BASE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-BASE-NEXT:    ret void
 ;
@@ -246,24 +246,24 @@ define void @maxnum_test(ptr addrspace(1) noalias nocapture %out, float %a, floa
 ; CHECK-MVE-LABEL: @maxnum_test(
 ; CHECK-MVE-NEXT:  entry:
 ; CHECK-MVE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #3
-; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #[[ATTR3]]
+; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-MVE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: @maxnum_test(
 ; CHECK-V8M-MAIN-NEXT:  entry:
 ; CHECK-V8M-MAIN-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-MAIN-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-MAIN-NEXT:    ret void
 ;
 ; CHECK-V8M-BASE-LABEL: @maxnum_test(
 ; CHECK-V8M-BASE-NEXT:  entry:
 ; CHECK-V8M-BASE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-BASE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-BASE-NEXT:    ret void
 ;
@@ -285,24 +285,24 @@ define void @minimum_test(ptr addrspace(1) noalias nocapture %out, float %a, flo
 ; CHECK-MVE-LABEL: @minimum_test(
 ; CHECK-MVE-NEXT:  entry:
 ; CHECK-MVE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #3
-; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #[[ATTR3]]
+; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-MVE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: @minimum_test(
 ; CHECK-V8M-MAIN-NEXT:  entry:
 ; CHECK-V8M-MAIN-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-MAIN-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-MAIN-NEXT:    ret void
 ;
 ; CHECK-V8M-BASE-LABEL: @minimum_test(
 ; CHECK-V8M-BASE-NEXT:  entry:
 ; CHECK-V8M-BASE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-BASE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-BASE-NEXT:    ret void
 ;
@@ -324,24 +324,24 @@ define void @maximum_test(ptr addrspace(1) noalias nocapture %out, float %a, flo
 ; CHECK-MVE-LABEL: @maximum_test(
 ; CHECK-MVE-NEXT:  entry:
 ; CHECK-MVE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #3
-; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-MVE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #[[ATTR3]]
+; CHECK-MVE-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-MVE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: @maximum_test(
 ; CHECK-V8M-MAIN-NEXT:  entry:
 ; CHECK-V8M-MAIN-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-MAIN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-V8M-MAIN-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-MAIN-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-MAIN-NEXT:    ret void
 ;
 ; CHECK-V8M-BASE-LABEL: @maximum_test(
 ; CHECK-V8M-BASE-NEXT:  entry:
 ; CHECK-V8M-BASE-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #2
-; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; CHECK-V8M-BASE-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #[[ATTR2]]
+; CHECK-V8M-BASE-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float +qnan, float [[TMP0]]
 ; CHECK-V8M-BASE-NEXT:    store float [[COND_I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-V8M-BASE-NEXT:    ret void
 ;

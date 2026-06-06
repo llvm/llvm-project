@@ -1,11 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T>
@@ -15,6 +15,7 @@
 
 #include <bit>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -41,6 +42,8 @@ constexpr bool test()
     assert(std::rotl(T(max - 1), 5) == T(max - 32));
     assert(std::rotl(T(max - 1), 6) == T(max - 64));
     assert(std::rotl(T(max - 1), 7) == T(max - 128));
+    assert(std::rotl(T(max - 1), std::numeric_limits<int>::max()) ==
+           std::rotl(T(max - 1), std::numeric_limits<int>::max() % std::numeric_limits<T>::digits));
 
     assert(std::rotl(T(max - 1), -1) == T(max - highbit));
     assert(std::rotl(T(max - 1), -2) == T(max - (highbit >> 1)));
@@ -49,6 +52,8 @@ constexpr bool test()
     assert(std::rotl(T(max - 1), -5) == T(max - (highbit >> 4)));
     assert(std::rotl(T(max - 1), -6) == T(max - (highbit >> 5)));
     assert(std::rotl(T(max - 1), -7) == T(max - (highbit >> 6)));
+    assert(std::rotl(T(max - 1), std::numeric_limits<int>::min()) ==
+           std::rotl(T(max - 1), std::numeric_limits<int>::min() % std::numeric_limits<T>::digits));
 
     assert(std::rotl(T(1), 0) == T(1));
     assert(std::rotl(T(1), 1) == T(2));
@@ -159,6 +164,62 @@ int main(int, char**)
     test<std::uintmax_t>();
     test<std::uintptr_t>();
     test<std::size_t>();
+
+    // _BitInt tests. Width tiers follow C23 7.18.2.5.
+    // rotl uses numeric_limits::digits internally, so only byte-aligned
+    // widths are safe (where digits matches the actual bit width).
+#if TEST_HAS_EXTENSION(bit_int)
+    {
+      using T32 = unsigned _BitInt(32);
+      using T64 = unsigned _BitInt(64);
+
+      T32 m32 = ~T32(0);
+      assert(std::rotl(T32(1), 0) == T32(1));
+      assert(std::rotl(T32(1), 1) == T32(2));
+      assert(std::rotl(T32(1), 4) == T32(16));
+      assert(std::rotl(T32(1), 7) == T32(128));
+      assert(std::rotl(T32(128), -1) == T32(64));
+      assert(std::rotl(T32(128), -7) == T32(1));
+      assert(std::rotl(T32(m32 - 1), 0) == T32(m32 - 1));
+      assert(std::rotl(T32(m32 - 1), 1) == T32(m32 - 2));
+      assert(std::rotl(T32(m32 - 1), 4) == T32(m32 - 16));
+      // Full rotation returns original.
+      assert(std::rotl(T32(1), 32) == T32(1));
+
+      assert(std::rotl(T64(1), 0) == T64(1));
+      assert(std::rotl(T64(1), 4) == T64(16));
+      assert(std::rotl(T64(1), -1) == (T64(1) << 63));
+      assert(std::rotl(T64(1), 64) == T64(1));
+    }
+#  if __BITINT_MAXWIDTH__ >= 128
+    {
+      using T128 = unsigned _BitInt(128);
+      assert(std::rotl(T128(1), 0) == T128(1));
+      assert(std::rotl(T128(1), 4) == T128(16));
+      assert(std::rotl(T128(1), 63) == (T128(1) << 63));
+      assert(std::rotl(T128(1), 64) == (T128(1) << 64));
+      assert(std::rotl(T128(1), -1) == (T128(1) << 127));
+      assert(std::rotl(T128(1), 128) == T128(1));
+      // Multi-bit wrap-around across limb boundary.
+      assert(std::rotl(T128(3) << 62, 4) == T128(3) << 66);
+    }
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::rotl(T256(1), 0) == T256(1));
+      assert(std::rotl(T256(1), 4) == T256(16));
+      assert(std::rotl(T256(1), 200) == (T256(1) << 200));
+      assert(std::rotl(T256(1), -1) == (T256(1) << 255));
+      assert(std::rotl(T256(1), 256) == T256(1));
+      assert(std::rotl(T256(~T256(0) - 1), 1) == T256(~T256(0) - 2));
+      // Wrap-around: rotate a high bit to low.
+      assert(std::rotl(T256(1) << 255, 1) == T256(1));
+      // Modulo: rotation amount larger than width.
+      assert(std::rotl(T256(1), 256 + 4) == T256(1) << 4);
+    }
+#  endif
+#endif // TEST_HAS_EXTENSION(bit_int)
 
     return 0;
 }

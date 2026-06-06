@@ -13,6 +13,7 @@
 #define LLVM_IR_DIAGNOSTICHANDLER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class DiagnosticInfo;
@@ -21,13 +22,14 @@ class DiagnosticInfo;
 /// The handleDiagnostics method must be overriden by the subclasses to handle
 /// diagnostic. The *RemarkEnabled methods can be overriden to control
 /// which remarks are enabled.
-struct DiagnosticHandler {
+struct LLVM_ABI DiagnosticHandler {
   void *DiagnosticContext = nullptr;
+  bool HasErrors = false;
   DiagnosticHandler(void *DiagContext = nullptr)
       : DiagnosticContext(DiagContext) {}
   virtual ~DiagnosticHandler() = default;
 
-  using DiagnosticHandlerTy = void (*)(const DiagnosticInfo &DI, void *Context);
+  using DiagnosticHandlerTy = void (*)(const DiagnosticInfo *DI, void *Context);
 
   /// DiagHandlerCallback is settable from the C API and base implementation
   /// of DiagnosticHandler will call it from handleDiagnostics(). Any derived
@@ -41,7 +43,7 @@ struct DiagnosticHandler {
   /// with a prefix based on the severity.
   virtual bool handleDiagnostics(const DiagnosticInfo &DI) {
     if (DiagHandlerCallback) {
-      DiagHandlerCallback(DI, DiagnosticContext);
+      DiagHandlerCallback(&DI, DiagnosticContext);
       return true;
     }
     return false;

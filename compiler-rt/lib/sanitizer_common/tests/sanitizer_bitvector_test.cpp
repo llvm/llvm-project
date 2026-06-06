@@ -61,7 +61,7 @@ void Print(const BV &bv) {
   t.copyFrom(bv);
   while (!t.empty()) {
     uptr idx = t.getAndClearFirstOne();
-    fprintf(stderr, "%lu ", idx);
+    fprintf(stderr, "%lu ", (unsigned long)idx);
   }
   fprintf(stderr, "\n");
 }
@@ -71,7 +71,7 @@ void Print(const set<uptr> &s) {
 #if defined(_WIN64)
     fprintf(stderr, "%llu ", *it);
 #else
-    fprintf(stderr, "%zu ", *it);
+    fprintf(stderr, "%lu ", (unsigned long)*it);
 #endif
   }
   fprintf(stderr, "\n");

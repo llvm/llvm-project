@@ -13,9 +13,9 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include <queue>
 
 #include <numeric>
+#include <queue>
 
 #define DEBUG_TYPE "taildup"
 
@@ -26,7 +26,7 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> NoThreads;
 
-cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
+static cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
     "tail-duplication",
     cl::desc("duplicate unconditional branches that cross a cache line"),
     cl::init(bolt::TailDuplication::TD_NONE),
@@ -97,8 +97,8 @@ bool TailDuplication::regIsPossiblyOverwritten(const MCInst &Inst, unsigned Reg,
   getCallerSavedRegs(Inst, WrittenRegs, BC);
   if (BC.MIB->isRep(Inst))
     BC.MIB->getRepRegs(WrittenRegs);
-  WrittenRegs &= BC.MIB->getAliases(Reg, false);
-  return WrittenRegs.any();
+  const BitVector &AllAliases = BC.MIB->getAliases(Reg, false);
+  return WrittenRegs.anyCommon(AllAliases);
 }
 
 bool TailDuplication::regIsDefinitelyOverwritten(const MCInst &Inst,
@@ -117,8 +117,8 @@ bool TailDuplication::regIsUsed(const MCInst &Inst, unsigned Reg,
                                 BinaryContext &BC) const {
   BitVector SrcRegs = BitVector(BC.MRI->getNumRegs(), false);
   BC.MIB->getSrcRegs(Inst, SrcRegs);
-  SrcRegs &= BC.MIB->getAliases(Reg, true);
-  return SrcRegs.any();
+  const BitVector &SmallerAliases = BC.MIB->getAliases(Reg, true);
+  return SrcRegs.anyCommon(SmallerAliases);
 }
 
 bool TailDuplication::isOverwrittenBeforeUsed(BinaryBasicBlock &StartBB,
@@ -167,18 +167,22 @@ void TailDuplication::constantAndCopyPropagate(
 
   BlocksToPropagate.insert(BlocksToPropagate.begin(), &OriginalBB);
   // Iterate through the original instructions to find one to propagate
-  for (auto Itr = OriginalBB.begin(); Itr != OriginalBB.end(); ++Itr) {
+  for (auto Itr = OriginalBB.begin(); Itr != OriginalBB.end();) {
     MCInst &OriginalInst = *Itr;
     // It must be a non conditional
-    if (BC.MIB->isConditionalMove(OriginalInst))
+    if (BC.MIB->isConditionalMove(OriginalInst)) {
+      ++Itr;
       continue;
+    }
 
     // Move immediate or move register
     if ((!BC.MII->get(OriginalInst.getOpcode()).isMoveImmediate() ||
          !OriginalInst.getOperand(1).isImm()) &&
         (!BC.MII->get(OriginalInst.getOpcode()).isMoveReg() ||
-         !OriginalInst.getOperand(1).isReg()))
+         !OriginalInst.getOperand(1).isReg())) {
+      ++Itr;
       continue;
+    }
 
     // True if this is constant propagation and not copy propagation
     bool ConstantProp = BC.MII->get(OriginalInst.getOpcode()).isMoveImmediate();
@@ -236,7 +240,7 @@ void TailDuplication::constantAndCopyPropagate(
         break;
     }
 
-    // If the register was replaced everwhere and it was overwritten in either
+    // If the register was replaced everywhere and it was overwritten in either
     // one of the iterated through blocks or one of the successor blocks, delete
     // the original move instruction
     if (ReplacedEverywhere &&
@@ -247,7 +251,9 @@ void TailDuplication::constantAndCopyPropagate(
       // to replace is active for constant propagation
       StaticInstructionDeletionCount++;
       DynamicInstructionDeletionCount += OriginalBB.getExecutionCount();
-      Itr = std::prev(OriginalBB.eraseInstruction(Itr));
+      Itr = OriginalBB.eraseInstruction(Itr);
+    } else {
+      ++Itr;
     }
   }
 }
@@ -276,7 +282,7 @@ TailDuplication::moderateDuplicate(BinaryBasicBlock &BB,
   // The block must be hot
   if (BB.getKnownExecutionCount() == 0)
     return BlocksToDuplicate;
-  // and its sucessor is not already in the same cache line
+  // and its successor is not already in the same cache line
   if (isInCacheLine(BB, Tail))
     return BlocksToDuplicate;
   // and its size do not exceed the maximum allowed size
@@ -299,7 +305,7 @@ TailDuplication::aggressiveDuplicate(BinaryBasicBlock &BB,
   // The block must be hot
   if (BB.getKnownExecutionCount() == 0)
     return BlocksToDuplicate;
-  // and its sucessor is not already in the same cache line
+  // and its successor is not already in the same cache line
   if (isInCacheLine(BB, Tail))
     return BlocksToDuplicate;
 
@@ -633,9 +639,9 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
     ModifiedFunctions++;
 }
 
-void TailDuplication::runOnFunctions(BinaryContext &BC) {
+Error TailDuplication::runOnFunctions(BinaryContext &BC) {
   if (opts::TailDuplicationMode == TailDuplication::TD_NONE)
-    return;
+    return Error::success();
 
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
@@ -644,23 +650,26 @@ void TailDuplication::runOnFunctions(BinaryContext &BC) {
     runOnFunction(Function);
   }
 
-  outs() << "BOLT-INFO: tail duplication"
-         << format(" modified %zu (%.2f%%) functions;", ModifiedFunctions,
-                   100.0 * ModifiedFunctions / BC.getBinaryFunctions().size())
-         << format(" duplicated %zu blocks (%zu bytes) responsible for",
-                   DuplicatedBlockCount, DuplicatedByteCount)
-         << format(" %zu dynamic executions (%.2f%% of all block executions)",
-                   DuplicationsDynamicCount,
-                   100.0 * DuplicationsDynamicCount / AllDynamicCount)
-         << "\n";
+  BC.outs()
+      << "BOLT-INFO: tail duplication"
+      << format(" modified %zu (%.2f%%) functions;", ModifiedFunctions,
+                100.0 * ModifiedFunctions / BC.getBinaryFunctions().size())
+      << format(" duplicated %zu blocks (%zu bytes) responsible for",
+                DuplicatedBlockCount, DuplicatedByteCount)
+      << format(" %zu dynamic executions (%.2f%% of all block executions)",
+                DuplicationsDynamicCount,
+                100.0 * DuplicationsDynamicCount / AllDynamicCount)
+      << "\n";
 
   if (opts::TailDuplicationConstCopyPropagation) {
-    outs() << "BOLT-INFO: tail duplication "
-           << format("applied %zu static and %zu dynamic propagation deletions",
+    BC.outs() << "BOLT-INFO: tail duplication "
+              << format(
+                     "applied %zu static and %zu dynamic propagation deletions",
                      StaticInstructionDeletionCount,
                      DynamicInstructionDeletionCount)
-           << "\n";
+              << "\n";
   }
+  return Error::success();
 }
 
 } // end namespace bolt

@@ -20,6 +20,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/Utility/XcodeSDK.h"
@@ -30,6 +31,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
@@ -85,7 +87,8 @@ struct ModuleFunctionSearchOptions {
 ///
 /// The module will parse more detailed information as more queries are made.
 class Module : public std::enable_shared_from_this<Module>,
-               public SymbolContextScope {
+               public SymbolContextScope,
+               public UserID {
 public:
   class LookupInfo;
   // Static functions that can track the lifetime of module objects. This is
@@ -296,23 +299,15 @@ public:
   ///     matches.
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list);
 
-  /// Find functions by lookup info.
+  /// Find functions by a vector of lookup infos.
   ///
   /// If the function is an inlined function, it will have a block,
   /// representing the inlined function, and the function will be the
   /// containing function.  If it is not inlined, then the block will be NULL.
-  ///
-  /// \param[in] lookup_info
-  ///     The lookup info of the function we are looking for.
-  ///
-  /// \param[out] sc_list
-  ///     A symbol context list that gets filled in with all of the
-  ///     matches.
-  void FindFunctions(const LookupInfo &lookup_info,
+  void FindFunctions(llvm::ArrayRef<LookupInfo> lookup_infos,
                      const CompilerDeclContext &parent_decl_ctx,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
-
   /// Find functions by name.
   ///
   /// If the function is an inlined function, it will have a block,
@@ -333,6 +328,12 @@ public:
   ///     matches.
   void FindFunctions(ConstString name,
                      const CompilerDeclContext &parent_decl_ctx,
+                     lldb::FunctionNameType name_type_mask,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
+
+  /// Find functions by compiler context.
+  void FindFunctions(llvm::ArrayRef<CompilerContext> compiler_ctx,
                      lldb::FunctionNameType name_type_mask,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
@@ -415,70 +416,19 @@ public:
   void FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
                            VariableList &variable_list);
 
-  /// Find types by name.
+  /// Find types using a type-matching object that contains all search
+  /// parameters.
   ///
-  /// Type lookups in modules go through the SymbolFile. The SymbolFile needs to
-  /// be able to lookup types by basename and not the fully qualified typename.
-  /// This allows the type accelerator tables to stay small, even with heavily
-  /// templatized C++. The type search will then narrow down the search
-  /// results. If "exact_match" is true, then the type search will only match
-  /// exact type name matches. If "exact_match" is false, the type will match
-  /// as long as the base typename matches and as long as any immediate
-  /// containing namespaces/class scopes that are specified match. So to
-  /// search for a type "d" in "b::c", the name "b::c::d" can be specified and
-  /// it will match any class/namespace "b" which contains a class/namespace
-  /// "c" which contains type "d". We do this to allow users to not always
-  /// have to specify complete scoping on all expressions, but it also allows
-  /// for exact matching when required.
+  /// \see lldb_private::TypeQuery
   ///
-  /// \param[in] type_name
-  ///     The name of the type we are looking for that is a fully
-  ///     or partially qualified type name.
+  /// \param[in] query
+  ///     A type matching object that contains all of the details of the type
+  ///     search.
   ///
-  /// \param[in] exact_match
-  ///     If \b true, \a type_name is fully qualified and must match
-  ///     exactly. If \b false, \a type_name is a partially qualified
-  ///     name where the leading namespaces or classes can be
-  ///     omitted to make finding types that a user may type
-  ///     easier.
-  ///
-  /// \param[out] types
-  ///     A type list gets populated with any matches.
-  ///
-  void
-  FindTypes(ConstString type_name, bool exact_match, size_t max_matches,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            TypeList &types);
-
-  /// Find types by name.
-  ///
-  /// This behaves like the other FindTypes method but allows to
-  /// specify a DeclContext and a language for the type being searched
-  /// for.
-  ///
-  /// \param searched_symbol_files
-  ///     Prevents one file from being visited multiple times.
-  void
-  FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            TypeMap &types);
-
-  lldb::TypeSP FindFirstType(const SymbolContext &sc, ConstString type_name,
-                             bool exact_match);
-
-  /// Find types by name that are in a namespace. This function is used by the
-  /// expression parser when searches need to happen in an exact namespace
-  /// scope.
-  ///
-  /// \param[in] type_name
-  ///     The name of a type within a namespace that should not include
-  ///     any qualifying namespaces (just a type basename).
-  ///
-  /// \param[out] type_list
-  ///     A type list gets populated with any matches.
-  void FindTypesInNamespace(ConstString type_name,
-                            const CompilerDeclContext &parent_decl_ctx,
-                            size_t max_matches, TypeList &type_list);
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object using
+  ///     TypeMap::InsertUnique(...).
+  void FindTypes(const TypeQuery &query, TypeResults &results);
 
   /// Get const accessor for the module architecture.
   ///
@@ -561,9 +511,6 @@ public:
   ///     \b true if it is, \b false otherwise.
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Status &error,
-                                     Stream &feedback_stream);
-
   /// Get the number of compile units for this module.
   ///
   /// \return
@@ -574,6 +521,10 @@ public:
   lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
   ConstString GetObjectName() const;
+
+  std::optional<lldb::addr_t> GetMemoryModuleAddress() const {
+    return m_memory_module_addr;
+  }
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
@@ -591,6 +542,11 @@ public:
   ///     remains valid as long as the object is around.
   virtual ObjectFile *GetObjectFile();
 
+  /// Like GetObjectFile, but the returned handle holds the Module mutex for
+  /// its lifetime, serializing concurrent access to the ObjectFile against
+  /// other callers using the locked accessors.
+  LockedPtr<ObjectFile> GetObjectFileLocked();
+
   /// Get the unified section list for the module. This is the section list
   /// created by the module's object file and any debug info and symbol files
   /// created by the symbol vendor.
@@ -601,6 +557,10 @@ public:
   /// \return
   ///     Unified module section list.
   virtual SectionList *GetSectionList();
+
+  /// Like GetSectionList, but the returned handle holds the Module mutex for
+  /// its lifetime.
+  LockedPtr<SectionList> GetSectionListLocked();
 
   /// Notify the module that the file addresses for the Sections have been
   /// updated.
@@ -652,7 +612,20 @@ public:
   virtual SymbolFile *GetSymbolFile(bool can_create = true,
                                     Stream *feedback_strm = nullptr);
 
-  Symtab *GetSymtab();
+  /// Like GetSymbolFile, but the returned handle holds the Module mutex for
+  /// its lifetime.
+  LockedPtr<SymbolFile> GetSymbolFileLocked(bool can_create = true,
+                                            Stream *feedback_strm = nullptr);
+
+  /// Get the module's symbol table
+  ///
+  /// If the symbol table has already been loaded, this function returns it.
+  /// Otherwise, it will only be loaded when can_create is true.
+  Symtab *GetSymtab(bool can_create = true);
+
+  /// Like GetSymtab, but the returned handle holds the Module mutex for its
+  /// lifetime.
+  LockedPtr<Symtab> GetSymtabLocked(bool can_create = true);
 
   /// Get a reference to the UUID value contained in this object.
   ///
@@ -893,7 +866,7 @@ public:
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.
-  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
+  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec);
 
   /// Remaps a source file given \a path into \a new_path.
   ///
@@ -907,8 +880,13 @@ public:
   /// \return
   ///     The newly remapped filespec that is may or may not exist if
   ///     \a path was successfully located.
-  std::optional<std::string> RemapSourceFile(llvm::StringRef path) const;
+  std::optional<std::string> RemapSourceFile(llvm::StringRef path);
   bool RemapSourceFile(const char *, std::string &) const = delete;
+
+  /// Register a directory to be searched for \c compilation-prefix-map.json
+  /// on the first call to RemapSourceFile or FindSourceFile. Duplicate
+  /// directories are silently ignored.
+  void AddPrefixMapSearchDir(FileSpec dir);
 
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
@@ -924,6 +902,12 @@ public:
   /// The value is returned as a reference to allow it to be updated by the
   /// ElapsedTime RAII object.
   StatsDuration &GetSymtabIndexTime() { return m_symtab_index_time; }
+
+  StatisticsMap &GetSymbolLocatorStatistics() {
+    return m_symbol_locator_duration_map;
+  }
+
+  void ResetStatistics();
 
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
@@ -950,22 +934,44 @@ public:
   public:
     LookupInfo() = default;
 
-    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
-               lldb::LanguageType language);
+    /// Copies an existing LookupInfo with a different lookup name.
+    LookupInfo(const LookupInfo &lookup_info, ConstString lookup_name);
+
+    /// Creates a vector of lookup infos for function name resolution.
+    ///
+    /// \param[in] name
+    ///     The function name to search for. This can be a simple name like
+    ///     "foo" or a qualified name like "Class::method".
+    ///
+    /// \param[in] name_type_mask
+    ///     A bitmask specifying what types of names to search for
+    ///     (e.g., eFunctionNameTypeFull, eFunctionNameTypeBase,
+    ///     eFunctionNameTypeMethod, eFunctionNameTypeAuto). Multiple types
+    ///     can be combined with bitwise OR.
+    ///
+    /// \param[in] lang_type
+    ///     The language to create lookups for. If eLanguageTypeUnknown is
+    ///     passed, creates one LookupInfo for each language plugin currently
+    ///     available in LLDB. If a specific language is provided, creates only
+    ///     a single LookupInfo for that language.
+    ///
+    /// \param[in] lookup_name_override
+    ///     Manually override the name used for lookup. This parameter is
+    ///     optional. If not provided, it will be set to the value of the name
+    ///     parameter.
+    ///
+    /// \return
+    ///     A vector of LookupInfo objects, one per relevant language.
+    static std::vector<LookupInfo>
+    MakeLookupInfos(ConstString name, lldb::FunctionNameType name_type_mask,
+                    lldb::LanguageType lang_type,
+                    ConstString lookup_name_override = {});
 
     ConstString GetName() const { return m_name; }
 
-    void SetName(ConstString name) { m_name = name; }
-
     ConstString GetLookupName() const { return m_lookup_name; }
 
-    void SetLookupName(ConstString name) { m_lookup_name = name; }
-
     lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
-
-    void SetNameTypeMask(lldb::FunctionNameType mask) {
-      m_name_type_mask = mask;
-    }
 
     lldb::LanguageType GetLanguageType() const { return m_language; }
 
@@ -989,9 +995,14 @@ public:
     /// names we are looking for
     lldb::FunctionNameType m_name_type_mask = lldb::eFunctionNameTypeNone;
 
-    ///< If \b true, then demangled names that match will need to contain
-    ///< "m_name" in order to be considered a match
+    /// If \b true, then demangled names that match will need to contain
+    /// "m_name" in order to be considered a match
     bool m_match_name_after_lookup = false;
+
+  private:
+    LookupInfo(ConstString name, ConstString lookup_name,
+               lldb::FunctionNameType name_type_mask,
+               lldb::LanguageType lang_type);
   };
 
   /// Get a unique hash for this module.
@@ -1001,23 +1012,27 @@ public:
   /// file, then the hash should include the object name and object offset to
   /// ensure a unique hash. Some examples:
   /// - just a regular object file (mach-o, elf, coff, etc) should create a hash
-  /// - a universal mach-o file that contains to multiple architectures,
+  /// - a universal mach-o file that contains multiple architectures,
   ///   each architecture slice should have a unique hash even though they come
   ///   from the same file
   /// - a .o file inside of a BSD archive. Each .o file will have an object name
   ///   and object offset that should produce a unique hash. The object offset
   ///   is needed as BSD archive files can contain multiple .o files that have
   ///   the same name.
+  ///
+  /// This hash value does not change as the binary is recompiled during
+  /// development.  DataFileCache's CacheSignature() creates a hash based
+  /// on the mod time/UUID to reflect when a binary has been recompiled.
   uint32_t Hash();
 
   /// Get a unique cache key for the current module.
   ///
   /// The cache key must be unique for a file on disk and not change if the file
   /// is updated. This allows cache data to use this key as a prefix and as
-  /// files are modified in disk, we will overwrite the cache files. If one file
-  /// can contain multiple files, like a universal mach-o file or like a BSD
-  /// archive, the cache key must contain enough information to differentiate
-  /// these different files.
+  /// files are modified on disk, we will overwrite the previous cache file. If
+  /// one file can contain multiple files, like a universal mach-o file or like
+  /// BSD archive, the cache key must contain enough information to
+  /// differentiate these different files.
   std::string GetCacheKey();
 
   /// Get the global index file cache.
@@ -1055,20 +1070,23 @@ protected:
   ConstString m_object_name; ///< The name an object within this module that is
                              /// selected, or empty of the module is represented
                              /// by \a m_file.
+  std::optional<lldb::addr_t>
+      m_memory_module_addr; ///< For a Module read from memory,
+                            ///  the address it was read from.
   uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
-  /// DataBuffer containing the module image, if it was provided at
+  /// DataExtractor containing the module image, if it was provided at
   /// construction time. Otherwise the data will be retrieved by mapping
   /// one of the FileSpec members above.
-  lldb::DataBufferSP m_data_sp;
+  lldb::DataExtractorSP m_extractor_sp;
 
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
                                    /// not be shared with the SymbolFile
-  std::optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
-                                             /// objects created for this
-                                             /// Module's functions
+  UnwindTable m_unwind_table;      ///< Table of FuncUnwinders
+                                   /// objects created for this
+                                   /// Module's functions
   lldb::SymbolVendorUP
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>
@@ -1082,6 +1100,15 @@ protected:
   /// module that doesn't match where the sources currently are.
   PathMappingList m_source_mappings =
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
+
+  /// Directories registered via AddPrefixMapSearchDir, searched lazily on the
+  /// first call to RemapSourceFile or FindSourceFile. Cleared after searching.
+  llvm::DenseSet<ConstString> m_prefix_map_search_dirs;
+
+  /// Search each registered directory upward for compilation-prefix-map.json
+  /// and apply any found mappings to m_source_mappings. Called at most once.
+  /// Must be called with m_mutex held.
+  void LoadPrefixMapsIfNeeded();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and
@@ -1102,16 +1129,19 @@ protected:
   /// time for the symbol tables can be aggregated here.
   StatsDuration m_symtab_index_time;
 
-  std::once_flag m_optimization_warning;
-  std::once_flag m_language_warning;
+  StatisticsMap m_symbol_locator_duration_map;
+
+  /// A set of hashes of all warnings and errors, to avoid reporting them
+  /// multiple times to the same Debugger.
+  llvm::DenseMap<llvm::stable_hash, std::unique_ptr<std::once_flag>>
+      m_shown_diagnostics;
+  std::recursive_mutex m_diagnostic_mutex;
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,
                                         std::vector<uint32_t> &symbol_indexes,
                                         SymbolContextList &sc_list);
 
   bool SetArchitecture(const ArchSpec &new_arch);
-
-  void SetUUID(const lldb_private::UUID &uuid);
 
   SectionList *GetUnifiedSectionList();
 
@@ -1122,12 +1152,6 @@ protected:
 private:
   Module(); // Only used internally by CreateJITModule ()
 
-  void FindTypes_Impl(
-      ConstString name, const CompilerDeclContext &parent_decl_ctx,
-      size_t max_matches,
-      llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-      TypeMap &types);
-
   Module(const Module &) = delete;
   const Module &operator=(const Module &) = delete;
 
@@ -1137,6 +1161,7 @@ private:
   void ReportWarning(const llvm::formatv_object_base &payload);
   void ReportError(const llvm::formatv_object_base &payload);
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
+  std::once_flag *GetDiagnosticOnceFlag(llvm::StringRef msg);
 };
 
 } // namespace lldb_private

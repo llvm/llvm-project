@@ -14,11 +14,12 @@
 
 #include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
+#include "mlir/Conversion/IndexToSPIRV/IndexToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/BuiltinOps.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFTOSPIRV
@@ -40,6 +41,7 @@ void SCFToSPIRVPass::runOnOperation() {
   auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
+  target->addLegalOp<UnrealizedConversionCastOp>();
 
   SPIRVTypeConverter typeConverter(targetAttr);
   ScfToSPIRVContext scfContext;
@@ -52,6 +54,7 @@ void SCFToSPIRVPass::runOnOperation() {
   populateFuncToSPIRVPatterns(typeConverter, patterns);
   populateMemRefToSPIRVPatterns(typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
+  index::populateIndexToSPIRVPatterns(typeConverter, patterns);
 
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();

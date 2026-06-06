@@ -37,6 +37,10 @@
 LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
 #endif
 
+#if defined(_AIX) || defined(__MVS__)
+#define CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+#endif
+
 using namespace clang;
 
 namespace {
@@ -45,7 +49,7 @@ static std::unique_ptr<Interpreter>
 createInterpreter(const Args &ExtraArgs = {},
                   DiagnosticConsumer *Client = nullptr) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
-  ClangArgs.insert(ClangArgs.end(), ExtraArgs.begin(), ExtraArgs.end());
+  llvm::append_range(ClangArgs, ExtraArgs);
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgs);
   auto CI = cantFail(CB.CreateCpp());
@@ -54,7 +58,11 @@ createInterpreter(const Args &ExtraArgs = {},
   return cantFail(clang::Interpreter::create(std::move(CI)));
 }
 
-TEST(InterpreterTest, CatchException) {
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(InterpreterExceptionTest, DISABLED_CatchException) {
+#else
+TEST(InterpreterExceptionTest, CatchException) {
+#endif
   llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
@@ -109,10 +117,6 @@ extern "C" int throw_exception() {
   const clang::CompilerInstance *CI = Interp->getCompilerInstance();
   const llvm::Triple &Triple = CI->getASTContext().getTargetInfo().getTriple();
 
-  // AIX is unsupported.
-  if (Triple.isOSAIX())
-    GTEST_SKIP();
-
   // FIXME: ARM fails due to `Not implemented relocation type!`
   if (Triple.isARM())
     GTEST_SKIP();
@@ -120,11 +124,6 @@ extern "C" int throw_exception() {
   // FIXME: libunwind on darwin is broken, see PR49692.
   if (Triple.isOSDarwin() && (Triple.getArch() == llvm::Triple::aarch64 ||
                               Triple.getArch() == llvm::Triple::aarch64_32))
-    GTEST_SKIP();
-
-  // FIXME: RISC-V fails as .eh_frame handling is not yet implemented in
-  // JITLink for RISC-V. See PR #66067.
-  if (Triple.isRISCV())
     GTEST_SKIP();
 
   llvm::cantFail(Interp->ParseAndExecute(ExceptionCode));

@@ -61,12 +61,12 @@ movq %mm7, %mm0
 # CHECK-NEXT: [5]   - Zn3ALU2
 # CHECK-NEXT: [6]   - Zn3ALU3
 # CHECK-NEXT: [7]   - Zn3BRU1
-# CHECK-NEXT: [8]   - Zn3FPP0
-# CHECK-NEXT: [9]   - Zn3FPP1
-# CHECK-NEXT: [10]  - Zn3FPP2
-# CHECK-NEXT: [11]  - Zn3FPP3
-# CHECK-NEXT: [12.0] - Zn3FPP45
-# CHECK-NEXT: [12.1] - Zn3FPP45
+# CHECK-NEXT: [8]   - Zn3FP0
+# CHECK-NEXT: [9]   - Zn3FP1
+# CHECK-NEXT: [10]  - Zn3FP2
+# CHECK-NEXT: [11]  - Zn3FP3
+# CHECK-NEXT: [12.0] - Zn3FP45
+# CHECK-NEXT: [12.1] - Zn3FP45
 # CHECK-NEXT: [13]  - Zn3FPSt
 # CHECK-NEXT: [14.0] - Zn3LSU
 # CHECK-NEXT: [14.1] - Zn3LSU
@@ -190,4 +190,4 @@ movq %mm7, %mm0
 # CHECK-NEXT: 5.     10    35.5   0.0    0.0       movq	%mm5, %mm6
 # CHECK-NEXT: 6.     10    36.1   0.0    0.0       movq	%mm6, %mm7
 # CHECK-NEXT: 7.     10    37.0   0.0    0.0       movq	%mm7, %mm0
-# CHECK-NEXT:        10    34.2   0.0    0.0       <total>
+# CHECK-NEXT:        80    34.2   0.0    0.0       <total>

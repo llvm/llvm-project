@@ -18,25 +18,33 @@ target triple = "nvptx64-nvidia-cuda"
 ; CHECK-ALIAS: NoAlias:  i8 addrspace(1)* %global, i8 addrspace(5)* %local
 ; CHECK-ALIAS: NoAlias:  i8 addrspace(5)* %local, i8 addrspace(3)* %shared
 ; CHECK-ALIAS: NoAlias:  i8 addrspace(4)* %const, i8 addrspace(5)* %local
+; CHECK-ALIAS: MayAlias:     i8* %gen, i8 addrspace(7)* %shared_cluster
+; CHECK-ALIAS: NoAlias:      i8 addrspace(1)* %global, i8 addrspace(7)* %shared_cluster
+; CHECK-ALIAS: MayAlias:     i8 addrspace(3)* %shared, i8 addrspace(7)* %shared_cluster
+; CHECK-ALIAS: NoAlias:      i8 addrspace(4)* %const, i8 addrspace(7)* %shared_cluster
+; CHECK-ALIAS: NoAlias:      i8 addrspace(5)* %local, i8 addrspace(7)* %shared_cluster
 ; CHECK-ALIAS: MayAlias: i8* %gen, i8 addrspace(101)* %param
 ; CHECK-ALIAS: NoAlias:  i8 addrspace(1)* %global, i8 addrspace(101)* %param
 ; CHECK-ALIAS: NoAlias:  i8 addrspace(101)* %param, i8 addrspace(3)* %shared
 ; CHECK-ALIAS: NoAlias:  i8 addrspace(4)* %const, i8 addrspace(101)* %param
 ; CHECK-ALIAS: NoAlias:  i8 addrspace(5)* %local, i8 addrspace(101)* %param
+; CHECK-ALIAS: NoAlias:  i8 addrspace(101)* %param, i8 addrspace(7)* %shared_cluster
 
-define i8 @test_alias(ptr %gen, ptr addrspace(1) %global, ptr addrspace(3) %shared, ptr addrspace(4) %const, ptr addrspace(5) %local) {
+define i8 @test_alias(ptr %gen, ptr addrspace(1) %global, ptr addrspace(3) %shared, ptr addrspace(4) %const, ptr addrspace(5) %local, ptr addrspace(7) %shared_cluster) {
   %param = addrspacecast ptr %gen to ptr addrspace(101)
   %v1 = load i8, ptr %gen
   %v2 = load i8, ptr addrspace(1) %global
   %v3 = load i8, ptr addrspace(3) %shared
   %v4 = load i8, ptr addrspace(4) %const
   %v5 = load i8, ptr addrspace(5) %local
-  %v6 = load i8, ptr addrspace(101) %param
+  %v6 = load i8, ptr addrspace(7) %shared_cluster
+  %v7 = load i8, ptr addrspace(101) %param
   %res1 = add i8 %v1, %v2
   %res2 = add i8 %res1, %v3
   %res3 = add i8 %res2, %v4
   %res4 = add i8 %res3, %v5
   %res5 = add i8 %res4, %v6
+  %res6 = add i8 %res4, %v7
   ret i8 %res5
 }
 
@@ -110,4 +118,41 @@ loop:
   br i1 %cond, label %done, label %loop
 done:
   ret i8 %v2
+}
+
+;; Address space information may be encoded anywhere along the UD chain.
+;; We define a set of tests that:
+;;  1. Perform some number of address space casts on pointer A and B
+;;  2. Store a value to address A
+;;  3. Store a value to address B (that we know does not alias with A)
+
+;; generic->space
+; CHECK-ALIAS-LABEL: Function: test_traversal_gen_space
+; CHECK-ALIAS: NoAlias: i32 addrspace(1)* %global, i32 addrspace(5)* %local
+define void @test_traversal_gen_space(ptr %gen, ptr addrspace(1) %global) {
+  %local = addrspacecast ptr %gen to ptr addrspace(5)
+  store i32 1, ptr addrspace(5) %local, align 8
+  store i32 5, ptr addrspace(1) %global, align 8
+  ret void
+}
+
+;; space->generic
+; CHECK-ALIAS-LABEL: Function: test_traversal_space_gen
+; CHECK-ALIAS: NoAlias: i32* %gen, i32 addrspace(1)* %global
+define void @test_traversal_space_gen(ptr addrspace(5) %local, ptr addrspace(1) %global) {
+  %gen = addrspacecast ptr addrspace(5) %local to ptr
+  store i32 2, ptr %gen, align 8
+  store i32 5, ptr addrspace(1) %global, align 8
+  ret void
+}
+
+;; generic->space->generic
+; CHECK-ALIAS-LABEL: Function: test_traversal_gen_space_gen
+; CHECK-ALIAS: NoAlias: i32* %gen2, i32 addrspace(1)* %global
+define void @test_traversal_gen_space_gen(ptr %gen1, ptr addrspace(1) %global) {
+  %local = addrspacecast ptr %gen1 to ptr addrspace(5)
+  %gen2 = addrspacecast ptr addrspace(5) %local to ptr
+  store i32 3, ptr %gen2, align 8
+  store i32 5, ptr addrspace(1) %global, align 8
+  ret void
 }

@@ -15,6 +15,9 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLY_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLY_H
 
+#include "GISel/WebAssemblyRegisterBankInfo.h"
+#include "WebAssemblySubtarget.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CodeGen.h"
 
@@ -30,19 +33,34 @@ ModulePass *createWebAssemblyAddMissingPrototypes();
 ModulePass *createWebAssemblyFixFunctionBitcasts();
 FunctionPass *createWebAssemblyOptimizeReturned();
 FunctionPass *createWebAssemblyLowerRefTypesIntPtrConv();
+FunctionPass *createWebAssemblyRefTypeMem2Local();
+FunctionPass *createWebAssemblyReduceToAnyAllTrue(WebAssemblyTargetMachine &TM);
+
+// GlobalISel
+InstructionSelector *
+createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
+                                     const WebAssemblySubtarget &,
+                                     const WebAssemblyRegisterBankInfo &);
+
+FunctionPass *createWebAssemblyPostLegalizerCombiner();
+void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
+
+FunctionPass *createWebAssemblyPreLegalizerCombiner();
+void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
 
 // ISel and immediate followup passes.
 FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
                                        CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyArgumentMove();
 FunctionPass *createWebAssemblySetP2AlignOperands();
+FunctionPass *createWebAssemblyCleanCodeAfterTrap();
 
 // Late passes.
 FunctionPass *createWebAssemblyReplacePhysRegs();
 FunctionPass *createWebAssemblyNullifyDebugValueLists();
 FunctionPass *createWebAssemblyOptimizeLiveIntervals();
 FunctionPass *createWebAssemblyMemIntrinsicResults();
-FunctionPass *createWebAssemblyRegStackify();
+FunctionPass *createWebAssemblyRegStackify(CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyRegColoring();
 FunctionPass *createWebAssemblyFixBrTableDefaults();
 FunctionPass *createWebAssemblyFixIrreducibleControlFlow();
@@ -52,6 +70,7 @@ FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
+FunctionPass *createWebAssemblyVecReduce();
 FunctionPass *createWebAssemblyDebugFixup();
 FunctionPass *createWebAssemblyPeephole();
 ModulePass *createWebAssemblyMCLowerPrePass();
@@ -59,11 +78,14 @@ ModulePass *createWebAssemblyMCLowerPrePass();
 // PassRegistry initialization declarations.
 void initializeFixFunctionBitcastsPass(PassRegistry &);
 void initializeOptimizeReturnedPass(PassRegistry &);
+void initializeWebAssemblyRefTypeMem2LocalPass(PassRegistry &);
 void initializeWebAssemblyAddMissingPrototypesPass(PassRegistry &);
 void initializeWebAssemblyArgumentMovePass(PassRegistry &);
+void initializeWebAssemblyAsmPrinterPass(PassRegistry &);
+void initializeWebAssemblyCleanCodeAfterTrapPass(PassRegistry &);
 void initializeWebAssemblyCFGSortPass(PassRegistry &);
 void initializeWebAssemblyCFGStackifyPass(PassRegistry &);
-void initializeWebAssemblyDAGToDAGISelPass(PassRegistry &);
+void initializeWebAssemblyDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeWebAssemblyDebugFixupPass(PassRegistry &);
 void initializeWebAssemblyExceptionInfoPass(PassRegistry &);
 void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);

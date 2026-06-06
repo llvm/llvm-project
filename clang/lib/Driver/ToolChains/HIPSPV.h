@@ -20,7 +20,7 @@ namespace HIPSPV {
 
 // Runs llvm-link/opt/llc/lld, which links multiple LLVM bitcode, together with
 // device library, then compiles it to SPIR-V in a shared object.
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("HIPSPV::Linker", "hipspv-link", TC) {}
 
@@ -47,9 +47,12 @@ class LLVM_LIBRARY_VISIBILITY HIPSPVToolChain final : public ToolChain {
 public:
   HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
                   const ToolChain &HostTC, const llvm::opt::ArgList &Args);
+  HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
+                  const llvm::opt::ArgList &Args);
 
   const llvm::Triple *getAuxTriple() const override {
-    return &HostTC.getTriple();
+    assert(HostTC);
+    return &HostTC->getTriple();
   }
 
   void
@@ -69,9 +72,12 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
   llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args) const override;
+  getDeviceLibs(const llvm::opt::ArgList &Args,
+                const Action::OffloadKind DeviceOffloadKind) const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   VersionTuple
   computeMSVCVersion(const Driver *D,
@@ -89,7 +95,7 @@ public:
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
 
-  const ToolChain &HostTC;
+  const ToolChain *HostTC = nullptr;
 
 protected:
   Tool *buildLinker() const override;

@@ -199,6 +199,8 @@ public:
 
   std::optional<bool> GetWatchpointReportedAfter();
 
+  WatchpointHardwareFeature GetSupportedWatchpointTypes();
+
   const ArchSpec &GetHostArchitecture();
 
   std::chrono::seconds GetHostDefaultPacketTimeout();
@@ -212,11 +214,18 @@ public:
 
   void GetRemoteQSupported();
 
-  bool GetVContSupported(char flavor);
+  bool GetVContSupported(llvm::StringRef flavor);
 
   bool GetpPacketSupported(lldb::tid_t tid);
 
-  bool GetxPacketSupported();
+  enum class xPacketState {
+    Unimplemented,
+    Prefixed, // Successful responses start with a 'b' character. This is the
+              // style used by GDB.
+    Bare,     // No prefix, packets starts with the memory being read. This is
+              // LLDB's original style.
+  };
+  xPacketState GetxPacketState();
 
   bool GetVAttachOrWaitSupported();
 
@@ -253,9 +262,9 @@ public:
 
   bool GetGroupName(uint32_t gid, std::string &name);
 
-  bool HasFullVContSupport() { return GetVContSupported('A'); }
+  bool HasFullVContSupport() { return GetVContSupported("A"); }
 
-  bool HasAnyVContSupport() { return GetVContSupported('a'); }
+  bool HasAnyVContSupport() { return GetVContSupported("a"); }
 
   bool GetStopReply(StringExtractorGDBRemote &response);
 
@@ -329,6 +338,14 @@ public:
 
   bool GetMultiprocessSupported();
 
+  bool GetReverseContinueSupported();
+
+  bool GetReverseStepSupported();
+
+  bool GetMultiMemReadSupported();
+
+  bool GetMultiBreakpointSupported();
+
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
@@ -388,9 +405,11 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string *separated_error_output, // Pass nullptr if you don't want the
+                                           // command error output
       const Timeout<std::micro> &timeout);
 
-  bool CalculateMD5(const FileSpec &file_spec, uint64_t &high, uint64_t &low);
+  llvm::ErrorOr<llvm::MD5::MD5Result> CalculateMD5(const FileSpec &file_spec);
 
   lldb::DataBufferSP ReadRegister(
       lldb::tid_t tid,
@@ -539,7 +558,6 @@ protected:
   LazyBool m_attach_or_wait_reply = eLazyBoolCalculate;
   LazyBool m_prepare_for_reg_writing_reply = eLazyBoolCalculate;
   LazyBool m_supports_p = eLazyBoolCalculate;
-  LazyBool m_supports_x = eLazyBoolCalculate;
   LazyBool m_avoid_g_packets = eLazyBoolCalculate;
   LazyBool m_supports_QSaveRegisterState = eLazyBoolCalculate;
   LazyBool m_supports_qXfer_auxv_read = eLazyBoolCalculate;
@@ -559,6 +577,11 @@ protected:
   LazyBool m_supports_memory_tagging = eLazyBoolCalculate;
   LazyBool m_supports_qSaveCore = eLazyBoolCalculate;
   LazyBool m_uses_native_signals = eLazyBoolCalculate;
+  std::optional<xPacketState> m_x_packet_state;
+  LazyBool m_supports_reverse_continue = eLazyBoolCalculate;
+  LazyBool m_supports_reverse_step = eLazyBoolCalculate;
+  LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
+  LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,
@@ -581,6 +604,8 @@ protected:
   lldb::tid_t m_curr_tid_run = LLDB_INVALID_THREAD_ID;
 
   uint32_t m_num_supported_hardware_watchpoints = 0;
+  WatchpointHardwareFeature m_watchpoint_types =
+      eWatchpointHardwareFeatureUnknown;
   uint32_t m_low_mem_addressing_bits = 0;
   uint32_t m_high_mem_addressing_bits = 0;
 

@@ -54,8 +54,8 @@ define amdgpu_kernel void @poison_interposable_initializer_gv(i32 %n) {
 define amdgpu_kernel void @not_constant_gv(i32 %n) {
 entry:
   %str = alloca [9 x i8], align 1, addrspace(5)
-  %arraydecay = getelementptr inbounds [9 x i8], [9 x i8] addrspace(5)* %str, i32 0, i32 0
-  %call1 = call i32 (i8 addrspace(4)*, ...) @printf(i8 addrspace(4)* getelementptr inbounds ([6 x i8], [6 x i8] addrspace(4)* @not.constant, i32 0, i32 0), i8 addrspace(5)* %arraydecay, i32 %n)
+  %arraydecay = getelementptr inbounds [9 x i8], ptr addrspace(5) %str, i32 0, i32 0
+  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @not.constant, ptr addrspace(5) %arraydecay, i32 %n)
   ret void
 }
 
@@ -69,4 +69,6 @@ declare i32 @printf(ptr addrspace(4), ...)
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !DILocation(line: 1, column: 42, scope: !5)
-!5 = distinct !DISubprogram(name: "arst", scope: null, file: !1, line: 1, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0)
+!5 = distinct !DISubprogram(name: "arst", scope: null, file: !1, line: 1, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, type: !6)
+!6 = !DISubroutineType(types: !7)
+!7 = !{null}

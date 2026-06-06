@@ -1,9 +1,7 @@
 ; Test the ASan's stack layout.
 ; More tests in tests/Transforms/Utils/ASanStackFrameLayoutTest.cpp
-; RUN: opt < %s -passes=asan -asan-stack-dynamic-alloca=0 -asan-use-after-scope -S \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-STATIC
-; RUN: opt < %s -passes=asan -asan-stack-dynamic-alloca=1 -asan-use-after-scope -S \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC
+; RUN: opt < %s -passes=asan -asan-use-stack-safety=0 -asan-stack-dynamic-alloca=0 -asan-use-after-scope -S | FileCheck %s --check-prefixes=CHECK,CHECK-STATIC
+; RUN: opt < %s -passes=asan -asan-use-stack-safety=0 -asan-stack-dynamic-alloca=1 -asan-use-after-scope -S | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -96,12 +94,14 @@ define void @Func5() sanitize_address #0 !dbg !11 {
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
 !1 = !DIFile(filename: "../file1.c", directory: "/")
-!11 = distinct !DISubprogram(name: "Func5", scope: !1, file: !1, line: 6, unit: !0)
+!11 = distinct !DISubprogram(name: "Func5", scope: !1, file: !1, line: 6, type: !19, unit: !0)
 !12 = !DILocation(line: 7, column: 3, scope: !11)
 !18 = !DILocation(line: 10, column: 1, scope: !11)
+!19 = !DISubroutineType(types: !20)
+!20 = !{null}
 
 !21 = !DIFile(filename: "../file2.c", directory: "/")
-!6 = distinct !DISubprogram(name: "Func4", scope: !1, file: !21, line: 2, unit: !0)
+!6 = distinct !DISubprogram(name: "Func4", scope: !1, file: !21, line: 2, type: !19, unit: !0)
 !15 = distinct !DILocation(line: 8, column: 3, scope: !11)
 !14 = !DILocation(line: 3, column: 3, scope: !6, inlinedAt: !15)
 !17 = !DILocation(line: 4, column: 1, scope: !6, inlinedAt: !15)

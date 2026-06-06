@@ -2,10 +2,10 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang_cc1 -triple nvptx -fcuda-is-device -std=c++11 \
-// RUN:    -emit-llvm -o - %s -fsyntax-only -verify=dev,com
+// RUN:    -o - %s -fsyntax-only -verify=dev,com
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
-// RUN:    -emit-llvm -o - %s -fsyntax-only -verify=host,com
+// RUN:    -o - %s -fsyntax-only -verify=host,com
 
 // Checks allowed usage of file-scope and function-scope static variables.
 

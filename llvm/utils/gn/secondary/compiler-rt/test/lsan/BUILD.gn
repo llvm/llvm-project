@@ -7,11 +7,13 @@ import("//llvm/version.gni")
 
 write_cmake_config("asan_mode_cfg") {
   input = "lit.site.cfg.py.in"
-  output = "$target_gen_dir/${crt_current_target_arch}AsanConfig/lit.site.cfg.py"
+  output =
+      "$target_gen_dir/${crt_current_target_arch}AsanConfig/lit.site.cfg.py"
   values = [
     "LSAN_LIT_SOURCE_DIR=" + rebase_path("."),
     "LSAN_TEST_CONFIG_SUFFIX=$crt_current_target_suffix",
     "LSAN_TEST_TARGET_CFLAGS=$target_flags_string",
+
     # TODO(lgrey): Support standalone mode
     "LSAN_LIT_TEST_MODE=AddressSanitizer",
     "LSAN_TEST_TARGET_ARCH=$crt_current_target_arch",
@@ -59,9 +61,7 @@ if (supported_toolchains != []) {
       test_dir = rebase_path(
               get_label_info(":lit_site_cfg($toolchain)", "target_gen_dir"),
               root_build_dir)
-      args += [ 
-        test_dir + "/${crt_current_target_arch}AsanConfig",
-      ]
+      args += [ test_dir + "/${crt_current_target_arch}AsanConfig" ]
     }
     outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs
                                              # it each time.

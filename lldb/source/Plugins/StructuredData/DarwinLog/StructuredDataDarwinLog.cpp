@@ -126,7 +126,7 @@ public:
 
   StructuredDataDarwinLogProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_darwinlog_properties);
+    m_collection_sp->Initialize(g_darwinlog_properties_def);
   }
 
   ~StructuredDataDarwinLogProperties() override = default;
@@ -197,8 +197,8 @@ public:
     auto map = GetCreationFuncMap();
     auto find_it = map.find(operation);
     if (find_it == map.end()) {
-      error.SetErrorStringWithFormatv("unknown filter operation \"{0}\"",
-                                      operation);
+      error = Status::FromErrorStringWithFormatv(
+          "unknown filter operation \"{0}\"", operation);
       return FilterRuleSP();
     }
 
@@ -281,15 +281,15 @@ private:
                                       Status &error) {
     // We treat the op_arg as a regex.  Validate it.
     if (op_arg.empty()) {
-      error.SetErrorString("regex filter type requires a regex "
-                           "argument");
+      error = Status::FromErrorString("regex filter type requires a regex "
+                                      "argument");
       return FilterRuleSP();
     }
 
     // Instantiate the regex so we can report any errors.
     auto regex = RegularExpression(op_arg);
     if (llvm::Error err = regex.GetError()) {
-      error.SetErrorString(llvm::toString(std::move(err)));
+      error = Status::FromError(std::move(err));
       return FilterRuleSP();
     }
 
@@ -332,9 +332,9 @@ private:
                                       const std::string &op_arg,
                                       Status &error) {
     if (op_arg.empty()) {
-      error.SetErrorString("exact match filter type requires an "
-                           "argument containing the text that must "
-                           "match the specified message attribute.");
+      error = Status::FromErrorString("exact match filter type requires an "
+                                      "argument containing the text that must "
+                                      "match the specified message attribute.");
       return FilterRuleSP();
     }
 
@@ -553,7 +553,8 @@ public:
       break;
 
     default:
-      error.SetErrorStringWithFormat("unsupported option '%c'", short_option);
+      error = Status::FromErrorStringWithFormat("unsupported option '%c'",
+                                                short_option);
     }
     return error;
   }
@@ -573,8 +574,7 @@ public:
       return config_sp;
 
     // Handle source stream flags.
-    auto source_flags_sp =
-        StructuredData::DictionarySP(new StructuredData::Dictionary());
+    auto source_flags_sp = std::make_shared<StructuredData::Dictionary>();
     config_sp->AddItem("source-flags", source_flags_sp);
 
     source_flags_sp->AddBooleanItem("any-process", m_include_any_process);
@@ -590,8 +590,7 @@ public:
 
     // Handle filter rules
     if (!m_filter_rules.empty()) {
-      auto json_filter_rules_sp =
-          StructuredData::ArraySP(new StructuredData::Array);
+      auto json_filter_rules_sp = std::make_shared<StructuredData::Array>();
       config_sp->AddItem("filter-rules", json_filter_rules_sp);
       for (auto &rule_sp : m_filter_rules) {
         if (!rule_sp)
@@ -635,7 +634,7 @@ private:
     Status error;
 
     if (rule_text.empty()) {
-      error.SetErrorString("invalid rule_text");
+      error = Status::FromErrorString("invalid rule_text");
       return error;
     }
 
@@ -662,9 +661,9 @@ private:
     // Parse action.
     auto action_end_pos = rule_text.find(' ');
     if (action_end_pos == std::string::npos) {
-      error.SetErrorStringWithFormat("could not parse filter rule "
-                                     "action from \"%s\"",
-                                     rule_text.str().c_str());
+      error = Status::FromErrorStringWithFormat("could not parse filter rule "
+                                                "action from \"%s\"",
+                                                rule_text.str().c_str());
       return error;
     }
     auto action = rule_text.substr(0, action_end_pos);
@@ -674,25 +673,27 @@ private:
     else if (action == "reject")
       accept = false;
     else {
-      error.SetErrorString("filter action must be \"accept\" or \"deny\"");
+      error = Status::FromErrorString(
+          "filter action must be \"accept\" or \"deny\"");
       return error;
     }
 
     // parse attribute
     auto attribute_end_pos = rule_text.find(" ", action_end_pos + 1);
     if (attribute_end_pos == std::string::npos) {
-      error.SetErrorStringWithFormat("could not parse filter rule "
-                                     "attribute from \"%s\"",
-                                     rule_text.str().c_str());
+      error = Status::FromErrorStringWithFormat("could not parse filter rule "
+                                                "attribute from \"%s\"",
+                                                rule_text.str().c_str());
       return error;
     }
     auto attribute = rule_text.substr(action_end_pos + 1,
                                       attribute_end_pos - (action_end_pos + 1));
     auto attribute_index = MatchAttributeIndex(attribute);
     if (attribute_index < 0) {
-      error.SetErrorStringWithFormat("filter rule attribute unknown: "
-                                     "%s",
-                                     attribute.str().c_str());
+      error =
+          Status::FromErrorStringWithFormat("filter rule attribute unknown: "
+                                            "%s",
+                                            attribute.str().c_str());
       return error;
     }
 
@@ -740,8 +741,10 @@ class EnableCommand : public CommandObjectParsed {
 public:
   EnableCommand(CommandInterpreter &interpreter, bool enable, const char *name,
                 const char *help, const char *syntax)
-      : CommandObjectParsed(interpreter, name, help, syntax), m_enable(enable),
-        m_options_sp(enable ? new EnableOptions() : nullptr) {}
+      : CommandObjectParsed(interpreter, name, help, syntax,
+                            eCommandAllowsDummyTarget),
+        m_enable(enable), m_options_sp(enable ? new EnableOptions() : nullptr) {
+  }
 
 protected:
   void AppendStrictSourcesWarning(CommandReturnObject &result,
@@ -766,7 +769,7 @@ protected:
     result.AppendWarning(stream.GetString());
   }
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     // First off, set the global sticky state of enable/disable based on this
     // command execution.
     s_is_explicitly_enabled = m_enable;
@@ -783,21 +786,21 @@ protected:
 
     // Now check if we have a running process.  If so, we should instruct the
     // process monitor to enable/disable DarwinLog support now.
-    Target &target = GetSelectedOrDummyTarget();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandAllowsDummyTarget");
     // Grab the active process.
-    auto process_sp = target.GetProcessSP();
+    auto process_sp = target->GetProcessSP();
     if (!process_sp) {
       // No active process, so there is nothing more to do right now.
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return true;
+      return;
     }
 
     // If the process is no longer alive, we can't do this now. We'll catch it
     // the next time the process is started up.
     if (!process_sp->IsAlive()) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return true;
+      return;
     }
 
     // Get the plugin for the process.
@@ -838,7 +841,6 @@ protected:
       // one this command is setup to do.
       plugin.SetEnabled(m_enable);
     }
-    return result.Succeeded();
   }
 
   Options *GetOptions() override {
@@ -858,16 +860,18 @@ public:
       : CommandObjectParsed(interpreter, "status",
                             "Show whether Darwin log supported is available"
                             " and enabled.",
-                            "plugin structured-data darwin-log status") {}
+                            "plugin structured-data darwin-log status",
+                            eCommandAllowsDummyTarget) {}
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     auto &stream = result.GetOutputStream();
 
     // Figure out if we've got a process.  If so, we can tell if DarwinLog is
     // available for that process.
-    Target &target = GetSelectedOrDummyTarget();
-    auto process_sp = target.GetProcessSP();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandAllowsDummyTarget");
+    auto process_sp = target->GetProcessSP();
     if (!process_sp) {
       stream.PutCString("Availability: unknown (requires process)\n");
       stream.PutCString("Enabled: not applicable "
@@ -891,7 +895,7 @@ protected:
     if (!options_sp) {
       // Nothing more to do.
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
 
     // Print filter rules
@@ -924,7 +928,6 @@ protected:
                   options_sp->GetFallthroughAccepts() ? "accept" : "reject");
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 
@@ -974,8 +977,6 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
   EnableOptionsSP options_sp(new EnableOptions());
   options_sp->NotifyOptionParsingStarting(&exe_ctx);
 
-  CommandReturnObject result(debugger.GetUseColor());
-
   // Parse the arguments.
   auto options_property_sp =
       debugger.GetPropertyValue(nullptr,
@@ -985,8 +986,8 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
   if (!error.Success())
     return EnableOptionsSP();
   if (!options_property_sp) {
-    error.SetErrorString("failed to find option setting for "
-                         "plugin.structured-data.darwin-log.");
+    error = Status::FromErrorString("failed to find option setting for "
+                                    "plugin.structured-data.darwin-log.");
     return EnableOptionsSP();
   }
 
@@ -1012,8 +1013,13 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
     return EnableOptionsSP();
   }
 
-  if (!options_sp->VerifyOptions(result))
+  if (llvm::Error error = options_sp->VerifyOptions()) {
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "Parsing plugin.structured-data.darwin-log.auto-enable-options value "
+        "failed: {0}");
     return EnableOptionsSP();
+  }
 
   // We successfully parsed and validated the options.
   return options_sp;
@@ -1113,7 +1119,7 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
 static void SetErrorWithJSON(Status &error, const char *message,
                              StructuredData::Object &object) {
   if (!message) {
-    error.SetErrorString("Internal error: message not set.");
+    error = Status::FromErrorString("Internal error: message not set.");
     return;
   }
 
@@ -1121,7 +1127,8 @@ static void SetErrorWithJSON(Status &error, const char *message,
   object.Dump(object_stream);
   object_stream.Flush();
 
-  error.SetErrorStringWithFormat("%s: %s", message, object_stream.GetData());
+  error = Status::FromErrorStringWithFormat("%s: %s", message,
+                                            object_stream.GetData());
 }
 
 Status StructuredDataDarwinLog::GetDescription(
@@ -1129,7 +1136,7 @@ Status StructuredDataDarwinLog::GetDescription(
   Status error;
 
   if (!object_sp) {
-    error.SetErrorString("No structured data.");
+    error = Status::FromErrorString("No structured data.");
     return error;
   }
 
@@ -1408,7 +1415,8 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
     // We really can't do this without a target.  We need to be able to get to
     // the debugger to get the proper options to do this right.
     // TODO log.
-    error.SetErrorString("requires a target to auto-enable DarwinLog.");
+    error =
+        Status::FromErrorString("requires a target to auto-enable DarwinLog.");
     return error;
   }
 
@@ -1597,6 +1605,7 @@ void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
 
   const char *func_name = "_libtrace_init";
   const lldb::addr_t offset = 0;
+  const bool offset_is_insn_count = false;
   const LazyBool skip_prologue = eLazyBoolCalculate;
   // This is an internal breakpoint - the user shouldn't see it.
   const bool internal = true;
@@ -1604,7 +1613,8 @@ void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
 
   auto breakpoint_sp = target.CreateBreakpoint(
       &module_spec_list, source_spec_list, func_name, eFunctionNameTypeFull,
-      eLanguageTypeC, offset, skip_prologue, internal, hardware);
+      eLanguageTypeC, offset, offset_is_insn_count, skip_prologue, internal,
+      hardware);
   if (!breakpoint_sp) {
     // Huh?  Bail here.
     LLDB_LOGF(log,
@@ -1798,18 +1808,16 @@ void StructuredDataDarwinLog::EnableNow() {
     // care of the rest.
     auto &interpreter = debugger_sp->GetCommandInterpreter();
     const bool success = RunEnableCommand(interpreter);
-    if (log) {
-      if (success)
-        LLDB_LOGF(log,
-                  "StructuredDataDarwinLog::%s() ran enable command "
-                  "successfully for (process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
-      else
-        LLDB_LOGF(log,
-                  "StructuredDataDarwinLog::%s() error: running "
-                  "enable command failed (process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
-    }
+    if (success)
+      LLDB_LOGF(log,
+                "StructuredDataDarwinLog::%s() ran enable command "
+                "successfully for (process uid %u)",
+                __FUNCTION__, process_sp->GetUniqueID());
+    else
+      LLDB_LOGF(log,
+                "StructuredDataDarwinLog::%s() error: running "
+                "enable command failed (process uid %u)",
+                __FUNCTION__, process_sp->GetUniqueID());
     Debugger::ReportError("failed to configure DarwinLog support",
                           debugger_sp->GetID());
     return;

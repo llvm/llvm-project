@@ -72,9 +72,7 @@ namespace {
 class AMDGPURewriteUndefForPHILegacy : public FunctionPass {
 public:
   static char ID;
-  AMDGPURewriteUndefForPHILegacy() : FunctionPass(ID) {
-    initializeAMDGPURewriteUndefForPHILegacyPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPURewriteUndefForPHILegacy() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override {
     return "AMDGPU Rewrite Undef for PHI";
@@ -85,7 +83,6 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<UniformityInfoWrapperPass>();
     AU.setPreservesCFG();
   }
 };
@@ -105,7 +102,7 @@ bool rewritePHIs(Function &F, UniformityInfo &UA, DominatorTree *DT) {
   SmallVector<PHINode *> ToBeDeleted;
   for (auto &BB : F) {
     for (auto &PHI : BB.phis()) {
-      if (UA.isDivergent(&PHI))
+      if (UA.isDivergentAtDef(&PHI))
         continue;
 
       // The unique incoming value except undef/poison for the PHI node.
@@ -147,7 +144,7 @@ bool rewritePHIs(Function &F, UniformityInfo &UA, DominatorTree *DT) {
       // TODO: We should still be able to replace undef value if the unique
       // value is a Constant.
       if (!UniqueDefinedIncoming || Undefs.empty() ||
-          !UA.isDivergent(DominateBB->getTerminator()))
+          UA.isUniformAtDef(DominateBB->getTerminator()))
         continue;
 
       // We only replace the undef when DominateBB truly dominates all the

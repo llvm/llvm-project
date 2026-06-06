@@ -1,5 +1,14 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("X86GenAsmMatcher") {
+  visibility = [
+    ":LLVMX86CodeGen",
+    "AsmParser",
+  ]
+  args = [ "-gen-asm-matcher" ]
+  td_file = "X86.td"
+}
+
 tablegen("X86GenCallingConv") {
   visibility = [ ":LLVMX86CodeGen" ]
   args = [ "-gen-callingconv" ]
@@ -12,9 +21,12 @@ tablegen("X86GenDAGISel") {
   td_file = "X86.td"
 }
 
-tablegen("X86GenEVEX2VEXTables") {
-  visibility = [ ":LLVMX86CodeGen" ]
-  args = [ "-gen-x86-EVEX2VEX-tables" ]
+tablegen("X86GenInstrMapping") {
+  visibility = [
+    ":LLVMX86CodeGen",
+    "AsmParser",
+  ]
+  args = [ "-gen-x86-instr-mapping" ]
   td_file = "X86.td"
 }
 
@@ -45,15 +57,47 @@ tablegen("X86GenRegisterBank") {
   td_file = "X86.td"
 }
 
+tablegen("X86GenSDNodeInfo") {
+  visibility = [
+    ":LLVMX86CodeGen",
+    "//bolt/unittests/Core:CoreTests",
+    "//llvm//unittests/Target/X86:X86Tests",
+  ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "X86.td"
+}
+
+tablegen("X86GenPreLegalizeGICombiner") {
+  visibility = [ ":LLVMX86CodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=X86PreLegalizerCombiner",
+  ]
+  td_file = "X86.td"
+}
+
+tablegen("X86GenPostLegalizeGICombiner") {
+  visibility = [ ":LLVMX86CodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=X86PostLegalizerCombiner",
+  ]
+  td_file = "X86.td"
+}
+
 static_library("LLVMX86CodeGen") {
   deps = [
+    ":X86GenAsmMatcher",
     ":X86GenCallingConv",
     ":X86GenDAGISel",
-    ":X86GenEVEX2VEXTables",
     ":X86GenFastISel",
     ":X86GenFoldTables",
     ":X86GenGlobalISel",
+    ":X86GenInstrMapping",
+    ":X86GenPostLegalizeGICombiner",
+    ":X86GenPreLegalizeGICombiner",
     ":X86GenRegisterBank",
+    ":X86GenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -63,18 +107,22 @@ static_library("LLVMX86CodeGen") {
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/CFGuard",
     "//llvm/lib/Transforms/Instrumentation",
+    "//llvm/lib/Transforms/Scalar",
   ]
   include_dirs = [ "." ]
   sources = [
     "GISel/X86CallLowering.cpp",
     "GISel/X86InstructionSelector.cpp",
     "GISel/X86LegalizerInfo.cpp",
+    "GISel/X86PostLegalizerCombiner.cpp",
+    "GISel/X86PreLegalizerCombiner.cpp",
     "GISel/X86RegisterBankInfo.cpp",
     "X86ArgumentStackSlotRebase.cpp",
     "X86AsmPrinter.cpp",
@@ -82,11 +130,12 @@ static_library("LLVMX86CodeGen") {
     "X86AvoidTrailingCall.cpp",
     "X86CallFrameOptimization.cpp",
     "X86CallingConv.cpp",
+    "X86CleanupLocalDynamicTLS.cpp",
     "X86CmovConversion.cpp",
-    "X86DiscriminateMemOps.cpp",
+    "X86CodeGenPassBuilder.cpp",
+    "X86CompressEVEX.cpp",
     "X86DomainReassignment.cpp",
     "X86DynAllocaExpander.cpp",
-    "X86EvexToVex.cpp",
     "X86ExpandPseudo.cpp",
     "X86FastISel.cpp",
     "X86FastPreTileConfig.cpp",
@@ -99,13 +148,14 @@ static_library("LLVMX86CodeGen") {
     "X86FlagsCopyLowering.cpp",
     "X86FloatingPoint.cpp",
     "X86FrameLowering.cpp",
+    "X86GlobalBaseReg.cpp",
     "X86ISelDAGToDAG.cpp",
     "X86ISelLowering.cpp",
     "X86ISelLoweringCall.cpp",
     "X86IndirectBranchTracking.cpp",
     "X86IndirectThunks.cpp",
-    "X86InsertPrefetch.cpp",
-    "X86InsertWait.cpp",
+    "X86InsertVZeroUpper.cpp",
+    "X86InsertX87Wait.cpp",
     "X86InstCombineIntrinsic.cpp",
     "X86InstrFMA3Info.cpp",
     "X86InstrFoldTables.cpp",
@@ -122,7 +172,6 @@ static_library("LLVMX86CodeGen") {
     "X86OptimizeLEAs.cpp",
     "X86PadShortFunction.cpp",
     "X86PartialReduction.cpp",
-    "X86PreAMXConfig.cpp",
     "X86PreTileConfig.cpp",
     "X86RegisterInfo.cpp",
     "X86ReturnThunks.cpp",
@@ -131,12 +180,13 @@ static_library("LLVMX86CodeGen") {
     "X86SpeculativeExecutionSideEffectSuppression.cpp",
     "X86SpeculativeLoadHardening.cpp",
     "X86Subtarget.cpp",
+    "X86SuppressAPXForReloc.cpp",
     "X86TargetMachine.cpp",
     "X86TargetObjectFile.cpp",
     "X86TargetTransformInfo.cpp",
     "X86TileConfig.cpp",
-    "X86VZeroUpper.cpp",
     "X86WinEHState.cpp",
+    "X86WinEHUnwindV2.cpp",
   ]
 }
 

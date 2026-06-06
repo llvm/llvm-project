@@ -100,7 +100,7 @@ exit:
 }
 
 ; Address calculation cheap enough on some cores.
-define i32 @f3(i1 %c1, ptr %p, i64 %i) nounwind  "target-features"="+alu-lsl-fast,+addr-lsl-fast" {
+define i32 @f3(i1 %c1, ptr %p, i64 %i) nounwind  "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: f3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tbz w0, #0, .LBB3_2
@@ -130,7 +130,7 @@ exit:
   ret i32 %v
 }
 
-define void @f4(ptr %a, i64 %n) nounwind "target-features"="+alu-lsl-fast,+addr-lsl-fast" {
+define void @f4(ptr %a, i64 %n) nounwind "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: f4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x1, #1
@@ -160,10 +160,9 @@ define void @f4(ptr %a, i64 %n) nounwind "target-features"="+alu-lsl-fast,+addr-
 ; CHECK-NEXT:  .LBB4_5: // %LJ.latch
 ; CHECK-NEXT:    // in Loop: Header=BB4_6 Depth=2
 ; CHECK-NEXT:    add x8, x21, #1
+; CHECK-NEXT:    cmp x21, x19
 ; CHECK-NEXT:    str w0, [x20, x21, lsl #2]
-; CHECK-NEXT:    sub x9, x8, #1
 ; CHECK-NEXT:    mov x21, x8
-; CHECK-NEXT:    cmp x9, x19
 ; CHECK-NEXT:    b.ge .LBB4_2
 ; CHECK-NEXT:  .LBB4_6: // %LJ
 ; CHECK-NEXT:    // Parent Loop BB4_3 Depth=1
@@ -298,7 +297,6 @@ exit:
 define i32 @f6(i1 %c, ptr %a, i32 %i) {
 ; CHECK-LABEL: f6:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    tbz w0, #0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    mov w0, wzr

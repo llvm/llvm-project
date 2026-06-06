@@ -4,7 +4,7 @@
 // RUN:   -analyzer-checker=alpha.unix.cstring \
 // RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false  
+// RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
 // RUN:   -analyzer-checker=core \
@@ -131,7 +131,7 @@ void memcpy5(void) {
 
 void memcpy6(void) {
   int a[4] = {0};
-  memcpy(a, a, 8); // expected-warning{{overlapping}}  
+  memcpy(a, a, 8); // expected-warning{{overlapping}}
 }
 
 void memcpy7(void) {
@@ -257,7 +257,7 @@ void mempcpy5(void) {
 
 void mempcpy6(void) {
   int a[4] = {0};
-  mempcpy(a, a, 8); // expected-warning{{overlapping}}  
+  mempcpy(a, a, 8); // expected-warning{{overlapping}}
 }
 
 void mempcpy7(void) {
@@ -319,7 +319,7 @@ void mempcpy15(void) {
 
   p1 = (&s2) + 1;
   p2 = mempcpy(&s2, &s1, sizeof(struct st));
-  
+
   clang_analyzer_eval(p1 == p2); // expected-warning{{TRUE}}
 }
 
@@ -405,7 +405,7 @@ void memmove2 (void) {
 #define bcmp BUILTIN(bcmp)
 int bcmp(const void *s1, const void *s2, size_t n);
 #define memcmp bcmp
-// 
+//
 #else /* VARIANT */
 
 #define memcmp BUILTIN(memcmp)
@@ -508,7 +508,8 @@ void bcopy2 (void) {
   char src[] = {1, 2, 3, 4};
   char dst[1];
 
-  bcopy(src, dst, 4); // expected-warning{{overflow}}
+  bcopy(src, dst, 4); // expected-warning {{Memory copy function overflows the destination buffer}}
+  // expected-warning@-1 {{bcopy' will always overflow; destination buffer has size 1, but size argument is 4}}
 }
 
 void *malloc(size_t);
@@ -528,4 +529,18 @@ struct S {
 void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
   size_t iAdd = (size_t) addr;
   memcpy(((void *) &(s.f)), from, iAdd);
+}
+
+// PR#190457 - Crash on memcpy with zero-size element type (empty struct).
+// In the GNU C extension, empty structs have sizeof == 0, which caused a
+// division by zero in checkInit. On MSVC targets, even in C mode, empty
+// structs have nonzero sizeof (due to ABI requirements), so the overflow
+// warnings don't fire there.
+void nocrash_on_empty_struct_memcpy(void) {
+  struct {} a[10];
+  __builtin_memcpy(&a[2], a, 2); // no-crash
+#if !defined(_WIN32) || defined(__MINGW32__)
+  // expected-warning@-2 {{'memcpy' will always overflow; destination buffer has size 0, but size argument is 2}}
+  // expected-warning@-3 {{Memory copy function overflows the destination buffer}}
+#endif
 }

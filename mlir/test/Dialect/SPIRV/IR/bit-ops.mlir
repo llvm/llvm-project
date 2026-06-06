@@ -137,7 +137,7 @@ func.func @bitwise_or_all_ones_vector(%arg: vector<3xi8>) -> vector<3xi8> {
 // -----
 
 func.func @bitwise_or_float(%arg0: f16, %arg1: f16) -> f16 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
   %0 = spirv.BitwiseOr %arg0, %arg1 : f16
   return %0 : f16
 }
@@ -149,21 +149,23 @@ func.func @bitwise_or_float(%arg0: f16, %arg1: f16) -> f16 {
 //===----------------------------------------------------------------------===//
 
 func.func @bitwise_xor_scalar(%arg: i32) -> i32 {
+  %c1 = spirv.Constant 1 : i32 // using constant to avoid folding
   // CHECK: spirv.BitwiseXor
-  %0 = spirv.BitwiseXor %arg, %arg : i32
+  %0 = spirv.BitwiseXor %c1, %arg : i32
   return %0 : i32
 }
 
 func.func @bitwise_xor_vector(%arg: vector<4xi32>) -> vector<4xi32> {
+  %c1 = spirv.Constant dense<1> : vector<4xi32> // using constant to avoid folding
   // CHECK: spirv.BitwiseXor
-  %0 = spirv.BitwiseXor %arg, %arg : vector<4xi32>
+  %0 = spirv.BitwiseXor %c1, %arg : vector<4xi32>
   return %0 : vector<4xi32>
 }
 
 // -----
 
 func.func @bitwise_xor_float(%arg0: f16, %arg1: f16) -> f16 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
   %0 = spirv.BitwiseXor %arg0, %arg1 : f16
   return %0 : f16
 }
@@ -272,7 +274,7 @@ func.func @bitwise_and_zext_vector(%arg: vector<2xi8>) -> vector<2xi32> {
 // -----
 
 func.func @bitwise_and_float(%arg0: f16, %arg1: f16) -> f16 {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4}}
   %0 = spirv.BitwiseAnd %arg0, %arg1 : f16
   return %0 : f16
 }

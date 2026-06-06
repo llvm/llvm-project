@@ -138,7 +138,6 @@ func.func @test_scalar_forall_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 }
 // CHECK-LABEL:   func.func @test_scalar_forall_overlap(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) {
-// CHECK:  %[[VAL_1:.*]] = fir.alloca index
 // CHECK:  %[[VAL_2:.*]] = arith.constant 0 : i32
 // CHECK:  %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_4:.*]] = arith.constant 10 : index
@@ -150,33 +149,46 @@ func.func @test_scalar_forall_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:  %[[VAL_10:.*]] = arith.divsi %[[VAL_9]], %[[VAL_6]] : index
 // CHECK:  %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_7]] : index
 // CHECK:  %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_10]], %[[VAL_7]] : index
-// CHECK:  %[[VAL_13:.*]] = arith.constant 1 : index
-// CHECK:  %[[VAL_14:.*]] = arith.constant 1 : index
-// CHECK:  fir.store %[[VAL_13]] to %[[VAL_1]] : !fir.ref<index>
 // CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?xi1>, %[[VAL_12]] {bindc_name = ".tmp.forall", uniq_name = ""}
-// CHECK:  %[[VAL_16:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_16]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi1>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi1>>, !fir.heap<!fir.array<?xi1>>)
+// CHECK:  %[[VAL_16:.*]] = fir.shape_shift %[[VAL_3]], %[[VAL_12]] : (index, index) -> !fir.shapeshift<1>
+// CHECK:  %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_16]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi1>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi1>>, !fir.heap<!fir.array<?xi1>>)
 // CHECK:  fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_6]] {
 // CHECK:    %[[VAL_19:.*]] = arith.subi %[[VAL_5]], %[[VAL_18]] : index
 // CHECK:    %[[VAL_20:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_19]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // CHECK:    %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<i32>
 // CHECK:    %[[VAL_22:.*]] = arith.cmpi slt, %[[VAL_21]], %[[VAL_2]] : i32
-// CHECK:    %[[VAL_23:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
-// CHECK:    %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_14]] : index
-// CHECK:    fir.store %[[VAL_24]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:    %[[VAL_25:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_23]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
+// CHECK:    %[[VAL_25:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_18]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
 // CHECK:    hlfir.assign %[[VAL_22]] to %[[VAL_25]] : i1, !fir.ref<i1>
 // CHECK:  }
 // CHECK:  %[[VAL_26:.*]] = arith.constant 1 : index
-// CHECK:  fir.store %[[VAL_13]] to %[[VAL_1]] : !fir.ref<index>
 // CHECK:  fir.do_loop %[[VAL_27:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_26]] {
-// CHECK:    %[[VAL_28:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
-// CHECK:    %[[VAL_29:.*]] = arith.addi %[[VAL_28]], %[[VAL_14]] : index
-// CHECK:    fir.store %[[VAL_29]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:    %[[VAL_30:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_28]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
+// CHECK:    %[[VAL_30:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_27]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
 // CHECK:    %[[VAL_31:.*]] = fir.load %[[VAL_30]] : !fir.ref<i1>
 // CHECK:    %[[VAL_32:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_27]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // CHECK:    %[[VAL_33:.*]] = fir.convert %[[VAL_31]] : (i1) -> !fir.logical<4>
 // CHECK:    fir.call @logical_value_to_numeric(%[[VAL_32]], %[[VAL_33]]) : (!fir.ref<i32>, !fir.logical<4>) -> ()
 // CHECK:  }
 // CHECK:  fir.freemem %[[VAL_15]] : !fir.heap<!fir.array<?xi1>>
+
+func.func @test_saved_scalar_box(%arg0: !fir.box<!fir.type<sometype>>, %arg1: !fir.class<!fir.type<sometype>>) {
+  hlfir.region_assign {
+    hlfir.yield %arg0 : !fir.box<!fir.type<sometype>>
+  } to {
+    hlfir.yield %arg1 : !fir.class<!fir.type<sometype>>
+  } user_defined_assign  (%arg2: !fir.box<!fir.type<sometype>>) to (%arg3: !fir.class<!fir.type<sometype>>) {
+    fir.call @user_assign_box(%arg3, %arg2) : (!fir.class<!fir.type<sometype>>, !fir.box<!fir.type<sometype>>) -> ()
+  }
+  return
+}
+func.func private @user_assign_box(!fir.class<!fir.type<sometype>>, !fir.box<!fir.type<sometype>>) -> ()
+
+// CHECK-LABEL:   func.func @test_saved_scalar_box(
+// CHECK-SAME:                    %[[VAL_0:.*]]: !fir.box<!fir.type<sometype>>,
+// CHECK-SAME:                    %[[VAL_1:.*]]: !fir.class<!fir.type<sometype>>) {
+// CHECK:           %[[VAL_2:.*]] = hlfir.as_expr %[[VAL_0]] : (!fir.box<!fir.type<sometype>>) -> !hlfir.expr<!fir.type<sometype>>
+// CHECK:           %[[VAL_3:.*]]:3 = hlfir.associate %[[VAL_2]]
+// CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<!fir.type<sometype>>) -> !fir.box<!fir.type<sometype>>
+// CHECK:           fir.call @user_assign_box(%[[VAL_1]], %[[VAL_4]]) : (!fir.class<!fir.type<sometype>>, !fir.box<!fir.type<sometype>>) -> ()
+// CHECK:           hlfir.end_associate %[[VAL_3]]#1, %[[VAL_3]]#2 : !fir.ref<!fir.type<sometype>>, i1
+// CHECK:           return
+// CHECK:         }

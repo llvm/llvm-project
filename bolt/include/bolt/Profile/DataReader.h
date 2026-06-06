@@ -32,25 +32,13 @@ namespace bolt {
 
 class BinaryFunction;
 
-struct LBREntry {
-  uint64_t From;
-  uint64_t To;
-  bool Mispred;
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS, const LBREntry &LBR) {
-  OS << "0x" << Twine::utohexstr(LBR.From) << " -> 0x"
-     << Twine::utohexstr(LBR.To);
-  return OS;
-}
-
 struct Location {
   bool IsSymbol;
   StringRef Name;
   uint64_t Offset;
 
   explicit Location(uint64_t Offset)
-      : IsSymbol(false), Name("[unknown]"), Offset(Offset) {}
+      : IsSymbol(false), Name(""), Offset(Offset) {}
 
   Location(bool IsSymbol, StringRef Name, uint64_t Offset)
       : IsSymbol(IsSymbol), Name(Name), Offset(Offset) {}
@@ -73,8 +61,6 @@ struct Location {
   friend raw_ostream &operator<<(raw_ostream &OS, const Location &Loc);
 };
 
-typedef std::vector<std::pair<Location, Location>> BranchContext;
-
 struct BranchInfo {
   Location From;
   Location To;
@@ -90,13 +76,7 @@ struct BranchInfo {
   }
 
   bool operator<(const BranchInfo &RHS) const {
-    if (From < RHS.From)
-      return true;
-
-    if (From == RHS.From)
-      return (To < RHS.To);
-
-    return false;
+    return std::tie(From, To) < std::tie(RHS.From, RHS.To);
   }
 
   /// Merges branch and misprediction counts of \p BI with those of this object.
@@ -112,27 +92,14 @@ struct FuncBranchData {
   ContainerTy Data;
   ContainerTy EntryData;
 
-  /// Total execution count for the function.
-  int64_t ExecutionCount{0};
-
   /// Indicate if the data was used.
   bool Used{false};
 
   FuncBranchData() {}
 
-  FuncBranchData(StringRef Name, ContainerTy Data)
-      : Name(Name), Data(std::move(Data)) {}
-
-  FuncBranchData(StringRef Name, ContainerTy Data, ContainerTy EntryData)
+  FuncBranchData(StringRef Name, ContainerTy Data = ContainerTy(),
+                 ContainerTy EntryData = ContainerTy())
       : Name(Name), Data(std::move(Data)), EntryData(std::move(EntryData)) {}
-
-  ErrorOr<const BranchInfo &> getBranch(uint64_t From, uint64_t To) const;
-
-  /// Returns the branch info object associated with a direct call originating
-  /// from the given offset. If no branch info object is found, an error is
-  /// returned. If the offset corresponds to an indirect call the behavior is
-  /// undefined.
-  ErrorOr<const BranchInfo &> getDirectCallBranch(uint64_t From) const;
 
   /// Append the branch data of another function located \p Offset bytes away
   /// from the entry of this function.
@@ -141,6 +108,9 @@ struct FuncBranchData {
   /// Returns the total number of executed branches in this function
   /// by counting the number of executed branches for each BranchInfo
   uint64_t getNumExecutedBranches() const;
+
+  /// Set entry counts derived from EntryData to \p BF.
+  void setEntryCounts(BinaryFunction &BF) const;
 
   /// Aggregation helpers
   DenseMap<uint64_t, DenseMap<uint64_t, size_t>> IntraIndex;
@@ -211,22 +181,23 @@ struct FuncMemData {
 
   FuncMemData() {}
 
-  FuncMemData(StringRef Name, ContainerTy Data)
+  FuncMemData(StringRef Name, ContainerTy Data = ContainerTy())
       : Name(Name), Data(std::move(Data)) {}
 };
 
 /// Similar to BranchInfo, but instead of recording from-to address (an edge),
 /// it records the address of a perf event and the number of times samples hit
 /// this address.
-struct SampleInfo {
+struct BasicSampleInfo {
   Location Loc;
   int64_t Hits;
 
-  SampleInfo(Location Loc, int64_t Hits) : Loc(std::move(Loc)), Hits(Hits) {}
+  BasicSampleInfo(Location Loc, int64_t Hits)
+      : Loc(std::move(Loc)), Hits(Hits) {}
 
-  bool operator==(const SampleInfo &RHS) const { return Loc == RHS.Loc; }
+  bool operator==(const BasicSampleInfo &RHS) const { return Loc == RHS.Loc; }
 
-  bool operator<(const SampleInfo &RHS) const {
+  bool operator<(const BasicSampleInfo &RHS) const {
     if (Loc < RHS.Loc)
       return true;
 
@@ -235,22 +206,25 @@ struct SampleInfo {
 
   void print(raw_ostream &OS) const;
 
-  void mergeWith(const SampleInfo &SI);
+  void mergeWith(const BasicSampleInfo &SI);
 };
 
 /// Helper class to store samples recorded in the address space of a given
 /// function, analogous to FuncBranchData but for samples instead of branches.
-struct FuncSampleData {
-  typedef std::vector<SampleInfo> ContainerTy;
+struct FuncBasicSampleData {
+  typedef std::vector<BasicSampleInfo> ContainerTy;
 
   StringRef Name;
   ContainerTy Data;
 
-  FuncSampleData(StringRef Name, ContainerTy Data)
+  FuncBasicSampleData(StringRef Name, ContainerTy Data = ContainerTy())
       : Name(Name), Data(std::move(Data)) {}
 
   /// Get the number of samples recorded in [Start, End)
   uint64_t getSamples(uint64_t Start, uint64_t End) const;
+
+  /// Returns the total number of samples recorded in this function.
+  uint64_t getSamples() const;
 
   /// Aggregation helper
   DenseMap<uint64_t, size_t> Index;
@@ -311,7 +285,7 @@ protected:
   /// The last step is to infer edge counts based on BB execution count. Note
   /// this is the opposite of the LBR way, where we infer BB execution count
   /// based on edge counts.
-  void readSampleData(BinaryFunction &BF);
+  void readBasicSampleData(BinaryFunction &BF);
 
   /// Convert function-level branch data into instruction annotations.
   void convertBranchData(BinaryFunction &BF) const;
@@ -350,9 +324,9 @@ protected:
   ///
   /// The examples records branches from local symbol func (from t2.c), offset
   /// 11, to global symbol globalfunc, offset 1d, with 1775 branches, no
-  /// mispreds. Of these branches, 1002 were preceeded by a sequence of
+  /// mispreds. Of these branches, 1002 were preceded by a sequence of
   /// branches from func, offset 18 to offset 20 and then from offset 31 to
-  /// offset d. The rest 773 branches were preceeded by a different sequence
+  /// offset d. The rest 773 branches were preceded by a different sequence
   /// of branches, from func, offset 18 to offset 60 and then from offset 71 to
   /// offset d.
   std::error_code parse();
@@ -385,7 +359,8 @@ protected:
   /// Return mem data matching one of the names in \p FuncNames.
   FuncMemData *getMemDataForNames(const std::vector<StringRef> &FuncNames);
 
-  FuncSampleData *getFuncSampleData(const std::vector<StringRef> &FuncNames);
+  FuncBasicSampleData *
+  getFuncBasicSampleData(const std::vector<StringRef> &FuncNames);
 
   /// Return a vector of all FuncBranchData matching the list of names.
   /// Internally use fuzzy matching to match special names like LTO-generated
@@ -428,7 +403,7 @@ protected:
   }
 
   using NamesToBranchesMapTy = std::map<StringRef, FuncBranchData>;
-  using NamesToSamplesMapTy = std::map<StringRef, FuncSampleData>;
+  using NamesToBasicSamplesMapTy = std::map<StringRef, FuncBasicSampleData>;
   using NamesToMemEventsMapTy = std::map<StringRef, FuncMemData>;
   using FuncsToBranchesMapTy =
       std::unordered_map<const BinaryFunction *, FuncBranchData *>;
@@ -477,7 +452,7 @@ protected:
     return parseLocation(EndChar, EndNl, true);
   }
   ErrorOr<BranchInfo> parseBranchInfo();
-  ErrorOr<SampleInfo> parseSampleInfo();
+  ErrorOr<BasicSampleInfo> parseSampleInfo();
   ErrorOr<MemInfo> parseMemInfo();
   ErrorOr<bool> maybeParseNoLBRFlag();
   ErrorOr<bool> maybeParseBATFlag();
@@ -491,7 +466,7 @@ protected:
   unsigned Line{0};
   unsigned Col{0};
   NamesToBranchesMapTy NamesToBranches;
-  NamesToSamplesMapTy NamesToSamples;
+  NamesToBasicSamplesMapTy NamesToBasicSamples;
   NamesToMemEventsMapTy NamesToMemEvents;
   FuncsToBranchesMapTy FuncsToBranches;
   FuncsToMemDataMapTy FuncsToMemData;
@@ -515,10 +490,6 @@ public:
 template <> struct DenseMapInfo<bolt::Location> {
   static inline bolt::Location getEmptyKey() {
     return bolt::Location(true, StringRef(), static_cast<uint64_t>(-1LL));
-  }
-  static inline bolt::Location getTombstoneKey() {
-    return bolt::Location(true, StringRef(), static_cast<uint64_t>(-2LL));
-    ;
   }
   static unsigned getHashValue(const bolt::Location &L) {
     return (unsigned(DenseMapInfo<StringRef>::getHashValue(L.Name)) >> 4) ^

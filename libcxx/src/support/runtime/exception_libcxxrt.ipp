@@ -8,18 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef LIBCXXRT
-#error this header may only be used when targeting libcxxrt
+#  error this header may only be used when targeting libcxxrt
 #endif
+
+#include <exception>
 
 namespace std {
 
-bad_exception::~bad_exception() noexcept
-{
-}
+bad_exception::~bad_exception() noexcept {}
 
-const char* bad_exception::what() const noexcept
-{
-  return "std::bad_exception";
-}
+const char* bad_exception::what() const noexcept { return "std::bad_exception"; }
 
 } // namespace std

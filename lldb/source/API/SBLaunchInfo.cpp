@@ -210,7 +210,8 @@ void SBLaunchInfo::Clear() {
 const char *SBLaunchInfo::GetWorkingDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetWorkingDirectory().GetPathAsConstString().AsCString();
+  return m_opaque_sp->GetWorkingDirectory().GetPathAsConstString().AsCString(
+      nullptr);
 }
 
 void SBLaunchInfo::SetWorkingDirectory(const char *working_dir) {
@@ -248,8 +249,8 @@ const char *SBLaunchInfo::GetShell() {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString shell(m_opaque_sp->GetShell().GetPath().c_str());
-  return shell.AsCString();
+  ConstString shell(m_opaque_sp->GetShell().GetPath());
+  return shell.AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetShell(const char *path) {
@@ -341,8 +342,8 @@ const char *SBLaunchInfo::GetScriptedProcessClassName() const {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString class_name(metadata_sp->GetClassName().data());
-  return class_name.AsCString();
+  ConstString class_name(metadata_sp->GetClassName());
+  return class_name.AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetScriptedProcessClassName(const char *class_name) {
@@ -402,11 +403,5 @@ SBListener SBLaunchInfo::GetShadowListener() {
 void SBLaunchInfo::SetShadowListener(SBListener &listener) {
   LLDB_INSTRUMENT_VA(this, listener);
 
-  ListenerSP listener_sp = listener.GetSP();
-  if (listener_sp && listener.IsValid())
-    listener_sp->SetShadow(true);
-  else
-    listener_sp = nullptr;
-
-  m_opaque_sp->SetShadowListener(listener_sp);
+  m_opaque_sp->SetShadowListener(listener.GetSP());
 }

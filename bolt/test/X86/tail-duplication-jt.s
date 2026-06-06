@@ -1,5 +1,5 @@
-# This reproduces a bug in tail duplication when aggressiveCodeToDuplicate
-# fails to handle a block with a jump table.
+## This reproduces a bug in tail duplication when aggressiveCodeToDuplicate
+## fails to handle a block with a jump table.
 
 # REQUIRES: system-linux
 

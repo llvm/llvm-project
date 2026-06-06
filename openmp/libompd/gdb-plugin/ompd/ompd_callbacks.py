@@ -84,7 +84,7 @@ def _thread_context(*args):
             m = re.search(r"(0x[a-fA-F0-9]+)", line)
         elif lwp:
             m = re.search(r"\([^)]*?(\d+)[^)]*?\)", line)
-        if m == None:
+        if m is None:
             continue
         pid = int(m.group(1), 0)
         if pid == thread_id:

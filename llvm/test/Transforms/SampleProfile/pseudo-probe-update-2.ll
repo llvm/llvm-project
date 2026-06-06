@@ -14,8 +14,8 @@ T1:                                               ; preds = %0
   %v1 = call i32 @f1(), !prof !12
   %cond3 = icmp eq i32 %v1, 412
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 2, i32 0, i64 -1)
-;; The distribution factor -8513881372706734080 stands for 53.85%, whic is from 7/6+7.
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -8513881372706734080)
+;; The distribution factor -9223372036854775808 stands for 53.85%, whic is from 7/6+7.
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -9223372036854775808)
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 4, i32 0, i64 -1), !dbg !13
 ;; Probe 7 has two copies, since they don't share the same inline context, they are not
 ;; considered sharing samples, thus their distribution factors are not fixed up.
@@ -29,8 +29,8 @@ T1:                                               ; preds = %0
 Merge:                                            ; preds = %0
   %v2 = call i32 @f2(), !prof !12
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 3, i32 0, i64 -1)
-;; The distribution factor 8513881922462547968 stands for 46.25%, which is from 6/6+7.
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 4, i32 0, i64 8513881922462547968)
+;; The distribution factor  -9223372036854775808 stands for 46.25%, which is from 6/6+7.
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 4, i32 0, i64  -9223372036854775808)
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 4, i32 0, i64 8513881922462547968), !dbg !13
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 7, i32 0, i64 -1)
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 7, i32 0, i64 -1), !dbg !18

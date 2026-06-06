@@ -1,0 +1,1137 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+  - Name:            .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         4883EC2889C84889D14889F248897C2408488954241048894C24188844242748893C244889E7488D3500000000440FB6C0FF15000000004883C428C3
+  - Name:            '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         4883EC1848897C2408488B3FE800000000E800000000884424170FB6C04883C418C3
+  - Name:            .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         4883EC1848897C2408E8000000004883C418C3
+  - Name:            '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         4883EC1848897C2410488B3FE8000000004883C418C3
+  - Name:            .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         4883EC1848897C2408488D7C2408E8000000004883C418C3
+  - Name:            .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         4883EC1848897C2410FFD74883C418C3
+  - Name:            '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         48897C24F8C3
+  - Name:            '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         31C0C3
+  - Name:            .text._ZN4main4main17h5659c6c02e5cd445E
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         C3
+  - Name:            .text.main
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         504889F2488B05000000008A004863F7488D3D0000000031C9E80000000059C3
+  - Name:            .data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         '000000000000000008000000000000000800000000000000000000000000000000000000000000000000000000000000'
+  - Name:            .rodata._ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x1
+    Content:         0A
+  - Name:            .debug_gdb_scripts
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         016764625F6C6F61645F727573745F7072657474795F7072696E746572732E707900
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011101250E1305030E10171B0E110155170000023400030E4913021800000313011D13030E0B0B88010F0000040D00030E491388010F380B0000050F004913030E33060000062400030E3E0B0B0B0000073901030E0000081301030E0B0B88010F0000092E011101120640186E0E030E3A0B3B0B491300000A34000218030E88010F3A0B3B0B491300000B1D01311311011206580B590B570B00000C05000218311300000D1D00311311011206580B5905570B00000E2F004913030E00000F05000218030E3A0B3B0B49130000101301030E0B0B320B88010F0000110D00030E491388010F380B320B0000122E016E0E030E3A0B3B0549133C19000013050049130000142E011101120640186E0E030E3A0B3B0B0000150B01110112060000163400021831130000172E011101120640186E0E030E3A0B3B054913000018050002183A0B3B054913000019150000001A3400030E49133A0B3B0B88010F02186E0E00001B330100001C190100001D2E001101120640186E0E030E3A0B3B0B6A1900001E2E004713200B00001F2E014713200B0000200500030E3A0B3B0549130000212E016E0E030E3A0B3B05200B0000223400030E88010F3A0B3B054913000023050002183A0B3B0B49130000242E011101120640186E0E030E3A0B3B05000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         F00400000400000000000801000000001C0000000000000000000000000000000000000000000000000002000000003D0000000903000000000000000003B500000000000000300804000000008B000000080004000000009F000000080804000000009F000000081004000000008B000000081804000000008B000000082004000000008B000000082800059800000000000000000000000600000000070006000000000708070000000007000000000700000000080000000008080400000000B1020000080000090000000000000000220000000157000000000000000002C7590300000A03910806000000000802C1B10200000B7303000000000000000000000300000002C7550C029117790300000D6D030000000000000000000003000000041D0810000E980000000000000000000900000000000000003C0000000157000000000000000002C0C50400000F0291080000000002C1B10200000F0291100000000002C2C50400000F0291180000000002C3CC0400000F0291270000000002C4520300000E9800000000000000000007000000000700000000070000000007000000001000000000010101110000000052030000010003120000000000000000037C0259030000136003000000000000000700000000140000000000000000130000000157000000000000000005940F029108000000000594B1020000150000000000000000000000000A02910700000000010598980000000B90030000000000000000000000000000059B0516029117A603000000000EB1020000000000000E9800000000000000000000070000000010000000000101011100000000A6010000010003120000000000000000041C0859030000135402000000000700000000170000000000000000030000000157000000000000000004A909540200001802917F04A909980000000000000005BE02000000000000000000001907000000001A00000000DE020000010C01090300000000000000000000000010000000000101011B1C0400000000F502000001000000100000000001010111000000000B030000010001000010000000000101011B1C04000000002203000001000000100000000001010111000000005203000001000100001D00000000000000000100000001570000000000000000010E00060000000007010600000000050405A601000000000000000000001EBA010000011F68020000012000000000041C0854020000000700000000070000000021000000000000000006DC01010E980000000000000022000000000106DC01980000000000070000000007000000000700000000090000000000000000160000000157000000000000000007FA590300002302911007FAE60400002302910F07FA980000000EB5000000000000000E980000000000000000090000000000000000180000000157000000000000000007FA590300002302910807FAB50000002302911707FA980000000EB5000000000000000E980000000000000000140000000000000000100000000157000000000000000007FA2302911007FAB10200002302910F07FA980000000EB1020000000000000E98000000000000000000000007000000002400000000000000000600000001570000000000000000080B0218029178080B02E60400000EB5000000000000000000000600000000050805D904000000000000000000000552030000000000000000000005B5000000000000000000000000
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         0072757374632076657273696F6E20312E38372E30202831373036376539616320323032352D30352D30392900
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C070890010000140000001C000000000000003C00000000440E30770E08001400000034000000000000002200000000440E205D0E0800140000004C000000000000001300000000440E204E0E08001400000064000000000000001600000000440E20510E0800140000007C000000000000001800000000440E20530E08001400000094000000000000001000000000440E204B0E080010000000AC00000000000000060000000000000010000000C000000000000000030000000000000010000000D400000000000000010000000000000018000000E8000000000000002000000000410E105E0E080000000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0D0400000400E9020000010101FB0E0D0001010101000000010000012F686F6D652F6B6976612F2E7275737475702F746F6F6C636861696E732F737461626C652D7838365F36342D756E6B6E6F776E2D6C696E75782D676E752F6C69622F727573746C69622F7372632F727573742F6C6962726172792F7374642F737263002F686F6D652F6B6976612F2E7275737475702F746F6F6C636861696E732F737461626C652D7838365F36342D756E6B6E6F776E2D6C696E75782D676E752F6C69622F727573746C69622F7372632F727573742F6C6962726172792F7374642F7372632F7379732F70726F636573732F756E6978002F686F6D652F6B6976612F2E7275737475702F746F6F6C636861696E732F737461626C652D7838365F36342D756E6B6E6F776E2D6C696E75782D676E752F6C69622F727573746C69622F7372632F727573742F6C6962726172792F7374642F7372632F737973002F686F6D652F6B6976612F2E7275737475702F746F6F6C636861696E732F737461626C652D7838365F36342D756E6B6E6F776E2D6C696E75782D676E752F6C69622F727573746C69622F7372632F727573742F6C6962726172792F636F72652F737263002F686F6D652F6B6976612F2E7275737475702F746F6F6C636861696E732F737461626C652D7838365F36342D756E6B6E6F776E2D6C696E75782D676E752F6C69622F727573746C69622F7372632F727573742F6C6962726172792F636F72652F7372632F6F7073002F686F6D652F6B6976612F2E7275737475702F746F6F6C636861696E732F737461626C652D7838365F36342D756E6B6E6F776E2D6C696E75782D676E752F6C69622F727573746C69622F7372632F727573742F6C6962726172792F636F72652F7372632F70747200006D61696E2E72730000000072742E727300010000636F6D6D6F6E2E72730002000070726F636573732E7273000100006261636B74726163652E72730003000068696E742E72730004000066756E6374696F6E2E7273000500006D6F642E727300060000000402000902000000000000000003BF0101050A0A08DD05054905020B084202050001010402000902000000000000000003C6010105460A900512063C040305090603B603D60402055D0B03CA7C3C0205000101040500090200000000000000000393010105120A940406050503C50258040505020B03C17D0102050001010407000902000000000000000003F9010105050A90060B8202050001010407000902000000000000000003F9010105050A90060B9E02050001010407000902000000000000000003F9010105050A90060B2E020500010104080009020000000000000000038A040105010A580201000101040405060A000902000000000000000003AA1301020300010105020A0009020000000000000000030E010201000101
+  - Name:            .rela.text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+    Relocations:
+      - Offset:          0x29
+        Symbol:          .data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x33
+        Symbol:          _ZN3std2rt19lang_start_internal17h418648f91f5be3a1E
+        Type:            R_X86_64_GOTPCREL
+        Addend:          -4
+  - Name:            '.rela.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+    Relocations:
+      - Offset:          0xD
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x12
+        Symbol:          '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+    Relocations:
+      - Offset:          0xA
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            '.rela.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+    Relocations:
+      - Offset:          0xD
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+    Relocations:
+      - Offset:          0xF
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.text.main
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text.main
+    Relocations:
+      - Offset:          0x7
+        Symbol:          __rustc_debug_gdb_scripts_section__
+        Type:            R_X86_64_GOTPCREL
+        Addend:          -4
+      - Offset:          0x13
+        Symbol:          .text._ZN4main4main17h5659c6c02e5cd445E
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x1A
+        Symbol:          _ZN3std2rt10lang_start17hcb2a6a78164896cfE
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+    Relocations:
+      - Offset:          0x18
+        Symbol:          '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+        Type:            R_X86_64_64
+      - Offset:          0x20
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+      - Offset:          0x28
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x6
+        Symbol:          .debug_abbrev
+        Type:            R_X86_64_32
+      - Offset:          0xC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+      - Offset:          0x12
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          57
+      - Offset:          0x16
+        Symbol:          .debug_line
+        Type:            R_X86_64_32
+      - Offset:          0x1A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          95
+      - Offset:          0x26
+        Symbol:          .debug_ranges
+        Type:            R_X86_64_32
+      - Offset:          0x2B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          176
+      - Offset:          0x35
+        Symbol:          .data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+        Type:            R_X86_64_64
+      - Offset:          0x42
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          382
+      - Offset:          0x49
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          260
+      - Offset:          0x54
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          287
+      - Offset:          0x5F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          298
+      - Offset:          0x6A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          304
+      - Offset:          0x75
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          314
+      - Offset:          0x80
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          324
+      - Offset:          0x90
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          277
+      - Offset:          0x99
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          274
+      - Offset:          0xA0
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          292
+      - Offset:          0xA7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          334
+      - Offset:          0xAC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          338
+      - Offset:          0xB1
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          341
+      - Offset:          0xB6
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          362
+      - Offset:          0xBD
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          352
+      - Offset:          0xC9
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+      - Offset:          0xD7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          943
+      - Offset:          0xDB
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1016
+      - Offset:          0xEA
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          352
+      - Offset:          0xFA
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+        Addend:          26
+      - Offset:          0x116
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+        Addend:          26
+      - Offset:          0x12C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          769
+      - Offset:          0x133
+        Symbol:          .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+        Type:            R_X86_64_64
+      - Offset:          0x141
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          879
+      - Offset:          0x145
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          922
+      - Offset:          0x153
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          352
+      - Offset:          0x161
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1744
+      - Offset:          0x16F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1749
+      - Offset:          0x17D
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1781
+      - Offset:          0x18C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          769
+      - Offset:          0x193
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          540
+      - Offset:          0x198
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          544
+      - Offset:          0x19D
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          552
+      - Offset:          0x1A2
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          557
+      - Offset:          0x1A7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          564
+      - Offset:          0x1AF
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          487
+      - Offset:          0x1BB
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          573
+      - Offset:          0x1BF
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          641
+      - Offset:          0x1D5
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          835
+      - Offset:          0x1DA
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_64
+      - Offset:          0x1E8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1034
+      - Offset:          0x1EC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1106
+      - Offset:          0x1F6
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1796
+      - Offset:          0x201
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_64
+        Addend:          14
+      - Offset:          0x211
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1789
+      - Offset:          0x221
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_64
+        Addend:          14
+      - Offset:          0x23F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1032
+      - Offset:          0x248
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          769
+      - Offset:          0x250
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          544
+      - Offset:          0x255
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          564
+      - Offset:          0x25D
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          487
+      - Offset:          0x269
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          695
+      - Offset:          0x26D
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          747
+      - Offset:          0x280
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          869
+      - Offset:          0x285
+        Symbol:          '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+        Type:            R_X86_64_64
+      - Offset:          0x293
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1616
+      - Offset:          0x297
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1703
+      - Offset:          0x2B6
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          357
+      - Offset:          0x2C0
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          352
+      - Offset:          0x2C5
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          471
+      - Offset:          0x2D2
+        Symbol:          .rodata._ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+        Type:            R_X86_64_64
+      - Offset:          0x2DA
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          496
+      - Offset:          0x2DF
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          485
+      - Offset:          0x2E9
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          485
+      - Offset:          0x2F6
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          485
+      - Offset:          0x2FE
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          487
+      - Offset:          0x30C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          491
+      - Offset:          0x316
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          491
+      - Offset:          0x323
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          491
+      - Offset:          0x32B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          487
+      - Offset:          0x339
+        Symbol:          .text._ZN4main4main17h5659c6c02e5cd445E
+        Type:            R_X86_64_64
+      - Offset:          0x347
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1710
+      - Offset:          0x34B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          352
+      - Offset:          0x353
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          493
+      - Offset:          0x35A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          648
+      - Offset:          0x365
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          652
+      - Offset:          0x37A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          754
+      - Offset:          0x387
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          759
+      - Offset:          0x38C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          764
+      - Offset:          0x391
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          771
+      - Offset:          0x395
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          815
+      - Offset:          0x3A2
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          769
+      - Offset:          0x3A7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          829
+      - Offset:          0x3B6
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          845
+      - Offset:          0x3BB
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          849
+      - Offset:          0x3C0
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          858
+      - Offset:          0x3C5
+        Symbol:          '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+        Type:            R_X86_64_64
+      - Offset:          0x3D3
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1155
+      - Offset:          0x3D7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1246
+      - Offset:          0x3FA
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1145
+      - Offset:          0x403
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1150
+      - Offset:          0x409
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+        Type:            R_X86_64_64
+      - Offset:          0x417
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1302
+      - Offset:          0x41B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1246
+      - Offset:          0x43E
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1145
+      - Offset:          0x447
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1150
+      - Offset:          0x44D
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+        Type:            R_X86_64_64
+      - Offset:          0x45B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1361
+      - Offset:          0x45F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1420
+      - Offset:          0x47E
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1145
+      - Offset:          0x487
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1150
+      - Offset:          0x490
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          865
+      - Offset:          0x495
+        Symbol:          '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+        Type:            R_X86_64_64
+      - Offset:          0x4A3
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1440
+      - Offset:          0x4A7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1560
+      - Offset:          0x4BE
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          769
+      - Offset:          0x4C6
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          937
+      - Offset:          0x4D1
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1764
+      - Offset:          0x4DE
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1754
+      - Offset:          0x4EB
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1798
+  - Name:            .rela.debug_aranges
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_aranges
+    Relocations:
+      - Offset:          0x6
+        Symbol:          .debug_info
+        Type:            R_X86_64_32
+      - Offset:          0x10
+        Symbol:          .data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+        Type:            R_X86_64_64
+      - Offset:          0x20
+        Symbol:          .rodata._ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+        Type:            R_X86_64_64
+      - Offset:          0x30
+        Symbol:          .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+        Type:            R_X86_64_64
+      - Offset:          0x40
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+      - Offset:          0x50
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_64
+      - Offset:          0x60
+        Symbol:          '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+        Type:            R_X86_64_64
+      - Offset:          0x70
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+        Type:            R_X86_64_64
+      - Offset:          0x80
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+        Type:            R_X86_64_64
+      - Offset:          0x90
+        Symbol:          '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+        Type:            R_X86_64_64
+      - Offset:          0xA0
+        Symbol:          '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+        Type:            R_X86_64_64
+      - Offset:          0xB0
+        Symbol:          .text._ZN4main4main17h5659c6c02e5cd445E
+        Type:            R_X86_64_64
+  - Name:            .rela.debug_ranges
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_ranges
+    Relocations:
+      - Symbol:          .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+        Type:            R_X86_64_64
+      - Offset:          0x8
+        Symbol:          .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+        Type:            R_X86_64_64
+        Addend:          60
+      - Offset:          0x10
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+      - Offset:          0x18
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+        Addend:          34
+      - Offset:          0x20
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_64
+      - Offset:          0x28
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_64
+        Addend:          19
+      - Offset:          0x30
+        Symbol:          '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+        Type:            R_X86_64_64
+      - Offset:          0x38
+        Symbol:          '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+        Type:            R_X86_64_64
+        Addend:          22
+      - Offset:          0x40
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+        Type:            R_X86_64_64
+      - Offset:          0x48
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+        Type:            R_X86_64_64
+        Addend:          24
+      - Offset:          0x50
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+        Type:            R_X86_64_64
+      - Offset:          0x58
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+        Type:            R_X86_64_64
+        Addend:          16
+      - Offset:          0x60
+        Symbol:          '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+        Type:            R_X86_64_64
+      - Offset:          0x68
+        Symbol:          '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+        Type:            R_X86_64_64
+        Addend:          6
+      - Offset:          0x70
+        Symbol:          '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+        Type:            R_X86_64_64
+      - Offset:          0x78
+        Symbol:          '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+        Type:            R_X86_64_64
+        Addend:          3
+      - Offset:          0x80
+        Symbol:          .text._ZN4main4main17h5659c6c02e5cd445E
+        Type:            R_X86_64_64
+      - Offset:          0x88
+        Symbol:          .text._ZN4main4main17h5659c6c02e5cd445E
+        Type:            R_X86_64_64
+        Addend:          1
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x20
+        Symbol:          .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+        Type:            R_X86_64_PC32
+      - Offset:          0x38
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_PC32
+      - Offset:          0x50
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_PC32
+      - Offset:          0x68
+        Symbol:          '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+        Type:            R_X86_64_PC32
+      - Offset:          0x80
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+        Type:            R_X86_64_PC32
+      - Offset:          0x98
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+        Type:            R_X86_64_PC32
+      - Offset:          0xB0
+        Symbol:          '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+        Type:            R_X86_64_PC32
+      - Offset:          0xC4
+        Symbol:          '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+        Type:            R_X86_64_PC32
+      - Offset:          0xD8
+        Symbol:          .text._ZN4main4main17h5659c6c02e5cd445E
+        Type:            R_X86_64_PC32
+      - Offset:          0xEC
+        Symbol:          .text.main
+        Type:            R_X86_64_PC32
+  - Name:            .rela.debug_line
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_line
+    Relocations:
+      - Offset:          0x2F8
+        Symbol:          .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+        Type:            R_X86_64_64
+      - Offset:          0x31B
+        Symbol:          '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+        Type:            R_X86_64_64
+      - Offset:          0x34B
+        Symbol:          .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+        Type:            R_X86_64_64
+      - Offset:          0x376
+        Symbol:          '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+        Type:            R_X86_64_64
+      - Offset:          0x393
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+        Type:            R_X86_64_64
+      - Offset:          0x3B0
+        Symbol:          .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+        Type:            R_X86_64_64
+      - Offset:          0x3CD
+        Symbol:          '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+        Type:            R_X86_64_64
+      - Offset:          0x3EA
+        Symbol:          '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+        Type:            R_X86_64_64
+      - Offset:          0x401
+        Symbol:          .text._ZN4main4main17h5659c6c02e5cd445E
+        Type:            R_X86_64_64
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+      - Name:            .rela.text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+      - Name:            '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+      - Name:            '.rela.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+      - Name:            .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+      - Name:            .rela.text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+      - Name:            '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+      - Name:            '.rela.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+      - Name:            .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+      - Name:            .rela.text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+      - Name:            .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+      - Name:            '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+      - Name:            '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+      - Name:            .text._ZN4main4main17h5659c6c02e5cd445E
+      - Name:            .text.main
+      - Name:            .rela.text.main
+      - Name:            .data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+      - Name:            .rela.data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+      - Name:            .rodata._ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+      - Name:            .debug_gdb_scripts
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .rela.debug_info
+      - Name:            .debug_aranges
+      - Name:            .rela.debug_aranges
+      - Name:            .debug_ranges
+      - Name:            .rela.debug_ranges
+      - Name:            .debug_str
+      - Name:            .comment
+      - Name:            .note.GNU-stack
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .debug_line
+      - Name:            .rela.debug_line
+      - Name:            .symtab
+Symbols:
+  - Name:            main.5f6bf0c8e9d0afce-cgu.0
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+    Type:            STT_SECTION
+    Section:         .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+  - Name:            '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+    Type:            STT_SECTION
+    Section:         '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+  - Name:            '_ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+    Type:            STT_FUNC
+    Section:         '.text._ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+    Size:            0x22
+  - Name:            _ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+    Type:            STT_FUNC
+    Section:         .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+    Size:            0x13
+  - Name:            '_ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+    Type:            STT_FUNC
+    Section:         '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+    Size:            0x3
+  - Name:            .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+    Type:            STT_SECTION
+    Section:         .text._ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+  - Name:            _ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+    Type:            STT_FUNC
+    Section:         .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+    Size:            0x10
+  - Name:            '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+    Type:            STT_SECTION
+    Section:         '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+  - Name:            '_ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+    Type:            STT_FUNC
+    Section:         '.text._ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+    Size:            0x16
+  - Name:            _ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+    Type:            STT_FUNC
+    Section:         .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+    Size:            0x18
+  - Name:            .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+    Type:            STT_SECTION
+    Section:         .text._ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+  - Name:            .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+    Type:            STT_SECTION
+    Section:         .text._ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+  - Name:            '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+    Type:            STT_SECTION
+    Section:         '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+  - Name:            '_ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+    Type:            STT_FUNC
+    Section:         '.text._ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+    Size:            0x6
+  - Name:            '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+    Type:            STT_SECTION
+    Section:         '.text._ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+  - Name:            .text._ZN4main4main17h5659c6c02e5cd445E
+    Type:            STT_SECTION
+    Section:         .text._ZN4main4main17h5659c6c02e5cd445E
+  - Name:            _ZN4main4main17h5659c6c02e5cd445E
+    Type:            STT_FUNC
+    Section:         .text._ZN4main4main17h5659c6c02e5cd445E
+    Size:            0x1
+  - Name:            .text.main
+    Type:            STT_SECTION
+    Section:         .text.main
+  - Name:            .data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+    Type:            STT_SECTION
+    Section:         .data.rel.ro..Lanon.4a406b9d9c1243847b49ddffb2385826.0
+  - Name:            _ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+    Type:            STT_OBJECT
+    Section:         .rodata._ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+    Size:            0x1
+  - Name:            .rodata._ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+    Type:            STT_SECTION
+    Section:         .rodata._ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_ranges
+    Type:            STT_SECTION
+    Section:         .debug_ranges
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            _ZN3std2rt10lang_start17hcb2a6a78164896cfE
+    Type:            STT_FUNC
+    Section:         .text._ZN3std2rt10lang_start17hcb2a6a78164896cfE
+    Binding:         STB_GLOBAL
+    Size:            0x3C
+    Other:           [ STV_HIDDEN ]
+  - Name:            _ZN3std2rt19lang_start_internal17h418648f91f5be3a1E
+    Binding:         STB_GLOBAL
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text.main
+    Binding:         STB_GLOBAL
+    Size:            0x20
+  - Name:            __rustc_debug_gdb_scripts_section__
+    Type:            STT_OBJECT
+    Section:         .debug_gdb_scripts
+    Binding:         STB_WEAK
+    Size:            0x22
+DWARF:
+  debug_str:
+    - 'clang LLVM (rustc version 1.87.0 (17067e9ac 2025-05-09))'
+    - 'main.rs/@/main.5f6bf0c8e9d0afce-cgu.0'
+    - '/home/kiva/upstream/llvm-upstream/lldb/test/API/lang/rust/enum-variant-same-name'
+    - '<std::rt::lang_start::{closure_env#0}<()> as core::ops::function::Fn<()>>::{vtable}'
+    - drop_in_place
+    - '()'
+    - '*const ()'
+    - size
+    - usize
+    - align
+    - __method3
+    - __method4
+    - __method5
+    - std
+    - rt
+    - lang_start
+    - main
+    - 'fn()'
+    - '{closure_env#0}<()>'
+    - '<std::rt::lang_start::{closure_env#0}<()> as core::ops::function::Fn<()>>::{vtable_type}'
+    - ENUM_INSTANCE
+    - A
+    - __0
+    - B
+    - u8
+    - _ZN4main13ENUM_INSTANCE17hc6db515181ea378fE
+    - sys
+    - process
+    - unix
+    - common
+    - ExitCode
+    - _ZN3std3sys7process4unix6common8ExitCode6as_i3217h7893c1c2ab39ed8fE
+    - as_i32
+    - i32
+    - '&std::sys::process::unix::common::ExitCode'
+    - _ZN3std7process8ExitCode6to_i3217habce61080992bc43E
+    - to_i32
+    - self
+    - core
+    - hint
+    - T
+    - _ZN4core4hint9black_box17h29a7c52ab9efa45eE
+    - 'black_box<()>'
+    - dummy
+    - backtrace
+    - ops
+    - function
+    - FnOnce
+    - ptr
+    - '{impl#59}'
+    - _ZN3std2rt10lang_start17hcb2a6a78164896cfE
+    - 'lang_start<()>'
+    - isize
+    - '_ZN3std2rt10lang_start28_$u7b$$u7b$closure$u7d$$u7d$17hda4568952b4f838eE'
+    - '{closure#0}<()>'
+    - F
+    - _ZN3std3sys9backtrace28__rust_begin_short_backtrace17h4c89f1d03cb386ebE
+    - '__rust_begin_short_backtrace<fn(), ()>'
+    - Self
+    - Args
+    - '_ZN4core3ops8function6FnOnce40call_once$u7b$$u7b$vtable.shim$u7d$$u7d$17h356d5dadf319082fE'
+    - 'call_once<std::rt::lang_start::{closure_env#0}<()>, ()>'
+    - _ZN4core3ops8function6FnOnce9call_once17h21112f971fb5dae8E
+    - _ZN4core3ops8function6FnOnce9call_once17hf55c273de81f71dfE
+    - 'call_once<fn(), ()>'
+    - '_ZN4core3ptr85drop_in_place$LT$std..rt..lang_start$LT$$LP$$RP$$GT$..$u7b$$u7b$closure$u7d$$u7d$$GT$17h623f70e9f0cf3066E'
+    - 'drop_in_place<std::rt::lang_start::{closure_env#0}<()>>'
+    - '_ZN54_$LT$$LP$$RP$$u20$as$u20$std..process..Termination$GT$6report17h10aa5c9c6135be01E'
+    - report
+    - _ZN4main4main17h5659c6c02e5cd445E
+    - argc
+    - argv
+    - '*const u8'
+    - '*const *const u8'
+    - sigpipe
+    - result
+    - f
+    - '*mut std::rt::lang_start::{closure_env#0}<()>'
+  debug_aranges:
+    - Length:          0xCC
+      Version:         2
+      CuOffset:        0x0
+      AddressSize:     0x8
+      Descriptors:
+        - Address:         0x0
+          Length:          0x30
+        - Address:         0x0
+          Length:          0x1
+        - Address:         0x0
+          Length:          0x3C
+        - Address:         0x0
+          Length:          0x22
+        - Address:         0x0
+          Length:          0x13
+        - Address:         0x0
+          Length:          0x16
+        - Address:         0x0
+          Length:          0x18
+        - Address:         0x0
+          Length:          0x10
+        - Address:         0x0
+          Length:          0x6
+        - Address:         0x0
+          Length:          0x3
+        - Address:         0x0
+          Length:          0x1
+  debug_ranges:
+    - Offset:          0x0
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x10
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x20
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x30
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x40
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x50
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x60
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x70
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x80
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x90
+      AddrSize:        0x8
+      Entries:         []
+...

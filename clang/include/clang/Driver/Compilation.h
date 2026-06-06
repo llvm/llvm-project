@@ -90,14 +90,8 @@ class Compilation {
         : TC(TC), BoundArch(BoundArch), DeviceOffloadKind(DeviceOffloadKind) {}
 
     bool operator<(const TCArgsKey &K) const {
-      if (TC < K.TC)
-        return true;
-      else if (TC == K.TC && BoundArch < K.BoundArch)
-        return true;
-      else if (TC == K.TC && BoundArch == K.BoundArch &&
-               DeviceOffloadKind < K.DeviceOffloadKind)
-        return true;
-      return false;
+      return std::tie(TC, BoundArch, DeviceOffloadKind) <
+             std::tie(K.TC, K.BoundArch, K.DeviceOffloadKind);
     }
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
@@ -131,6 +125,10 @@ class Compilation {
 
   /// Whether to keep temporary files regardless of -save-temps.
   bool ForceKeepTempFiles = false;
+
+  /// The bound architecture currently being built, if any. Set around
+  /// ConstructJob calls so addCommand can stamp it onto each new Command.
+  StringRef CurrentBoundArch;
 
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
@@ -217,7 +215,13 @@ public:
   JobList &getJobs() { return Jobs; }
   const JobList &getJobs() const { return Jobs; }
 
-  void addCommand(std::unique_ptr<Command> C) { Jobs.addJob(std::move(C)); }
+  void addCommand(std::unique_ptr<Command> Cmd) {
+    Cmd->setBoundArch(CurrentBoundArch);
+    Jobs.addJob(std::move(Cmd));
+  }
+
+  StringRef getCurrentBoundArch() const { return CurrentBoundArch; }
+  void setCurrentBoundArch(StringRef Arch) { CurrentBoundArch = Arch; }
 
   llvm::opt::ArgStringList &getTempFiles() { return TempFiles; }
   const llvm::opt::ArgStringList &getTempFiles() const { return TempFiles; }

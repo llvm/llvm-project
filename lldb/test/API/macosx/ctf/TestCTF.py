@@ -6,6 +6,7 @@ import os
 
 
 class TestCTF(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def no_ctf_convert(self):
@@ -53,6 +54,7 @@ class TestCTF(TestBase):
                 "[2] = 'b'",
                 "[3] = 'c'",
                 'u = (i = 1, s = "")',
+                "b = false",
                 "f = 0x0000000000000000",
             ],
         )

@@ -18,6 +18,7 @@
 #include "clang-c/CXString.h"
 #include "clang-c/ExternC.h"
 #include "clang-c/Platform.h"
+#include <time.h>
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 
@@ -95,7 +96,7 @@ CINDEX_LINKAGE void clang_free(void *buffer);
 CINDEX_LINKAGE void clang_VirtualFileOverlay_dispose(CXVirtualFileOverlay);
 
 /**
- * Object encapsulating information about a module.map file.
+ * Object encapsulating information about a module.modulemap file.
  */
 typedef struct CXModuleMapDescriptorImpl *CXModuleMapDescriptor;
 
@@ -109,7 +110,7 @@ CINDEX_LINKAGE CXModuleMapDescriptor
 clang_ModuleMapDescriptor_create(unsigned options);
 
 /**
- * Sets the framework module name that the module.map describes.
+ * Sets the framework module name that the module.modulemap describes.
  * \returns 0 for success, non-zero to indicate an error.
  */
 CINDEX_LINKAGE enum CXErrorCode
@@ -117,7 +118,7 @@ clang_ModuleMapDescriptor_setFrameworkModuleName(CXModuleMapDescriptor,
                                                  const char *name);
 
 /**
- * Sets the umbrella header name that the module.map describes.
+ * Sets the umbrella header name that the module.modulemap describes.
  * \returns 0 for success, non-zero to indicate an error.
  */
 CINDEX_LINKAGE enum CXErrorCode
@@ -142,6 +143,58 @@ clang_ModuleMapDescriptor_writeToBuffer(CXModuleMapDescriptor, unsigned options,
  * Dispose a \c CXModuleMapDescriptor object.
  */
 CINDEX_LINKAGE void clang_ModuleMapDescriptor_dispose(CXModuleMapDescriptor);
+
+/**
+ * Prune module files in the module cache directory that haven't been accessed
+ * in a long time.
+ *
+ * \param Path the path to the module cache directory.
+ *
+ * \param PruneInterval the minimum time in seconds between two prune
+ * operations. If the timestamp file is newer than this, pruning is skipped.
+ *
+ * \param PruneAfter the time in seconds after which unused module files are
+ * removed.
+ *
+ */
+CINDEX_LINKAGE void clang_ModuleCache_prune(const char *Path,
+                                            time_t PruneInterval,
+                                            time_t PruneAfter);
+
+/**
+ * Callback invoked by \c clang_ModuleCache_pruneWithCallback() once for each
+ * file or directory removed from the module cache.
+ *
+ * \param Path the absolute path of the file or directory that was pruned.
+ * The pointer is only valid for the duration of the callback.
+ *
+ * \param UserData the opaque pointer passed to
+ * \c clang_ModuleCache_pruneWithCallback().
+ */
+typedef void (*CXModuleCachePruneCallback)(const char *Path, void *UserData);
+
+/**
+ * Variant of \c clang_ModuleCache_prune() that invokes \p Callback once for
+ * each absolute path removed from the cache. This includes pruned \c .pcm
+ * files, their companion \c .timestamp files, and any cache subdirectory that
+ * becomes empty as a result of pruning.
+ *
+ * \param Path the path to the module cache directory.
+ *
+ * \param PruneInterval the minimum time in seconds between two prune
+ * operations. If the timestamp file is newer than this, pruning is skipped.
+ *
+ * \param PruneAfter the time in seconds after which unused module files are
+ * removed.
+ *
+ * \param Callback invoked for each pruned absolute path. May be NULL, in
+ * which case this function behaves like \c clang_ModuleCache_prune().
+ *
+ * \param UserData opaque pointer passed through to \p Callback.
+ */
+CINDEX_LINKAGE void clang_ModuleCache_pruneWithCallback(
+    const char *Path, time_t PruneInterval, time_t PruneAfter,
+    CXModuleCachePruneCallback Callback, void *UserData);
 
 /**
  * @}

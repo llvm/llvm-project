@@ -171,9 +171,13 @@ std::optional<std::string> getCanonicalPath(const FileEntryRef F,
 /// FIXME: should we be caching the .clang-format file search?
 /// This uses format::DefaultFormatStyle and format::DefaultFallbackStyle,
 /// though the latter may have been overridden in main()!
+/// \p FormatFile indicates whether the returned FormatStyle is used
+/// to format the entire main file (or a range selected by the user
+/// which can be arbitrarily long).
 format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
-                                          const ThreadsafeFS &TFS);
+                                          const ThreadsafeFS &TFS,
+                                          bool FormatFile);
 
 /// Cleanup and format the given replacements.
 llvm::Expected<tooling::Replacements>
@@ -304,6 +308,11 @@ struct EligibleRegion {
 EligibleRegion getEligiblePoints(llvm::StringRef Code,
                                  llvm::StringRef FullyQualifiedName,
                                  const LangOptions &LangOpts);
+
+/// Returns the fully qualified name of the namespace at \p Pos in the \p Code.
+/// Employs pseudo-parsing to determine the start and end of namespaces.
+std::string getNamespaceAtPosition(llvm::StringRef Code, const Position &Pos,
+                                   const LangOptions &LangOpts);
 
 struct DefinedMacro {
   llvm::StringRef Name;

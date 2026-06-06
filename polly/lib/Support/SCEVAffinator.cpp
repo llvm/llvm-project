@@ -15,6 +15,7 @@
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
+#include "llvm/IR/DataLayout.h"
 #include "isl/aff.h"
 #include "isl/local_space.h"
 #include "isl/set.h"
@@ -82,7 +83,7 @@ static __isl_give isl_pw_aff *getWidthExpValOnDomain(unsigned Width,
 
 SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
     : S(S), Ctx(S->getIslCtx().get()), SE(*S->getSE()), LI(LI),
-      TD(S->getFunction().getParent()->getDataLayout()) {}
+      TD(S->getFunction().getDataLayout()) {}
 
 Loop *SCEVAffinator::getScope() { return BB ? LI.getLoopFor(BB) : nullptr; }
 
@@ -114,8 +115,10 @@ PWACtx SCEVAffinator::getPWACtxFromPWA(isl::pw_aff PWA) {
 }
 
 PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB,
-                               RecordedAssumptionsTy *RecordedAssumptions) {
+                               RecordedAssumptionsTy *RecordedAssumptions,
+                               bool IsInsideDomain) {
   this->BB = BB;
+  this->IsInsideDomain = IsInsideDomain;
   this->RecordedAssumptions = RecordedAssumptions;
 
   if (BB) {
@@ -136,7 +139,7 @@ PWACtx SCEVAffinator::checkForWrapping(const SCEV *Expr, PWACtx PWAC) const {
   // whereas n is the number of bits of the Expr, hence:
   //   n = bitwidth(ExprType)
 
-  if (IgnoreIntegerWrapping || (getNoWrapFlags(Expr) & SCEV::FlagNSW))
+  if (IgnoreIntegerWrapping || any(getNoWrapFlags(Expr) & SCEV::FlagNSW))
     return PWAC;
 
   isl::pw_aff PWAMod = addModuloSemantic(PWAC.first, Expr->getType());
@@ -177,7 +180,7 @@ bool SCEVAffinator::hasNSWAddRecForLoop(Loop *L) const {
       continue;
     if (AddRec->getLoop() != L)
       continue;
-    if (AddRec->getNoWrapFlags() & SCEV::FlagNSW)
+    if (AddRec->hasNoSignedWrap())
       return true;
   }
 
@@ -188,7 +191,7 @@ bool SCEVAffinator::computeModuloForExpr(const SCEV *Expr) {
   unsigned Width = TD.getTypeSizeInBits(Expr->getType());
   // We assume nsw expressions never overflow.
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Expr))
-    if (NAry->getNoWrapFlags() & SCEV::FlagNSW)
+    if (NAry->hasNoSignedWrap())
       return false;
   return Width <= MaxSmallBitWidth;
 }
@@ -270,6 +273,10 @@ PWACtx SCEVAffinator::visitVScale(const SCEVVScale *VScale) {
   llvm_unreachable("SCEVVScale not yet supported");
 }
 
+PWACtx SCEVAffinator::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+  return visit(Expr->getOperand(0));
+}
+
 PWACtx SCEVAffinator::visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
   return visit(Expr->getOperand(0));
 }
@@ -280,7 +287,7 @@ PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   // to fit in the new type size instead of introducing a modulo with a very
   // large constant.
 
-  auto *Op = Expr->getOperand();
+  const SCEV *Op = Expr->getOperand();
   auto OpPWAC = visit(Op);
 
   unsigned Width = TD.getTypeSizeInBits(Expr->getType());
@@ -304,7 +311,7 @@ PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   }
 
   recordAssumption(RecordedAssumptions, UNSIGNED, isl::manage(OutOfBoundsDom),
-                   DebugLoc(), AS_RESTRICTION, BB);
+                   DebugLoc(), AS_RESTRICTION, IsInsideDomain ? BB : nullptr);
 
   return OpPWAC;
 }
@@ -353,7 +360,7 @@ PWACtx SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
   // bit-width is bigger than MaxZextSmallBitWidth we will employ overflow
   // assumptions and assume the "former negative" piece will not exist.
 
-  auto *Op = Expr->getOperand();
+  const SCEV *Op = Expr->getOperand();
   auto OpPWAC = visit(Op);
 
   // If the width is to big we assume the negative part does not occur.
@@ -482,8 +489,8 @@ PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
   // For the dividend we could choose from the different representation
   // schemes introduced for zero-extend operations but for now we will
   // simply use an assumption.
-  auto *Dividend = Expr->getLHS();
-  auto *Divisor = Expr->getRHS();
+  const SCEV *Dividend = Expr->getLHS();
+  const SCEV *Divisor = Expr->getRHS();
   assert(isa<SCEVConstant>(Divisor) &&
          "UDiv is no parameter but has a non-constant RHS.");
 
@@ -501,7 +508,7 @@ PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
   }
 
   // TODO: One can represent the dividend as piece-wise function to be more
-  //       precise but therefor a heuristic is needed.
+  //       precise but therefore a heuristic is needed.
 
   // Assume a non-negative dividend.
   takeNonNegativeAssumption(DividendPWAC, RecordedAssumptions);
@@ -517,13 +524,13 @@ PWACtx SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {
 
   auto *Scope = getScope();
   auto *Divisor = SDiv->getOperand(1);
-  auto *DivisorSCEV = SE.getSCEVAtScope(Divisor, Scope);
+  const SCEV *DivisorSCEV = SE.getSCEVAtScope(Divisor, Scope);
   auto DivisorPWAC = visit(DivisorSCEV);
   assert(isa<SCEVConstant>(DivisorSCEV) &&
          "SDiv is no parameter but has a non-constant RHS.");
 
   auto *Dividend = SDiv->getOperand(0);
-  auto *DividendSCEV = SE.getSCEVAtScope(Dividend, Scope);
+  const SCEV *DividendSCEV = SE.getSCEVAtScope(Dividend, Scope);
   auto DividendPWAC = visit(DividendSCEV);
   DividendPWAC = combine(DividendPWAC, DivisorPWAC, isl_pw_aff_tdiv_q);
   return DividendPWAC;
@@ -534,13 +541,13 @@ PWACtx SCEVAffinator::visitSRemInstruction(Instruction *SRem) {
 
   auto *Scope = getScope();
   auto *Divisor = SRem->getOperand(1);
-  auto *DivisorSCEV = SE.getSCEVAtScope(Divisor, Scope);
+  const SCEV *DivisorSCEV = SE.getSCEVAtScope(Divisor, Scope);
   auto DivisorPWAC = visit(DivisorSCEV);
   assert(isa<ConstantInt>(Divisor) &&
          "SRem is no parameter but has a non-constant RHS.");
 
   auto *Dividend = SRem->getOperand(0);
-  auto *DividendSCEV = SE.getSCEVAtScope(Dividend, Scope);
+  const SCEV *DividendSCEV = SE.getSCEVAtScope(Dividend, Scope);
   auto DividendPWAC = visit(DividendSCEV);
   DividendPWAC = combine(DividendPWAC, DivisorPWAC, isl_pw_aff_tdiv_r);
   return DividendPWAC;

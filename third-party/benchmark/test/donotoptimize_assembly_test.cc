@@ -2,20 +2,25 @@
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
 #endif
+BENCHMARK_DISABLE_DEPRECATED_WARNING
 
 extern "C" {
 
 extern int ExternInt;
 extern int ExternInt2;
 extern int ExternInt3;
+extern int BigArray[2049];
+
+const int ConstBigArray[2049]{};
 
 inline int Add42(int x) { return x + 42; }
 
 struct NotTriviallyCopyable {
   NotTriviallyCopyable();
   explicit NotTriviallyCopyable(int x) : value(x) {}
-  NotTriviallyCopyable(NotTriviallyCopyable const &);
+  NotTriviallyCopyable(NotTriviallyCopyable const&);
   int value;
 };
 
@@ -23,7 +28,15 @@ struct Large {
   int value;
   int data[2];
 };
+
+struct ExtraLarge {
+  int arr[2049];
+};
 }
+
+extern ExtraLarge ExtraLargeObj;
+const ExtraLarge ConstExtraLargeObj{};
+
 // CHECK-LABEL: test_with_rvalue:
 extern "C" void test_with_rvalue() {
   benchmark::DoNotOptimize(Add42(0));
@@ -68,6 +81,22 @@ extern "C" void test_with_large_lvalue() {
   // CHECK: ret
 }
 
+// CHECK-LABEL: test_with_extra_large_lvalue_with_op:
+extern "C" void test_with_extra_large_lvalue_with_op() {
+  ExtraLargeObj.arr[16] = 42;
+  benchmark::DoNotOptimize(ExtraLargeObj);
+  // CHECK: movl $42, ExtraLargeObj+64(%rip)
+  // CHECK: ret
+}
+
+// CHECK-LABEL: test_with_big_array_with_op
+extern "C" void test_with_big_array_with_op() {
+  BigArray[16] = 42;
+  benchmark::DoNotOptimize(BigArray);
+  // CHECK: movl $42, BigArray+64(%rip)
+  // CHECK: ret
+}
+
 // CHECK-LABEL: test_with_non_trivial_lvalue:
 extern "C" void test_with_non_trivial_lvalue() {
   NotTriviallyCopyable NTC(ExternInt);
@@ -93,6 +122,18 @@ extern "C" void test_with_large_const_lvalue() {
   // CHECK: movl %eax, -{{[0-9]+}}(%[[REG:[a-z]+]])
   // CHECK: movl %eax, -{{[0-9]+}}(%[[REG]])
   // CHECK: movl %eax, -{{[0-9]+}}(%[[REG]])
+  // CHECK: ret
+}
+
+// CHECK-LABEL: test_with_const_extra_large_obj:
+extern "C" void test_with_const_extra_large_obj() {
+  benchmark::DoNotOptimize(ConstExtraLargeObj);
+  // CHECK: ret
+}
+
+// CHECK-LABEL: test_with_const_big_array
+extern "C" void test_with_const_big_array() {
+  benchmark::DoNotOptimize(ConstBigArray);
   // CHECK: ret
 }
 
@@ -145,7 +186,7 @@ extern "C" void test_pointer_const_lvalue() {
   // CHECK-CLANG: movq %rax, -{{[0-9]+}}(%[[REG:[a-z]+]])
   // CHECK: ret
   int x = 42;
-  int *const xp = &x;
+  int* const xp = &x;
   benchmark::DoNotOptimize(xp);
 }
 
@@ -156,6 +197,6 @@ extern "C" void test_pointer_lvalue() {
   // CHECK-CLANG: movq %rax, -{{[0-9]+}}(%[[REG:[a-z+]+]])
   // CHECK: ret
   int x = 42;
-  int *xp = &x;
+  int* xp = &x;
   benchmark::DoNotOptimize(xp);
 }

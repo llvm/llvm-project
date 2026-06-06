@@ -1,13 +1,12 @@
-; RUN: opt %loadPolly -polly-scops -polly-opt-isl -polly-codegen -polly-scops -polly-codegen -S < %s | FileCheck %s
-; RUN: opt %loadNPMPolly "-passes=scop(polly-opt-isl,polly-codegen,polly-codegen)" -S < %s | FileCheck %s
-; RUN: opt %loadNPMPolly "-passes=scop(polly-opt-isl,polly-codegen),scop(polly-codegen)" -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts;opt-isl>,polly<no-default-opts>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=function(polly<no-default-opts;opt-isl>),function(polly<no-default-opts>)' -S < %s | FileCheck %s
 ;
 ; llvm.org/PR34441
 ; Properly handle multiple -polly-scops/-polly-codegen in the same
 ; RegionPassManager. -polly-codegen must not reuse the -polly-ast analysis the
 ; was created for the first -polly-scops pass.
 ; The current solution is that only the first -polly-codegen is allowed to
-; generate code, the second detects it is re-using an IslAst that belongs to a
+; generate code, the second detects it is reusing an IslAst that belongs to a
 ; different ScopInfo.
 ;
 ; int a, b, c;

@@ -9,6 +9,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-scev-validator"
 
 namespace SCEVType {
@@ -82,7 +83,7 @@ public:
 
   /// Add the parameters of Source to this result.
   void addParamsFrom(const ValidatorResult &Source) {
-    Parameters.insert(Source.Parameters.begin(), Source.Parameters.end());
+    Parameters.insert_range(Source.Parameters);
   }
 
   /// Merge a result.
@@ -136,7 +137,7 @@ public:
 
   ValidatorResult visitVScale(const SCEVVScale *VScale) {
     // We do not support VScale constants.
-    LLVM_DEBUG(dbgs() << "INVALID: VScale is not supported");
+    POLLY_DEBUG(dbgs() << "INVALID: VScale is not supported");
     return ValidatorResult(SCEVType::INVALID);
   }
 
@@ -153,6 +154,10 @@ public:
     if (Type == SCEVType::IV)
       return ValidatorResult(SCEVType::INVALID);
     return ValidatorResult(SCEVType::PARAM, Expr);
+  }
+
+  ValidatorResult visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+    return visit(Expr->getOperand());
   }
 
   ValidatorResult visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
@@ -203,7 +208,7 @@ public:
       }
 
       if ((Op.isIV() || Op.isPARAM()) && !Return.isINT()) {
-        LLVM_DEBUG(
+        POLLY_DEBUG(
             dbgs() << "INVALID: More than one non-int operand in MulExpr\n"
                    << "\tExpr: " << *Expr << "\n"
                    << "\tPrevious expression type: " << Return << "\n"
@@ -224,7 +229,7 @@ public:
 
   ValidatorResult visitAddRecExpr(const SCEVAddRecExpr *Expr) {
     if (!Expr->isAffine()) {
-      LLVM_DEBUG(dbgs() << "INVALID: AddRec is not affine");
+      POLLY_DEBUG(dbgs() << "INVALID: AddRec is not affine");
       return ValidatorResult(SCEVType::INVALID);
     }
 
@@ -239,7 +244,7 @@ public:
 
     auto *L = Expr->getLoop();
     if (R->contains(L) && (!Scope || !L->contains(Scope))) {
-      LLVM_DEBUG(
+      POLLY_DEBUG(
           dbgs() << "INVALID: Loop of AddRec expression boxed in an a "
                     "non-affine subregion or has a non-synthesizable exit "
                     "value.");
@@ -253,8 +258,8 @@ public:
         return Result;
       }
 
-      LLVM_DEBUG(dbgs() << "INVALID: AddRec within scop has non-int"
-                           "recurrence part");
+      POLLY_DEBUG(dbgs() << "INVALID: AddRec within scop has non-int"
+                            "recurrence part");
       return ValidatorResult(SCEVType::INVALID);
     }
 
@@ -314,7 +319,7 @@ public:
       ValidatorResult Op = visit(Expr->getOperand(i));
 
       if (!Op.isConstant()) {
-        LLVM_DEBUG(dbgs() << "INVALID: UMaxExpr has a non-constant operand");
+        POLLY_DEBUG(dbgs() << "INVALID: UMaxExpr has a non-constant operand");
         return ValidatorResult(SCEVType::INVALID);
       }
     }
@@ -329,7 +334,7 @@ public:
       ValidatorResult Op = visit(Expr->getOperand(i));
 
       if (!Op.isConstant()) {
-        LLVM_DEBUG(dbgs() << "INVALID: UMinExpr has a non-constant operand");
+        POLLY_DEBUG(dbgs() << "INVALID: UMinExpr has a non-constant operand");
         return ValidatorResult(SCEVType::INVALID);
       }
     }
@@ -344,7 +349,7 @@ public:
       ValidatorResult Op = visit(Expr->getOperand(i));
 
       if (!Op.isConstant()) {
-        LLVM_DEBUG(
+        POLLY_DEBUG(
             dbgs()
             << "INVALID: SCEVSequentialUMinExpr has a non-constant operand");
         return ValidatorResult(SCEVType::INVALID);
@@ -356,8 +361,8 @@ public:
 
   ValidatorResult visitGenericInst(Instruction *I, const SCEV *S) {
     if (R->contains(I)) {
-      LLVM_DEBUG(dbgs() << "INVALID: UnknownExpr references an instruction "
-                           "within the region\n");
+      POLLY_DEBUG(dbgs() << "INVALID: UnknownExpr references an instruction "
+                            "within the region\n");
       return ValidatorResult(SCEVType::INVALID);
     }
 
@@ -393,7 +398,7 @@ public:
     if (LHS.isConstant() && RHS.isConstant())
       return ValidatorResult(SCEVType::PARAM, DivExpr);
 
-    LLVM_DEBUG(
+    POLLY_DEBUG(
         dbgs() << "INVALID: unsigned division of non-constant expressions");
     return ValidatorResult(SCEVType::INVALID);
   }
@@ -402,8 +407,8 @@ public:
     if (!PollyAllowUnsignedOperations)
       return ValidatorResult(SCEVType::INVALID);
 
-    auto *Dividend = Expr->getLHS();
-    auto *Divisor = Expr->getRHS();
+    const SCEV *Dividend = Expr->getLHS();
+    const SCEV *Divisor = Expr->getRHS();
     return visitDivision(Dividend, Divisor, Expr);
   }
 
@@ -411,8 +416,8 @@ public:
     assert(SDiv->getOpcode() == Instruction::SDiv &&
            "Assumed SDiv instruction!");
 
-    auto *Dividend = SE.getSCEV(SDiv->getOperand(0));
-    auto *Divisor = SE.getSCEV(SDiv->getOperand(1));
+    const SCEV *Dividend = SE.getSCEV(SDiv->getOperand(0));
+    const SCEV *Divisor = SE.getSCEV(SDiv->getOperand(1));
     return visitDivision(Dividend, Divisor, Expr, SDiv);
   }
 
@@ -422,11 +427,11 @@ public:
 
     auto *Divisor = SRem->getOperand(1);
     auto *CI = dyn_cast<ConstantInt>(Divisor);
-    if (!CI || CI->isZeroValue())
+    if (!CI || CI->isNullValue())
       return visitGenericInst(SRem, S);
 
     auto *Dividend = SRem->getOperand(0);
-    auto *DividendSCEV = SE.getSCEV(Dividend);
+    const SCEV *DividendSCEV = SE.getSCEV(Dividend);
     return visit(DividendSCEV);
   }
 
@@ -434,12 +439,13 @@ public:
     Value *V = Expr->getValue();
 
     if (!Expr->getType()->isIntegerTy() && !Expr->getType()->isPointerTy()) {
-      LLVM_DEBUG(dbgs() << "INVALID: UnknownExpr is not an integer or pointer");
+      POLLY_DEBUG(
+          dbgs() << "INVALID: UnknownExpr is not an integer or pointer");
       return ValidatorResult(SCEVType::INVALID);
     }
 
     if (isa<UndefValue>(V)) {
-      LLVM_DEBUG(dbgs() << "INVALID: UnknownExpr references an undef value");
+      POLLY_DEBUG(dbgs() << "INVALID: UnknownExpr references an undef value");
       return ValidatorResult(SCEVType::INVALID);
     }
 
@@ -564,11 +570,11 @@ public:
                   Inst->getOpcode() != Instruction::SDiv))
       return false;
 
-    auto *Dividend = SE.getSCEV(Inst->getOperand(1));
+    const SCEV *Dividend = SE.getSCEV(Inst->getOperand(1));
     if (!isa<SCEVConstant>(Dividend))
       return false;
 
-    auto *Divisor = SE.getSCEV(Inst->getOperand(0));
+    const SCEV *Divisor = SE.getSCEV(Inst->getOperand(0));
     SCEVFindValues FindValues(SE, Values);
     SCEVTraversal<SCEVFindValues> ST(FindValues);
     ST.visitAll(Dividend);
@@ -601,7 +607,7 @@ bool polly::isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
     return false;
 
   SCEVValidator Validator(R, Scope, SE, ILS);
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     dbgs() << "\n";
     dbgs() << "Expr: " << *Expr << "\n";
     dbgs() << "Region: " << R->getNameStr() << "\n";
@@ -610,7 +616,7 @@ bool polly::isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
 
   ValidatorResult Result = Validator.visit(Expr);
 
-  LLVM_DEBUG({
+  POLLY_DEBUG({
     if (Result.isValid())
       dbgs() << "VALID\n";
     dbgs() << "\n";
@@ -621,7 +627,7 @@ bool polly::isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
 
 static bool isAffineExpr(Value *V, const Region *R, Loop *Scope,
                          ScalarEvolution &SE, ParameterSetTy &Params) {
-  auto *E = SE.getSCEV(V);
+  const SCEV *E = SE.getSCEV(V);
   if (isa<SCEVCouldNotCompute>(E))
     return false;
 
@@ -631,7 +637,7 @@ static bool isAffineExpr(Value *V, const Region *R, Loop *Scope,
     return false;
 
   auto ResultParams = Result.getParameters();
-  Params.insert(ResultParams.begin(), ResultParams.end());
+  Params.insert_range(ResultParams);
 
   return true;
 }
@@ -682,10 +688,10 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
 
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(S);
   if (AddRec) {
-    auto *StartExpr = AddRec->getStart();
+    const SCEV *StartExpr = AddRec->getStart();
     if (StartExpr->isZero()) {
       auto StepPair = extractConstantFactor(AddRec->getStepRecurrence(SE), SE);
-      auto *LeftOverAddRec =
+      const SCEV *LeftOverAddRec =
           SE.getAddRecExpr(StartExpr, StepPair.second, AddRec->getLoop(),
                            AddRec->getNoWrapFlags());
       return std::make_pair(StepPair.first, LeftOverAddRec);
@@ -694,7 +700,7 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
   }
 
   if (auto *Add = dyn_cast<SCEVAddExpr>(S)) {
-    SmallVector<const SCEV *, 4> LeftOvers;
+    SmallVector<SCEVUse, 4> LeftOvers;
     auto Op0Pair = extractConstantFactor(Add->getOperand(0), SE);
     auto *Factor = Op0Pair.first;
     if (SE.isKnownNegative(Factor)) {
@@ -715,7 +721,7 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
         return std::make_pair(ConstPart, S);
     }
 
-    auto *NewAdd = SE.getAddExpr(LeftOvers, Add->getNoWrapFlags());
+    const SCEV *NewAdd = SE.getAddExpr(LeftOvers, Add->getNoWrapFlags());
     return std::make_pair(Factor, NewAdd);
   }
 
@@ -723,8 +729,8 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
   if (!Mul)
     return std::make_pair(ConstPart, S);
 
-  SmallVector<const SCEV *, 4> LeftOvers;
-  for (auto *Op : Mul->operands())
+  SmallVector<SCEVUse, 4> LeftOvers;
+  for (const SCEV *Op : Mul->operands())
     if (isa<SCEVConstant>(Op))
       ConstPart = cast<SCEVConstant>(SE.getMulExpr(ConstPart, Op));
     else

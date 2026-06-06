@@ -167,16 +167,12 @@ def IsARM            : Predicate<"!Subtarget->isThumb()">,
                                  AssemblerPredicate<(all_of (not ModeThumb)), "arm-mode">;
 def IsMachO          : Predicate<"Subtarget->isTargetMachO()">;
 def IsNotMachO       : Predicate<"!Subtarget->isTargetMachO()">;
-def IsNaCl           : Predicate<"Subtarget->isTargetNaCl()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
 def IsNotWindows     : Predicate<"!Subtarget->isTargetWindows()">;
 def IsReadTPTPIDRURW : Predicate<"Subtarget->isReadTPTPIDRURW()">;
 def IsReadTPTPIDRURO : Predicate<"Subtarget->isReadTPTPIDRURO()">;
 def IsReadTPTPIDRPRW : Predicate<"Subtarget->isReadTPTPIDRPRW()">;
 def IsReadTPSoft     : Predicate<"Subtarget->isReadTPSoft()">;
-def UseNaClTrap      : Predicate<"Subtarget->useNaClTrap()">,
-                                 AssemblerPredicate<(all_of FeatureNaClTrap), "NaCl">;
-def DontUseNaClTrap  : Predicate<"!Subtarget->useNaClTrap()">;
 
 def UseNegativeImmediates :
   Predicate<"false">,
@@ -228,6 +224,10 @@ def DontGenExecuteOnly : Predicate<"!Subtarget->genExecuteOnly()">;
 def GenT1ExecuteOnly : Predicate<"Subtarget->genExecuteOnly() && "
                                  "Subtarget->isThumb1Only() && "
                                  "!Subtarget->hasV8MBaselineOps()">;
+let RecomputePerFunction = 1 in {
+  def SignRetAddr : Predicate<[{ MF->getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true) }]>;
+  def NoSignRetAddr : Predicate<[{ !MF->getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true) }]>;
+}
 
 // Armv8.5-A extensions
 def HasSB            : Predicate<"Subtarget->hasSB()">,

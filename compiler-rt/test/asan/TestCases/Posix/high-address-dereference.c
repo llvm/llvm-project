@@ -5,12 +5,11 @@
 
 // REQUIRES: x86_64-target-arch
 // RUN: %clang_asan %s -o %t
-// RUN: export %env_asan_opts=print_scariness=1
-// RUN: not %run %t 0x0000000000000000 2>&1 | FileCheck %s --check-prefixes=ZERO,HINT-PAGE0
-// RUN: not %run %t 0x0000000000000FFF 2>&1 | FileCheck %s --check-prefixes=LOW1,HINT-PAGE0
-// RUN: not %run %t 0x0000000000001000 2>&1 | FileCheck %s --check-prefixes=LOW2,HINT-NONE
-// RUN: not %run %t 0x4141414141414141 2>&1 | FileCheck %s --check-prefixes=HIGH,HINT-HIGHADDR
-// RUN: not %run %t 0xFFFFFFFFFFFFFFFF 2>&1 | FileCheck %s --check-prefixes=MAX,HINT-HIGHADDR
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0x0000000000000000 2>&1 | FileCheck %s --check-prefixes=ZERO,HINT-PAGE0
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0x0000000000000FFF 2>&1 | FileCheck %s --check-prefixes=LOW1,HINT-PAGE0
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0x0000000000001000 2>&1 | FileCheck %s --check-prefixes=LOW2,HINT-NONE
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0x4141414141414141 2>&1 | FileCheck %s --check-prefixes=HIGH,HINT-HIGHADDR
+// RUN: %env_asan_opts=print_scariness=1 not %run %t 0xFFFFFFFFFFFFFFFF 2>&1 | FileCheck %s --check-prefixes=MAX,HINT-HIGHADDR
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -28,14 +27,14 @@ int main(int argc, const char *argv[]) {
 // HIGH:  {{BUS|SEGV}} on unknown address (pc
 // MAX:   {{BUS|SEGV}} on unknown address (pc
 
-// HINT-PAGE0-NOT: Hint: this fault was caused by a dereference of a high value address
-// HINT-PAGE0:     Hint: address points to the zero page.
+// HINT-PAGE0-NOT: HINT: this fault was caused by a dereference of a high value address
+// HINT-PAGE0:     HINT: address points to the zero page.
 
-// HINT-NONE-NOT:  Hint: this fault was caused by a dereference of a high value address
-// HINT-NONE-NOT:  Hint: address points to the zero page.
+// HINT-NONE-NOT:  HINT: this fault was caused by a dereference of a high value address
+// HINT-NONE-NOT:  HINT: address points to the zero page.
 
-// HINT-HIGHADDR:     Hint: this fault was caused by a dereference of a high value address
-// HINT-HIGHADDR-NOT: Hint: address points to the zero page.
+// HINT-HIGHADDR:     HINT: this fault was caused by a dereference of a high value address
+// HINT-HIGHADDR-NOT: HINT: address points to the zero page.
 
 // ZERO:  SCARINESS: 10 (null-deref)
 // LOW1:  SCARINESS: 10 (null-deref)

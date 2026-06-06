@@ -9,8 +9,8 @@
 #ifndef LLVM_COV_COVERAGEVIEWOPTIONS_H
 #define LLVM_COV_COVERAGEVIEWOPTIONS_H
 
-#include "llvm/Config/llvm-config.h"
 #include "RenderingSupport.h"
+#include "llvm/Config/llvm-config.h"
 #include <vector>
 
 namespace llvm {
@@ -30,19 +30,25 @@ struct CoverageViewOptions {
   bool ShowLineNumbers;
   bool ShowLineStats;
   bool ShowRegionMarkers;
+  bool ShowMCDC;
+  bool ShowMCDCNonExecutedVectors = false;
   bool ShowBranchCounts;
   bool ShowBranchPercents;
   bool ShowExpandedRegions;
   bool ShowFunctionInstantiations;
+  bool UnifyFunctionInstantiations;
   bool ShowFullFilenames;
   bool ShowBranchSummary;
+  bool ShowMCDCSummary;
   bool ShowRegionSummary;
+  bool ShowFunctionSummary;
   bool ShowInstantiationSummary;
   bool ShowDirectoryCoverage;
   bool ExportSummaryOnly;
   bool SkipExpansions;
   bool SkipFunctions;
   bool SkipBranches;
+  bool BinaryCounters;
   OutputFormat Format;
   BranchOutputType ShowBranches;
   std::string ShowOutputDirectory;

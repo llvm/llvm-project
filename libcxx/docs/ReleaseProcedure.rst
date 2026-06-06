@@ -49,7 +49,7 @@ After branching for an LLVM release:
 3. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
 4. Update ``_LIBUNWIND_VERSION`` in ``libunwind/include/__libunwind_config.h``
 5. Create a release notes file for the next release from the template
-6. Point to the new release notes file from ``libcxx/docs/index.rst``
+6. Point to the new release notes file from ``libcxx/docs/ReleaseNotes.rst``
 
 Post branching
 ==============
@@ -63,8 +63,6 @@ backported to the release branch the oldest compiler is not removed yet.
 
 The section ``Upcoming Deprecations and Removals`` is cleared by the release
 managers. Copy back the items that were in this section.
-
-The items that need changing are marked with ``LLVM POST-BRANCH``.
 
 Post release
 ============

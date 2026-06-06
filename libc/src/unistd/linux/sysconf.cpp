@@ -10,24 +10,38 @@
 
 #include "src/__support/common.h"
 
-#include "src/errno/libc_errno.h"
-#include <linux/param.h> // For EXEC_PAGESIZE.
-#include <unistd.h>
+#include "hdr/sys_auxv_macros.h"
+#include "hdr/unistd_macros.h"
+#include "src/__support/OSUtil/linux/auxv.h"
+#include "src/__support/OSUtil/linux/sysinfo.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
-  long ret = 0;
   if (name == _SC_PAGESIZE) {
-    // TODO: get this information from the auxvector.
-    return EXEC_PAGESIZE;
-  }
-  // TODO: Complete the rest of the sysconf options.
-  if (ret < 0) {
+    cpp::optional<unsigned long> page_size = auxv::get(AT_PAGESZ);
+    if (page_size)
+      return static_cast<long>(*page_size);
     libc_errno = EINVAL;
     return -1;
   }
-  return ret;
+
+  if (name == _SC_NPROCESSORS_CONF)
+    return static_cast<long>(
+        sysinfo::parse_nproc_with_fallback_from(sysinfo::POSSIBLE_NPROC_PATH));
+
+  if (name == _SC_NPROCESSORS_ONLN)
+    return static_cast<long>(
+        sysinfo::parse_nproc_with_fallback_from(sysinfo::ONLINE_NPROC_PATH));
+
+  if (name == _SC_THREADS)
+    return _POSIX_THREADS;
+
+  // TODO: Complete the rest of the sysconf options.
+  libc_errno = EINVAL;
+  return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

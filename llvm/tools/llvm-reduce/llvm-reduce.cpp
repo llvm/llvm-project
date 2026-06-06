@@ -21,12 +21,9 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <system_error>
-#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -142,7 +139,11 @@ int main(int Argc, char **Argv) {
   const StringRef ToolName(Argv[0]);
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
-  cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
+  cl::ParseCommandLineOptions(
+      Argc, Argv,
+      "LLVM automatic testcase reducer.\n"
+      "See https://llvm.org/docs/CommandGuide/llvm-reduce.html for more "
+      "information.\n");
 
   if (Argc == 1) {
     cl::PrintHelpMessage();
@@ -158,7 +159,7 @@ int main(int Argc, char **Argv) {
   if (InputLanguage != InputLanguages::None) {
     if (InputLanguage == InputLanguages::MIR)
       ReduceModeMIR = true;
-  } else if (StringRef(InputFilename).endswith(".mir")) {
+  } else if (StringRef(InputFilename).ends_with(".mir")) {
     ReduceModeMIR = true;
   }
 
@@ -201,7 +202,7 @@ int main(int Argc, char **Argv) {
   // interestingness checks.
   if (!Tester.getProgram().isReduced(Tester)) {
     errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
-    return 1;
+    return 2;
   }
 
   // Try to reduce code

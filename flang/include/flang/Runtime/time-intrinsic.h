@@ -26,6 +26,9 @@ extern "C" {
 // real kind.
 double RTNAME(CpuTime)();
 
+// Interface for Timef()
+double RTNAME(Timef)();
+
 // Interface for the SYSTEM_CLOCK intrinsic. We break it up into 3 distinct
 // function calls, one for each of SYSTEM_CLOCK's optional output arguments.
 // Lowering converts the results to the types of the actual arguments,
@@ -42,6 +45,9 @@ void RTNAME(DateAndTime)(char *date, std::size_t dateChars, char *time,
     std::size_t timeChars, char *zone, std::size_t zoneChars,
     const char *source = nullptr, int line = 0,
     const Descriptor *values = nullptr);
+
+void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
+    const char *sourceFile, int line);
 
 } // extern "C"
 } // namespace Fortran::runtime

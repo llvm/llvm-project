@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx  | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
 
 @a = dso_local global [1024 x i8] zeroinitializer, align 16
 @b = dso_local global [1024 x i8] zeroinitializer, align 16
@@ -14,7 +14,7 @@ define dso_local i32 @sad_16i8() nounwind {
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB0_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqu a+1024(%rax), %xmm2
@@ -39,7 +39,7 @@ define dso_local i32 @sad_16i8() nounwind {
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB0_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovdqu a+1024(%rax), %xmm2
@@ -67,7 +67,7 @@ define dso_local i32 @sad_16i8() nounwind {
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB0_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqu a+1024(%rax), %xmm2
@@ -91,7 +91,7 @@ define dso_local i32 @sad_16i8() nounwind {
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB0_1: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vmovdqu a+1024(%rax), %xmm1
@@ -117,13 +117,13 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.phi = phi <16 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
-  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %1, align 4
+  %0 = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <16 x i8>, ptr %1, align 4
   %2 = zext <16 x i8> %wide.load to <16 x i32>
-  %3 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load1 = load <16 x i8>, <16 x i8>* %4, align 4
+  %3 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.load1 = load <16 x i8>, ptr %4, align 4
   %5 = zext <16 x i8> %wide.load1 to <16 x i32>
   %6 = sub nsw <16 x i32> %2, %5
   %7 = icmp sgt <16 x i32> %6, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
@@ -135,15 +135,7 @@ vector.body:
   br i1 %11, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf = shufflevector <16 x i32> %10, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <16 x i32> %10, %rdx.shuf
-  %rdx.shuf2 = shufflevector <16 x i32> %bin.rdx, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx2 = add <16 x i32> %bin.rdx, %rdx.shuf2
-  %rdx.shuf3 = shufflevector <16 x i32> %bin.rdx2, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx3 = add <16 x i32> %bin.rdx2, %rdx.shuf3
-  %rdx.shuf4 = shufflevector <16 x i32> %bin.rdx3, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx4 = add <16 x i32> %bin.rdx3, %rdx.shuf4
-  %12 = extractelement <16 x i32> %bin.rdx4, i32 0
+  %12 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %10)
   ret i32 %12
 }
 
@@ -154,7 +146,7 @@ define dso_local i32 @sad_32i8() nounwind {
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB1_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqa a+1024(%rax), %xmm3
@@ -184,7 +176,7 @@ define dso_local i32 @sad_32i8() nounwind {
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB1_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovdqa a+1024(%rax), %xmm2
@@ -220,7 +212,7 @@ define dso_local i32 @sad_32i8() nounwind {
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB1_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqa a+1024(%rax), %ymm2
@@ -247,7 +239,7 @@ define dso_local i32 @sad_32i8() nounwind {
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB1_1: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vmovdqa a+1024(%rax), %ymm2
@@ -274,13 +266,13 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.phi = phi <32 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
-  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %index
-  %1 = bitcast i8* %0 to <32 x i8>*
-  %wide.load = load <32 x i8>, <32 x i8>* %1, align 32
+  %0 = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <32 x i8>, ptr %1, align 32
   %2 = zext <32 x i8> %wide.load to <32 x i32>
-  %3 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %index
-  %4 = bitcast i8* %3 to <32 x i8>*
-  %wide.load1 = load <32 x i8>, <32 x i8>* %4, align 32
+  %3 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.load1 = load <32 x i8>, ptr %4, align 32
   %5 = zext <32 x i8> %wide.load1 to <32 x i32>
   %6 = sub nsw <32 x i32> %2, %5
   %7 = icmp sgt <32 x i32> %6, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
@@ -292,17 +284,7 @@ vector.body:
   br i1 %11, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf = shufflevector <32 x i32> %10, <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <32 x i32> %10, %rdx.shuf
-  %rdx.shuf2 = shufflevector <32 x i32> %bin.rdx, <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx2 = add <32 x i32> %bin.rdx, %rdx.shuf2
-  %rdx.shuf3 = shufflevector <32 x i32> %bin.rdx2, <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx3 = add <32 x i32> %bin.rdx2, %rdx.shuf3
-  %rdx.shuf4 = shufflevector <32 x i32> %bin.rdx3, <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx4 = add <32 x i32> %bin.rdx3, %rdx.shuf4
-  %rdx.shuf5 = shufflevector <32 x i32> %bin.rdx4, <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx5 = add <32 x i32> %bin.rdx4, %rdx.shuf5
-  %12 = extractelement <32 x i32> %bin.rdx5, i32 0
+  %12 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %10)
   ret i32 %12
 }
 
@@ -315,7 +297,7 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB2_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqa a+1024(%rax), %xmm5
@@ -359,7 +341,7 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB2_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovdqa a+1024(%rax), %xmm3
@@ -411,7 +393,7 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB2_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqa a+1024(%rax), %ymm3
@@ -444,7 +426,7 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    .p2align 4, 0x90
+; AVX512F-NEXT:    .p2align 4
 ; AVX512F-NEXT:  .LBB2_1: # %vector.body
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512F-NEXT:    vmovdqa a+1024(%rax), %ymm2
@@ -476,7 +458,7 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    .p2align 4, 0x90
+; AVX512BW-NEXT:    .p2align 4
 ; AVX512BW-NEXT:  .LBB2_1: # %vector.body
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512BW-NEXT:    vmovdqa64 a+1024(%rax), %zmm2
@@ -505,13 +487,13 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.phi = phi <64 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
-  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %index
-  %1 = bitcast i8* %0 to <64 x i8>*
-  %wide.load = load <64 x i8>, <64 x i8>* %1, align 64
+  %0 = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <64 x i8>, ptr %1, align 64
   %2 = zext <64 x i8> %wide.load to <64 x i32>
-  %3 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %index
-  %4 = bitcast i8* %3 to <64 x i8>*
-  %wide.load1 = load <64 x i8>, <64 x i8>* %4, align 64
+  %3 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.load1 = load <64 x i8>, ptr %4, align 64
   %5 = zext <64 x i8> %wide.load1 to <64 x i32>
   %6 = sub nsw <64 x i32> %2, %5
   %7 = icmp sgt <64 x i32> %6, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
@@ -523,19 +505,234 @@ vector.body:
   br i1 %11, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf = shufflevector <64 x i32> %10, <64 x i32> undef, <64 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <64 x i32> %10, %rdx.shuf
-  %rdx.shuf2 = shufflevector <64 x i32> %bin.rdx, <64 x i32> undef, <64 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx2 = add <64 x i32> %bin.rdx, %rdx.shuf2
-  %rdx.shuf3 = shufflevector <64 x i32> %bin.rdx2, <64 x i32> undef, <64 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx3 = add <64 x i32> %bin.rdx2, %rdx.shuf3
-  %rdx.shuf4 = shufflevector <64 x i32> %bin.rdx3, <64 x i32> undef, <64 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx4 = add <64 x i32> %bin.rdx3, %rdx.shuf4
-  %rdx.shuf5 = shufflevector <64 x i32> %bin.rdx4, <64 x i32> undef, <64 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx5 = add <64 x i32> %bin.rdx4, %rdx.shuf5
-  %rdx.shuf6 = shufflevector <64 x i32> %bin.rdx5, <64 x i32> undef, <64 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx6 = add <64 x i32> %bin.rdx5, %rdx.shuf6
-  %12 = extractelement <64 x i32> %bin.rdx6, i32 0
+  %12 = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %10)
+  ret i32 %12
+}
+
+; Make sure we don't crash if 512-bit vectors aren't enabled.
+define i32 @sad_avx64i8_prefer_256() nounwind "min-legal-vector-width"="256" "prefer-vector-width"="256" {
+; SSE2-LABEL: sad_avx64i8_prefer_256:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    pxor %xmm4, %xmm4
+; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    .p2align 4
+; SSE2-NEXT:  .LBB3_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movdqa a+1024(%rax), %xmm5
+; SSE2-NEXT:    psadbw b+1024(%rax), %xmm5
+; SSE2-NEXT:    paddd %xmm5, %xmm0
+; SSE2-NEXT:    movdqa a+1040(%rax), %xmm5
+; SSE2-NEXT:    psadbw b+1040(%rax), %xmm5
+; SSE2-NEXT:    paddd %xmm5, %xmm3
+; SSE2-NEXT:    movdqa a+1056(%rax), %xmm5
+; SSE2-NEXT:    psadbw b+1056(%rax), %xmm5
+; SSE2-NEXT:    paddd %xmm5, %xmm2
+; SSE2-NEXT:    movdqa a+1072(%rax), %xmm5
+; SSE2-NEXT:    psadbw b+1072(%rax), %xmm5
+; SSE2-NEXT:    paddd %xmm5, %xmm1
+; SSE2-NEXT:    addq $64, %rax
+; SSE2-NEXT:    jne .LBB3_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    paddd %xmm4, %xmm2
+; SSE2-NEXT:    pxor %xmm5, %xmm5
+; SSE2-NEXT:    paddd %xmm5, %xmm5
+; SSE2-NEXT:    paddd %xmm4, %xmm0
+; SSE2-NEXT:    paddd %xmm4, %xmm1
+; SSE2-NEXT:    paddd %xmm4, %xmm3
+; SSE2-NEXT:    paddd %xmm5, %xmm3
+; SSE2-NEXT:    paddd %xmm5, %xmm1
+; SSE2-NEXT:    paddd %xmm3, %xmm1
+; SSE2-NEXT:    paddd %xmm5, %xmm0
+; SSE2-NEXT:    paddd %xmm2, %xmm5
+; SSE2-NEXT:    paddd %xmm0, %xmm5
+; SSE2-NEXT:    paddd %xmm1, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[2,3,2,3]
+; SSE2-NEXT:    paddd %xmm5, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: sad_avx64i8_prefer_256:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    .p2align 4
+; AVX1-NEXT:  .LBB3_1: # %vector.body
+; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX1-NEXT:    vmovdqa a+1024(%rax), %xmm3
+; AVX1-NEXT:    vpsadbw b+1024(%rax), %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqa a+1040(%rax), %xmm4
+; AVX1-NEXT:    vpsadbw b+1040(%rax), %xmm4, %xmm4
+; AVX1-NEXT:    vmovdqa a+1056(%rax), %xmm5
+; AVX1-NEXT:    vpsadbw b+1056(%rax), %xmm5, %xmm5
+; AVX1-NEXT:    vmovdqa a+1072(%rax), %xmm6
+; AVX1-NEXT:    vpsadbw b+1072(%rax), %xmm6, %xmm6
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm7
+; AVX1-NEXT:    vpaddd %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpaddd %xmm1, %xmm5, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm1, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
+; AVX1-NEXT:    vpaddd %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; AVX1-NEXT:    addq $64, %rax
+; AVX1-NEXT:    jne .LBB3_1
+; AVX1-NEXT:  # %bb.2: # %middle.block
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX1-NEXT:    vpaddd %xmm4, %xmm4, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
+; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm7
+; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm8
+; AVX1-NEXT:    vpaddd %xmm0, %xmm8, %xmm8
+; AVX1-NEXT:    vpaddd %xmm2, %xmm8, %xmm2
+; AVX1-NEXT:    vpaddd %xmm7, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpaddd %xmm5, %xmm4, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm6, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: sad_avx64i8_prefer_256:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    .p2align 4
+; AVX2-NEXT:  .LBB3_1: # %vector.body
+; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX2-NEXT:    vmovdqa a+1024(%rax), %ymm3
+; AVX2-NEXT:    vpsadbw b+1024(%rax), %ymm3, %ymm3
+; AVX2-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vmovdqa a+1056(%rax), %ymm3
+; AVX2-NEXT:    vpsadbw b+1056(%rax), %ymm3, %ymm3
+; AVX2-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    addq $64, %rax
+; AVX2-NEXT:    jne .LBB3_1
+; AVX2-NEXT:  # %bb.2: # %middle.block
+; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm2
+; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm3
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm3, %ymm2, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: sad_avx64i8_prefer_256:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    .p2align 4
+; AVX512F-NEXT:  .LBB3_1: # %vector.body
+; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512F-NEXT:    vmovdqa a+1024(%rax), %ymm2
+; AVX512F-NEXT:    vpsadbw b+1024(%rax), %ymm2, %ymm2
+; AVX512F-NEXT:    vmovdqa a+1056(%rax), %ymm3
+; AVX512F-NEXT:    vpsadbw b+1056(%rax), %ymm3, %ymm3
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
+; AVX512F-NEXT:    addq $64, %rax
+; AVX512F-NEXT:    jne .LBB3_1
+; AVX512F-NEXT:  # %bb.2: # %middle.block
+; AVX512F-NEXT:    vpaddd %zmm0, %zmm1, %zmm1
+; AVX512F-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512F-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512F-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512F-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: sad_avx64i8_prefer_256:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512BW-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    .p2align 4
+; AVX512BW-NEXT:  .LBB3_1: # %vector.body
+; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512BW-NEXT:    vmovdqa a+1024(%rax), %ymm3
+; AVX512BW-NEXT:    vpsadbw b+1024(%rax), %ymm3, %ymm3
+; AVX512BW-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
+; AVX512BW-NEXT:    vmovdqa a+1056(%rax), %ymm3
+; AVX512BW-NEXT:    vpsadbw b+1056(%rax), %ymm3, %ymm3
+; AVX512BW-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; AVX512BW-NEXT:    addq $64, %rax
+; AVX512BW-NEXT:    jne .LBB3_1
+; AVX512BW-NEXT:  # %bb.2: # %middle.block
+; AVX512BW-NEXT:    vpaddd %ymm0, %ymm2, %ymm2
+; AVX512BW-NEXT:    vpaddd %ymm0, %ymm0, %ymm3
+; AVX512BW-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; AVX512BW-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddd %ymm3, %ymm2, %ymm1
+; AVX512BW-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+entry:
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.phi = phi <64 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
+  %0 = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <64 x i8>, ptr %1, align 64
+  %2 = zext <64 x i8> %wide.load to <64 x i32>
+  %3 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.load1 = load <64 x i8>, ptr %4, align 64
+  %5 = zext <64 x i8> %wide.load1 to <64 x i32>
+  %6 = sub nsw <64 x i32> %2, %5
+  %7 = icmp sgt <64 x i32> %6, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %8 = sub nsw <64 x i32> zeroinitializer, %6
+  %9 = select <64 x i1> %7, <64 x i32> %6, <64 x i32> %8
+  %10 = add nsw <64 x i32> %9, %vec.phi
+  %index.next = add i64 %index, 64
+  %11 = icmp eq i64 %index.next, 1024
+  br i1 %11, label %middle.block, label %vector.body
+
+middle.block:
+  %12 = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %10)
   ret i32 %12
 }
 
@@ -544,9 +741,9 @@ define dso_local i32 @sad_2i8() nounwind {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,0,0]
-; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB3_1: # %vector.body
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = [65535,0,0,0]
+; SSE2-NEXT:    .p2align 4
+; SSE2-NEXT:  .LBB4_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
@@ -555,7 +752,7 @@ define dso_local i32 @sad_2i8() nounwind {
 ; SSE2-NEXT:    psadbw %xmm2, %xmm3
 ; SSE2-NEXT:    paddd %xmm3, %xmm0
 ; SSE2-NEXT:    addq $2, %rax
-; SSE2-NEXT:    jne .LBB3_1
+; SSE2-NEXT:    jne .LBB4_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
@@ -567,8 +764,8 @@ define dso_local i32 @sad_2i8() nounwind {
 ; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    .p2align 4, 0x90
-; AVX-NEXT:  .LBB3_1: # %vector.body
+; AVX-NEXT:    .p2align 4
+; AVX-NEXT:  .LBB4_1: # %vector.body
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
@@ -577,7 +774,7 @@ define dso_local i32 @sad_2i8() nounwind {
 ; AVX-NEXT:    vpsadbw %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    addq $2, %rax
-; AVX-NEXT:    jne .LBB3_1
+; AVX-NEXT:    jne .LBB4_1
 ; AVX-NEXT:  # %bb.2: # %middle.block
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
@@ -589,13 +786,13 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.phi = phi <2 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
-  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %index
-  %1 = bitcast i8* %0 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %1, align 4
+  %0 = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <2 x i8>, ptr %1, align 4
   %2 = zext <2 x i8> %wide.load to <2 x i32>
-  %3 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %index
-  %4 = bitcast i8* %3 to <2 x i8>*
-  %wide.load1 = load <2 x i8>, <2 x i8>* %4, align 4
+  %3 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.load1 = load <2 x i8>, ptr %4, align 4
   %5 = zext <2 x i8> %wide.load1 to <2 x i32>
   %6 = sub nsw <2 x i32> %2, %5
   %7 = icmp sgt <2 x i32> %6, <i32 -1, i32 -1>
@@ -607,9 +804,7 @@ vector.body:
   br i1 %11, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf = shufflevector <2 x i32> %10, <2 x i32> undef, <2 x i32> <i32 1, i32 undef>
-  %bin.rdx = add <2 x i32> %10, %rdx.shuf
-  %12 = extractelement <2 x i32> %bin.rdx, i32 0
+  %12 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %10)
   ret i32 %12
 }
 
@@ -618,15 +813,15 @@ define dso_local i32 @sad_4i8() nounwind {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB4_1: # %vector.body
+; SSE2-NEXT:    .p2align 4
+; SSE2-NEXT:  .LBB5_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    psadbw %xmm1, %xmm2
 ; SSE2-NEXT:    paddd %xmm2, %xmm0
 ; SSE2-NEXT:    addq $4, %rax
-; SSE2-NEXT:    jne .LBB4_1
+; SSE2-NEXT:    jne .LBB5_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
@@ -639,15 +834,15 @@ define dso_local i32 @sad_4i8() nounwind {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX-NEXT:    .p2align 4, 0x90
-; AVX-NEXT:  .LBB4_1: # %vector.body
+; AVX-NEXT:    .p2align 4
+; AVX-NEXT:  .LBB5_1: # %vector.body
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vpsadbw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    addq $4, %rax
-; AVX-NEXT:    jne .LBB4_1
+; AVX-NEXT:    jne .LBB5_1
 ; AVX-NEXT:  # %bb.2: # %middle.block
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -661,13 +856,13 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.phi = phi <4 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
-  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %index
-  %1 = bitcast i8* %0 to <4 x i8>*
-  %wide.load = load <4 x i8>, <4 x i8>* %1, align 4
+  %0 = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <4 x i8>, ptr %1, align 4
   %2 = zext <4 x i8> %wide.load to <4 x i32>
-  %3 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %index
-  %4 = bitcast i8* %3 to <4 x i8>*
-  %wide.load1 = load <4 x i8>, <4 x i8>* %4, align 4
+  %3 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.load1 = load <4 x i8>, ptr %4, align 4
   %5 = zext <4 x i8> %wide.load1 to <4 x i32>
   %6 = sub nsw <4 x i32> %2, %5
   %7 = icmp sgt <4 x i32> %6, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -679,16 +874,12 @@ vector.body:
   br i1 %11, label %middle.block, label %vector.body
 
 middle.block:
-  %h2 = shufflevector <4 x i32> %10, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %sum2 = add <4 x i32> %10, %h2
-  %h3 = shufflevector <4 x i32> %sum2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <4 x i32> %sum2, %h3
-  %sum = extractelement <4 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %10)
   ret i32 %sum
 }
 
 
-define dso_local i32 @sad_nonloop_4i8(<4 x i8>* nocapture readonly %p, i64, <4 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_4i8(ptr nocapture readonly %p, i64, ptr nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -704,23 +895,19 @@ define dso_local i32 @sad_nonloop_4i8(<4 x i8>* nocapture readonly %p, i64, <4 x
 ; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
-  %v1 = load <4 x i8>, <4 x i8>* %p, align 1
+  %v1 = load <4 x i8>, ptr %p, align 1
   %z1 = zext <4 x i8> %v1 to <4 x i32>
-  %v2 = load <4 x i8>, <4 x i8>* %q, align 1
+  %v2 = load <4 x i8>, ptr %q, align 1
   %z2 = zext <4 x i8> %v2 to <4 x i32>
   %sub = sub nsw <4 x i32> %z1, %z2
   %isneg = icmp sgt <4 x i32> %sub, <i32 -1, i32 -1, i32 -1, i32 -1>
   %neg = sub nsw <4 x i32> zeroinitializer, %sub
   %abs = select <4 x i1> %isneg, <4 x i32> %sub, <4 x i32> %neg
-  %h2 = shufflevector <4 x i32> %abs, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %sum2 = add <4 x i32> %abs, %h2
-  %h3 = shufflevector <4 x i32> %sum2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <4 x i32> %sum2, %h3
-  %sum = extractelement <4 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %abs)
   ret i32 %sum
 }
 
-define dso_local i32 @sad_nonloop_8i8(<8 x i8>* nocapture readonly %p, i64, <8 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_8i8(ptr nocapture readonly %p, i64, ptr nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -736,25 +923,19 @@ define dso_local i32 @sad_nonloop_8i8(<8 x i8>* nocapture readonly %p, i64, <8 x
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
-  %v1 = load <8 x i8>, <8 x i8>* %p, align 1
+  %v1 = load <8 x i8>, ptr %p, align 1
   %z1 = zext <8 x i8> %v1 to <8 x i32>
-  %v2 = load <8 x i8>, <8 x i8>* %q, align 1
+  %v2 = load <8 x i8>, ptr %q, align 1
   %z2 = zext <8 x i8> %v2 to <8 x i32>
   %sub = sub nsw <8 x i32> %z1, %z2
   %isneg = icmp sgt <8 x i32> %sub, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %neg = sub nsw <8 x i32> zeroinitializer, %sub
   %abs = select <8 x i1> %isneg, <8 x i32> %sub, <8 x i32> %neg
-  %h1 = shufflevector <8 x i32> %abs, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum1 = add <8 x i32> %abs, %h1
-  %h2 = shufflevector <8 x i32> %sum1, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum2 = add <8 x i32> %sum1, %h2
-  %h3 = shufflevector <8 x i32> %sum2, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <8 x i32> %sum2, %h3
-  %sum = extractelement <8 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %abs)
   ret i32 %sum
 }
 
-define dso_local i32 @sad_nonloop_16i8(<16 x i8>* nocapture readonly %p, i64, <16 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_16i8(ptr nocapture readonly %p, i64, ptr nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -773,27 +954,19 @@ define dso_local i32 @sad_nonloop_16i8(<16 x i8>* nocapture readonly %p, i64, <1
 ; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
-  %v1 = load <16 x i8>, <16 x i8>* %p, align 1
+  %v1 = load <16 x i8>, ptr %p, align 1
   %z1 = zext <16 x i8> %v1 to <16 x i32>
-  %v2 = load <16 x i8>, <16 x i8>* %q, align 1
+  %v2 = load <16 x i8>, ptr %q, align 1
   %z2 = zext <16 x i8> %v2 to <16 x i32>
   %sub = sub nsw <16 x i32> %z1, %z2
   %isneg = icmp sgt <16 x i32> %sub, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %neg = sub nsw <16 x i32> zeroinitializer, %sub
   %abs = select <16 x i1> %isneg, <16 x i32> %sub, <16 x i32> %neg
-  %h0 = shufflevector <16 x i32> %abs, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum0 = add <16 x i32> %abs, %h0
-  %h1 = shufflevector <16 x i32> %sum0, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum1 = add <16 x i32> %sum0, %h1
-  %h2 = shufflevector <16 x i32> %sum1, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum2 = add <16 x i32> %sum1, %h2
-  %h3 = shufflevector <16 x i32> %sum2, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <16 x i32> %sum2, %h3
-  %sum = extractelement <16 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %abs)
   ret i32 %sum
 }
 
-define dso_local i32 @sad_nonloop_32i8(<32 x i8>* nocapture readonly %p, i64, <32 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_32i8(ptr nocapture readonly %p, i64, ptr nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdx), %xmm0
@@ -843,29 +1016,19 @@ define dso_local i32 @sad_nonloop_32i8(<32 x i8>* nocapture readonly %p, i64, <3
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %v1 = load <32 x i8>, <32 x i8>* %p, align 1
+  %v1 = load <32 x i8>, ptr %p, align 1
   %z1 = zext <32 x i8> %v1 to <32 x i32>
-  %v2 = load <32 x i8>, <32 x i8>* %q, align 1
+  %v2 = load <32 x i8>, ptr %q, align 1
   %z2 = zext <32 x i8> %v2 to <32 x i32>
   %sub = sub nsw <32 x i32> %z1, %z2
   %isneg = icmp sgt <32 x i32> %sub, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %neg = sub nsw <32 x i32> zeroinitializer, %sub
   %abs = select <32 x i1> %isneg, <32 x i32> %sub, <32 x i32> %neg
-  %h32 = shufflevector <32 x i32> %abs, <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum32 = add <32 x i32> %abs, %h32
-  %h0 = shufflevector <32 x i32> %sum32, <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum0 = add <32 x i32> %sum32, %h0
-  %h1 = shufflevector <32 x i32> %sum0, <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum1 = add <32 x i32> %sum0, %h1
-  %h2 = shufflevector <32 x i32> %sum1, <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum2 = add <32 x i32> %sum1, %h2
-  %h3 = shufflevector <32 x i32> %sum2, <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <32 x i32> %sum2, %h3
-  %sum = extractelement <32 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %abs)
   ret i32 %sum
 }
 
-define dso_local i32 @sad_nonloop_64i8(<64 x i8>* nocapture readonly %p, i64, <64 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_64i8(ptr nocapture readonly %p, i64, ptr nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_64i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdx), %xmm0
@@ -927,8 +1090,7 @@ define dso_local i32 @sad_nonloop_64i8(<64 x i8>* nocapture readonly %p, i64, <6
 ; AVX512F-NEXT:    vmovdqu 32(%rdi), %ymm1
 ; AVX512F-NEXT:    vpsadbw 32(%rdx), %ymm1, %ymm1
 ; AVX512F-NEXT:    vpsadbw (%rdx), %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512F-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -950,33 +1112,21 @@ define dso_local i32 @sad_nonloop_64i8(<64 x i8>* nocapture readonly %p, i64, <6
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %v1 = load <64 x i8>, <64 x i8>* %p, align 1
+  %v1 = load <64 x i8>, ptr %p, align 1
   %z1 = zext <64 x i8> %v1 to <64 x i32>
-  %v2 = load <64 x i8>, <64 x i8>* %q, align 1
+  %v2 = load <64 x i8>, ptr %q, align 1
   %z2 = zext <64 x i8> %v2 to <64 x i32>
   %sub = sub nsw <64 x i32> %z1, %z2
   %isneg = icmp sgt <64 x i32> %sub, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %neg = sub nsw <64 x i32> zeroinitializer, %sub
   %abs = select <64 x i1> %isneg, <64 x i32> %sub, <64 x i32> %neg
-  %h64 = shufflevector <64 x i32> %abs, <64 x i32> undef, <64 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum64 = add <64 x i32> %abs, %h64
-  %h32 = shufflevector <64 x i32> %sum64, <64 x i32> undef, <64 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum32 = add <64 x i32> %sum64, %h32
-  %h0 = shufflevector <64 x i32> %sum32, <64 x i32> undef, <64 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum0 = add <64 x i32> %sum32, %h0
-  %h1 = shufflevector <64 x i32> %sum0, <64 x i32> undef, <64 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum1 = add <64 x i32> %sum0, %h1
-  %h2 = shufflevector <64 x i32> %sum1, <64 x i32> undef, <64 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum2 = add <64 x i32> %sum1, %h2
-  %h3 = shufflevector <64 x i32> %sum2, <64 x i32> undef, <64 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %sum3 = add <64 x i32> %sum2, %h3
-  %sum = extractelement <64 x i32> %sum3, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %abs)
   ret i32 %sum
 }
 
 ; This contains an unrolled sad loop with a non-zero initial value.
 ; DAGCombiner reassociation previously rewrote the adds to move the constant vector further down the tree. This resulted in the vector-reduction flag being lost.
-define dso_local i32 @sad_unroll_nonzero_initial(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x i8>* %arg2, <16 x i8>* %arg3) {
+define dso_local i32 @sad_unroll_nonzero_initial(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 ; SSE2-LABEL: sad_unroll_nonzero_initial:
 ; SSE2:       # %bb.0: # %bb
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -986,31 +1136,59 @@ define dso_local i32 @sad_unroll_nonzero_initial(<16 x i8>* %arg, <16 x i8>* %ar
 ; SSE2-NEXT:    movdqu (%rcx), %xmm2
 ; SSE2-NEXT:    psadbw %xmm0, %xmm2
 ; SSE2-NEXT:    paddd %xmm1, %xmm2
-; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    incl %eax
 ; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: sad_unroll_nonzero_initial:
-; AVX:       # %bb.0: # %bb
-; AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    retq
+; AVX1-LABEL: sad_unroll_nonzero_initial:
+; AVX1:       # %bb.0: # %bb
+; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX1-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX1-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [1,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: sad_unroll_nonzero_initial:
+; AVX2:       # %bb.0: # %bb
+; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX2-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX2-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,0,0,0]
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: sad_unroll_nonzero_initial:
+; AVX512:       # %bb.0: # %bb
+; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX512-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,0,0,0]
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    retq
 bb:
-  %tmp = load <16 x i8>, <16 x i8>* %arg, align 1
-  %tmp4 = load <16 x i8>, <16 x i8>* %arg1, align 1
+  %tmp = load <16 x i8>, ptr %arg, align 1
+  %tmp4 = load <16 x i8>, ptr %arg1, align 1
   %tmp5 = zext <16 x i8> %tmp to <16 x i32>
   %tmp6 = zext <16 x i8> %tmp4 to <16 x i32>
   %tmp7 = sub nsw <16 x i32> %tmp5, %tmp6
@@ -1018,8 +1196,8 @@ bb:
   %tmp9 = sub nsw <16 x i32> zeroinitializer, %tmp7
   %tmp10 = select <16 x i1> %tmp8, <16 x i32> %tmp9, <16 x i32> %tmp7
   %tmp11 = add nuw nsw <16 x i32> %tmp10, <i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
-  %tmp12 = load <16 x i8>, <16 x i8>* %arg2, align 1
-  %tmp13 = load <16 x i8>, <16 x i8>* %arg3, align 1
+  %tmp12 = load <16 x i8>, ptr %arg2, align 1
+  %tmp13 = load <16 x i8>, ptr %arg3, align 1
   %tmp14 = zext <16 x i8> %tmp12 to <16 x i32>
   %tmp15 = zext <16 x i8> %tmp13 to <16 x i32>
   %tmp16 = sub nsw <16 x i32> %tmp14, %tmp15
@@ -1027,21 +1205,13 @@ bb:
   %tmp18 = sub nsw <16 x i32> zeroinitializer, %tmp16
   %tmp19 = select <16 x i1> %tmp17, <16 x i32> %tmp18, <16 x i32> %tmp16
   %tmp20 = add nuw nsw <16 x i32> %tmp19, %tmp11
-  %tmp21 = shufflevector <16 x i32> %tmp20, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp22 = add <16 x i32> %tmp20, %tmp21
-  %tmp23 = shufflevector <16 x i32> %tmp22, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp24 = add <16 x i32> %tmp22, %tmp23
-  %tmp25 = shufflevector <16 x i32> %tmp24, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp26 = add <16 x i32> %tmp24, %tmp25
-  %tmp27 = shufflevector <16 x i32> %tmp26, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp28 = add <16 x i32> %tmp26, %tmp27
-  %tmp29 = extractelement <16 x i32> %tmp28, i64 0
+  %tmp29 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %tmp20)
   ret i32 %tmp29
 }
 
 ; This test contains two absolute difference patterns joined by an add. The result of that add is then reduced to a single element.
 ; SelectionDAGBuilder should tag the joining add as a vector reduction. We neeed to recognize that both sides can use psadbw.
-define dso_local i32 @sad_double_reduction(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x i8>* %arg2, <16 x i8>* %arg3) {
+define dso_local i32 @sad_double_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 ; SSE2-LABEL: sad_double_reduction:
 ; SSE2:       # %bb.0: # %bb
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -1053,9 +1223,7 @@ define dso_local i32 @sad_double_reduction(<16 x i8>* %arg, <16 x i8>* %arg1, <1
 ; SSE2-NEXT:    paddd %xmm1, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad_double_reduction:
@@ -1067,21 +1235,19 @@ define dso_local i32 @sad_double_reduction(<16 x i8>* %arg, <16 x i8>* %arg1, <1
 ; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 bb:
-  %tmp = load <16 x i8>, <16 x i8>* %arg, align 1
-  %tmp4 = load <16 x i8>, <16 x i8>* %arg1, align 1
+  %tmp = load <16 x i8>, ptr %arg, align 1
+  %tmp4 = load <16 x i8>, ptr %arg1, align 1
   %tmp5 = zext <16 x i8> %tmp to <16 x i32>
   %tmp6 = zext <16 x i8> %tmp4 to <16 x i32>
   %tmp7 = sub nsw <16 x i32> %tmp5, %tmp6
   %tmp8 = icmp slt <16 x i32> %tmp7, zeroinitializer
   %tmp9 = sub nsw <16 x i32> zeroinitializer, %tmp7
   %tmp10 = select <16 x i1> %tmp8, <16 x i32> %tmp9, <16 x i32> %tmp7
-  %tmp11 = load <16 x i8>, <16 x i8>* %arg2, align 1
-  %tmp12 = load <16 x i8>, <16 x i8>* %arg3, align 1
+  %tmp11 = load <16 x i8>, ptr %arg2, align 1
+  %tmp12 = load <16 x i8>, ptr %arg3, align 1
   %tmp13 = zext <16 x i8> %tmp11 to <16 x i32>
   %tmp14 = zext <16 x i8> %tmp12 to <16 x i32>
   %tmp15 = sub nsw <16 x i32> %tmp13, %tmp14
@@ -1089,21 +1255,13 @@ bb:
   %tmp17 = sub nsw <16 x i32> zeroinitializer, %tmp15
   %tmp18 = select <16 x i1> %tmp16, <16 x i32> %tmp17, <16 x i32> %tmp15
   %tmp19 = add nuw nsw <16 x i32> %tmp18, %tmp10
-  %tmp20 = shufflevector <16 x i32> %tmp19, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp21 = add <16 x i32> %tmp19, %tmp20
-  %tmp22 = shufflevector <16 x i32> %tmp21, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp23 = add <16 x i32> %tmp21, %tmp22
-  %tmp24 = shufflevector <16 x i32> %tmp23, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp25 = add <16 x i32> %tmp23, %tmp24
-  %tmp26 = shufflevector <16 x i32> %tmp25, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp27 = add <16 x i32> %tmp25, %tmp26
-  %tmp28 = extractelement <16 x i32> %tmp27, i64 0
+  %tmp28 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %tmp19)
   ret i32 %tmp28
 }
 
 ; This test contains two absolute difference patterns joined by an add. The result of that add is then reduced to a single element.
 ; SelectionDAGBuilder should tag the joining add as a vector reduction. We neeed to recognize that both sides can use psadbw.
-define dso_local i32 @sad_double_reduction_abs(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x i8>* %arg2, <16 x i8>* %arg3) {
+define dso_local i32 @sad_double_reduction_abs(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 ; SSE2-LABEL: sad_double_reduction_abs:
 ; SSE2:       # %bb.0: # %bb
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -1115,9 +1273,7 @@ define dso_local i32 @sad_double_reduction_abs(<16 x i8>* %arg, <16 x i8>* %arg1
 ; SSE2-NEXT:    paddd %xmm1, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad_double_reduction_abs:
@@ -1129,36 +1285,55 @@ define dso_local i32 @sad_double_reduction_abs(<16 x i8>* %arg, <16 x i8>* %arg1
 ; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 bb:
-  %tmp = load <16 x i8>, <16 x i8>* %arg, align 1
-  %tmp4 = load <16 x i8>, <16 x i8>* %arg1, align 1
+  %tmp = load <16 x i8>, ptr %arg, align 1
+  %tmp4 = load <16 x i8>, ptr %arg1, align 1
   %tmp5 = zext <16 x i8> %tmp to <16 x i32>
   %tmp6 = zext <16 x i8> %tmp4 to <16 x i32>
   %tmp7 = sub nsw <16 x i32> %tmp5, %tmp6
   %tmp10 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %tmp7, i1 false)
-  %tmp11 = load <16 x i8>, <16 x i8>* %arg2, align 1
-  %tmp12 = load <16 x i8>, <16 x i8>* %arg3, align 1
+  %tmp11 = load <16 x i8>, ptr %arg2, align 1
+  %tmp12 = load <16 x i8>, ptr %arg3, align 1
   %tmp13 = zext <16 x i8> %tmp11 to <16 x i32>
   %tmp14 = zext <16 x i8> %tmp12 to <16 x i32>
   %tmp15 = sub nsw <16 x i32> %tmp13, %tmp14
   %tmp18 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %tmp15, i1 false)
   %tmp19 = add nuw nsw <16 x i32> %tmp18, %tmp10
-  %tmp20 = shufflevector <16 x i32> %tmp19, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp21 = add <16 x i32> %tmp19, %tmp20
-  %tmp22 = shufflevector <16 x i32> %tmp21, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp23 = add <16 x i32> %tmp21, %tmp22
-  %tmp24 = shufflevector <16 x i32> %tmp23, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp25 = add <16 x i32> %tmp23, %tmp24
-  %tmp26 = shufflevector <16 x i32> %tmp25, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp27 = add <16 x i32> %tmp25, %tmp26
-  %tmp28 = extractelement <16 x i32> %tmp27, i64 0
+  %tmp28 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %tmp19)
   ret i32 %tmp28
 }
+declare <16 x i32> @llvm.abs.v16i32(<16 x i32>, i1 immarg)
 
-; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare <16 x i32> @llvm.abs.v16i32(<16 x i32>, i1 immarg) #0
+define i32 @PR143456(ptr %p0, ptr %p1) {
+; SSE2-LABEL: PR143456:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    psadbw %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: PR143456:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; AVX-NEXT:    retq
+  %v0 = load <8 x i8>, ptr %p0, align 1
+  %v1 = load <8 x i8>, ptr %p1, align 1
+  %max = tail call <8 x i8> @llvm.umax.v8i8(<8 x i8> %v0, <8 x i8> %v1)
+  %min = tail call <8 x i8> @llvm.umin.v8i8(<8 x i8> %v0, <8 x i8> %v1)
+  %abd = sub nuw <8 x i8> %max, %min
+  %elt = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %abd)
+  %res = zext i8 %elt to i32
+  ret i32 %res
+}
+declare <8 x i8> @llvm.umax.v8i8(<8 x i8>, <8 x i8>)
+declare <8 x i8> @llvm.umin.v8i8(<8 x i8>, <8 x i8>)
+declare i8 @llvm.vector.reduce.add.v8i8(<8 x i8>)
+
 attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }

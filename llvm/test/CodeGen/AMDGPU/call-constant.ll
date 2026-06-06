@@ -1,12 +1,12 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,GISEL %s
 
 ; GCN-LABEL: {{^}}test_call_undef:
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_call_undef() #0 {
   %val = call i32 undef(i32 1)
   %op = add i32 %val, 1
-  store volatile i32 %op, ptr addrspace(1) undef
+  store volatile i32 %op, ptr addrspace(1) poison
   ret void
 }
 

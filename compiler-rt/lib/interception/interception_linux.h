@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #if !defined(INCLUDED_FROM_INTERCEPTION_LIB)
 # error interception_linux.h should be included from interception library only
@@ -28,12 +28,14 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
                        uptr func, uptr trampoline);
 }  // namespace __interception
 
-#define INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func) \
-  ::__interception::InterceptFunction(            \
-      #func,                                      \
-      (::__interception::uptr *)&REAL(func),      \
-      (::__interception::uptr)&(func),            \
-      (::__interception::uptr)&TRAMPOLINE(func))
+// Cast func to type of REAL(func) before casting to uptr in case it is an
+// overloaded function, which is the case for some glibc functions when
+// _FORTIFY_SOURCE is used. This disambiguates which overload to use.
+#define INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)            \
+  ::__interception::InterceptFunction(                       \
+      #func, (::__interception::uptr *)&REAL(func),          \
+      (::__interception::uptr)(decltype(REAL(func)))&(func), \
+      (::__interception::uptr) &TRAMPOLINE(func))
 
 // dlvsym is a GNU extension supported by some other platforms.
 #if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD
@@ -41,7 +43,7 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
   ::__interception::InterceptFunction(                        \
       #func, symver,                                          \
       (::__interception::uptr *)&REAL(func),                  \
-      (::__interception::uptr)&(func),                        \
+      (::__interception::uptr)(decltype(REAL(func)))&(func),  \
       (::__interception::uptr)&TRAMPOLINE(func))
 #else
 #define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
@@ -50,4 +52,4 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
 
 #endif  // INTERCEPTION_LINUX_H
 #endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
-        // SANITIZER_SOLARIS
+        // SANITIZER_SOLARIS || SANITIZER_HAIKU

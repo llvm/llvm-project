@@ -26,6 +26,10 @@ public:
 
   virtual ~BreakpointID();
 
+  bool operator==(BreakpointID rhs) const {
+    return m_break_id == rhs.m_break_id && m_location_id == rhs.m_location_id;
+  }
+
   lldb::break_id_t GetBreakpointID() const { return m_break_id; }
 
   lldb::break_id_t GetLocationID() const { return m_location_id; }

@@ -4,22 +4,41 @@
 #include <cmath>
 #include <cstdlib>
 #include <ostream>
+#include <string_view>
 
+#include "benchmark/export.h"
 #include "internal_macros.h"
 #include "log.h"
+
+#if defined(__GNUC__) || defined(__clang__)
+#define BENCHMARK_NOEXCEPT noexcept
+#define BENCHMARK_NOEXCEPT_OP(x) noexcept(x)
+#elif defined(_MSC_VER) && !defined(__clang__)
+#if _MSC_VER >= 1900
+#define BENCHMARK_NOEXCEPT noexcept
+#define BENCHMARK_NOEXCEPT_OP(x) noexcept(x)
+#else
+#define BENCHMARK_NOEXCEPT
+#define BENCHMARK_NOEXCEPT_OP(x)
+#endif
+#define __func__ __FUNCTION__
+#else
+#define BENCHMARK_NOEXCEPT
+#define BENCHMARK_NOEXCEPT_OP(x)
+#endif
 
 namespace benchmark {
 namespace internal {
 
 typedef void(AbortHandlerT)();
 
-inline AbortHandlerT*& GetAbortHandler() {
-  static AbortHandlerT* handler = &std::abort;
-  return handler;
-}
+BENCHMARK_EXPORT
+AbortHandlerT*& GetAbortHandler();
 
 BENCHMARK_NORETURN inline void CallAbortHandler() {
   GetAbortHandler()();
+  std::flush(std::cout);
+  std::flush(std::cerr);
   std::abort();  // fallback to enforce noreturn
 }
 
@@ -28,7 +47,8 @@ BENCHMARK_NORETURN inline void CallAbortHandler() {
 // destructed.
 class CheckHandler {
  public:
-  CheckHandler(const char* check, const char* file, const char* func, int line)
+  CheckHandler(std::string_view check, std::string_view file,
+               std::string_view func, int line)
       : log_(GetErrorLogInstance()) {
     log_ << file << ":" << line << ": " << func << ": Check `" << check
          << "' failed. ";
@@ -36,10 +56,17 @@ class CheckHandler {
 
   LogType& GetLog() { return log_; }
 
+#if defined(COMPILER_MSVC)
+#pragma warning(push)
+#pragma warning(disable : 4722)
+#endif
   BENCHMARK_NORETURN ~CheckHandler() BENCHMARK_NOEXCEPT_OP(false) {
-    log_ << std::endl;
+    log_ << '\n';
     CallAbortHandler();
   }
+#if defined(COMPILER_MSVC)
+#pragma warning(pop)
+#endif
 
   CheckHandler& operator=(const CheckHandler&) = delete;
   CheckHandler(const CheckHandler&) = delete;
@@ -55,9 +82,11 @@ class CheckHandler {
 // The BM_CHECK macro returns a std::ostream object that can have extra
 // information written to it.
 #ifndef NDEBUG
-#define BM_CHECK(b)                                                          \
-  (b ? ::benchmark::internal::GetNullLogInstance()                           \
-     : ::benchmark::internal::CheckHandler(#b, __FILE__, __func__, __LINE__) \
+#define BM_CHECK(b)                                          \
+  (b ? ::benchmark::internal::GetNullLogInstance()           \
+     : ::benchmark::internal::CheckHandler(                  \
+           std::string_view(#b), std::string_view(__FILE__), \
+           std::string_view(__func__), __LINE__)             \
            .GetLog())
 #else
 #define BM_CHECK(b) ::benchmark::internal::GetNullLogInstance()

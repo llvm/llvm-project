@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -function-sections %s -o - | FileCheck %s
-; RUN: llc -mtriple=aarch64 -function-sections %s -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -no-integrated-as -binutils-version=2.35 %s -o - | FileCheck --check-prefix=NOLINK %s
 ; RUN: llc -mtriple=aarch64 -no-integrated-as -binutils-version=2.36 %s -o - | FileCheck %s
 
@@ -48,7 +47,7 @@ define void @f3() "patchable-function-entry"="3" comdat {
 ; CHECK-NEXT: .Lfunc_begin3:
 ; CHECK-COUNT-3: nop
 ; CHECK-NEXT:  ret
-; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f3,comdat,f3{{$}}
+; CHECK:       .section __patchable_function_entries,"awoG",@progbits,f3,f3,comdat{{$}}
 ; CHECK-NEXT:  .p2align 3
 ; CHECK-NEXT:  .xword .Lfunc_begin3
   ret void
@@ -60,7 +59,7 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ; CHECK-NEXT: .Lfunc_begin4:
 ; CHECK-COUNT-5: nop
 ; CHECK-NEXT:  sub sp, sp, #16
-; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f5,comdat,f5{{$}}
+; CHECK:       .section __patchable_function_entries,"awoG",@progbits,f5,f5,comdat{{$}}
 ; CHECK:       .p2align 3
 ; CHECK-NEXT:  .xword .Lfunc_begin4
   %frame = alloca i8, i32 16

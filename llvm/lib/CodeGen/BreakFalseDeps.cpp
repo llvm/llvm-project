@@ -17,6 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/BreakFalseDeps.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -31,9 +32,9 @@
 
 using namespace llvm;
 
-namespace llvm {
+namespace {
 
-class BreakFalseDeps : public MachineFunctionPass {
+class BreakFalseDeps {
 private:
   MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
@@ -46,27 +47,12 @@ private:
   /// Storage for register unit liveness.
   LivePhysRegs LiveRegSet;
 
-  ReachingDefAnalysis *RDA = nullptr;
+  ReachingDefInfo *RDI = nullptr;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  BreakFalseDeps(ReachingDefInfo *RDI) : RDI(RDI) {}
 
-  BreakFalseDeps() : MachineFunctionPass(ID) {
-    initializeBreakFalseDepsPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<ReachingDefAnalysis>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-      MachineFunctionProperties::Property::NoVRegs);
-  }
+  bool run(MachineFunction &CurMF);
 
 private:
   /// Process he given basic block.
@@ -96,16 +82,39 @@ private:
   void processUndefReads(MachineBasicBlock *);
 };
 
-} // namespace llvm
+class BreakFalseDepsLegacy : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  BreakFalseDepsLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    AU.addRequired<ReachingDefInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+} // namespace
 
 #define DEBUG_TYPE "break-false-deps"
 
-char BreakFalseDeps::ID = 0;
-INITIALIZE_PASS_BEGIN(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
-INITIALIZE_PASS_END(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false, false)
+char BreakFalseDepsLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(BreakFalseDepsLegacy, DEBUG_TYPE, "BreakFalseDeps", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
+INITIALIZE_PASS_END(BreakFalseDepsLegacy, DEBUG_TYPE, "BreakFalseDeps", false,
+                    false)
 
-FunctionPass *llvm::createBreakFalseDeps() { return new BreakFalseDeps(); }
+FunctionPass *llvm::createBreakFalseDepsLegacyPass() {
+  return new BreakFalseDepsLegacy();
+}
 
 bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   unsigned Pref) {
@@ -134,8 +143,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   }
 
   // Get the undef operand's register class
-  const TargetRegisterClass *OpRC =
-    TII->getRegClass(MI->getDesc(), OpIdx, TRI, *MF);
+  const TargetRegisterClass *OpRC = TII->getRegClass(MI->getDesc(), OpIdx);
   assert(OpRC && "Not a valid register class");
 
   // If the instruction has a true dependency, we can hide the false depdency
@@ -155,7 +163,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   unsigned MaxClearanceReg = OriginalReg;
   ArrayRef<MCPhysReg> Order = RegClassInfo.getOrder(OpRC);
   for (MCPhysReg Reg : Order) {
-    unsigned Clearance = RDA->getClearance(MI, Reg);
+    unsigned Clearance = RDI->getClearance(MI, Reg);
     if (Clearance <= MaxClearance)
       continue;
     MaxClearance = Clearance;
@@ -175,7 +183,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
 bool BreakFalseDeps::shouldBreakDependence(MachineInstr *MI, unsigned OpIdx,
                                            unsigned Pref) {
   MCRegister Reg = MI->getOperand(OpIdx).getReg().asMCReg();
-  unsigned Clearance = RDA->getClearance(MI, Reg);
+  unsigned Clearance = RDI->getClearance(MI, Reg);
   LLVM_DEBUG(dbgs() << "Clearance: " << Clearance << ", want " << Pref);
 
   if (Pref > Clearance) {
@@ -278,28 +286,47 @@ void BreakFalseDeps::processBasicBlock(MachineBasicBlock *MBB) {
   processUndefReads(MBB);
 }
 
-bool BreakFalseDeps::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
-    return false;
-  MF = &mf;
+bool BreakFalseDeps::run(MachineFunction &CurMF) {
+  MF = &CurMF;
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
-  RDA = &getAnalysis<ReachingDefAnalysis>();
 
-  RegClassInfo.runOnMachineFunction(mf);
+  RegClassInfo.runOnMachineFunction(CurMF, /*Rev=*/true);
 
   LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
 
   // Skip Dead blocks due to ReachingDefAnalysis has no idea about instructions
   // in them.
   df_iterator_default_set<MachineBasicBlock *> Reachable;
-  for (MachineBasicBlock *MBB : depth_first_ext(&mf, Reachable))
+  for (MachineBasicBlock *MBB : depth_first_ext(&CurMF, Reachable))
     (void)MBB /* Mark all reachable blocks */;
 
   // Traverse the basic blocks.
-  for (MachineBasicBlock &MBB : mf)
+  for (MachineBasicBlock &MBB : CurMF)
     if (Reachable.count(&MBB))
       processBasicBlock(&MBB);
 
   return false;
+}
+
+bool BreakFalseDepsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  ReachingDefInfo *RDI = &getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
+  BreakFalseDeps Impl(RDI);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+BreakFalseDepsPass::run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  ReachingDefInfo *RDI = &MFAM.getResult<ReachingDefAnalysis>(MF);
+  BreakFalseDeps(RDI).run(MF);
+  // TODO: breakPartialRegDependency() may insert instructions, propagate when
+  // the pass made a change and return PreservedAnalyses::all() otherwise.
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

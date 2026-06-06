@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRSCFDialect
   SCF.cpp
   DeviceMappingInterface.cpp
+  MemorySlot.cpp
   ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -11,12 +12,14 @@ add_mlir_dialect_library(MLIRSCFDialect
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
-  MLIRBufferizationDialect
   MLIRControlFlowDialect
+  MLIRDialectUtils
   MLIRFunctionInterfaces
   MLIRIR
   MLIRLoopLikeInterface
+  MLIRMemorySlotUtils
   MLIRSideEffectInterfaces
+  MLIRTensorDialect
   MLIRValueBoundsOpInterface
+  MLIRTransformUtils
   )
-

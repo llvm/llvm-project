@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include <optional>
+#include <type_traits>
 using namespace clang;
 
 void LoopHintAttr::printPrettyPragma(raw_ostream &OS,
@@ -224,6 +226,12 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     PrintExprs(adjustArgsNeedDevicePtr_begin(), adjustArgsNeedDevicePtr_end());
     OS << ")";
   }
+  if (adjustArgsNeedDeviceAddr_size()) {
+    OS << " adjust_args(need_device_addr:";
+    PrintExprs(adjustArgsNeedDeviceAddr_begin(),
+               adjustArgsNeedDeviceAddr_end());
+    OS << ")";
+  }
 
   auto PrintInteropInfo = [&OS](OMPInteropInfo *Begin, OMPInteropInfo *End) {
     for (OMPInteropInfo *I = Begin; I != End; ++I) {
@@ -269,5 +277,187 @@ unsigned AlignedAttr::getAlignment(ASTContext &Ctx) const {
 
   return Ctx.getTargetDefaultAlignForAttributeAligned();
 }
+
+StringLiteral *FormatMatchesAttr::getFormatString() const {
+  return cast<StringLiteral>(getExpectedFormat());
+}
+
+namespace {
+// Arguments whose types fail this test never compare equal unless there's a
+// specialization of equalAttrArgs for the type. Specilization for the following
+// arguments haven't been implemented yet:
+//  - DeclArgument
+//  - OMPTraitInfoArgument
+//  - VariadicOMPInteropInfoArgument
+#define USE_DEFAULT_EQUALITY                                                   \
+  (std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||          \
+   std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, char *> ||         \
+   std::is_enum_v<T> || std::is_integral_v<T>)
+
+template <class T>
+typename std::enable_if_t<!USE_DEFAULT_EQUALITY, bool>
+equalAttrArgs(T A, T B, StructuralEquivalenceContext &Context) {
+  return false;
+}
+
+template <class T>
+typename std::enable_if_t<USE_DEFAULT_EQUALITY, bool>
+equalAttrArgs(T A1, T A2, StructuralEquivalenceContext &Context) {
+  return A1 == A2;
+}
+
+template <>
+bool equalAttrArgs<ParamIdx>(ParamIdx P1, ParamIdx P2,
+                             StructuralEquivalenceContext &) {
+  // ParamIdx can be invalid when representing an optional parameter that was
+  // not specified (e.g. the second argument of alloc_size(N)).
+  // ParamIdx::operator== asserts both sides are valid, so guard against the
+  // invalid case before delegating to it.
+  if (P1.isValid() != P2.isValid())
+    return false;
+  if (!P1.isValid())
+    return true;
+  return P1 == P2;
+}
+
+template <class T>
+bool equalAttrArgs(T *A1_B, T *A1_E, T *A2_B, T *A2_E,
+                   StructuralEquivalenceContext &Context) {
+  if (A1_E - A1_B != A2_E - A2_B)
+    return false;
+
+  for (; A1_B != A1_E; ++A1_B, ++A2_B)
+    if (!equalAttrArgs(*A1_B, *A2_B, Context))
+      return false;
+
+  return true;
+}
+
+template <>
+bool equalAttrArgs<Attr *>(Attr *A1, Attr *A2,
+                           StructuralEquivalenceContext &Context) {
+  if (!A1 || !A2)
+    return A1 == A2;
+  return A1->isEquivalent(*A2, Context);
+}
+
+template <>
+bool equalAttrArgs<Expr *>(Expr *A1, Expr *A2,
+                           StructuralEquivalenceContext &Context) {
+  return ASTStructuralEquivalence::isEquivalent(Context, A1, A2);
+}
+
+template <>
+bool equalAttrArgs<QualType>(QualType T1, QualType T2,
+                             StructuralEquivalenceContext &Context) {
+  return ASTStructuralEquivalence::isEquivalent(Context, T1, T2);
+}
+
+template <>
+bool equalAttrArgs<const IdentifierInfo *>(
+    const IdentifierInfo *Name1, const IdentifierInfo *Name2,
+    StructuralEquivalenceContext &Context) {
+  return ASTStructuralEquivalence::isEquivalent(Name1, Name2);
+}
+
+bool areAlignedAttrsEqual(const AlignedAttr &A1, const AlignedAttr &A2,
+                          StructuralEquivalenceContext &Context) {
+  if (A1.getSpelling() != A2.getSpelling())
+    return false;
+
+  if (A1.isAlignmentExpr() != A2.isAlignmentExpr())
+    return false;
+
+  if (A1.isAlignmentExpr())
+    return equalAttrArgs(A1.getAlignmentExpr(), A2.getAlignmentExpr(), Context);
+
+  return equalAttrArgs(A1.getAlignmentType()->getType(),
+                       A2.getAlignmentType()->getType(), Context);
+}
+} // namespace
+
+namespace {
+// Machinery to unique attributes based on the arguments.
+// The construction mirrors the equivalent testing code above.
+// The content of the arguments are added to the FoldingSetNodeID instance,
+// which allows the AttributedTypes to unique the attributes based on
+// the value of the arguments.
+
+#define USE_DEFAULT_PROFILE                                                    \
+  (std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||          \
+   std::is_same_v<T, IdentifierInfo *> ||                                      \
+   std::is_same_v<T, const IdentifierInfo *> || std::is_enum_v<T> ||           \
+   std::is_integral_v<T>)
+
+template <class T>
+typename std::enable_if_t<!USE_DEFAULT_PROFILE>
+profileAttrArg(llvm::FoldingSetNodeID &, const ASTContext &, T) {}
+
+template <class T>
+typename std::enable_if_t<USE_DEFAULT_PROFILE>
+profileAttrArg(llvm::FoldingSetNodeID &ID, const ASTContext &, T V) {
+  if constexpr (std::is_same_v<T, StringRef>)
+    ID.AddString(V);
+  else if constexpr (std::is_same_v<T, VersionTuple>) {
+    ID.AddInteger(V.getMajor());
+    ID.AddInteger(V.getMinor().value_or(0));
+    ID.AddInteger(V.getSubminor().value_or(0));
+    ID.AddInteger(V.getBuild().value_or(0));
+  } else if constexpr (std::is_same_v<T, IdentifierInfo *> ||
+                       std::is_same_v<T, const IdentifierInfo *>)
+    ID.AddPointer(V);
+  else
+    ID.AddInteger(static_cast<long long>(V));
+}
+
+template <>
+inline void profileAttrArg<ParamIdx>(llvm::FoldingSetNodeID &ID,
+                                     const ASTContext &, ParamIdx P) {
+  ID.AddBoolean(P.isValid());
+  if (P.isValid())
+    ID.AddInteger(P.getASTIndex());
+}
+
+template <class T>
+inline void profileAttrArg(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                           T *Begin, T *End) {
+  ID.AddInteger(End - Begin);
+  for (; Begin != End; ++Begin)
+    profileAttrArg(ID, Ctx, *Begin);
+}
+
+template <>
+inline void profileAttrArg<Attr *>(llvm::FoldingSetNodeID &ID,
+                                   const ASTContext &Ctx, Attr *A) {
+  if (!A) {
+    ID.AddPointer(nullptr);
+    return;
+  }
+  ID.AddInteger(A->getKind());
+  A->Profile(ID, Ctx);
+}
+
+template <>
+inline void profileAttrArg<Expr *>(llvm::FoldingSetNodeID &ID,
+                                   const ASTContext &Ctx, Expr *E) {
+  E->Profile(ID, Ctx, /*Canonical=*/true);
+}
+
+template <>
+inline void profileAttrArg<QualType>(llvm::FoldingSetNodeID &ID,
+                                     const ASTContext &, QualType T) {
+  ID.AddPointer(T.getCanonicalType().getAsOpaquePtr());
+}
+
+void profileAlignedAttr(const AlignedAttr &A, llvm::FoldingSetNodeID &ID,
+                        const ASTContext &Ctx) {
+  ID.AddInteger(A.getSpellingListIndex());
+  ID.AddBoolean(A.isAlignmentExpr());
+  if (A.isAlignmentExpr())
+    profileAttrArg(ID, Ctx, A.getAlignmentExpr());
+  else
+    profileAttrArg(ID, Ctx, A.getAlignmentType()->getType());
+}
+} // namespace
 
 #include "clang/AST/AttrImpl.inc"

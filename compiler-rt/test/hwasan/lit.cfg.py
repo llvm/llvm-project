@@ -2,6 +2,9 @@
 
 import os
 
+from lit.llvm import llvm_config
+from lit.llvm.subst import ToolSubst, FindTool
+
 # Setup config name.
 config.name = "HWAddressSanitizer" + getattr(config, "name_suffix", "default")
 
@@ -74,8 +77,14 @@ config.substitutions.append(
     ("%env_hwasan_opts=", "env HWASAN_OPTIONS=" + default_hwasan_opts_str)
 )
 
+# Ensure that we can use hwasan_symbolize from the expected location
+llvm_config.add_tool_substitutions(
+    [ToolSubst("hwasan_symbolize", unresolved="fatal")],
+    search_dirs=[config.compiler_rt_bindir],
+)
+
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-if config.host_os not in ["Linux", "Android"] or not config.has_lld:
+if config.target_os not in ["Linux", "Android"] or not config.has_lld:
     config.unsupported = True

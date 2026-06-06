@@ -51,21 +51,10 @@ def SPIRV_ControlBarrierOp : SPIRV_Op<"ControlBarrier", []> {
     OpControlBarrier will be visible to any other invocation after return
     from that OpControlBarrier.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
-
-    memory-semantics ::= `"None"` | `"Acquire"` | "Release"` | ...
-
-    control-barrier-op ::= `spirv.ControlBarrier` scope, scope, memory-semantics
-    ```
-
     #### Example:
 
     ```mlir
-    spirv.ControlBarrier "Workgroup", "Device", "Acquire|UniformMemory"
-
+    spirv.ControlBarrier <Workgroup>, <Device>, <Acquire|UniformMemory>
     ```
   }];
 
@@ -102,21 +91,10 @@ def SPIRV_MemoryBarrierOp : SPIRV_Op<"MemoryBarrier", []> {
     To execute both a memory barrier and a control barrier, see
     OpControlBarrier.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
-
-    memory-semantics ::= `"None"` | `"Acquire"` | `"Release"` | ...
-
-    memory-barrier-op ::= `spirv.MemoryBarrier` scope, memory-semantics
-    ```
-
     #### Example:
 
     ```mlir
     spirv.MemoryBarrier "Device", "Acquire|UniformMemory"
-
     ```
   }];
 
@@ -128,6 +106,107 @@ def SPIRV_MemoryBarrierOp : SPIRV_Op<"MemoryBarrier", []> {
   let results = (outs);
 
   let assemblyFormat = "$memory_scope `,` $memory_semantics attr-dict";
+}
+
+// -----
+
+def SPIRV_NamedBarrierInitializeOp
+    : SPIRV_Op<"NamedBarrierInitialize", []> {
+  let summary = "Initialize a named barrier with a subgroup count.";
+
+  let description = [{
+    Declare a new named-barrier object.
+
+    Result Type must be the type OpTypeNamedBarrier.
+
+    Subgroup Count must be a 32-bit integer type scalar representing the
+    number of subgroups that must reach the current point of execution.
+
+    Capability: NamedBarrier
+
+    Missing before version 1.1.
+
+    #### Example:
+
+    ```mlir
+    %nb = spirv.NamedBarrierInitialize %subgroup_count : i32 -> !spirv.named_barrier
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_1>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_NamedBarrier]>
+  ];
+
+  let arguments = (ins
+    SPIRV_Int32:$subgroup_count
+  );
+
+  let results = (outs
+    SPIRV_AnyNamedBarrier:$result
+  );
+
+  let assemblyFormat = [{
+    $subgroup_count attr-dict `:` type($subgroup_count) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_MemoryNamedBarrierOp
+    : SPIRV_Op<"MemoryNamedBarrier", []> {
+  let summary = [{
+    Wait on a named barrier and apply a memory barrier.
+  }];
+
+  let description = [{
+    Wait for other invocations of this module to reach the current point
+    of execution.
+
+    Named Barrier must be the type OpTypeNamedBarrier.
+
+    If Semantics is not None, this instruction also serves as an
+    OpMemoryBarrier instruction, and also performs and adheres to the
+    description and semantics of an OpMemoryBarrier instruction with the
+    same Memory and Semantics operands. This allows atomically specifying
+    both a control barrier and a memory barrier (that is, without needing
+    two instructions). If Semantics is None, Memory is ignored.
+
+    Capability: NamedBarrier
+
+    Missing before version 1.1.
+
+    #### Example:
+
+    ```mlir
+    spirv.MemoryNamedBarrier %nb, <Workgroup>, <AcquireRelease|WorkgroupMemory>
+        : !spirv.named_barrier
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_1>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_NamedBarrier]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyNamedBarrier:$named_barrier,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$memory_semantics
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $named_barrier `,` $memory_scope `,` $memory_semantics attr-dict
+        `:` type($named_barrier)
+  }];
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_BARRIER_OPS

@@ -15,6 +15,7 @@
 #define LLVM_BITCODE_BITCODEWRITERPASS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
@@ -28,25 +29,18 @@ class raw_ostream;
 ///
 /// If \c ShouldPreserveUseListOrder, encode use-list order so it can be
 /// reproduced when deserialized.
-///
-/// If \c EmitSummaryIndex, emit the summary index (currently for use in ThinLTO
-/// optimization).
-///
-/// If \c EmitModuleHash, compute and emit the module hash in the bitcode
-/// (currently for use in ThinLTO incremental build).
-ModulePass *createBitcodeWriterPass(raw_ostream &Str,
-                                    bool ShouldPreserveUseListOrder = false,
-                                    bool EmitSummaryIndex = false,
-                                    bool EmitModuleHash = false);
+LLVM_ABI ModulePass *
+createBitcodeWriterPass(raw_ostream &Str,
+                        bool ShouldPreserveUseListOrder = false);
 
 /// Check whether a pass is a BitcodeWriterPass.
-bool isBitcodeWriterPass(Pass *P);
+LLVM_ABI bool isBitcodeWriterPass(Pass *P);
 
 /// Pass for writing a module of IR out to a bitcode file.
 ///
 /// Note that this is intended for use with the new pass manager. To construct
 /// a pass for the legacy pass manager, use the function above.
-class BitcodeWriterPass : public PassInfoMixin<BitcodeWriterPass> {
+class BitcodeWriterPass : public RequiredPassInfoMixin<BitcodeWriterPass> {
   raw_ostream &OS;
   bool ShouldPreserveUseListOrder;
   bool EmitSummaryIndex;
@@ -69,11 +63,8 @@ public:
 
   /// Run the bitcode writer pass, and output the module to the selected
   /// output stream.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
-
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
-
 }
 
 #endif

@@ -384,23 +384,19 @@ declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)
 define <8 x float> @knownbits_mask_concat_uitofp(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; X86-LABEL: knownbits_mask_concat_uitofp:
 ; X86:       # %bb.0:
-; X86-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3,1,3]
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [131071,131071,131071,131071]
-; X86-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,0,2]
-; X86-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; X86-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,0,2,5,7,5,7]
 ; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_concat_uitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3,1,3]
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [131071,131071,131071,131071]
-; X64-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,0,2]
-; X64-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; X64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,0,2,5,7,5,7]
 ; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X64-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 131071, i32 -1, i32 131071, i32 -1>

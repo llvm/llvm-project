@@ -227,7 +227,7 @@ f37:
         .cfi_endproc
 
 // CHECK:       Section {
-// CHECK:         Name: .eh_frame (20)
+// CHECK:         Name: .eh_frame
 // CHECK-NEXT:    Type: SHT_PROGBITS (0x1)
 // CHECK-NEXT:    Flags [ (0x2)
 // CHECK-NEXT:      SHF_ALLOC (0x2)
@@ -355,7 +355,7 @@ f37:
 // CHECK-NEXT:    )
 // CHECK-NEXT:  }
 // CHECK:       Section {
-// CHECK:         Name: .rela.eh_frame (15)
+// CHECK:         Name: .rela.eh_frame
 // CHECK-NEXT:    Type: SHT_RELA (0x4)
 // CHECK-NEXT:    Flags [ (0x40)
 // CHECK-NEXT:      SHF_INFO_LINK (0x40)
@@ -557,12 +557,14 @@ f37:
 // CHECK-NEXT:  }
 
 .ifdef ERR
-// ERR: [[#@LINE+1]]:15: error: expected .eh_frame or .debug_frame
+// ERR: [[#@LINE+1]]:15: error: expected .eh_frame, .debug_frame, or .sframe
 .cfi_sections $
 // ERR: [[#@LINE+1]]:28: error: expected comma
 .cfi_sections .debug_frame $
 // ERR: [[#@LINE+1]]:39: error: expected comma
 .cfi_sections .debug_frame, .eh_frame $
+// ERR: [[#@LINE+1]]:48: error: expected comma
+.cfi_sections .debug_frame, .eh_frame, .sframe $
 
 // ERR: [[#@LINE+1]]:16: error: unexpected token
 .cfi_startproc $

@@ -17,16 +17,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/FileSystemStatCache.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -39,11 +38,26 @@ using namespace clang;
 
 #define DEBUG_TYPE "file-search"
 
-ALWAYS_ENABLED_STATISTIC(NumDirLookups, "Number of directory lookups.");
-ALWAYS_ENABLED_STATISTIC(NumFileLookups, "Number of file lookups.");
-ALWAYS_ENABLED_STATISTIC(NumDirCacheMisses,
-                         "Number of directory cache misses.");
-ALWAYS_ENABLED_STATISTIC(NumFileCacheMisses, "Number of file cache misses.");
+static void normalizeCacheKey(StringRef &Path,
+                              std::optional<std::string> &Storage) {
+  using namespace llvm::sys::path;
+
+  // Drop trailing separators for non-root paths so that cache keys and `stat`
+  // queries use a single spelling. Keep root paths (`/`, `[A-Z]:\`) unchanged.
+  if (Path.size() > 1 && root_path(Path) != Path && is_separator(Path.back()))
+    Path = Path.drop_back();
+
+  // A bare drive path like "[A-Z]:" is drive-relative (current directory on the
+  // drive).  As `[A-Z]:` is not a path specification, we must canonicalise it
+  // to `[A-Z]:.`.
+  if (is_style_windows(Style::native)) {
+    if (Path.size() > 1 && Path.back() == ':' &&
+        Path.equals_insensitive(root_name(Path))) {
+      Storage = Path.str() + ".";
+      Path = *Storage;
+    }
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // Common logic.
@@ -61,31 +75,36 @@ FileManager::FileManager(const FileSystemOptions &FSO,
 
 FileManager::~FileManager() = default;
 
-void FileManager::setStatCache(std::unique_ptr<FileSystemStatCache> statCache) {
-  assert(statCache && "No stat cache provided?");
-  StatCache = std::move(statCache);
-}
-
-void FileManager::clearStatCache() { StatCache.reset(); }
-
-/// Retrieve the directory that the given file name resides in.
-/// Filename can point to either a real file or a virtual file.
-static llvm::Expected<DirectoryEntryRef>
-getDirectoryFromFile(FileManager &FileMgr, StringRef Filename,
-                     bool CacheFailure) {
+llvm::ErrorOr<DirectoryEntryRef>
+FileManager::getDirectoryFromFile(StringRef Filename, bool CacheFailure) {
   if (Filename.empty())
-    return llvm::errorCodeToError(
-        make_error_code(std::errc::no_such_file_or_directory));
+    return make_error_code(std::errc::no_such_file_or_directory);
 
   if (llvm::sys::path::is_separator(Filename[Filename.size() - 1]))
-    return llvm::errorCodeToError(make_error_code(std::errc::is_a_directory));
+    return make_error_code(std::errc::is_a_directory);
 
   StringRef DirName = llvm::sys::path::parent_path(Filename);
   // Use the current directory if file has no path component.
   if (DirName.empty())
     DirName = ".";
 
-  return FileMgr.getDirectoryRef(DirName, CacheFailure);
+  return getDirectoryRefImpl(DirName, CacheFailure);
+}
+
+DirectoryEntry *&FileManager::getRealDirEntry(const llvm::vfs::Status &Status) {
+  assert(Status.isDirectory() && "The directory should exist!");
+  // See if we have already opened a directory with the
+  // same inode (this occurs on Unix-like systems when one dir is
+  // symlinked to another, for example) or the same path (on
+  // Windows).
+  DirectoryEntry *&UDE = UniqueRealDirs[Status.getUniqueID()];
+
+  if (!UDE) {
+    // We don't have this directory yet, add it.  We use the string
+    // key from the SeenDirEntries map as the string.
+    UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
+  }
+  return UDE;
 }
 
 /// Add all ancestors of the given path (pointing to either a file or
@@ -94,6 +113,13 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   StringRef DirName = llvm::sys::path::parent_path(Path);
   if (DirName.empty())
     DirName = ".";
+
+  // Normalize the key for cache lookup/insert, but keep the original DirName
+  // for recursive processing since normalization can create paths that don't
+  // work well with parent_path() (e.g., "C:" -> "C:.").
+  std::optional<std::string> Storage;
+  StringRef OriginalDirName = DirName;
+  normalizeCacheKey(DirName, Storage);
 
   auto &NamedDirEnt = *SeenDirEntries.insert(
         {DirName, std::errc::no_such_file_or_directory}).first;
@@ -105,35 +131,30 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   if (NamedDirEnt.second)
     return;
 
-  // Add the virtual directory to the cache.
-  auto *UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
-  UDE->Name = NamedDirEnt.first();
-  NamedDirEnt.second = *UDE;
-  VirtualDirectoryEntries.push_back(UDE);
+  // Check to see if the directory exists.
+  llvm::vfs::Status Status;
+  auto statError =
+      getStatValue(DirName, Status, false, nullptr /*directory lookup*/);
+  if (statError) {
+    // There's no real directory at the given path.
+    // Add the virtual directory to the cache.
+    auto *UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
+    NamedDirEnt.second = *UDE;
+    VirtualDirectoryEntries.push_back(UDE);
+  } else {
+    // There is the real directory
+    DirectoryEntry *&UDE = getRealDirEntry(Status);
+    NamedDirEnt.second = *UDE;
+  }
 
   // Recursively add the other ancestors.
-  addAncestorsAsVirtualDirs(DirName);
+  addAncestorsAsVirtualDirs(OriginalDirName);
 }
 
-llvm::Expected<DirectoryEntryRef>
-FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
-  // stat doesn't like trailing separators except for root directory.
-  // At least, on Win32 MSVCRT, stat() cannot strip trailing '/'.
-  // (though it can strip '\\')
-  if (DirName.size() > 1 &&
-      DirName != llvm::sys::path::root_path(DirName) &&
-      llvm::sys::path::is_separator(DirName.back()))
-    DirName = DirName.substr(0, DirName.size()-1);
+llvm::ErrorOr<DirectoryEntryRef>
+FileManager::getDirectoryRefImpl(StringRef DirName, bool CacheFailure) {
   std::optional<std::string> DirNameStr;
-  if (is_style_windows(llvm::sys::path::Style::native)) {
-    // Fixing a problem with "clang C:test.c" on Windows.
-    // Stat("C:") does not recognize "C:" as a valid directory
-    if (DirName.size() > 1 && DirName.back() == ':' &&
-        DirName.equals_insensitive(llvm::sys::path::root_name(DirName))) {
-      DirNameStr = DirName.str() + '.';
-      DirName = *DirNameStr;
-    }
-  }
+  normalizeCacheKey(DirName, DirNameStr);
 
   ++NumDirLookups;
 
@@ -144,7 +165,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   if (!SeenDirInsertResult.second) {
     if (SeenDirInsertResult.first->second)
       return DirectoryEntryRef(*SeenDirInsertResult.first);
-    return llvm::errorCodeToError(SeenDirInsertResult.first->second.getError());
+    return SeenDirInsertResult.first->second.getError();
   }
 
   // We've not seen this before. Fill it in.
@@ -166,44 +187,20 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
       NamedDirEnt.second = statError;
     else
       SeenDirEntries.erase(DirName);
-    return llvm::errorCodeToError(statError);
+    return statError;
   }
 
-  // It exists.  See if we have already opened a directory with the
-  // same inode (this occurs on Unix-like systems when one dir is
-  // symlinked to another, for example) or the same path (on
-  // Windows).
-  DirectoryEntry *&UDE = UniqueRealDirs[Status.getUniqueID()];
-
-  if (!UDE) {
-    // We don't have this directory yet, add it.  We use the string
-    // key from the SeenDirEntries map as the string.
-    UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
-    UDE->Name = InterndDirName;
-  }
+  // It exists.
+  DirectoryEntry *&UDE = getRealDirEntry(Status);
   NamedDirEnt.second = *UDE;
 
   return DirectoryEntryRef(NamedDirEnt);
 }
 
-llvm::ErrorOr<const DirectoryEntry *>
-FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
-  auto Result = getDirectoryRef(DirName, CacheFailure);
-  if (Result)
-    return &Result->getDirEntry();
-  return llvm::errorToErrorCode(Result.takeError());
-}
-
-llvm::ErrorOr<const FileEntry *>
-FileManager::getFile(StringRef Filename, bool openFile, bool CacheFailure) {
-  auto Result = getFileRef(Filename, openFile, CacheFailure);
-  if (Result)
-    return &Result->getFileEntry();
-  return llvm::errorToErrorCode(Result.takeError());
-}
-
-llvm::Expected<FileEntryRef>
-FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
+llvm::ErrorOr<FileEntryRef> FileManager::getFileRefImpl(StringRef Filename,
+                                                        bool openFile,
+                                                        bool CacheFailure,
+                                                        bool IsText) {
   ++NumFileLookups;
 
   // See if there is already an entry in the map.
@@ -211,8 +208,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
       SeenFileEntries.insert({Filename, std::errc::no_such_file_or_directory});
   if (!SeenFileInsertResult.second) {
     if (!SeenFileInsertResult.first->second)
-      return llvm::errorCodeToError(
-          SeenFileInsertResult.first->second.getError());
+      return SeenFileInsertResult.first->second.getError();
     return FileEntryRef(*SeenFileInsertResult.first);
   }
 
@@ -230,15 +226,15 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   // subdirectory.  This will let us avoid having to waste time on known-to-fail
   // searches when we go to find sys/bar.h, because all the search directories
   // without a 'sys' subdir will get a cached failure result.
-  auto DirInfoOrErr = getDirectoryFromFile(*this, Filename, CacheFailure);
+  auto DirInfoOrErr = getDirectoryFromFile(Filename, CacheFailure);
   if (!DirInfoOrErr) { // Directory doesn't exist, file can't exist.
-    std::error_code Err = errorToErrorCode(DirInfoOrErr.takeError());
+    std::error_code Err = DirInfoOrErr.getError();
     if (CacheFailure)
       NamedFileEnt->second = Err;
     else
       SeenFileEntries.erase(Filename);
 
-    return llvm::errorCodeToError(Err);
+    return Err;
   }
   DirectoryEntryRef DirInfo = *DirInfoOrErr;
 
@@ -249,7 +245,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   std::unique_ptr<llvm::vfs::File> F;
   llvm::vfs::Status Status;
   auto statError = getStatValue(InterndFileName, Status, true,
-                                openFile ? &F : nullptr);
+                                openFile ? &F : nullptr, IsText);
   if (statError) {
     // There's no real file at the given path.
     if (CacheFailure)
@@ -257,7 +253,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     else
       SeenFileEntries.erase(Filename);
 
-    return llvm::errorCodeToError(statError);
+    return statError;
   }
 
   assert((openFile || !F) && "undesired open file");
@@ -312,9 +308,9 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
         *SeenFileEntries
              .insert({Status.getName(), FileEntryRef::MapValue(*UFE, DirInfo)})
              .first;
-    assert(Redirection.second->V.is<FileEntry *>() &&
+    assert(isa<FileEntry *>(Redirection.second->V) &&
            "filename redirected to a non-canonical filename?");
-    assert(Redirection.second->V.get<FileEntry *>() == UFE &&
+    assert(cast<FileEntry *>(Redirection.second->V) == UFE &&
            "filename from getStatValue() refers to wrong file");
 
     // Cache the redirection in the previously-inserted entry, still available
@@ -324,38 +320,18 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
 
   FileEntryRef ReturnedRef(*NamedFileEnt);
   if (ReusingEntry) { // Already have an entry with this inode, return it.
-
-    // FIXME: This hack ensures that `getDir()` will use the path that was
-    // used to lookup this file, even if we found a file by different path
-    // first. This is required in order to find a module's structure when its
-    // headers/module map are mapped in the VFS.
-    //
-    // See above for how this will eventually be removed. `IsVFSMapped`
-    // *cannot* be narrowed to `ExposesExternalVFSPath` as crash reproducers
-    // also depend on this logic and they have `use-external-paths: false`.
-    if (&DirInfo.getDirEntry() != UFE->Dir && Status.IsVFSMapped)
-      UFE->Dir = &DirInfo.getDirEntry();
-
-    // Always update LastRef to the last name by which a file was accessed.
-    // FIXME: Neither this nor always using the first reference is correct; we
-    // want to switch towards a design where we return a FileName object that
-    // encapsulates both the name by which the file was accessed and the
-    // corresponding FileEntry.
-    // FIXME: LastRef should be removed from FileEntry once all clients adopt
-    // FileEntryRef.
-    UFE->LastRef = ReturnedRef;
-
     return ReturnedRef;
   }
 
   // Otherwise, we don't have this file yet, add it.
-  UFE->LastRef = ReturnedRef;
   UFE->Size = Status.getSize();
   UFE->ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
   UFE->Dir = &DirInfo.getDirEntry();
   UFE->UID = NextFileUID++;
   UFE->UniqueID = Status.getUniqueID();
   UFE->IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
+  UFE->IsDeviceFile =
+      Status.getType() == llvm::sys::fs::file_type::character_file;
   UFE->File = std::move(F);
 
   if (UFE->File) {
@@ -373,12 +349,15 @@ llvm::Expected<FileEntryRef> FileManager::getSTDIN() {
   if (STDIN)
     return *STDIN;
 
-  std::unique_ptr<llvm::MemoryBuffer> Content;
-  if (auto ContentOrError = llvm::MemoryBuffer::getSTDIN())
-    Content = std::move(*ContentOrError);
-  else
-    return llvm::errorCodeToError(ContentOrError.getError());
+  auto ContentOrError = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::MemoryBuffer::getSTDIN();
+  }();
 
+  if (!ContentOrError)
+    return llvm::createFileError("-", ContentOrError.getError());
+
+  auto Content = std::move(*ContentOrError);
   STDIN = getVirtualFileRef(Content->getBufferIdentifier(),
                             Content->getBufferSize(), 0);
   FileEntry &FE = const_cast<FileEntry &>(STDIN->getFileEntry());
@@ -387,9 +366,11 @@ llvm::Expected<FileEntryRef> FileManager::getSTDIN() {
   return *STDIN;
 }
 
-const FileEntry *FileManager::getVirtualFile(StringRef Filename, off_t Size,
-                                             time_t ModificationTime) {
-  return &getVirtualFileRef(Filename, Size, ModificationTime).getFileEntry();
+void FileManager::trackVFSUsage(bool Active) {
+  FS->visit([Active](llvm::vfs::FileSystem &FileSys) {
+    if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FileSys))
+      RFS->setUsageTrackingActive(Active);
+  });
 }
 
 FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
@@ -401,9 +382,9 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
       {Filename, std::errc::no_such_file_or_directory}).first;
   if (NamedFileEnt.second) {
     FileEntryRef::MapValue Value = *NamedFileEnt.second;
-    if (LLVM_LIKELY(Value.V.is<FileEntry *>()))
+    if (LLVM_LIKELY(isa<FileEntry *>(Value.V)))
       return FileEntryRef(NamedFileEnt);
-    return FileEntryRef(*Value.V.get<const FileEntryRef::MapEntry *>());
+    return FileEntryRef(*cast<const FileEntryRef::MapEntry *>(Value.V));
   }
 
   // We've not seen this before, or the file is cached as non-existent.
@@ -417,8 +398,8 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   // from a source location preprocessor directive with an empty filename as
   // an example, so we need to pretend it has a name to ensure a valid directory
   // entry can be returned.
-  auto DirInfo = expectedToOptional(getDirectoryFromFile(
-      *this, Filename.empty() ? "." : Filename, /*CacheFailure=*/true));
+  auto DirInfo = getDirectoryFromFile(Filename.empty() ? "." : Filename,
+                                      /*CacheFailure=*/true);
   assert(DirInfo &&
          "The directory of a virtual file should already be in the cache.");
 
@@ -461,7 +442,6 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   }
 
   NamedFileEnt.second = FileEntryRef::MapValue(*UFE, *DirInfo);
-  UFE->LastRef = FileEntryRef(NamedFileEnt);
   UFE->Size    = Size;
   UFE->ModTime = ModificationTime;
   UFE->Dir     = &DirInfo->getDirEntry();
@@ -490,7 +470,6 @@ OptionalFileEntryRef FileManager::getBypassFile(FileEntryRef VF) {
   FileEntry *BFE = new (FilesAlloc.Allocate()) FileEntry();
   BypassFileEntries.push_back(BFE);
   Insertion.first->second = FileEntryRef::MapValue(*BFE, VF.getDir());
-  BFE->LastRef = FileEntryRef(*Insertion.first);
   BFE->Size = Status.getSize();
   BFE->Dir = VF.getFileEntry().Dir;
   BFE->ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
@@ -500,8 +479,9 @@ OptionalFileEntryRef FileManager::getBypassFile(FileEntryRef VF) {
   return FileEntryRef(*Insertion.first);
 }
 
-bool FileManager::FixupRelativePath(SmallVectorImpl<char> &path) const {
-  StringRef pathRef(path.data(), path.size());
+bool FileManager::fixupRelativePath(const FileSystemOptions &FileSystemOpts,
+                                    SmallVectorImpl<char> &Path) {
+  StringRef pathRef(Path.data(), Path.size());
 
   if (FileSystemOpts.WorkingDir.empty()
       || llvm::sys::path::is_absolute(pathRef))
@@ -509,17 +489,21 @@ bool FileManager::FixupRelativePath(SmallVectorImpl<char> &path) const {
 
   SmallString<128> NewPath(FileSystemOpts.WorkingDir);
   llvm::sys::path::append(NewPath, pathRef);
-  path = NewPath;
+  Path = std::move(NewPath);
   return true;
 }
 
-bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path) const {
+bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path,
+                                   bool Canonicalize) const {
   bool Changed = FixupRelativePath(Path);
 
   if (!llvm::sys::path::is_absolute(StringRef(Path.data(), Path.size()))) {
     FS->makeAbsolute(Path);
     Changed = true;
   }
+
+  if (Canonicalize)
+    Changed |= llvm::sys::path::remove_dots(Path);
 
   return Changed;
 }
@@ -532,18 +516,23 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
   // misleading. We need to clean up the interface here.
   makeAbsolutePath(AbsPath);
   llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
-  UFE->RealPathName = std::string(AbsPath.str());
+  UFE->RealPathName = std::string(AbsPath);
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
-                              bool RequiresNullTerminator) {
+                              bool RequiresNullTerminator,
+                              std::optional<int64_t> MaybeLimit, bool IsText) {
   const FileEntry *Entry = &FE.getFileEntry();
   // If the content is living on the file entry, return a reference to it.
   if (Entry->Content)
     return llvm::MemoryBuffer::getMemBuffer(Entry->Content->getMemBufferRef());
 
   uint64_t FileSize = Entry->getSize();
+
+  if (MaybeLimit)
+    FileSize = *MaybeLimit;
+
   // If there's a high enough chance that the file have changed since we
   // got its size, force a stat before opening it.
   if (isVolatile || Entry->isNamedPipe())
@@ -560,73 +549,97 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
 
   // Otherwise, open the file.
   return getBufferForFileImpl(Filename, FileSize, isVolatile,
-                              RequiresNullTerminator);
+                              RequiresNullTerminator, IsText);
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
-                                  bool isVolatile,
-                                  bool RequiresNullTerminator) {
+                                  bool isVolatile, bool RequiresNullTerminator,
+                                  bool IsText) const {
   if (FileSystemOpts.WorkingDir.empty())
     return FS->getBufferForFile(Filename, FileSize, RequiresNullTerminator,
-                                isVolatile);
+                                isVolatile, IsText);
 
   SmallString<128> FilePath(Filename);
   FixupRelativePath(FilePath);
   return FS->getBufferForFile(FilePath, FileSize, RequiresNullTerminator,
-                              isVolatile);
+                              isVolatile, IsText);
 }
 
-/// getStatValue - Get the 'stat' information for the specified path,
-/// using the cache to accelerate it if possible.  This returns true
-/// if the path points to a virtual file or does not exist, or returns
-/// false if it's an existent real file.  If FileDescriptor is NULL,
-/// do directory look-up instead of file look-up.
-std::error_code
-FileManager::getStatValue(StringRef Path, llvm::vfs::Status &Status,
-                          bool isFile, std::unique_ptr<llvm::vfs::File> *F) {
+std::error_code FileManager::getStatValue(StringRef Path,
+                                          llvm::vfs::Status &Status,
+                                          bool isFile,
+                                          std::unique_ptr<llvm::vfs::File> *F,
+                                          bool IsText) {
+  SmallString<128> FilePath;
+
   // FIXME: FileSystemOpts shouldn't be passed in here, all paths should be
   // absolute!
-  if (FileSystemOpts.WorkingDir.empty())
-    return FileSystemStatCache::get(Path, Status, isFile, F,
-                                    StatCache.get(), *FS);
-
-  SmallString<128> FilePath(Path);
-  FixupRelativePath(FilePath);
-
-  return FileSystemStatCache::get(FilePath.c_str(), Status, isFile, F,
-                                  StatCache.get(), *FS);
-}
-
-std::error_code
-FileManager::getNoncachedStatValue(StringRef Path,
-                                   llvm::vfs::Status &Result) {
-  SmallString<128> FilePath(Path);
-  FixupRelativePath(FilePath);
-
-  llvm::ErrorOr<llvm::vfs::Status> S = FS->status(FilePath.c_str());
-  if (!S)
-    return S.getError();
-  Result = *S;
-  return std::error_code();
-}
-
-void FileManager::GetUniqueIDMapping(
-    SmallVectorImpl<OptionalFileEntryRef> &UIDToFiles) const {
-  UIDToFiles.clear();
-  UIDToFiles.resize(NextFileUID);
-
-  for (const auto &Entry : SeenFileEntries) {
-    // Only return files that exist and are not redirected.
-    if (!Entry.getValue() || !Entry.getValue()->V.is<FileEntry *>())
-      continue;
-    FileEntryRef FE(Entry);
-    // Add this file if it's the first one with the UID, or if its name is
-    // better than the existing one.
-    OptionalFileEntryRef &ExistingFE = UIDToFiles[FE.getUID()];
-    if (!ExistingFE || FE.getName() < ExistingFE->getName())
-      ExistingFE = FE;
+  if (!FileSystemOpts.WorkingDir.empty()) {
+    FilePath = Path;
+    FixupRelativePath(FilePath);
+    Path = FilePath;
   }
+
+  bool isForDir = !isFile;
+  std::error_code RetCode;
+
+  if (isForDir || !F) {
+    // If this is a directory or a file descriptor is not needed, just go to the
+    // file system.
+    llvm::ErrorOr<llvm::vfs::Status> StatusOrErr = FS->status(Path);
+    if (!StatusOrErr) {
+      RetCode = StatusOrErr.getError();
+    } else {
+      Status = *StatusOrErr;
+    }
+  } else {
+    // We can always just use 'stat' here, but (for files) the client is asking
+    // whether the file exists because it wants to turn around and *open* it.
+    // It is more efficient to do "open+fstat" on success than it is to do
+    // "stat+open".
+    //
+    // Because of this, check to see if the file exists with 'open'.  If the
+    // open succeeds, use fstat to get the stat info.
+    auto OwnedFile =
+        IsText ? FS->openFileForRead(Path) : FS->openFileForReadBinary(Path);
+
+    if (!OwnedFile) {
+      // If the open fails, our "stat" fails.
+      RetCode = OwnedFile.getError();
+    } else {
+      // Otherwise, the open succeeded.  Do an fstat to get the information
+      // about the file.  We'll end up returning the open file descriptor to the
+      // client to do what they please with it.
+      llvm::ErrorOr<llvm::vfs::Status> StatusOrErr = (*OwnedFile)->status();
+      if (StatusOrErr) {
+        Status = *StatusOrErr;
+        *F = std::move(*OwnedFile);
+      } else {
+        // fstat rarely fails.  If it does, claim the initial open didn't
+        // succeed.
+        *F = nullptr;
+        RetCode = StatusOrErr.getError();
+      }
+    }
+  }
+
+  // If the path doesn't exist, return failure.
+  if (RetCode)
+    return RetCode;
+
+  // If the path exists, make sure that its "directoryness" matches the clients
+  // demands.
+  if (Status.isDirectory() != isForDir) {
+    // If not, close the file if opened.
+    if (F)
+      *F = nullptr;
+    return std::make_error_code(Status.isDirectory()
+                                    ? std::errc::is_a_directory
+                                    : std::errc::not_a_directory);
+  }
+
+  return std::error_code();
 }
 
 StringRef FileManager::getCanonicalName(DirectoryEntryRef Dir) {
@@ -675,6 +688,14 @@ StringRef FileManager::getCanonicalName(const void *Entry, StringRef Name) {
   return CanonicalName;
 }
 
+void FileManager::AddStats(const FileManager &Other) {
+  assert(&Other != this && "Collecting stats into the same FileManager");
+  NumDirLookups += Other.NumDirLookups;
+  NumFileLookups += Other.NumFileLookups;
+  NumDirCacheMisses += Other.NumDirCacheMisses;
+  NumFileCacheMisses += Other.NumFileCacheMisses;
+}
+
 void FileManager::PrintStats() const {
   llvm::errs() << "\n*** File Manager Stats:\n";
   llvm::errs() << UniqueRealFiles.size() << " real files found, "
@@ -685,6 +706,17 @@ void FileManager::PrintStats() const {
                << NumDirCacheMisses << " dir cache misses.\n";
   llvm::errs() << NumFileLookups << " file lookups, "
                << NumFileCacheMisses << " file cache misses.\n";
+
+  getVirtualFileSystem().visit([](llvm::vfs::FileSystem &VFS) {
+    if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS))
+      llvm::errs() << "\n*** Virtual File System Stats:\n"
+                   << T->NumStatusCalls << " status() calls\n"
+                   << T->NumOpenFileForReadCalls << " openFileForRead() calls\n"
+                   << T->NumDirBeginCalls << " dir_begin() calls\n"
+                   << T->NumGetRealPathCalls << " getRealPath() calls\n"
+                   << T->NumExistsCalls << " exists() calls\n"
+                   << T->NumIsLocalCalls << " isLocal() calls\n";
+  });
 
   //llvm::errs() << PagesMapped << BytesOfPagesMapped << FSLookups;
 }

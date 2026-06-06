@@ -149,14 +149,16 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68
-// CHECK1-SAME: () #[[ATTR2:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK1-NEXT:  entry:
+// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3:[0-9]+]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined)
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -231,7 +233,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -295,18 +297,18 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP8]]
 // CHECK1-NEXT:    store double 1.000000e+00, ptr [[G]], align 8, !llvm.access.group [[ACC_GRP8]]
-// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[_TMP3]], align 8, !llvm.access.group [[ACC_GRP8]]
+// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[_TMP3]], align 8, !nonnull [[META9:![0-9]+]], !align [[META10:![0-9]+]], !llvm.access.group [[ACC_GRP8]]
 // CHECK1-NEXT:    store volatile double 1.000000e+00, ptr [[TMP10]], align 8, !llvm.access.group [[ACC_GRP8]]
 // CHECK1-NEXT:    store i32 3, ptr [[SVAR]], align 4, !llvm.access.group [[ACC_GRP8]]
 // CHECK1-NEXT:    store float 4.000000e+00, ptr [[SFVAR]], align 4, !llvm.access.group [[ACC_GRP8]]
-// CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[G]], ptr [[TMP11]], align 8, !llvm.access.group [[ACC_GRP8]]
-// CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 1
-// CHECK1-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[_TMP3]], align 8, !llvm.access.group [[ACC_GRP8]]
+// CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[_TMP3]], align 8, !nonnull [[META9]], !align [[META10]], !llvm.access.group [[ACC_GRP8]]
 // CHECK1-NEXT:    store ptr [[TMP13]], ptr [[TMP12]], align 8, !llvm.access.group [[ACC_GRP8]]
-// CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
 // CHECK1-NEXT:    store ptr [[SVAR]], ptr [[TMP14]], align 8, !llvm.access.group [[ACC_GRP8]]
-// CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 3
+// CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 3
 // CHECK1-NEXT:    store ptr [[SFVAR]], ptr [[TMP15]], align 8, !llvm.access.group [[ACC_GRP8]]
 // CHECK1-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(ptr noundef nonnull align 8 dereferenceable(32) [[REF_TMP]]), !llvm.access.group [[ACC_GRP8]]
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -316,11 +318,11 @@ int main() {
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP8]]
 // CHECK1-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP16]], 1
 // CHECK1-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP8]]
-// CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
+// CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
 // CHECK1-NEXT:    br i1 [[TMP18]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -328,13 +330,6 @@ int main() {
 // CHECK1-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK1-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK1:       .omp.final.done:
-// CHECK1-NEXT:    ret void
-//
-//
-// CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -352,14 +347,16 @@ int main() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68
-// CHECK3-SAME: () #[[ATTR2:[0-9]+]] {
+// CHECK3-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK3-NEXT:  entry:
+// CHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
+// CHECK3-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3:[0-9]+]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined)
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -432,7 +429,7 @@ int main() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -494,18 +491,18 @@ int main() {
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP9]]
 // CHECK3-NEXT:    store double 1.000000e+00, ptr [[G]], align 8, !llvm.access.group [[ACC_GRP9]]
-// CHECK3-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[_TMP2]], align 4, !llvm.access.group [[ACC_GRP9]]
+// CHECK3-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[_TMP2]], align 4, !nonnull [[META10:![0-9]+]], !align [[META11:![0-9]+]], !llvm.access.group [[ACC_GRP9]]
 // CHECK3-NEXT:    store volatile double 1.000000e+00, ptr [[TMP10]], align 4, !llvm.access.group [[ACC_GRP9]]
 // CHECK3-NEXT:    store i32 3, ptr [[SVAR]], align 4, !llvm.access.group [[ACC_GRP9]]
 // CHECK3-NEXT:    store float 4.000000e+00, ptr [[SFVAR]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK3-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr [[G]], ptr [[TMP11]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 1
-// CHECK3-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[_TMP2]], align 4, !llvm.access.group [[ACC_GRP9]]
+// CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK3-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[_TMP2]], align 4, !nonnull [[META10]], !align [[META11]], !llvm.access.group [[ACC_GRP9]]
 // CHECK3-NEXT:    store ptr [[TMP13]], ptr [[TMP12]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK3-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
+// CHECK3-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
 // CHECK3-NEXT:    store ptr [[SVAR]], ptr [[TMP14]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 3
+// CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 3
 // CHECK3-NEXT:    store ptr [[SFVAR]], ptr [[TMP15]], align 4, !llvm.access.group [[ACC_GRP9]]
 // CHECK3-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(ptr noundef nonnull align 4 dereferenceable(16) [[REF_TMP]]), !llvm.access.group [[ACC_GRP9]]
 // CHECK3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -515,11 +512,11 @@ int main() {
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP9]]
 // CHECK3-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP16]], 1
 // CHECK3-NEXT:    store i32 [[ADD4]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK3-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
+// CHECK3-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP12:![0-9]+]]
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK3-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK3-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
 // CHECK3-NEXT:    br i1 [[TMP18]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -527,13 +524,6 @@ int main() {
 // CHECK3-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK3-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK3:       .omp.final.done:
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK3-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK3-NEXT:    ret void
 //
 //
@@ -572,8 +562,11 @@ int main() {
 // CHECK9-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S:%.*]], align 4
 // CHECK9-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S], align 4
+// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S]]], align 4
 // CHECK9-NEXT:    [[VAR:%.*]] = alloca ptr, align 8
+// CHECK9-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
+// CHECK9-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
+// CHECK9-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -582,60 +575,67 @@ int main() {
 // CHECK9-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK9-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i1 false)
-// CHECK9-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 0
-// CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float noundef 1.000000e+00)
-// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], float noundef 1.000000e+00)
+// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i64 1
 // CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK9-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 8
-// CHECK9-NEXT:    store ptr undef, ptr [[_TMP1]], align 8
-// CHECK9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 2, ptr [[TMP0]], align 4
-// CHECK9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// CHECK9-NEXT:    store i32 0, ptr [[TMP1]], align 4
-// CHECK9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CHECK9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK9-NEXT:    store ptr null, ptr [[TMP0]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK9-NEXT:    store ptr null, ptr [[TMP1]], align 8
+// CHECK9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
 // CHECK9-NEXT:    store ptr null, ptr [[TMP2]], align 8
-// CHECK9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// CHECK9-NEXT:    store ptr null, ptr [[TMP3]], align 8
-// CHECK9-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// CHECK9-NEXT:    store ptr null, ptr [[TMP4]], align 8
-// CHECK9-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// CHECK9-NEXT:    store ptr null, ptr [[TMP5]], align 8
-// CHECK9-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// CHECK9-NEXT:    store ptr null, ptr [[TMP6]], align 8
-// CHECK9-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// CHECK9-NEXT:    store ptr null, ptr [[TMP7]], align 8
-// CHECK9-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// CHECK9-NEXT:    store i64 2, ptr [[TMP8]], align 8
-// CHECK9-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// CHECK9-NEXT:    store i64 0, ptr [[TMP9]], align 8
-// CHECK9-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP10]], align 4
-// CHECK9-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP11]], align 4
-// CHECK9-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// CHECK9-NEXT:    store i32 0, ptr [[TMP12]], align 4
-// CHECK9-NEXT:    [[TMP13:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.region_id, ptr [[KERNEL_ARGS]])
-// CHECK9-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
-// CHECK9-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK9-NEXT:    store ptr undef, ptr [[_TMP1]], align 8
+// CHECK9-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// CHECK9-NEXT:    store i32 4, ptr [[TMP5]], align 4
+// CHECK9-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// CHECK9-NEXT:    store i32 1, ptr [[TMP6]], align 4
+// CHECK9-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CHECK9-NEXT:    store ptr [[TMP3]], ptr [[TMP7]], align 8
+// CHECK9-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// CHECK9-NEXT:    store ptr [[TMP4]], ptr [[TMP8]], align 8
+// CHECK9-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// CHECK9-NEXT:    store ptr @.offload_sizes, ptr [[TMP9]], align 8
+// CHECK9-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// CHECK9-NEXT:    store ptr @.offload_maptypes, ptr [[TMP10]], align 8
+// CHECK9-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// CHECK9-NEXT:    store ptr null, ptr [[TMP11]], align 8
+// CHECK9-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// CHECK9-NEXT:    store ptr null, ptr [[TMP12]], align 8
+// CHECK9-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK9-NEXT:    store i64 2, ptr [[TMP13]], align 8
+// CHECK9-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// CHECK9-NEXT:    store i64 0, ptr [[TMP14]], align 8
+// CHECK9-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP15]], align 4
+// CHECK9-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
+// CHECK9-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// CHECK9-NEXT:    store i32 0, ptr [[TMP17]], align 4
+// CHECK9-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.region_id, ptr [[KERNEL_ARGS]])
+// CHECK9-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
+// CHECK9-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK9:       omp_offload.failed:
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95() #[[ATTR5:[0-9]+]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95(ptr null) #[[ATTR4:[0-9]+]]
 // CHECK9-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK9:       omp_offload.cont:
 // CHECK9-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z5tmainIiET_v()
 // CHECK9-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
-// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
-// CHECK9-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i64 2
+// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK9:       arraydestroy.body:
-// CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP15]], [[OMP_OFFLOAD_CONT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP20]], [[OMP_OFFLOAD_CONT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN]]
 // CHECK9-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE2:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK9:       arraydestroy.done2:
-// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR5]]
-// CHECK9-NEXT:    [[TMP16:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK9-NEXT:    ret i32 [[TMP16]]
+// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[TEST]]) #[[ATTR4]]
+// CHECK9-NEXT:    [[TMP21:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK9-NEXT:    ret i32 [[TMP21]]
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIfEC1Ev
@@ -662,14 +662,16 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95
-// CHECK9-SAME: () #[[ATTR3:[0-9]+]] {
+// CHECK9-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK9-NEXT:  entry:
+// CHECK9-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK9-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined)
 // CHECK9-NEXT:    ret void
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -682,8 +684,8 @@ int main() {
 // CHECK9-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S], align 4
-// CHECK9-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S:%.*]], align 4
+// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S:%.*]]], align 4
+// CHECK9-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK9-NEXT:    [[_TMP2:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[SVAR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -694,7 +696,7 @@ int main() {
 // CHECK9-NEXT:    store i32 1, ptr [[DOTOMP_COMB_UB]], align 4
 // CHECK9-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK9:       arrayctor.loop:
@@ -724,25 +726,25 @@ int main() {
 // CHECK9-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK9:       omp.inner.for.cond:
-// CHECK9-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP5:![0-9]+]]
-// CHECK9-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP5]]
+// CHECK9-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6:![0-9]+]]
+// CHECK9-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK9-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK9-NEXT:    br i1 [[CMP3]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK9:       omp.inner.for.cond.cleanup:
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK9:       omp.inner.for.body:
-// CHECK9-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4, !llvm.access.group [[ACC_GRP5]]
+// CHECK9-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK9-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
-// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP5]]
+// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK9-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined.omp_outlined, i64 [[TMP8]], i64 [[TMP10]]), !llvm.access.group [[ACC_GRP5]]
+// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined.omp_outlined, i64 [[TMP8]], i64 [[TMP10]]), !llvm.access.group [[ACC_GRP6]]
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK9:       omp.inner.for.inc:
-// CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP5]]
-// CHECK9-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP5]]
+// CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK9-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
-// CHECK9-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP5]]
-// CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
+// CHECK9-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
@@ -756,14 +758,14 @@ int main() {
 // CHECK9-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK9-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK9:       .omp.final.done:
-// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5]]
-// CHECK9-NEXT:    [[ARRAY_BEGIN4:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR]]) #[[ATTR4]]
+// CHECK9-NEXT:    [[ARRAY_BEGIN4:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN4]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK9:       arraydestroy.body:
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP17]], [[DOTOMP_FINAL_DONE]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN4]]
 // CHECK9-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE5:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK9:       arraydestroy.done5:
@@ -771,7 +773,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -786,8 +788,8 @@ int main() {
 // CHECK9-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S], align 4
-// CHECK9-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S:%.*]], align 4
+// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S:%.*]]], align 4
+// CHECK9-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK9-NEXT:    [[_TMP3:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[SVAR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -806,7 +808,7 @@ int main() {
 // CHECK9-NEXT:    store i32 [[CONV2]], ptr [[DOTOMP_UB]], align 4
 // CHECK9-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK9:       arrayctor.loop:
@@ -836,41 +838,41 @@ int main() {
 // CHECK9-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK9:       omp.inner.for.cond:
-// CHECK9-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP9:![0-9]+]]
-// CHECK9-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP9]]
+// CHECK9-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP10:![0-9]+]]
+// CHECK9-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP10]]
 // CHECK9-NEXT:    [[CMP4:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
 // CHECK9-NEXT:    br i1 [[CMP4]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK9:       omp.inner.for.cond.cleanup:
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK9:       omp.inner.for.body:
-// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP9]]
+// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP10]]
 // CHECK9-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK9-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK9-NEXT:    [[TMP10:%.*]] = load i32, ptr [[T_VAR]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP9]]
+// CHECK9-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP10]]
+// CHECK9-NEXT:    [[TMP10:%.*]] = load i32, ptr [[T_VAR]], align 4, !llvm.access.group [[ACC_GRP10]]
+// CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP10]]
 // CHECK9-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP11]] to i64
 // CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC]], i64 0, i64 [[IDXPROM]]
-// CHECK9-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK9-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP3]], align 8, !llvm.access.group [[ACC_GRP9]]
-// CHECK9-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP9]]
+// CHECK9-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP10]]
+// CHECK9-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP3]], align 8, !nonnull [[META11:![0-9]+]], !align [[META12:![0-9]+]], !llvm.access.group [[ACC_GRP10]]
+// CHECK9-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP10]]
 // CHECK9-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[TMP13]] to i64
-// CHECK9-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 [[IDXPROM5]]
-// CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX6]], ptr align 4 [[TMP12]], i64 4, i1 false), !llvm.access.group [[ACC_GRP9]]
+// CHECK9-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i64 0, i64 [[IDXPROM5]]
+// CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX6]], ptr align 4 [[TMP12]], i64 4, i1 false), !llvm.access.group [[ACC_GRP10]]
 // CHECK9-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK9:       omp.body.continue:
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK9:       omp.inner.for.inc:
-// CHECK9-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP9]]
+// CHECK9-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP10]]
 // CHECK9-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP14]], 1
-// CHECK9-NEXT:    store i32 [[ADD7]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP9]]
-// CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
+// CHECK9-NEXT:    store i32 [[ADD7]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP10]]
+// CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP16]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP16]])
 // CHECK9-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK9-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
 // CHECK9-NEXT:    br i1 [[TMP18]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -878,14 +880,14 @@ int main() {
 // CHECK9-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK9-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK9:       .omp.final.done:
-// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5]]
-// CHECK9-NEXT:    [[ARRAY_BEGIN8:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR]]) #[[ATTR4]]
+// CHECK9-NEXT:    [[ARRAY_BEGIN8:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN8]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK9:       arraydestroy.body:
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP19]], [[DOTOMP_FINAL_DONE]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN8]]
 // CHECK9-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE9:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK9:       arraydestroy.done9:
@@ -893,83 +895,93 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIfED1Ev
-// CHECK9-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK9-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    call void @_ZN1SIfED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZN1SIfED2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR4]]
 // CHECK9-NEXT:    ret void
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK9-SAME: () #[[ATTR6:[0-9]+]] comdat {
+// CHECK9-SAME: () #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
 // CHECK9-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S.0], align 4
+// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S_0]]], align 4
 // CHECK9-NEXT:    [[VAR:%.*]] = alloca ptr, align 8
+// CHECK9-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
+// CHECK9-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
+// CHECK9-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK9-NEXT:    call void @_ZN1SIiEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK9-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
-// CHECK9-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 0
-// CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef signext 1)
-// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef signext 1)
+// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i64 1
 // CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef signext 2)
 // CHECK9-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 8
-// CHECK9-NEXT:    store ptr undef, ptr [[_TMP1]], align 8
-// CHECK9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 2, ptr [[TMP0]], align 4
-// CHECK9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// CHECK9-NEXT:    store i32 0, ptr [[TMP1]], align 4
-// CHECK9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CHECK9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK9-NEXT:    store ptr null, ptr [[TMP0]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK9-NEXT:    store ptr null, ptr [[TMP1]], align 8
+// CHECK9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
 // CHECK9-NEXT:    store ptr null, ptr [[TMP2]], align 8
-// CHECK9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// CHECK9-NEXT:    store ptr null, ptr [[TMP3]], align 8
-// CHECK9-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// CHECK9-NEXT:    store ptr null, ptr [[TMP4]], align 8
-// CHECK9-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// CHECK9-NEXT:    store ptr null, ptr [[TMP5]], align 8
-// CHECK9-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// CHECK9-NEXT:    store ptr null, ptr [[TMP6]], align 8
-// CHECK9-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// CHECK9-NEXT:    store ptr null, ptr [[TMP7]], align 8
-// CHECK9-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// CHECK9-NEXT:    store i64 2, ptr [[TMP8]], align 8
-// CHECK9-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// CHECK9-NEXT:    store i64 0, ptr [[TMP9]], align 8
-// CHECK9-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP10]], align 4
-// CHECK9-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP11]], align 4
-// CHECK9-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// CHECK9-NEXT:    store i32 0, ptr [[TMP12]], align 4
-// CHECK9-NEXT:    [[TMP13:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.region_id, ptr [[KERNEL_ARGS]])
-// CHECK9-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
-// CHECK9-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK9-NEXT:    store ptr undef, ptr [[_TMP1]], align 8
+// CHECK9-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// CHECK9-NEXT:    store i32 4, ptr [[TMP5]], align 4
+// CHECK9-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// CHECK9-NEXT:    store i32 1, ptr [[TMP6]], align 4
+// CHECK9-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CHECK9-NEXT:    store ptr [[TMP3]], ptr [[TMP7]], align 8
+// CHECK9-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// CHECK9-NEXT:    store ptr [[TMP4]], ptr [[TMP8]], align 8
+// CHECK9-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// CHECK9-NEXT:    store ptr @.offload_sizes.1, ptr [[TMP9]], align 8
+// CHECK9-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// CHECK9-NEXT:    store ptr @.offload_maptypes.2, ptr [[TMP10]], align 8
+// CHECK9-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// CHECK9-NEXT:    store ptr null, ptr [[TMP11]], align 8
+// CHECK9-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// CHECK9-NEXT:    store ptr null, ptr [[TMP12]], align 8
+// CHECK9-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK9-NEXT:    store i64 2, ptr [[TMP13]], align 8
+// CHECK9-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// CHECK9-NEXT:    store i64 0, ptr [[TMP14]], align 8
+// CHECK9-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP15]], align 4
+// CHECK9-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
+// CHECK9-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// CHECK9-NEXT:    store i32 0, ptr [[TMP17]], align 4
+// CHECK9-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.region_id, ptr [[KERNEL_ARGS]])
+// CHECK9-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
+// CHECK9-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK9:       omp_offload.failed:
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49() #[[ATTR5]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49(ptr null) #[[ATTR4]]
 // CHECK9-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK9:       omp_offload.cont:
 // CHECK9-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
-// CHECK9-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i64 2
+// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK9:       arraydestroy.body:
-// CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP15]], [[OMP_OFFLOAD_CONT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP20]], [[OMP_OFFLOAD_CONT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN]]
 // CHECK9-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE2:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK9:       arraydestroy.done2:
-// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR5]]
-// CHECK9-NEXT:    [[TMP16:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK9-NEXT:    ret i32 [[TMP16]]
+// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[TEST]]) #[[ATTR4]]
+// CHECK9-NEXT:    [[TMP21:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK9-NEXT:    ret i32 [[TMP21]]
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
@@ -978,7 +990,7 @@ int main() {
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    store float 0.000000e+00, ptr [[F]], align 4
 // CHECK9-NEXT:    ret void
 //
@@ -991,14 +1003,14 @@ int main() {
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    store float [[TMP0]], ptr [[F]], align 4
 // CHECK9-NEXT:    ret void
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
-// CHECK9-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK9-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -1030,14 +1042,16 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49
-// CHECK9-SAME: () #[[ATTR3]] {
+// CHECK9-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK9-NEXT:  entry:
+// CHECK9-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK9-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined)
 // CHECK9-NEXT:    ret void
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1050,8 +1064,8 @@ int main() {
 // CHECK9-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S.0], align 4
-// CHECK9-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
+// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S_0:%.*]]], align 4
+// CHECK9-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S_0]], align 4
 // CHECK9-NEXT:    [[_TMP2:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
@@ -1061,7 +1075,7 @@ int main() {
 // CHECK9-NEXT:    store i32 1, ptr [[DOTOMP_COMB_UB]], align 4
 // CHECK9-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK9:       arrayctor.loop:
@@ -1091,25 +1105,25 @@ int main() {
 // CHECK9-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK9:       omp.inner.for.cond:
-// CHECK9-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP14:![0-9]+]]
-// CHECK9-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP14]]
+// CHECK9-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP17:![0-9]+]]
+// CHECK9-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP17]]
 // CHECK9-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK9-NEXT:    br i1 [[CMP3]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK9:       omp.inner.for.cond.cleanup:
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK9:       omp.inner.for.body:
-// CHECK9-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4, !llvm.access.group [[ACC_GRP14]]
+// CHECK9-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4, !llvm.access.group [[ACC_GRP17]]
 // CHECK9-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
-// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP14]]
+// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP17]]
 // CHECK9-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined.omp_outlined, i64 [[TMP8]], i64 [[TMP10]]), !llvm.access.group [[ACC_GRP14]]
+// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined.omp_outlined, i64 [[TMP8]], i64 [[TMP10]]), !llvm.access.group [[ACC_GRP17]]
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK9:       omp.inner.for.inc:
-// CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP14]]
-// CHECK9-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP14]]
+// CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP17]]
+// CHECK9-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP17]]
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
-// CHECK9-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP14]]
-// CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP15:![0-9]+]]
+// CHECK9-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP17]]
+// CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP18:![0-9]+]]
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
@@ -1123,14 +1137,14 @@ int main() {
 // CHECK9-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK9-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK9:       .omp.final.done:
-// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5]]
-// CHECK9-NEXT:    [[ARRAY_BEGIN4:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR]]) #[[ATTR4]]
+// CHECK9-NEXT:    [[ARRAY_BEGIN4:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN4]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK9:       arraydestroy.body:
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP17]], [[DOTOMP_FINAL_DONE]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN4]]
 // CHECK9-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE5:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK9:       arraydestroy.done5:
@@ -1138,7 +1152,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1153,8 +1167,8 @@ int main() {
 // CHECK9-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S.0], align 4
-// CHECK9-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
+// CHECK9-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S_0:%.*]]], align 4
+// CHECK9-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S_0]], align 4
 // CHECK9-NEXT:    [[_TMP3:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
@@ -1172,7 +1186,7 @@ int main() {
 // CHECK9-NEXT:    store i32 [[CONV2]], ptr [[DOTOMP_UB]], align 4
 // CHECK9-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK9-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK9:       arrayctor.loop:
@@ -1202,41 +1216,41 @@ int main() {
 // CHECK9-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK9:       omp.inner.for.cond:
-// CHECK9-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP17:![0-9]+]]
-// CHECK9-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP17]]
+// CHECK9-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP20:![0-9]+]]
+// CHECK9-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK9-NEXT:    [[CMP4:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
 // CHECK9-NEXT:    br i1 [[CMP4]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK9:       omp.inner.for.cond.cleanup:
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK9:       omp.inner.for.body:
-// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP17]]
+// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK9-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK9-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP17]]
-// CHECK9-NEXT:    [[TMP10:%.*]] = load i32, ptr [[T_VAR]], align 4, !llvm.access.group [[ACC_GRP17]]
-// CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP17]]
+// CHECK9-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
+// CHECK9-NEXT:    [[TMP10:%.*]] = load i32, ptr [[T_VAR]], align 4, !llvm.access.group [[ACC_GRP20]]
+// CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK9-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP11]] to i64
 // CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC]], i64 0, i64 [[IDXPROM]]
-// CHECK9-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP17]]
-// CHECK9-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP3]], align 8, !llvm.access.group [[ACC_GRP17]]
-// CHECK9-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP17]]
+// CHECK9-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP20]]
+// CHECK9-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP3]], align 8, !nonnull [[META11]], !align [[META12]], !llvm.access.group [[ACC_GRP20]]
+// CHECK9-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK9-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[TMP13]] to i64
-// CHECK9-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 [[IDXPROM5]]
-// CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX6]], ptr align 4 [[TMP12]], i64 4, i1 false), !llvm.access.group [[ACC_GRP17]]
+// CHECK9-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i64 0, i64 [[IDXPROM5]]
+// CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX6]], ptr align 4 [[TMP12]], i64 4, i1 false), !llvm.access.group [[ACC_GRP20]]
 // CHECK9-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK9:       omp.body.continue:
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK9:       omp.inner.for.inc:
-// CHECK9-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP17]]
+// CHECK9-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK9-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP14]], 1
-// CHECK9-NEXT:    store i32 [[ADD7]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP17]]
-// CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP18:![0-9]+]]
+// CHECK9-NEXT:    store i32 [[ADD7]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP20]]
+// CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP21:![0-9]+]]
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP16]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP16]])
 // CHECK9-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK9-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
 // CHECK9-NEXT:    br i1 [[TMP18]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1244,14 +1258,14 @@ int main() {
 // CHECK9-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK9-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK9:       .omp.final.done:
-// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5]]
-// CHECK9-NEXT:    [[ARRAY_BEGIN8:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR]]) #[[ATTR4]]
+// CHECK9-NEXT:    [[ARRAY_BEGIN8:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN8]], i64 2
 // CHECK9-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK9:       arraydestroy.body:
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP19]], [[DOTOMP_FINAL_DONE]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK9-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN8]]
 // CHECK9-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE9:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK9:       arraydestroy.done9:
@@ -1259,12 +1273,12 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIiED1Ev
-// CHECK9-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK9-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    call void @_ZN1SIiED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZN1SIiED2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR4]]
 // CHECK9-NEXT:    ret void
 //
 //
@@ -1274,7 +1288,7 @@ int main() {
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    store i32 0, ptr [[F]], align 4
 // CHECK9-NEXT:    ret void
 //
@@ -1287,25 +1301,18 @@ int main() {
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // CHECK9-NEXT:    ret void
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIiED2Ev
-// CHECK9-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK9-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    ret void
-//
-//
-// CHECK9-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK9-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK9-NEXT:  entry:
-// CHECK9-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK9-NEXT:    ret void
 //
 //
@@ -1318,8 +1325,11 @@ int main() {
 // CHECK11-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S:%.*]], align 4
 // CHECK11-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S], align 4
+// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S]]], align 4
 // CHECK11-NEXT:    [[VAR:%.*]] = alloca ptr, align 4
+// CHECK11-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
+// CHECK11-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
+// CHECK11-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -1328,60 +1338,67 @@ int main() {
 // CHECK11-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK11-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i32 8, i1 false)
-// CHECK11-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
-// CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float noundef 1.000000e+00)
-// CHECK11-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i32 1
+// CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], float noundef 1.000000e+00)
+// CHECK11-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i32 1
 // CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK11-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 4
-// CHECK11-NEXT:    store ptr undef, ptr [[_TMP1]], align 4
-// CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 2, ptr [[TMP0]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// CHECK11-NEXT:    store i32 0, ptr [[TMP1]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK11-NEXT:    store ptr null, ptr [[TMP0]], align 4
+// CHECK11-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK11-NEXT:    store ptr null, ptr [[TMP1]], align 4
+// CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // CHECK11-NEXT:    store ptr null, ptr [[TMP2]], align 4
-// CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// CHECK11-NEXT:    store ptr null, ptr [[TMP3]], align 4
-// CHECK11-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// CHECK11-NEXT:    store ptr null, ptr [[TMP4]], align 4
-// CHECK11-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// CHECK11-NEXT:    store ptr null, ptr [[TMP5]], align 4
-// CHECK11-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// CHECK11-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// CHECK11-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// CHECK11-NEXT:    store ptr null, ptr [[TMP7]], align 4
-// CHECK11-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// CHECK11-NEXT:    store i64 2, ptr [[TMP8]], align 8
-// CHECK11-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// CHECK11-NEXT:    store i64 0, ptr [[TMP9]], align 8
-// CHECK11-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP10]], align 4
-// CHECK11-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP11]], align 4
-// CHECK11-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// CHECK11-NEXT:    store i32 0, ptr [[TMP12]], align 4
-// CHECK11-NEXT:    [[TMP13:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.region_id, ptr [[KERNEL_ARGS]])
-// CHECK11-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
-// CHECK11-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK11-NEXT:    store ptr undef, ptr [[_TMP1]], align 4
+// CHECK11-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// CHECK11-NEXT:    store i32 4, ptr [[TMP5]], align 4
+// CHECK11-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// CHECK11-NEXT:    store i32 1, ptr [[TMP6]], align 4
+// CHECK11-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CHECK11-NEXT:    store ptr [[TMP3]], ptr [[TMP7]], align 4
+// CHECK11-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// CHECK11-NEXT:    store ptr [[TMP4]], ptr [[TMP8]], align 4
+// CHECK11-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// CHECK11-NEXT:    store ptr @.offload_sizes, ptr [[TMP9]], align 4
+// CHECK11-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// CHECK11-NEXT:    store ptr @.offload_maptypes, ptr [[TMP10]], align 4
+// CHECK11-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// CHECK11-NEXT:    store ptr null, ptr [[TMP11]], align 4
+// CHECK11-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// CHECK11-NEXT:    store ptr null, ptr [[TMP12]], align 4
+// CHECK11-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK11-NEXT:    store i64 2, ptr [[TMP13]], align 8
+// CHECK11-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// CHECK11-NEXT:    store i64 0, ptr [[TMP14]], align 8
+// CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP15]], align 4
+// CHECK11-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
+// CHECK11-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// CHECK11-NEXT:    store i32 0, ptr [[TMP17]], align 4
+// CHECK11-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.region_id, ptr [[KERNEL_ARGS]])
+// CHECK11-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
+// CHECK11-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK11:       omp_offload.failed:
-// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95() #[[ATTR5:[0-9]+]]
+// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95(ptr null) #[[ATTR4:[0-9]+]]
 // CHECK11-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK11:       omp_offload.cont:
 // CHECK11-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiET_v()
 // CHECK11-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
-// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i32 2
+// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK11:       arraydestroy.body:
-// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP15]], [[OMP_OFFLOAD_CONT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP20]], [[OMP_OFFLOAD_CONT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i32 -1
-// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN]]
 // CHECK11-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE2:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK11:       arraydestroy.done2:
-// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR5]]
-// CHECK11-NEXT:    [[TMP16:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK11-NEXT:    ret i32 [[TMP16]]
+// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[TEST]]) #[[ATTR4]]
+// CHECK11-NEXT:    [[TMP21:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK11-NEXT:    ret i32 [[TMP21]]
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIfEC1Ev
@@ -1408,14 +1425,16 @@ int main() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95
-// CHECK11-SAME: () #[[ATTR3:[0-9]+]] {
+// CHECK11-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK11-NEXT:  entry:
+// CHECK11-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
+// CHECK11-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined)
 // CHECK11-NEXT:    ret void
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1428,8 +1447,8 @@ int main() {
 // CHECK11-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S], align 4
-// CHECK11-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S:%.*]], align 4
+// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S:%.*]]], align 4
+// CHECK11-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK11-NEXT:    [[_TMP2:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[SVAR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -1440,7 +1459,7 @@ int main() {
 // CHECK11-NEXT:    store i32 1, ptr [[DOTOMP_COMB_UB]], align 4
 // CHECK11-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK11-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK11:       arrayctor.loop:
@@ -1470,23 +1489,23 @@ int main() {
 // CHECK11-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK11:       omp.inner.for.cond:
-// CHECK11-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6:![0-9]+]]
-// CHECK11-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK11-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7:![0-9]+]]
+// CHECK11-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP7]]
 // CHECK11-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK11-NEXT:    br i1 [[CMP3]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK11:       omp.inner.for.cond.cleanup:
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK11:       omp.inner.for.body:
-// CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4, !llvm.access.group [[ACC_GRP6]]
-// CHECK11-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP6]]
-// CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined.omp_outlined, i32 [[TMP7]], i32 [[TMP8]]), !llvm.access.group [[ACC_GRP6]]
+// CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK11-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined.omp_outlined, i32 [[TMP7]], i32 [[TMP8]]), !llvm.access.group [[ACC_GRP7]]
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK11:       omp.inner.for.inc:
-// CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
-// CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP7]]
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP9]], [[TMP10]]
-// CHECK11-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
-// CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
+// CHECK11-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
 // CHECK11:       omp.inner.for.end:
 // CHECK11-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK11:       omp.loop.exit:
@@ -1500,14 +1519,14 @@ int main() {
 // CHECK11-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK11-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK11:       .omp.final.done:
-// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5]]
-// CHECK11-NEXT:    [[ARRAY_BEGIN4:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR]]) #[[ATTR4]]
+// CHECK11-NEXT:    [[ARRAY_BEGIN4:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN4]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK11:       arraydestroy.body:
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP15]], [[DOTOMP_FINAL_DONE]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i32 -1
-// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN4]]
 // CHECK11-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE5:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK11:       arraydestroy.done5:
@@ -1515,7 +1534,7 @@ int main() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l95.omp_outlined.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1530,8 +1549,8 @@ int main() {
 // CHECK11-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S], align 4
-// CHECK11-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S:%.*]], align 4
+// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S:%.*]]], align 4
+// CHECK11-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK11-NEXT:    [[_TMP2:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[SVAR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -1548,7 +1567,7 @@ int main() {
 // CHECK11-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_UB]], align 4
 // CHECK11-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK11-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK11:       arrayctor.loop:
@@ -1578,39 +1597,39 @@ int main() {
 // CHECK11-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK11:       omp.inner.for.cond:
-// CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP10:![0-9]+]]
-// CHECK11-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP10]]
+// CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP11:![0-9]+]]
+// CHECK11-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP11]]
 // CHECK11-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
 // CHECK11-NEXT:    br i1 [[CMP3]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK11:       omp.inner.for.cond.cleanup:
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK11:       omp.inner.for.body:
-// CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP10]]
+// CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP11]]
 // CHECK11-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK11-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP10]]
-// CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[T_VAR]], align 4, !llvm.access.group [[ACC_GRP10]]
-// CHECK11-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP10]]
+// CHECK11-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP11]]
+// CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[T_VAR]], align 4, !llvm.access.group [[ACC_GRP11]]
+// CHECK11-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP11]]
 // CHECK11-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC]], i32 0, i32 [[TMP11]]
-// CHECK11-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP10]]
-// CHECK11-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP2]], align 4, !llvm.access.group [[ACC_GRP10]]
-// CHECK11-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP10]]
-// CHECK11-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 [[TMP13]]
-// CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARRAYIDX4]], ptr align 4 [[TMP12]], i32 4, i1 false), !llvm.access.group [[ACC_GRP10]]
+// CHECK11-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP11]]
+// CHECK11-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP2]], align 4, !nonnull [[META12:![0-9]+]], !align [[META13:![0-9]+]], !llvm.access.group [[ACC_GRP11]]
+// CHECK11-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP11]]
+// CHECK11-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 [[TMP13]]
+// CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARRAYIDX4]], ptr align 4 [[TMP12]], i32 4, i1 false), !llvm.access.group [[ACC_GRP11]]
 // CHECK11-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK11:       omp.body.continue:
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK11:       omp.inner.for.inc:
-// CHECK11-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP10]]
+// CHECK11-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP11]]
 // CHECK11-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP14]], 1
-// CHECK11-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP10]]
-// CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
+// CHECK11-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP11]]
+// CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP14:![0-9]+]]
 // CHECK11:       omp.inner.for.end:
 // CHECK11-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK11:       omp.loop.exit:
 // CHECK11-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK11-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP16]])
+// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP16]])
 // CHECK11-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK11-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
 // CHECK11-NEXT:    br i1 [[TMP18]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1618,14 +1637,14 @@ int main() {
 // CHECK11-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK11-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK11:       .omp.final.done:
-// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5]]
-// CHECK11-NEXT:    [[ARRAY_BEGIN6:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR]]) #[[ATTR4]]
+// CHECK11-NEXT:    [[ARRAY_BEGIN6:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN6]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK11:       arraydestroy.body:
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP19]], [[DOTOMP_FINAL_DONE]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i32 -1
-// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN6]]
 // CHECK11-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE7:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK11:       arraydestroy.done7:
@@ -1633,83 +1652,93 @@ int main() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIfED1Ev
-// CHECK11-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK11-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK11-NEXT:    call void @_ZN1SIfED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR5]]
+// CHECK11-NEXT:    call void @_ZN1SIfED2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR4]]
 // CHECK11-NEXT:    ret void
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK11-SAME: () #[[ATTR6:[0-9]+]] comdat {
+// CHECK11-SAME: () #[[ATTR1]] comdat {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
 // CHECK11-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S.0], align 4
+// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S_0]]], align 4
 // CHECK11-NEXT:    [[VAR:%.*]] = alloca ptr, align 4
+// CHECK11-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 4
+// CHECK11-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
+// CHECK11-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK11-NEXT:    call void @_ZN1SIiEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK11-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i32 8, i1 false)
-// CHECK11-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
-// CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef 1)
-// CHECK11-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i32 1
+// CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef 1)
+// CHECK11-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i32 1
 // CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK11-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 4
-// CHECK11-NEXT:    store ptr undef, ptr [[_TMP1]], align 4
-// CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 2, ptr [[TMP0]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// CHECK11-NEXT:    store i32 0, ptr [[TMP1]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK11-NEXT:    store ptr null, ptr [[TMP0]], align 4
+// CHECK11-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK11-NEXT:    store ptr null, ptr [[TMP1]], align 4
+// CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i32 0, i32 0
 // CHECK11-NEXT:    store ptr null, ptr [[TMP2]], align 4
-// CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// CHECK11-NEXT:    store ptr null, ptr [[TMP3]], align 4
-// CHECK11-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// CHECK11-NEXT:    store ptr null, ptr [[TMP4]], align 4
-// CHECK11-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// CHECK11-NEXT:    store ptr null, ptr [[TMP5]], align 4
-// CHECK11-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// CHECK11-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// CHECK11-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// CHECK11-NEXT:    store ptr null, ptr [[TMP7]], align 4
-// CHECK11-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// CHECK11-NEXT:    store i64 2, ptr [[TMP8]], align 8
-// CHECK11-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// CHECK11-NEXT:    store i64 0, ptr [[TMP9]], align 8
-// CHECK11-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP10]], align 4
-// CHECK11-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP11]], align 4
-// CHECK11-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// CHECK11-NEXT:    store i32 0, ptr [[TMP12]], align 4
-// CHECK11-NEXT:    [[TMP13:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.region_id, ptr [[KERNEL_ARGS]])
-// CHECK11-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
-// CHECK11-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK11-NEXT:    store ptr undef, ptr [[_TMP1]], align 4
+// CHECK11-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// CHECK11-NEXT:    store i32 4, ptr [[TMP5]], align 4
+// CHECK11-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// CHECK11-NEXT:    store i32 1, ptr [[TMP6]], align 4
+// CHECK11-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// CHECK11-NEXT:    store ptr [[TMP3]], ptr [[TMP7]], align 4
+// CHECK11-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// CHECK11-NEXT:    store ptr [[TMP4]], ptr [[TMP8]], align 4
+// CHECK11-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// CHECK11-NEXT:    store ptr @.offload_sizes.1, ptr [[TMP9]], align 4
+// CHECK11-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// CHECK11-NEXT:    store ptr @.offload_maptypes.2, ptr [[TMP10]], align 4
+// CHECK11-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// CHECK11-NEXT:    store ptr null, ptr [[TMP11]], align 4
+// CHECK11-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// CHECK11-NEXT:    store ptr null, ptr [[TMP12]], align 4
+// CHECK11-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK11-NEXT:    store i64 2, ptr [[TMP13]], align 8
+// CHECK11-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// CHECK11-NEXT:    store i64 0, ptr [[TMP14]], align 8
+// CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP15]], align 4
+// CHECK11-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
+// CHECK11-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// CHECK11-NEXT:    store i32 0, ptr [[TMP17]], align 4
+// CHECK11-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.region_id, ptr [[KERNEL_ARGS]])
+// CHECK11-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
+// CHECK11-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK11:       omp_offload.failed:
-// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49() #[[ATTR5]]
+// CHECK11-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49(ptr null) #[[ATTR4]]
 // CHECK11-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK11:       omp_offload.cont:
 // CHECK11-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i32 2
+// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK11:       arraydestroy.body:
-// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP15]], [[OMP_OFFLOAD_CONT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP20]], [[OMP_OFFLOAD_CONT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i32 -1
-// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN]]
 // CHECK11-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE2:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK11:       arraydestroy.done2:
-// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR5]]
-// CHECK11-NEXT:    [[TMP16:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK11-NEXT:    ret i32 [[TMP16]]
+// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[TEST]]) #[[ATTR4]]
+// CHECK11-NEXT:    [[TMP21:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK11-NEXT:    ret i32 [[TMP21]]
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
@@ -1718,7 +1747,7 @@ int main() {
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    store float 0.000000e+00, ptr [[F]], align 4
 // CHECK11-NEXT:    ret void
 //
@@ -1731,14 +1760,14 @@ int main() {
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    store float [[TMP0]], ptr [[F]], align 4
 // CHECK11-NEXT:    ret void
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
-// CHECK11-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK11-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
@@ -1770,14 +1799,16 @@ int main() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49
-// CHECK11-SAME: () #[[ATTR3]] {
+// CHECK11-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
 // CHECK11-NEXT:  entry:
+// CHECK11-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
+// CHECK11-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined)
 // CHECK11-NEXT:    ret void
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1790,8 +1821,8 @@ int main() {
 // CHECK11-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S.0], align 4
-// CHECK11-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
+// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S_0:%.*]]], align 4
+// CHECK11-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S_0]], align 4
 // CHECK11-NEXT:    [[_TMP2:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
@@ -1801,7 +1832,7 @@ int main() {
 // CHECK11-NEXT:    store i32 1, ptr [[DOTOMP_COMB_UB]], align 4
 // CHECK11-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK11-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK11:       arrayctor.loop:
@@ -1831,23 +1862,23 @@ int main() {
 // CHECK11-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK11:       omp.inner.for.cond:
-// CHECK11-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP15:![0-9]+]]
-// CHECK11-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP15]]
+// CHECK11-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP18:![0-9]+]]
+// CHECK11-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP18]]
 // CHECK11-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK11-NEXT:    br i1 [[CMP3]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK11:       omp.inner.for.cond.cleanup:
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK11:       omp.inner.for.body:
-// CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4, !llvm.access.group [[ACC_GRP15]]
-// CHECK11-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP15]]
-// CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined.omp_outlined, i32 [[TMP7]], i32 [[TMP8]]), !llvm.access.group [[ACC_GRP15]]
+// CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4, !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4, !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined.omp_outlined, i32 [[TMP7]], i32 [[TMP8]]), !llvm.access.group [[ACC_GRP18]]
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK11:       omp.inner.for.inc:
-// CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP15]]
-// CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP15]]
+// CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4, !llvm.access.group [[ACC_GRP18]]
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP9]], [[TMP10]]
-// CHECK11-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP15]]
-// CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
+// CHECK11-NEXT:    store i32 [[ADD]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 // CHECK11:       omp.inner.for.end:
 // CHECK11-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK11:       omp.loop.exit:
@@ -1861,14 +1892,14 @@ int main() {
 // CHECK11-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK11-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK11:       .omp.final.done:
-// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5]]
-// CHECK11-NEXT:    [[ARRAY_BEGIN4:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR]]) #[[ATTR4]]
+// CHECK11-NEXT:    [[ARRAY_BEGIN4:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN4]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK11:       arraydestroy.body:
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP15]], [[DOTOMP_FINAL_DONE]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i32 -1
-// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN4]]
 // CHECK11-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE5:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK11:       arraydestroy.done5:
@@ -1876,7 +1907,7 @@ int main() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l49.omp_outlined.omp_outlined
-// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] {
+// CHECK11-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1891,8 +1922,8 @@ int main() {
 // CHECK11-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S.0], align 4
-// CHECK11-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
+// CHECK11-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S_0:%.*]]], align 4
+// CHECK11-NEXT:    [[VAR:%.*]] = alloca [[STRUCT_S_0]], align 4
 // CHECK11-NEXT:    [[_TMP2:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
@@ -1908,7 +1939,7 @@ int main() {
 // CHECK11-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_UB]], align 4
 // CHECK11-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK11-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK11:       arrayctor.loop:
@@ -1938,39 +1969,39 @@ int main() {
 // CHECK11-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK11:       omp.inner.for.cond:
-// CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP18:![0-9]+]]
-// CHECK11-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP21:![0-9]+]]
+// CHECK11-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP21]]
 // CHECK11-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
 // CHECK11-NEXT:    br i1 [[CMP3]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK11:       omp.inner.for.cond.cleanup:
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK11:       omp.inner.for.body:
-// CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP21]]
 // CHECK11-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK11-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP18]]
-// CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[T_VAR]], align 4, !llvm.access.group [[ACC_GRP18]]
-// CHECK11-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP21]]
+// CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[T_VAR]], align 4, !llvm.access.group [[ACC_GRP21]]
+// CHECK11-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP21]]
 // CHECK11-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC]], i32 0, i32 [[TMP11]]
-// CHECK11-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP18]]
-// CHECK11-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP2]], align 4, !llvm.access.group [[ACC_GRP18]]
-// CHECK11-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP18]]
-// CHECK11-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 [[TMP13]]
-// CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARRAYIDX4]], ptr align 4 [[TMP12]], i32 4, i1 false), !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP21]]
+// CHECK11-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[_TMP2]], align 4, !nonnull [[META12]], !align [[META13]], !llvm.access.group [[ACC_GRP21]]
+// CHECK11-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP21]]
+// CHECK11-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 [[TMP13]]
+// CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARRAYIDX4]], ptr align 4 [[TMP12]], i32 4, i1 false), !llvm.access.group [[ACC_GRP21]]
 // CHECK11-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK11:       omp.body.continue:
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK11:       omp.inner.for.inc:
-// CHECK11-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP18]]
+// CHECK11-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP21]]
 // CHECK11-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP14]], 1
-// CHECK11-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP18]]
-// CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
+// CHECK11-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP21]]
+// CHECK11-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 // CHECK11:       omp.inner.for.end:
 // CHECK11-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK11:       omp.loop.exit:
 // CHECK11-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK11-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP16]])
+// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP16]])
 // CHECK11-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK11-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
 // CHECK11-NEXT:    br i1 [[TMP18]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1978,14 +2009,14 @@ int main() {
 // CHECK11-NEXT:    store i32 2, ptr [[I]], align 4
 // CHECK11-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK11:       .omp.final.done:
-// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5]]
-// CHECK11-NEXT:    [[ARRAY_BEGIN6:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR]]) #[[ATTR4]]
+// CHECK11-NEXT:    [[ARRAY_BEGIN6:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN6]], i32 2
 // CHECK11-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK11:       arraydestroy.body:
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP19]], [[DOTOMP_FINAL_DONE]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i32 -1
-// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR5]]
+// CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN6]]
 // CHECK11-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE7:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK11:       arraydestroy.done7:
@@ -1993,12 +2024,12 @@ int main() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIiED1Ev
-// CHECK11-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK11-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK11-NEXT:    call void @_ZN1SIiED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR5]]
+// CHECK11-NEXT:    call void @_ZN1SIiED2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR4]]
 // CHECK11-NEXT:    ret void
 //
 //
@@ -2008,7 +2039,7 @@ int main() {
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    store i32 0, ptr [[F]], align 4
 // CHECK11-NEXT:    ret void
 //
@@ -2021,25 +2052,18 @@ int main() {
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // CHECK11-NEXT:    ret void
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIiED2Ev
-// CHECK11-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK11-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK11-NEXT:    ret void
-//
-//
-// CHECK11-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK11-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK11-NEXT:  entry:
-// CHECK11-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK11-NEXT:    ret void
 //
 //
@@ -2052,28 +2076,27 @@ int main() {
 // CHECK13-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S:%.*]], align 4
 // CHECK13-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK13-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S], align 4
+// CHECK13-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S]]], align 4
 // CHECK13-NEXT:    [[VAR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
-// CHECK13-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[T_VAR2:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[VEC3:%.*]] = alloca [2 x i32], align 4
-// CHECK13-NEXT:    [[S_ARR4:%.*]] = alloca [2 x %struct.S], align 4
+// CHECK13-NEXT:    [[S_ARR4:%.*]] = alloca [2 x [[STRUCT_S]]], align 4
 // CHECK13-NEXT:    [[VAR5:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK13-NEXT:    [[_TMP6:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[SVAR:%.*]] = alloca i32, align 4
+// CHECK13-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK13-NEXT:    store ptr [[G]], ptr [[G1]], align 8
 // CHECK13-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK13-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK13-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i1 false)
-// CHECK13-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 0
-// CHECK13-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float noundef 1.000000e+00)
-// CHECK13-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK13-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], float noundef 1.000000e+00)
+// CHECK13-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i64 1
 // CHECK13-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK13-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 8
 // CHECK13-NEXT:    store ptr undef, ptr [[_TMP1]], align 8
@@ -2081,7 +2104,7 @@ int main() {
 // CHECK13-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK13-NEXT:    store i32 [[TMP0]], ptr [[DOTOMP_IV]], align 4
-// CHECK13-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR4]], i32 0, i32 0
+// CHECK13-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR4]], i32 0, i32 0
 // CHECK13-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK13-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK13:       arrayctor.loop:
@@ -2095,61 +2118,61 @@ int main() {
 // CHECK13-NEXT:    store ptr [[VAR5]], ptr [[_TMP6]], align 8
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK13:       omp.inner.for.cond:
-// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP2:![0-9]+]]
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP1:![0-9]+]]
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP1]]
 // CHECK13-NEXT:    [[CMP:%.*]] = icmp sle i32 [[TMP1]], [[TMP2]]
 // CHECK13-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK13:       omp.inner.for.cond.cleanup:
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK13:       omp.inner.for.body:
-// CHECK13-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK13-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP1]]
 // CHECK13-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP3]], 1
 // CHECK13-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK13-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
-// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR2]], align 4, !llvm.access.group [[ACC_GRP2]]
-// CHECK13-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK13-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP1]]
+// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR2]], align 4, !llvm.access.group [[ACC_GRP1]]
+// CHECK13-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP1]]
 // CHECK13-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP5]] to i64
 // CHECK13-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC3]], i64 0, i64 [[IDXPROM]]
-// CHECK13-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP2]]
-// CHECK13-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[_TMP6]], align 8, !llvm.access.group [[ACC_GRP2]]
-// CHECK13-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK13-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP1]]
+// CHECK13-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[_TMP6]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]], !llvm.access.group [[ACC_GRP1]]
+// CHECK13-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP1]]
 // CHECK13-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP7]] to i64
-// CHECK13-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR4]], i64 0, i64 [[IDXPROM7]]
-// CHECK13-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX8]], ptr align 4 [[TMP6]], i64 4, i1 false), !llvm.access.group [[ACC_GRP2]]
+// CHECK13-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR4]], i64 0, i64 [[IDXPROM7]]
+// CHECK13-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX8]], ptr align 4 [[TMP6]], i64 4, i1 false), !llvm.access.group [[ACC_GRP1]]
 // CHECK13-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK13:       omp.body.continue:
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK13:       omp.inner.for.inc:
-// CHECK13-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK13-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP1]]
 // CHECK13-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP8]], 1
-// CHECK13-NEXT:    store i32 [[ADD9]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP2]]
-// CHECK13-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
+// CHECK13-NEXT:    store i32 [[ADD9]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP1]]
+// CHECK13-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    store i32 2, ptr [[I]], align 4
-// CHECK13-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR5]]) #[[ATTR4:[0-9]+]]
-// CHECK13-NEXT:    [[ARRAY_BEGIN10:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR4]], i32 0, i32 0
+// CHECK13-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR5]]) #[[ATTR3:[0-9]+]]
+// CHECK13-NEXT:    [[ARRAY_BEGIN10:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR4]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN10]], i64 2
 // CHECK13-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK13:       arraydestroy.body:
 // CHECK13-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP9]], [[OMP_INNER_FOR_END]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK13-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK13-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK13-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN10]]
 // CHECK13-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE11:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK13:       arraydestroy.done11:
 // CHECK13-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z5tmainIiET_v()
 // CHECK13-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
-// CHECK13-NEXT:    [[ARRAY_BEGIN12:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK13-NEXT:    [[ARRAY_BEGIN12:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN12]], i64 2
 // CHECK13-NEXT:    br label [[ARRAYDESTROY_BODY13:%.*]]
 // CHECK13:       arraydestroy.body13:
 // CHECK13-NEXT:    [[ARRAYDESTROY_ELEMENTPAST14:%.*]] = phi ptr [ [[TMP10]], [[ARRAYDESTROY_DONE11]] ], [ [[ARRAYDESTROY_ELEMENT15:%.*]], [[ARRAYDESTROY_BODY13]] ]
 // CHECK13-NEXT:    [[ARRAYDESTROY_ELEMENT15]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST14]], i64 -1
-// CHECK13-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT15]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT15]]) #[[ATTR3]]
 // CHECK13-NEXT:    [[ARRAYDESTROY_DONE16:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT15]], [[ARRAY_BEGIN12]]
 // CHECK13-NEXT:    br i1 [[ARRAYDESTROY_DONE16]], label [[ARRAYDESTROY_DONE17:%.*]], label [[ARRAYDESTROY_BODY13]]
 // CHECK13:       arraydestroy.done17:
-// CHECK13-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[TEST]]) #[[ATTR3]]
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK13-NEXT:    ret i32 [[TMP11]]
 //
@@ -2178,41 +2201,40 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SIfED1Ev
-// CHECK13-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK13-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK13-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK13-NEXT:    call void @_ZN1SIfED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @_ZN1SIfED2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR3]]
 // CHECK13-NEXT:    ret void
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK13-SAME: () #[[ATTR3:[0-9]+]] comdat {
+// CHECK13-SAME: () #[[ATTR1]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
 // CHECK13-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK13-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S.0], align 4
+// CHECK13-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S_0]]], align 4
 // CHECK13-NEXT:    [[VAR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
-// CHECK13-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[T_VAR2:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[VEC3:%.*]] = alloca [2 x i32], align 4
-// CHECK13-NEXT:    [[S_ARR4:%.*]] = alloca [2 x %struct.S.0], align 4
+// CHECK13-NEXT:    [[S_ARR4:%.*]] = alloca [2 x [[STRUCT_S_0]]], align 4
 // CHECK13-NEXT:    [[VAR5:%.*]] = alloca [[STRUCT_S_0]], align 4
 // CHECK13-NEXT:    [[_TMP6:%.*]] = alloca ptr, align 8
+// CHECK13-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    call void @_ZN1SIiEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK13-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK13-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
-// CHECK13-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 0
-// CHECK13-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef signext 1)
-// CHECK13-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK13-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef signext 1)
+// CHECK13-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i64 1
 // CHECK13-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef signext 2)
 // CHECK13-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 8
 // CHECK13-NEXT:    store ptr undef, ptr [[_TMP1]], align 8
@@ -2220,7 +2242,7 @@ int main() {
 // CHECK13-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK13-NEXT:    store i32 [[TMP0]], ptr [[DOTOMP_IV]], align 4
-// CHECK13-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR4]], i32 0, i32 0
+// CHECK13-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR4]], i32 0, i32 0
 // CHECK13-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK13-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK13:       arrayctor.loop:
@@ -2234,60 +2256,60 @@ int main() {
 // CHECK13-NEXT:    store ptr [[VAR5]], ptr [[_TMP6]], align 8
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK13:       omp.inner.for.cond:
-// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6:![0-9]+]]
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7:![0-9]+]]
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP7]]
 // CHECK13-NEXT:    [[CMP:%.*]] = icmp sle i32 [[TMP1]], [[TMP2]]
 // CHECK13-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK13:       omp.inner.for.cond.cleanup:
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK13:       omp.inner.for.body:
-// CHECK13-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK13-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7]]
 // CHECK13-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP3]], 1
 // CHECK13-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK13-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP6]]
-// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR2]], align 4, !llvm.access.group [[ACC_GRP6]]
-// CHECK13-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK13-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR2]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK13-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP7]]
 // CHECK13-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP5]] to i64
 // CHECK13-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC3]], i64 0, i64 [[IDXPROM]]
-// CHECK13-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP6]]
-// CHECK13-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[_TMP6]], align 8, !llvm.access.group [[ACC_GRP6]]
-// CHECK13-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK13-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK13-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[_TMP6]], align 8, !nonnull [[META2]], !align [[META3]], !llvm.access.group [[ACC_GRP7]]
+// CHECK13-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP7]]
 // CHECK13-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP7]] to i64
-// CHECK13-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR4]], i64 0, i64 [[IDXPROM7]]
-// CHECK13-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX8]], ptr align 4 [[TMP6]], i64 4, i1 false), !llvm.access.group [[ACC_GRP6]]
+// CHECK13-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR4]], i64 0, i64 [[IDXPROM7]]
+// CHECK13-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX8]], ptr align 4 [[TMP6]], i64 4, i1 false), !llvm.access.group [[ACC_GRP7]]
 // CHECK13-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK13:       omp.body.continue:
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK13:       omp.inner.for.inc:
-// CHECK13-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
+// CHECK13-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7]]
 // CHECK13-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP8]], 1
-// CHECK13-NEXT:    store i32 [[ADD9]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP6]]
-// CHECK13-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
+// CHECK13-NEXT:    store i32 [[ADD9]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK13-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    store i32 2, ptr [[I]], align 4
-// CHECK13-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR5]]) #[[ATTR4]]
-// CHECK13-NEXT:    [[ARRAY_BEGIN10:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR4]], i32 0, i32 0
+// CHECK13-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR5]]) #[[ATTR3]]
+// CHECK13-NEXT:    [[ARRAY_BEGIN10:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR4]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN10]], i64 2
 // CHECK13-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK13:       arraydestroy.body:
 // CHECK13-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP9]], [[OMP_INNER_FOR_END]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK13-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK13-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK13-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN10]]
 // CHECK13-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE11:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK13:       arraydestroy.done11:
 // CHECK13-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK13-NEXT:    [[ARRAY_BEGIN12:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK13-NEXT:    [[ARRAY_BEGIN12:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN12]], i64 2
 // CHECK13-NEXT:    br label [[ARRAYDESTROY_BODY13:%.*]]
 // CHECK13:       arraydestroy.body13:
 // CHECK13-NEXT:    [[ARRAYDESTROY_ELEMENTPAST14:%.*]] = phi ptr [ [[TMP10]], [[ARRAYDESTROY_DONE11]] ], [ [[ARRAYDESTROY_ELEMENT15:%.*]], [[ARRAYDESTROY_BODY13]] ]
 // CHECK13-NEXT:    [[ARRAYDESTROY_ELEMENT15]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST14]], i64 -1
-// CHECK13-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT15]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT15]]) #[[ATTR3]]
 // CHECK13-NEXT:    [[ARRAYDESTROY_DONE16:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT15]], [[ARRAY_BEGIN12]]
 // CHECK13-NEXT:    br i1 [[ARRAYDESTROY_DONE16]], label [[ARRAYDESTROY_DONE17:%.*]], label [[ARRAYDESTROY_BODY13]]
 // CHECK13:       arraydestroy.done17:
-// CHECK13-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[TEST]]) #[[ATTR3]]
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK13-NEXT:    ret i32 [[TMP11]]
 //
@@ -2298,13 +2320,13 @@ int main() {
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK13-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK13-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK13-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK13-NEXT:    store float 0.000000e+00, ptr [[F]], align 4
 // CHECK13-NEXT:    ret void
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
-// CHECK13-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK13-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -2320,7 +2342,7 @@ int main() {
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK13-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK13-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK13-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK13-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CHECK13-NEXT:    store float [[TMP0]], ptr [[F]], align 4
 // CHECK13-NEXT:    ret void
@@ -2350,12 +2372,12 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SIiED1Ev
-// CHECK13-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK13-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK13-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK13-NEXT:    call void @_ZN1SIiED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @_ZN1SIiED2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR3]]
 // CHECK13-NEXT:    ret void
 //
 //
@@ -2365,7 +2387,7 @@ int main() {
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK13-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK13-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK13-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK13-NEXT:    store i32 0, ptr [[F]], align 4
 // CHECK13-NEXT:    ret void
 //
@@ -2378,14 +2400,14 @@ int main() {
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK13-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK13-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK13-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK13-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK13-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // CHECK13-NEXT:    ret void
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SIiED2Ev
-// CHECK13-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK13-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -2402,28 +2424,27 @@ int main() {
 // CHECK15-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S:%.*]], align 4
 // CHECK15-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK15-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S], align 4
+// CHECK15-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S]]], align 4
 // CHECK15-NEXT:    [[VAR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
-// CHECK15-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[T_VAR2:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[VEC3:%.*]] = alloca [2 x i32], align 4
-// CHECK15-NEXT:    [[S_ARR4:%.*]] = alloca [2 x %struct.S], align 4
+// CHECK15-NEXT:    [[S_ARR4:%.*]] = alloca [2 x [[STRUCT_S]]], align 4
 // CHECK15-NEXT:    [[VAR5:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK15-NEXT:    [[_TMP6:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[SVAR:%.*]] = alloca i32, align 4
+// CHECK15-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK15-NEXT:    store ptr [[G]], ptr [[G1]], align 4
 // CHECK15-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK15-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK15-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i32 8, i1 false)
-// CHECK15-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
-// CHECK15-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float noundef 1.000000e+00)
-// CHECK15-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i32 1
+// CHECK15-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], float noundef 1.000000e+00)
+// CHECK15-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i32 1
 // CHECK15-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK15-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 4
 // CHECK15-NEXT:    store ptr undef, ptr [[_TMP1]], align 4
@@ -2431,7 +2452,7 @@ int main() {
 // CHECK15-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
 // CHECK15-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK15-NEXT:    store i32 [[TMP0]], ptr [[DOTOMP_IV]], align 4
-// CHECK15-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR4]], i32 0, i32 0
+// CHECK15-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR4]], i32 0, i32 0
 // CHECK15-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i32 2
 // CHECK15-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK15:       arrayctor.loop:
@@ -2445,59 +2466,59 @@ int main() {
 // CHECK15-NEXT:    store ptr [[VAR5]], ptr [[_TMP6]], align 4
 // CHECK15-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK15:       omp.inner.for.cond:
-// CHECK15-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP3:![0-9]+]]
-// CHECK15-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP3]]
+// CHECK15-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP2:![0-9]+]]
+// CHECK15-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP2]]
 // CHECK15-NEXT:    [[CMP:%.*]] = icmp sle i32 [[TMP1]], [[TMP2]]
 // CHECK15-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK15:       omp.inner.for.cond.cleanup:
 // CHECK15-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK15:       omp.inner.for.body:
-// CHECK15-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP3]]
+// CHECK15-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP2]]
 // CHECK15-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP3]], 1
 // CHECK15-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK15-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP3]]
-// CHECK15-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR2]], align 4, !llvm.access.group [[ACC_GRP3]]
-// CHECK15-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP3]]
+// CHECK15-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK15-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR2]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK15-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
 // CHECK15-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC3]], i32 0, i32 [[TMP5]]
-// CHECK15-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP3]]
-// CHECK15-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[_TMP6]], align 4, !llvm.access.group [[ACC_GRP3]]
-// CHECK15-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP3]]
-// CHECK15-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR4]], i32 0, i32 [[TMP7]]
-// CHECK15-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARRAYIDX7]], ptr align 4 [[TMP6]], i32 4, i1 false), !llvm.access.group [[ACC_GRP3]]
+// CHECK15-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK15-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[_TMP6]], align 4, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]], !llvm.access.group [[ACC_GRP2]]
+// CHECK15-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK15-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR4]], i32 0, i32 [[TMP7]]
+// CHECK15-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARRAYIDX7]], ptr align 4 [[TMP6]], i32 4, i1 false), !llvm.access.group [[ACC_GRP2]]
 // CHECK15-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK15:       omp.body.continue:
 // CHECK15-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK15:       omp.inner.for.inc:
-// CHECK15-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP3]]
+// CHECK15-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP2]]
 // CHECK15-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP8]], 1
-// CHECK15-NEXT:    store i32 [[ADD8]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP3]]
-// CHECK15-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
+// CHECK15-NEXT:    store i32 [[ADD8]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP2]]
+// CHECK15-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
 // CHECK15:       omp.inner.for.end:
 // CHECK15-NEXT:    store i32 2, ptr [[I]], align 4
-// CHECK15-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR5]]) #[[ATTR4:[0-9]+]]
-// CHECK15-NEXT:    [[ARRAY_BEGIN9:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR4]], i32 0, i32 0
+// CHECK15-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR5]]) #[[ATTR3:[0-9]+]]
+// CHECK15-NEXT:    [[ARRAY_BEGIN9:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR4]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN9]], i32 2
 // CHECK15-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK15:       arraydestroy.body:
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP9]], [[OMP_INNER_FOR_END]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i32 -1
-// CHECK15-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK15-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN9]]
 // CHECK15-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE10:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK15:       arraydestroy.done10:
 // CHECK15-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiET_v()
 // CHECK15-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
-// CHECK15-NEXT:    [[ARRAY_BEGIN11:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
+// CHECK15-NEXT:    [[ARRAY_BEGIN11:%.*]] = getelementptr inbounds [2 x [[STRUCT_S]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN11]], i32 2
 // CHECK15-NEXT:    br label [[ARRAYDESTROY_BODY12:%.*]]
 // CHECK15:       arraydestroy.body12:
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENTPAST13:%.*]] = phi ptr [ [[TMP10]], [[ARRAYDESTROY_DONE10]] ], [ [[ARRAYDESTROY_ELEMENT14:%.*]], [[ARRAYDESTROY_BODY12]] ]
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENT14]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST13]], i32 -1
-// CHECK15-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT14]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT14]]) #[[ATTR3]]
 // CHECK15-NEXT:    [[ARRAYDESTROY_DONE15:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT14]], [[ARRAY_BEGIN11]]
 // CHECK15-NEXT:    br i1 [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_DONE16:%.*]], label [[ARRAYDESTROY_BODY12]]
 // CHECK15:       arraydestroy.done16:
-// CHECK15-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[TEST]]) #[[ATTR3]]
 // CHECK15-NEXT:    [[TMP11:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK15-NEXT:    ret i32 [[TMP11]]
 //
@@ -2526,41 +2547,40 @@ int main() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN1SIfED1Ev
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK15-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK15-NEXT:    call void @_ZN1SIfED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @_ZN1SIfED2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR3]]
 // CHECK15-NEXT:    ret void
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK15-SAME: () #[[ATTR3:[0-9]+]] comdat {
+// CHECK15-SAME: () #[[ATTR1]] comdat {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[TEST:%.*]] = alloca [[STRUCT_S_0:%.*]], align 4
 // CHECK15-NEXT:    [[T_VAR:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[VEC:%.*]] = alloca [2 x i32], align 4
-// CHECK15-NEXT:    [[S_ARR:%.*]] = alloca [2 x %struct.S.0], align 4
+// CHECK15-NEXT:    [[S_ARR:%.*]] = alloca [2 x [[STRUCT_S_0]]], align 4
 // CHECK15-NEXT:    [[VAR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[_TMP1:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
-// CHECK15-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[T_VAR2:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[VEC3:%.*]] = alloca [2 x i32], align 4
-// CHECK15-NEXT:    [[S_ARR4:%.*]] = alloca [2 x %struct.S.0], align 4
+// CHECK15-NEXT:    [[S_ARR4:%.*]] = alloca [2 x [[STRUCT_S_0]]], align 4
 // CHECK15-NEXT:    [[VAR5:%.*]] = alloca [[STRUCT_S_0]], align 4
 // CHECK15-NEXT:    [[_TMP6:%.*]] = alloca ptr, align 4
+// CHECK15-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    call void @_ZN1SIiEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK15-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK15-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i32 8, i1 false)
-// CHECK15-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
-// CHECK15-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef 1)
-// CHECK15-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i32 1
+// CHECK15-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef 1)
+// CHECK15-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i32 1
 // CHECK15-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK15-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 4
 // CHECK15-NEXT:    store ptr undef, ptr [[_TMP1]], align 4
@@ -2568,7 +2588,7 @@ int main() {
 // CHECK15-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
 // CHECK15-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK15-NEXT:    store i32 [[TMP0]], ptr [[DOTOMP_IV]], align 4
-// CHECK15-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR4]], i32 0, i32 0
+// CHECK15-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR4]], i32 0, i32 0
 // CHECK15-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i32 2
 // CHECK15-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK15:       arrayctor.loop:
@@ -2582,58 +2602,58 @@ int main() {
 // CHECK15-NEXT:    store ptr [[VAR5]], ptr [[_TMP6]], align 4
 // CHECK15-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK15:       omp.inner.for.cond:
-// CHECK15-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7:![0-9]+]]
-// CHECK15-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK15-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP8:![0-9]+]]
+// CHECK15-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !llvm.access.group [[ACC_GRP8]]
 // CHECK15-NEXT:    [[CMP:%.*]] = icmp sle i32 [[TMP1]], [[TMP2]]
 // CHECK15-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK15:       omp.inner.for.cond.cleanup:
 // CHECK15-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK15:       omp.inner.for.body:
-// CHECK15-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK15-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP8]]
 // CHECK15-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP3]], 1
 // CHECK15-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK15-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP7]]
-// CHECK15-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR2]], align 4, !llvm.access.group [[ACC_GRP7]]
-// CHECK15-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK15-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP8]]
+// CHECK15-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR2]], align 4, !llvm.access.group [[ACC_GRP8]]
+// CHECK15-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP8]]
 // CHECK15-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC3]], i32 0, i32 [[TMP5]]
-// CHECK15-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP7]]
-// CHECK15-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[_TMP6]], align 4, !llvm.access.group [[ACC_GRP7]]
-// CHECK15-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP7]]
-// CHECK15-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR4]], i32 0, i32 [[TMP7]]
-// CHECK15-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARRAYIDX7]], ptr align 4 [[TMP6]], i32 4, i1 false), !llvm.access.group [[ACC_GRP7]]
+// CHECK15-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4, !llvm.access.group [[ACC_GRP8]]
+// CHECK15-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[_TMP6]], align 4, !nonnull [[META3]], !align [[META4]], !llvm.access.group [[ACC_GRP8]]
+// CHECK15-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP8]]
+// CHECK15-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR4]], i32 0, i32 [[TMP7]]
+// CHECK15-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARRAYIDX7]], ptr align 4 [[TMP6]], i32 4, i1 false), !llvm.access.group [[ACC_GRP8]]
 // CHECK15-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK15:       omp.body.continue:
 // CHECK15-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK15:       omp.inner.for.inc:
-// CHECK15-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7]]
+// CHECK15-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP8]]
 // CHECK15-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP8]], 1
-// CHECK15-NEXT:    store i32 [[ADD8]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP7]]
-// CHECK15-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
+// CHECK15-NEXT:    store i32 [[ADD8]], ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP8]]
+// CHECK15-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
 // CHECK15:       omp.inner.for.end:
 // CHECK15-NEXT:    store i32 2, ptr [[I]], align 4
-// CHECK15-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR5]]) #[[ATTR4]]
-// CHECK15-NEXT:    [[ARRAY_BEGIN9:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR4]], i32 0, i32 0
+// CHECK15-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[VAR5]]) #[[ATTR3]]
+// CHECK15-NEXT:    [[ARRAY_BEGIN9:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR4]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN9]], i32 2
 // CHECK15-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK15:       arraydestroy.body:
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP9]], [[OMP_INNER_FOR_END]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i32 -1
-// CHECK15-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK15-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN9]]
 // CHECK15-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE10:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK15:       arraydestroy.done10:
 // CHECK15-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK15-NEXT:    [[ARRAY_BEGIN11:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
+// CHECK15-NEXT:    [[ARRAY_BEGIN11:%.*]] = getelementptr inbounds [2 x [[STRUCT_S_0]]], ptr [[S_ARR]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN11]], i32 2
 // CHECK15-NEXT:    br label [[ARRAYDESTROY_BODY12:%.*]]
 // CHECK15:       arraydestroy.body12:
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENTPAST13:%.*]] = phi ptr [ [[TMP10]], [[ARRAYDESTROY_DONE10]] ], [ [[ARRAYDESTROY_ELEMENT14:%.*]], [[ARRAYDESTROY_BODY12]] ]
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENT14]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST13]], i32 -1
-// CHECK15-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT14]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT14]]) #[[ATTR3]]
 // CHECK15-NEXT:    [[ARRAYDESTROY_DONE15:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT14]], [[ARRAY_BEGIN11]]
 // CHECK15-NEXT:    br i1 [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_DONE16:%.*]], label [[ARRAYDESTROY_BODY12]]
 // CHECK15:       arraydestroy.done16:
-// CHECK15-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[TEST]]) #[[ATTR3]]
 // CHECK15-NEXT:    [[TMP11:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK15-NEXT:    ret i32 [[TMP11]]
 //
@@ -2644,13 +2664,13 @@ int main() {
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK15-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK15-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK15-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK15-NEXT:    store float 0.000000e+00, ptr [[F]], align 4
 // CHECK15-NEXT:    ret void
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
@@ -2666,7 +2686,7 @@ int main() {
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK15-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK15-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK15-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK15-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CHECK15-NEXT:    store float [[TMP0]], ptr [[F]], align 4
 // CHECK15-NEXT:    ret void
@@ -2696,12 +2716,12 @@ int main() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN1SIiED1Ev
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK15-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK15-NEXT:    call void @_ZN1SIiED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @_ZN1SIiED2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR3]]
 // CHECK15-NEXT:    ret void
 //
 //
@@ -2711,7 +2731,7 @@ int main() {
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK15-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK15-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK15-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK15-NEXT:    store i32 0, ptr [[F]], align 4
 // CHECK15-NEXT:    ret void
 //
@@ -2724,14 +2744,14 @@ int main() {
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK15-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK15-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK15-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK15-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK15-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // CHECK15-NEXT:    ret void
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN1SIiED2Ev
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4

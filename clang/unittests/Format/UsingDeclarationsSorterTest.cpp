@@ -17,22 +17,22 @@ namespace clang {
 namespace format {
 namespace {
 
-class UsingDeclarationsSorterTest : public ::testing::Test {
+class UsingDeclarationsSorterTest : public testing::Test {
 protected:
-  std::string sortUsingDeclarations(llvm::StringRef Code,
+  std::string sortUsingDeclarations(StringRef Code,
                                     const std::vector<tooling::Range> &Ranges,
                                     const FormatStyle &Style = getLLVMStyle()) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     tooling::Replacements Replaces =
-        clang::format::sortUsingDeclarations(Style, Code, Ranges, "<stdin>");
+        format::sortUsingDeclarations(Style, Code, Ranges, "<stdin>");
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
     return *Result;
   }
 
-  std::string sortUsingDeclarations(llvm::StringRef Code,
+  std::string sortUsingDeclarations(StringRef Code,
                                     const FormatStyle &Style = getLLVMStyle()) {
     return sortUsingDeclarations(Code,
                                  /*Ranges=*/{1, tooling::Range(0, Code.size())},
@@ -784,7 +784,7 @@ TEST_F(UsingDeclarationsSorterTest,
             "using std::chrono::duration_cast;\n"
             "using std::chrono::microseconds;\n"
             "using std::chrono::seconds;\n"
-            "using std::chrono::steady_clock;\n",
+            "using std::chrono::steady_clock;",
             sortUsingDeclarations("using boost::regex;\n"
                                   "using boost::regex_constants::icase;\n"
                                   "using std::chrono::duration_cast;\n"
@@ -792,7 +792,7 @@ TEST_F(UsingDeclarationsSorterTest,
                                   "using std::chrono::seconds;\n"
                                   "using std::chrono::steady_clock;\n"
                                   "using std::move;\n"
-                                  "using std::string;\n",
+                                  "using std::string;",
                                   Style));
 
   Style.SortUsingDeclarations = FormatStyle::SUD_Lexicographic;
@@ -803,7 +803,7 @@ TEST_F(UsingDeclarationsSorterTest,
             "using std::chrono::seconds;\n"
             "using std::chrono::steady_clock;\n"
             "using std::move;\n"
-            "using std::string;\n",
+            "using std::string;",
             sortUsingDeclarations("using boost::regex;\n"
                                   "using boost::regex_constants::icase;\n"
                                   "using std::move;\n"
@@ -811,7 +811,7 @@ TEST_F(UsingDeclarationsSorterTest,
                                   "using std::chrono::duration_cast;\n"
                                   "using std::chrono::microseconds;\n"
                                   "using std::chrono::seconds;\n"
-                                  "using std::chrono::steady_clock;\n",
+                                  "using std::chrono::steady_clock;",
                                   Style));
 }
 

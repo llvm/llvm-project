@@ -13,7 +13,7 @@ list(APPEND SCUDO_CFLAGS
   -nostdinc++)
 
 # Remove -stdlib= which is unused when passing -nostdinc++.
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-?-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SCUDO_CFLAGS)
 
@@ -58,10 +58,14 @@ endif()
 set(SCUDO_HEADERS
   allocator_common.h
   allocator_config.h
+  allocator_config_wrapper.h
   atomic_helpers.h
   bytemap.h
   checksum.h
   chunk.h
+  condition_variable.h
+  condition_variable_base.h
+  condition_variable_linux.h
   combined.h
   common.h
   flags_parser.h
@@ -70,7 +74,6 @@ set(SCUDO_HEADERS
   internal_defs.h
   linux.h
   list.h
-  local_cache.h
   memtag.h
   mem_map.h
   mem_map_base.h
@@ -86,6 +89,7 @@ set(SCUDO_HEADERS
   report.h
   report_linux.h
   secondary.h
+  size_class_allocator.h
   size_class_map.h
   stack_depot.h
   stats.h
@@ -94,6 +98,7 @@ set(SCUDO_HEADERS
   tsd_exclusive.h
   tsd_shared.h
   tsd.h
+  type_traits.h
   vector.h
   wrappers_c_checks.h
   wrappers_c.h
@@ -104,6 +109,7 @@ set(SCUDO_HEADERS
 set(SCUDO_SOURCES
   checksum.cpp
   common.cpp
+  condition_variable_linux.cpp
   crc32_hw.cpp
   flags_parser.cpp
   flags.cpp
@@ -190,60 +196,57 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH MATCHES "mips|mips64|mipsel|mips64el")
   list(APPEND SCUDO_LINK_LIBS atomic)
 endif()
 
-if(COMPILER_RT_HAS_SCUDO_STANDALONE)
-  add_compiler_rt_object_libraries(RTScudoStandalone
-    ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
-    SOURCES ${SCUDO_SOURCES}
-    ADDITIONAL_HEADERS ${SCUDO_HEADERS}
-    CFLAGS ${SCUDO_CFLAGS}
-    DEPS ${SCUDO_DEPS})
-  add_compiler_rt_object_libraries(RTScudoStandaloneCWrappers
-    ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
-    SOURCES ${SCUDO_SOURCES_C_WRAPPERS}
-    ADDITIONAL_HEADERS ${SCUDO_HEADERS}
-    CFLAGS ${SCUDO_CFLAGS}
-    DEPS ${SCUDO_DEPS})
-  add_compiler_rt_object_libraries(RTScudoStandaloneCxxWrappers
-    ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
-    SOURCES ${SCUDO_SOURCES_CXX_WRAPPERS}
-    ADDITIONAL_HEADERS ${SCUDO_HEADERS}
-    CFLAGS ${SCUDO_CFLAGS}
-    DEPS ${SCUDO_DEPS})
+add_compiler_rt_object_libraries(RTScudoStandalone
+  ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
+  SOURCES ${SCUDO_SOURCES}
+  ADDITIONAL_HEADERS ${SCUDO_HEADERS}
+  CFLAGS ${SCUDO_CFLAGS}
+  DEPS ${SCUDO_DEPS})
+add_compiler_rt_object_libraries(RTScudoStandaloneCWrappers
+  ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
+  SOURCES ${SCUDO_SOURCES_C_WRAPPERS}
+  ADDITIONAL_HEADERS ${SCUDO_HEADERS}
+  CFLAGS ${SCUDO_CFLAGS}
+  DEPS ${SCUDO_DEPS})
+add_compiler_rt_object_libraries(RTScudoStandaloneCxxWrappers
+  ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
+  SOURCES ${SCUDO_SOURCES_CXX_WRAPPERS}
+  ADDITIONAL_HEADERS ${SCUDO_HEADERS}
+  CFLAGS ${SCUDO_CFLAGS}
+  DEPS ${SCUDO_DEPS})
 
+add_compiler_rt_runtime(clang_rt.scudo_standalone
+  STATIC
+  ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
+  SOURCES ${SCUDO_SOURCES} ${SCUDO_SOURCES_C_WRAPPERS}
+  ADDITIONAL_HEADERS ${SCUDO_HEADERS}
+  CFLAGS ${SCUDO_CFLAGS}
+  DEPS ${SCUDO_DEPS}
+  OBJECT_LIBS ${SCUDO_OBJECT_LIBS}
+  PARENT_TARGET scudo_standalone)
+add_compiler_rt_runtime(clang_rt.scudo_standalone_cxx
+  STATIC
+  ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
+  SOURCES ${SCUDO_SOURCES_CXX_WRAPPERS}
+  ADDITIONAL_HEADERS ${SCUDO_HEADERS}
+  CFLAGS ${SCUDO_CFLAGS}
+  DEPS ${SCUDO_DEPS}
+  PARENT_TARGET scudo_standalone)
+
+if(COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED)
   add_compiler_rt_runtime(clang_rt.scudo_standalone
-    STATIC
+    SHARED
     ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
-    SOURCES ${SCUDO_SOURCES} ${SCUDO_SOURCES_C_WRAPPERS}
+    SOURCES ${SCUDO_SOURCES} ${SCUDO_SOURCES_C_WRAPPERS} ${SCUDO_SOURCES_CXX_WRAPPERS}
     ADDITIONAL_HEADERS ${SCUDO_HEADERS}
     CFLAGS ${SCUDO_CFLAGS}
     DEPS ${SCUDO_DEPS}
     OBJECT_LIBS ${SCUDO_OBJECT_LIBS}
+    LINK_FLAGS ${SCUDO_LINK_FLAGS}
+    LINK_LIBS ${SCUDO_LINK_LIBS}
     PARENT_TARGET scudo_standalone)
-  add_compiler_rt_runtime(clang_rt.scudo_standalone_cxx
-    STATIC
-    ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
-    SOURCES ${SCUDO_SOURCES_CXX_WRAPPERS}
-    ADDITIONAL_HEADERS ${SCUDO_HEADERS}
-    CFLAGS ${SCUDO_CFLAGS}
-    DEPS ${SCUDO_DEPS}
-    PARENT_TARGET scudo_standalone)
+endif()
 
-  if(COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED)
-    add_compiler_rt_runtime(clang_rt.scudo_standalone
-      SHARED
-      ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
-      SOURCES ${SCUDO_SOURCES} ${SCUDO_SOURCES_C_WRAPPERS} ${SCUDO_SOURCES_CXX_WRAPPERS}
-      ADDITIONAL_HEADERS ${SCUDO_HEADERS}
-      CFLAGS ${SCUDO_CFLAGS}
-      DEPS ${SCUDO_DEPS}
-      OBJECT_LIBS ${SCUDO_OBJECT_LIBS}
-      LINK_FLAGS ${SCUDO_LINK_FLAGS}
-      LINK_LIBS ${SCUDO_LINK_LIBS}
-      PARENT_TARGET scudo_standalone)
-  endif()
-
-  add_subdirectory(benchmarks)
-  if(COMPILER_RT_INCLUDE_TESTS)
-    add_subdirectory(tests)
-  endif()
+if(COMPILER_RT_INCLUDE_TESTS)
+  add_subdirectory(tests)
 endif()

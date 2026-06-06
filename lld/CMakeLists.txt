@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "LLD")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -38,6 +39,10 @@ if(LLD_BUILT_STANDALONE)
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
 
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
@@ -62,6 +67,9 @@ if(LLD_BUILT_STANDALONE)
     if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       # Note: path not really used, except for checking if lit was found
       set(LLVM_EXTERNAL_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
+      if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+        add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit utils/llvm-lit)
+      endif()
       if(NOT LLVM_UTILS_PROVIDED)
         add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/FileCheck utils/FileCheck)
         add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/not utils/not)
@@ -179,20 +187,15 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
 
-if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  install(DIRECTORY include/
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-    FILES_MATCHING
-    PATTERN "*.h"
-    )
-endif()
-
 add_subdirectory(Common)
 add_subdirectory(tools/lld)
 
 if (LLVM_INCLUDE_TESTS)
   add_custom_target(LLDUnitTests)
-  llvm_add_unittests(LLD_UNITTESTS_ADDED)
+  set_target_properties(LLDUnitTests PROPERTIES FOLDER "LLD/Tests")
+  if (TARGET llvm_gtest)
+    add_subdirectory(unittests)
+  endif()
   add_subdirectory(test)
 endif()
 
@@ -202,5 +205,43 @@ add_subdirectory(ELF)
 add_subdirectory(MachO)
 add_subdirectory(MinGW)
 add_subdirectory(wasm)
+
+add_custom_target(lld-headers)
+set_target_properties(lld-headers PROPERTIES FOLDER "Misc")
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  install(DIRECTORY include/lld
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    COMPONENT lld-headers
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.inc"
+    )
+
+  if (NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-lld-headers
+                             DEPENDS lld-headers
+                             COMPONENT lld-headers)
+  endif()
+endif()
+
+# Custom target to install all lld libraries
+add_custom_target(lld-libraries)
+if (NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-lld-libraries
+                           DEPENDS lld-libraries
+                           COMPONENT lld-libraries)
+endif()
+
+get_property(LLD_LIBS GLOBAL PROPERTY LLD_ALL_LIBS)
+if(LLD_LIBS)
+  list(REMOVE_DUPLICATES LLD_LIBS)
+  foreach(lib ${LLD_LIBS})
+    add_dependencies(lld-libraries ${lib})
+    if(NOT LLVM_ENABLE_IDE)
+      add_dependencies(install-lld-libraries install-${lib})
+      add_dependencies(install-lld-libraries-stripped install-${lib}-stripped)
+    endif()
+  endforeach()
+endif()
 
 add_subdirectory(cmake/modules)

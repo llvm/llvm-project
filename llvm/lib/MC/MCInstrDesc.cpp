@@ -21,15 +21,15 @@ bool MCInstrDesc::mayAffectControlFlow(const MCInst &MI,
                                        const MCRegisterInfo &RI) const {
   if (isBranch() || isCall() || isReturn() || isIndirectBranch())
     return true;
-  unsigned PC = RI.getProgramCounter();
-  if (PC == 0)
+  MCRegister PC = RI.getProgramCounter();
+  if (!PC)
     return false;
   if (hasDefOfPhysReg(MI, PC, RI))
     return true;
   return false;
 }
 
-bool MCInstrDesc::hasImplicitDefOfPhysReg(unsigned Reg,
+bool MCInstrDesc::hasImplicitDefOfPhysReg(MCRegister Reg,
                                           const MCRegisterInfo *MRI) const {
   for (MCPhysReg ImpDef : implicit_defs())
     if (ImpDef == Reg || (MRI && MRI->isSubRegister(Reg, ImpDef)))
@@ -37,8 +37,8 @@ bool MCInstrDesc::hasImplicitDefOfPhysReg(unsigned Reg,
   return false;
 }
 
-bool MCInstrDesc::hasDefOfPhysReg(const MCInst &MI, unsigned Reg,
-                                  const MCRegisterInfo &RI) const {
+bool MCInstrDesc::hasExplicitDefOfPhysReg(const MCInst &MI, MCRegister Reg,
+                                          const MCRegisterInfo &RI) const {
   for (int i = 0, e = NumDefs; i != e; ++i)
     if (MI.getOperand(i).isReg() && MI.getOperand(i).getReg() &&
         RI.isSubRegisterEq(Reg, MI.getOperand(i).getReg()))
@@ -48,5 +48,11 @@ bool MCInstrDesc::hasDefOfPhysReg(const MCInst &MI, unsigned Reg,
       if (MI.getOperand(i).isReg() &&
           RI.isSubRegisterEq(Reg, MI.getOperand(i).getReg()))
         return true;
-  return hasImplicitDefOfPhysReg(Reg, &RI);
+  return false;
+}
+
+bool MCInstrDesc::hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
+                                  const MCRegisterInfo &RI) const {
+  return hasExplicitDefOfPhysReg(MI, Reg, RI) ||
+         hasImplicitDefOfPhysReg(Reg, &RI);
 }

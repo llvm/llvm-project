@@ -3,6 +3,8 @@
 # RUN: echo "SECTIONS { .zed : { *(.foo) *(.bar) } }" > %t.script
 # RUN: ld.lld --emit-relocs --script %t.script %t.o -o %t1
 # RUN: llvm-readobj -r %t1 | FileCheck %s
+# RUN: ld.lld -r --script %t.script %t.o -o %t.ro
+# RUN: llvm-readobj -r %t.ro | FileCheck %s
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section {{.*}} .rela.zed {

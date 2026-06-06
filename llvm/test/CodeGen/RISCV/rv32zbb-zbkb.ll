@@ -111,7 +111,139 @@ define i64 @xnor_i64(i64 %a, i64 %b) nounwind {
   ret i64 %xor
 }
 
-declare i32 @llvm.fshl.i32(i32, i32, i32)
+define i32 @disjoint_or_xnor_i32(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: disjoint_or_xnor_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_i32:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %or = or disjoint i32 %a, %b
+  %not = xor i32 %or, -1
+  ret i32 %not
+}
+
+define i64 @disjoint_or_xnor_i64(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: disjoint_or_xnor_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    xnor a1, a1, a3
+; RV32ZBB-ZBKB-NEXT:    ret
+  %or = or disjoint i64 %a, %b
+  %not = xor i64 %or, -1
+  ret i64 %not
+}
+
+define i32 @disjoint_or_xnor_knownbits_i32(i32 %x, i32 %y, i32 %z) nounwind {
+; RV32I-LABEL: disjoint_or_xnor_knownbits_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 126
+; RV32I-NEXT:    andi a1, a1, -127
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_knownbits_i32:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    andi a0, a0, 126
+; RV32ZBB-ZBKB-NEXT:    andi a1, a1, -127
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = and i32 %x, 126
+  %b = and i32 %y, -127
+  %or = or i32 %a, %b
+  %not = xor i32 %or, -1
+  ret i32 %not
+}
+
+define i64 @disjoint_or_xnor_knownbits_i64(i64 %x, i64 %y, i64 %z) nounwind {
+; RV32I-LABEL: disjoint_or_xnor_knownbits_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 126
+; RV32I-NEXT:    andi a1, a2, -127
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    not a1, a3
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_knownbits_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    andi a0, a0, 126
+; RV32ZBB-ZBKB-NEXT:    andi a1, a2, -127
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    not a1, a3
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = and i64 %x, 126
+  %b = and i64 %y, -127
+  %or = or i64 %a, %b
+  %not = xor i64 %or, -1
+  ret i64 %not
+}
+
+define i32 @inverted_masked_merge_i32(i32 %x, i32 %y, i32 %z) nounwind {
+; RV32I-LABEL: inverted_masked_merge_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    xor a1, a1, a2
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    xor a0, a0, a2
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: inverted_masked_merge_i32:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    and a1, a0, a1
+; RV32ZBB-ZBKB-NEXT:    andn a0, a2, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = and i32 %x, %y
+  %notx = xor i32 %x, -1
+  %b = and i32 %notx, %z
+  %or = or i32 %a, %b
+  %not = xor i32 %or, -1
+  ret i32 %not
+}
+
+define i64 @inverted_masked_merge_i64(i64 %x, i64 %y, i64 %z) nounwind {
+; RV32I-LABEL: inverted_masked_merge_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    xor a3, a3, a5
+; RV32I-NEXT:    xor a2, a2, a4
+; RV32I-NEXT:    and a1, a3, a1
+; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    xor a1, a1, a5
+; RV32I-NEXT:    xor a0, a0, a4
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: inverted_masked_merge_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    and a3, a1, a3
+; RV32ZBB-ZBKB-NEXT:    and a2, a0, a2
+; RV32ZBB-ZBKB-NEXT:    andn a1, a5, a1
+; RV32ZBB-ZBKB-NEXT:    andn a0, a4, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a2, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a1, a3, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = and i64 %x, %y
+  %notx = xor i64 %x, -1
+  %b = and i64 %notx, %z
+  %or = or i64 %a, %b
+  %not = xor i64 %or, -1
+  ret i64 %not
+}
 
 define i32 @rol_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: rol_i32:
@@ -133,38 +265,33 @@ define i32 @rol_i32(i32 %a, i32 %b) nounwind {
 ; This test is presented here in case future expansions of the Bitmanip
 ; extensions introduce instructions suitable for this pattern.
 
-declare i64 @llvm.fshl.i64(i64, i64, i64)
-
 define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: rol_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    srli a3, a3, 31
-; CHECK-NEXT:    mv a4, a1
-; CHECK-NEXT:    bnez a3, .LBB7_2
+; CHECK-NEXT:    slli a5, a2, 26
+; CHECK-NEXT:    srli a5, a5, 31
+; CHECK-NEXT:    mv a3, a1
+; CHECK-NEXT:    bnez a5, .LBB13_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a4, a0
-; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    sll a5, a4, a2
-; CHECK-NEXT:    bnez a3, .LBB7_4
+; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    sll a4, a3, a2
+; CHECK-NEXT:    bnez a5, .LBB13_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB7_4:
+; CHECK-NEXT:  .LBB13_4:
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    not a6, a2
-; CHECK-NEXT:    srl a3, a1, a6
-; CHECK-NEXT:    or a3, a5, a3
-; CHECK-NEXT:    sll a0, a0, a2
-; CHECK-NEXT:    srli a4, a4, 1
-; CHECK-NEXT:    srl a1, a4, a6
-; CHECK-NEXT:    or a1, a0, a1
-; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    not a5, a2
+; CHECK-NEXT:    sll a2, a0, a2
+; CHECK-NEXT:    srli a3, a3, 1
+; CHECK-NEXT:    srl a0, a1, a5
+; CHECK-NEXT:    srl a1, a3, a5
+; CHECK-NEXT:    or a0, a4, a0
+; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %or = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %b)
   ret i64 %or
 }
-
-declare i32 @llvm.fshr.i32(i32, i32, i32)
 
 define i32 @ror_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: ror_i32:
@@ -186,29 +313,27 @@ define i32 @ror_i32(i32 %a, i32 %b) nounwind {
 ; This test is presented here in case future expansions of the Bitmanip
 ; extensions introduce instructions suitable for this pattern.
 
-declare i64 @llvm.fshr.i64(i64, i64, i64)
-
 define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: ror_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a4, a2, 32
+; CHECK-NEXT:    andi a5, a2, 32
 ; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    beqz a4, .LBB9_2
+; CHECK-NEXT:    beqz a5, .LBB15_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    srl a5, a3, a2
-; CHECK-NEXT:    beqz a4, .LBB9_4
+; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:    srl a4, a3, a2
+; CHECK-NEXT:    beqz a5, .LBB15_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:  .LBB9_4:
+; CHECK-NEXT:  .LBB15_4:
 ; CHECK-NEXT:    slli a0, a1, 1
-; CHECK-NEXT:    not a4, a2
-; CHECK-NEXT:    sll a0, a0, a4
-; CHECK-NEXT:    or a0, a0, a5
+; CHECK-NEXT:    not a5, a2
 ; CHECK-NEXT:    srl a1, a1, a2
 ; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    sll a2, a3, a4
+; CHECK-NEXT:    sll a0, a0, a5
+; CHECK-NEXT:    sll a2, a3, a5
+; CHECK-NEXT:    or a0, a0, a4
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 %b)
@@ -252,11 +377,10 @@ define i64 @rori_i64(i64 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a2, a0, 1
 ; CHECK-NEXT:    slli a3, a1, 31
-; CHECK-NEXT:    or a2, a3, a2
 ; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    slli a0, a0, 31
-; CHECK-NEXT:    or a1, a0, a1
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    slli a4, a0, 31
+; CHECK-NEXT:    or a0, a3, a2
+; CHECK-NEXT:    or a1, a4, a1
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1
@@ -267,11 +391,10 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a2, a1, 31
 ; CHECK-NEXT:    slli a3, a0, 1
-; CHECK-NEXT:    or a2, a3, a2
-; CHECK-NEXT:    srli a0, a0, 31
+; CHECK-NEXT:    srli a4, a0, 31
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    or a1, a1, a0
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    or a0, a3, a2
+; CHECK-NEXT:    or a1, a1, a4
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1
@@ -298,14 +421,14 @@ define i32 @not_shl_one_i32(i32 %x) {
 define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK-LABEL: not_shl_one_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    sll a1, a1, a0
-; CHECK-NEXT:    addi a0, a0, -32
-; CHECK-NEXT:    slti a0, a0, 0
-; CHECK-NEXT:    neg a2, a0
-; CHECK-NEXT:    and a2, a2, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a1, a0, a1
+; CHECK-NEXT:    addi a1, a0, -32
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    srli a1, a1, 31
+; CHECK-NEXT:    sll a0, a2, a0
+; CHECK-NEXT:    neg a2, a1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a2, a2, a0
+; CHECK-NEXT:    and a1, a1, a0
 ; CHECK-NEXT:    not a0, a2
 ; CHECK-NEXT:    not a1, a1
 ; CHECK-NEXT:    ret
@@ -440,4 +563,358 @@ define i1 @andn_snez_i64(i64 %a, i64 %b) nounwind {
   %and = and i64 %a, %b
   %cmpeq = icmp ne i64 %and, %b
   ret i1 %cmpeq
+}
+
+define i32 @and_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
+; RV32I-LABEL: and_hoisted_not_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a2, .LBB30_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:  .LBB30_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: and_hoisted_not_i32:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a2, .LBB30_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:  .LBB30_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = and i32 %a, %x
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i32 @and_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
+; RV32I-LABEL: and_hoisted_not_i32_swapped:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a2, .LBB31_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:  .LBB31_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: and_hoisted_not_i32_swapped:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a2, .LBB31_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:  .LBB31_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = and i32 %x, %a
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i64 @and_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
+; RV32I-LABEL: and_hoisted_not_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a4, .LBB32_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a3, a3
+; RV32I-NEXT:    not a2, a2
+; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    and a1, a3, a1
+; RV32I-NEXT:  .LBB32_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: and_hoisted_not_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a4, .LBB32_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    andn a1, a1, a3
+; RV32ZBB-ZBKB-NEXT:  .LBB32_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = and i64 %a, %x
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i64 @and_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
+; RV32I-LABEL: and_hoisted_not_i64_swapped:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a4, .LBB33_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a3, a3
+; RV32I-NEXT:    not a2, a2
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    and a1, a1, a3
+; RV32I-NEXT:  .LBB33_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: and_hoisted_not_i64_swapped:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a4, .LBB33_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    andn a1, a1, a3
+; RV32ZBB-ZBKB-NEXT:  .LBB33_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = and i64 %x, %a
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i32 @or_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
+; RV32I-LABEL: or_hoisted_not_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a2, .LBB34_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:  .LBB34_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: or_hoisted_not_i32:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a2, .LBB34_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    orn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:  .LBB34_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = or i32 %a, %x
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i32 @or_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
+; RV32I-LABEL: or_hoisted_not_i32_swapped:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a2, .LBB35_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:  .LBB35_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: or_hoisted_not_i32_swapped:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a2, .LBB35_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    orn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:  .LBB35_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = or i32 %x, %a
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i64 @or_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
+; RV32I-LABEL: or_hoisted_not_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a4, .LBB36_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a3, a3
+; RV32I-NEXT:    not a2, a2
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:  .LBB36_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: or_hoisted_not_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a4, .LBB36_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    orn a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    orn a1, a1, a3
+; RV32ZBB-ZBKB-NEXT:  .LBB36_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = or i64 %a, %x
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i64 @or_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
+; RV32I-LABEL: or_hoisted_not_i64_swapped:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a4, .LBB37_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a3, a3
+; RV32I-NEXT:    not a2, a2
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:  .LBB37_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: or_hoisted_not_i64_swapped:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a4, .LBB37_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    orn a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    orn a1, a1, a3
+; RV32ZBB-ZBKB-NEXT:  .LBB37_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = or i64 %x, %a
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i32 @xor_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
+; RV32I-LABEL: xor_hoisted_not_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a2, .LBB38_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    xor a0, a1, a0
+; RV32I-NEXT:  .LBB38_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: xor_hoisted_not_i32:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a2, .LBB38_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV32ZBB-ZBKB-NEXT:  .LBB38_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = xor i32 %a, %x
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i32 @xor_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
+; RV32I-LABEL: xor_hoisted_not_i32_swapped:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a2, .LBB39_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:  .LBB39_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: xor_hoisted_not_i32_swapped:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a2, .LBB39_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV32ZBB-ZBKB-NEXT:  .LBB39_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = xor i32 %x, %a
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i64 @xor_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
+; RV32I-LABEL: xor_hoisted_not_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a4, .LBB40_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a3, a3
+; RV32I-NEXT:    not a2, a2
+; RV32I-NEXT:    xor a0, a2, a0
+; RV32I-NEXT:    xor a1, a3, a1
+; RV32I-NEXT:  .LBB40_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: xor_hoisted_not_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a4, .LBB40_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a2, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a1, a3, a1
+; RV32ZBB-ZBKB-NEXT:  .LBB40_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = xor i64 %a, %x
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i64 @xor_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
+; RV32I-LABEL: xor_hoisted_not_i64_swapped:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a4, .LBB41_2
+; RV32I-NEXT:  # %bb.1: # %mask
+; RV32I-NEXT:    not a3, a3
+; RV32I-NEXT:    not a2, a2
+; RV32I-NEXT:    xor a0, a0, a2
+; RV32I-NEXT:    xor a1, a1, a3
+; RV32I-NEXT:  .LBB41_2: # %identity
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: xor_hoisted_not_i64_swapped:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    beqz a4, .LBB41_2
+; RV32ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a2, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a1, a3, a1
+; RV32ZBB-ZBKB-NEXT:  .LBB41_2: # %identity
+; RV32ZBB-ZBKB-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = xor i64 %x, %a
+  ret i64 %masked
+
+identity:
+  ret i64 %x
 }

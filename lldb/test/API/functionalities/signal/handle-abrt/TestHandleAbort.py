@@ -7,10 +7,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSignals
 class HandleAbortTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows  # signals do not exist on Windows
     @expectedFailureNetBSD
     def test_inferior_handle_sigabrt(self):
         """Inferior calls abort() and handles the resultant SIGABRT.
@@ -33,8 +33,8 @@ class HandleAbortTestCase(TestBase):
         self.assertTrue(
             thread and thread.IsValid(), "Thread should be stopped due to a signal"
         )
-        self.assertTrue(
-            thread.GetStopReasonDataCount() >= 1, "There should be data in the event."
+        self.assertGreaterEqual(
+            thread.GetStopReasonDataCount(), 1, "There should be data in the event."
         )
         self.assertEqual(
             thread.GetStopReasonDataAtIndex(0),

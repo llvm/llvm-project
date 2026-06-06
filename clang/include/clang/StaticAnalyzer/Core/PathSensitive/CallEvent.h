@@ -50,15 +50,15 @@
 
 namespace clang {
 
-class LocationContext;
 class ProgramPoint;
 class ProgramPointTag;
-class StackFrameContext;
+class StackFrame;
 
 namespace ento {
 
 enum CallEventKind {
   CE_Function,
+  CE_CXXStaticOperator,
   CE_CXXMember,
   CE_CXXMemberOperator,
   CE_CXXDestructor,
@@ -78,7 +78,7 @@ enum CallEventKind {
 
 class CallEvent;
 
-template<typename T = CallEvent>
+template <typename T = CallEvent>
 class CallEventRef : public IntrusiveRefCntPtr<const T> {
 public:
   CallEventRef(const T *Call) : IntrusiveRefCntPtr<const T>(Call) {}
@@ -94,8 +94,7 @@ public:
 
   // Allow implicit conversions to a superclass type, since CallEventRef
   // behaves like a pointer-to-const.
-  template <typename SuperT>
-  operator CallEventRef<SuperT> () const {
+  template <typename SuperT> operator CallEventRef<SuperT>() const {
     return this->get();
   }
 };
@@ -124,9 +123,9 @@ class RuntimeDefinition {
 
 public:
   RuntimeDefinition() = default;
-  RuntimeDefinition(const Decl *InD): D(InD) {}
+  RuntimeDefinition(const Decl *InD) : D(InD) {}
   RuntimeDefinition(const Decl *InD, bool Foreign) : D(InD), Foreign(Foreign) {}
-  RuntimeDefinition(const Decl *InD, const MemRegion *InR): D(InD), R(InR) {}
+  RuntimeDefinition(const Decl *InD, const MemRegion *InR) : D(InD), R(InR) {}
 
   const Decl *getDecl() { return D; }
   bool isForeign() const { return Foreign; }
@@ -156,7 +155,7 @@ public:
 
 private:
   ProgramStateRef State;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   llvm::PointerUnion<const Expr *, const Decl *> Origin;
   CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0};
   mutable std::optional<bool> Foreign; // Set by CTU analysis.
@@ -181,17 +180,17 @@ private:
 protected:
   friend class CallEventManager;
 
-  CallEvent(const Expr *E, ProgramStateRef state, const LocationContext *lctx,
+  CallEvent(const Expr *E, ProgramStateRef state, const StackFrame *SF,
             CFGBlock::ConstCFGElementRef ElemRef)
-      : State(std::move(state)), LCtx(lctx), Origin(E), ElemRef(ElemRef) {}
+      : State(std::move(state)), SF(SF), Origin(E), ElemRef(ElemRef) {}
 
-  CallEvent(const Decl *D, ProgramStateRef state, const LocationContext *lctx,
+  CallEvent(const Decl *D, ProgramStateRef state, const StackFrame *SF,
             CFGBlock::ConstCFGElementRef ElemRef)
-      : State(std::move(state)), LCtx(lctx), Origin(D), ElemRef(ElemRef) {}
+      : State(std::move(state)), SF(SF), Origin(D), ElemRef(ElemRef) {}
 
   // DO NOT MAKE PUBLIC
   CallEvent(const CallEvent &Original)
-      : State(Original.State), LCtx(Original.LCtx), Origin(Original.Origin),
+      : State(Original.State), SF(Original.SF), Origin(Original.Origin),
         ElemRef(Original.ElemRef), Data(Original.Data),
         Location(Original.Location) {}
 
@@ -199,16 +198,27 @@ protected:
   virtual void cloneTo(void *Dest) const = 0;
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return getState()->getSVal(S, getLocationContext());
+  SVal getSVal(const Expr *E) const {
+    return getState()->getSVal(E, getStackFrame());
   }
 
   using ValueList = SmallVectorImpl<SVal>;
 
   /// Used to specify non-argument regions that will be invalidated as a
   /// result of this call.
-  virtual void getExtraInvalidatedValues(ValueList &Values,
-                 RegionAndSymbolInvalidationTraits *ETraits) const {}
+  virtual void
+  getExtraInvalidatedValues(ValueList &Values,
+                            RegionAndSymbolInvalidationTraits *ETraits) const {}
+
+  /// A state for looking up relevant Environment entries (arguments, return
+  /// value), dynamic type information and similar "stable" things.
+  /// WARNING: During the evaluation of a function call, several state
+  /// transitions happen, so this state can become partially obsolete!
+  ///
+  /// TODO: Instead of storing a complete state object in the CallEvent, only
+  /// store the relevant parts (such as argument/return SVals etc.) that aren't
+  /// allowed to become obsolete until the end of the call evaluation.
+  ProgramStateRef getState() const { return State; }
 
 public:
   CallEvent &operator=(const CallEvent &) = delete;
@@ -230,15 +240,14 @@ public:
   }
   void setForeign(bool B) const { Foreign = B; }
 
-  /// The state in which the call is being evaluated.
-  const ProgramStateRef &getState() const {
-    return State;
+  /// NOTE: There are plans for refactoring that would eliminate this method.
+  /// Prefer to use CheckerContext::getASTContext if possible!
+  const ASTContext &getASTContext() const {
+    return getState()->getStateManager().getContext();
   }
 
-  /// The context in which the call is being evaluated.
-  const LocationContext *getLocationContext() const {
-    return LCtx;
-  }
+  /// The stack frame in which the call is being evaluated.
+  const StackFrame *getStackFrame() const { return SF; }
 
   const CFGBlock::ConstCFGElementRef &getCFGElementRef() const {
     return ElemRef;
@@ -249,7 +258,7 @@ public:
   virtual RuntimeDefinition getRuntimeDefinition() const = 0;
 
   /// Returns the expression whose value will be the result of this call.
-  /// May be null.
+  /// Null if and only if 'this' is a CXXDestructorCall.
   virtual const Expr *getOriginExpr() const {
     return Origin.dyn_cast<const Expr *>();
   }
@@ -270,7 +279,7 @@ public:
     SourceLocation Loc = D->getLocation();
     if (Loc.isValid()) {
       const SourceManager &SM =
-        getState()->getStateManager().getContext().getSourceManager();
+          getState()->getStateManager().getContext().getSourceManager();
       return SM.isInSystemHeader(D->getLocation());
     }
 
@@ -324,9 +333,7 @@ public:
   // NOTE: The exact semantics of this are still being defined!
   // We don't really want a list of hardcoded exceptions in the long run,
   // but we don't want duplicated lists of known APIs in the short term either.
-  virtual bool argumentsMayEscape() const {
-    return hasNonZeroCallbackArg();
-  }
+  virtual bool argumentsMayEscape() const { return hasNonZeroCallbackArg(); }
 
   /// Returns true if the callee is an externally-visible function in the
   /// top-level namespace, such as \c malloc.
@@ -364,19 +371,17 @@ public:
   ProgramPoint getProgramPoint(bool IsPreVisit = false,
                                const ProgramPointTag *Tag = nullptr) const;
 
-  /// Returns a new state with all argument regions invalidated.
-  ///
-  /// This accepts an alternate state in case some processing has already
-  /// occurred.
+  /// Invalidates the regions (arguments, globals, special regions like 'this')
+  /// that may have been written by this call, returning the updated state.
   ProgramStateRef invalidateRegions(unsigned BlockCount,
-                                    ProgramStateRef Orig = nullptr) const;
+                                    ProgramStateRef State) const;
 
   using FrameBindingTy = std::pair<SVal, SVal>;
   using BindingsTy = SmallVectorImpl<FrameBindingTy>;
 
   /// Populates the given SmallVector with the bindings in the callee's stack
   /// frame at the start of this call.
-  virtual void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  virtual void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                             BindingsTy &Bindings) const = 0;
 
   /// Returns a copy of this CallEvent, but using the given state.
@@ -410,7 +415,7 @@ public:
   /// during analysis if the call is inlined, but it may still be useful
   /// in intermediate calculations even if the call isn't inlined.
   /// May fail; returns null on failure.
-  const StackFrameContext *getCalleeStackFrame(unsigned BlockCount) const;
+  const StackFrame *getCalleeStackFrame(unsigned BlockCount) const;
 
   /// Returns memory location for a parameter variable within the callee stack
   /// frame. The behavior is undefined if the block count is different from the
@@ -427,7 +432,7 @@ public:
   bool isArgumentConstructedDirectly(unsigned Index) const {
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
-               getState(), {getOriginExpr(), Index}, getLocationContext())
+               getState(), {getOriginExpr(), Index}, getStackFrame())
         .has_value();
   }
 
@@ -455,6 +460,14 @@ public:
   /// If the call returns a C++ record type then the region of its return value
   /// can be retrieved from its construction context.
   std::optional<SVal> getReturnValueUnderConstruction() const;
+
+  // Returns the CallEvent representing the caller of this function
+  const CallEventRef<> getCaller() const;
+
+  // Returns true if the function was called from a standard library function.
+  // If not or could not get the caller (it may be a top level function)
+  // returns false.
+  bool isCalledFromSystemHeader() const;
 
   // Iterator access to formal parameters and their types.
 private:
@@ -495,14 +508,12 @@ public:
 /// FunctionDecl.
 class AnyFunctionCall : public CallEvent {
 protected:
-  AnyFunctionCall(const Expr *E, ProgramStateRef St,
-                  const LocationContext *LCtx,
+  AnyFunctionCall(const Expr *E, ProgramStateRef St, const StackFrame *SF,
                   CFGBlock::ConstCFGElementRef ElemRef)
-      : CallEvent(E, St, LCtx, ElemRef) {}
-  AnyFunctionCall(const Decl *D, ProgramStateRef St,
-                  const LocationContext *LCtx,
+      : CallEvent(E, St, SF, ElemRef) {}
+  AnyFunctionCall(const Decl *D, ProgramStateRef St, const StackFrame *SF,
                   CFGBlock::ConstCFGElementRef ElemRef)
-      : CallEvent(D, St, LCtx, ElemRef) {}
+      : CallEvent(D, St, SF, ElemRef) {}
   AnyFunctionCall(const AnyFunctionCall &Other) = default;
 
 public:
@@ -516,7 +527,7 @@ public:
 
   bool argumentsMayEscape() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   ArrayRef<ParmVarDecl *> parameters() const override;
@@ -535,9 +546,8 @@ class SimpleFunctionCall : public AnyFunctionCall {
 
 protected:
   SimpleFunctionCall(const CallExpr *CE, ProgramStateRef St,
-                     const LocationContext *LCtx,
-                     CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(CE, St, LCtx, ElemRef) {}
+                     const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : AnyFunctionCall(CE, St, SF, ElemRef) {}
   SimpleFunctionCall(const SimpleFunctionCall &Other) = default;
 
   void cloneTo(void *Dest) const override {
@@ -550,6 +560,8 @@ public:
   }
 
   const FunctionDecl *getDecl() const override;
+
+  RuntimeDefinition getRuntimeDefinition() const override;
 
   unsigned getNumArgs() const override { return getOriginExpr()->getNumArgs(); }
 
@@ -572,15 +584,16 @@ class BlockCall : public CallEvent {
   friend class CallEventManager;
 
 protected:
-  BlockCall(const CallExpr *CE, ProgramStateRef St, const LocationContext *LCtx,
+  BlockCall(const CallExpr *CE, ProgramStateRef St, const StackFrame *SF,
             CFGBlock::ConstCFGElementRef ElemRef)
-      : CallEvent(CE, St, LCtx, ElemRef) {}
+      : CallEvent(CE, St, SF, ElemRef) {}
   BlockCall(const BlockCall &Other) = default;
 
   void cloneTo(void *Dest) const override { new (Dest) BlockCall(*this); }
 
-  void getExtraInvalidatedValues(ValueList &Values,
-         RegionAndSymbolInvalidationTraits *ETraits) const override;
+  void getExtraInvalidatedValues(
+      ValueList &Values,
+      RegionAndSymbolInvalidationTraits *ETraits) const override;
 
 public:
   const CallExpr *getOriginExpr() const override {
@@ -650,16 +663,14 @@ public:
     // the block body and analyze the operator() method on the captured lambda.
     const VarDecl *LambdaVD = getRegionStoringCapturedLambda()->getDecl();
     const CXXRecordDecl *LambdaDecl = LambdaVD->getType()->getAsCXXRecordDecl();
-    CXXMethodDecl* LambdaCallOperator = LambdaDecl->getLambdaCallOperator();
+    CXXMethodDecl *LambdaCallOperator = LambdaDecl->getLambdaCallOperator();
 
     return RuntimeDefinition(LambdaCallOperator);
   }
 
-  bool argumentsMayEscape() const override {
-    return true;
-  }
+  bool argumentsMayEscape() const override { return true; }
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   ArrayRef<ParmVarDecl *> parameters() const override;
@@ -674,18 +685,22 @@ public:
 /// it is written.
 class CXXInstanceCall : public AnyFunctionCall {
 protected:
-  CXXInstanceCall(const CallExpr *CE, ProgramStateRef St,
-                  const LocationContext *LCtx,
+  CXXInstanceCall(const CallExpr *CE, ProgramStateRef St, const StackFrame *SF,
                   CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(CE, St, LCtx, ElemRef) {}
+      : AnyFunctionCall(CE, St, SF, ElemRef) {}
   CXXInstanceCall(const FunctionDecl *D, ProgramStateRef St,
-                  const LocationContext *LCtx,
-                  CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(D, St, LCtx, ElemRef) {}
+                  const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : AnyFunctionCall(D, St, SF, ElemRef) {}
   CXXInstanceCall(const CXXInstanceCall &Other) = default;
 
-  void getExtraInvalidatedValues(ValueList &Values,
-         RegionAndSymbolInvalidationTraits *ETraits) const override;
+  void getExtraInvalidatedValues(
+      ValueList &Values,
+      RegionAndSymbolInvalidationTraits *ETraits) const override;
+
+  /// Returns the decl refered to by the "dynamic type" of the current object
+  /// and if the class can be a sub-class or not.
+  /// If the Pointer is null, the flag has no meaning.
+  std::pair<const CXXRecordDecl *, bool> getDeclForDynamicType() const;
 
 public:
   /// Returns the expression representing the implicit 'this' object.
@@ -698,12 +713,83 @@ public:
 
   RuntimeDefinition getRuntimeDefinition() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() >= CE_BEG_CXX_INSTANCE_CALLS &&
            CA->getKind() <= CE_END_CXX_INSTANCE_CALLS;
+  }
+};
+
+/// Represents a static C++ operator call.
+///
+/// "A" in this example.
+/// However, "B" and "C" are represented by SimpleFunctionCall.
+/// \code
+///   struct S {
+///     int pad;
+///     static void operator()(int x, int y);
+///   };
+///   S s{10};
+///   void (*fptr)(int, int) = &S::operator();
+///
+///   s(1, 2);  // A
+///   S::operator()(1, 2);  // B
+///   fptr(1, 2); // C
+/// \endcode
+class CXXStaticOperatorCall : public SimpleFunctionCall {
+  friend class CallEventManager;
+
+protected:
+  CXXStaticOperatorCall(const CXXOperatorCallExpr *CE, ProgramStateRef St,
+                        const StackFrame *SF,
+                        CFGBlock::ConstCFGElementRef ElemRef)
+      : SimpleFunctionCall(CE, St, SF, ElemRef) {}
+  CXXStaticOperatorCall(const CXXStaticOperatorCall &Other) = default;
+
+  void cloneTo(void *Dest) const override {
+    new (Dest) CXXStaticOperatorCall(*this);
+  }
+
+public:
+  const CXXOperatorCallExpr *getOriginExpr() const override {
+    return cast<CXXOperatorCallExpr>(SimpleFunctionCall::getOriginExpr());
+  }
+
+  unsigned getNumArgs() const override {
+    // Ignore the object parameter that is not used for static member functions.
+    assert(getOriginExpr()->getNumArgs() > 0);
+    return getOriginExpr()->getNumArgs() - 1;
+  }
+
+  const Expr *getArgExpr(unsigned Index) const override {
+    // Ignore the object parameter that is not used for static member functions.
+    return getOriginExpr()->getArg(Index + 1);
+  }
+
+  std::optional<unsigned>
+  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const override {
+    // Ignore the object parameter that is not used for static member functions.
+    if (ASTArgumentIndex == 0)
+      return std::nullopt;
+    return ASTArgumentIndex - 1;
+  }
+
+  unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const override {
+    // Account for the object parameter for the static member function.
+    return CallArgumentIndex + 1;
+  }
+
+  OverloadedOperatorKind getOverloadedOperator() const {
+    return getOriginExpr()->getOperator();
+  }
+
+  Kind getKind() const override { return CE_CXXStaticOperator; }
+  StringRef getKindAsString() const override { return "CXXStaticOperatorCall"; }
+
+  static bool classof(const CallEvent *CA) {
+    return CA->getKind() == CE_CXXStaticOperator;
   }
 };
 
@@ -715,9 +801,8 @@ class CXXMemberCall : public CXXInstanceCall {
 
 protected:
   CXXMemberCall(const CXXMemberCallExpr *CE, ProgramStateRef St,
-                const LocationContext *LCtx,
-                CFGBlock::ConstCFGElementRef ElemRef)
-      : CXXInstanceCall(CE, St, LCtx, ElemRef) {}
+                const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : CXXInstanceCall(CE, St, SF, ElemRef) {}
   CXXMemberCall(const CXXMemberCall &Other) = default;
 
   void cloneTo(void *Dest) const override { new (Dest) CXXMemberCall(*this); }
@@ -758,9 +843,9 @@ class CXXMemberOperatorCall : public CXXInstanceCall {
 
 protected:
   CXXMemberOperatorCall(const CXXOperatorCallExpr *CE, ProgramStateRef St,
-                        const LocationContext *LCtx,
+                        const StackFrame *SF,
                         CFGBlock::ConstCFGElementRef ElemRef)
-      : CXXInstanceCall(CE, St, LCtx, ElemRef) {}
+      : CXXInstanceCall(CE, St, SF, ElemRef) {}
   CXXMemberOperatorCall(const CXXMemberOperatorCall &Other) = default;
 
   void cloneTo(void *Dest) const override {
@@ -825,7 +910,7 @@ protected:
   /// \param Trigger The statement whose completion causes this destructor call.
   /// \param Target The object region to be destructed.
   /// \param St The path-sensitive state at this point in the program.
-  /// \param LCtx The location context at this point in the program.
+  /// \param SF The stack frame at this point in the program.
   /// \param ElemRef The reference to this destructor in the CFG.
   ///
   /// FIXME: Eventually we want to drop \param Target and deduce it from
@@ -834,16 +919,18 @@ protected:
   /// independent from ExprEngine.
   CXXDestructorCall(const CXXDestructorDecl *DD, const Stmt *Trigger,
                     const MemRegion *Target, bool IsBaseDestructor,
-                    ProgramStateRef St, const LocationContext *LCtx,
+                    ProgramStateRef St, const StackFrame *SF,
                     CFGBlock::ConstCFGElementRef ElemRef)
-      : CXXInstanceCall(DD, St, LCtx, ElemRef) {
+      : CXXInstanceCall(DD, St, SF, ElemRef) {
     Data = DtorDataTy(Target, IsBaseDestructor).getOpaqueValue();
     Location = Trigger->getEndLoc();
   }
 
   CXXDestructorCall(const CXXDestructorCall &Other) = default;
 
-  void cloneTo(void *Dest) const override {new (Dest) CXXDestructorCall(*this);}
+  void cloneTo(void *Dest) const override {
+    new (Dest) CXXDestructorCall(*this);
+  }
 
 public:
   SourceRange getSourceRange() const override { return Location; }
@@ -872,18 +959,19 @@ public:
 class AnyCXXConstructorCall : public AnyFunctionCall {
 protected:
   AnyCXXConstructorCall(const Expr *E, const MemRegion *Target,
-                        ProgramStateRef St, const LocationContext *LCtx,
+                        ProgramStateRef St, const StackFrame *SF,
                         CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(E, St, LCtx, ElemRef) {
+      : AnyFunctionCall(E, St, SF, ElemRef) {
     assert(E && (isa<CXXConstructExpr>(E) || isa<CXXInheritedCtorInitExpr>(E)));
     // Target may be null when the region is unknown.
     Data = Target;
   }
 
-  void getExtraInvalidatedValues(ValueList &Values,
-         RegionAndSymbolInvalidationTraits *ETraits) const override;
+  void getExtraInvalidatedValues(
+      ValueList &Values,
+      RegionAndSymbolInvalidationTraits *ETraits) const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
 public:
@@ -909,19 +997,21 @@ protected:
   /// \param Target The region where the object should be constructed. If NULL,
   ///               a new symbolic region will be used.
   /// \param St The path-sensitive state at this point in the program.
-  /// \param LCtx The location context at this point in the program.
+  /// \param SF The stack frame at this point in the program.
   /// \param ElemRef The reference to this constructor in the CFG.
   ///
   /// FIXME: Eventually we want to drop \param Target and deduce it from
   /// \param ElemRef.
   CXXConstructorCall(const CXXConstructExpr *CE, const MemRegion *Target,
-                     ProgramStateRef St, const LocationContext *LCtx,
+                     ProgramStateRef St, const StackFrame *SF,
                      CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyCXXConstructorCall(CE, Target, St, LCtx, ElemRef) {}
+      : AnyCXXConstructorCall(CE, Target, St, SF, ElemRef) {}
 
   CXXConstructorCall(const CXXConstructorCall &Other) = default;
 
-  void cloneTo(void *Dest) const override { new (Dest) CXXConstructorCall(*this); }
+  void cloneTo(void *Dest) const override {
+    new (Dest) CXXConstructorCall(*this);
+  }
 
 public:
   const CXXConstructExpr *getOriginExpr() const override {
@@ -972,9 +1062,9 @@ class CXXInheritedConstructorCall : public AnyCXXConstructorCall {
 protected:
   CXXInheritedConstructorCall(const CXXInheritedCtorInitExpr *CE,
                               const MemRegion *Target, ProgramStateRef St,
-                              const LocationContext *LCtx,
+                              const StackFrame *SF,
                               CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyCXXConstructorCall(CE, Target, St, LCtx, ElemRef) {}
+      : AnyCXXConstructorCall(CE, Target, St, SF, ElemRef) {}
 
   CXXInheritedConstructorCall(const CXXInheritedConstructorCall &Other) =
       default;
@@ -994,7 +1084,7 @@ public:
 
   /// Obtain the stack frame of the inheriting constructor. Argument expressions
   /// can be found on the call site of that stack frame.
-  const StackFrameContext *getInheritingStackFrame() const;
+  const StackFrame *getInheritingStackFrame() const;
 
   /// Obtain the CXXConstructExpr for the sub-class that inherited the current
   /// constructor (possibly indirectly). It's the statement that contains
@@ -1012,9 +1102,8 @@ public:
   }
 
   SVal getArgSVal(unsigned Index) const override {
-    return getState()->getSVal(
-        getArgExpr(Index),
-        getInheritingStackFrame()->getParent()->getStackFrame());
+    return getState()->getSVal(getArgExpr(Index),
+                               getInheritingStackFrame()->getParent());
   }
 
   Kind getKind() const override { return CE_CXXInheritedConstructor; }
@@ -1035,12 +1124,13 @@ class CXXAllocatorCall : public AnyFunctionCall {
 
 protected:
   CXXAllocatorCall(const CXXNewExpr *E, ProgramStateRef St,
-                   const LocationContext *LCtx,
-                   CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(E, St, LCtx, ElemRef) {}
+                   const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : AnyFunctionCall(E, St, SF, ElemRef) {}
   CXXAllocatorCall(const CXXAllocatorCall &Other) = default;
 
-  void cloneTo(void *Dest) const override { new (Dest) CXXAllocatorCall(*this); }
+  void cloneTo(void *Dest) const override {
+    new (Dest) CXXAllocatorCall(*this);
+  }
 
 public:
   const CXXNewExpr *getOriginExpr() const override {
@@ -1053,14 +1143,14 @@ public:
 
   SVal getObjectUnderConstruction() const {
     return *ExprEngine::getObjectUnderConstruction(getState(), getOriginExpr(),
-                                                   getLocationContext());
+                                                   getStackFrame());
   }
 
   /// Number of non-placement arguments to the call. It is equal to 2 for
   /// C++17 aligned operator new() calls that have alignment implicitly
   /// passed as the second argument, and to 1 for other operator new() calls.
   unsigned getNumImplicitArgs() const {
-    return getOriginExpr()->passAlignment() ? 2 : 1;
+    return getOriginExpr()->getNumImplicitArgs();
   }
 
   unsigned getNumArgs() const override {
@@ -1076,7 +1166,7 @@ public:
   SVal getArraySizeVal() const {
     assert(isArray() && "The allocator call doesn't allocate and array!");
 
-    return getState()->getSVal(*getArraySizeExpr(), getLocationContext());
+    return getState()->getSVal(*getArraySizeExpr(), getStackFrame());
   }
 
   const Expr *getArgExpr(unsigned Index) const override {
@@ -1117,9 +1207,8 @@ class CXXDeallocatorCall : public AnyFunctionCall {
 
 protected:
   CXXDeallocatorCall(const CXXDeleteExpr *E, ProgramStateRef St,
-                     const LocationContext *LCtx,
-                     CFGBlock::ConstCFGElementRef ElemRef)
-      : AnyFunctionCall(E, St, LCtx, ElemRef) {}
+                     const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : AnyFunctionCall(E, St, SF, ElemRef) {}
   CXXDeallocatorCall(const CXXDeallocatorCall &Other) = default;
 
   void cloneTo(void *Dest) const override {
@@ -1154,11 +1243,7 @@ public:
 //
 // Note to maintainers: OCM_Message should always be last, since it does not
 // need to fit in the Data field's low bits.
-enum ObjCMessageKind {
-  OCM_PropertyAccess,
-  OCM_Subscript,
-  OCM_Message
-};
+enum ObjCMessageKind { OCM_PropertyAccess, OCM_Subscript, OCM_Message };
 
 /// Represents any expression that calls an Objective-C method.
 ///
@@ -1170,9 +1255,8 @@ class ObjCMethodCall : public CallEvent {
 
 protected:
   ObjCMethodCall(const ObjCMessageExpr *Msg, ProgramStateRef St,
-                 const LocationContext *LCtx,
-                 CFGBlock::ConstCFGElementRef ElemRef)
-      : CallEvent(Msg, St, LCtx, ElemRef) {
+                 const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef)
+      : CallEvent(Msg, St, SF, ElemRef) {
     Data = nullptr;
   }
 
@@ -1180,8 +1264,9 @@ protected:
 
   void cloneTo(void *Dest) const override { new (Dest) ObjCMethodCall(*this); }
 
-  void getExtraInvalidatedValues(ValueList &Values,
-         RegionAndSymbolInvalidationTraits *ETraits) const override;
+  void getExtraInvalidatedValues(
+      ValueList &Values,
+      RegionAndSymbolInvalidationTraits *ETraits) const override;
 
   /// Check if the selector may have multiple definitions (may have overrides).
   virtual bool canBeOverridenInSubclass(ObjCInterfaceDecl *IDecl,
@@ -1196,9 +1281,7 @@ public:
     return getOriginExpr()->getMethodDecl();
   }
 
-  unsigned getNumArgs() const override {
-    return getOriginExpr()->getNumArgs();
-  }
+  unsigned getNumArgs() const override { return getOriginExpr()->getNumArgs(); }
 
   const Expr *getArgExpr(unsigned Index) const override {
     return getOriginExpr()->getArg(Index);
@@ -1212,9 +1295,7 @@ public:
     return getOriginExpr()->getMethodFamily();
   }
 
-  Selector getSelector() const {
-    return getOriginExpr()->getSelector();
-  }
+  Selector getSelector() const { return getOriginExpr()->getSelector(); }
 
   SourceRange getSourceRange() const override;
 
@@ -1259,10 +1340,10 @@ public:
 
   bool argumentsMayEscape() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
-  ArrayRef<ParmVarDecl*> parameters() const override;
+  ArrayRef<ParmVarDecl *> parameters() const override;
 
   Kind getKind() const override { return CE_ObjCMessage; }
   StringRef getKindAsString() const override { return "ObjCMethodCall"; }
@@ -1300,98 +1381,97 @@ class CallEventManager {
   }
 
   template <typename T, typename Arg>
-  T *create(Arg A, ProgramStateRef St, const LocationContext *LCtx,
+  T *create(Arg A, ProgramStateRef St, const StackFrame *SF,
             CFGBlock::ConstCFGElementRef ElemRef) {
     static_assert(sizeof(T) == sizeof(CallEventTemplateTy),
                   "CallEvent subclasses are not all the same size");
-    return new (allocate()) T(A, St, LCtx, ElemRef);
+    return new (allocate()) T(A, St, SF, ElemRef);
   }
 
   template <typename T, typename Arg1, typename Arg2>
-  T *create(Arg1 A1, Arg2 A2, ProgramStateRef St, const LocationContext *LCtx,
+  T *create(Arg1 A1, Arg2 A2, ProgramStateRef St, const StackFrame *SF,
             CFGBlock::ConstCFGElementRef ElemRef) {
     static_assert(sizeof(T) == sizeof(CallEventTemplateTy),
                   "CallEvent subclasses are not all the same size");
-    return new (allocate()) T(A1, A2, St, LCtx, ElemRef);
+    return new (allocate()) T(A1, A2, St, SF, ElemRef);
   }
 
   template <typename T, typename Arg1, typename Arg2, typename Arg3>
-  T *create(Arg1 A1, Arg2 A2, Arg3 A3, ProgramStateRef St,
-            const LocationContext *LCtx, CFGBlock::ConstCFGElementRef ElemRef) {
+  T *create(Arg1 A1, Arg2 A2, Arg3 A3, ProgramStateRef St, const StackFrame *SF,
+            CFGBlock::ConstCFGElementRef ElemRef) {
     static_assert(sizeof(T) == sizeof(CallEventTemplateTy),
                   "CallEvent subclasses are not all the same size");
-    return new (allocate()) T(A1, A2, A3, St, LCtx, ElemRef);
+    return new (allocate()) T(A1, A2, A3, St, SF, ElemRef);
   }
 
   template <typename T, typename Arg1, typename Arg2, typename Arg3,
             typename Arg4>
   T *create(Arg1 A1, Arg2 A2, Arg3 A3, Arg4 A4, ProgramStateRef St,
-            const LocationContext *LCtx, CFGBlock::ConstCFGElementRef ElemRef) {
+            const StackFrame *SF, CFGBlock::ConstCFGElementRef ElemRef) {
     static_assert(sizeof(T) == sizeof(CallEventTemplateTy),
                   "CallEvent subclasses are not all the same size");
-    return new (allocate()) T(A1, A2, A3, A4, St, LCtx, ElemRef);
+    return new (allocate()) T(A1, A2, A3, A4, St, SF, ElemRef);
   }
 
 public:
-  CallEventManager(llvm::BumpPtrAllocator &alloc) : Alloc(alloc) {}
+  CallEventManager(llvm::BumpPtrAllocator &alloc);
 
   /// Gets an outside caller given a callee context.
-  CallEventRef<>
-  getCaller(const StackFrameContext *CalleeCtx, ProgramStateRef State);
+  CallEventRef<> getCaller(const StackFrame *CalleeSF, ProgramStateRef State);
 
   /// Gets a call event for a function call, Objective-C method call,
   /// a 'new', or a 'delete' call.
   CallEventRef<> getCall(const Stmt *S, ProgramStateRef State,
-                         const LocationContext *LC,
+                         const StackFrame *SF,
                          CFGBlock::ConstCFGElementRef ElemRef);
 
   CallEventRef<> getSimpleCall(const CallExpr *E, ProgramStateRef State,
-                               const LocationContext *LCtx,
+                               const StackFrame *SF,
                                CFGBlock::ConstCFGElementRef ElemRef);
 
   CallEventRef<ObjCMethodCall>
   getObjCMethodCall(const ObjCMessageExpr *E, ProgramStateRef State,
-                    const LocationContext *LCtx,
+                    const StackFrame *SF,
                     CFGBlock::ConstCFGElementRef ElemRef) {
-    return create<ObjCMethodCall>(E, State, LCtx, ElemRef);
+    return create<ObjCMethodCall>(E, State, SF, ElemRef);
   }
 
   CallEventRef<CXXConstructorCall>
   getCXXConstructorCall(const CXXConstructExpr *E, const MemRegion *Target,
-                        ProgramStateRef State, const LocationContext *LCtx,
+                        ProgramStateRef State, const StackFrame *SF,
                         CFGBlock::ConstCFGElementRef ElemRef) {
-    return create<CXXConstructorCall>(E, Target, State, LCtx, ElemRef);
+    return create<CXXConstructorCall>(E, Target, State, SF, ElemRef);
   }
 
   CallEventRef<CXXInheritedConstructorCall>
   getCXXInheritedConstructorCall(const CXXInheritedCtorInitExpr *E,
                                  const MemRegion *Target, ProgramStateRef State,
-                                 const LocationContext *LCtx,
+                                 const StackFrame *SF,
                                  CFGBlock::ConstCFGElementRef ElemRef) {
-    return create<CXXInheritedConstructorCall>(E, Target, State, LCtx, ElemRef);
+    return create<CXXInheritedConstructorCall>(E, Target, State, SF, ElemRef);
   }
 
   CallEventRef<CXXDestructorCall>
   getCXXDestructorCall(const CXXDestructorDecl *DD, const Stmt *Trigger,
                        const MemRegion *Target, bool IsBase,
-                       ProgramStateRef State, const LocationContext *LCtx,
+                       ProgramStateRef State, const StackFrame *SF,
                        CFGBlock::ConstCFGElementRef ElemRef) {
-    return create<CXXDestructorCall>(DD, Trigger, Target, IsBase, State, LCtx,
+    return create<CXXDestructorCall>(DD, Trigger, Target, IsBase, State, SF,
                                      ElemRef);
   }
 
   CallEventRef<CXXAllocatorCall>
   getCXXAllocatorCall(const CXXNewExpr *E, ProgramStateRef State,
-                      const LocationContext *LCtx,
+                      const StackFrame *SF,
                       CFGBlock::ConstCFGElementRef ElemRef) {
-    return create<CXXAllocatorCall>(E, State, LCtx, ElemRef);
+    return create<CXXAllocatorCall>(E, State, SF, ElemRef);
   }
 
   CallEventRef<CXXDeallocatorCall>
   getCXXDeallocatorCall(const CXXDeleteExpr *E, ProgramStateRef State,
-                        const LocationContext *LCtx,
+                        const StackFrame *SF,
                         CFGBlock::ConstCFGElementRef ElemRef) {
-    return create<CXXDeallocatorCall>(E, State, LCtx, ElemRef);
+    return create<CXXDeallocatorCall>(E, State, SF, ElemRef);
   }
 };
 
@@ -1433,11 +1513,10 @@ inline void CallEvent::Release() const {
 namespace llvm {
 
 // Support isa<>, cast<>, and dyn_cast<> for CallEventRef.
-template<class T> struct simplify_type< clang::ento::CallEventRef<T>> {
+template <class T> struct simplify_type<clang::ento::CallEventRef<T>> {
   using SimpleType = const T *;
 
-  static SimpleType
-  getSimplifiedValue(clang::ento::CallEventRef<T> Val) {
+  static SimpleType getSimplifiedValue(clang::ento::CallEventRef<T> Val) {
     return Val.get();
   }
 };

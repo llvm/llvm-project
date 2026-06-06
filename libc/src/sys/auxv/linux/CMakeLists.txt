@@ -1,0 +1,10 @@
+add_entrypoint_object(
+  getauxval
+  SRCS
+  getauxval.cpp
+  HDRS
+    ../getauxval.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.auxv
+    libc.src.__support.libc_errno
+)

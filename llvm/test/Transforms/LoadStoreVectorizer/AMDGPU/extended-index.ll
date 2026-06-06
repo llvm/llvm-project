@@ -1,8 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S -o - %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
-
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; CHECK-LABEL: @basic_merge_sext_index(
@@ -63,7 +61,7 @@ entry:
   %a.0 = getelementptr inbounds float, ptr addrspace(1) %a, i64 %zext.id.x
   %c.0 = getelementptr inbounds float, ptr addrspace(1) %c, i64 %zext.id.x
 
-  %id.x.1 = or i32 %shl, 1
+  %id.x.1 = or disjoint i32 %shl, 1
   %id.x.1.ext = zext i32 %id.x.1 to i64
 
   %a.1 = getelementptr inbounds float, ptr addrspace(1) %a, i64 %id.x.1.ext
@@ -90,7 +88,7 @@ entry:
   %a.0 = getelementptr inbounds float, ptr addrspace(1) %a, i64 %zext.id.x
   %c.0 = getelementptr inbounds float, ptr addrspace(1) %c, i64 %zext.id.x
 
-  %id.x.1 = or i32 %shl, 1
+  %id.x.1 = or disjoint i32 %shl, 1
   %id.x.1.ext = sext i32 %id.x.1 to i64
 
   %a.1 = getelementptr inbounds float, ptr addrspace(1) %a, i64 %id.x.1.ext
@@ -127,7 +125,7 @@ loop:
   %c.0 = getelementptr inbounds i32, ptr addrspace(1) %c, i64 %idx.ext
   %a.0 = getelementptr inbounds i32, ptr addrspace(1) %a, i64 %idx.ext
 
-  %idx.1 = or i32 %idx, 1
+  %idx.1 = or disjoint i32 %idx, 1
   %idx.1.ext = zext i32 %idx.1 to i64
   %c.1 = getelementptr inbounds i32, ptr addrspace(1) %c, i64 %idx.1.ext
   %a.1 = getelementptr inbounds i32, ptr addrspace(1) %a, i64 %idx.1.ext

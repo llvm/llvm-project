@@ -22,6 +22,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
@@ -33,6 +34,7 @@ class Error;
 class Module;
 class ModuleSummaryIndex;
 class raw_pwrite_stream;
+class PassPlugin;
 
 namespace lto {
 
@@ -49,7 +51,12 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
-  std::vector<std::string> PassPlugins;
+  // LTO will register both lists of plugins, but
+  // if an LTO client has already loaded a set of plugins,
+  // they should register them via LoadedPassPlugins.
+  // LoadedPassPlugins is currently used by distributed thin-lto.
+  std::vector<llvm::PassPlugin *> LoadedPassPlugins;
+  std::vector<std::string> PassPluginFilenames;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
@@ -59,9 +66,6 @@ struct Config {
   unsigned OptLevel = 2;
   bool VerifyEach = false;
   bool DisableVerify = false;
-
-  /// Use the standard optimization pipeline.
-  bool UseDefaultPipeline = false;
 
   /// Flag to indicate that the optimizer should not assume builtins are present
   /// on the target.
@@ -90,6 +94,16 @@ struct Config {
   /// LTO modules were linked. This option is useful for some build system which
   /// want to know a priori all possible output files.
   bool AlwaysEmitRegularLTOObj = false;
+
+  /// If true, the LTO instance creates copies of the symbol names for LTO::run.
+  /// The lld linker uses string saver to keep symbol names alive and doesn't
+  /// need to create copies, so it can set this field to false.
+  bool KeepSymbolNameCopies = true;
+
+  /// This flag is used as one of parameters to calculate cache entries and to
+  /// ensure that in-process cache and out-of-process (DTLTO) cache are
+  /// distinguished.
+  mutable bool Dtlto = 0;
 
   /// Allows non-imported definitions to get the potentially more constraining
   /// visibility from the prevailing definition. FromPrevailing is the default
@@ -275,9 +289,27 @@ struct Config {
   ///
   /// SaveTempsArgs can be specified to select which temps to save.
   /// If SaveTempsArgs is not provided, all temps are saved.
-  Error addSaveTemps(std::string OutputFileName,
-                     bool UseInputModulePath = false,
-                     const DenseSet<StringRef> &SaveTempsArgs = {});
+  LLVM_ABI Error addSaveTemps(std::string OutputFileName,
+                              bool UseInputModulePath = false,
+                              const DenseSet<StringRef> &SaveTempsArgs = {});
+
+  /// Called by WriteIndexesThinBackend when it needs to write a bitcode
+  /// module's summary index. The callback should return a stream to write
+  /// the index into. If not set, the backend falls back
+  /// to writing the summary index to a file.
+  std::function<std::unique_ptr<raw_pwrite_stream>(size_t Task)>
+      GetSummaryIndexOutputStream;
+  /// Called by WriteIndexesThinBackend when it needs to store a bitcode
+  /// module's imports list. The callback should return a vector that the
+  /// backend will populate with the imported module paths. If not set, the
+  /// backend writes the imports list to a file instead.
+  std::function<std::vector<std::string> &(size_t Task)>
+      GetImportsListOutputArray;
+  /// Called by WriteIndexesThinBackend when it needs to store a bitcode
+  /// module's cache key. The callback should return a string that the backend
+  /// will fill with the computed cache key. If not set, the cache key is
+  /// discarded.
+  std::function<std::string &(size_t Task)> GetCacheKeyOutputString;
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {

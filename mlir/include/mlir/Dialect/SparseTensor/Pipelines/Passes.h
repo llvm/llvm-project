@@ -23,12 +23,11 @@ using namespace llvm::cl;
 namespace mlir {
 namespace sparse_tensor {
 
-/// Options for the "sparse-compiler" pipeline.  So far this only contains
+/// Options for the "sparsifier" pipeline.  So far this only contains
 /// a subset of the options that can be set for the underlying passes,
 /// because it must be manually kept in sync with the tablegen files
 /// for those passes.
-struct SparseCompilerOptions
-    : public PassPipelineOptions<SparseCompilerOptions> {
+struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
   // These options must be kept in sync with `SparsificationBase`.
   // TODO(57514): These options are duplicated in Passes.td.
   PassOptions::Option<mlir::SparseParallelizationStrategy> parallelization{
@@ -52,28 +51,20 @@ struct SparseCompilerOptions
               mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
               "any-storage-any-loop",
               "Enable sparse parallelization for any storage and loop."))};
-  PassOptions::Option<mlir::GPUDataTransferStrategy> gpuDataTransfer{
-      *this, "gpu-data-transfer-strategy",
+  PassOptions::Option<mlir::SparseEmitStrategy> emitStrategy{
+      *this, "sparse-emit-strategy",
       ::llvm::cl::desc(
-          "Set the data transfer strategy between the host and the GPUs"),
-      ::llvm::cl::init(mlir::GPUDataTransferStrategy::kRegularDMA),
+          "Emit functional code or interfaces (to debug) for sparse loops"),
+      ::llvm::cl::init(mlir::SparseEmitStrategy::kFunctional),
       llvm::cl::values(
-          clEnumValN(mlir::GPUDataTransferStrategy::kRegularDMA, "regular-dma",
-                     "Default option: malloc on host without additional "
-                     "options or care and then use DMA to copy the data"),
-          clEnumValN(mlir::GPUDataTransferStrategy::kPinnedDMA, "pinned-dma",
-                     "Based on the default option, pin the host memory to "
-                     "accelerate the data transfer"),
-          clEnumValN(mlir::GPUDataTransferStrategy::kZeroCopy, "zero-copy",
-                     "Use zero-copy to perform the data transfer from the host "
-                     "to the GPU"))};
-
-  PassOptions::Option<bool> enableIndexReduction{
-      *this, "enable-index-reduction",
-      desc("Enable dependent index reduction based algorithm to handle "
-           "non-trivial index expressions on sparse inputs (experimental "
-           "features)"),
-      init(false)};
+          clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
+                     "Emit functional code (with scf.for/while)."),
+          clEnumValN(mlir::SparseEmitStrategy::kSparseIterator,
+                     "sparse-iterator",
+                     "Emit (experimental) loops (with sparse.iterate)."),
+          clEnumValN(
+              mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
+              "Emit non-functional but easy-to-read interfaces to debug."))};
 
   PassOptions::Option<bool> enableRuntimeLibrary{
       *this, "enable-runtime-library",
@@ -113,10 +104,6 @@ struct SparseCompilerOptions
       desc("Allows compiler to assume indices fit in 32-bit if that yields "
            "faster code"),
       init(true)};
-  PassOptions::Option<bool> amx{
-      *this, "enable-amx",
-      desc("Enables the use of AMX dialect while lowering the vector dialect"),
-      init(false)};
   PassOptions::Option<bool> armNeon{
       *this, "enable-arm-neon",
       desc("Enables the use of ArmNeon dialect while lowering the vector "
@@ -127,9 +114,9 @@ struct SparseCompilerOptions
       desc("Enables the use of ArmSVE dialect while lowering the vector "
            "dialect"),
       init(false)};
-  PassOptions::Option<bool> x86Vector{
-      *this, "enable-x86vector",
-      desc("Enables the use of X86Vector dialect while lowering the vector "
+  PassOptions::Option<bool> x86{
+      *this, "enable-x86",
+      desc("Enables the use of X86 dialect while lowering the vector "
            "dialect"),
       init(false)};
 
@@ -164,22 +151,27 @@ struct SparseCompilerOptions
       desc("Enables GPU acceleration by means of direct library calls (like "
            "cuSPARSE)")};
 
+  /// This option is used to specify the number of threads of GPU codegen.
+  PassOptions::Option<unsigned> gpuNumThreads{
+      *this, "gpu-num-threads",
+      desc("Number of threads for GPU codegen. Setting this to 0 enables "
+           "direct library calls instead."),
+      init(1024)};
+
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, gpuDataTransfer,
-                                 enableIndexReduction, enableGPULibgen,
+    return SparsificationOptions(parallelization, emitStrategy,
                                  enableRuntimeLibrary);
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
-  ConvertVectorToLLVMPassOptions lowerVectorToLLVMOptions() const {
+  ConvertVectorToLLVMPassOptions convertVectorToLLVMOptions() const {
     ConvertVectorToLLVMPassOptions opts{};
     opts.reassociateFPReductions = reassociateFPReductions;
     opts.force32BitVectorIndices = force32BitVectorIndices;
     opts.armNeon = armNeon;
     opts.armSVE = armSVE;
-    opts.amx = amx;
-    opts.x86Vector = x86Vector;
+    opts.x86 = x86;
     return opts;
   }
 };
@@ -188,15 +180,14 @@ struct SparseCompilerOptions
 // Building and Registering.
 //===----------------------------------------------------------------------===//
 
-/// Adds the "sparse-compiler" pipeline to the `OpPassManager`.  This
+/// Adds the "sparsifier" pipeline to the `OpPassManager`.  This
 /// is the standard pipeline for taking sparsity-agnostic IR using
 /// the sparse-tensor type and lowering it to LLVM IR with concrete
 /// representations and algorithms for sparse tensors.
-void buildSparseCompiler(OpPassManager &pm,
-                         const SparseCompilerOptions &options);
+void buildSparsifier(OpPassManager &pm, const SparsifierOptions &options);
 
 /// Registers all pipelines for the `sparse_tensor` dialect.  At present,
-/// this includes only "sparse-compiler".
+/// this includes only "sparsifier".
 void registerSparseTensorPipelines();
 
 } // namespace sparse_tensor

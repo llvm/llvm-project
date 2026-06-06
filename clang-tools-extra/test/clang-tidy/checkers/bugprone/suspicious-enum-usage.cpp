@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-enum-usage %t -- -config="{CheckOptions: {bugprone-suspicious-enum-usage.StrictMode: false}}" --
+// RUN: %check_clang_tidy -std=c++17 %s bugprone-suspicious-enum-usage %t -- -config="{CheckOptions: {bugprone-suspicious-enum-usage.StrictMode: false}}"
 
 enum Empty {
 };
@@ -79,7 +79,7 @@ int dont_trigger() {
   int d = c | H, e = b * a;
   a = B | C;
   b = X | Z;
-  
+
   if (Tuesday != Monday + 1 ||
       Friday - Thursday != 1 ||
       Sunday + Wednesday == (Sunday | Wednesday))

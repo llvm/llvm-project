@@ -10,8 +10,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include <optional>
 
 namespace clang {
@@ -71,7 +71,7 @@ std::optional<OpaqueType> OpaqueType::encode(ASTContext &Ctx, QualType T) {
   llvm::SmallString<128> Encoded;
   if (index::generateUSRForType(QualType(C, 0), Ctx, Encoded))
     return std::nullopt;
-  return OpaqueType(std::string(Encoded.str()));
+  return OpaqueType(std::string(Encoded));
 }
 
 OpaqueType::OpaqueType(std::string Data) : Data(std::move(Data)) {}

@@ -1,8 +1,9 @@
 set(LLVM_SHLIBEXT "${CMAKE_SHARED_MODULE_SUFFIX}")
 
 add_custom_target(check-polly)
-set_target_properties(check-polly PROPERTIES FOLDER "Polly")
+set_target_properties(check-polly PROPERTIES FOLDER "Polly/Meta")
 
+set(POLLY_TEST_C_COMPILER "")
 if(NOT LLVM_MAIN_SRC_DIR)
   find_program(LLVM_OPT NAMES opt HINTS ${LLVM_TOOLS_BINARY_DIR})
   find_program(LLVM_FILECHECK NAMES FileCheck HINTS ${LLVM_TOOLS_BINARY_DIR})
@@ -35,6 +36,11 @@ else ()
   set(LLVM_NOT "${LLVM_TOOLS_BINARY_DIR}/not")
   set(POLLY_TEST_EXTRA_PATHS "")
   set(POLLY_TEST_DEPS llvm-config opt LLVMPolly FileCheck not count)
+
+  if (TARGET clang)
+    set(POLLY_TEST_C_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
+    list(APPEND POLLY_TEST_DEPS clang)
+  endif ()
 endif()
 
 if (POLLY_BUNDLED_ISL)
@@ -64,7 +70,6 @@ add_lit_testsuite(check-polly-tests "Running polly regression tests"
   polly_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${POLLY_TEST_DEPS}
   )
-set_target_properties(check-polly-tests PROPERTIES FOLDER "Polly")
 add_dependencies(check-polly check-polly-tests)
 
 configure_lit_site_cfg(
@@ -80,7 +85,6 @@ if (POLLY_GTEST_AVAIL)
     EXCLUDE_FROM_CHECK_ALL
     DEPENDS PollyUnitTests
     )
-  set_target_properties(check-polly-unittests PROPERTIES FOLDER "Polly")
 endif ()
 
 configure_file(
@@ -94,7 +98,6 @@ if (POLLY_BUNDLED_ISL)
     EXCLUDE_FROM_CHECK_ALL
     DEPENDS polly-isl-test
     )
-  set_target_properties(check-polly-isl PROPERTIES FOLDER "Polly")
 endif (POLLY_BUNDLED_ISL)
 
 # Run polly-check-format as part of polly-check only if we are compiling with
@@ -114,5 +117,5 @@ configure_file(
 
 # Add a legacy target spelling: polly-test
 add_custom_target(polly-test)
-set_target_properties(polly-test PROPERTIES FOLDER "Polly")
+set_target_properties(polly-test PROPERTIES FOLDER "Polly/Metatargets")
 add_dependencies(polly-test check-polly)
