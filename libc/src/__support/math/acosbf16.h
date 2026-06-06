@@ -27,7 +27,7 @@ LIBC_INLINE bfloat16 acosbf16(bfloat16 x) {
   // > round(pi/2, SG, RN);
   constexpr float PI_2 = 0x1.921fb6p0f;
   // > round(pi, SG, RN);
-  constexpr float PI = 0x1.921fb6p1;
+  constexpr float PI = 0x1.921fb6p1f;
 
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits xbits(x);
@@ -58,7 +58,7 @@ LIBC_INLINE bfloat16 acosbf16(bfloat16 x) {
       if (sign)
         return fputil::cast<bfloat16>(PI);
       else
-        return fputil::cast<bfloat16>(0.0f);
+        return FPBits::zero().get_val();
     }
 
     // using reduction for acos:
@@ -66,14 +66,16 @@ LIBC_INLINE bfloat16 acosbf16(bfloat16 x) {
     // and acos(x) = acos(|x|) for x >= 0, pi - acos(|x|) for x < 0
     float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
     float t_sqrt = fputil::sqrt<float>(t);
+    // TODO: Use bfloat16 version for inv_trigf_utils_internals after they are available
+    // Tracking issue : https://github.com/llvm/llvm-project/issues/202079
     float tp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(t));
     float asin_sqrt_t = t_sqrt * (fputil::multiply_add(t, tp, 1.0f));
 
     return fputil::cast<bfloat16>(
         (sign) ? fputil::multiply_add(asin_sqrt_t, -2.0f, PI)
-               : 2 * asin_sqrt_t);
+               : 2.0f * asin_sqrt_t);
   }
-  // case 3: NaN or Inf
+  // case 3: NaN or |x| > 1
   // NaN
   if (xbits.is_nan()) {
     if (xbits.is_signaling_nan()) {
@@ -82,7 +84,7 @@ LIBC_INLINE bfloat16 acosbf16(bfloat16 x) {
     }
     return x; // quiet NaN
   }
-  // inf
+  // |x| > 1
   fputil::raise_except_if_required(FE_INVALID);
   fputil::set_errno_if_required(EDOM); // Domain is bounded
   return FPBits::quiet_nan().get_val();
