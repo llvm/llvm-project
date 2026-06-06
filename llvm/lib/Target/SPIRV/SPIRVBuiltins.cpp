@@ -731,13 +731,11 @@ static bool buildAtomicCompareExchangeInst(
   SPIRVTypeInst SpvDesiredTy = GR->getSPIRVTypeForVReg(Desired);
   LLT DesiredLLT = MRI->getType(Desired);
 
-  [[maybe_unused]] auto IsPtrTy = [](unsigned Op) {
-    return Op == SPIRV::OpTypePointer || Op == SPIRV::OpTypeUntypedPointerKHR;
-  };
-  assert(IsPtrTy(GR->getSPIRVTypeForVReg(ObjectPtr)->getOpcode()));
-  unsigned ExpectedType = GR->getSPIRVTypeForVReg(ExpectedArg)->getOpcode();
-  (void)ExpectedType;
-  assert(IsCmpxchg ? ExpectedType == SPIRV::OpTypeInt : IsPtrTy(ExpectedType));
+  assert(GR->getSPIRVTypeForVReg(ObjectPtr).isPointer());
+  [[maybe_unused]] SPIRVTypeInst ExpectedTy =
+      GR->getSPIRVTypeForVReg(ExpectedArg);
+  assert(IsCmpxchg ? ExpectedTy->getOpcode() == SPIRV::OpTypeInt
+                   : ExpectedTy.isPointer());
   assert(GR->isScalarOfType(Desired, SPIRV::OpTypeInt));
 
   SPIRVTypeInst SpvObjectPtrTy = GR->getSPIRVTypeForVReg(ObjectPtr);
@@ -2057,6 +2055,22 @@ static void buildSRetInst(unsigned Opcode, Register SRetReg, Register Op1Reg,
   MIRBuilder.buildInstr(SPIRV::OpStore).addUse(SRetReg).addUse(ResReg);
 }
 
+// Find the pointee type of an sret pointer argument. A typed pointer gives us
+// the type directly. An untyped one does not, so fall back to the element type
+// we deduced for the matching IR argument, or null if there is nothing to fall
+// back to.
+static SPIRVTypeInst deduceSRetPointeeType(Register SRetReg,
+                                           const Value *SRetArg,
+                                           MachineIRBuilder &MIRBuilder,
+                                           SPIRVGlobalRegistry *GR) {
+  SPIRVTypeInst RetType = GR->getPointeeType(GR->getSPIRVTypeForVReg(SRetReg));
+  if (!RetType)
+    if (Type *ElemTy = GR->findDeducedElementType(SRetArg))
+      RetType = GR->getOrCreateSPIRVType(
+          ElemTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
+  return RetType;
+}
+
 // We expect a builtin
 //     Name(ptr sret([RetType]) %result, Type %operand1, Type %operand1)
 // where %result is a pointer to where the result of the builtin execution
@@ -2072,15 +2086,8 @@ static bool generateICarryBorrowInst(const SPIRV::IncomingCall *Call,
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
 
   Register SRetReg = Call->Arguments[0];
-  SPIRVTypeInst PtrRetType = GR->getSPIRVTypeForVReg(SRetReg);
-  SPIRVTypeInst RetType = GR->getPointeeType(PtrRetType);
-  if (!RetType) {
-    // For an untyped sret pointer, recover the result type from the deduced
-    // type.
-    if (Type *ElemTy = GR->findDeducedElementType(CB.getArgOperand(0)))
-      RetType = GR->getOrCreateSPIRVType(
-          ElemTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
-  }
+  SPIRVTypeInst RetType =
+      deduceSRetPointeeType(SRetReg, CB.getArgOperand(0), MIRBuilder, GR);
   if (!RetType)
     report_fatal_error("The first parameter must be a pointer");
   if (RetType->getOpcode() != SPIRV::OpTypeStruct)
@@ -2136,15 +2143,8 @@ static bool generateMulExtendedInst(const SPIRV::IncomingCall *Call,
   SPIRVTypeInst RetType = nullptr;
   if (IsSret) {
     Register SRetReg = Call->Arguments[0];
-    SPIRVTypeInst PtrRetType = GR->getSPIRVTypeForVReg(SRetReg);
-    RetType = GR->getPointeeType(PtrRetType);
-    if (!RetType) {
-      // For an untyped sret pointer, recover the result type from the deduced
-      // type.
-      if (Type *ElemTy = GR->findDeducedElementType(CB.getArgOperand(0)))
-        RetType = GR->getOrCreateSPIRVType(
-            ElemTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
-    }
+    RetType =
+        deduceSRetPointeeType(SRetReg, CB.getArgOperand(0), MIRBuilder, GR);
     if (!RetType)
       report_fatal_error("The first parameter must be a pointer");
   } else {
@@ -2708,13 +2708,7 @@ static bool buildAPFixedPointInst(const SPIRV::IncomingCall *Call,
     const LLT ValTy = MRI->getType(InputReg);
     Register ActualRetValReg = MRI->createGenericVirtualRegister(ValTy);
     SPIRVTypeInst InstructionType =
-        GR->getPointeeType(GR->getSPIRVTypeForVReg(InputReg));
-    if (!InstructionType)
-      // For an untyped sret pointer, recover the result type from the deduced
-      // type.
-      if (Type *ElemTy = GR->findDeducedElementType(CB.getArgOperand(0)))
-        InstructionType = GR->getOrCreateSPIRVType(
-            ElemTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
+        deduceSRetPointeeType(InputReg, CB.getArgOperand(0), MIRBuilder, GR);
     InputReg = Call->Arguments[1];
     auto InputType = GR->getTypeForSPIRVType(GR->getSPIRVTypeForVReg(InputReg));
     Register PtrInputReg;
@@ -2967,15 +2961,8 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
   // When sret is used, store nd_range struct through the pointer in the first
   // argument.
   Register SRetReg = Call->Arguments[SRetArgIdx];
-  SPIRVTypeInst SRetPtrType = GR->getSPIRVTypeForVReg(SRetReg);
-  SPIRVTypeInst SRetType = GR->getPointeeType(SRetPtrType);
-  if (!SRetType) {
-    // For an untyped sret pointer, recover the nd_range type from the deduced
-    // type.
-    if (Type *ElemTy = GR->findDeducedElementType(CB.getArgOperand(SRetArgIdx)))
-      SRetType = GR->getOrCreateSPIRVType(
-          ElemTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
-  }
+  SPIRVTypeInst SRetType = deduceSRetPointeeType(
+      SRetReg, CB.getArgOperand(SRetArgIdx), MIRBuilder, GR);
 
   Register TmpReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
   GR->assignSPIRVTypeToVReg(SRetType, TmpReg, MF);
@@ -3181,15 +3168,16 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
       if (!ElemBytes)
         ElemBytes = GR->getDeducedPointeeByteSize(CB.getArgOperand(1));
       if (!ElemBytes)
-        ElemBytes = 1;
+        report_fatal_error("Could not deduce the element type of an untyped "
+                           "async copy pointer argument");
       MIB.addUse(GR->buildConstantInt(ElemBytes, MIRBuilder, SizeTy,
                                       /*EmitIR=*/false));
     }
-    bool Res = MIB.addUse(NumElemReg).addUse(StrideReg).addUse(EventReg);
+    MIB.addUse(NumElemReg).addUse(StrideReg).addUse(EventReg);
     if (NewType)
       updateRegType(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
                     MIRBuilder.getMF().getRegInfo());
-    return Res;
+    return true;
   }
   case SPIRV::OpGroupWaitEvents:
     return MIRBuilder.buildInstr(Opcode)

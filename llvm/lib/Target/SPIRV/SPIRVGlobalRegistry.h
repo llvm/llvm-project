@@ -647,6 +647,17 @@ public:
                               SPIRV::StorageClass::StorageClass SC,
                               bool ForceTyped = false);
 
+  // Like getOrCreateSPIRVPointerType, but always returns an OpTypePointer even
+  // when untyped pointers are available. Use this when the pointee type must be
+  // preserved (e.g. a byval/byref/sret aggregate argument).
+  SPIRVTypeInst
+  getOrCreateSPIRVTypedPointerType(const Type *BaseType,
+                                   MachineIRBuilder &MIRBuilder,
+                                   SPIRV::StorageClass::StorageClass SC) {
+    return getOrCreateSPIRVPointerType(BaseType, MIRBuilder, SC,
+                                       /*ForceTyped=*/true);
+  }
+
   // Returns a pointer to a SPIR-V pointer type with the given base type and
   // storage class. It is the responsibility of the caller to make sure the
   // decorations on the base type are valid for the given storage class. For

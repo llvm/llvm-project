@@ -188,10 +188,9 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
     // byval/byref/sret carry the aggregate layout in the pointee type, so keep
     // a typed pointer here. An untyped one drops the type and breaks the
     // argument ABI on the way back from SPIR-V.
-    return GR->getOrCreateSPIRVPointerType(
+    return GR->getOrCreateSPIRVTypedPointerType(
         getPointeeTypeByAttr(Arg), MIRBuilder,
-        addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST),
-        /*ForceTyped=*/true);
+        addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
   for (auto User : Arg->users()) {

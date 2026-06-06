@@ -1556,16 +1556,14 @@ bool SPIRVGlobalRegistry::isBitcastCompatible(SPIRVTypeInst Type1,
                                               SPIRVTypeInst Type2) const {
   if (!Type1 || !Type2)
     return false;
-  auto IsPtr = [](unsigned Op) {
-    return Op == SPIRV::OpTypePointer || Op == SPIRV::OpTypeUntypedPointerKHR;
-  };
-  auto Op1 = Type1->getOpcode(), Op2 = Type2->getOpcode();
   // Ignore difference between <1.5 and >=1.5 protocol versions:
   // it's valid if either Result Type or Operand is a pointer, and the other
   // is a pointer, an integer scalar, or an integer vector.
-  if (IsPtr(Op1) && (IsPtr(Op2) || retrieveScalarOrVectorIntType(Type2)))
+  if (Type1.isPointer() &&
+      (Type2.isPointer() || retrieveScalarOrVectorIntType(Type2)))
     return true;
-  if (IsPtr(Op2) && (IsPtr(Op1) || retrieveScalarOrVectorIntType(Type1)))
+  if (Type2.isPointer() &&
+      (Type1.isPointer() || retrieveScalarOrVectorIntType(Type1)))
     return true;
   unsigned Bits1 = getNumScalarOrVectorTotalBitWidth(Type1),
            Bits2 = getNumScalarOrVectorTotalBitWidth(Type2);
