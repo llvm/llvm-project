@@ -192,7 +192,9 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
           using WithOmpDeclarative = semantics::WithOmpDeclarative;
           if constexpr (std::is_convertible_v<decltype(s),
                                               const WithOmpDeclarative &>) {
-            return s.ompAtomicDefaultMemOrder();
+            if (auto &admo{s.ompAtomicDefaultMemOrder()}) {
+              return &*admo;
+            }
           }
           return static_cast<const common::OmpMemoryOrderType *>(nullptr);
         },
@@ -593,11 +595,10 @@ void Fortran::lower::omp::lowerAtomic(
     // expectedVal) is emitted before the capture op, not after the terminator.
     builder.restoreInsertionPoint(preAt);
 
-    // Check for compound clauses (fail, weak) that are not yet
+    // Check for compound clause (fail) that is not yet
     // supported with atomic compare.
     if (llvm::any_of(clauses, [](const omp::Clause &clause) {
-          return clause.id == llvm::omp::Clause::OMPC_fail ||
-                 clause.id == llvm::omp::Clause::OMPC_weak;
+          return clause.id == llvm::omp::Clause::OMPC_fail;
         })) {
       TODO(loc, "Compound clauses of OpenMP ATOMIC COMPARE");
     }
@@ -657,6 +658,11 @@ void Fortran::lower::omp::lowerAtomic(
     }
 
     mlir::UnitAttr weakAttr = nullptr;
+    if (llvm::any_of(clauses, [](const omp::Clause &clause) {
+          return clause.id == llvm::omp::Clause::OMPC_weak;
+        })) {
+      weakAttr = builder.getUnitAttr();
+    }
     mlir::Operation *atomicOp = mlir::omp::AtomicCompareOp::create(
         builder, loc, atomAddr, weakAttr, hint,
         makeMemOrderAttr(converter, memOrder));

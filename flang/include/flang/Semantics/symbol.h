@@ -52,33 +52,53 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
 public:
-  // The set of requirements for any program unit include requirements
-  // from any module used in the program unit.
-  using RequiresClauses =
+  using OmpClauseSet =
       common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
 
-  bool has_ompRequires() const { return ompRequires_.has_value(); }
-  const RequiresClauses *ompRequires() const {
-    return ompRequires_ ? &*ompRequires_ : nullptr;
-  }
-  void set_ompRequires(RequiresClauses clauses) { ompRequires_ = clauses; }
+  const OmpClauseSet &ompRequires() const { return ompRequires_; }
+  void set_ompRequires(OmpClauseSet clauses) { ompRequires_ = clauses; }
 
-  bool has_ompAtomicDefaultMemOrder() const {
-    return ompAtomicDefaultMemOrder_.has_value();
-  }
-  const common::OmpMemoryOrderType *ompAtomicDefaultMemOrder() const {
-    return ompAtomicDefaultMemOrder_ ? &*ompAtomicDefaultMemOrder_ : nullptr;
+  const std::optional<common::OmpMemoryOrderType> &
+  ompAtomicDefaultMemOrder() const {
+    return ompAtomicDefaultMemOrder_;
   }
   void set_ompAtomicDefaultMemOrder(common::OmpMemoryOrderType flags) {
     ompAtomicDefaultMemOrder_ = flags;
   }
 
+  const OmpClauseSet &ompDeclTarget() const { return ompDeclTarget_; }
+  void set_ompDeclTarget(OmpClauseSet clauses) { ompDeclTarget_ = clauses; }
+
+  const std::optional<common::OmpDeviceType> &ompDeviceType() const {
+    return ompDeviceType_;
+  }
+  void set_ompDeclTarget(common::OmpDeviceType device) {
+    ompDeviceType_ = device;
+  }
+
+  void printClauseSet(llvm::raw_ostream &os, const OmpClauseSet &clauses,
+      parser::CharBlock name = parser::CharBlock{}) const;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const WithOmpDeclarative &);
 
+  void set_version(unsigned version) { version_ = version; }
+
 private:
-  std::optional<RequiresClauses> ompRequires_;
+  unsigned version_;
+  // The set of clauses from a REQUIRES directive. Only applicable
+  // to program unit symbols (i.e. scopes of the REQUIRES directive).
+  // The set of requirements for any program unit include requirements
+  // from any module used in the program unit.
+  OmpClauseSet ompRequires_;
+  // The argument to ATOMIC_DEFAULT_MEM_ORDER. Only needed when the ADMO
+  // clause is present in the ompRequires_ set.
   std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
+  // The set of clauses on DECLARE_TARGET directive that apply to this
+  // symbol.
+  OmpClauseSet ompDeclTarget_;
+  // The argument to DEVICE_TYPE clause. Only needed when the clause is
+  // present in the ompDeclTarget_ set.
+  std::optional<common::OmpDeviceType> ompDeviceType_;
 };
 
 // A module or submodule.
@@ -377,7 +397,7 @@ private:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 
 // An entity known to be an object.
-class ObjectEntityDetails : public EntityDetails {
+class ObjectEntityDetails : public EntityDetails, public WithOmpDeclarative {
 public:
   explicit ObjectEntityDetails(EntityDetails &&);
   ObjectEntityDetails(const ObjectEntityDetails &) = default;
@@ -448,7 +468,9 @@ private:
 // A procedure pointer (other than one defined with POINTER and an
 // INTERFACE block), a dummy procedure (without an INTERFACE but with
 // EXTERNAL or use in a procedure reference), or external procedure.
-class ProcEntityDetails : public EntityDetails, public WithPassArg {
+class ProcEntityDetails : public EntityDetails,
+                          public WithPassArg,
+                          public WithOmpDeclarative {
 public:
   ProcEntityDetails() = default;
   explicit ProcEntityDetails(EntityDetails &&);
@@ -585,7 +607,7 @@ private:
   SymbolVector objects_;
 };
 
-class CommonBlockDetails : public WithBindName {
+class CommonBlockDetails : public WithBindName, public WithOmpDeclarative {
 public:
   explicit CommonBlockDetails(SourceName location)
       : sourceLocation_{location} {}
@@ -1234,11 +1256,6 @@ SourceOrderedSymbolSet OrderBySourcePosition(const A &container) {
 // Define required  info so that SymbolRef can be used inside llvm::DenseMap.
 namespace llvm {
 template <> struct DenseMapInfo<Fortran::semantics::SymbolRef> {
-  static inline Fortran::semantics::SymbolRef getEmptyKey() {
-    auto ptr = DenseMapInfo<const Fortran::semantics::Symbol *>::getEmptyKey();
-    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
-  }
-
   static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
     return DenseMapInfo<const Fortran::semantics::Symbol *>::getHashValue(
         &sym.get());
