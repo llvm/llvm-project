@@ -101,9 +101,7 @@ void initializeAIRAsyncEventToAllocaLegacyPass(PassRegistry &);
 /// alloca and insert no-op bitcasts before async-copy / wait-event calls.
 ModulePass *createAIRAsyncEventToAllocaLegacyPass();
 
-void initializeAIRAsyncCopyToCooperativeLegacyPass(PassRegistry &);
 
-ModulePass *createAIRAsyncCopyToCooperativeLegacyPass();
 
 /// Initializer for the AIR normalize-allocas pass.
 void initializeAIRNormalizeAllocasLegacyPass(PassRegistry &);

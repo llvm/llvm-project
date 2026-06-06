@@ -16,7 +16,6 @@
 #include "AIRWriter/AIRWriterPass.h"
 #include "AIR.h"
 #include "AIRSystemValues.h"
-#include "AIRAsyncCopyToCooperative.h"
 #include "AIRAsyncEventToAlloca.h"
 #include "AIRBFloat16CastDecompose.h"
 #include "AIRBarrierRename.h"
@@ -68,7 +67,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRLowerAtomicRMWLegacyPass(*PR);
   initializeAIRSplitI64ShuffleLegacyPass(*PR);
   initializeAIRScalarStoreGuardLegacyPass(*PR);
-  initializeAIRAsyncCopyToCooperativeLegacyPass(*PR);
   initializeAIRTGGlobalCoalesceLegacyPass(*PR);
   initializeAIRTGBarrierInsertLegacyPass(*PR);
   initializeAIRDeviceLoadsVolatileLegacyPass(*PR);
@@ -123,7 +121,6 @@ public:
     addPass(createAIRLowerAtomicRMWLegacyPass());
     addPass(createAIRSplitI64ShuffleLegacyPass());
     addPass(createAIRScalarStoreGuardLegacyPass());
-    addPass(createAIRAsyncCopyToCooperativeLegacyPass());
     addPass(createAIRTGGlobalCoalesceLegacyPass());
     addPass(createAIRTGBarrierInsertLegacyPass());
     addPass(createAIRDeviceLoadsVolatileLegacyPass());
