@@ -718,6 +718,16 @@ namespace cwg242 { // cwg242: 2.8
     return (B *)(p);
     // expected-error@-1 {{cannot cast 'cwg242::V *' to 'B *' via virtual base 'cwg242::V'}}
   }
+
+  A &ref_upcast(D &r) {
+    return (A &)(r);
+    // expected-error@-1 {{ambiguous conversion from derived class 'cwg242::D' to base class 'cwg242::A'}}
+  }
+
+  int D::*ptm_cast(int A::*p) {
+    return (int D::*)(p);
+    // expected-error@-1 {{ambiguous conversion from pointer to member of base class 'cwg242::A' to pointer to member of derived class 'cwg242::D'}}
+  }
 } // namespace cwg242
 
 namespace cwg243 { // cwg243: 2.8
