@@ -722,8 +722,8 @@ void LoopConvertCheck::doConversion(
         // If this is an access to a member through the arrow operator, after
         // the replacement it must be accessed through the '.' operator.
         ReplaceText += Usage.Kind == Usage::UK_MemberThroughArrow
-                          ? VarNameOrStructuredBinding + "."
-                          : VarNameOrStructuredBinding;
+                           ? VarNameOrStructuredBinding + "."
+                           : VarNameOrStructuredBinding;
         const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
