@@ -148,27 +148,19 @@ BasicBlock::iterator
 SCEVExpander::findInsertPointAfter(Instruction *I,
                                    Instruction *MustDominate) const {
   BasicBlock::iterator IP;
-  if (auto *II = dyn_cast<InvokeInst>(I)) {
-    IP = II->getNormalDest()->begin();
-  } else if (isa<CallBrInst>(I)) {
-    // callbr is a terminator, so there is no valid same-block point after it.
-    // Use the point we need the result to dominate.
+  if (auto MaybeIP = I->getInsertionPointAfterDef()) {
+    IP = *MaybeIP;
+  } else {
     assert(SE.DT.dominates(I, MustDominate) &&
-           "callbr result must dominate the insertion point");
-    IP = MustDominate->getIterator();
-  } else {
-    IP = ++I->getIterator();
-  }
-
-  while (isa<PHINode>(IP))
-    ++IP;
-
-  if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
-    ++IP;
-  } else if (isa<CatchSwitchInst>(IP)) {
-    IP = MustDominate->getParent()->getFirstInsertionPt();
-  } else {
-    assert(!IP->isEHPad() && "unexpected eh pad!");
+           "instruction must dominate the insertion point");
+    if (isa<CallBrInst>(I)) {
+      // Def is available in multiple successors, so use the point that needs
+      // to be dominated.
+      IP = MustDominate->getIterator();
+    } else {
+      // catchswitch blocks don't have any legal insertion point.
+      IP = MustDominate->getParent()->getFirstInsertionPt();
+    }
   }
 
   // Adjust insert point to be after instructions inserted by the expander, so
