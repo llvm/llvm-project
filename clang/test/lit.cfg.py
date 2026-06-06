@@ -414,7 +414,9 @@ if config.enable_threads:
 
 # Add clang resource directory as a substitution
 if config.clang:
-    clang_resource_dir = subprocess.run([config.clang, "-print-resource-dir"], stdout=subprocess.PIPE, text=True).stdout.rstrip()
+    clang_resource_dir = subprocess.run(
+        [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE, text=True
+    ).stdout.rstrip()
     config.substitutions.append(("%clang-resource-dir", clang_resource_dir))
 
 # Check if we should allow outputs to console.
