@@ -28,6 +28,7 @@
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
+#include <flang/Semantics/openmp-utils.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
 #include <flang/Utils/OpenMP.h>
@@ -455,6 +456,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         interimMapType &= ~mlir::omp::ClauseMapFlags::to;
         interimMapType &= ~mlir::omp::ClauseMapFlags::from;
         interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
+        // We do not want to carry over the separation of descriptor and pointer
+        // mapping of any intermediate components we emit maps for as this can
+        // result in very odd differing behaviour when either ref_ptr/ptee is
+        // specified.
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptee;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -562,16 +569,16 @@ void insertChildMapInfoIntoParent(
     lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
+    llvm::SmallVectorImpl<Object> &mapObjects) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (auto indices : parentMemberIndices) {
     auto *parentIter =
-        llvm::find_if(mapSyms, [&indices](const semantics::Symbol *v) {
-          return v == indices.first.sym();
+        llvm::find_if(mapObjects, [&indices](const Object &object) {
+          return object.sym() == indices.first.sym();
         });
-    if (parentIter != mapSyms.end()) {
+    if (parentIter != mapObjects.end()) {
       auto mapOp = llvm::cast<mlir::omp::MapInfoOp>(
-          mapOperands[std::distance(mapSyms.begin(), parentIter)]
+          mapOperands[std::distance(mapObjects.begin(), parentIter)]
               .getDefiningOp());
 
       // Once explicit members are attached to a parent map, do not also invoke
@@ -597,13 +604,16 @@ void insertChildMapInfoIntoParent(
       mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
           indices.second.memberPlacementIndices));
     } else {
-      // NOTE: We take the map type of the first child, this may not
-      // be the correct thing to do, however, we shall see. For the moment
-      // it allows this to work with enter and exit without causing MLIR
-      // verification issues. The more appropriate thing may be to take
-      // the "main" map type clause from the directive being used.
-      mlir::omp::ClauseMapFlags mapType =
-          indices.second.memberMap[0].getMapType();
+      // NOTE: We do not assign default mapped parents a map type, as
+      // selecting a child can result in the incorrect map type being
+      // applied to the parent and data being incorrectly moved to or
+      // from device. We make an exception currently for present.
+      mlir::omp::ClauseMapFlags mapType = mlir::omp::ClauseMapFlags::storage;
+
+      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+        if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
+            mlir::omp::ClauseMapFlags::present)
+          mapType |= mlir::omp::ClauseMapFlags::present;
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());
@@ -631,7 +641,7 @@ void insertChildMapInfoIntoParent(
           /*partialMap=*/true);
 
       mapOperands.push_back(mapOp);
-      mapSyms.push_back(indices.first.sym());
+      mapObjects.push_back(indices.first);
     }
   }
 }
@@ -1119,6 +1129,117 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   /*slice=*/mlir::Value{},
                                   /*indices=*/ivs,
                                   /*typeparams=*/mlir::ValueRange{});
+}
+
+/// Collect trait property names (vendor, kind, arch, isa, etc.) into a VMI.
+static void processTraitProperties(
+    llvm::omp::VariantMatchInfo &vmi, llvm::omp::TraitSet set,
+    llvm::omp::TraitSelector selector,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    llvm::APInt *scorePtr, mlir::Location loc) {
+  if (!props)
+    return;
+
+  for (const auto &prop :
+       std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+    const auto *name = std::get_if<parser::OmpTraitPropertyName>(&prop.u);
+    // Clause properties and extension properties (e.g. `simdlen(8)` in
+    // `construct={simd(simdlen(8))}`) and `foo(bar)` in
+    // `implementation={my_trait(foo(bar))}` are not matched yet.
+    if (!name)
+      TODO(loc, "clause or extension trait matching in METADIRECTIVE");
+  }
+  semantics::omp::ProcessTraitProperties(vmi, set, selector, props, scorePtr);
+}
+
+/// Process user={condition(...)} trait properties. Constant conditions are
+/// resolved to user_condition_true/false. Non-constant conditions are marked
+/// as user_condition_unknown and returned for later use in fir.if lowering.
+static std::optional<DynamicUserCondition> processUserConditionTrait(
+    llvm::omp::VariantMatchInfo &vmi,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    semantics::SemanticsContext &semaCtx, llvm::APInt *scorePtr) {
+  std::optional<DynamicUserCondition> dynamicCond;
+  if (!props)
+    return dynamicCond;
+
+  for (const auto &prop :
+       std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+    const auto *scalarExpr = std::get_if<parser::ScalarExpr>(&prop.u);
+    if (!scalarExpr)
+      continue;
+
+    if (auto constValue =
+            semantics::omp::EvaluateUserCondition(semaCtx, *scalarExpr)) {
+      vmi.addTrait(*constValue ? llvm::omp::TraitProperty::user_condition_true
+                               : llvm::omp::TraitProperty::user_condition_false,
+                   "<condition>", scorePtr);
+      continue;
+    }
+
+    dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
+    vmi.addTrait(llvm::omp::TraitProperty::user_condition_unknown,
+                 "<condition>", scorePtr);
+  }
+
+  return dynamicCond;
+}
+
+/// Populate a VariantMatchInfo from context selector.
+/// For user conditions, attempts constant folding. Non-constant conditions
+/// are recorded as user_condition_unknown and returned for later use in
+/// fir.if lowering.
+std::optional<DynamicUserCondition>
+makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
+                     const parser::modifier::OmpContextSelector &ctxSel,
+                     semantics::SemanticsContext &semaCtx, mlir::Location loc) {
+  std::optional<DynamicUserCondition> dynamicCond;
+
+  for (const auto &traitSet : ctxSel.v) {
+    using TSSName = parser::OmpTraitSetSelectorName;
+    auto setName = std::get<TSSName>(traitSet.t).v;
+    llvm::omp::TraitSet set = semantics::omp::MapTraitSet(setName);
+
+    for (const auto &trait :
+         std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      const auto &selectorName =
+          std::get<parser::OmpTraitSelectorName>(trait.t);
+      llvm::omp::TraitSelector selector =
+          semantics::omp::MapTraitSelector(selectorName, set);
+      const auto &props =
+          std::get<std::optional<parser::OmpTraitSelector::Properties>>(
+              trait.t);
+
+      // target_device selectors require runtime target device queries not yet
+      // supported.
+      if (set == llvm::omp::TraitSet::target_device)
+        TODO(loc, "target_device selector in METADIRECTIVE");
+
+      std::optional<llvm::APInt> score;
+      llvm::APInt *scorePtr =
+          semantics::omp::GetTraitScore(props, semaCtx, score);
+
+      if (selector == llvm::omp::TraitSelector::user_condition) {
+        if (std::optional<DynamicUserCondition> userCond =
+                processUserConditionTrait(vmi, props, semaCtx, scorePtr))
+          dynamicCond = userCond;
+        continue;
+      }
+
+      processTraitProperties(vmi, set, selector, props, scorePtr, loc);
+
+      if (props || set != llvm::omp::TraitSet::construct)
+        continue;
+
+      // Construct traits with no properties: the selector is the property.
+      llvm::omp::TraitProperty propKind =
+          llvm::omp::getOpenMPContextTraitPropertyForSelector(selector);
+      if (propKind != llvm::omp::TraitProperty::invalid)
+        vmi.addTrait(set, propKind, selectorName.ToString(), scorePtr);
+    }
+  }
+
+  return dynamicCond;
 }
 
 } // namespace omp

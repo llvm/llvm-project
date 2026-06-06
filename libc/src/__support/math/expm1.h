@@ -32,13 +32,13 @@ namespace math {
 
 namespace expm1_internal {
 
-#if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #define LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
 #endif
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
-using Float128 = typename fputil::DyadicFloat<128>;
+using DFloat128 = typename fputil::DyadicFloat<128>;
 
 using LIBC_NAMESPACE::operator""_u128;
 
@@ -87,7 +87,7 @@ LIBC_INLINE double poly_approx_d(double dx) {
 // Return expm1(dx) / dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - expm1(dx) | < 2^-101
-LIBC_INLINE LIBC_CONSTEXPR DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
+LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
   // Taylor polynomial.
   constexpr DoubleDouble COEFFS[] = {
       {0, 0x1p0},                                      // 1
@@ -108,9 +108,8 @@ LIBC_INLINE LIBC_CONSTEXPR DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // Return (exp(dx) - 1)/dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
-[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR Float128
-poly_approx_f128(const Float128 &dx) {
-  LIBC_CONSTEXPR Float128 COEFFS_128[]{
+[[maybe_unused]] LIBC_INLINE DFloat128 poly_approx_f128(const DFloat128 &dx) {
+  constexpr DFloat128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
       {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/6
@@ -120,14 +119,14 @@ poly_approx_f128(const Float128 &dx) {
       {Sign::POS, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/5040
   };
 
-  Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
-                                COEFFS_128[3], COEFFS_128[4], COEFFS_128[5],
-                                COEFFS_128[6]);
+  DFloat128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1],
+                                 COEFFS_128[2], COEFFS_128[3], COEFFS_128[4],
+                                 COEFFS_128[5], COEFFS_128[6]);
   return p;
 }
 
 #ifdef DEBUGDEBUG
-std::ostream &operator<<(std::ostream &OS, const Float128 &r) {
+std::ostream &operator<<(std::ostream &OS, const DFloat128 &r) {
   OS << (r.sign == Sign::NEG ? "-(" : "(") << r.mantissa.val[0] << " + "
      << r.mantissa.val[1] << " * 2^64) * 2^" << r.exponent << "\n";
   return OS;
@@ -143,41 +142,41 @@ std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
 // Compute exp(x) - 1 using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-[[maybe_unused]] LIBC_INLINE Float128 expm1_f128(double x, double kd, int idx1,
-                                                 int idx2) {
+[[maybe_unused]] LIBC_INLINE DFloat128 expm1_f128(double x, double kd, int idx1,
+                                                  int idx2) {
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
   double t2 = kd * MLOG_2_EXP2_M12_MID_30;                     // exact
   double t3 = kd * MLOG_2_EXP2_M12_LO;                         // Error < 2^-133
 
-  Float128 dx = fputil::quick_add(
-      Float128(t1), fputil::quick_add(Float128(t2), Float128(t3)));
+  DFloat128 dx = fputil::quick_add(
+      DFloat128(t1), fputil::quick_add(DFloat128(t2), DFloat128(t3)));
 
   // TODO: Skip recalculating exp_mid1 and exp_mid2.
-  Float128 exp_mid1 =
-      fputil::quick_add(Float128(EXP2_MID1[idx1].hi),
-                        fputil::quick_add(Float128(EXP2_MID1[idx1].mid),
-                                          Float128(EXP2_MID1[idx1].lo)));
+  DFloat128 exp_mid1 =
+      fputil::quick_add(DFloat128(EXP2_MID1[idx1].hi),
+                        fputil::quick_add(DFloat128(EXP2_MID1[idx1].mid),
+                                          DFloat128(EXP2_MID1[idx1].lo)));
 
-  Float128 exp_mid2 =
-      fputil::quick_add(Float128(EXP2_MID2[idx2].hi),
-                        fputil::quick_add(Float128(EXP2_MID2[idx2].mid),
-                                          Float128(EXP2_MID2[idx2].lo)));
+  DFloat128 exp_mid2 =
+      fputil::quick_add(DFloat128(EXP2_MID2[idx2].hi),
+                        fputil::quick_add(DFloat128(EXP2_MID2[idx2].mid),
+                                          DFloat128(EXP2_MID2[idx2].lo)));
 
-  Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
+  DFloat128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
 
   int hi = static_cast<int>(kd) >> 12;
-  Float128 minus_one{Sign::NEG, -127 - hi,
-                     0x80000000'00000000'00000000'00000000_u128};
+  DFloat128 minus_one{Sign::NEG, -127 - hi,
+                      0x80000000'00000000'00000000'00000000_u128};
 
-  Float128 exp_mid_m1 = fputil::quick_add(exp_mid, minus_one);
+  DFloat128 exp_mid_m1 = fputil::quick_add(exp_mid, minus_one);
 
-  Float128 p = poly_approx_f128(dx);
+  DFloat128 p = poly_approx_f128(dx);
 
   // r = exp_mid * (1 + dx * P) - 1
   //   = (exp_mid - 1) + (dx * exp_mid) * P
-  Float128 r =
+  DFloat128 r =
       fputil::multiply_add(fputil::quick_mul(exp_mid, dx), p, exp_mid_m1);
 
   r.exponent += hi;
@@ -225,7 +224,7 @@ LIBC_INLINE DoubleDouble exp_double_double(double x, double kd,
 
 // Check for exceptional cases when
 // |x| <= 2^-53 or x < log(2^-54) or x >= 0x1.6232bdd7abcd3p+9
-LIBC_INLINE LIBC_CONSTEXPR double set_exceptional(double x) {
+LIBC_INLINE double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -279,7 +278,7 @@ LIBC_INLINE LIBC_CONSTEXPR double set_exceptional(double x) {
 
 } // namespace expm1_internal
 
-LIBC_INLINE LIBC_CONSTEXPR double expm1(double x) {
+LIBC_INLINE double expm1(double x) {
   using namespace expm1_internal;
 
   using FPBits = typename fputil::FPBits<double>;
@@ -478,7 +477,7 @@ LIBC_INLINE LIBC_CONSTEXPR double expm1(double x) {
   if (LIBC_LIKELY(upper == lower)) {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
     return r;
   }
@@ -498,13 +497,13 @@ LIBC_INLINE LIBC_CONSTEXPR double expm1(double x) {
   double lower_dd = r_dd.hi + (r_dd.lo - err_dd);
 
   if (LIBC_LIKELY(upper_dd == lower_dd)) {
-    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
     return r;
   }
 
   // Use 128-bit precision
-  Float128 r_f128 = expm1_f128(x, kd, idx1, idx2);
+  DFloat128 r_f128 = expm1_f128(x, kd, idx1, idx2);
 
   return static_cast<double>(r_f128);
 #endif // LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS

@@ -2290,8 +2290,9 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   // This makes the transformation incorrect since the original program would
   // have preserved the exact NaN bit-pattern.
   // Avoid the folding if X can have NaN elements.
-  if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
-      !isKnownNeverNaN(X, SQ))
+  bool IsFloatingPointTy =
+      Shuf.getType()->getElementType()->isFloatingPointTy();
+  if (IsFloatingPointTy && !isKnownNeverNaN(X, SQ))
     return nullptr;
 
   // Shuffle identity constants into the lanes that return the original value.
@@ -2310,8 +2311,14 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
 
   // shuf (bop X, C), X, M --> bop X, C'
   // shuf X, (bop X, C), M --> bop X, C'
-  Instruction *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
+  BinaryOperator *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
   NewBO->copyIRFlags(BO);
+
+  // Drop noinf FMF if X can be Inf. If X can have Inf elements and noinf FMF is
+  // set, the transformation may generate poison where the original program
+  // would preserve the Inf value.
+  if (IsFloatingPointTy && NewBO->hasNoInfs() && !isKnownNeverInfinity(X, SQ))
+    NewBO->setHasNoInfs(false);
 
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
@@ -3304,4 +3311,146 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   }
 
   return MadeChange ? &SVI : nullptr;
+}
+
+/// Given the following de-interleaving shufflevectors and the consuming zexts:
+/// ```
+/// %f0 = shufflevector <8 x i32> %v, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+/// %f1 = shufflevector <8 x i32> %v, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+/// %z0 = zext <4 x i32> %f0 to <4 x i64>
+/// %z1 = zext <4 x i32> %f1 to <4 x i64>
+/// ```
+/// We can actually bitcast the input value, `%v` first before replacing zexts
+/// with simple arithmetics on this new bitcast:
+/// ```
+/// %bc = bitcast <8 x i32> %v to <4 x i64>
+//  %z0 = and <4 x i64> %bc, splat (i64 4294967295)
+//  %z1 = lshr <4 x i64> %bc, splat (i64 32)
+/// ```
+/// This transformation is almost always benefitial as shufflevector is more
+/// expensive than normal arithmetics.
+Instruction *
+InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
+  // This pattern involves bitcast that is not compatible with big endian.
+  if (DL.isBigEndian())
+    return nullptr;
+
+  // The actual value that got de-interleaved.
+  Value *DIV;
+
+  using namespace PatternMatch;
+  Value *SVI = nullptr, *DI = nullptr;
+  if (!match(&RootZExt,
+             m_ZExt(m_CombineOr(
+                 m_ExtractValue(m_Value(DI, m_Deinterleave2(m_Value(DIV)))),
+                 m_Value(SVI, m_Shuffle(m_Value(), m_Value()))))))
+    return nullptr;
+
+  auto isDeinterleaveShuffle =
+      [](Instruction *I) -> std::pair<Value *, unsigned> {
+    Value *V;
+    ArrayRef<int> ShuffleMask;
+    unsigned Index;
+    if (match(I, m_Shuffle(m_Value(V), m_Undef(), m_Mask(ShuffleMask))) &&
+        isa<FixedVectorType>(V->getType())) {
+      unsigned NumInputElements =
+          cast<VectorType>(V->getType())->getElementCount().getFixedValue();
+      if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(ShuffleMask, 2,
+                                                        Index) &&
+          Index < 2 &&
+          ShuffleVectorInst::isSingleSourceMask(ShuffleMask,
+                                                NumInputElements) &&
+          ShuffleMask.size() * 2 == NumInputElements)
+        return {V, Index};
+    }
+    return {nullptr, UINT_MAX};
+  };
+
+  // Validate either the shufflevector or the vector.deinterleave2 and obtain
+  // the value they're de-interleaving.
+  if (SVI) {
+    // We will find other shufflevectors later.
+    DIV = isDeinterleaveShuffle(cast<Instruction>(SVI)).first;
+    if (!DIV)
+      return nullptr;
+  } else {
+    // We should already capture the value that got de-interleaved (i.e. DIV).
+    assert(DI && DIV);
+    if (!all_of(DI->users(), [](User *Usr) -> bool {
+          auto *EV = dyn_cast<ExtractValueInst>(Usr);
+          return EV && EV->getNumIndices() == 1;
+        }))
+      return nullptr;
+  }
+
+  auto *InputVecTy = dyn_cast<VectorType>(DIV->getType());
+  if (!InputVecTy)
+    return nullptr;
+  auto *InElementTy = dyn_cast<IntegerType>(InputVecTy->getElementType());
+  if (!InElementTy)
+    return nullptr;
+  if (!InputVecTy->getElementCount().isKnownEven())
+    return nullptr;
+
+  // {Field instruction, Field index}
+  SmallVector<std::pair<Instruction *, unsigned>, 4> Fields;
+  if (SVI) {
+    for (auto *Usr : DIV->users()) {
+      auto *FieldI = dyn_cast<Instruction>(Usr);
+      if (!FieldI)
+        continue;
+      auto [V, Index] = isDeinterleaveShuffle(FieldI);
+      if (V != DIV)
+        continue;
+      assert(Index < 2);
+      Fields.push_back({FieldI, Index});
+    }
+  } else {
+    // llvm.vector.deinterleave2.
+    for (User *Field : DI->users()) {
+      auto *FieldI = cast<ExtractValueInst>(Field);
+      unsigned FieldIdx = *FieldI->idx_begin();
+      assert(FieldIdx < 2);
+      Fields.push_back({FieldI, FieldIdx});
+    }
+  }
+
+  // {field to be replaced, field index}
+  SmallVector<std::pair<ZExtInst *, unsigned>, 4> FieldReplacements;
+  // We commit the transformation only if all the field users can be replaced,
+  // otherwise the primary de-interleaving construction, regardless of
+  // llvm.vector.deinterleave2 or shufflevectors, will still be there.
+  for (auto [Field, FieldIdx] : Fields) {
+    for (User *FieldUsr : Field->users()) {
+      auto *ZExt = dyn_cast<ZExtInst>(FieldUsr);
+      if (!ZExt)
+        return nullptr;
+      // Only if it's doubling the element size.
+      if (ZExt->getDestTy() != ZExt->getSrcTy()->getExtendedType())
+        return nullptr;
+      FieldReplacements.push_back({ZExt, FieldIdx});
+    }
+  }
+
+  // Double the element size but half the vector length.
+  auto *BitcastedTy = VectorType::getExtendedElementVectorType(InputVecTy);
+  BitcastedTy = VectorType::getHalfElementsVectorType(BitcastedTy);
+  // Since we're going to "merge" lanes via bitcast, we need to freeze any
+  // potential poison lanes first.
+  Value *Freeze = Builder.CreateFreeze(DIV);
+  Value *Bitcast = Builder.CreateBitCast(Freeze, BitcastedTy);
+  unsigned InElementBitWidth = InElementTy->getBitWidth();
+  auto Mask = APInt::getLowBitsSet(InElementBitWidth * 2, InElementBitWidth);
+  Value *NewField0 = Builder.CreateAnd(Bitcast, Mask);
+  Value *NewField1 = Builder.CreateLShr(Bitcast, InElementBitWidth);
+
+  for (auto [I, Idx] : FieldReplacements) {
+    assert(Idx < 2 && "unsupported field index");
+    replaceInstUsesWith(*I, Idx ? NewField1 : NewField0);
+    // Make sure the old ZExt are in the worklist so that they
+    // can be removed in the following iterations.
+    addToWorklist(I);
+  }
+
+  return &RootZExt;
 }

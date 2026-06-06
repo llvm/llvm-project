@@ -174,12 +174,6 @@ headers_not_available = list(map(Header, [
     "text_encoding",
 ]))
 
-header_restrictions = {
-    # headers with #error directives
-    "atomic": "_LIBCPP_HAS_ATOMIC_HEADER",
-    "stdatomic.h": "_LIBCPP_HAS_ATOMIC_HEADER",
-}
-
 lit_header_restrictions = {
     "barrier": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",

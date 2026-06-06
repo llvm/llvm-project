@@ -22,7 +22,7 @@
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 #
-# DEBUG-NEXT: G_MUL (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: G_MUL (opcode [[MUL_OPC:[0-9]+]]): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 #
@@ -319,8 +319,8 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FENCE (opcode {{[0-9]+}}): 0 type indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_PREFETCH (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
@@ -331,14 +331,15 @@
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_INVOKE_REGION_START (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT:  .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT:  .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_INTRINSIC (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_INTRINSIC_W_SIDE_EFFECTS (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_INTRINSIC_CONVERGENT (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
@@ -495,8 +496,9 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_UMULFIX (opcode {{[0-9]+}}): 1 type index, 1 imm index
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_SMULFIXSAT (opcode {{[0-9]+}}): 1 type index, 1 imm index
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
@@ -770,6 +772,9 @@
 # DEBUG-NEXT: G_BITREVERSE (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: G_CLMUL (opcode [[CLMUL_OPC:[0-9]+]]): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FCEIL (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected

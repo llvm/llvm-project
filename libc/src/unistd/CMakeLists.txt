@@ -20,6 +20,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  alarm
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.alarm
+)
+
+add_entrypoint_object(
   access
   ALIAS
   DEPENDS

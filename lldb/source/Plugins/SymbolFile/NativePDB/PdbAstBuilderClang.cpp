@@ -361,6 +361,73 @@ PdbAstBuilderClang::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
 }
 
 clang::DeclContext *
+PdbAstBuilderClang::GetOrCreateDeclContextForCompilandSymbol(
+    PdbCompilandSymId uid) {
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVSymbol sym = index.ReadSymbolRecord(uid);
+
+  llvm::StringRef symbol_name = getSymbolName(sym);
+
+  std::optional<PdbTypeSymId> func_id = GetFunctionType(sym);
+  if (!func_id || !symbol_name.contains("::"))
+    return CreateDeclInfoForUndecoratedName(symbol_name).first;
+
+  // Try to get the context from class type of an LF_MFUNCTION.
+  // For some types, we might not find a class type.
+  auto get_member_fn_context = [&]() -> clang::DeclContext * {
+    TypeIndex id = func_id->index;
+
+    if (func_id->is_ipi) {
+      // Type from IPI, for example from S_INLINESITE
+      std::optional<CVType> func_id_type =
+          index.ipi().tryGetType(func_id->index);
+      if (!func_id_type || func_id_type->kind() != LF_MFUNC_ID)
+        return nullptr;
+
+      MemberFuncIdRecord record;
+      llvm::Error err = TypeDeserializer::deserializeAs<MemberFuncIdRecord>(
+          *func_id_type, record);
+      if (err) {
+        llvm::consumeError(std::move(err));
+        return nullptr;
+      }
+
+      id = record.FunctionType;
+    }
+
+    std::optional<CVType> func_type = index.tpi().tryGetType(id);
+    if (!func_type || func_type->kind() != LF_MFUNCTION)
+      return nullptr;
+
+    MemberFunctionRecord mfr(TypeRecordKind::MemberFunction);
+
+    llvm::Error err =
+        TypeDeserializer::deserializeAs<MemberFunctionRecord>(*func_type, mfr);
+    if (err || mfr.ClassType.isNoneType()) {
+      llvm::consumeError(std::move(err));
+      return nullptr;
+    }
+
+    clang::QualType qt = GetOrCreateClangType(mfr.ClassType);
+    if (qt.isNull())
+      return nullptr;
+    clang::TagDecl *tag = qt->getAsTagDecl();
+    if (!tag)
+      return nullptr;
+
+    return clang::TagDecl::castToDeclContext(tag);
+  };
+
+  clang::DeclContext *context = get_member_fn_context();
+  if (!context)
+    return CreateDeclInfoForUndecoratedName(symbol_name).first;
+
+  return context;
+}
+
+clang::DeclContext *
 PdbAstBuilderClang::GetParentClangDeclContext(PdbSymUid uid) {
   // We must do this *without* calling GetOrCreate on the current uid, as
   // that would be an infinite recursion.
@@ -374,8 +441,7 @@ PdbAstBuilderClang::GetParentClangDeclContext(PdbSymUid uid) {
     if (scope)
       return GetOrCreateClangDeclContextForUid(*scope);
 
-    CVSymbol sym = index.ReadSymbolRecord(uid.asCompilandSym());
-    return CreateDeclInfoForUndecoratedName(getSymbolName(sym)).first;
+    return GetOrCreateDeclContextForCompilandSymbol(uid.asCompilandSym());
   }
   case PdbSymUidKind::Type: {
     // It could be a namespace, class, or global.  We don't support nested
@@ -809,14 +875,22 @@ clang::QualType PdbAstBuilderClang::CreateType(PdbTypeSymId type) {
   if (cvt.kind() == LF_PROCEDURE) {
     ProcedureRecord pr;
     llvm::cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr));
-    return CreateFunctionType(pr.ArgumentList, pr.ReturnType, pr.CallConv);
+    return CreateFunctionType(pr.ArgumentList, pr.ReturnType, pr.CallConv,
+                              /*type_quals=*/0);
   }
 
   if (cvt.kind() == LF_MFUNCTION) {
     MemberFunctionRecord mfr;
     llvm::cantFail(
         TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr));
-    return CreateFunctionType(mfr.ArgumentList, mfr.ReturnType, mfr.CallConv);
+    unsigned int type_quals = 0;
+    if (!mfr.ThisType.isNoneType()) {
+      clang::QualType this_type = GetOrCreateClangType(mfr.getThisType());
+      if (!this_type.isNull())
+        type_quals = this_type->getPointeeType().getLocalFastQualifiers();
+    }
+    return CreateFunctionType(mfr.ArgumentList, mfr.ReturnType, mfr.CallConv,
+                              type_quals);
   }
 
   return {};
@@ -1078,8 +1152,15 @@ PdbAstBuilderClang::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
   CompilerType func_ct = ToCompilerType(qt);
 
   llvm::StringRef proc_name = proc.Name;
-  proc_name.consume_front(context_name);
-  proc_name.consume_front("::");
+  if (!context_name.empty() && !(proc_name.consume_front(context_name) &&
+                                 proc_name.consume_front("::"))) {
+    // If we have some context, but the function name doesn't start with it, use
+    // the basename.
+    MSVCUndecoratedNameParser parser(proc.Name);
+    llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs(parser.GetSpecifiers());
+    if (!specs.empty())
+      proc_name = specs.back().GetBaseName();
+  }
   clang::FunctionDecl *function_decl =
       CreateFunctionDecl(func_id, proc_name, proc.FunctionType, func_ct,
                          func_type->getNumParams(), storage, false, parent);
@@ -1243,7 +1324,8 @@ clang::QualType PdbAstBuilderClang::CreateArrayType(const ArrayRecord &ar) {
 
 clang::QualType PdbAstBuilderClang::CreateFunctionType(
     TypeIndex args_type_idx, TypeIndex return_type_idx,
-    llvm::codeview::CallingConvention calling_convention) {
+    llvm::codeview::CallingConvention calling_convention,
+    unsigned int type_quals) {
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
@@ -1278,8 +1360,8 @@ clang::QualType PdbAstBuilderClang::CreateFunctionType(
     return {};
 
   CompilerType return_ct = ToCompilerType(return_type);
-  CompilerType func_sig_ast_type =
-      m_clang.CreateFunctionType(return_ct, arg_types, is_variadic, 0, *cc);
+  CompilerType func_sig_ast_type = m_clang.CreateFunctionType(
+      return_ct, arg_types, is_variadic, type_quals, *cc);
 
   return clang::QualType::getFromOpaquePtr(
       func_sig_ast_type.GetOpaqueQualType());

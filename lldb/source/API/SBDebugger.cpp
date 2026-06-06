@@ -526,7 +526,8 @@ void SBDebugger::HandleCommand(const char *command) {
   LLDB_INSTRUMENT_VA(this, command);
 
   if (m_opaque_sp) {
-    TargetSP target_sp(m_opaque_sp->GetSelectedTarget());
+    TargetSP target_sp(
+        m_opaque_sp->GetCommandInterpreter().GetSelectedTarget());
     std::unique_lock<std::recursive_mutex> lock;
     if (target_sp)
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
@@ -1337,7 +1338,7 @@ void SBDebugger::SetTerminalWidth(uint32_t term_width) {
 uint32_t SBDebugger::GetTerminalHeight() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return (m_opaque_sp ? m_opaque_sp->GetTerminalWidth() : 0);
+  return (m_opaque_sp ? m_opaque_sp->GetTerminalHeight() : 0);
 }
 
 void SBDebugger::SetTerminalHeight(uint32_t term_height) {
@@ -1345,6 +1346,14 @@ void SBDebugger::SetTerminalHeight(uint32_t term_height) {
 
   if (m_opaque_sp)
     m_opaque_sp->SetTerminalHeight(term_height);
+}
+
+void SBDebugger::SetTerminalDimensions(uint32_t term_width,
+                                       uint32_t term_height) {
+  LLDB_INSTRUMENT_VA(this, term_width, term_height);
+
+  if (m_opaque_sp)
+    m_opaque_sp->SetTerminalDimensions(term_width, term_height);
 }
 
 const char *SBDebugger::GetPrompt() const {

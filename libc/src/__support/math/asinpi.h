@@ -50,16 +50,16 @@ LIBC_INLINE double asinpi(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     return x * asinpi_eval(x * x);
 #else
-    using Float128 = fputil::DyadicFloat<128>;
+    using DFloat128 = fputil::DyadicFloat<128>;
     using DoubleDouble = fputil::DoubleDouble;
 
     // For |x| < 2^-511, x^2 would underflow to subnormal, raising a
     // spurious underflow exception. Since asinpi(x) = x/pi with correction
     // x^2/(6*pi) < 2^-1024 relative (negligible), compute x/pi directly
-    // in Float128.
+    // in DFloat128.
     if (LIBC_UNLIKELY(x_exp < 512)) {
-      Float128 x_f128(x);
-      Float128 r = fputil::quick_mul(x_f128, ONE_OVER_PI_F128);
+      DFloat128 x_f128(x);
+      DFloat128 r = fputil::quick_mul(x_f128, ONE_OVER_PI_F128);
       double result = static_cast<double>(r);
 
       // IEEE 754 "after rounding" tininess: the 53-bit unlimited-exponent
@@ -73,10 +73,9 @@ LIBC_INLINE double asinpi(double x) {
         // result to exactly 2^-1022 (not tiny). Check for this.
         if (exp_hi == 0) {
           constexpr unsigned SHIFT_53 = 128 - FPBits::SIG_LEN - 1;
-          using MantT = typename Float128::MantissaType;
+          using MantT = typename DFloat128::MantissaType;
           MantT m53 = r.mantissa >> SHIFT_53;
-          LIBC_CONSTEXPR MantT ALL_ONES_53 =
-              (MantT(1) << (FPBits::SIG_LEN + 1)) - 1;
+          constexpr MantT ALL_ONES_53 = (MantT(1) << (FPBits::SIG_LEN + 1)) - 1;
           if (m53 == ALL_ONES_53) {
             // All 53 bits set. carry happens if rounding rounds away
             // from zero at this precision.
@@ -132,20 +131,20 @@ LIBC_INLINE double asinpi(double x) {
     // Recalculate mod 1/64.
     idx = static_cast<unsigned>(fputil::nearest_integer(x_sq.hi * 0x1.0p6));
 
-    Float128 x_f128(x);
+    DFloat128 x_f128(x);
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-    Float128 u_hi(
+    DFloat128 u_hi(
         fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, x_sq.hi));
-    Float128 u = fputil::quick_add(u_hi, Float128(x_sq.lo));
+    DFloat128 u = fputil::quick_add(u_hi, DFloat128(x_sq.lo));
 #else
-    Float128 x_sq_f128 = fputil::quick_mul(x_f128, x_f128);
-    Float128 u = fputil::quick_add(
-        x_sq_f128, Float128(static_cast<double>(idx) * (-0x1.0p-6)));
+    DFloat128 x_sq_f128 = fputil::quick_mul(x_f128, x_f128);
+    DFloat128 u = fputil::quick_add(
+        x_sq_f128, DFloat128(static_cast<double>(idx) * (-0x1.0p-6)));
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
-    Float128 p_f128 = asinpi_eval(u, idx);
-    Float128 r = fputil::quick_mul(x_f128, p_f128);
+    DFloat128 p_f128 = asinpi_eval(u, idx);
+    DFloat128 r = fputil::quick_mul(x_f128, p_f128);
 
     return static_cast<double>(r);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -198,7 +197,7 @@ LIBC_INLINE double asinpi(double x) {
   double r = x_sign * fputil::multiply_add(-2.0 * v_hi, p, 0.5);
   return r;
 #else
-  using Float128 = fputil::DyadicFloat<128>;
+  using DFloat128 = fputil::DyadicFloat<128>;
   using DoubleDouble = fputil::DoubleDouble;
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
@@ -245,7 +244,7 @@ LIBC_INLINE double asinpi(double x) {
   if (LIBC_LIKELY(r_upper == r_lower))
     return r_upper;
 
-  // Ziv's accuracy test failed, we redo the computations in Float128.
+  // Ziv's accuracy test failed, we redo the computations in DFloat128.
   // Recalculate mod 1/64.
   idx = static_cast<unsigned>(fputil::nearest_integer(u * 0x1.0p6));
 
@@ -266,17 +265,18 @@ LIBC_INLINE double asinpi(double x) {
   double t = h * (-0.25) / u;
   double vll = fputil::multiply_add(vl, t, vl_lo);
   // m_v = -(v_hi + v_lo + v_ll).
-  Float128 m_v = fputil::quick_add(
-      Float128(vh), fputil::quick_add(Float128(vl), Float128(vll)));
+  DFloat128 m_v = fputil::quick_add(
+      DFloat128(vh), fputil::quick_add(DFloat128(vl), DFloat128(vll)));
   m_v.sign = Sign::NEG;
 
-  // Perform computations in Float128:
+  // Perform computations in DFloat128:
   //   asinpi(x) = 0.5 - (v_hi + v_lo + vll) * P_pi(u).
-  Float128 y_f128(fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
+  DFloat128 y_f128(
+      fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
 
-  Float128 p_f128 = asinpi_eval(y_f128, idx);
-  Float128 r0_f128 = fputil::quick_mul(m_v, p_f128);
-  Float128 r_f128 = fputil::quick_add(HALF_F128, r0_f128);
+  DFloat128 p_f128 = asinpi_eval(y_f128, idx);
+  DFloat128 r0_f128 = fputil::quick_mul(m_v, p_f128);
+  DFloat128 r_f128 = fputil::quick_add(HALF_F128, r0_f128);
 
   if (xbits.is_neg())
     r_f128.sign = Sign::NEG;

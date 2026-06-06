@@ -2140,9 +2140,6 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "ref_ptee")
       mapTypeBits |= ClauseMapFlags::ref_ptee;
 
-    if (mapTypeMod == "ref_ptr_ptee")
-      mapTypeBits |= ClauseMapFlags::ref_ptr_ptee;
-
     if (mapTypeMod == "is_device_ptr")
       mapTypeBits |= ClauseMapFlags::is_device_ptr;
 
@@ -2213,8 +2210,6 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("ref_ptr");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptee))
     mapTypeStrs.push_back("ref_ptee");
-  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr_ptee))
-    mapTypeStrs.push_back("ref_ptr_ptee");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::is_device_ptr))
     mapTypeStrs.push_back("is_device_ptr");
   if (mapFlags == ClauseMapFlags::none)
@@ -2331,6 +2326,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
       bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
       bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
       bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
+      bool attach = mapTypeToBool(mapTypeBits, ClauseMapFlags::attach);
 
       if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
         return emitError(op->getLoc(),
@@ -2350,10 +2346,11 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
                            "specified, other map types are not permitted");
         }
 
-        if (!to && !from) {
-          return emitError(op->getLoc(),
-                           "at least one of to or from map types must be "
-                           "specified, other map types are not permitted");
+        if (!to && !from && !attach) {
+          return emitError(
+              op->getLoc(),
+              "at least one of to or from or attach map types must be "
+              "specified, other map types are not permitted");
         }
 
         auto updateVar = mapInfoOp.getVarPtr();
@@ -2371,7 +2368,20 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
               "present, mapper and iterator map type modifiers are permitted");
         }
 
-        to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
+        // It's possible we have an attach map, in which case if there is no to
+        // or from tied to it, we skip insertion.
+        if (to || from) {
+          to ? updateToVars.insert(updateVar)
+             : updateFromVars.insert(updateVar);
+        }
+      }
+
+      if ((mapInfoOp.getVarPtrPtr() && !mapInfoOp.getVarPtrPtrType()) ||
+          (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
+        return emitError(
+            op->getLoc(),
+            "if varPtrPtr or varPtrPtrType is specified, then both "
+            "must be present");
       }
     } else if (!isa<DeclareMapperInfoOp>(op)) {
       return emitError(op->getLoc(),
@@ -4497,11 +4507,19 @@ LogicalResult AtomicReadOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
-    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
-        *mo == ClauseMemoryOrderKind::Release) {
-      return emitError(
-          "memory-order must not be acq_rel or release for atomic reads");
+    if (*mo == ClauseMemoryOrderKind::Release) {
+      return emitError("memory-order must not be release for atomic reads");
+    }
+    if (*mo == ClauseMemoryOrderKind::Acq_rel) {
+      // acq_rel is prohibited on read only in OpenMP 5.0; allowed in 5.1+.
+      if (version < 51)
+        return emitError("memory-order must not be acq_rel for atomic reads");
     }
   }
   return verifySynchronizationHint(*this, getHint());
@@ -4515,11 +4533,19 @@ LogicalResult AtomicWriteOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
-    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
-        *mo == ClauseMemoryOrderKind::Acquire) {
-      return emitError(
-          "memory-order must not be acq_rel or acquire for atomic writes");
+    if (*mo == ClauseMemoryOrderKind::Acquire) {
+      return emitError("memory-order must not be acquire for atomic writes");
+    }
+    if (*mo == ClauseMemoryOrderKind::Acq_rel) {
+      // acq_rel is prohibited on write only in OpenMP 5.0; allowed in 5.1+.
+      if (version < 51)
+        return emitError("memory-order must not be acq_rel for atomic writes");
     }
   }
   return verifySynchronizationHint(*this, getHint());
@@ -4547,11 +4573,18 @@ LogicalResult AtomicUpdateOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Acquire) {
-      return emitError(
-          "memory-order must not be acq_rel or acquire for atomic updates");
+      // This restriction applies only to OpenMP 5.0; removed in 5.1.
+      if (version < 51)
+        return emitError(
+            "memory-order must not be acq_rel or acquire for atomic updates");
     }
   }
 
@@ -4598,6 +4631,32 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
       getSecondOp()->getAttr("memory_order"))
     return emitOpError(
         "operations inside capture region must not have memory_order clause");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCompareOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+  return verifySynchronizationHint(*this, getHint());
+}
+
+LogicalResult AtomicCompareOp::verifyRegions() {
+  if (verifyRegionsCommon().failed())
+    return mlir::failure();
+
+  if (verifyOperator().failed())
+    return mlir::failure();
+
+  Block &block = getRegion().front();
+
+  Operation *terminator = block.getTerminator();
+  if (!terminator || !isa<YieldOp>(terminator))
+    return emitOpError("region must be terminated with omp.yield");
+
   return success();
 }
 

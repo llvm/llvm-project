@@ -1496,7 +1496,6 @@
 {'is_defined': True, 'name': '_ZNSt3__18ios_base7unitbufE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base8internalE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base8showbaseE', 'size': 4, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt3__18ios_base9__xindex_E', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base9basefieldE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base9boolalphaE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base9showpointE', 'size': 4, 'type': 'OBJECT'}

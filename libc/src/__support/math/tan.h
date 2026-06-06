@@ -36,7 +36,7 @@ namespace math {
 namespace tan_internal {
 
 using DoubleDouble = fputil::DoubleDouble;
-using Float128 = typename fputil::DyadicFloat<128>;
+using DFloat128 = typename fputil::DyadicFloat<128>;
 
 LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
   // Evaluate tan(y) = tan(x - k * (pi/128))
@@ -76,14 +76,14 @@ LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Accurate evaluation of tan for small u.
-[[maybe_unused]] LIBC_INLINE Float128 tan_eval(const Float128 &u) {
-  Float128 u_sq = fputil::quick_mul(u, u);
+[[maybe_unused]] LIBC_INLINE DFloat128 tan_eval(const DFloat128 &u) {
+  DFloat128 u_sq = fputil::quick_mul(u, u);
 
   // tan(x) ~ x + x^3/3 + x^5 * 2/15 + x^7 * 17/315 + x^9 * 62/2835 +
   //          + x^11 * 1382/155925 + x^13 * 21844/6081075 +
   //          + x^15 * 929569/638512875 + x^17 * 6404582/10854718875
   // Relative errors < 2^-127 for |u| < pi/256.
-  LIBC_CONSTEXPR Float128 TAN_COEFFS[] = {
+  constexpr DFloat128 TAN_COEFFS[] = {
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1
       {Sign::POS, -129, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1
       {Sign::POS, -130, 0x88888888'88888888'88888888'88888889_u128}, // 2/15
@@ -105,17 +105,17 @@ LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
                           TAN_COEFFS[6], TAN_COEFFS[7], TAN_COEFFS[8]));
 }
 
-// Calculation a / b = a * (1/b) for Float128.
+// Calculation a / b = a * (1/b) for DFloat128.
 // Using the initial approximation of q ~ (1/b), then apply 2 Newton-Raphson
 // iterations, before multiplying by a.
-[[maybe_unused]] Float128 newton_raphson_div(const Float128 &a, Float128 b,
-                                             double q) {
-  Float128 q0(q);
-  LIBC_CONSTEXPR Float128 TWO(2.0);
+[[maybe_unused]] DFloat128 newton_raphson_div(const DFloat128 &a, DFloat128 b,
+                                              double q) {
+  DFloat128 q0(q);
+  LIBC_BIT_CAST_CONSTEXPR_VAR DFloat128 TWO(2.0);
   b.sign = (b.sign == Sign::POS) ? Sign::NEG : Sign::POS;
-  Float128 q1 =
+  DFloat128 q1 =
       fputil::quick_mul(q0, fputil::quick_add(TWO, fputil::quick_mul(b, q0)));
-  Float128 q2 =
+  DFloat128 q2 =
       fputil::quick_mul(q1, fputil::quick_add(TWO, fputil::quick_mul(b, q1)));
   return fputil::quick_mul(a, q2);
 }
@@ -256,39 +256,39 @@ LIBC_INLINE double tan(double x) {
   if (LIBC_LIKELY(tan_upper == tan_lower))
     return tan_upper;
 
-  Float128 u_f128;
+  DFloat128 u_f128;
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT))
     u_f128 = range_reduction_small_f128(x);
   else
     u_f128 = range_reduction_large.accurate();
 
-  Float128 tan_u = tan_eval(u_f128);
+  DFloat128 tan_u = tan_eval(u_f128);
 
-  auto get_sin_k = [](unsigned kk) -> Float128 {
+  auto get_sin_k = [](unsigned kk) -> DFloat128 {
     unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
-    Float128 ans = SIN_K_PI_OVER_128_F128[idx];
+    DFloat128 ans = SIN_K_PI_OVER_128_F128[idx];
     if (kk & 128)
       ans.sign = Sign::NEG;
     return ans;
   };
 
   // cos(k * pi/128) = sin(k * pi/128 + pi/2) = sin((k + 64) * pi/128).
-  Float128 sin_k_f128 = get_sin_k(k);
-  Float128 cos_k_f128 = get_sin_k(k + 64);
-  Float128 msin_k_f128 = get_sin_k(k + 128);
+  DFloat128 sin_k_f128 = get_sin_k(k);
+  DFloat128 cos_k_f128 = get_sin_k(k + 64);
+  DFloat128 msin_k_f128 = get_sin_k(k + 128);
 
   // num_f128 = sin(k*pi/128) + tan(y) * cos(k*pi/128)
-  Float128 num_f128 =
+  DFloat128 num_f128 =
       fputil::quick_add(sin_k_f128, fputil::quick_mul(cos_k_f128, tan_u));
   // den_f128 = cos(k*pi/128) - tan(y) * sin(k*pi/128)
-  Float128 den_f128 =
+  DFloat128 den_f128 =
       fputil::quick_add(cos_k_f128, fputil::quick_mul(msin_k_f128, tan_u));
 
   // tan(x) = (sin(k*pi/128) + tan(y) * cos(k*pi/128)) /
   //          / (cos(k*pi/128) - tan(y) * sin(k*pi/128))
   // TODO: The initial seed 1.0/den_dd.hi for Newton-Raphson reciprocal can be
   // reused from DoubleDouble fputil::div in the fast pass.
-  Float128 result = newton_raphson_div(num_f128, den_f128, 1.0 / den_dd.hi);
+  DFloat128 result = newton_raphson_div(num_f128, den_f128, 1.0 / den_dd.hi);
 
   // TODO: Add assertion if Ziv's accuracy tests fail in debug mode.
   // https://github.com/llvm/llvm-project/issues/96452.

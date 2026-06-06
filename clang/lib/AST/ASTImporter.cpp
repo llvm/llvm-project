@@ -1079,6 +1079,11 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
+      } else if (auto CR = Record->dyn_cast<const ConceptReference *>()) {
+        Expected<ConceptReference *> ToCROrErr = import(CR);
+        if (!ToCROrErr)
+          return ToCROrErr.takeError();
+        ToSat.Details.emplace_back(ToCROrErr.get());
       } else {
         auto Pair =
             Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
@@ -9045,8 +9050,8 @@ ExpectedStmt ASTNodeImporter::VisitInitListExpr(InitListExpr *E) {
     return std::move(Err);
 
   ASTContext &ToCtx = Importer.getToContext();
-  InitListExpr *To = new (ToCtx) InitListExpr(
-      ToCtx, ToLBraceLoc, ToExprs, ToRBraceLoc);
+  InitListExpr *To = new (ToCtx)
+      InitListExpr(ToCtx, ToLBraceLoc, ToExprs, ToRBraceLoc, E->isExplicit());
   To->setType(ToType);
 
   if (E->hasArrayFiller()) {
@@ -9210,14 +9215,14 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
   auto ToType = importChecked(Err, E->getType());
   auto ToNameLoc = importChecked(Err, E->getNameLoc());
   auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
+  auto ToParamType = importChecked(Err, E->getParameterType());
   auto ToReplacement = importChecked(Err, E->getReplacement());
   if (Err)
     return std::move(Err);
 
   return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
       ToType, E->getValueKind(), ToNameLoc, ToReplacement, ToAssociatedDecl,
-      E->getIndex(), E->getPackIndex(), E->isReferenceParameter(),
-      E->getFinal());
+      ToParamType, E->getIndex(), E->getPackIndex(), E->getFinal());
 }
 
 ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {
@@ -9864,10 +9869,15 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
     // Failed to import.
 
     auto Pos = ImportedDecls.find(FromD);
-    if (Pos != ImportedDecls.end()) {
+    bool ToDWasCreated = Pos != ImportedDecls.end();
+    // Capture the mapped decl before erasing: the iterator is invalidated by
+    // the erase below under backward-shift deletion, but it is still needed
+    // further down to record the import error.
+    Decl *CreatedToD = ToDWasCreated ? Pos->second : nullptr;
+    if (ToDWasCreated) {
       // Import failed after the object was created.
       // Remove all references to it.
-      auto *ToD = Pos->second;
+      auto *ToD = CreatedToD;
       ImportedDecls.erase(Pos);
 
       // ImportedDecls and ImportedFromDecls are not symmetric.  It may happen
@@ -9903,8 +9913,8 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
                     [&ErrOut](const ASTImportError &E) { ErrOut = E; });
     setImportDeclError(FromD, ErrOut);
     // Set the error for the mapped to Decl, which is in the "to" context.
-    if (Pos != ImportedDecls.end())
-      SharedState->setImportDeclError(Pos->second, ErrOut);
+    if (ToDWasCreated)
+      SharedState->setImportDeclError(CreatedToD, ErrOut);
 
     // Set the error for all nodes which have been created before we
     // recognized the error.

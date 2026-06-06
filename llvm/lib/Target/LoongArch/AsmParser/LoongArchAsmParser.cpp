@@ -95,6 +95,8 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
   bool parseDirectiveOption();
+  bool parseDirectiveDtpRelWord();
+  bool parseDirectiveDtpRelDWord();
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().hasFeature(Feature))) {
@@ -2079,9 +2081,31 @@ bool LoongArchAsmParser::parseDirectiveOption() {
   return false;
 }
 
+bool LoongArchAsmParser::parseDirectiveDtpRelWord() {
+  const MCExpr *Value;
+  if (getParser().parseExpression(Value))
+    return true;
+  getTargetStreamer().emitDTPRel32Value(Value);
+  return parseEOL();
+}
+
+bool LoongArchAsmParser::parseDirectiveDtpRelDWord() {
+  const MCExpr *Value;
+  if (getParser().parseExpression(Value))
+    return true;
+  getTargetStreamer().emitDTPRel64Value(Value);
+  return parseEOL();
+}
+
 ParseStatus LoongArchAsmParser::parseDirective(AsmToken DirectiveID) {
   if (DirectiveID.getString() == ".option")
     return parseDirectiveOption();
+
+  if (DirectiveID.getString() == ".dtprelword")
+    return parseDirectiveDtpRelWord();
+
+  if (DirectiveID.getString() == ".dtpreldword")
+    return parseDirectiveDtpRelDWord();
 
   return ParseStatus::NoMatch;
 }

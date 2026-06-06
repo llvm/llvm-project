@@ -527,11 +527,13 @@ TEST_P(ImportExpr, ImportInitListExpr) {
              "                        [0].x = 1.0 }; }",
              Lang_CXX03, "", Lang_CXX03, Verifier,
              functionDecl(hasDescendant(initListExpr(
+                 unless(isImplicit()),
                  has(cxxConstructExpr(requiresZeroInitialization())),
                  has(initListExpr(
-                     hasType(asString("point")), has(floatLiteral(equals(1.0))),
+                     isImplicit(), hasType(asString("point")),
+                     has(floatLiteral(equals(1.0))),
                      has(implicitValueInitExpr(hasType(asString("double")))))),
-                 has(initListExpr(hasType(asString("point")),
+                 has(initListExpr(isImplicit(), hasType(asString("point")),
                                   has(floatLiteral(equals(2.0))),
                                   has(floatLiteral(equals(1.0)))))))));
 }

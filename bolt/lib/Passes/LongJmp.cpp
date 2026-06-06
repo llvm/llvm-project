@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/LongJmp.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -367,6 +369,11 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
   CurrentIndex = 0;
   bool ColdLayoutDone = false;
   auto runColdLayout = [&]() {
+    // Mirror the extra hugify alignment inserted by final section allocation
+    // after the last non-cold section. Account for it before assigning cold
+    // fragment addresses so range checks see the hot-to-cold gap.
+    if (opts::Hugify && !BC.HasFixedLoadAddress && !opts::HotFunctionsAtEnd)
+      DotAddress = alignTo(DotAddress, opts::AlignText);
     DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
     ColdLayoutDone = true;
     if (opts::HotFunctionsAtEnd)
@@ -651,7 +658,8 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   return Error::success();
 }
 
-void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
+void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
+                                     DataflowInfoManager *DIM) {
   BinaryContext &BC = BF.getBinaryContext();
   auto &MIB = BC.MIB;
 
@@ -821,7 +829,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       // If the other successor is a fall-through, invert the condition code.
       BinaryBasicBlock *NextBB =
           BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
-      bool IsReversibleBranch = MIB->isReversibleBranch(Inst);
+      bool IsReversibleBranch = MIB->isReversibleBranch(Inst, DIM);
       bool ShouldReverseBranch = BB->getConditionalSuccessor(false) == NextBB;
 
       // Create a trampoline basic block for the fall-through target of the
@@ -839,7 +847,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
       if (ShouldReverseBranch && IsReversibleBranch) {
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(Inst, NextBB->getLabel(), BC.Ctx.get());
+        MIB->reverseBranchCondition(BB, Inst, NextBB->getLabel(), BC.Ctx.get(),
+                                    DIM);
       } else {
         auto L = BC.scopeLock();
         MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
@@ -924,12 +933,23 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
 
+  std::unique_ptr<BinaryFunctionCallGraph> CG;
+  std::unique_ptr<RegAnalysis> RA;
+  std::unique_ptr<DataflowInfoManager> DIM;
+
+  if (opts::LivenessAnalysis) {
+    CG = std::make_unique<BinaryFunctionCallGraph>(buildCallGraph(BC));
+    RA = std::make_unique<RegAnalysis>(BC, &BC.getBinaryFunctions(), CG.get());
+  }
+
   if (opts::CompactCodeModel) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-      relaxLocalBranches(BF);
+      if (opts::LivenessAnalysis)
+        DIM = std::make_unique<DataflowInfoManager>(BF, RA.get(), nullptr);
+      relaxLocalBranches(BF, DIM.get());
     };
 
     ParallelUtilities::PredicateTy SkipPredicate =
@@ -954,12 +974,14 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     tentativeLayout(BC, Sorted);
     updateStubGroups();
     for (BinaryFunction *Func : Sorted) {
+      if (opts::LivenessAnalysis)
+        DIM = std::make_unique<DataflowInfoManager>(*Func, RA.get(), nullptr);
       if (auto E = relax(*Func, Modified))
         return Error(std::move(E));
       // Don't ruin non-simple functions, they can't afford to have the layout
       // changed.
       if (Modified && Func->isSimple())
-        Func->fixBranches();
+        Func->fixBranches(DIM.get());
     }
   } while (Modified);
   BC.outs() << "BOLT-INFO: Inserted " << NumHotStubs

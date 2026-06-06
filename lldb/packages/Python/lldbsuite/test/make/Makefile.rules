@@ -209,6 +209,10 @@ ifeq "$(OS)" "Darwin"
 	DSFLAGS := $(DSFLAGS_EXTRAS)
 	DSYM = $(EXE).dSYM
 	ARFLAGS := -static -o
+	# The default UUID is a hash based on filename and __text section content.
+	# Use a random UUID so that LLDB and Spotlight never confuse two test
+	# binaries, where repeated test code can result in identical binaries.
+	LDFLAGS += -Wl,-random_uuid
 else
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 		DSYM = $(EXE).debug
@@ -243,6 +247,13 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
+
+# Some tests require no debug information. When lldb-dotest specifies a DWARF version,
+# it adds `-gdwarf-{version}` to the CFLAGS environment variable which causes those tests
+# to fail. Strip any existing debug flags from CFLAGS and force -g0 to prevent this.
+ifeq "$(MAKE_NO_DEBUG_INFO)" "YES"
+    CFLAGS := $(filter-out -g%,$(CFLAGS)) -g0
+endif
 CFLAGS += $(SYSROOT_FLAGS)
 
 ifeq "$(OS)" "Darwin"
