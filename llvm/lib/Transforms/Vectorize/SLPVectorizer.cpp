@@ -30098,10 +30098,13 @@ public:
           }))
         return false;
 
+      // Ignore the whole reduction operation chain, not only the ops tied to
+      // the current window.
       SmallDenseSet<Value *> IgnoreList;
-      for (Value *RdxVal : VL)
-        for (Instruction *Op : ReducedValsToOps.at(RdxVal))
-          IgnoreList.insert(Op);
+      for (ReductionOpsType &RdxOps : ReductionOps)
+        for (Value *RdxOp : RdxOps)
+          if (RdxOp)
+            IgnoreList.insert(RdxOp);
 
       V.buildTree(VL, IgnoreList);
       if (V.isTreeTinyAndNotFullyVectorizable(/*ForReduction=*/true)) {
