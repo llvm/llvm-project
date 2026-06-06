@@ -204,13 +204,12 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT);
-static bool hoistInsertPastInsert(
-    InsertElementInst *Ins, Loop *CurLoop, AAResults *AA, DominatorTree *DT,
-    const TargetLibraryInfo *TLI, BasicBlock *Preheader, BasicBlock *HoistDest,
-    ICFLoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU, AssumptionCache *AC,
-    ScalarEvolution *SE, SinkAndHoistLICMFlags &Flags,
-    OptimizationRemarkEmitter *ORE,
-    SmallVectorImpl<Instruction *> &HoistedInstructions, bool AllowSpeculation);
+static bool
+hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
+                      BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
+                      MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                      OptimizationRemarkEmitter *ORE,
+                      SmallVectorImpl<Instruction *> &HoistedInstructions);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU);
@@ -944,10 +943,9 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       }
 
       if (auto *Ins = dyn_cast<InsertElementInst>(&I))
-        if (hoistInsertPastInsert(Ins, CurLoop, AA, DT, TLI, Preheader,
+        if (hoistInsertPastInsert(Ins, CurLoop, DT,
                                   CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
-                                  MSSAU, AC, SE, Flags, ORE,
-                                  HoistedInstructions, AllowSpeculation)) {
+                                  MSSAU, SE, ORE, HoistedInstructions)) {
           Changed = true;
           continue;
         }
@@ -1114,14 +1112,12 @@ static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
   return CurrIns;
 }
 
-static bool hoistInsertPastInsert(
-    InsertElementInst *Ins, Loop *CurLoop, AAResults *AA, DominatorTree *DT,
-    const TargetLibraryInfo *TLI, BasicBlock *Preheader, BasicBlock *HoistDest,
-    ICFLoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU, AssumptionCache *AC,
-    ScalarEvolution *SE, SinkAndHoistLICMFlags &Flags,
-    OptimizationRemarkEmitter *ORE,
-    SmallVectorImpl<Instruction *> &HoistedInstructions,
-    bool AllowSpeculation) {
+static bool
+hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
+                      BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
+                      MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                      OptimizationRemarkEmitter *ORE,
+                      SmallVectorImpl<Instruction *> &HoistedInstructions) {
   // Canonicalize:
   //   %inner = insertelement %base, %variant, C1
   //   %outer = insertelement %inner, %invariant, C2
