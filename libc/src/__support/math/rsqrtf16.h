@@ -26,6 +26,9 @@ namespace math {
 
 namespace rsqrtf16_internal {
 
+// Fixed-point computations below use Q29: the integer N represents
+// N * 2^-29.  Multiplying two Q29 values produces a Q58 value, so products are
+// shifted right by RSQRT_FRACTION_BITS to return to Q29.
 LIBC_INLINE_VAR constexpr int RSQRT_FRACTION_BITS = 29;
 LIBC_INLINE_VAR constexpr int64_t ONE = int64_t(1) << RSQRT_FRACTION_BITS;
 LIBC_INLINE_VAR constexpr int64_t THREE_HALVES = 3 * (ONE >> 1);
@@ -50,6 +53,9 @@ LIBC_INLINE constexpr int64_t initial_approximation(uint32_t x_mant) {
 }
 
 LIBC_INLINE constexpr int64_t newton_raphson(uint32_t m, int64_t y) {
+  // Refine y ~= 1/sqrt(m) with:
+  //   y_{n+1} = y_n * (1.5 - 0.5 * m * y_n^2)
+  // where both m and y are stored in Q29.
   int64_t y2 = (y * y) >> RSQRT_FRACTION_BITS;
   int64_t my2 = (static_cast<int64_t>(m) * y2) >> RSQRT_FRACTION_BITS;
   int64_t factor = THREE_HALVES - (my2 >> 1);
@@ -84,6 +90,10 @@ LIBC_INLINE constexpr ApproxResult approximate_rsqrt(uint16_t x_abs) {
   int x_exp = -24;
   int exponent = 0;
 
+  // Decompose the finite positive input as:
+  //   x = m * 2^exponent, with 0.5 <= m < 1.
+  // `x_sig` and `x_exp` keep the exact input as x_sig * 2^x_exp for the integer
+  // rounding test below.
   if (x_abs >= 0x0400) {
     int biased_exp = static_cast<int>(x_abs >> 10);
     x_mant |= 0x0400;
@@ -99,6 +109,8 @@ LIBC_INLINE constexpr ApproxResult approximate_rsqrt(uint16_t x_abs) {
   uint32_t m = x_mant << (RSQRT_FRACTION_BITS - 11);
   int64_t y = newton_raphson(m, initial_approximation(x_mant));
 
+  // Since rsqrt(m * 2^e) = rsqrt(m) * 2^(-e/2), odd exponents need one
+  // extra factor of 1/sqrt(2) before applying the integral power of two.
   int scale_exp = 0;
   if (exponent & 1) {
     y = (y * ONE_OVER_SQRT2) >> RSQRT_FRACTION_BITS;
@@ -113,6 +125,8 @@ LIBC_INLINE constexpr ApproxResult approximate_rsqrt(uint16_t x_abs) {
 
 // Compare y = sig * 2^exp with 1 / sqrt(x_sig * 2^x_exp).
 // Return -1 if y is below the exact value, 0 if exact, and 1 if above.
+// Instead of computing a reciprocal square root, square both sides:
+//   y <= 1/sqrt(x)  <=>  y^2 * x <= 1.
 LIBC_INLINE constexpr int compare_with_rsqrt(uint32_t sig, int exp,
                                              uint32_t x_sig, int x_exp) {
   uint64_t lhs = static_cast<uint64_t>(sig) * sig * x_sig;
@@ -141,6 +155,8 @@ struct FloorResult {
 
 LIBC_INLINE constexpr FloorResult floor_rsqrt(uint16_t approx, uint32_t x_sig,
                                               int x_exp) {
+  // The table seed and Newton step have been validated exhaustively to produce
+  // a candidate at most one half-precision step below the exact floor.
   uint16_t y = approx < 0x0400 ? 0x0400 : approx;
   int cmp = compare_half_with_rsqrt(y, x_sig, x_exp);
   if (LIBC_UNLIKELY(cmp > 0)) {
@@ -162,6 +178,9 @@ LIBC_INLINE constexpr uint16_t round_result(FloorResult floor, uint32_t x_sig,
   if (floor.cmp == 0)
     return y;
 
+  // Once `y` is the greatest half value below the exact result, directed
+  // rounding is immediate.  Round-to-nearest compares against the midpoint
+  // between `y` and the next half value, then applies ties-to-even.
   int rounding_mode = FE_TONEAREST;
   if (!cpp::is_constant_evaluated())
     rounding_mode = fputil::get_round();
