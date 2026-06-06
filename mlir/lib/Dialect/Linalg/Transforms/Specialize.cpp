@@ -224,7 +224,8 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
     if (isa<math::ErfOp>(op))
       return replaceOp(ErfOp{}, ElementwiseKind::erf);
 
-    // sin, cos, tan only have the category (elementwise) form, no named op.
+    // sin, cos, tan only have the category (elementwise) form, but no
+    // linalg.* named op equivalent.
     if (emitCategoryOp) {
       if (isa<math::SinOp>(op))
         return replaceOp(nullptr, ElementwiseKind::sin);
