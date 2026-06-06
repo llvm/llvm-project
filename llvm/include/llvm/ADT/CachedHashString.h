@@ -69,8 +69,8 @@ class CachedHashString {
   uint32_t Hash;
 
   static char *getEmptyKeyPtr() {
-    return reinterpret_cast<char *>(static_cast<uintptr_t>(-1)
-                                    << DenseMapInfo<char *>::Log2MaxAlign);
+    // Assume no pointer requires more than 4096 (1 << 12) bytes of alignment.
+    return reinterpret_cast<char *>(static_cast<uintptr_t>(-1) << 12);
   }
 
   bool isEmpty() const { return P == getEmptyKeyPtr(); }

@@ -57,16 +57,8 @@ template <typename T, typename Enable = void> struct DenseMapInfo {
 
 // Provide DenseMapInfo for all pointers. Avoid requiring T to be complete so
 // clients can instantiate DenseMap<T*, ...> with forward declared key types.
-// Log2MaxAlign assumes that no pointer key type requires more than 4096 bytes
-// of alignment.
 template<typename T>
 struct DenseMapInfo<T*> {
-  // The following should hold, but it would require T to be complete:
-  // static_assert(alignof(T) <= (1 << Log2MaxAlign),
-  //               "DenseMap does not support pointer keys requiring more than "
-  //               "Log2MaxAlign bits of alignment");
-  static constexpr uintptr_t Log2MaxAlign = 12;
-
   static unsigned getHashValue(const T *PtrVal) {
     return densemap::detail::mix(reinterpret_cast<uintptr_t>(PtrVal));
   }
