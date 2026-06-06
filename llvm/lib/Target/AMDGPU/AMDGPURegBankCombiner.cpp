@@ -501,7 +501,6 @@ void AMDGPURegBankCombinerImpl::applyMinMaxToMinMax3(
 
 // min(min(a, b), c) == min(a, min(b, c)) == min3(a, b, c)
 // supported scalar type: S32 S16 U32 U16 F32 F16
-// supported vector type: V2F32
 bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
