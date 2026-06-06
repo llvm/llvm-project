@@ -632,11 +632,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       return std::move(E);
 
     ISAInfo->Exts["y"] = {Major, Minor};
-    if (auto IVersion = findDefaultVersion("i")) {
-      ISAInfo->Exts["i"] = {IVersion->Major, IVersion->Minor};
-    } else {
-      llvm_unreachable("Default 'i' extension version not found?");
-    }
+    auto IVersion = findDefaultVersion("i");
+    assert(IVersion && "Default 'i' extension version not found?");
+    ISAInfo->Exts["i"] = {IVersion->Major, IVersion->Minor};
     break;
   case 'g':
     // g expands to extensions in RISCVGImplications.
