@@ -8056,9 +8056,6 @@ struct EqualBBWrapper {
 };
 
 template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
-  static const EqualBBWrapper *getEmptyKey() {
-    return static_cast<EqualBBWrapper *>(DenseMapInfo<void *>::getEmptyKey());
-  }
   static unsigned getHashValue(const EqualBBWrapper *EBW) {
     BasicBlock *BB = EBW->BB;
     UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
@@ -8078,10 +8075,6 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
     return hash_combine(Succ, hash_combine_range(PhiValsForBB));
   }
   static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
-    auto *EKey = DenseMapInfo<EqualBBWrapper *>::getEmptyKey();
-    if (LHS == EKey || RHS == EKey)
-      return LHS == RHS;
-
     BasicBlock *A = LHS->BB;
     BasicBlock *B = RHS->BB;
 

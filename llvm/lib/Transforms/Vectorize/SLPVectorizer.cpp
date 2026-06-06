@@ -6463,12 +6463,6 @@ private:
   /// A DenseMapInfo implementation for holding DenseMaps and DenseSets of
   /// sorted SmallVectors of unsigned.
   struct OrdersTypeDenseMapInfo {
-    static OrdersType getEmptyKey() {
-      OrdersType V;
-      V.push_back(~1U);
-      return V;
-    }
-
     static unsigned getHashValue(const OrdersType &V) {
       return static_cast<unsigned>(hash_combine_range(V));
     }
@@ -6523,11 +6517,6 @@ private:
 template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
   using FirstInfo = DenseMapInfo<BoUpSLP::TreeEntry *>;
   using SecondInfo = DenseMapInfo<unsigned>;
-  static BoUpSLP::EdgeInfo getEmptyKey() {
-    return BoUpSLP::EdgeInfo(FirstInfo::getEmptyKey(),
-                             SecondInfo::getEmptyKey());
-  }
-
   static unsigned getHashValue(const BoUpSLP::EdgeInfo &Val) {
     return detail::combineHashValue(FirstInfo::getHashValue(Val.UserTE),
                                     SecondInfo::getHashValue(Val.EdgeIdx));
