@@ -1159,8 +1159,8 @@ static void AddAtomicVectorFloatRequirements(const MachineInstr &MI,
         "The element type for the result type of an atomic vector float "
         "instruction must be a 16-bit floating-point scalar");
 
-  // The extension is defined for fp16, but the AMD target lets a bf16 vector use
-  // the same instruction so it can lower to a packed bf16 atomic.
+  // The extension is defined for fp16, but the AMD target lets a bf16 vector
+  // use the same instruction so it can lower to a packed bf16 atomic.
   if (isBFloat16Type(EltTypeDef) &&
       ST.getTargetTriple().getVendor() != Triple::AMD)
     reportFatalUsageError(
