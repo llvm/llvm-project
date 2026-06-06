@@ -9298,7 +9298,19 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           });
           Data.first->reorderSplitNode(P.second ? 1 : 0, Mask, MaskOrder);
           // Clear ordering of the operand.
-          if (!OpTE.ReorderIndices.empty()) {
+          if (OpTE.State != TreeEntry::SplitVectorize &&
+              !OpTE.ReuseShuffleIndices.empty() &&
+              !OpTE.ReorderIndices.empty()) {
+            // The operand has both reordered and reused scalars. The absorbed
+            // order (computed by getReorderingData above) already folds in the
+            // reorder indices, so fold them into the reuse mask too and reorder
+            // it, to keep the operand effective order in sync with the
+            // reordered split node, then drop the applied reorder indices.
+            SmallVector<int> NewReuses = OpTE.getCommonMask();
+            reorderReuses(NewReuses, Mask);
+            OpTE.ReuseShuffleIndices.assign(NewReuses.begin(), NewReuses.end());
+            OpTE.ReorderIndices.clear();
+          } else if (!OpTE.ReorderIndices.empty()) {
             OpTE.ReorderIndices.clear();
           } else if (!OpTE.ReuseShuffleIndices.empty()) {
             reorderReuses(OpTE.ReuseShuffleIndices, Mask);
