@@ -2087,6 +2087,22 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::AsmINTEL);
     }
     break;
+  case SPIRV::OpTypeRayQueryKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_ray_query))
+      report_fatal_error("OpTypeRayQueryKHR type requires the "
+                         "following SPIR-V extension: SPV_KHR_ray_query",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_ray_query);
+    Reqs.addCapability(SPIRV::Capability::RayQueryKHR);
+    break;
+  case SPIRV::OpTypeAccelerationStructureKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_ray_query))
+      report_fatal_error("OpTypeAccelerationStructureKHR type requires the "
+                         "following SPIR-V extension: SPV_KHR_ray_query",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_ray_query);
+    Reqs.addCapability(SPIRV::Capability::RayQueryKHR);
+    break;
   case SPIRV::OpTypeCooperativeMatrixKHR: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
       report_fatal_error(
