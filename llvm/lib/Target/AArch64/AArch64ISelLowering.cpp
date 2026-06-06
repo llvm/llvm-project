@@ -26348,9 +26348,11 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
 
   assert(ST->getOffset().isUndef() && "undef offset expected");
   SDLoc DL(ST);
-  auto WideVT = EVT::getVectorVT(
+  EVT WideVT = EVT::getVectorVT(
       *DAG.getContext(),
       Value->getOperand(0).getValueType().getVectorElementType(), 4);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(WideVT))
+    return SDValue();
   SDValue PoisonVector = DAG.getPOISON(WideVT);
   SDValue WideTrunc = DAG.getNode(
       ISD::INSERT_SUBVECTOR, DL, WideVT,
