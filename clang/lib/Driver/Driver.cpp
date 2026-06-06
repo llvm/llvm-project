@@ -3070,15 +3070,11 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
   // actually use it, so we warn about unused -x arguments.
   types::ID InputType = types::TY_Nothing;
   Arg *InputTypeArg = nullptr;
-  bool IsSYCL = Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false);
 
   // The last /TC or /TP option sets the input type to C or C++ globally.
   if (Arg *TCTP = Args.getLastArgNoClaim(options::OPT__SLASH_TC,
                                          options::OPT__SLASH_TP)) {
     InputTypeArg = TCTP;
-    if (TCTP->getOption().matches(options::OPT__SLASH_TC) && IsSYCL)
-      Diag(clang::diag::err_drv_argument_not_allowed_with)
-          << TCTP->getAsString(Args) << "-fsycl";
     InputType = TCTP->getOption().matches(options::OPT__SLASH_TC)
                     ? types::TY_C
                     : types::TY_CXX;
@@ -3157,12 +3153,6 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
               Ty = types::TY_Object;
           }
 
-          // -fsycl requires C++ source; error if a C file is detected.
-          if (IsSYCL && (Ty == types::TY_C || Ty == types::TY_PP_C ||
-                         Ty == types::TY_CHeader || Ty == types::TY_PP_CHeader))
-            Diag(clang::diag::err_drv_argument_not_allowed_with)
-                << Value << "-fsycl";
-
           // If the driver is invoked as C++ compiler (like clang++ or c++) it
           // should autodetect some input files as C++ for g++ compatibility.
           if (CCCIsCXX()) {
@@ -3226,11 +3216,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
 
     } else if (A->getOption().matches(options::OPT__SLASH_Tc)) {
       StringRef Value = A->getValue();
-      if (IsSYCL)
-        Diag(clang::diag::err_drv_argument_not_allowed_with)
-            << A->getAsString(Args) << "-fsycl";
-      else if (DiagnoseInputExistence(Value, types::TY_C,
-                                      /*TypoCorrect=*/false)) {
+      if (DiagnoseInputExistence(Value, types::TY_C,
+                                 /*TypoCorrect=*/false)) {
         Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_C, InputArg));
       }
@@ -3260,12 +3247,6 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
         Diag(clang::diag::err_drv_unknown_language) << A->getValue();
         InputType = types::TY_Object;
       }
-
-      // Emit an error if C compilation is forced in -fsycl mode.
-      if (IsSYCL && (InputType == types::TY_C || InputType == types::TY_PP_C ||
-                     InputType == types::TY_CHeader))
-        Diag(clang::diag::err_drv_argument_not_allowed_with)
-            << A->getAsString(Args) << "-fsycl";
 
       // If the user has put -fmodule-header{,=} then we treat C++ headers as
       // header unit inputs.  So we 'promote' -xc++-header appropriately.
