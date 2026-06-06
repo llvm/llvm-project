@@ -117,10 +117,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const TargetMachine &TM = ST.getTargetLowering()->getTargetMachine();
 
   // FIXME: support subtargets which have neon/fp-armv8 disabled.
-  if (!ST.hasNEON() || !ST.hasFPARMv8()) {
-    getLegacyLegalizerInfo().computeTables();
+  if (!ST.hasNEON() || !ST.hasFPARMv8())
     return;
-  }
 
   // Some instructions only support s16 if the subtarget has full 16-bit FP
   // support.
@@ -1516,7 +1514,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
   getActionDefinitionsBuilder(G_INVOKE_REGION_START).alwaysLegal();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
 

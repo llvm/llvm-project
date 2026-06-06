@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/GlobalISel/LegacyLegalizerInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -93,10 +92,6 @@ enum LegalizeAction : std::uint8_t {
 
   /// Sentinel value for when no action was found in the specified table.
   NotFound,
-
-  /// Fall back onto the old rules.
-  /// TODO: Remove this once we've migrated
-  UseLegacyRules,
 };
 } // end namespace LegalizeActions
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
@@ -153,45 +148,6 @@ struct LegalizeActionStep {
   LegalizeActionStep(LegalizeAction Action, unsigned TypeIdx,
                      const LLT NewType)
       : Action(Action), TypeIdx(TypeIdx), NewType(NewType) {}
-
-  LegalizeActionStep(LegacyLegalizeActionStep Step)
-      : TypeIdx(Step.TypeIdx), NewType(Step.NewType) {
-    switch (Step.Action) {
-    case LegacyLegalizeActions::Legal:
-      Action = LegalizeActions::Legal;
-      break;
-    case LegacyLegalizeActions::NarrowScalar:
-      Action = LegalizeActions::NarrowScalar;
-      break;
-    case LegacyLegalizeActions::WidenScalar:
-      Action = LegalizeActions::WidenScalar;
-      break;
-    case LegacyLegalizeActions::FewerElements:
-      Action = LegalizeActions::FewerElements;
-      break;
-    case LegacyLegalizeActions::MoreElements:
-      Action = LegalizeActions::MoreElements;
-      break;
-    case LegacyLegalizeActions::Bitcast:
-      Action = LegalizeActions::Bitcast;
-      break;
-    case LegacyLegalizeActions::Lower:
-      Action = LegalizeActions::Lower;
-      break;
-    case LegacyLegalizeActions::Libcall:
-      Action = LegalizeActions::Libcall;
-      break;
-    case LegacyLegalizeActions::Custom:
-      Action = LegalizeActions::Custom;
-      break;
-    case LegacyLegalizeActions::Unsupported:
-      Action = LegalizeActions::Unsupported;
-      break;
-    case LegacyLegalizeActions::NotFound:
-      Action = LegalizeActions::NotFound;
-      break;
-    }
-  }
 
   bool operator==(const LegalizeActionStep &RHS) const {
     return std::tie(Action, TypeIdx, NewType) ==
@@ -1348,13 +1304,6 @@ public:
         .clampMaxNumElements(TypeIdx, EltTy, NumElts);
   }
 
-  /// Fallback on the previous implementation. This should only be used while
-  /// porting a rule.
-  LegalizeRuleSet &fallback() {
-    add({always, LegalizeAction::UseLegacyRules});
-    return *this;
-  }
-
   /// Check if there is no type index which is obviously not handled by the
   /// LegalizeRuleSet in any way at all.
   /// \pre Type indices of the opcode form a dense [0, \p NumTypeIdxs) set.
@@ -1371,11 +1320,6 @@ public:
 class LLVM_ABI LegalizerInfo {
 public:
   virtual ~LegalizerInfo() = default;
-
-  const LegacyLegalizerInfo &getLegacyLegalizerInfo() const {
-    return LegacyInfo;
-  }
-  LegacyLegalizerInfo &getLegacyLegalizerInfo() { return LegacyInfo; }
 
   unsigned getOpcodeIdxForOpcode(unsigned Opcode) const;
   unsigned getActionDefinitionsIdx(unsigned Opcode) const;
@@ -1464,7 +1408,6 @@ private:
   static const int LastOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
 
   LegalizeRuleSet RulesForOpcode[LastOp - FirstOp + 1];
-  LegacyLegalizerInfo LegacyInfo;
 };
 
 #ifndef NDEBUG

@@ -2264,7 +2264,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS})
       .alwaysLegal();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
 
