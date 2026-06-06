@@ -64,8 +64,7 @@ public:
     ProximityURI,
     /// Type of symbol (see `Symbol::Type`).
     Type,
-    /// Internal Token type for invalid/special tokens, e.g. empty tokens for
-    /// llvm::DenseMap.
+    /// Internal Token type for invalid/special tokens.
     Sentinel,
   };
 

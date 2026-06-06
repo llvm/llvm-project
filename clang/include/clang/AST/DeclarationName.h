@@ -552,12 +552,6 @@ public:
     return LHS.Ptr != RHS.Ptr;
   }
 
-  static DeclarationName getEmptyMarker() {
-    DeclarationName Name;
-    Name.Ptr = uintptr_t(-1);
-    return Name;
-  }
-
   static int compare(DeclarationName LHS, DeclarationName RHS);
 
   void print(raw_ostream &OS, const PrintingPolicy &Policy) const;

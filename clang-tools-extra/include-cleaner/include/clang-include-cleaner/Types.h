@@ -78,11 +78,6 @@ private:
   // Order must match Kind enum!
   std::variant<const Decl *, struct Macro> Storage;
 
-  // Disambiguation tag to make sure we can call the right constructor from
-  // DenseMapInfo methods.
-  struct SentinelTag {};
-  Symbol(SentinelTag, decltype(Storage) Sentinel)
-      : Storage(std::move(Sentinel)) {}
   friend llvm::DenseMapInfo<Symbol>;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Symbol &);
@@ -144,11 +139,6 @@ private:
   // Order must match Kind enum!
   std::variant<FileEntryRef, tooling::stdlib::Header, StringRef> Storage;
 
-  // Disambiguation tag to make sure we can call the right constructor from
-  // DenseMapInfo methods.
-  struct SentinelTag {};
-  Header(SentinelTag, decltype(Storage) Sentinel)
-      : Storage(std::move(Sentinel)) {}
   friend llvm::DenseMapInfo<Header>;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Header &);

@@ -207,8 +207,6 @@ struct DriverArgs {
     return Args;
   }
 
-  static DriverArgs getEmpty() { return {}; }
-
 private:
   DriverArgs() = default;
 };
