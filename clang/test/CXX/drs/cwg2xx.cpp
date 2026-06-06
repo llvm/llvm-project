@@ -695,7 +695,7 @@ namespace cwg241 { // cwg241: 9
   }
 } // namespace cwg241
 
-namespace cwg242 { // cwg242: yes
+namespace cwg242 { // cwg242: 2.8
   struct A {};
   struct I1 : A {};
   struct I2 : A {};
