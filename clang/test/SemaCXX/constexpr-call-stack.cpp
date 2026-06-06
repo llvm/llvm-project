@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -Wno-unused-value -Wno-stack-exhausted -fconstexpr-depth=1024 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -Wno-unused-value -Wno-stack-exhausted -fconstexpr-depth=1024 -fexperimental-new-constant-interpreter %s
 
 int rand();
 
