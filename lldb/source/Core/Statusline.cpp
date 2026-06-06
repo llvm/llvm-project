@@ -29,6 +29,8 @@
 #define ANSI_TO_START_OF_ROW ESCAPE "[%u;1f"
 #define ANSI_REVERSE_VIDEO ESCAPE "[7m"
 #define ANSI_UP_ROWS ESCAPE "[%dA"
+#define ANSI_DISABLE_AUTO_WRAP ESCAPE "[?7l"
+#define ANSI_ENABLE_AUTO_WRAP ESCAPE "[?7h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -40,10 +42,15 @@ Statusline::Statusline(Debugger &debugger)
 Statusline::~Statusline() { Disable(); }
 
 void Statusline::TerminalSizeChanged() {
+  // The dimensions the statusline was last drawn at, needed to clear it before
+  // redrawing at the new size.
+  const uint64_t prev_width = m_terminal_width;
+  const uint64_t prev_height = m_terminal_height;
+
   m_terminal_width = m_debugger.GetTerminalWidth();
   m_terminal_height = m_debugger.GetTerminalHeight();
 
-  UpdateScrollWindow(ResizeStatusline);
+  UpdateScrollWindow(ResizeStatusline, prev_width, prev_height);
 
   // Redraw the old statusline.
   Redraw(std::nullopt);
@@ -71,6 +78,9 @@ void Statusline::Draw(std::string str) {
 
   LockedStreamFile locked_stream = stream_sp->Lock();
   locked_stream << ANSI_SAVE_CURSOR;
+  // A statusline wider than the terminal (e.g. a stale width mid-resize) would
+  // wrap onto the row above; with autowrap off it is clipped at the margin.
+  locked_stream << ANSI_DISABLE_AUTO_WRAP;
   locked_stream.Printf(ANSI_TO_START_OF_ROW,
                        static_cast<unsigned>(m_terminal_height));
 
@@ -81,10 +91,12 @@ void Statusline::Draw(std::string str) {
 
   locked_stream << str;
   locked_stream << ANSI_NORMAL;
+  locked_stream << ANSI_ENABLE_AUTO_WRAP;
   locked_stream << ANSI_RESTORE_CURSOR;
 }
 
-void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
+void Statusline::UpdateScrollWindow(ScrollWindowMode mode, uint64_t prev_width,
+                                    uint64_t prev_height) {
   assert(m_terminal_width != 0 && m_terminal_height != 0);
 
   lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
@@ -114,12 +126,32 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
       // Clear the screen below to hide the old statusline.
       locked_stream << ANSI_CLEAR_BELOW;
       break;
-    case ResizeStatusline:
-      // Clear the screen and update the scroll window.
-      // FIXME: Find a better solution (#146919).
-      locked_stream << ANSI_CLEAR_SCREEN;
+    case ResizeStatusline: {
+      // The old statusline is still on screen after a resize: a width shrink
+      // reflows that full-width line into ceil(prev_width / width) rows at the
+      // bottom, and growing taller strands it at its old row. Clear from the
+      // topmost row it can occupy to the bottom (preserving the scrollback
+      // above), then re-establish the scroll region. DECSTBM homes the cursor,
+      // so save and restore it.
+      const unsigned height = static_cast<unsigned>(m_terminal_height);
+      unsigned reflow = 1;
+      if (prev_width > m_terminal_width && m_terminal_width > 0)
+        reflow = (prev_width + m_terminal_width - 1) / m_terminal_width;
+      if (reflow >= height)
+        reflow = height - 1;
+      unsigned first_row = height - reflow + 1;
+      if (prev_height > 0 && prev_height < first_row)
+        first_row = static_cast<unsigned>(prev_height);
+      if (first_row < 1)
+        first_row = 1;
+
+      locked_stream << ANSI_SAVE_CURSOR;
+      locked_stream.Printf(ANSI_TO_START_OF_ROW, first_row);
+      locked_stream << ANSI_CLEAR_BELOW;
       locked_stream.Printf(ANSI_SET_SCROLL_ROWS, reduced_scroll_rows);
+      locked_stream << ANSI_RESTORE_CURSOR;
       break;
+    }
     }
   }
   m_debugger.RefreshIOHandler();

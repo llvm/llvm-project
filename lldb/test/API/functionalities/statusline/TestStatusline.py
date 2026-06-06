@@ -117,6 +117,42 @@ class TestStatusline(PExpectTest):
         self.child.expect(re.escape("\x1b[1;19r"))
         self.child.expect("(lldb)")
 
+    @skipIfEditlineSupportMissing
+    def test_resize_recomputes_without_clearing(self):
+        """Resizing should recompute the statusline in place, not clear the
+        entire screen. Clearing the screen (ESC[2J) was the old workaround for
+        the statusline wrapping/duplicating on resize; it also wiped the visible
+        scrollback on every resize."""
+        self.launch()
+        self.resize()
+        self.expect("set set show-statusline true", ["no target"])
+
+        # Capture the output emitted during the resize. The tee handles both
+        # str- and bytes-mode spawns.
+        class Tee:
+            def __init__(self):
+                self.data = b""
+
+            def write(self, s):
+                self.data += s if isinstance(s, bytes) else s.encode(
+                    "latin-1", "replace"
+                )
+                return len(s)
+
+            def flush(self):
+                pass
+
+        tee = Tee()
+        self.child.logfile_read = tee
+        self.resize(20, 60)
+        # Wait for the resize redraw to finish before inspecting the capture.
+        self.child.expect(re.escape("\x1b[1;19r"))
+        self.child.expect("(lldb)")
+        self.child.logfile_read = None
+
+        # The resize recomputes in place; it must not clear the whole screen.
+        self.assertNotIn(b"\x1b[2J", tee.data)
+
     @skipUnlessPlatform(["linux"])
     def test_target_symbols_add(self):
         """Regression test: adding symbols while the statusline is enabled
