@@ -3690,7 +3690,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
         if (computeKnownBits(RK.WasOn, II).countMinTrailingZeros() <
-            Log2_64_Ceil(RK.ArgValue))
+            Log2_64(RK.ArgValue))
           continue;
         return CallBase::removeOperandBundleAt(II, Idx);
       }
