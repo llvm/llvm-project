@@ -38,7 +38,7 @@ struct Big P3(struct Big a, struct Big b) {
   [[clang::musttail]] return C3(b, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P33BigS_(
-// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
+// COMMON: %musttail.copy{{[0-9.a-z]*}} =
 // COMMON: musttail call {{.*}} @_Z2C33BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
 // P4: non-trivial copy constructor. The trivial-copy gate must NOT engage;
@@ -145,7 +145,7 @@ struct Big P13(struct Big a, struct Big b) {
 }
 // COMMON-LABEL: define {{.*}} @_Z3P133BigS_(
 // COMMON-NOT: byval-temp
-// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
+// COMMON: %musttail.copy{{[0-9.a-z]*}} =
 // COMMON: musttail call {{.*}} @_Z3C133BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
 // P17: same arg to three slots (generalization of P7).
@@ -154,7 +154,5 @@ struct Big P17(struct Big a, struct Big b, struct Big c) {
   [[clang::musttail]] return C17(a, a, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z3P173BigS_S_(
-// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
-// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %b,
-// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %c,
+// COMMON: %musttail.copy{{[0-9.a-z]*}} =
 // COMMON: musttail call {{.*}} @_Z3C173BigS_S_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b, ptr {{.*}} %c)

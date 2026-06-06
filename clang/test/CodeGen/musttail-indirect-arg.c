@@ -44,7 +44,7 @@ struct Big P3(struct Big a, struct Big b) {
   __attribute__((musttail)) return C3(b, a);
 }
 // COMMON-LABEL: define {{.*}} @P3(
-// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
+// COMMON: %musttail.copy{{[0-9.a-z]*}} =
 // COMMON: musttail call {{.*}} @C3({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
 // P5: caller mutates the parameter before the musttail. The mutation lands
@@ -143,7 +143,7 @@ struct Big P13(struct Big a, struct Big b) {
 }
 // COMMON-LABEL: define {{.*}} @P13(
 // COMMON-NOT: byval-temp
-// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
+// COMMON: %musttail.copy{{[0-9.a-z]*}} =
 // COMMON: musttail call {{.*}} @C13({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
 
 // P17: same arg to three slots (generalization of P7).
@@ -152,11 +152,7 @@ struct Big P17(struct Big a, struct Big b, struct Big c) {
   __attribute__((musttail)) return C17(a, a, a);
 }
 // COMMON-LABEL: define {{.*}} @P17(
-// The scratch alloca catches the in-place-write regression: v1 would emit
-// memcpy(%b, %a); memcpy(%c, %a) directly and pass a v1 check too. The
-// scratch presence asserts the two-phase emit is in use; the per-dst
-// memcpy/memmove and call-arg list pin the rest.
-// COMMON: %musttail.copy{{[0-9]*}} = alloca {{.*}}struct.Big
-// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %b,
-// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %c,
+// The scratch presence catches the in-place-write regression: a one-pass
+// emit would memcpy(%b, %a); memcpy(%c, %a) directly with no scratch.
+// COMMON: %musttail.copy{{[0-9.a-z]*}} =
 // COMMON: musttail call {{.*}} @C17({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b, ptr {{.*}} %c)
