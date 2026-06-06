@@ -15,7 +15,8 @@
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/is_trivially_constructible.h>
+#include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/constant_wrapper.h>
@@ -98,15 +99,13 @@ template <auto _Value>
 constexpr bool __is_constant_wrapper<constant_wrapper<_Value>> = true;
 
 template <class _Arg>
-struct __function_ref_arg_fwd {
-  using type _LIBCPP_NODEBUG = _Arg&&;
-};
+concept __itanium_trivial_for_calls =
+    is_trivially_destructible_v<_Arg> && is_trivially_copy_constructible_v<_Arg> &&
+    is_trivially_move_constructible_v<_Arg>;
 
 template <class _Arg>
-  requires(!is_reference_v<_Arg> && is_trivially_copyable_v<_Arg> && sizeof(_Arg) <= 16)
-struct __function_ref_arg_fwd<_Arg> {
-  using type _LIBCPP_NODEBUG = _Arg;
-};
+concept __register_passable =
+    !is_reference_v<_Arg> && sizeof(_Arg) <= 2 * sizeof(void*) && __itanium_trivial_for_calls<_Arg>;
 
 template <class _Fn, class... _Args>
 concept __statically_callable = requires { _Fn::operator()(std::declval<_Args>()...); };

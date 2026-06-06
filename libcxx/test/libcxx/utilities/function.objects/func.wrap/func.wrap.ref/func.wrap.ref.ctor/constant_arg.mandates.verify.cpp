@@ -41,7 +41,7 @@ void test() {
   // expected-error@*:* {{static assertion failed due to requirement '__f.value != nullptr': the function pointer should not be a nullptr}}
 
   std::function_ref<void(std::constant_wrapper<42>)> f33(std::cw<B{}>);
-  // expected-error@*:* {{static assertion failed due to requirement '!requires { std::constant_wrapper<std::__cw_fixed_value<int>{42}, int>; }': function_ref argument types are all constexpr-param, and callable can be invoked with unwrapped arguments and produces a result with a structural type}}
+  // expected-error@*:* {{static assertion failed due to requirement '!requires { std::constant_wrapper<std::__cw_fixed_value<int>{42}, int>; }': cw(args...) should be equivalent to fn(args...), otherwise the intended behavior for a function_ref constructed from cw would be ambiguous}}
 
   int i;
   std::function_ref<void()> f3(std::cw<static_cast<void (*)(int)>(nullptr)>, i); // expected-note-re{{in instantiation of function template specialization 'std::function_ref{{.*}}' requested here}}

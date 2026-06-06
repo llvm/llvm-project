@@ -77,7 +77,7 @@ private:
   friend class function_ref;
 
   template <class _Arg>
-  using __arg_t _LIBCPP_NODEBUG = typename __function_ref_arg_fwd<_Arg>::type;
+  using __arg_t _LIBCPP_NODEBUG = _If<__register_passable<_Arg>, _Arg, _Arg&&>;
 
   using __storage_t _LIBCPP_NODEBUG = __function_ref_storage;
 
@@ -135,8 +135,8 @@ public:
           !requires {
             typename constant_wrapper<std::invoke(decltype(__f)::value, remove_cvref_t<_ArgTypes>::value...)>;
           },
-          "function_ref argument types are all constexpr-param, and callable can be invoked with unwrapped arguments "
-          "and produces a result with a structural type");
+          "cw(args...) should be equivalent to fn(args...), otherwise the intended behavior for a function_ref "
+          "constructed from cw would be ambiguous");
     }
   }
 
