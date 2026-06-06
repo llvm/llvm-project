@@ -25,9 +25,9 @@ void g() {
   df.f();
 }
 
-// CIR: !rec_Base = !cir.record<class "Base" {!cir.vptr}>
-// CIR: !rec_Derived = !cir.record<class "Derived" {!rec_Base}>
-// CIR: !rec_DerivedFinal = !cir.record<class "DerivedFinal" {!rec_Base}>
+// CIR: !rec_Base = !cir.struct<class "Base" {!cir.vptr}>
+// CIR: !rec_Derived = !cir.struct<class "Derived" {!rec_Base}>
+// CIR: !rec_DerivedFinal = !cir.struct<class "DerivedFinal" {!rec_Base}>
 
 // LLVM: %class.Derived = type { %class.Base }
 // LLVM: %class.Base = type { ptr }
@@ -54,7 +54,7 @@ void ppp() { B b; }
 // CIR: cir.global "private" {{.*}}@_ZTV1B = #cir.vtable<{#cir.const_array<[#cir.ptr<12 : i64> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1B> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct3 {alignment = 8 : i64}
 // LLVM: @_ZTV1B = linkonce_odr global { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
 
-// OGCG: @_ZTV1B = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
+// OGCG: @_ZTV1B = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
 
 // CIR: cir.func {{.*}}@_Z1fv()
 // CIR:   %[[D:.+]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["d", init]

@@ -416,7 +416,8 @@ bool SIOptimizeExecMasking::isRegisterInUseBetween(MachineInstr &Stop,
     ++A;
 
   for (; A != Stop.getParent()->rend() && A != Stop; ++A) {
-    LR.stepBackward(*A);
+    if (!A->isDebugInstr())
+      LR.stepBackward(*A);
   }
 
   return !LR.available(Reg) || MRI->isReserved(Reg);

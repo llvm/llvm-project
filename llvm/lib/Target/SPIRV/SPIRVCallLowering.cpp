@@ -304,6 +304,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
+        if (Arg.hasAttribute(Attribute::SExt)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sext);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
         if (Arg.hasAttribute(Attribute::NoAlias)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoAlias);
