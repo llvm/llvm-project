@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -47,12 +48,18 @@ static cl::opt<bool>
                                " instruction output for test purposes only."),
                       cl::init(false));
 
-static bool getWasmGlobalMutable(const GlobalValue *Global) {
+static bool getWasmGlobalMutable(const GlobalValue *Global,
+                                 const Function &CurrentFunc,
+                                 const DiagnosticLocation &DL) {
   const auto *BaseObject = Global->getAliaseeObject();
   const auto *GV = dyn_cast_or_null<GlobalVariable>(BaseObject);
-  if (!GV)
-    report_fatal_error(
-        "wasm_var address space symbol must resolve to a GlobalVariable");
+  if (!GV) {
+    CurrentFunc.getContext().diagnose(DiagnosticInfoUnsupported(
+        CurrentFunc, "wasm_var address space symbol must resolve to a "
+                     "GlobalVariable",
+        DL));
+    return false;
+  }
   return !GV->isConstant();
 }
 
@@ -68,11 +75,13 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
     // WASM_SYMBOL_TYPE_GLOBAL.
     if (WebAssembly::isWasmVarAddressSpace(Global->getAddressSpace()) &&
         !WasmSym->getType()) {
+      const MachineInstr &MI = *MO.getParent();
       const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
       const TargetMachine &TM = MF.getTarget();
       const Function &CurrentFunc = MF.getFunction();
 
-      bool Mutable = getWasmGlobalMutable(Global);
+      bool Mutable = getWasmGlobalMutable(Global, CurrentFunc,
+                                          MI.getDebugLoc());
 
       Type *GlobalVT = Global->getValueType();
       SmallVector<MVT, 1> VTs;

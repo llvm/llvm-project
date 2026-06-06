@@ -1,6 +1,7 @@
-; RUN: not --crash llc -mtriple=wasm32-unknown-unknown -filetype=asm %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=wasm32-unknown-unknown -filetype=asm %s -o - 2>&1 | FileCheck %s
 
-; CHECK: LLVM ERROR: wasm_var address space symbol must resolve to a GlobalVariable
+; CHECK-NOT: LLVM ERROR
+; CHECK: in function foo i32 (): wasm_var address space symbol must resolve to a GlobalVariable
 
 target triple = "wasm32-unknown-unknown"
 
