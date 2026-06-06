@@ -513,9 +513,8 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
 
   LLT Ty = MRI.getType(Dst);
   unsigned Opc = MI.getOpcode();
-  bool IsSupportedTy =
-      Ty == LLT::scalar(32) || (Ty == LLT::scalar(16) && STI.hasMin3Max3_16());
-  if (!IsSupportedTy)
+  if (!(Ty == LLT::scalar(32) ||
+        (Ty == LLT::scalar(16) && STI.hasMin3Max3_16())))
     return false;
 
   Register R0, R1, R2;
@@ -526,35 +525,39 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     return false;
   }
 
-  auto getAMDGPUOp = [](unsigned Opc) -> unsigned {
-    switch (Opc) {
-    case AMDGPU::G_SMAX:
-      return AMDGPU::G_AMDGPU_SMAX3;
-    case AMDGPU::G_SMIN:
-      return AMDGPU::G_AMDGPU_SMIN3;
-    case AMDGPU::G_UMAX:
-      return AMDGPU::G_AMDGPU_UMAX3;
-    case AMDGPU::G_UMIN:
-      return AMDGPU::G_AMDGPU_UMIN3;
-    case AMDGPU::G_FMAXNUM:
-    case AMDGPU::G_FMAXNUM_IEEE:
-      return AMDGPU::G_AMDGPU_FMAX3;
-    case AMDGPU::G_FMINNUM:
-    case AMDGPU::G_FMINNUM_IEEE:
-      return AMDGPU::G_AMDGPU_FMIN3;
-    case AMDGPU::G_FMAXIMUM:
-    case AMDGPU::G_FMAXIMUMNUM:
-      return AMDGPU::G_AMDGPU_FMAXIMUM3;
-    case AMDGPU::G_FMINIMUM:
-    case AMDGPU::G_FMINIMUMNUM:
-      return AMDGPU::G_AMDGPU_FMINIMUM3;
-    default:
-      return 0;
-    }
-  };
-  unsigned AMDGPUOpc = getAMDGPUOp(Opc);
-  if (!AMDGPUOpc)
+  unsigned AMDGPUOpc = 0;
+  switch (Opc) {
+  case AMDGPU::G_SMAX:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_SMAX3;
+    break;
+  case AMDGPU::G_SMIN:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_SMIN3;
+    break;
+  case AMDGPU::G_UMAX:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_UMAX3;
+    break;
+  case AMDGPU::G_UMIN:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_UMIN3;
+    break;
+  case AMDGPU::G_FMAXNUM:
+  case AMDGPU::G_FMAXNUM_IEEE:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMAX3;
+    break;
+  case AMDGPU::G_FMINNUM:
+  case AMDGPU::G_FMINNUM_IEEE:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMIN3;
+    break;
+  case AMDGPU::G_FMAXIMUM:
+  case AMDGPU::G_FMAXIMUMNUM:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMAXIMUM3;
+    break;
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMINIMUMNUM:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMINIMUM3;
+    break;
+  default:
     return false;
+  }
 
   MatchInfo = {AMDGPUOpc, R0, R1, R2};
   return true;
