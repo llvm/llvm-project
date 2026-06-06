@@ -8,53 +8,39 @@
 
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "lower-vector-intrinsics"
 
 using namespace llvm;
 
 bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
-  Type *ArgTy = CI->getArgOperand(0)->getType();
-  VectorType *VecTy = cast<VectorType>(ArgTy);
+  VectorType *VecTy = cast<VectorType>(CI->getArgOperand(0)->getType());
+  Type *IdxTy = M.getDataLayout().getIndexType(CI->getContext(), 0);
 
-  BasicBlock *PreLoopBB = CI->getParent();
-  BasicBlock *PostLoopBB = nullptr;
-  Function *ParentFunc = PreLoopBB->getParent();
-  LLVMContext &Ctx = PreLoopBB->getContext();
-  Type *IdxTy = M.getDataLayout().getIndexType(Ctx, 0);
+  IRBuilder<> Builder(CI);
+  Value *LoopEnd = Builder.CreateElementCount(IdxTy, VecTy->getElementCount());
 
-  PostLoopBB = PreLoopBB->splitBasicBlock(CI);
-  BasicBlock *LoopBB = BasicBlock::Create(Ctx, "", ParentFunc, PostLoopBB);
-  PreLoopBB->getTerminator()->setSuccessor(0, LoopBB);
+  auto [BodyIP, IV] =
+      SplitBlockAndInsertSimpleForLoop(LoopEnd, CI->getIterator());
 
-  // Loop preheader
-  IRBuilder<> PreLoopBuilder(PreLoopBB->getTerminator());
-  Value *LoopEnd =
-      PreLoopBuilder.CreateElementCount(IdxTy, VecTy->getElementCount());
+  BasicBlock *LoopBB = BodyIP->getParent();
+  auto *IVPhi = cast<PHINode>(IV);
+  BasicBlock *Preheader =
+      IVPhi->getIncomingBlock(IVPhi->getIncomingBlock(0) == LoopBB);
 
-  // Loop body
-  IRBuilder<> LoopBuilder(LoopBB);
+  PHINode *Vec = PHINode::Create(VecTy, 2, "", BodyIP->getIterator());
+  Vec->addIncoming(CI->getArgOperand(0), Preheader);
 
-  PHINode *LoopIndex = LoopBuilder.CreatePHI(IdxTy, 2);
-  LoopIndex->addIncoming(ConstantInt::get(IdxTy, 0U), PreLoopBB);
-  PHINode *Vec = LoopBuilder.CreatePHI(VecTy, 2);
-  Vec->addIncoming(CI->getArgOperand(0), PreLoopBB);
-
-  Value *Elem = LoopBuilder.CreateExtractElement(Vec, LoopIndex);
+  Builder.SetInsertPoint(BodyIP);
+  Value *Elem = Builder.CreateExtractElement(Vec, IV);
   Function *Exp = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
                                                     VecTy->getElementType());
-  Value *Res = LoopBuilder.CreateCall(Exp, Elem);
-  Value *NewVec = LoopBuilder.CreateInsertElement(Vec, Res, LoopIndex);
+  Value *Res = Builder.CreateCall(Exp, Elem);
+  Value *NewVec = Builder.CreateInsertElement(Vec, Res, IV);
   Vec->addIncoming(NewVec, LoopBB);
-
-  Value *One = ConstantInt::get(IdxTy, 1U);
-  Value *NextLoopIndex = LoopBuilder.CreateAdd(LoopIndex, One);
-  LoopIndex->addIncoming(NextLoopIndex, LoopBB);
-
-  Value *ExitCond =
-      LoopBuilder.CreateICmp(CmpInst::ICMP_EQ, NextLoopIndex, LoopEnd);
-  LoopBuilder.CreateCondBr(ExitCond, PostLoopBB, LoopBB);
 
   CI->replaceAllUsesWith(NewVec);
   CI->eraseFromParent();

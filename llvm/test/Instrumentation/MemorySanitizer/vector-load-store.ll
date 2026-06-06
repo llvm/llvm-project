@@ -676,14 +676,14 @@ define void @store.nxv1i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
-; ORIGINS:       .split:
+; ORIGINS:       ec.loop:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
 ; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
 ; ORIGINS-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; ORIGINS:       .split.split:
+; ORIGINS:       ec.exit:
 ; ORIGINS-NEXT:    br label [[TMP13]]
 ; ORIGINS:       13:
 ; ORIGINS-NEXT:    store <vscale x 1 x i32> zeroinitializer, ptr [[P]], align 4
@@ -736,14 +736,14 @@ define void @store.nxv2i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
-; ORIGINS:       .split:
+; ORIGINS:       ec.loop:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
 ; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
 ; ORIGINS-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; ORIGINS:       .split.split:
+; ORIGINS:       ec.exit:
 ; ORIGINS-NEXT:    br label [[TMP13]]
 ; ORIGINS:       13:
 ; ORIGINS-NEXT:    store <vscale x 2 x i32> zeroinitializer, ptr [[P]], align 8
@@ -796,14 +796,14 @@ define void @store.nxv4i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
-; ORIGINS:       .split:
+; ORIGINS:       ec.loop:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
 ; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
 ; ORIGINS-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; ORIGINS:       .split.split:
+; ORIGINS:       ec.exit:
 ; ORIGINS-NEXT:    br label [[TMP13]]
 ; ORIGINS:       13:
 ; ORIGINS-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[P]], align 16
@@ -856,14 +856,14 @@ define void @store.nxv8i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
-; ORIGINS:       .split:
+; ORIGINS:       ec.loop:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
 ; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
 ; ORIGINS-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; ORIGINS:       .split.split:
+; ORIGINS:       ec.exit:
 ; ORIGINS-NEXT:    br label [[TMP13]]
 ; ORIGINS:       13:
 ; ORIGINS-NEXT:    store <vscale x 8 x i32> zeroinitializer, ptr [[P]], align 32
@@ -916,14 +916,14 @@ define void @store.nxv16i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
-; ORIGINS:       .split:
+; ORIGINS:       ec.loop:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
 ; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
 ; ORIGINS-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; ORIGINS:       .split.split:
+; ORIGINS:       ec.exit:
 ; ORIGINS-NEXT:    br label [[TMP13]]
 ; ORIGINS:       13:
 ; ORIGINS-NEXT:    store <vscale x 16 x i32> zeroinitializer, ptr [[P]], align 64

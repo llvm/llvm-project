@@ -568,8 +568,12 @@ inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// that \p End is assumed > 0, and thus not checked on entry) at \p
 /// SplitBefore.  Returns the first insert point in the loop body, and the
 /// PHINode for the induction variable (i.e. "i" above).
+/// If \p DT and/or \p LI are provided, they are updated to reflect the
+/// new basic blocks.
 LLVM_ABI std::pair<Instruction *, Value *>
-SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore);
+SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore,
+                                 DominatorTree *DT = nullptr,
+                                 LoopInfo *LI = nullptr);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EC elements.  To simplify porting legacy code, this defaults to
@@ -581,7 +585,8 @@ SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore);
 /// This index *may* be a constant.
 LLVM_ABI void SplitBlockAndInsertForEachLane(
     ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
-    std::function<void(IRBuilderBase &, Value *)> Func);
+    std::function<void(IRBuilderBase &, Value *)> Func,
+    DominatorTree *DT = nullptr, LoopInfo *LI = nullptr);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy
@@ -593,7 +598,8 @@ LLVM_ABI void SplitBlockAndInsertForEachLane(
 /// index *may* be a constant.
 LLVM_ABI void SplitBlockAndInsertForEachLane(
     Value *End, BasicBlock::iterator InsertBefore,
-    std::function<void(IRBuilderBase &, Value *)> Func);
+    std::function<void(IRBuilderBase &, Value *)> Func,
+    DominatorTree *DT = nullptr, LoopInfo *LI = nullptr);
 
 /// Check whether BB is the merge point of a if-region.
 /// If so, return the branch instruction that determines which entry into
