@@ -3923,8 +3923,6 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
   using FragInfo = DIExpression::FragmentInfo;
   static const uint64_t MaxVal = std::numeric_limits<uint64_t>::max();
 
-  static inline FragInfo getEmptyKey() { return {MaxVal, MaxVal}; }
-
   static unsigned getHashValue(const FragInfo &Frag) {
     return (Frag.SizeInBits & 0xffff) << 16 | (Frag.OffsetInBits & 0xffff);
   }
@@ -4794,10 +4792,6 @@ template <> struct DenseMapInfo<DebugVariable> {
   using FragmentInfo = DIExpression::FragmentInfo;
 
   /// Empty key: no key should be generated that has no DILocalVariable.
-  static inline DebugVariable getEmptyKey() {
-    return DebugVariable(nullptr, std::nullopt, nullptr);
-  }
-
   static unsigned getHashValue(const DebugVariable &D) {
     unsigned HV = 0;
     const std::optional<FragmentInfo> Fragment = D.getFragment();
