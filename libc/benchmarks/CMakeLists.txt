@@ -19,15 +19,9 @@ set(LLVM_LINK_COMPONENTS
 # Add Unit Testing Support
 #==============================================================================
 
-if(COMMAND make_gtest_target)
-  make_gtest_target()
-endif()
+make_gtest_target()
 
 function(add_libc_benchmark_unittest target_name)
-  if(NOT COMMAND make_gtest_target)
-    return()
-  endif()
-
   if(NOT LLVM_INCLUDE_TESTS)
     return()
   endif()
