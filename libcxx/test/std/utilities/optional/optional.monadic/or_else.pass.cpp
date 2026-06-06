@@ -15,6 +15,7 @@
 #include "MoveOnly.h"
 
 #include <cassert>
+#include <concepts>
 #include <optional>
 
 struct NonMovable {
