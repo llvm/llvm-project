@@ -167,8 +167,11 @@ SBDebugger::GetDiagnosticFromEvent(const lldb::SBEvent &event) {
 
 SBBroadcaster SBDebugger::GetBroadcaster() {
   LLDB_INSTRUMENT_VA(this);
-  SBBroadcaster broadcaster(&m_opaque_sp->GetBroadcaster(), false);
-  return broadcaster;
+
+  if (m_opaque_sp)
+    return SBBroadcaster(&m_opaque_sp->GetBroadcaster(), false);
+
+  return SBBroadcaster();
 }
 
 void SBDebugger::Initialize() {
