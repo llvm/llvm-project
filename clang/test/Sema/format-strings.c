@@ -790,6 +790,11 @@ void test_opencl_vector_format(int x) {
   printf("%hld", x); // expected-warning{{invalid conversion specifier 'l'}}
 }
 
+void test_int_width_modifiers(int x) {
+  printf("%w32d", x);    // expected-warning {{invalid conversion specifier '3'}}
+  printf("%wf32d", 1.0); // expected-warning {{length modifier 'w' results in undefined behavior or no effect with 'f' conversion specifier}}
+}
+
 // Test that we correctly merge the format in both orders.
 extern void test14_foo(const char *, const char *, ...)
      __attribute__((__format__(__printf__, 1, 3)));
