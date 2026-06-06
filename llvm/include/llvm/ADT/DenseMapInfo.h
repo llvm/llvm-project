@@ -216,7 +216,7 @@ template <typename T> struct DenseMapInfo<std::optional<T>> {
   static unsigned getHashValue(const Optional &OptionalVal) {
     if (OptionalVal)
       return detail::combineHashValue(1, Info::getHashValue(*OptionalVal));
-    return detail::combineHashValue(0, 0);
+    return 0;
   }
 
   static bool isEqual(const Optional &LHS, const Optional &RHS) {
