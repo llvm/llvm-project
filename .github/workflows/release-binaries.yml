@@ -79,6 +79,13 @@ jobs:
         vcpkg install openssl:arm64-windows-static-md
         echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
 
+    # zstd is missing from the windows-11-arm runner
+    - name: Install zstd on windows-11-arm runner
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        vcpkg install "zstd[tools]:arm64-windows"
+        echo "$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows\bin" >> $env:GITHUB_PATH
+
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
