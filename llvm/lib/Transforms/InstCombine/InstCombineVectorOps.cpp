@@ -2317,7 +2317,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   // Drop noinf FMF if X can be Inf. If X can have Inf elements and noinf FMF is
   // set, the transformation may generate poison where the original program
   // would preserve the Inf value.
-  if (IsFloatingPointTy && !isKnownNeverInfinity(X, SQ))
+  if (IsFloatingPointTy && NewBO->hasNoInfs() && !isKnownNeverInfinity(X, SQ))
     NewBO->setHasNoInfs(false);
 
   // An undef shuffle mask element may propagate as an undef constant element in
