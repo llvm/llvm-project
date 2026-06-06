@@ -25402,7 +25402,7 @@ static SDValue tryCombineExtendRShTrunc(SDNode *N, SelectionDAG &DAG) {
   // Same unextended operand value?
   SDValue Lo = Op0.getOperand(0);
   SDValue Hi = Op1.getOperand(0);
-  if (Lo.getOpcode() != AArch64ISD::UUNPKLO &&
+  if (Lo.getOpcode() != AArch64ISD::UUNPKLO ||
       Hi.getOpcode() != AArch64ISD::UUNPKHI)
     return SDValue();
   SDValue OrigArg = Lo.getOperand(0);
