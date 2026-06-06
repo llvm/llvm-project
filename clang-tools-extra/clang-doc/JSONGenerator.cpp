@@ -451,7 +451,7 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
 
   // Namespaces aren't SymbolInfos, so they dont have a DefLoc
   if (I.IT != InfoType::IT_namespace) {
-    const auto *Symbol = static_cast<const SymbolInfo *>(&I);
+    const auto *Symbol = cast<SymbolInfo>(&I);
     if (Symbol->DefLoc)
       Obj["Location"] = serializeLocation(Symbol->DefLoc.value());
   }
@@ -491,7 +491,7 @@ void JSONGenerator::serializeClassSpecializations(SymbolID ClassUSR,
   auto *Class = Infos->lookup(toHex(ClassUSR));
   if (!Class || Class->IT != InfoType::IT_record)
     return;
-  RecordInfo *ClassInfo = static_cast<RecordInfo *>(Class);
+  RecordInfo *ClassInfo = cast<RecordInfo>(Class);
   if (!ClassInfo->Template || !ClassInfo->Template->Specialization)
     return;
   serializeTemplateSpecialization(ClassInfo->Template.value(), ReferenceObj);
@@ -865,7 +865,7 @@ SmallString<16> JSONGenerator::determineFileName(Info *I,
                                                  SmallString<128> &Path) {
   SmallString<16> FileName;
   if (I->IT == InfoType::IT_record) {
-    auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
+    auto *RecordSymbolInfo = cast<SymbolInfo>(I);
     FileName = RecordSymbolInfo->MangledName;
   } else if (I->IT == InfoType::IT_namespace) {
     FileName = "index";
@@ -1052,10 +1052,10 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
 
   switch (I->IT) {
   case InfoType::IT_namespace:
-    serializeInfo(*static_cast<NamespaceInfo *>(I), Obj);
+    serializeInfo(*cast<NamespaceInfo>(I), Obj);
     break;
   case InfoType::IT_record:
-    serializeInfo(*static_cast<RecordInfo *>(I), Obj);
+    serializeInfo(*cast<RecordInfo>(I), Obj);
     break;
   case InfoType::IT_concept:
   case InfoType::IT_enum:
