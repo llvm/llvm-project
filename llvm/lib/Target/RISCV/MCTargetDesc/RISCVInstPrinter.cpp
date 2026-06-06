@@ -12,6 +12,7 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -225,7 +226,11 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   // above.
   if (!RISCVVType::isValidVType(Imm) ||
       (RISCVVType::isAltFmt(Imm) &&
-       !(STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+       !(STI.hasFeature(RISCV::FeatureStdExtZvqwdota8i) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvqwdota16i) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfwdota16bf) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfqwdota8f) ||
+         STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
          STI.hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
          STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e) ||
          STI.hasFeature(RISCV::FeatureStdExtZvqwbdota8i) ||
@@ -354,6 +359,20 @@ void RISCVInstPrinter::printVScaleReg(const MCInst *MI, unsigned OpNo,
   O << ", ";
   printRegName(O, MO.getReg());
   O << ".scale";
+}
+
+void RISCVInstPrinter::printTileLambda(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isImm() && "printTileLambda can only print immediate operands");
+  unsigned Lambda = MO.getImm();
+  if (Lambda == 0)
+    return;
+
+  assert(Lambda <= 7 && "Unexpected tile lambda encoding");
+  O << ", L" << (1U << (Lambda - 1));
 }
 
 void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,

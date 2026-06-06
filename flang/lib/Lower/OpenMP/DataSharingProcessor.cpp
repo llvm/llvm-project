@@ -237,11 +237,6 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   // Such cases are suggested to be clearly documented and explained
   // instead of being silently skipped
   auto isException = [&](const Fortran::semantics::Symbol *sym) -> bool {
-    // `OmpPreDetermined` symbols cannot be exceptions since
-    // their privatized symbols are heavily used in FIR.
-    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return false;
-
     // The handling of linear clause is deferred to the OpenMP
     // IRBuilder which is responsible for all its aspects,
     // including privatization. Privatizing linear variables at this point would
@@ -538,6 +533,9 @@ void DataSharingProcessor::collectPrivatizedSymbols(
 
   for (const auto *sym : allSymbols) {
     if (semantics::omp::IsPrivatizable(*sym) &&
+        // Linear symbols are privatized by OpenMP IRBuilder. See comments
+        // in collectSymbolsForPrivatization() for more details.
+        !sym->test(semantics::Symbol::Flag::OmpLinear) &&
         !symbolsInNestedRegions.contains(sym) &&
         !explicitlyPrivatizedSymbols.contains(sym) &&
         shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
@@ -704,7 +702,8 @@ void DataSharingProcessor::privatizeSymbol(
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
-      mightHaveReadHostSym, symToPrivatize, clauseOps, dir);
+      mightHaveReadHostSym, symToPrivatize, clauseOps, dir,
+      forceHeapAllocationForPrivateDynamicArrays);
 }
 } // namespace omp
 } // namespace lower

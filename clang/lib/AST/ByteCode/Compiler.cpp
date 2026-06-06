@@ -2501,7 +2501,7 @@ bool Compiler<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
                              UnaryExprOrTypeTrait Kind) {
   bool AlignOfReturnsPreferred =
-      ASTCtx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
 
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
@@ -2649,6 +2649,8 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
   }
 
   if (Kind == UETT_OpenMPRequiredSimdAlign) {
+    if (E->containsErrors())
+      return false;
     assert(E->isArgumentType());
     unsigned Bits = ASTCtx.getOpenMPDefaultSimdAlign(E->getArgumentType());
 
@@ -2834,16 +2836,6 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     return this->delegate(FalseExpr);
   }
 
-  // Force-init the scope, which creates a InitScope op. This is necessary so
-  // the scope is not only initialized in one arm of the conditional operator.
-  this->VarScope->forceInit();
-  // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
-  // scope, which means the local variables created within them unconditionally
-  // always exist. However, we need to later differentiate which branch was
-  // taken and only destroy the varibles of the active branch. This is what the
-  // "enabled" flags on local variables are used for.
-  llvm::SaveAndRestore LAAA(this->VarScope->LocalsAlwaysEnabled,
-                            /*NewValue=*/false);
   bool IsBcpCall = false;
   if (const auto *CE = dyn_cast<CallExpr>(Condition->IgnoreParenCasts());
       CE && CE->getBuiltinCallee() == Builtin::BI__builtin_constant_p) {
@@ -2870,6 +2862,17 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     }
     return false;
   }
+
+  // Force-init the scope, which creates a InitScope op. This is necessary so
+  // the scope is not only initialized in one arm of the conditional operator.
+  this->VarScope->forceInit();
+  // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
+  // scope, which means the local variables created within them unconditionally
+  // always exist. However, we need to later differentiate which branch was
+  // taken and only destroy the varibles of the active branch. This is what the
+  // "enabled" flags on local variables are used for.
+  llvm::SaveAndRestore LAAA(this->VarScope->LocalsAlwaysEnabled,
+                            /*NewValue=*/false);
 
   if (!this->jumpFalse(LabelFalse, E))
     return false;
@@ -3570,6 +3573,8 @@ bool Compiler<Emitter>::VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
   if (!this->emitCheckDynamicCast(E))
     return false;
 
+  if (DiscardResult)
+    return this->emitPopPtr(E);
   return true;
 }
 
@@ -3829,7 +3834,7 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
   if (OptPrimType T = classify(Ty))
     return this->visitZeroInitializer(*T, Ty, E);
 
-  if (const auto *CT = Ty->getAs<ComplexType>()) {
+  if (Ty->isAnyComplexType() || Ty->isVectorType()) {
     if (!Initializing) {
       UnsignedOrNone LocalIndex = allocateLocal(E);
       if (!LocalIndex)
@@ -3838,34 +3843,21 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
         return false;
     }
 
-    // Initialize both fields to 0.
-    QualType ElemQT = CT->getElementType();
+    QualType ElemQT;
+    unsigned NumElems;
+    if (const auto *CT = Ty->getAs<ComplexType>()) {
+      NumElems = 2;
+      ElemQT = CT->getElementType();
+    } else {
+      const auto *VT = Ty->castAs<VectorType>();
+      NumElems = VT->getNumElements();
+      ElemQT = VT->getElementType();
+    }
+
     PrimType ElemT = classifyPrim(ElemQT);
-
-    for (unsigned I = 0; I != 2; ++I) {
-      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
-        return false;
-      if (!this->emitInitElem(ElemT, I, E))
-        return false;
-    }
-    return true;
-  }
-
-  if (const auto *VT = Ty->getAs<VectorType>()) {
-    // FIXME: Code duplication with the _Complex case above.
-    if (!Initializing) {
-      UnsignedOrNone LocalIndex = allocateLocal(E);
-      if (!LocalIndex)
-        return false;
-      if (!this->emitGetPtrLocal(*LocalIndex, E))
-        return false;
-    }
 
     // Initialize all fields to 0.
-    QualType ElemQT = VT->getElementType();
-    PrimType ElemT = classifyPrim(ElemQT);
-
-    for (unsigned I = 0, N = VT->getNumElements(); I != N; ++I) {
+    for (unsigned I = 0, N = NumElems; I != N; ++I) {
       if (!this->visitZeroInitializer(ElemT, ElemQT, E))
         return false;
       if (!this->emitInitElem(ElemT, I, E))
@@ -4058,7 +4050,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (const auto *ILE = dyn_cast<InitListExpr>(Init)) {
           if (ILE->hasArrayFiller())
             DynamicInit = ILE->getArrayFiller();
-          else if (isa<StringLiteral>(ILE->getInit(0)))
+          else if (StaticInitElems > 0 && isa<StringLiteral>(ILE->getInit(0)))
             ElemT = classifyPrim(CAT->getElementType());
         }
       }
@@ -4399,6 +4391,9 @@ bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::emitVectorConversion(const Expr *Src, const Expr *E) {
+  if (Src->containsErrors())
+    return false;
+
   const auto *VT = E->getType()->castAs<VectorType>();
   QualType ElemType = VT->getElementType();
   PrimType ElemT = classifyPrim(ElemType);
@@ -5733,7 +5728,9 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
       if (FuncDecl->getDeclName().isAnyOperatorNew())
         return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
-      assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
+      assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete ||
+             FuncDecl->getDeclName().getCXXOverloadedOperator() ==
+                 OO_Array_Delete);
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
     }
 
@@ -7169,6 +7166,9 @@ static uint32_t getBitWidth(const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
+  if (E->containsErrors())
+    return false;
+
   const Expr *SubExpr = E->getSubExpr();
   if (SubExpr->getType()->isAnyComplexType())
     return this->VisitComplexUnaryOperator(E);
@@ -7385,6 +7385,17 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       if (DiscardResult)
         return true;
       return this->emitGetMemberPtr(cast<DeclRefExpr>(SubExpr)->getDecl(), E);
+    }
+    // [C11 6.5.3.2p3]: if the operand of '&' is the result of a unary '*'
+    // operator, neither operator is evaluated and the result is as if both
+    // were omitted. So '&*q' is just 'q' with no dereference; delegate to the
+    // pointer operand directly instead of to the '*' (which would emit a null
+    // check), so that e.g. '&*(int *)0' is not rejected.
+    if (!Ctx.getLangOpts().CPlusPlus) {
+      const Expr *Sub = SubExpr->IgnoreParens();
+      if (const auto *Deref = dyn_cast<UnaryOperator>(Sub);
+          Deref && Deref->getOpcode() == UO_Deref)
+        return this->delegate(Deref->getSubExpr());
     }
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
@@ -7840,7 +7851,6 @@ bool Compiler<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitDesignatedInitUpdateExpr(
     const DesignatedInitUpdateExpr *E) {
-  assert(E->getType()->isRecordType());
   if (!this->visitInitializer(E->getBase()))
     return false;
   return this->visitInitializer(E->getUpdater());

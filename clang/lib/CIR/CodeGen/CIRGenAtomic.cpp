@@ -110,6 +110,10 @@ public:
   /// copy the value across.
   Address convertToAtomicIntPointer(Address addr) const;
 
+  /// Turn an atomic-layout object into an r-value.
+  RValue convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                   bool asValue) const;
+
   /// Converts a rvalue to integer value.
   mlir::Value convertRValueToInt(RValue rvalue, bool cmpxchg = false) const;
 
@@ -124,9 +128,9 @@ public:
   LValue projectValue() const {
     assert(lvalue.isSimple());
     Address addr = getAtomicAddress();
-    if (hasPadding()) {
-      cgf.cgm.errorNYI(loc, "AtomicInfo::projectValue: padding");
-    }
+    if (hasPadding())
+      addr = cgf.getBuilder().createGetMember(loc, addr, /*name=*/"value",
+                                              /*index=*/0);
 
     assert(!cir::MissingFeatures::opTBAA());
     return LValue::makeAddr(addr, getValueType(), lvalue.getBaseInfo());
@@ -202,6 +206,33 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr) const {
   return castToAtomicIntPointer(addr);
 }
 
+RValue AtomicInfo::convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                             bool asValue) const {
+  if (lvalue.isSimple()) {
+    if (evaluationKind == TEK_Aggregate) {
+      cgf.cgm.errorNYI(
+          loc,
+          "AtomicInfo::convertAtomicTempToRValue: evaluationKind is aggregate");
+      return RValue::get(nullptr);
+    }
+
+    // Drill into the padding structure if we have one.
+    if (hasPadding()) {
+      cgf.cgm.errorNYI(loc,
+                       "AtomicInfo::convertAtomicTempToRValue: hasPadding");
+      return RValue::get(nullptr);
+    }
+
+    // Otherwise, just convert the temporary to an r-value using the
+    // normal conversion routine.
+    return cgf.convertTempToRValue(addr, getValueType(), loc);
+  }
+
+  cgf.cgm.errorNYI(
+      loc, "AtomicInfo::convertAtomicTempToRValue: lvalue is not simple");
+  return RValue::get(nullptr);
+}
+
 RValue AtomicInfo::emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
                                   bool asValue, cir::MemOrder order,
                                   bool isVolatile) {
@@ -262,9 +293,14 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   if (!requiresMemSetZero(addr.getElementType()))
     return false;
 
-  cgf.cgm.errorNYI(loc,
-                   "AtomicInfo::emitMemSetZeroIfNecaessary: emit memset zero");
-  return false;
+  addr = addr.withElementType(cgf.getBuilder(), cgf.cgm.voidTy);
+  mlir::Value zero = cgf.getBuilder().getConstInt(loc, cgf.cgm.uInt8Ty, 0);
+  mlir::Value memSetSize = cgf.getBuilder().getConstInt(
+      loc, cgf.cgm.uInt64Ty,
+      cgf.getContext().toCharUnitsFromBits(atomicSizeInBits).getQuantity());
+
+  cgf.getBuilder().createMemSet(loc, addr, zero, memSetSize);
+  return true;
 }
 
 /// Return true if \param valueTy is a type that should be casted to integer
@@ -334,8 +370,20 @@ RValue AtomicInfo::convertToValueOrAtomic(mlir::Value intVal,
     return RValue::get(nullptr);
   }
 
-  cgf.cgm.errorNYI("convertToValueOrAtomic: convert through temp");
-  return RValue::get(nullptr);
+  // Create a temporary.  This needs to be big enough to hold the
+  // atomic integer.
+  Address temp = Address::invalid();
+  if (asValue && getEvaluationKind() == TEK_Aggregate) {
+    cgf.cgm.errorNYI("convertToValueOrAtomic: temporary aggregate");
+    return RValue::get(nullptr);
+  } else {
+    temp = createTempAlloca();
+  }
+
+  // Slam the integer into the temporary.
+  Address castTemp = castToAtomicIntPointer(temp);
+  cgf.getBuilder().createStore(cgf.getLoc(loc), intVal, castTemp);
+  return convertAtomicTempToRValue(temp, loc, asValue);
 }
 
 /// Copy an r-value into memory as part of storing to an atomic type.

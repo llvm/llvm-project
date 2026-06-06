@@ -136,8 +136,10 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
                    options::OPT_funsigned, options::OPT_fno_unsigned,
-                   options::OPT_facc_allow_default_none_scalars,
-                   options::OPT_fno_acc_allow_default_none_scalars,
+                   options::OPT_fopenacc_default_none_scalars_strict,
+                   options::OPT_fno_openacc_default_none_scalars_strict,
+                   options::OPT_fopenacc_multiple_names_in_routine,
+                   options::OPT_fno_openacc_multiple_names_in_routine,
                    options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
@@ -261,15 +263,19 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_frepack_arrays_contiguity_EQ,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
-       options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+       options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
+       options::OPT_relaxed_c_loc});
+
+  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  addSeparateSectionFlags(Triple, Args, CmdArgs);
+
   if (Args.hasArg(options::OPT_fcoarray))
     CmdArgs.push_back("-fcoarray");
 }
 
 void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
-  const Driver &D = TC.getDriver();
-  LTOKind LTOMode = D.getLTOMode();
+  LTOKind LTOMode = TC.getLTOMode(Args);
   // LTO mode is parsed by the Clang driver library.
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
@@ -689,6 +695,11 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsHostOffloadingAction = JA.isHostOffloading(Action::OFK_OpenMP) ||
                                 JA.isHostOffloading(C.getActiveOffloadKinds());
+
+  // Tell the frontend when it is compiling for an offloading device, regardless
+  // of offloading programming model.
+  if (IsHostOffloadingAction)
+    CmdArgs.push_back("-offload-device");
 
   // Skips the primary input file, which is the input file that the compilation
   // proccess will be executed upon (e.g. the host bitcode file) and
