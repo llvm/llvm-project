@@ -95,11 +95,13 @@ struct EnumStringsStorage {
     for (unsigned i = 0; i < N; i++) {
       Data[i].Value = Entries[i].Value;
       for (unsigned j = 0; j < NumStrs; j++) {
-        unsigned StrOff = offsetof(EnumStringsStorage, Strs[StrIdx]) -
-                          offsetof(EnumStringsStorage, Data[i]);
+        unsigned StrOff = offsetof(EnumStringsStorage, Strs) + StrIdx;
+        unsigned DataOff = offsetof(EnumStringsStorage, Data) +
+                           i * sizeof(EnumString<T, NumStrs>);
+        assert(StrOff - DataOff < UINT16_MAX && "enum string table too large");
         std::string_view Name(Entries[i].Names[j]);
         Data[i].NameSize[j] = Name.size();
-        Data[i].NameOff[j] = uint16_t(StrOff);
+        Data[i].NameOff[j] = uint16_t(StrOff - DataOff);
         for (char C : Name)
           Strs[StrIdx++] = C;
       }
@@ -115,7 +117,7 @@ struct EnumStringsStorage {
 
 template <typename T, unsigned NumStrs = 1> class EnumStrings {
 public:
-  using EnumString = EnumString<T, NumStrs>;
+  using EnumString = ::llvm::EnumString<T, NumStrs>;
 
   template <size_t N, size_t StrLen>
   EnumStrings(const EnumStringsStorage<T, NumStrs, N, StrLen> &Table)
