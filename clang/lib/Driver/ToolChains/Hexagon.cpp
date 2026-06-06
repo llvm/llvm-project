@@ -358,9 +358,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
-    if (D.isUsingLTO())
-      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
-                    D.getLTOMode() == LTOK_Thin);
+    if (auto LTO = HTC.getLTOMode(Args); LTO != LTOK_None)
+      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
     ToolChain::UnwindLibType UNW = HTC.GetUnwindLibType(Args);
 
@@ -456,9 +455,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO())
-    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = HTC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   //----------------------------------------------------------------------------
   // Libraries
@@ -790,9 +788,26 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                           UseInitArrayDefault))
     CC1Args.push_back("-fno-use-init-array");
 
-  if (DriverArgs.hasArg(options::OPT_ffixed_r19)) {
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+reserved-r19");
+  static const std::pair<options::ID, const char *> FixedRegs[] = {
+      {options::OPT_ffixed_r16, "+reserved-r16"},
+      {options::OPT_ffixed_r17, "+reserved-r17"},
+      {options::OPT_ffixed_r18, "+reserved-r18"},
+      {options::OPT_ffixed_r19, "+reserved-r19"},
+      {options::OPT_ffixed_r20, "+reserved-r20"},
+      {options::OPT_ffixed_r21, "+reserved-r21"},
+      {options::OPT_ffixed_r22, "+reserved-r22"},
+      {options::OPT_ffixed_r23, "+reserved-r23"},
+      {options::OPT_ffixed_r24, "+reserved-r24"},
+      {options::OPT_ffixed_r25, "+reserved-r25"},
+      {options::OPT_ffixed_r26, "+reserved-r26"},
+      {options::OPT_ffixed_r27, "+reserved-r27"},
+      {options::OPT_ffixed_r28, "+reserved-r28"},
+  };
+  for (const auto &[Opt, Feature] : FixedRegs) {
+    if (DriverArgs.hasArg(Opt)) {
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back(Feature);
+    }
   }
   if (isAutoHVXEnabled(DriverArgs)) {
     CC1Args.push_back("-mllvm");

@@ -771,12 +771,6 @@ template <> struct DenseMapInfo<BasicBlock::iterator> {
     return BasicBlock::iterator(nullptr);
   }
 
-  static inline BasicBlock::iterator getTombstoneKey() {
-    BasicBlock::iterator It(nullptr);
-    It.setHeadBit(true);
-    return It;
-  }
-
   static unsigned getHashValue(const BasicBlock::iterator &It) {
     return DenseMapInfo<void *>::getHashValue(
                reinterpret_cast<void *>(It.getNodePtr())) ^

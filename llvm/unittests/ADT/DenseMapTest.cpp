@@ -86,7 +86,6 @@ std::set<CtorTester *> CtorTester::Constructed;
 
 struct CtorTesterMapInfo {
   static inline CtorTester getEmptyKey() { return CtorTester(-1); }
-  static inline CtorTester getTombstoneKey() { return CtorTester(-2); }
   static unsigned getHashValue(const CtorTester &Val) {
     return Val.getValue() * 37u;
   }
@@ -733,7 +732,6 @@ TEST(DenseMapCustomTest, LookupOrConstness) {
 // In the latter case, "a" == 0, "b" == 1 and so on.
 struct TestDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
   static unsigned getHashValue(const char* Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -790,7 +788,6 @@ TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
 
 struct ContiguousDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val; }
   static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
     return LHS == RHS;
@@ -916,7 +913,6 @@ namespace llvm {
 template <typename T>
 struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
   static inline T getEmptyKey() { return {static_cast<int>(~0)}; }
-  static inline T getTombstoneKey() { return {static_cast<int>(~0U - 1)}; }
   static unsigned getHashValue(const T &Val) { return Val.value; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return LHS.value == RHS.value;
@@ -926,7 +922,6 @@ struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
 template <> struct DenseMapInfo<AlwaysEqType> {
   using T = AlwaysEqType;
   static inline T getEmptyKey() { return {}; }
-  static inline T getTombstoneKey() { return {}; }
   static unsigned getHashValue(const T &Val) { return 0; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return false;
@@ -981,6 +976,9 @@ TEST(DenseMapCustomTest, PairPrinting) {
 
 TEST(DenseMapCustomTest, InitSize) {
   constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+  // getMemorySize() counts the bucket array plus the packed used-bit array: one
+  // uint32 word per 32 buckets (a single word covers all counts used here).
+  constexpr unsigned UsedSize = sizeof(uint32_t);
 
   {
     DenseMap<int *, int> Map;
@@ -992,59 +990,62 @@ TEST(DenseMapCustomTest, InitSize) {
   }
   {
     DenseMap<int *, int> Map(1);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     DenseMap<int *, int> Map(2);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     DenseMap<int *, int> Map(3);
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B;
     DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B, C;
     DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
 }
 
 TEST(SmallDenseMapCustomTest, InitSize) {
   constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+  // getMemorySize() counts the bucket array plus the packed used-bit array: one
+  // uint32 word per 32 buckets (a single word covers all counts used here).
+  constexpr unsigned UsedSize = sizeof(uint32_t);
   {
     SmallDenseMap<int *, int> Map;
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(0);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(1);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(2);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(3);
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B;
     SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B, C;
     SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
 }
 
@@ -1152,5 +1153,16 @@ TEST(DenseMapCustomTest, RemoveIfValueDtor) {
   }
   EXPECT_EQ(0u, CtorTester::getNumConstructed());
 }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  M.try_emplace(2, 20);
+  auto It = M.find(1);
+  M.erase(M.find(2));
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+#endif
 
 } // namespace
