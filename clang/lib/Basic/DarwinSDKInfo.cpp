@@ -12,6 +12,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <optional>
 
 using namespace clang;
@@ -203,7 +204,7 @@ static DarwinSDKInfo::PlatformInfoStorageType parsePlatformInfos(
         SupportedTarget->getString("LLVMTargetTripleEnvironment");
     for (const auto &ArchValue : *Archs) {
       if (auto Arch = ArchValue.getAsString()) {
-        if (Environment)
+        if (Environment && !Environment->empty())
           Triples.emplace_back(*Arch, *Vendor, *OS, *Environment);
         else
           Triples.emplace_back(*Arch, *Vendor, *OS);
@@ -349,3 +350,25 @@ DarwinSDKInfo::DarwinSDKInfo(llvm::Triple::OSType OS,
     : DarwinSDKInfo("", OS, Environment, Version, DisplayName,
                     MaximumDeploymentTarget,
                     legacyPlatformInfos(OS, Environment)) {}
+
+const DarwinSDKInfo::SDKPlatformInfo *
+DarwinSDKInfo::getPlatformInfo(const llvm::Triple &Triple) const {
+  for (const DarwinSDKInfo::SDKPlatformInfo &PlatformInfo : PlatformInfos) {
+    const auto &Triples = PlatformInfo.getTriples();
+    if (llvm::find(Triples, Triple) != Triples.end())
+      return &PlatformInfo;
+  }
+  // Darwin usually specifies 32 bit ARM as "arm", but
+  // ToolChain::ComputeLLVMTriple(...) will often change that to "thumb". If
+  // there's no matching triple for thumb, look for an arm one instead.
+  if (Triple.getArch() == llvm::Triple::thumb) {
+    llvm::Triple ARMTriple(Triple);
+    llvm::ARM::ArchKind ArchKind =
+        llvm::ARM::parseArch(ARMTriple.getArchName());
+    ARMTriple.setArchName((llvm::Triple::getArchName(llvm::Triple::arm) +
+                           llvm::ARM::getSubArch(ArchKind).str())
+                              .str());
+    return getPlatformInfo(ARMTriple);
+  }
+  return nullptr;
+}

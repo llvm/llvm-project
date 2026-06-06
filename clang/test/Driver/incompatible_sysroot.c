@@ -9,6 +9,7 @@
 // RUN: %clang -target x86_64-apple-darwin -Wincompatible-sysroot -isysroot SDKs/iPhoneSimulator9.2.sdk -mios-version-min=9.0 -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-IOS-IOSSIM %s
 // RUN: %clang -target x86_64-apple-darwin -Wno-incompatible-sysroot -isysroot SDKs/MacOSX10.9.sdk -mios-version-min=9.0 -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-OSX-IOS-DISABLED %s
 
+// RUN: %clang -target armv7k-apple-watchos6.0 -Wincompatible-sysroot -isysroot %S/Inputs/WatchOS6.0.sdk -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-WATCHOS %s
 // RUN: %clang -target arm64-apple-visionos1.0-simulator -Wincompatible-sysroot -isysroot %S/Inputs/XRSimulator1.0.sdk -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-VISIONOSSIM %s
 // RUN: %clang -target arm64-apple-xros1.0 -Wincompatible-sysroot -isysroot %S/Inputs/XRSimulator1.0.sdk -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-VISIONOSSIM-VISIONOS %s
 // RUN: %clang -target arm64-apple-ios17.1 -Wincompatible-sysroot -isysroot %S/Inputs/XRSimulator1.0.sdk -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-VISIONOSSIM-IOS %s
@@ -23,6 +24,7 @@ int main() { return 0; }
 // CHECK-IOS-IOSSIM-NOT: warning: using sysroot for '{{.*}}' but targeting '{{.*}}'
 // CHECK-OSX-IOS-DISABLED-NOT: warning: using sysroot for '{{.*}}' but targeting '{{.*}}'
 
+// CHECK-WATCHOS-NOT: warning: using sysroot for '{{.*}}' but targeting '{{.*}}'
 // CHECK-VISIONOSSIM-NOT: warning: using sysroot for '{{.*}}' but targeting '{{.*}}'
 // CHECK-VISIONOSSIM-VISIONOS: warning: using sysroot for 'Simulator - visionOS 1.0' but targeting 'arm64-apple-xros1.0.0'
 // CHECK-VISIONOSSIM-IOS: warning: using sysroot for 'Simulator - visionOS 1.0' but targeting 'arm64-apple-ios17.1.0'

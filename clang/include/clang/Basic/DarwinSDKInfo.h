@@ -237,14 +237,7 @@ public:
                              const llvm::json::Object *Obj);
 
 private:
-  const SDKPlatformInfo *getPlatformInfo(const llvm::Triple &Triple) const {
-    for (const SDKPlatformInfo &PlatformInfo : PlatformInfos) {
-      const auto &Triples = PlatformInfo.getTriples();
-      if (llvm::find(Triples, Triple) != Triples.end())
-        return &PlatformInfo;
-    }
-    return nullptr;
-  }
+  const SDKPlatformInfo *getPlatformInfo(const llvm::Triple &Triple) const;
 
   std::string FilePath;
   llvm::Triple::OSType OS;
