@@ -1,5 +1,5 @@
 ; End-to-end loop-vectorize decisions driven by the AMD Zen per-shape
-; gather/scatter cost tables (TuningPreferAMDZenGSCost, set on znver4+).
+; gather/scatter cost tables (TuningPreferGSCostTable, set on znver4+).
 ;
 ; The companion cost-model test
 ;   llvm/test/Analysis/CostModel/X86/masked-gather-scatter-amd-zen.ll
