@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr int isnanf128(float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR int isnanf128(float128 x) {
   return fputil::FPBits<float128>(x).is_nan();
 }
 
