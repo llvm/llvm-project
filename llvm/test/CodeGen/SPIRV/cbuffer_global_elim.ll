@@ -10,7 +10,7 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 
 @llvm.used = appending global [1 x ptr] [ptr @CB.cb], section "llvm.metadata"
 
-; Check that SPRIVCBufferAccessPass removes the cbuffer global from @llvm.used
+; Check that SPIRVCBufferAccessPass removes the cbuffer global from @llvm.used
 ; and from the module.
 ;
 ; CHECK-NOT: @CB.cb = internal global target("spirv.VulkanBuffer", %__cblayout_CB, 2, 0) poison
