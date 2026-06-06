@@ -61,6 +61,7 @@ jobs:
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
       release-binary-filename-zstd: ${{ steps.vars.outputs.release-binary-filename-zstd }}
+      zstd-bin-dir: ${{ steps.vars.outputs.zstd-bin-dir }}
       build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
       test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
@@ -82,9 +83,7 @@ jobs:
     # zstd is missing from the windows-11-arm runner
     - name: Install zstd on windows-11-arm runner
       if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      run: |
-        vcpkg install "zstd[tools]:arm64-windows"
-        echo "$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows\bin" >> $env:GITHUB_PATH
+      run: vcpkg install "zstd[tools]:arm64-windows"
 
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -160,6 +159,11 @@ jobs:
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
         echo "release-binary-filename-zstd=$release_binary_basename.tar.zst" >> $GITHUB_OUTPUT
+
+        # Export the zstd path if we are on a Windows ARM64 runner
+        if [ "$RUNNER_OS" = "Windows" ] && [ "$RUNNER_ARCH" = "ARM64" ]; then
+          echo "zstd-bin-dir=$VCPKG_INSTALLATION_ROOT\installed\arm64-windows\bin" >> $GITHUB_OUTPUT
+        fi
 
         target="$RUNNER_OS-$RUNNER_ARCH"
 
@@ -300,6 +304,10 @@ jobs:
         mv $installer $env:GITHUB_WORKSPACE
         mv $tarball $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
+
+    - name: Activate Windows ARM zstd Path
+      if: needs.prepare.outputs.zstd-bin-dir != ''
+      run: echo "${{ needs.prepare.outputs.zstd-bin-dir }}" >> $env:GITHUB_PATH
 
     - name: Create zstd compressed tarball
       shell: bash
