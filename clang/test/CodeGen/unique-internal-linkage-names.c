@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -funique-internal-linkage-names -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -funique-internal-linkage-names -o - | FileCheck %s
 
 // Check that we do not crash when overloading extern functions.
 
@@ -10,7 +10,7 @@ extern void overloaded_external();
 static int uniqued(void) { return 0; }
 
 // Check that a static function with asm label keeps its original name.
-// CHECK: define internal i32 @"\01custom_label"
+// CHECK: define internal i32 @custom_label(
 static int asm_label(void) asm("custom_label");
 static int asm_label(void) { return 0; }
 
