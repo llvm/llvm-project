@@ -5,6 +5,8 @@ define float @test_fmin3(float %a, float %b, float %c) {
 ; GFX10-LABEL: test_fmin3:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GFX10-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX10-NEXT:    v_min3_f32 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -16,6 +18,7 @@ define float @test_fmin3(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
 ; GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min3_num_f32 v0, v0, v1, v2
@@ -29,8 +32,10 @@ define float @test_fmin3_inreg(float inreg %a, float inreg %b, float inreg %c) {
 ; GFX10-LABEL: test_fmin3_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_max_f32_e64 v0, s18, s18
-; GFX10-NEXT:    v_min3_f32 v0, s16, s17, v0
+; GFX10-NEXT:    v_max_f32_e64 v0, s16, s16
+; GFX10-NEXT:    v_max_f32_e64 v1, s17, s17
+; GFX10-NEXT:    v_max_f32_e64 v2, s18, s18
+; GFX10-NEXT:    v_min3_f32 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_fmin3_inreg:
@@ -112,6 +117,8 @@ define float @test_fmin3_with_constants(float %a, float %b) {
 ; GFX10-LABEL: test_fmin3_with_constants:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GFX10-NEXT:    v_min3_f32 v0, v0, v1, 0x40e00000
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -122,6 +129,8 @@ define float @test_fmin3_with_constants(float %a, float %b) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min3_num_f32 v0, v0, v1, 0x40e00000
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %min1 = call float @llvm.minnum.f32(float %a, float %b)
@@ -133,8 +142,9 @@ define float @test_fmin3_with_constants_inreg(float inreg %a, float inreg %b) {
 ; GFX10-LABEL: test_fmin3_with_constants_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0x40e00000
-; GFX10-NEXT:    v_min3_f32 v0, s16, s17, v0
+; GFX10-NEXT:    v_max_f32_e64 v0, s16, s16
+; GFX10-NEXT:    v_max_f32_e64 v1, s17, s17
+; GFX10-NEXT:    v_min3_f32 v0, v0, v1, 0x40e00000
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_fmin3_with_constants_inreg:
@@ -213,6 +223,8 @@ define float @test_fmax3(float %a, float %b, float %c) {
 ; GFX10-LABEL: test_fmax3:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GFX10-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX10-NEXT:    v_max3_f32 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -224,6 +236,7 @@ define float @test_fmax3(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
 ; GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max3_num_f32 v0, v0, v1, v2
@@ -237,8 +250,10 @@ define float @test_fmax3_inreg(float inreg %a, float inreg %b, float inreg %c) {
 ; GFX10-LABEL: test_fmax3_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_max_f32_e64 v0, s18, s18
-; GFX10-NEXT:    v_max3_f32 v0, s16, s17, v0
+; GFX10-NEXT:    v_max_f32_e64 v0, s16, s16
+; GFX10-NEXT:    v_max_f32_e64 v1, s17, s17
+; GFX10-NEXT:    v_max_f32_e64 v2, s18, s18
+; GFX10-NEXT:    v_max3_f32 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_fmax3_inreg:
@@ -320,6 +335,8 @@ define float @test_fmax3_with_constants(float %a, float %b) {
 ; GFX10-LABEL: test_fmax3_with_constants:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GFX10-NEXT:    v_max3_f32 v0, v0, v1, 0x40e00000
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -330,6 +347,8 @@ define float @test_fmax3_with_constants(float %a, float %b) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max3_num_f32 v0, v0, v1, 0x40e00000
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %max1 = call float @llvm.maxnum.f32(float %a, float %b)
@@ -341,8 +360,9 @@ define float @test_fmax3_with_constants_inreg(float inreg %a, float inreg %b) {
 ; GFX10-LABEL: test_fmax3_with_constants_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0x40e00000
-; GFX10-NEXT:    v_max3_f32 v0, s16, s17, v0
+; GFX10-NEXT:    v_max_f32_e64 v0, s16, s16
+; GFX10-NEXT:    v_max_f32_e64 v1, s17, s17
+; GFX10-NEXT:    v_max3_f32 v0, v0, v1, 0x40e00000
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_fmax3_with_constants_inreg:
@@ -421,6 +441,10 @@ define <2 x float> @test_fmin3_v2f32(<2 x float> %a, <2 x float> %b, <2 x float>
 ; GFX10-LABEL: test_fmin3_v2f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX10-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX10-NEXT:    v_max_f32_e32 v3, v3, v3
 ; GFX10-NEXT:    v_max_f32_e32 v4, v4, v4
 ; GFX10-NEXT:    v_max_f32_e32 v5, v5, v5
 ; GFX10-NEXT:    v_min3_f32 v0, v0, v2, v4
@@ -434,6 +458,8 @@ define <2 x float> @test_fmin3_v2f32(<2 x float> %a, <2 x float> %b, <2 x float>
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
+; GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
 ; GFX12-NEXT:    v_dual_max_num_f32 v4, v4, v4 :: v_dual_max_num_f32 v5, v5, v5
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_min3_num_f32 v0, v0, v2, v4
@@ -448,6 +474,10 @@ define <2 x float> @test_fmax3_v2f32(<2 x float> %a, <2 x float> %b, <2 x float>
 ; GFX10-LABEL: test_fmax3_v2f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX10-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX10-NEXT:    v_max_f32_e32 v3, v3, v3
 ; GFX10-NEXT:    v_max_f32_e32 v4, v4, v4
 ; GFX10-NEXT:    v_max_f32_e32 v5, v5, v5
 ; GFX10-NEXT:    v_max3_f32 v0, v0, v2, v4
@@ -461,6 +491,8 @@ define <2 x float> @test_fmax3_v2f32(<2 x float> %a, <2 x float> %b, <2 x float>
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
+; GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
 ; GFX12-NEXT:    v_dual_max_num_f32 v4, v4, v4 :: v_dual_max_num_f32 v5, v5, v5
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_max3_num_f32 v0, v0, v2, v4

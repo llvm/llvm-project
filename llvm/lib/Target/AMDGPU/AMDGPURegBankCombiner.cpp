@@ -562,26 +562,6 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
   if (!AMDGPUOpc)
     return false;
 
-  // For v_max_f32(src1, src2, src3), it's safe to drop canonicalize of src1 and
-  // src2 since v_max3_f32(src1, src2, src3) = v_max_f32(v_max_f32(src1, src2),
-  // src3) but **not** on src3
-  MachineInstr *Def = MRI.getVRegDef(Src1);
-  if (Def->getOpcode() == Opc) {
-    Register Left = Def->getOperand(1).getReg();
-    Register Right = Def->getOperand(2).getReg();
-
-    MachineInstr *Def1 = MRI.getVRegDef(Left);
-    MachineInstr *Def2 = MRI.getVRegDef(Right);
-
-    if (Def1 && Def1->getOpcode() == AMDGPU::G_FCANONICALIZE) {
-      R0 = Def1->getOperand(1).getReg();
-    }
-
-    if (Def2 && Def2->getOpcode() == AMDGPU::G_FCANONICALIZE) {
-      R1 = Def2->getOperand(1).getReg();
-    }
-  }
-
   MatchInfo = {AMDGPUOpc, R0, R1, R2};
   return true;
 }
