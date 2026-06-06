@@ -88,6 +88,8 @@ void DefinitionBlockSeparator::separateBlocks(
       assert(TargetLine);
       assert(TargetToken);
 
+      if (TargetToken->FinalizedNewLinesBefore)
+        return;
       // Do not handle EOF newlines.
       if (TargetToken->is(tok::eof))
         return;

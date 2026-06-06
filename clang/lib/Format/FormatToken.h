@@ -328,11 +328,11 @@ struct FormatToken {
         IsUnterminatedLiteral(false), CanBreakBefore(false),
         ClosesTemplateDeclaration(false), StartsBinaryExpression(false),
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
-        ContinuesLineCommentSection(false), Finalized(false),
-        ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        BlockKind(BK_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
-        Type(TT_Unknown) {}
+        ContinuesLineCommentSection(false), FinalizedNewLinesBefore(false),
+        Finalized(false), ClosesRequiresClause(false),
+        EndsCppAttributeGroup(false), BlockKind(BK_Unknown),
+        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
+        TypeIsFinalized(false), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -396,6 +396,11 @@ struct FormatToken {
   ///
   /// Only set to true if \c Type == \c TT_LineComment.
   unsigned ContinuesLineCommentSection : 1;
+
+  /// Empty lines should not be added before the token. But its indentation may
+  /// be changed. Set for the comment that ends a region where formatting is
+  /// disabled.
+  unsigned FinalizedNewLinesBefore : 1;
 
   /// If \c true, this token has been fully formatted (indented and
   /// potentially re-formatted inside), and we do not allow further formatting

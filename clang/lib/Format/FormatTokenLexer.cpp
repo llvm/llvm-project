@@ -1598,8 +1598,10 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   if ((Style.isJavaScript() || Style.isProto()) && Tok.is(tok::char_constant))
     Tok.Tok.setKind(tok::string_literal);
 
-  if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText))
+  if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText)) {
     FormattingDisabled = false;
+    Tok.FinalizedNewLinesBefore = true;
+  }
 
   Tok.Finalized = FormattingDisabled;
 
