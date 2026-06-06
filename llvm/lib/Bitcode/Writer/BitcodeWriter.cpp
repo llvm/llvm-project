@@ -1812,6 +1812,13 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= bitc::AllowContract;
     if (FPMO->hasApproxFunc())
       Flags |= bitc::ApproxFunc;
+
+    // Handle uitofp.
+    if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(V)) {
+      Flags <<= 1;
+      if (NNI->hasNonNeg())
+        Flags |= 1 << bitc::PNNI_NON_NEG;
+    }
   } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(V)) {
     if (NNI->hasNonNeg())
       Flags |= 1 << bitc::PNNI_NON_NEG;
@@ -2203,6 +2210,7 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(VE.getMetadataOrNullID(N->getRawSysRoot()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawSDK()));
   Record.push_back(Lang.hasVersionedName() ? Lang.getVersion() : 0);
+  Record.push_back(Lang.getDialect());
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();
@@ -4148,7 +4156,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(ValAbbrevOp); // OpVal
     Abbv->Add(TypeAbbrevOp); // dest ty
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // opc
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8)); // flags
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 9)); // flags
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_INST_CAST_FLAGS_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");
@@ -5315,21 +5323,23 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
-  SmallVector<StringRef, 4> Functions;
+  SmallVector<std::pair<StringRef, GlobalValue::GUID>, 4> Functions;
   auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
                               bitc::GlobalValueSummarySymtabCodes Code) {
     if (CfiIndex.empty())
       return;
     for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
-      auto Defs = CfiIndex.forGuid(GUID);
-      llvm::append_range(Functions, Defs);
+      auto Names = CfiIndex.getNamesForGUID(GUID);
+      for (StringRef Name : Names)
+        Functions.push_back({Name, GUID});
     }
     if (Functions.empty())
       return;
     llvm::sort(Functions);
-    for (const auto &S : Functions) {
-      NameVals.push_back(StrtabBuilder.add(S));
-      NameVals.push_back(S.size());
+    for (const auto &Record : Functions) {
+      NameVals.push_back(Record.second);
+      NameVals.push_back(StrtabBuilder.add(Record.first));
+      NameVals.push_back(Record.first.size());
     }
     Stream.EmitRecord(Code, NameVals);
     NameVals.clear();
