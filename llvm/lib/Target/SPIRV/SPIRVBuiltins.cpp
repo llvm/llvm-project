@@ -2925,9 +2925,7 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       return Reg;
     }
 
-    assert((GR->getSPIRVTypeForVReg(Reg)->getOpcode() == SPIRV::OpTypePointer ||
-            GR->getSPIRVTypeForVReg(Reg)->getOpcode() ==
-                SPIRV::OpTypeUntypedPointerKHR) &&
+    assert(GR->getSPIRVTypeForVReg(Reg).isPointer() &&
            "Only pointer types are supported for loading values");
 
     Register Ptr = Reg;
