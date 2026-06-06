@@ -453,6 +453,7 @@ private:
                              MachineInstr &I) const;
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
   bool selectCoopMatrixStore(MachineInstr &I) const;
+  Register coopMatrixElementPtr(Register PtrReg, MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, SPIRVTypeInst ResType,
                                 MachineInstr &I) const;
   bool selectPushConstantGetPointer(Register &ResVReg, SPIRVTypeInst ResType,
@@ -1610,12 +1611,51 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
   return false;
 }
 
+// OpCooperativeMatrixLoad/StoreKHR require the pointer to point to the element
+// type. A workgroup array tile reaches the selector as a pointer to the whole
+// array, so index it to its first element to get the scalar pointer the op
+// requires. Returns PtrReg unchanged when it is not an aggregate.
+Register SPIRVInstructionSelector::coopMatrixElementPtr(Register PtrReg,
+                                                        MachineInstr &I) const {
+  SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(PtrReg);
+  if (!PtrType)
+    return PtrReg;
+  SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
+  if (!PointeeType || PointeeType->getOpcode() != SPIRV::OpTypeArray)
+    return PtrReg;
+  SPIRVTypeInst ElemType =
+      GR.getSPIRVTypeForVReg(PointeeType->getOperand(1).getReg());
+  if (!ElemType)
+    return PtrReg;
+  SPIRV::StorageClass::StorageClass SC = GR.getPointerStorageClass(PtrReg);
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVTypeInst ElemPtrType =
+      GR.getOrCreateSPIRVPointerType(ElemType, MIRBuilder, SC);
+  SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  Register Zero = buildZerosVal(I32Type, I);
+  Register NewPtr = MRI->createVirtualRegister(GR.getRegClass(ElemPtrType));
+  GR.assignSPIRVTypeToVReg(ElemPtrType, NewPtr, *I.getParent()->getParent());
+  unsigned Opcode =
+      STI.isLogicalSPIRV() ? SPIRV::OpAccessChain : SPIRV::OpPtrAccessChain;
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+      .addDef(NewPtr)
+      .addUse(GR.getSPIRVTypeID(ElemPtrType))
+      .addUse(PtrReg)
+      .addUse(Zero)
+      .constrainAllUses(TII, TRI, RBI);
+  return NewPtr;
+}
+
 bool SPIRVInstructionSelector::selectCoopMatrixStore(MachineInstr &I) const {
   // Operands 1..: pointer, matrix, memory_layout, stride.
   // OpCooperativeMatrixStoreKHR has no result.
+  // Build the element access chain before the store so its result is defined
+  // before the store that consumes it.
+  Register Ptr = coopMatrixElementPtr(I.getOperand(1).getReg(), I);
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(SPIRV::OpCooperativeMatrixStoreKHR));
-  for (unsigned i = 1; i < I.getNumOperands(); ++i)
+  MIB.addUse(Ptr);
+  for (unsigned i = 2; i < I.getNumOperands(); ++i)
     MIB.addUse(I.getOperand(i).getReg());
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
@@ -4962,7 +5002,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_cooperative_matrix_load:
     // result = OpCooperativeMatrixLoadKHR ptr memory_layout stride
     return selectOpWithSrcs(ResVReg, ResType, I,
-                            {I.getOperand(2).getReg(), I.getOperand(3).getReg(),
+                            {coopMatrixElementPtr(I.getOperand(2).getReg(), I),
+                             I.getOperand(3).getReg(),
                              I.getOperand(4).getReg()},
                             SPIRV::OpCooperativeMatrixLoadKHR);
   case Intrinsic::spv_cooperative_matrix_store:
