@@ -547,7 +547,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
                (HasSSE2 && typeInSet(0, {v2s64, v8s16, v16s8})(Query)) ||
                (HasAVX && typeInSet(0, {v4s64, v8s32, v16s16, v32s8})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v8s64, v16s32, v32s16, v64s8}));
+               (HasAVX512 &&
+                typeInSet(0, {v8s64, v16s32, v32s16, v64s8})(Query));
       })
       .clampNumElements(0, v16s8, s8MaxVector)
       .clampNumElements(0, v8s16, s16MaxVector)

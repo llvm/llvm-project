@@ -34,7 +34,10 @@
 #include "llvm/Support/raw_ostream.h"
 
 #ifdef _WIN32
-#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
+#include "lldb/Host/Config.h"
+#if LLDB_ENABLE_PYTHON
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
+#endif
 #endif
 
 #include <algorithm>
@@ -735,13 +738,6 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
-#ifdef _WIN32
-  auto python_path_or_err = SetupPythonRuntimeLibrary();
-  if (!python_path_or_err)
-    llvm::WithColor::error()
-        << llvm::toString(python_path_or_err.takeError()) << '\n';
-#endif
-
   // Parse arguments.
   LLDBOptTable T;
   unsigned MissingArgIndex;
@@ -773,6 +769,21 @@ int main(int argc, char const *argv[]) {
                  << " --help' for a complete list of options.\n";
     return 1;
   }
+
+#if defined(_WIN32) && LLDB_ENABLE_PYTHON
+  // liblldb.dll has direct imports from python3xx.dll (the script interpreter
+  // plugin is statically linked into liblldb), so the loader needs to find
+  // python3xx.dll before lldb.exe's delay-load thunk for liblldb fires on the
+  // first SB call below. The runtime loader is statically linked into lldb.exe
+  // via lldbHost (it has no LLDB_API export), so this call does not itself
+  // trigger the liblldb.dll load.
+  llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> python_loader =
+      lldb_private::ScriptInterpreterRuntimeLoader::Get(eScriptLanguagePython);
+  if (!python_loader)
+    WithColor::warning() << llvm::toString(python_loader.takeError()) << '\n';
+  else if (llvm::Error err = python_loader->Load())
+    WithColor::warning() << llvm::toString(std::move(err)) << '\n';
+#endif
 
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
