@@ -135,9 +135,19 @@ static bool functionUsesMMA(const Function &F) {
   return false;
 }
 
-static bool isIntegerDevicePointer(Value *Ptr) {
+static bool isNonFloatScalarDevicePointer(Value *Ptr) {
   Type *Ty = PointeeTypeMap::inferFromUsage(Ptr);
-  return Ty && Ty->isIntegerTy() && !Ty->isIntegerTy(1);
+  if (!Ty)
+    return false;
+  if (Ty->isIntegerTy() && !Ty->isIntegerTy(1))
+    return true;
+  if (Ty->isHalfTy() || Ty->isBFloatTy())
+    return true;
+  return false;
+}
+
+static bool isIntegerDevicePointer(Value *Ptr) {
+  return isNonFloatScalarDevicePointer(Ptr);
 }
 
 PointeeTypeMap buildPointeeTypeMap(Module &M) {

@@ -1063,6 +1063,33 @@ static bool insertPreambleGEPs(Module &M) {
                                           NewOp->getType(), "", I.getIterator());
               NewOp = BC;
             }
+          } else if (auto *CI = dyn_cast<CallInst>(&I)) {
+            // The TG global (here its float-typed base) is fed straight into an
+            // MMA load/store intrinsic whose pointer pointee is half/bfloat
+            // (p3f16/p1f16/p3bf16/p1bf16). The writer's PointeeTypeMap would
+            // retag the shared base to that scalar to satisfy the MMA call,
+            // which then disagrees with the float GEPs/loads that reuse the
+            // same arena (load/store type != pointee type -> materializeAll
+            // failure). Insert an identity bitcast so the MMA argument is a
+            // distinct Value the PTM can retag in isolation, leaving the float
+            // base untouched.
+            Type *GVElem = cast<ArrayType>(GV->getValueType())->getElementType();
+            Function *Callee = CI->getCalledFunction();
+            if (Callee &&
+                Callee->getName().starts_with("air.simdgroup_matrix_8x8_")) {
+              StringRef Name = Callee->getName();
+              bool MMAIsHalf = Name.contains("p3f16") || Name.contains("p1f16");
+              bool MMAIsBF16 =
+                  Name.contains("p3bf16") || Name.contains("p1bf16");
+              bool TypeDiffers = (MMAIsHalf && !GVElem->isHalfTy()) ||
+                                 (MMAIsBF16 && !GVElem->isBFloatTy());
+              if (TypeDiffers) {
+                auto *BC =
+                    CastInst::Create(Instruction::BitCast, NewOp,
+                                     NewOp->getType(), "", I.getIterator());
+                NewOp = BC;
+              }
+            }
           }
           I.setOperand(i, NewOp);
           Changed = true;
