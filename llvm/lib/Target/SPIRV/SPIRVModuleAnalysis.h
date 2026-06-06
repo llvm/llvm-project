@@ -119,6 +119,10 @@ public:
   bool isCapabilityAvailable(Capability::Capability Cap) const {
     return AvailableCaps.contains(Cap);
   }
+  // True if Cap has been added to the module's required capabilities.
+  bool isCapabilityRequired(Capability::Capability Cap) const {
+    return AllCaps.contains(Cap);
+  }
 
   // Remove capability ToRemove, but only if IfPresent is present.
   void removeCapabilityIf(const Capability::Capability ToRemove,
