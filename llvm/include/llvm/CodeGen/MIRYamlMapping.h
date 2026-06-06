@@ -203,6 +203,7 @@ struct VirtualRegisterDefinition {
   StringValue Class;
   StringValue PreferredRegister;
   std::vector<FlowStringValue> RegisterFlags;
+  std::vector<FlowStringValue> AntiHints;
 
   // TODO: Serialize the target specific register hints.
 
@@ -220,6 +221,9 @@ template <> struct MappingTraits<VirtualRegisterDefinition> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("flags", Reg.RegisterFlags,
                        std::vector<FlowStringValue>());
+    if (!YamlIO.outputting() || !Reg.AntiHints.empty())
+      YamlIO.mapOptional("anti-hints", Reg.AntiHints,
+                         std::vector<FlowStringValue>());
   }
 
   static const bool flow = true;

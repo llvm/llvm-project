@@ -46,6 +46,7 @@ struct VRegInfo {
   } D;
   Register VReg;
   Register PreferredReg;
+  SmallVector<Register, 4> AntiHints;
   uint8_t Flags = 0;
 };
 

@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 namespace llvm {
 
@@ -29,6 +30,9 @@ class LiveRegMatrix;
 
 class LLVM_LIBRARY_VISIBILITY AllocationOrder {
   const SmallVector<MCPhysReg, 16> Hints;
+  // Used as storage if the Order received in the constructor needs to be
+  // altered.
+  SmallVector<MCPhysReg, 16> FilteredOrderStorage;
   ArrayRef<MCPhysReg> Order;
   // How far into the Order we can iterate. This is 0 if the AllocationOrder is
   // constructed with HardHints = true, Order.size() otherwise. While
@@ -91,6 +95,13 @@ public:
                   bool HardHints)
       : Hints(std::move(Hints)), Order(Order),
         IterationLimit(HardHints ? 0 : static_cast<int>(Order.size())) {}
+
+  /// Create an AllocationOrder with pre-computed FilteredOrderStorage.
+  AllocationOrder(SmallVector<MCPhysReg, 16> &&Hints, ArrayRef<MCPhysReg> Order,
+                  bool HardHints, SmallVector<MCPhysReg, 16> &&Storage)
+      : Hints(std::move(Hints)), FilteredOrderStorage(std::move(Storage)),
+        Order(FilteredOrderStorage.empty() ? Order : FilteredOrderStorage),
+        IterationLimit(HardHints ? 0 : static_cast<int>(this->Order.size())) {}
 
   Iterator begin() const {
     return Iterator(*this, -(static_cast<int>(Hints.size())));
