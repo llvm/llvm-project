@@ -514,13 +514,8 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
 
   LLT Ty = MRI.getType(Dst);
   unsigned Opc = MI.getOpcode();
-  bool IsFPOp = Opc == AMDGPU::G_FMAXNUM || Opc == AMDGPU::G_FMAXNUM_IEEE ||
-                Opc == AMDGPU::G_FMINNUM || Opc == AMDGPU::G_FMINNUM_IEEE ||
-                Opc == AMDGPU::G_FMAXIMUM || Opc == AMDGPU::G_FMINIMUM ||
-                Opc == AMDGPU::G_FMAXIMUMNUM || Opc == AMDGPU::G_FMINIMUMNUM;
-  bool IsSupportedTy = Ty == LLT::scalar(32) ||
-                       (Ty == LLT::scalar(16) && STI.hasMin3Max3_16()) ||
-                       (IsFPOp && Ty == LLT::fixed_vector(2, 32));
+  bool IsSupportedTy =
+      Ty == LLT::scalar(32) || (Ty == LLT::scalar(16) && STI.hasMin3Max3_16());
   if (!IsSupportedTy)
     return false;
 
