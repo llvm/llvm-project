@@ -421,8 +421,8 @@ static bool isTblTbxInstruction(unsigned Opcode, StringRef &Layout,
 
 struct LdStNInstrDesc {
   unsigned Opcode;
-  const char *Mnemonic;
-  const char *Layout;
+  char Mnemonic[6];
+  char Layout[6];
   int ListOperand;
   bool HasLane;
   int NaturalOffset;
