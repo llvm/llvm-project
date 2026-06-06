@@ -493,7 +493,6 @@ private:
   // KeyInfo for the cached module spec DenseMap.
   // The invariant is that all real keys will have the file and architecture
   // set.
-  // The empty key has an empty file and an empty arch.
   // The comparison and hash functions take the file name and architecture
   // triple into account.
   struct ModuleCacheInfo {
