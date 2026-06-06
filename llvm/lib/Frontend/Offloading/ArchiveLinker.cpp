@@ -294,7 +294,7 @@ resolveArchiveMembers(ArrayRef<InputDesc> Order,
     }
   }
 
-  return Result;
+  return std::move(Result);
 }
 
 } // namespace offloading
