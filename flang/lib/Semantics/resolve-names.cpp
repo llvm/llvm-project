@@ -9753,16 +9753,19 @@ void ResolveNamesVisitor::HandleProcedureName(
   // A name implicitly declared by a DECLARE_TARGET may have been followed
   // by an explcit declaration. Make sure the symbol is still implicit
   // before doing anything.
-  if (WasDeclaredByOmpDeclareTarget(symbol) &&
-      symbol->flags().test(Symbol::Flag::Implicit)) {
-    // Implicit declaration of a symbol caused by being on a declare_target
-    // should only declare it as an object, not a procedure. This is because
-    // the 'x' in declare_target(x) looks like a use of a variable, not a
-    // procedure.
-    assert(!IsProcedure(*symbol) && "Should not be a procedure");
-    ompDTScope = const_cast<Scope *>(&symbol->owner());
-    ompDTScope->erase(symbol->name());
-    symbol = nullptr;
+  if (WasDeclaredByOmpDeclareTarget(symbol)) {
+    bool isImplicit{symbol->flags().test(Symbol::Flag::Implicit)};
+    bool inEquivalence{FindEquivalenceSet(*symbol) != nullptr};
+    if (isImplicit && !inEquivalence) {
+      // Implicit declaration of a symbol caused by being on a declare_target
+      // should only declare it as an object, not a procedure. This is because
+      // the 'x' in declare_target(x) looks like a use of a variable, not a
+      // procedure.
+      assert(!IsProcedure(*symbol) && "Should not be a procedure");
+      ompDTScope = const_cast<Scope *>(&symbol->owner());
+      ompDTScope->erase(symbol->name());
+      symbol = nullptr;
+    }
   }
   if (!symbol) {
     if (IsIntrinsic(name.source, flag)) {
