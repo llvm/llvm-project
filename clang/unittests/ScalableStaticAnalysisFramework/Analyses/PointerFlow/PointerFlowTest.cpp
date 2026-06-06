@@ -1157,4 +1157,21 @@ TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
             std::string::npos);
 }
 
+TEST_F(PointerFlowTest, RHSResultsInNoEntityPointerLevel) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    void f() {
+      int *p = new int[10];
+      const char *q = "hello";
+    }
+    struct S {
+      int *p;
+      void g() { p = (int *)this; }
+    };
+  )cpp"),
+            true);
+  auto *Sum = getEntitySummary<FunctionDecl>("f");
+  ASSERT_EQ(Sum, nullptr);
+  Sum = getEntitySummary<CXXMethodDecl>("g");
+  ASSERT_EQ(Sum, nullptr);
+}
 } // namespace

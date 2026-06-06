@@ -108,6 +108,8 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
     return LHS.takeError();
   if (!RHS)
     return RHS.takeError();
+  if (RHS->empty())
+    return llvm::Error::success();
   for (auto L : *LHS)
     Results[L].insert(RHS->begin(), RHS->end());
   return llvm::Error::success();
