@@ -703,18 +703,12 @@ namespace cwg242 { // cwg242: 2.8
 
   A *upcast(D *p) {
     return (A *)(p);
-    /* expected-error@-1
-    {{ambiguous conversion from derived class 'D' to base class 'A':
-    struct cwg242::D -> I1 -> A
-    struct cwg242::D -> I2 -> A}}*/
+    // expected-error@-1 {{error: ambiguous conversion from derived class 'cwg242::D' to base class 'cwg242::A'}}
   }
 
   D *downcast(A *p) {
     return (D *)(p);
-    /* expected-error@-1
-    {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D':
-    A -> I1 -> struct cwg242::D
-    A -> I2 -> struct cwg242::D}}*/
+    // expected-error@-1 {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D'}}
   }
 
   struct V {};
