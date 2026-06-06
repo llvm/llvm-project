@@ -517,12 +517,16 @@ public:
   uint32_t GetTerminalWidth() const;
 
   /// Set the terminal width.
+  LLDB_DEPRECATED_FIXME("Use SetTerminalDimensions",
+                        "SetTerminalDimensions(uint32_t, uint32_t)")
   void SetTerminalWidth(uint32_t term_width);
 
   /// Get the terminal height.
   uint32_t GetTerminalHeight() const;
 
   /// Set the terminal height.
+  LLDB_DEPRECATED_FIXME("Use SetTerminalDimensions",
+                        "SetTerminalDimensions(uint32_t, uint32_t)")
   void SetTerminalHeight(uint32_t term_height);
 
   /// Set the terminal width and height together. Prefer this over the

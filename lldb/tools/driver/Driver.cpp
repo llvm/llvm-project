@@ -650,7 +650,8 @@ void Driver::UpdateWindowSize() {
 #ifndef _WIN32
       m_debugger.SetTerminalDimensions(window_size.ws_col, window_size.ws_row);
 #else
-      m_debugger.SetTerminalWidth(window_size.ws_col);
+      m_debugger.SetTerminalDimensions(window_size.ws_col,
+                                       m_debugger.GetTerminalHeight());
 #endif
     }
   }
