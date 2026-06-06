@@ -50,17 +50,15 @@ inline unsigned combineHashValue(unsigned a, unsigned b) {
 /// parameter that is used to support SFINAE (generally using std::enable_if_t)
 /// in derived DenseMapInfo specializations; in non-SFINAE use cases this should
 /// just be `void`.
-template<typename T, typename Enable = void>
-struct DenseMapInfo {
+template <typename T, typename Enable = void> struct DenseMapInfo {
   // static unsigned getHashValue(const T &Val);
   // static bool isEqual(const T &LHS, const T &RHS);
 };
 
-// Provide DenseMapInfo for all pointers. Come up with sentinel pointer values
-// that are aligned to alignof(T) bytes, but try to avoid requiring T to be
-// complete. This allows clients to instantiate DenseMap<T*, ...> with forward
-// declared key types. Assume that no pointer key type requires more than 4096
-// bytes of alignment.
+// Provide DenseMapInfo for all pointers. Avoid requiring T to be complete so
+// clients can instantiate DenseMap<T*, ...> with forward declared key types.
+// Log2MaxAlign assumes that no pointer key type requires more than 4096 bytes
+// of alignment.
 template<typename T>
 struct DenseMapInfo<T*> {
   // The following should hold, but it would require T to be complete:
@@ -153,14 +151,6 @@ template <typename Enum>
 struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
   using UnderlyingType = std::underlying_type_t<Enum>;
   using Info = DenseMapInfo<UnderlyingType>;
-
-  // If an enum does not have a "fixed" underlying type, it may be UB to cast
-  // some values of the underlying type to the enum. We use an "extra" constexpr
-  // local to ensure that such UB would trigger "static assertion expression is
-  // not an integral constant expression", rather than runtime UB.
-  //
-  // If you hit this error, you can fix by switching to `enum class`, or adding
-  // an explicit underlying type (e.g. `enum X : int`) to the enum's definition.
 
   static unsigned getHashValue(const Enum &Val) {
     return Info::getHashValue(static_cast<UnderlyingType>(Val));

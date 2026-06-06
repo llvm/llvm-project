@@ -134,9 +134,7 @@ public:
 };
 
 template <> struct DenseMapInfo<CachedHashString> {
-  static unsigned getHashValue(const CachedHashString &S) {
-    return S.hash();
-  }
+  static unsigned getHashValue(const CachedHashString &S) { return S.hash(); }
   static bool isEqual(const CachedHashString &LHS,
                       const CachedHashString &RHS) {
     if (LHS.hash() != RHS.hash())
