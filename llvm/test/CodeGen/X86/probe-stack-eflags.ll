@@ -11,30 +11,29 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @f(i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %bb13.i
-; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    subq $16, %rsp
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb16.i
-; CHECK-NEXT:    sets %bl
+; CHECK-NEXT:    sets {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Folded Spill
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    sets %bpl
+; CHECK-NEXT:    sets %bl
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq *%rax
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    xorb %bpl, %bl
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    xorb $1, %bl
-; CHECK-NEXT:    movzbl %bl, %eax
+; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; CHECK-NEXT:    xorb %bl, %al
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB0_3: # %exit2
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 bb13.i:
   %0 = icmp eq i32 %a, 0

@@ -16,18 +16,19 @@ define i64 @test(i1 %a, i64 %r1, i64 %r2, i64 %s1, i64 %s2, i64 %t1, i64 %t2) {
 ; CHECK-NEXT:    .cfi_offset %rbx, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
 ; CHECK-NEXT:    .cfi_offset %r15, -16
-; CHECK-NEXT:    movq %rcx, %rbx
-; CHECK-NEXT:    movl $4, %r14d
+; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %then
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r9
-; CHECK-NEXT:    movl $10, %r14d
+; CHECK-NEXT:    movl $10, %eax
 ; CHECK-NEXT:    movq %rdx, %rsi
-; CHECK-NEXT:    movq %r8, %rbx
+; CHECK-NEXT:    movq %r8, %rcx
 ; CHECK-NEXT:  .LBB0_2: # %else
-; CHECK-NEXT:    addq %r9, %rbx
-; CHECK-NEXT:    addq %rsi, %r14
+; CHECK-NEXT:    addq %r9, %rcx
+; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    movq %rcx, %rbx
+; CHECK-NEXT:    movq %rax, %r14
 ; CHECK-NEXT:    callq _Z3foov@PLT
 ; CHECK-NEXT:    movl %eax, %r15d
 ; CHECK-NEXT:    addq %r14, %r15

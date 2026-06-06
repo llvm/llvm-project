@@ -17,7 +17,8 @@ define dso_local zeroext i1 @test1(ptr nocapture noundef readonly %0) local_unna
 ; I386-LABEL: test1:
 ; I386:       # %bb.0:
 ; I386-NEXT:    pushl %ebx
-; I386-NEXT:    subl $24, %esp
+; I386-NEXT:    pushl %esi
+; I386-NEXT:    subl $20, %esp
 ; I386-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    movl (%eax), %eax
 ; I386-NEXT:    movzbl (%eax), %ebx
@@ -31,20 +32,19 @@ define dso_local zeroext i1 @test1(ptr nocapture noundef readonly %0) local_unna
 ; I386-NEXT:    je .LBB0_3
 ; I386-NEXT:  # %bb.2:
 ; I386-NEXT:    movzbl ma_meta_end_mn_0_0_0_0_0_0, %eax
-; I386-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; I386-NEXT:    jmp .LBB0_6
+; I386-NEXT:    jmp .LBB0_5
 ; I386-NEXT:  .LBB0_3:
-; I386-NEXT:    movb mt_pivots_0, %ah
-; I386-NEXT:    movb %ah, %al
-; I386-NEXT:    decb %al
-; I386-NEXT:    movl mas_data_end___trans_tmp_2, %ecx
-; I386-NEXT:    movsbl %al, %edx
-; I386-NEXT:    cmpl $0, (%ecx,%edx,4)
+; I386-NEXT:    movzbl mt_pivots_0, %eax
+; I386-NEXT:    movl %eax, %ecx
+; I386-NEXT:    decb %cl
+; I386-NEXT:    movl mas_data_end___trans_tmp_2, %edx
+; I386-NEXT:    movsbl %cl, %esi
+; I386-NEXT:    cmpl $0, (%edx,%esi,4)
 ; I386-NEXT:    je .LBB0_5
 ; I386-NEXT:  # %bb.4:
-; I386-NEXT:    movb %al, %ah
+; I386-NEXT:    movl %ecx, %eax
 ; I386-NEXT:  .LBB0_5:
-; I386-NEXT:    movb %ah, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; I386-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; I386-NEXT:  .LBB0_6:
 ; I386-NEXT:    movb mt_slots_0, %bh
 ; I386-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -59,7 +59,8 @@ define dso_local zeroext i1 @test1(ptr nocapture noundef readonly %0) local_unna
 ; I386-NEXT:    calll gaz
 ; I386-NEXT:  .LBB0_8:
 ; I386-NEXT:    movb $1, %al
-; I386-NEXT:    addl $24, %esp
+; I386-NEXT:    addl $20, %esp
+; I386-NEXT:    popl %esi
 ; I386-NEXT:    popl %ebx
 ; I386-NEXT:    xorl %ecx, %ecx
 ; I386-NEXT:    xorl %edx, %edx

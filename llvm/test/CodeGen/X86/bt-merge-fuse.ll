@@ -204,24 +204,27 @@ define i1 @no_fuse_diff_pos_or(ptr %word, i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    shldl %cl, %esi, %edi
 ; X86-NEXT:    shll %cl, %esi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    je .LBB4_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    jne .LBB4_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl %edi, %ecx
+; X86-NEXT:    jmp .LBB4_3
+; X86-NEXT:  .LBB4_1:
+; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:  .LBB4_2:
+; X86-NEXT:  .LBB4_3:
 ; X86-NEXT:    movl (%edx), %ebx
-; X86-NEXT:    movl 4(%edx), %ecx
-; X86-NEXT:    orl %ecx, %edi
+; X86-NEXT:    movl 4(%edx), %edi
+; X86-NEXT:    orl %edi, %ecx
 ; X86-NEXT:    orl %ebx, %esi
 ; X86-NEXT:    testb $32, %al
-; X86-NEXT:    jne .LBB4_4
-; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:  .LBB4_4:
-; X86-NEXT:    btl %eax, %ecx
+; X86-NEXT:    jne .LBB4_5
+; X86-NEXT:  # %bb.4:
+; X86-NEXT:    movl %ebx, %edi
+; X86-NEXT:  .LBB4_5:
+; X86-NEXT:    btl %eax, %edi
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    movl %esi, (%edx)
-; X86-NEXT:    movl %edi, 4(%edx)
+; X86-NEXT:    movl %ecx, 4(%edx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -305,26 +308,29 @@ define i1 @no_fuse_diff_pos_and(ptr %word, i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    shldl %cl, %esi, %edi
 ; X86-NEXT:    shll %cl, %esi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    je .LBB6_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    jne .LBB6_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl %edi, %ecx
+; X86-NEXT:    jmp .LBB6_3
+; X86-NEXT:  .LBB6_1:
+; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:  .LBB6_2:
-; X86-NEXT:    notl %edi
+; X86-NEXT:  .LBB6_3:
+; X86-NEXT:    notl %ecx
 ; X86-NEXT:    notl %esi
 ; X86-NEXT:    movl (%edx), %ebx
-; X86-NEXT:    movl 4(%edx), %ecx
-; X86-NEXT:    andl %ecx, %edi
+; X86-NEXT:    movl 4(%edx), %edi
+; X86-NEXT:    andl %edi, %ecx
 ; X86-NEXT:    andl %ebx, %esi
 ; X86-NEXT:    testb $32, %al
-; X86-NEXT:    jne .LBB6_4
-; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:  .LBB6_4:
-; X86-NEXT:    btl %eax, %ecx
+; X86-NEXT:    jne .LBB6_5
+; X86-NEXT:  # %bb.4:
+; X86-NEXT:    movl %ebx, %edi
+; X86-NEXT:  .LBB6_5:
+; X86-NEXT:    btl %eax, %edi
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    movl %esi, (%edx)
-; X86-NEXT:    movl %edi, 4(%edx)
+; X86-NEXT:    movl %ecx, 4(%edx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

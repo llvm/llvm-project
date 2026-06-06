@@ -95,10 +95,8 @@ void hp5_phi_ptr_mixed(int x) NO_TAIL {
 // CHECK: test ecx, ecx
 // CHECK: mov rsi, qword ptr [rip + __ref_g_has_pointers]
 // CHECK: call do_side_effects
-// CHECK: jmp
 // CHECK: call do_other_side_effects
-// CHECK: lea rsi, [rip + g_this_is_const]
-// CHECK: mov rcx, rsi
+// CHECK: lea rcx, [rip + g_this_is_const]
 // CHECK: call take_data
 // CHECK: .seh_endproc
 

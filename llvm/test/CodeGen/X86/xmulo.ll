@@ -679,24 +679,22 @@ define i64 @umuloselecti64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; WIN32-NEXT:    testl %ebp, %ebp
+; WIN32-NEXT:    testl %edi, %edi
 ; WIN32-NEXT:    setne %al
 ; WIN32-NEXT:    testl %esi, %esi
 ; WIN32-NEXT:    setne %bl
 ; WIN32-NEXT:    andb %al, %bl
 ; WIN32-NEXT:    movl %esi, %eax
-; WIN32-NEXT:    mull %edi
-; WIN32-NEXT:    movl %edi, %edx
-; WIN32-NEXT:    movl %eax, %edi
+; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
+; WIN32-NEXT:    movl %eax, %ebp
 ; WIN32-NEXT:    seto {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
-; WIN32-NEXT:    movl %ebp, %eax
-; WIN32-NEXT:    movl %edx, %ebp
+; WIN32-NEXT:    movl %edi, %eax
 ; WIN32-NEXT:    mull %ecx
 ; WIN32-NEXT:    seto %bh
 ; WIN32-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bh # 1-byte Folded Reload
 ; WIN32-NEXT:    orb %bl, %bh
-; WIN32-NEXT:    addl %eax, %edi
+; WIN32-NEXT:    leal (%ebp,%eax), %edi
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    mull %ebp
 ; WIN32-NEXT:    addl %edi, %edx

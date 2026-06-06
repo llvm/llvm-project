@@ -6,16 +6,16 @@
 ; Test the llvm-locstats output.
 ; LOCSTATS: 0% 0 0%
 ; LOCSTATS: (0%,10%) 0 0%
-; LOCSTATS: [10%,20%) 0 0%
-; LOCSTATS: [20%,30%) 1 11%
+; LOCSTATS: [10%,20%) 1 11%
+; LOCSTATS: [20%,30%) 0 0%
 ; LOCSTATS: [30%,40%) 0 0%
 ; LOCSTATS: [40%,50%) 0 0%
 ; LOCSTATS: [50%,60%) 0 0%
-; LOCSTATS: [60%,70%) 0 0%
+; LOCSTATS: [60%,70%) 2 22%
 ; LOCSTATS: [70%,80%) 1 11%
-; LOCSTATS: [80%,90%) 2 22%
+; LOCSTATS: [80%,90%) 1 11%
 ; LOCSTATS: [90%,100%) 1 11%
-; LOCSTATS: 100% 4 44%
+; LOCSTATS: 100% 3 33%
 ;
 ; The source code of the test case:
 ;extern int fn2 (int);

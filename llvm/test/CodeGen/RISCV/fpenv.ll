@@ -39,15 +39,17 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV32IF-NEXT:    call fesetround
 ; RV32IF-NEXT:    frrm a0
 ; RV32IF-NEXT:    lui a1, 66
-; RV32IF-NEXT:    slli a0, a0, 2
-; RV32IF-NEXT:    addi s0, a1, 769
-; RV32IF-NEXT:    srl a0, s0, a0
-; RV32IF-NEXT:    andi a0, a0, 7
-; RV32IF-NEXT:    beqz a0, .LBB1_2
+; RV32IF-NEXT:    slli a2, a0, 2
+; RV32IF-NEXT:    addi a0, a1, 769
+; RV32IF-NEXT:    srl a1, a0, a2
+; RV32IF-NEXT:    andi a1, a1, 7
+; RV32IF-NEXT:    beqz a1, .LBB1_2
 ; RV32IF-NEXT:  # %bb.1:
 ; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    j .LBB1_3
 ; RV32IF-NEXT:  .LBB1_2: # %if.end
+; RV32IF-NEXT:    mv s0, a0
+; RV32IF-NEXT:    li a0, 0
 ; RV32IF-NEXT:    call fesetround
 ; RV32IF-NEXT:    frrm a0
 ; RV32IF-NEXT:    slli a0, a0, 2
@@ -76,15 +78,17 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV64IF-NEXT:    call fesetround
 ; RV64IF-NEXT:    frrm a0
 ; RV64IF-NEXT:    lui a1, 66
-; RV64IF-NEXT:    slli a0, a0, 2
-; RV64IF-NEXT:    addi s0, a1, 769
-; RV64IF-NEXT:    srl a0, s0, a0
-; RV64IF-NEXT:    andi a0, a0, 7
-; RV64IF-NEXT:    beqz a0, .LBB1_2
+; RV64IF-NEXT:    slli a2, a0, 2
+; RV64IF-NEXT:    addi a0, a1, 769
+; RV64IF-NEXT:    srl a1, a0, a2
+; RV64IF-NEXT:    andi a1, a1, 7
+; RV64IF-NEXT:    beqz a1, .LBB1_2
 ; RV64IF-NEXT:  # %bb.1:
 ; RV64IF-NEXT:    li a0, 0
 ; RV64IF-NEXT:    j .LBB1_3
 ; RV64IF-NEXT:  .LBB1_2: # %if.end
+; RV64IF-NEXT:    mv s0, a0
+; RV64IF-NEXT:    li a0, 0
 ; RV64IF-NEXT:    call fesetround
 ; RV64IF-NEXT:    frrm a0
 ; RV64IF-NEXT:    slli a0, a0, 2

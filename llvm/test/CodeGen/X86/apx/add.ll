@@ -1274,31 +1274,31 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; NDD-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
 ; NDD-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
 ; NDD-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; NDD-NEXT:    movl %ebp, %eax # encoding: [0x89,0xe8]
 ; NDD-NEXT:    movl $1, %r12d # encoding: [0x41,0xbc,0x01,0x00,0x00,0x00]
-; NDD-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NDD-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
 ; NDD-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
 ; NDD-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.1: # %bb2
 ; NDD-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
 ; NDD-NEXT:  .LBB50_2: # %bb1
-; NDD-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
-; NDD-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
-; NDD-NEXT:    # encoding: [0x03,0x34,0x24]
+; NDD-NEXT:    movq (%rsp), %rcx # 8-byte Reload
+; NDD-NEXT:    # encoding: [0x48,0x8b,0x0c,0x24]
+; NDD-NEXT:    leal (%r13,%rcx), %ebp # encoding: [0x41,0x8d,0x6c,0x0d,0x00]
 ; NDD-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
-; NDD-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NDD-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
 ; NDD-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
 ; NDD-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.3: # %bb4
-; NDD-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
-; NDD-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
-; NDD-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; NDD-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    incl %r12d, %r15d # encoding: [0x62,0xd4,0x04,0x18,0xff,0xc4]
 ; NDD-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
-; NDD-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
-; NDD-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; NDD-NEXT:    callq *%rax # encoding: [0xff,0xd0]
 ; NDD-NEXT:  .LBB50_4: # %bb3
-; NDD-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; NDD-NEXT:    orl %r13d, %ebp, %esi # encoding: [0x62,0x74,0x4c,0x18,0x09,0xed]
 ; NDD-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
@@ -1339,31 +1339,31 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; IMMONLY-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
 ; IMMONLY-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
 ; IMMONLY-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; IMMONLY-NEXT:    movl %ebp, %eax # encoding: [0x89,0xe8]
 ; IMMONLY-NEXT:    movl $1, %r12d # encoding: [0x41,0xbc,0x01,0x00,0x00,0x00]
-; IMMONLY-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; IMMONLY-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
 ; IMMONLY-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
 ; IMMONLY-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
 ; IMMONLY-NEXT:  # %bb.1: # %bb2
 ; IMMONLY-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
 ; IMMONLY-NEXT:  .LBB50_2: # %bb1
-; IMMONLY-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
-; IMMONLY-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
-; IMMONLY-NEXT:    # encoding: [0x03,0x34,0x24]
+; IMMONLY-NEXT:    movq (%rsp), %rcx # 8-byte Reload
+; IMMONLY-NEXT:    # encoding: [0x48,0x8b,0x0c,0x24]
+; IMMONLY-NEXT:    leal (%r13,%rcx), %ebp # encoding: [0x41,0x8d,0x6c,0x0d,0x00]
 ; IMMONLY-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
-; IMMONLY-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; IMMONLY-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
 ; IMMONLY-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
 ; IMMONLY-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
 ; IMMONLY-NEXT:  # %bb.3: # %bb4
-; IMMONLY-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; IMMONLY-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; IMMONLY-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
-; IMMONLY-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
-; IMMONLY-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; IMMONLY-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; IMMONLY-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; IMMONLY-NEXT:    incl %r12d, %r15d # encoding: [0x62,0xd4,0x04,0x18,0xff,0xc4]
 ; IMMONLY-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
-; IMMONLY-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
-; IMMONLY-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; IMMONLY-NEXT:    callq *%rax # encoding: [0xff,0xd0]
 ; IMMONLY-NEXT:  .LBB50_4: # %bb3
-; IMMONLY-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; IMMONLY-NEXT:    orl %r13d, %ebp, %esi # encoding: [0x62,0x74,0x4c,0x18,0x09,0xed]
 ; IMMONLY-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
 ; IMMONLY-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; IMMONLY-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
@@ -1404,30 +1404,30 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; MEM-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
 ; MEM-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
 ; MEM-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; MEM-NEXT:    movl %ebp, %eax # encoding: [0x89,0xe8]
 ; MEM-NEXT:    movl $1, %r12d # encoding: [0x41,0xbc,0x01,0x00,0x00,0x00]
-; MEM-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; MEM-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
 ; MEM-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
 ; MEM-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
 ; MEM-NEXT:  # %bb.1: # %bb2
 ; MEM-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
 ; MEM-NEXT:  .LBB50_2: # %bb1
-; MEM-NEXT:    addl (%rsp), %r13d, %esi # 4-byte Folded Reload
-; MEM-NEXT:    # encoding: [0x62,0x74,0x4c,0x18,0x03,0x2c,0x24]
+; MEM-NEXT:    addl (%rsp), %r13d, %ebp # 4-byte Folded Reload
+; MEM-NEXT:    # encoding: [0x62,0x74,0x54,0x18,0x03,0x2c,0x24]
 ; MEM-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
-; MEM-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; MEM-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
 ; MEM-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
 ; MEM-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
 ; MEM-NEXT:  # %bb.3: # %bb4
-; MEM-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; MEM-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
-; MEM-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
-; MEM-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; MEM-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; MEM-NEXT:    incl %r12d, %r15d # encoding: [0x62,0xd4,0x04,0x18,0xff,0xc4]
 ; MEM-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
-; MEM-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
-; MEM-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; MEM-NEXT:    callq *%rax # encoding: [0xff,0xd0]
 ; MEM-NEXT:  .LBB50_4: # %bb3
-; MEM-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; MEM-NEXT:    orl %r13d, %ebp, %esi # encoding: [0x62,0x74,0x4c,0x18,0x09,0xed]
 ; MEM-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
 ; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; MEM-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
@@ -1468,31 +1468,31 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; NF-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
 ; NF-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
 ; NF-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; NF-NEXT:    movl %ebp, %eax # encoding: [0x89,0xe8]
 ; NF-NEXT:    movl $1, %r12d # encoding: [0x41,0xbc,0x01,0x00,0x00,0x00]
-; NF-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NF-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
 ; NF-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
 ; NF-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
 ; NF-NEXT:  # %bb.1: # %bb2
 ; NF-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
 ; NF-NEXT:  .LBB50_2: # %bb1
-; NF-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
-; NF-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
-; NF-NEXT:    # encoding: [0x03,0x34,0x24]
+; NF-NEXT:    movq (%rsp), %rcx # 8-byte Reload
+; NF-NEXT:    # encoding: [0x48,0x8b,0x0c,0x24]
+; NF-NEXT:    leal (%r13,%rcx), %ebp # encoding: [0x41,0x8d,0x6c,0x0d,0x00]
 ; NF-NEXT:    {nf} imull %ebx, %ebx, %r13d # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x14,0x1c,0xaf,0xdb]
-; NF-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NF-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
 ; NF-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
 ; NF-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
 ; NF-NEXT:  # %bb.3: # %bb4
-; NF-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
-; NF-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
-; NF-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; NF-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    {nf} incl %r12d, %r15d # EVEX TO EVEX Compression encoding: [0x62,0xd4,0x04,0x1c,0xff,0xc4]
 ; NF-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
-; NF-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
-; NF-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; NF-NEXT:    callq *%rax # encoding: [0xff,0xd0]
 ; NF-NEXT:  .LBB50_4: # %bb3
-; NF-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; NF-NEXT:    {nf} orl %r13d, %ebp, %esi # EVEX TO EVEX Compression encoding: [0x62,0x74,0x4c,0x1c,0x09,0xed]
 ; NF-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
 ; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]

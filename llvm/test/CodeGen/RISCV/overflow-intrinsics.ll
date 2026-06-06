@@ -1058,73 +1058,51 @@ end:
 define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-LABEL: usubo_ult_cmp_dominates_i64:
 ; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    andi a6, a5, 1
+; RV32-NEXT:    beqz a6, .LBB32_6
+; RV32-NEXT:  # %bb.1: # %t
 ; RV32-NEXT:    addi sp, sp, -32
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
 ; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s6, 0(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    .cfi_offset s1, -12
-; RV32-NEXT:    .cfi_offset s2, -16
-; RV32-NEXT:    .cfi_offset s3, -20
-; RV32-NEXT:    .cfi_offset s4, -24
-; RV32-NEXT:    .cfi_offset s5, -28
-; RV32-NEXT:    .cfi_offset s6, -32
-; RV32-NEXT:    mv s1, a5
-; RV32-NEXT:    mv s4, a1
-; RV32-NEXT:    andi a1, a5, 1
-; RV32-NEXT:    beqz a1, .LBB32_6
-; RV32-NEXT:  # %bb.1: # %t
-; RV32-NEXT:    mv s0, a4
-; RV32-NEXT:    mv s3, a3
-; RV32-NEXT:    mv s2, a2
-; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    beq s4, a3, .LBB32_3
+; RV32-NEXT:    sw a5, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a2, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a4, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a3, 0(sp) # 4-byte Folded Spill
+; RV32-NEXT:    beq a1, a3, .LBB32_3
 ; RV32-NEXT:  # %bb.2: # %t
-; RV32-NEXT:    sltu s6, s4, s3
+; RV32-NEXT:    sltu a0, a1, a3
 ; RV32-NEXT:    j .LBB32_4
 ; RV32-NEXT:  .LBB32_3:
-; RV32-NEXT:    sltu s6, s5, s2
+; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:  .LBB32_4: # %t
-; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    call call
-; RV32-NEXT:    beqz s6, .LBB32_6
-; RV32-NEXT:  # %bb.5: # %end
-; RV32-NEXT:    sltu a0, s5, s2
-; RV32-NEXT:    sub a1, s4, s3
-; RV32-NEXT:    sub a2, s5, s2
-; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    sw a2, 0(s0)
-; RV32-NEXT:    sw a1, 4(s0)
-; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    j .LBB32_7
-; RV32-NEXT:  .LBB32_6: # %f
-; RV32-NEXT:    mv a0, s1
-; RV32-NEXT:  .LBB32_7: # %f
+; RV32-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a5, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a2, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a4, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a6, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a3, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    .cfi_restore s1
-; RV32-NEXT:    .cfi_restore s2
-; RV32-NEXT:    .cfi_restore s3
-; RV32-NEXT:    .cfi_restore s4
-; RV32-NEXT:    .cfi_restore s5
-; RV32-NEXT:    .cfi_restore s6
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    beqz a0, .LBB32_6
+; RV32-NEXT:  # %bb.5: # %end
+; RV32-NEXT:    sltu a5, a3, a2
+; RV32-NEXT:    sub a4, a6, a4
+; RV32-NEXT:    sub a3, a3, a2
+; RV32-NEXT:    sub a4, a4, a5
+; RV32-NEXT:    sw a3, 0(a1)
+; RV32-NEXT:    sw a4, 4(a1)
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB32_6: # %f
+; RV32-NEXT:    mv a0, a5
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: usubo_ult_cmp_dominates_i64:
@@ -1143,24 +1121,24 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV64-NEXT:    .cfi_offset s2, -32
 ; RV64-NEXT:    .cfi_offset s3, -40
 ; RV64-NEXT:    .cfi_offset s4, -48
-; RV64-NEXT:    mv s0, a3
-; RV64-NEXT:    mv s2, a1
-; RV64-NEXT:    andi a1, a3, 1
-; RV64-NEXT:    beqz a1, .LBB32_3
+; RV64-NEXT:    mv s1, a3
+; RV64-NEXT:    andi a4, a3, 1
+; RV64-NEXT:    beqz a4, .LBB32_3
 ; RV64-NEXT:  # %bb.1: # %t
-; RV64-NEXT:    mv s1, a2
-; RV64-NEXT:    mv s3, a0
-; RV64-NEXT:    sltu s4, a0, s2
+; RV64-NEXT:    sltu s4, a0, a1
+; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    mv a0, s4
+; RV64-NEXT:    mv s3, a2
+; RV64-NEXT:    mv s2, a1
 ; RV64-NEXT:    call call
-; RV64-NEXT:    bgeu s3, s2, .LBB32_3
+; RV64-NEXT:    bgeu s0, s2, .LBB32_3
 ; RV64-NEXT:  # %bb.2: # %end
-; RV64-NEXT:    sub a0, s3, s2
-; RV64-NEXT:    sd a0, 0(s1)
+; RV64-NEXT:    sub a1, s0, s2
+; RV64-NEXT:    sd a1, 0(s3)
 ; RV64-NEXT:    mv a0, s4
 ; RV64-NEXT:    j .LBB32_4
 ; RV64-NEXT:  .LBB32_3: # %f
-; RV64-NEXT:    mv a0, s0
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:  .LBB32_4: # %f
 ; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload

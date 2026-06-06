@@ -219,15 +219,15 @@ declare i32 @llvm.cttz.i32(i32, i1)
 define void @testCTZ2(i32 %v) nounwind {
 ; CHECK-LABEL: testCTZ2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    tzcntl %edi, %ebx
-; CHECK-NEXT:    jb .LBB12_2
+; CHECK-NEXT:    tzcntl %edi, %edi
+; CHECK-NEXT:    jb foo32 # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    movl %ebx, %edi
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:  .LBB12_2: # %return
-; CHECK-NEXT:    movl %ebx, %edi
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    jmp foo32 # TAILCALL
   %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
   %cmp = icmp eq i32 %v, 0
@@ -245,15 +245,15 @@ return:
 define void @testCTZ3(i32 %v) nounwind {
 ; CHECK-LABEL: testCTZ3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    tzcntl %edi, %ebx
-; CHECK-NEXT:    jae .LBB13_2
+; CHECK-NEXT:    tzcntl %edi, %edi
+; CHECK-NEXT:    jae foo32 # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    movl %ebx, %edi
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:  .LBB13_2: # %return
-; CHECK-NEXT:    movl %ebx, %edi
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    jmp foo32 # TAILCALL
   %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
   %cmp = icmp ne i32 %v, 0

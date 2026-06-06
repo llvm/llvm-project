@@ -650,89 +650,88 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    v_writelane_b32 v40, s16, 20
+; GCN-NEXT:    v_writelane_b32 v40, s16, 6
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s34, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s35, 1
 ; GCN-NEXT:    v_writelane_b32 v40, s36, 2
 ; GCN-NEXT:    v_writelane_b32 v40, s37, 3
-; GCN-NEXT:    v_writelane_b32 v40, s38, 4
-; GCN-NEXT:    v_writelane_b32 v40, s39, 5
-; GCN-NEXT:    v_writelane_b32 v40, s48, 6
-; GCN-NEXT:    v_writelane_b32 v40, s49, 7
-; GCN-NEXT:    v_writelane_b32 v40, s50, 8
-; GCN-NEXT:    v_writelane_b32 v40, s51, 9
-; GCN-NEXT:    v_writelane_b32 v40, s52, 10
-; GCN-NEXT:    v_writelane_b32 v40, s53, 11
-; GCN-NEXT:    v_writelane_b32 v40, s54, 12
-; GCN-NEXT:    v_writelane_b32 v40, s55, 13
-; GCN-NEXT:    v_writelane_b32 v40, s64, 14
-; GCN-NEXT:    v_writelane_b32 v40, s65, 15
-; GCN-NEXT:    v_writelane_b32 v40, s66, 16
-; GCN-NEXT:    v_writelane_b32 v40, s67, 17
-; GCN-NEXT:    v_writelane_b32 v40, s30, 18
-; GCN-NEXT:    v_writelane_b32 v40, s31, 19
-; GCN-NEXT:    s_mov_b32 s50, s15
-; GCN-NEXT:    s_mov_b32 s51, s14
-; GCN-NEXT:    s_mov_b32 s52, s13
-; GCN-NEXT:    s_mov_b32 s53, s12
-; GCN-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
-; GCN-NEXT:    s_mov_b64 s[48:49], s[4:5]
+; GCN-NEXT:    v_writelane_b32 v40, s30, 4
+; GCN-NEXT:    v_writelane_b32 v40, s31, 5
 ; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
-; GCN-NEXT:    s_and_saveexec_b64 s[54:55], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[16:17], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB5_4
 ; GCN-NEXT:  ; %bb.1: ; %bb1
-; GCN-NEXT:    s_mov_b64 s[64:65], exec
+; GCN-NEXT:    ; implicit-def: $vgpr41 : SGPR spill to VGPR lane
+; GCN-NEXT:    v_writelane_b32 v41, s16, 0
+; GCN-NEXT:    v_writelane_b32 v41, s17, 1
+; GCN-NEXT:    s_mov_b64 s[34:35], exec
+; GCN-NEXT:    v_writelane_b32 v41, s4, 2
+; GCN-NEXT:    v_writelane_b32 v41, s5, 3
+; GCN-NEXT:    v_writelane_b32 v41, s6, 4
+; GCN-NEXT:    v_writelane_b32 v41, s7, 5
+; GCN-NEXT:    v_writelane_b32 v41, s8, 6
+; GCN-NEXT:    v_writelane_b32 v41, s9, 7
+; GCN-NEXT:    v_writelane_b32 v41, s10, 8
+; GCN-NEXT:    v_writelane_b32 v41, s11, 9
+; GCN-NEXT:    v_writelane_b32 v41, s12, 10
+; GCN-NEXT:    v_writelane_b32 v41, s13, 11
+; GCN-NEXT:    v_writelane_b32 v41, s14, 12
+; GCN-NEXT:    v_writelane_b32 v41, s15, 13
 ; GCN-NEXT:  .LBB5_2: ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    v_readfirstlane_b32 s16, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s17, v1
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
-; GCN-NEXT:    s_and_saveexec_b64 s[66:67], vcc
-; GCN-NEXT:    s_mov_b64 s[4:5], s[48:49]
-; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; GCN-NEXT:    s_mov_b32 s12, s53
-; GCN-NEXT:    s_mov_b32 s13, s52
-; GCN-NEXT:    s_mov_b32 s14, s51
-; GCN-NEXT:    s_mov_b32 s15, s50
+; GCN-NEXT:    s_and_saveexec_b64 s[36:37], vcc
+; GCN-NEXT:    v_readlane_b32 s4, v41, 2
+; GCN-NEXT:    v_readlane_b32 s5, v41, 3
+; GCN-NEXT:    v_readlane_b32 s6, v41, 4
+; GCN-NEXT:    v_readlane_b32 s7, v41, 5
+; GCN-NEXT:    v_readlane_b32 s8, v41, 6
+; GCN-NEXT:    v_readlane_b32 s9, v41, 7
+; GCN-NEXT:    v_readlane_b32 s10, v41, 8
+; GCN-NEXT:    v_readlane_b32 s11, v41, 9
+; GCN-NEXT:    v_readlane_b32 s12, v41, 10
+; GCN-NEXT:    v_readlane_b32 s13, v41, 11
+; GCN-NEXT:    v_readlane_b32 s14, v41, 12
+; GCN-NEXT:    v_readlane_b32 s15, v41, 13
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GCN-NEXT:    v_readlane_b32 s12, v41, 10
+; GCN-NEXT:    v_readlane_b32 s13, v41, 11
+; GCN-NEXT:    v_readlane_b32 s14, v41, 12
+; GCN-NEXT:    v_readlane_b32 s15, v41, 13
+; GCN-NEXT:    v_readlane_b32 s4, v41, 2
+; GCN-NEXT:    v_readlane_b32 s5, v41, 3
+; GCN-NEXT:    v_readlane_b32 s6, v41, 4
+; GCN-NEXT:    v_readlane_b32 s7, v41, 5
+; GCN-NEXT:    v_readlane_b32 s8, v41, 6
+; GCN-NEXT:    v_readlane_b32 s9, v41, 7
+; GCN-NEXT:    v_readlane_b32 s10, v41, 8
+; GCN-NEXT:    v_readlane_b32 s11, v41, 9
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN-NEXT:    ; implicit-def: $vgpr31
-; GCN-NEXT:    s_xor_b64 exec, exec, s[66:67]
+; GCN-NEXT:    s_xor_b64 exec, exec, s[36:37]
 ; GCN-NEXT:    s_cbranch_execnz .LBB5_2
 ; GCN-NEXT:  ; %bb.3:
-; GCN-NEXT:    s_mov_b64 exec, s[64:65]
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    v_readlane_b32 s16, v41, 0
+; GCN-NEXT:    v_readlane_b32 s17, v41, 1
 ; GCN-NEXT:  .LBB5_4: ; %bb2
-; GCN-NEXT:    s_or_b64 exec, exec, s[54:55]
-; GCN-NEXT:    v_readlane_b32 s30, v40, 18
-; GCN-NEXT:    v_readlane_b32 s31, v40, 19
-; GCN-NEXT:    v_readlane_b32 s67, v40, 17
-; GCN-NEXT:    v_readlane_b32 s66, v40, 16
-; GCN-NEXT:    v_readlane_b32 s65, v40, 15
-; GCN-NEXT:    v_readlane_b32 s64, v40, 14
-; GCN-NEXT:    v_readlane_b32 s55, v40, 13
-; GCN-NEXT:    v_readlane_b32 s54, v40, 12
-; GCN-NEXT:    v_readlane_b32 s53, v40, 11
-; GCN-NEXT:    v_readlane_b32 s52, v40, 10
-; GCN-NEXT:    v_readlane_b32 s51, v40, 9
-; GCN-NEXT:    v_readlane_b32 s50, v40, 8
-; GCN-NEXT:    v_readlane_b32 s49, v40, 7
-; GCN-NEXT:    v_readlane_b32 s48, v40, 6
-; GCN-NEXT:    v_readlane_b32 s39, v40, 5
-; GCN-NEXT:    v_readlane_b32 s38, v40, 4
+; GCN-NEXT:    s_or_b64 exec, exec, s[16:17]
+; GCN-NEXT:    v_readlane_b32 s30, v40, 4
+; GCN-NEXT:    v_readlane_b32 s31, v40, 5
 ; GCN-NEXT:    v_readlane_b32 s37, v40, 3
 ; GCN-NEXT:    v_readlane_b32 s36, v40, 2
 ; GCN-NEXT:    v_readlane_b32 s35, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s34, v40, 0
 ; GCN-NEXT:    s_mov_b32 s32, s33
-; GCN-NEXT:    v_readlane_b32 s4, v40, 20
+; GCN-NEXT:    v_readlane_b32 s4, v40, 6
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -745,89 +744,88 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) #0 {
 ; GISEL-NEXT:    s_mov_b32 s33, s32
 ; GISEL-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; GISEL-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_mov_b64 exec, s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v40, s16, 20
+; GISEL-NEXT:    v_writelane_b32 v40, s16, 6
 ; GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GISEL-NEXT:    v_writelane_b32 v40, s34, 0
 ; GISEL-NEXT:    v_writelane_b32 v40, s35, 1
 ; GISEL-NEXT:    v_writelane_b32 v40, s36, 2
 ; GISEL-NEXT:    v_writelane_b32 v40, s37, 3
-; GISEL-NEXT:    v_writelane_b32 v40, s38, 4
-; GISEL-NEXT:    v_writelane_b32 v40, s39, 5
-; GISEL-NEXT:    v_writelane_b32 v40, s48, 6
-; GISEL-NEXT:    v_writelane_b32 v40, s49, 7
-; GISEL-NEXT:    v_writelane_b32 v40, s50, 8
-; GISEL-NEXT:    v_writelane_b32 v40, s51, 9
-; GISEL-NEXT:    v_writelane_b32 v40, s52, 10
-; GISEL-NEXT:    v_writelane_b32 v40, s53, 11
-; GISEL-NEXT:    v_writelane_b32 v40, s54, 12
-; GISEL-NEXT:    v_writelane_b32 v40, s55, 13
-; GISEL-NEXT:    v_writelane_b32 v40, s64, 14
-; GISEL-NEXT:    v_writelane_b32 v40, s65, 15
-; GISEL-NEXT:    v_writelane_b32 v40, s66, 16
-; GISEL-NEXT:    v_writelane_b32 v40, s67, 17
-; GISEL-NEXT:    v_writelane_b32 v40, s30, 18
-; GISEL-NEXT:    v_writelane_b32 v40, s31, 19
-; GISEL-NEXT:    s_mov_b32 s50, s15
-; GISEL-NEXT:    s_mov_b32 s51, s14
-; GISEL-NEXT:    s_mov_b32 s52, s13
-; GISEL-NEXT:    s_mov_b32 s53, s12
-; GISEL-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; GISEL-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; GISEL-NEXT:    s_mov_b64 s[38:39], s[6:7]
-; GISEL-NEXT:    s_mov_b64 s[48:49], s[4:5]
+; GISEL-NEXT:    v_writelane_b32 v40, s30, 4
+; GISEL-NEXT:    v_writelane_b32 v40, s31, 5
 ; GISEL-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
-; GISEL-NEXT:    s_and_saveexec_b64 s[54:55], vcc
+; GISEL-NEXT:    s_and_saveexec_b64 s[16:17], vcc
 ; GISEL-NEXT:    s_cbranch_execz .LBB5_4
 ; GISEL-NEXT:  ; %bb.1: ; %bb1
-; GISEL-NEXT:    s_mov_b64 s[64:65], exec
+; GISEL-NEXT:    ; implicit-def: $vgpr41 : SGPR spill to VGPR lane
+; GISEL-NEXT:    v_writelane_b32 v41, s16, 0
+; GISEL-NEXT:    v_writelane_b32 v41, s17, 1
+; GISEL-NEXT:    s_mov_b64 s[34:35], exec
+; GISEL-NEXT:    v_writelane_b32 v41, s4, 2
+; GISEL-NEXT:    v_writelane_b32 v41, s5, 3
+; GISEL-NEXT:    v_writelane_b32 v41, s6, 4
+; GISEL-NEXT:    v_writelane_b32 v41, s7, 5
+; GISEL-NEXT:    v_writelane_b32 v41, s8, 6
+; GISEL-NEXT:    v_writelane_b32 v41, s9, 7
+; GISEL-NEXT:    v_writelane_b32 v41, s10, 8
+; GISEL-NEXT:    v_writelane_b32 v41, s11, 9
+; GISEL-NEXT:    v_writelane_b32 v41, s12, 10
+; GISEL-NEXT:    v_writelane_b32 v41, s13, 11
+; GISEL-NEXT:    v_writelane_b32 v41, s14, 12
+; GISEL-NEXT:    v_writelane_b32 v41, s15, 13
 ; GISEL-NEXT:  .LBB5_2: ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_readfirstlane_b32 s16, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s17, v1
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
-; GISEL-NEXT:    s_and_saveexec_b64 s[66:67], vcc
-; GISEL-NEXT:    s_mov_b64 s[4:5], s[48:49]
-; GISEL-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; GISEL-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; GISEL-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; GISEL-NEXT:    s_mov_b32 s12, s53
-; GISEL-NEXT:    s_mov_b32 s13, s52
-; GISEL-NEXT:    s_mov_b32 s14, s51
-; GISEL-NEXT:    s_mov_b32 s15, s50
+; GISEL-NEXT:    s_and_saveexec_b64 s[36:37], vcc
+; GISEL-NEXT:    v_readlane_b32 s4, v41, 2
+; GISEL-NEXT:    v_readlane_b32 s5, v41, 3
+; GISEL-NEXT:    v_readlane_b32 s6, v41, 4
+; GISEL-NEXT:    v_readlane_b32 s7, v41, 5
+; GISEL-NEXT:    v_readlane_b32 s8, v41, 6
+; GISEL-NEXT:    v_readlane_b32 s9, v41, 7
+; GISEL-NEXT:    v_readlane_b32 s10, v41, 8
+; GISEL-NEXT:    v_readlane_b32 s11, v41, 9
+; GISEL-NEXT:    v_readlane_b32 s12, v41, 10
+; GISEL-NEXT:    v_readlane_b32 s13, v41, 11
+; GISEL-NEXT:    v_readlane_b32 s14, v41, 12
+; GISEL-NEXT:    v_readlane_b32 s15, v41, 13
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-NEXT:    v_readlane_b32 s12, v41, 10
+; GISEL-NEXT:    v_readlane_b32 s13, v41, 11
+; GISEL-NEXT:    v_readlane_b32 s14, v41, 12
+; GISEL-NEXT:    v_readlane_b32 s15, v41, 13
+; GISEL-NEXT:    v_readlane_b32 s4, v41, 2
+; GISEL-NEXT:    v_readlane_b32 s5, v41, 3
+; GISEL-NEXT:    v_readlane_b32 s6, v41, 4
+; GISEL-NEXT:    v_readlane_b32 s7, v41, 5
+; GISEL-NEXT:    v_readlane_b32 s8, v41, 6
+; GISEL-NEXT:    v_readlane_b32 s9, v41, 7
+; GISEL-NEXT:    v_readlane_b32 s10, v41, 8
+; GISEL-NEXT:    v_readlane_b32 s11, v41, 9
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GISEL-NEXT:    ; implicit-def: $vgpr31
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[66:67]
+; GISEL-NEXT:    s_xor_b64 exec, exec, s[36:37]
 ; GISEL-NEXT:    s_cbranch_execnz .LBB5_2
 ; GISEL-NEXT:  ; %bb.3:
-; GISEL-NEXT:    s_mov_b64 exec, s[64:65]
+; GISEL-NEXT:    v_readlane_b32 s16, v41, 0
+; GISEL-NEXT:    v_readlane_b32 s17, v41, 1
+; GISEL-NEXT:    s_mov_b64 exec, s[34:35]
 ; GISEL-NEXT:  .LBB5_4: ; %bb2
-; GISEL-NEXT:    s_or_b64 exec, exec, s[54:55]
-; GISEL-NEXT:    v_readlane_b32 s30, v40, 18
-; GISEL-NEXT:    v_readlane_b32 s31, v40, 19
-; GISEL-NEXT:    v_readlane_b32 s67, v40, 17
-; GISEL-NEXT:    v_readlane_b32 s66, v40, 16
-; GISEL-NEXT:    v_readlane_b32 s65, v40, 15
-; GISEL-NEXT:    v_readlane_b32 s64, v40, 14
-; GISEL-NEXT:    v_readlane_b32 s55, v40, 13
-; GISEL-NEXT:    v_readlane_b32 s54, v40, 12
-; GISEL-NEXT:    v_readlane_b32 s53, v40, 11
-; GISEL-NEXT:    v_readlane_b32 s52, v40, 10
-; GISEL-NEXT:    v_readlane_b32 s51, v40, 9
-; GISEL-NEXT:    v_readlane_b32 s50, v40, 8
-; GISEL-NEXT:    v_readlane_b32 s49, v40, 7
-; GISEL-NEXT:    v_readlane_b32 s48, v40, 6
-; GISEL-NEXT:    v_readlane_b32 s39, v40, 5
-; GISEL-NEXT:    v_readlane_b32 s38, v40, 4
+; GISEL-NEXT:    s_or_b64 exec, exec, s[16:17]
+; GISEL-NEXT:    v_readlane_b32 s30, v40, 4
+; GISEL-NEXT:    v_readlane_b32 s31, v40, 5
 ; GISEL-NEXT:    v_readlane_b32 s37, v40, 3
 ; GISEL-NEXT:    v_readlane_b32 s36, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s35, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s34, v40, 0
 ; GISEL-NEXT:    s_mov_b32 s32, s33
-; GISEL-NEXT:    v_readlane_b32 s4, v40, 20
+; GISEL-NEXT:    v_readlane_b32 s4, v40, 6
 ; GISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; GISEL-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[6:7]
 ; GISEL-NEXT:    s_mov_b32 s33, s4
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -980,61 +978,60 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) #0 {
 ; GCN-NEXT:    s_mov_b32 s10, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
-; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-NEXT:    v_writelane_b32 v41, s34, 0
-; GCN-NEXT:    v_writelane_b32 v41, s35, 1
-; GCN-NEXT:    v_writelane_b32 v41, s36, 2
-; GCN-NEXT:    v_writelane_b32 v41, s37, 3
-; GCN-NEXT:    v_writelane_b32 v41, s38, 4
-; GCN-NEXT:    v_writelane_b32 v41, s39, 5
-; GCN-NEXT:    v_writelane_b32 v41, s48, 6
-; GCN-NEXT:    v_writelane_b32 v41, s49, 7
-; GCN-NEXT:    v_writelane_b32 v41, s50, 8
-; GCN-NEXT:    v_writelane_b32 v41, s51, 9
-; GCN-NEXT:    v_writelane_b32 v41, s52, 10
-; GCN-NEXT:    v_writelane_b32 v41, s53, 11
-; GCN-NEXT:    v_writelane_b32 v41, s54, 12
-; GCN-NEXT:    v_writelane_b32 v41, s55, 13
-; GCN-NEXT:    v_writelane_b32 v41, s30, 14
-; GCN-NEXT:    v_writelane_b32 v41, s31, 15
-; GCN-NEXT:    v_mov_b32_e32 v40, v0
+; GCN-NEXT:    v_writelane_b32 v40, s34, 0
+; GCN-NEXT:    v_writelane_b32 v40, s35, 1
+; GCN-NEXT:    v_writelane_b32 v40, s36, 2
+; GCN-NEXT:    v_writelane_b32 v40, s37, 3
+; GCN-NEXT:    v_writelane_b32 v40, s38, 4
+; GCN-NEXT:    v_writelane_b32 v40, s39, 5
+; GCN-NEXT:    v_writelane_b32 v40, s48, 6
+; GCN-NEXT:    v_writelane_b32 v40, s49, 7
+; GCN-NEXT:    v_writelane_b32 v40, s50, 8
+; GCN-NEXT:    v_writelane_b32 v40, s51, 9
+; GCN-NEXT:    v_writelane_b32 v40, s52, 10
+; GCN-NEXT:    v_writelane_b32 v40, s53, 11
+; GCN-NEXT:    v_writelane_b32 v40, s54, 12
+; GCN-NEXT:    v_writelane_b32 v40, s55, 13
+; GCN-NEXT:    v_writelane_b32 v40, s30, 14
+; GCN-NEXT:    v_writelane_b32 v40, s31, 15
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    v_readfirstlane_b32 s6, v1
 ; GCN-NEXT:    v_readfirstlane_b32 s7, v2
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[1:2]
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GCN-NEXT:    v_mov_b32_e32 v0, v40
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_execnz .LBB7_1
 ; GCN-NEXT:  ; %bb.2:
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    v_mov_b32_e32 v0, v40
-; GCN-NEXT:    v_readlane_b32 s30, v41, 14
-; GCN-NEXT:    v_readlane_b32 s31, v41, 15
-; GCN-NEXT:    v_readlane_b32 s55, v41, 13
-; GCN-NEXT:    v_readlane_b32 s54, v41, 12
-; GCN-NEXT:    v_readlane_b32 s53, v41, 11
-; GCN-NEXT:    v_readlane_b32 s52, v41, 10
-; GCN-NEXT:    v_readlane_b32 s51, v41, 9
-; GCN-NEXT:    v_readlane_b32 s50, v41, 8
-; GCN-NEXT:    v_readlane_b32 s49, v41, 7
-; GCN-NEXT:    v_readlane_b32 s48, v41, 6
-; GCN-NEXT:    v_readlane_b32 s39, v41, 5
-; GCN-NEXT:    v_readlane_b32 s38, v41, 4
-; GCN-NEXT:    v_readlane_b32 s37, v41, 3
-; GCN-NEXT:    v_readlane_b32 s36, v41, 2
-; GCN-NEXT:    v_readlane_b32 s35, v41, 1
-; GCN-NEXT:    v_readlane_b32 s34, v41, 0
-; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN-NEXT:    v_readlane_b32 s30, v40, 14
+; GCN-NEXT:    v_readlane_b32 s31, v40, 15
+; GCN-NEXT:    v_readlane_b32 s55, v40, 13
+; GCN-NEXT:    v_readlane_b32 s54, v40, 12
+; GCN-NEXT:    v_readlane_b32 s53, v40, 11
+; GCN-NEXT:    v_readlane_b32 s52, v40, 10
+; GCN-NEXT:    v_readlane_b32 s51, v40, 9
+; GCN-NEXT:    v_readlane_b32 s50, v40, 8
+; GCN-NEXT:    v_readlane_b32 s49, v40, 7
+; GCN-NEXT:    v_readlane_b32 s48, v40, 6
+; GCN-NEXT:    v_readlane_b32 s39, v40, 5
+; GCN-NEXT:    v_readlane_b32 s38, v40, 4
+; GCN-NEXT:    v_readlane_b32 s37, v40, 3
+; GCN-NEXT:    v_readlane_b32 s36, v40, 2
+; GCN-NEXT:    v_readlane_b32 s35, v40, 1
+; GCN-NEXT:    v_readlane_b32 s34, v40, 0
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_mov_b32 s33, s10
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

@@ -15,48 +15,27 @@ define ptr @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) {
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    jmp qux@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB0_1: # %if.then
-; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    pushq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    pushq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset %rbx, -48
-; CHECK-NEXT:    .cfi_offset %r12, -40
-; CHECK-NEXT:    .cfi_offset %r13, -32
-; CHECK-NEXT:    .cfi_offset %r14, -24
-; CHECK-NEXT:    .cfi_offset %r15, -16
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    movq %rdx, %r14
-; CHECK-NEXT:    movq %rcx, %r15
-; CHECK-NEXT:    movq %r8, %r12
-; CHECK-NEXT:    movq %r9, %r13
+; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; CHECK-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; CHECK-NEXT:    movq %r9, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movq (%rsp), %r9 # 8-byte Reload
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:    movq %rbx, %rsi
-; CHECK-NEXT:    movq %r14, %rdx
-; CHECK-NEXT:    movq %r15, %rcx
-; CHECK-NEXT:    movq %r12, %r8
-; CHECK-NEXT:    movq %r13, %r9
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; CHECK-NEXT:    movq (%rsp), %r9 # 8-byte Reload
 ; CHECK-NEXT:    movq %rax, %rdi
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    popq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_restore %rbx
-; CHECK-NEXT:    .cfi_restore %r12
-; CHECK-NEXT:    .cfi_restore %r13
-; CHECK-NEXT:    .cfi_restore %r14
-; CHECK-NEXT:    .cfi_restore %r15
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    jmp qux@PLT # TAILCALL
 entry:

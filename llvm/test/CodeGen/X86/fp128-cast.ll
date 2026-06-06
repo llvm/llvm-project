@@ -1284,18 +1284,18 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $36, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    cmpl $50001, {{[0-9]+}}(%esp) # imm = 0xC351
 ; X86-NEXT:    jl .LBB26_4
 ; X86-NEXT:  # %bb.1: # %if.then
-; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %ecx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __trunctfdf2
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
@@ -1314,16 +1314,16 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __extenddftf2
 ; X86-NEXT:    addl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl (%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:  .LBB26_4: # %cleanup
-; X86-NEXT:    movl %edx, (%esi)
-; X86-NEXT:    movl %edi, 4(%esi)
-; X86-NEXT:    movl %ecx, 8(%esi)
-; X86-NEXT:    movl %eax, 12(%esi)
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    addl $36, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

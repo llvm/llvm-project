@@ -109,21 +109,22 @@ define void @foo_streaming_compatible_pass_arg(ptr %arg) #1 {
 ; CHECK-NEXT:    .cfi_offset b15, -1136
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mrs x19, SVCR
+; CHECK-NEXT:    mrs x8, SVCR
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    addsvl x8, x8, #-1
-; CHECK-NEXT:    cbz x8, .LBB1_2
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    addsvl x9, x9, #-1
+; CHECK-NEXT:    cbz x9, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB1_2: // %entry
-; CHECK-NEXT:    sub x8, x29, #1088
-; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    tbnz w19, #0, .LBB1_4
+; CHECK-NEXT:    sub x9, x29, #1088
+; CHECK-NEXT:    str z0, [x9, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    tbnz w8, #0, .LBB1_4
 ; CHECK-NEXT:  // %bb.3: // %entry
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB1_4: // %entry
-; CHECK-NEXT:    ldr z0, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z0, [x9, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    mov x19, x8
 ; CHECK-NEXT:    bl bar_enabled
 ; CHECK-NEXT:    tbnz w19, #0, .LBB1_6
 ; CHECK-NEXT:  // %bb.5: // %entry
@@ -273,8 +274,8 @@ define void @foo_non_streaming_retval(ptr %ptr) {
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB3_2: // %entry
-; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    bl bar_retv_enabled
 ; CHECK-NEXT:    sub x8, x29, #64
 ; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
@@ -345,18 +346,19 @@ define void @foo_streaming_compatible_retval(ptr %ptr) #1 {
 ; CHECK-NEXT:    .cfi_offset b15, -1136
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mrs x20, SVCR
-; CHECK-NEXT:    addsvl x8, x8, #-1
-; CHECK-NEXT:    cbz x8, .LBB4_2
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    mrs x8, SVCR
+; CHECK-NEXT:    addsvl x9, x9, #-1
+; CHECK-NEXT:    cbz x9, .LBB4_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB4_2: // %entry
-; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    tbnz w20, #0, .LBB4_4
+; CHECK-NEXT:    tbnz w8, #0, .LBB4_4
 ; CHECK-NEXT:  // %bb.3: // %entry
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB4_4: // %entry
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mov x20, x8
 ; CHECK-NEXT:    bl bar_retv_enabled
 ; CHECK-NEXT:    sub x8, x29, #1088
 ; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill

@@ -1167,14 +1167,16 @@ define  i64 @masked_blcic(i64) {
 define i32 @blcic32_branch(i32 %x) nounwind {
 ; CHECK-LABEL: blcic32_branch:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    blcicl %edi, %ebx
-; CHECK-NEXT:    jne .LBB89_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    blcicl %edi, %eax
+; CHECK-NEXT:    je .LBB89_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB89_1:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB89_2:
-; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    retq
   %tmp = xor i32 %x, -1
   %tmp2 = add i32 %x, 1
@@ -1190,14 +1192,16 @@ define i32 @blcic32_branch(i32 %x) nounwind {
 define i64 @blcic64_branch(i64 %x) nounwind {
 ; CHECK-LABEL: blcic64_branch:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    blcicq %rdi, %rbx
-; CHECK-NEXT:    jne .LBB90_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    blcicq %rdi, %rax
+; CHECK-NEXT:    je .LBB90_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB90_1:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movq %rax, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB90_2:
-; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movq (%rsp), %rax # 8-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    retq
   %tmp = xor i64 %x, -1
   %tmp2 = add i64 %x, 1
@@ -1213,14 +1217,16 @@ define i64 @blcic64_branch(i64 %x) nounwind {
 define i32 @tzmsk32_branch(i32 %x) nounwind {
 ; CHECK-LABEL: tzmsk32_branch:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    tzmskl %edi, %ebx
-; CHECK-NEXT:    jne .LBB91_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    tzmskl %edi, %eax
+; CHECK-NEXT:    je .LBB91_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB91_1:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB91_2:
-; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    retq
   %tmp = xor i32 %x, -1
   %tmp2 = add i32 %x, -1
@@ -1236,14 +1242,16 @@ define i32 @tzmsk32_branch(i32 %x) nounwind {
 define i64 @tzmsk64_branch(i64 %x) nounwind {
 ; CHECK-LABEL: tzmsk64_branch:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    tzmskq %rdi, %rbx
-; CHECK-NEXT:    jne .LBB92_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    tzmskq %rdi, %rax
+; CHECK-NEXT:    je .LBB92_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB92_1:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movq %rax, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB92_2:
-; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movq (%rsp), %rax # 8-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    retq
   %tmp = xor i64 %x, -1
   %tmp2 = add i64 %x, -1
@@ -1259,14 +1267,16 @@ define i64 @tzmsk64_branch(i64 %x) nounwind {
 define i32 @blcfill32_branch(i32 %x) nounwind {
 ; CHECK-LABEL: blcfill32_branch:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    blcfilll %edi, %ebx
-; CHECK-NEXT:    jne .LBB93_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    blcfilll %edi, %eax
+; CHECK-NEXT:    je .LBB93_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB93_1:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB93_2:
-; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    retq
   %tmp2 = add i32 %x, 1
   %tmp3 = and i32 %tmp2, %x
@@ -1281,14 +1291,16 @@ define i32 @blcfill32_branch(i32 %x) nounwind {
 define i64 @blcfill64_branch(i64 %x) nounwind {
 ; CHECK-LABEL: blcfill64_branch:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    blcfillq %rdi, %rbx
-; CHECK-NEXT:    jne .LBB94_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    blcfillq %rdi, %rax
+; CHECK-NEXT:    je .LBB94_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB94_1:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movq %rax, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB94_2:
-; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movq (%rsp), %rax # 8-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    retq
   %tmp2 = add i64 %x, 1
   %tmp3 = and i64 %tmp2, %x

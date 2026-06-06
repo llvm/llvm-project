@@ -48,17 +48,18 @@ define i16 @main_bb_2E_i9_2E_i_2E_i932_2E_ce(ptr %l_addr.01.0.i2.i.i929, ptr %tm
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ecx, (%esp)
 ; CHECK-NEXT:    calll _fprintf
-; CHECK-NEXT:    movl 20(%edi), %eax
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl 20(%edi), %ecx
+; CHECK-NEXT:    testl %ecx, %ecx
 ; CHECK-NEXT:    jle LBB0_6
 ; CHECK-NEXT:  ## %bb.1: ## %NodeBlock4
-; CHECK-NEXT:    cmpl $2, %eax
+; CHECK-NEXT:    cmpl $2, %ecx
 ; CHECK-NEXT:    jge LBB0_2
 ; CHECK-NEXT:  ## %bb.4: ## %LeafBlock2
-; CHECK-NEXT:    cmpl $1, %eax
+; CHECK-NEXT:    cmpl $1, %ecx
 ; CHECK-NEXT:    jne LBB0_3
 ; CHECK-NEXT:  ## %bb.5: ## %bb20.i.i937.exitStub
-; CHECK-NEXT:    movl %edi, (%esi)
+; CHECK-NEXT:    movl %eax, (%esi)
 ; CHECK-NEXT:    movw $3, %ax
 ; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    popl %esi
@@ -69,7 +70,7 @@ define i16 @main_bb_2E_i9_2E_i_2E_i932_2E_ce(ptr %l_addr.01.0.i2.i.i929, ptr %tm
 ; CHECK-NEXT:  ## %bb.7: ## %LeafBlock1
 ; CHECK-NEXT:    jne LBB0_3
 ; CHECK-NEXT:  ## %bb.8: ## %bb12.i.i935.exitStub
-; CHECK-NEXT:    movl %edi, (%esi)
+; CHECK-NEXT:    movl %eax, (%esi)
 ; CHECK-NEXT:    movw $2, %ax
 ; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    popl %esi
@@ -78,24 +79,24 @@ define i16 @main_bb_2E_i9_2E_i_2E_i932_2E_ce(ptr %l_addr.01.0.i2.i.i929, ptr %tm
 ; CHECK-NEXT:  LBB0_2: ## %LeafBlock3
 ; CHECK-NEXT:    jne LBB0_3
 ; CHECK-NEXT:  ## %bb.11: ## %bb28.i.i938.exitStub
-; CHECK-NEXT:    movl %edi, (%esi)
+; CHECK-NEXT:    movl %eax, (%esi)
 ; CHECK-NEXT:    movw $4, %ax
 ; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB0_9: ## %LeafBlock
-; CHECK-NEXT:    cmpl $-1, %eax
+; CHECK-NEXT:    cmpl $-1, %ecx
 ; CHECK-NEXT:    je LBB0_10
 ; CHECK-NEXT:  LBB0_3: ## %NewDefault
-; CHECK-NEXT:    movl %edi, (%esi)
+; CHECK-NEXT:    movl %eax, (%esi)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB0_10: ## %bb.i14.i.exitStub
-; CHECK-NEXT:    movl %edi, (%esi)
+; CHECK-NEXT:    movl %eax, (%esi)
 ; CHECK-NEXT:    movw $1, %ax
 ; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    popl %esi

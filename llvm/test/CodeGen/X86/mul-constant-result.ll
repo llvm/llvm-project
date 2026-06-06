@@ -9,22 +9,22 @@
 define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-LABEL: mult:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmpl $2, %edx
 ; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    movl $1, %esi
+; X86-NEXT:    movl $1, %ecx
 ; X86-NEXT:    jge .LBB0_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:  .LBB0_2:
+; X86-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    je .LBB0_4
 ; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NEXT:  .LBB0_4:
 ; X86-NEXT:    decl %ecx
 ; X86-NEXT:    cmpl $31, %ecx
@@ -33,7 +33,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    jmpl *.LJTI0_0(,%ecx,4)
 ; X86-NEXT:  .LBB0_6:
 ; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_7:
@@ -66,25 +66,25 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    jmp .LBB0_12
 ; X86-NEXT:  .LBB0_19:
 ; X86-NEXT:    shll $4, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_20:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    shll $2, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_21:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_22:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    shll $5, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_23:
@@ -92,7 +92,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:  .LBB0_33:
 ; X86-NEXT:    leal (%eax,%eax,8), %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_24:
@@ -100,7 +100,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    leal (%eax,%eax,4), %ecx
 ; X86-NEXT:  .LBB0_14:
 ; X86-NEXT:    leal (%eax,%ecx,4), %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_25:
@@ -125,7 +125,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    leal (%eax,%eax,4), %ecx
 ; X86-NEXT:  .LBB0_32:
 ; X86-NEXT:    leal (%eax,%ecx,2), %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_34:
@@ -136,7 +136,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:  .LBB0_35:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:  .LBB0_36:
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_37:
@@ -146,7 +146,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:  .LBB0_38:
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_39:
@@ -154,7 +154,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:  .LBB0_12:
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_40:
@@ -167,7 +167,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:  .LBB0_9:
 ; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_42:
@@ -176,7 +176,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    shll $5, %eax
 ; X86-NEXT:  .LBB0_28:
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_43:
@@ -184,7 +184,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    leal (%eax,%eax,8), %eax
 ; X86-NEXT:  .LBB0_18:
 ; X86-NEXT:    leal (%eax,%eax,2), %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;

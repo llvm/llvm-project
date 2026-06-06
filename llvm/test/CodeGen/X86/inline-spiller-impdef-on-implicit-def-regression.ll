@@ -17,56 +17,52 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
-; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_offset %rbx, -56
-; CHECK-NEXT:    .cfi_offset %r12, -48
-; CHECK-NEXT:    .cfi_offset %r13, -40
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_offset %rbx, -40
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
-; CHECK-NEXT:    movl %r9d, %ebx
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-NEXT:    movabsq $87960930222080, %r14 # imm = 0x500000000000
-; CHECK-NEXT:    movl 0, %r13d
-; CHECK-NEXT:    movl %esi, %r15d
-; CHECK-NEXT:    # implicit-def: $r12d
-; CHECK-NEXT:    testb $1, %bl
+; CHECK-NEXT:    movabsq $87960930222080, %rbx # imm = 0x500000000000
+; CHECK-NEXT:    movl 0, %eax
+; CHECK-NEXT:    movl %esi, %r14d
+; CHECK-NEXT:    # implicit-def: $r15d
+; CHECK-NEXT:    testb $1, %r9b
 ; CHECK-NEXT:    jne .LBB0_6
 ; CHECK-NEXT:  # %bb.1: # %if.else
-; CHECK-NEXT:    movl %ecx, %r12d
-; CHECK-NEXT:    andl $1, %r12d
-; CHECK-NEXT:    movzbl 544(%r12), %r9d
-; CHECK-NEXT:    andl $1, %r9d
-; CHECK-NEXT:    movl %r14d, %r10d
-; CHECK-NEXT:    andl $1, %r10d
+; CHECK-NEXT:    movl %ecx, %r15d
+; CHECK-NEXT:    andl $1, %r15d
+; CHECK-NEXT:    movzbl 544(%r15), %r11d
+; CHECK-NEXT:    andl $1, %r11d
+; CHECK-NEXT:    # kill: def $ebx killed $ebx killed $rbx def $rbx
+; CHECK-NEXT:    andl $1, %ebx
 ; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    movabsq $17592186044416, %rax # imm = 0x100000000000
-; CHECK-NEXT:    orq %r8, %rax
+; CHECK-NEXT:    movabsq $17592186044416, %r10 # imm = 0x100000000000
+; CHECK-NEXT:    orq %r8, %r10
 ; CHECK-NEXT:    movl %esi, %r8d
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %r8d
 ; CHECK-NEXT:    andl $2, %r8d
-; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    cmoveq %r10, %rax
-; CHECK-NEXT:    orl %r9d, %edx
-; CHECK-NEXT:    movq %r13, %rcx
-; CHECK-NEXT:    orq $1, %rcx
+; CHECK-NEXT:    movl %r9d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    testb $1, %r9b
+; CHECK-NEXT:    cmoveq %rbx, %r10
+; CHECK-NEXT:    orl %r11d, %edx
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    orq $1, %rax
 ; CHECK-NEXT:    orl %esi, %r8d
-; CHECK-NEXT:    movl $1, %r8d
+; CHECK-NEXT:    movl $1, %ecx
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %if.else
-; CHECK-NEXT:    movl (%rax), %r8d
+; CHECK-NEXT:    movl (%r10), %ecx
 ; CHECK-NEXT:  .LBB0_3: # %if.else
 ; CHECK-NEXT:    shlq $5, %rdx
-; CHECK-NEXT:    movq %r15, %rax
-; CHECK-NEXT:    shlq $7, %rax
-; CHECK-NEXT:    leaq (%rax,%rdx), %rsi
+; CHECK-NEXT:    movq %r14, %rsi
+; CHECK-NEXT:    shlq $7, %rsi
+; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    addq $1248, %rsi # imm = 0x4E0
-; CHECK-NEXT:    movq %rcx, 0
-; CHECK-NEXT:    movq %rdi, %r14
-; CHECK-NEXT:    movl %r8d, (%rdi)
+; CHECK-NEXT:    movq %rax, 0
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorl %edx, %edx
@@ -75,28 +71,27 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.5: # %bb19
-; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    movq %r14, %rdi
-; CHECK-NEXT:    movabsq $87960930222080, %r14 # imm = 0x500000000000
+; CHECK-NEXT:    testb $1, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Folded Reload
+; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    movabsq $87960930222080, %rbx # imm = 0x500000000000
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  .LBB0_6: # %if.end69
-; CHECK-NEXT:    movl %r13d, 0
+; CHECK-NEXT:    movl %eax, 0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    callq *%rax
-; CHECK-NEXT:    xorq %r14, %r15
-; CHECK-NEXT:    movslq %r12d, %rax
-; CHECK-NEXT:    movzbl (%r15), %ecx
+; CHECK-NEXT:    xorq %rbx, %r14
+; CHECK-NEXT:    movslq %r15d, %rax
+; CHECK-NEXT:    movzbl (%r14), %ecx
 ; CHECK-NEXT:    movb %cl, 544(%rax)
 ; CHECK-NEXT:  .LBB0_7: # %land.lhs.true56
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp

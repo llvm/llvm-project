@@ -1032,10 +1032,20 @@ public:
 
   /// Allow the target to override the cost of using a callee-saved register for
   /// the first time. Default value of 0 means we will use a callee-saved
-  /// register if it is available.
-  virtual unsigned getCSRFirstUseCost() const { return 0; }
-  /// FIXME: We should deprecate this usage.
-  virtual unsigned getCSRCost() const { return 0; }
+  /// register if it is available. The returned value is multiplied by the entry
+  /// block frequency to produce the final CSR cost used by the greedy register
+  /// allocator. For example, a cost of 2 represents the cost of a push/pop
+  /// pair (2 memory accesses at entry frequency).
+  virtual unsigned getCSRFirstUseCost(const MachineFunction &MF) const {
+    return 0;
+  }
+
+  /// Allow the target to override the scale applied to the CSR first-use cost.
+  /// The scale is a percentage (e.g., 80 means 80% of the base cost).
+  /// Default value of 100 means no scaling.
+  virtual unsigned getCSRCostScale(const MachineFunction &MF) const {
+    return 100;
+  }
 
   /// Returns true if the target requires (and can make use of) the register
   /// scavenger.
