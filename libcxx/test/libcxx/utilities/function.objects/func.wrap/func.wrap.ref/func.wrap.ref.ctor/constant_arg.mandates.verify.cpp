@@ -17,8 +17,9 @@
 
 // Mandates: If is_pointer_v<F> || is_member_pointer_v<F> is true, then f != nullptr is true.
 
-// For the first overload,
-// f ArgTypes is not an empty pack and all types in remove_cvref_t<ArgTypes>... satisfy constexpr-param then constant_wrapper<INVOKE (f.value, remove_cvref_t<ArgTypes>::value...)> is not a valid type.
+// For the first overload, f ArgTypes is not an empty pack and all types in remove_cvref_t<ArgTypes>...
+// satisfy constexpr-param then constant_wrapper<INVOKE (f.value, remove_cvref_t<ArgTypes>::value...)>
+// is not a valid type.
 
 #include <functional>
 #include <utility>
