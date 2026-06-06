@@ -55,8 +55,9 @@ static bool getWasmGlobalMutable(const GlobalValue *Global,
   const auto *GV = dyn_cast_or_null<GlobalVariable>(BaseObject);
   if (!GV) {
     CurrentFunc.getContext().diagnose(DiagnosticInfoUnsupported(
-        CurrentFunc, "wasm_var address space symbol must resolve to a "
-                     "GlobalVariable",
+        CurrentFunc,
+        "wasm_var address space symbol must resolve to a "
+        "GlobalVariable",
         DL));
     return false;
   }
@@ -80,8 +81,8 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       const TargetMachine &TM = MF.getTarget();
       const Function &CurrentFunc = MF.getFunction();
 
-      bool Mutable = getWasmGlobalMutable(Global, CurrentFunc,
-                                          MI.getDebugLoc());
+      bool Mutable =
+          getWasmGlobalMutable(Global, CurrentFunc, MI.getDebugLoc());
 
       Type *GlobalVT = Global->getValueType();
       SmallVector<MVT, 1> VTs;
