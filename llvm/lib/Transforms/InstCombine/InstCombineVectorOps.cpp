@@ -2290,8 +2290,9 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   // This makes the transformation incorrect since the original program would
   // have preserved the exact NaN bit-pattern.
   // Avoid the folding if X can have NaN elements.
-  if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
-      !isKnownNeverNaN(X, SQ))
+  bool IsFloatingPointTy =
+      Shuf.getType()->getElementType()->isFloatingPointTy();
+  if (IsFloatingPointTy && !isKnownNeverNaN(X, SQ))
     return nullptr;
 
   // Shuffle identity constants into the lanes that return the original value.
@@ -2310,8 +2311,14 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
 
   // shuf (bop X, C), X, M --> bop X, C'
   // shuf X, (bop X, C), M --> bop X, C'
-  Instruction *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
+  BinaryOperator *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
   NewBO->copyIRFlags(BO);
+
+  // Drop noinf FMF if X can be Inf. If X can have Inf elements and noinf FMF is
+  // set, the transformation may generate poison where the original program
+  // would preserve the Inf value.
+  if (IsFloatingPointTy && NewBO->hasNoInfs() && !isKnownNeverInfinity(X, SQ))
+    NewBO->setHasNoInfs(false);
 
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
