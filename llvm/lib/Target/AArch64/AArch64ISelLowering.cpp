@@ -25819,8 +25819,8 @@ static SDValue performPostLD1Combine(SDNode *N,
     // If the increment is a constant, it must match the memory ref size.
     SDValue Inc = User->getOperand(User->getOperand(0) == Addr ? 1 : 0);
     if (ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode())) {
-      uint32_t IncVal = CInc->getZExtValue();
-      unsigned NumBytes = VT.getScalarSizeInBits() / 8;
+      uint64_t IncVal = CInc->getZExtValue();
+      uint64_t NumBytes = VT.getScalarSizeInBits() / 8;
       if (IncVal != NumBytes)
         continue;
       Inc = DAG.getRegister(AArch64::XZR, MVT::i64);
@@ -26956,8 +26956,8 @@ static SDValue performNEONPostLDSTCombine(SDNode *N,
     // If the increment is a constant, it must match the memory ref size.
     SDValue Inc = User->getOperand(User->getOperand(0) == Addr ? 1 : 0);
     if (ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode())) {
-      uint32_t IncVal = CInc->getZExtValue();
-      unsigned NumBytes = NumVecs * VecTy.getSizeInBits() / 8;
+      uint64_t IncVal = CInc->getZExtValue();
+      uint64_t NumBytes = NumVecs * VecTy.getSizeInBits() / 8;
       if (IsLaneOp || IsDupOp)
         NumBytes /= VecTy.getVectorNumElements();
       if (IncVal != NumBytes)
