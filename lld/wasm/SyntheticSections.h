@@ -102,7 +102,7 @@ protected:
  */
 template <typename T> struct ImportKey {
 public:
-  enum class State { Plain, Empty, Tombstone };
+  enum class State { Plain, Empty };
 
 public:
   T type;
@@ -131,16 +131,6 @@ inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
 // key in a `DenseMap`.
 namespace llvm {
 template <typename T> struct DenseMapInfo<lld::wasm::ImportKey<T>> {
-  static lld::wasm::ImportKey<T> getEmptyKey() {
-    typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
-    key.state = lld::wasm::ImportKey<T>::State::Empty;
-    return key;
-  }
-  static lld::wasm::ImportKey<T> getTombstoneKey() {
-    typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
-    key.state = lld::wasm::ImportKey<T>::State::Tombstone;
-    return key;
-  }
   static unsigned getHashValue(const lld::wasm::ImportKey<T> &key) {
     uintptr_t hash = hash_value(key.importModule);
     hash = hash_combine(hash, key.importName);

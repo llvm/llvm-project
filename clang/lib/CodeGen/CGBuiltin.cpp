@@ -794,49 +794,14 @@ static Value *EmitSignBit(CodeGenFunction &CGF, Value *V) {
   return CGF.Builder.CreateICmpSLT(V, Zero);
 }
 
-/// Checks no arguments or results are passed indirectly in the ABI (i.e. via a
-/// hidden pointer). This is used to check annotating FP libcalls (that could
-/// set `errno`) with "int" TBAA metadata is safe. If any floating-point
-/// arguments are passed indirectly, setup for the call could be incorrectly
-/// optimized out.
-static bool HasNoIndirectArgumentsOrResults(CGFunctionInfo const &FnInfo) {
-  auto IsIndirect = [&](ABIArgInfo const &info) {
-    return info.isIndirect() || info.isIndirectAliased() || info.isInAlloca();
-  };
-  return !IsIndirect(FnInfo.getReturnInfo()) &&
-         llvm::none_of(FnInfo.arguments(),
-                       [&](CGFunctionInfoArgInfo const &ArgInfo) {
-                         return IsIndirect(ArgInfo.info);
-                       });
-}
-
 static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
                               const CallExpr *E, llvm::Constant *calleeValue) {
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
   llvm::CallBase *callOrInvoke = nullptr;
   CGFunctionInfo const *FnInfo = nullptr;
-  RValue Call =
-      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot(),
-                   /*Chain=*/nullptr, &callOrInvoke, &FnInfo);
-
-  if (unsigned BuiltinID = FD->getBuiltinID()) {
-    // Check whether a FP math builtin function, such as BI__builtin_expf
-    ASTContext &Context = CGF.getContext();
-    bool ConstWithoutErrnoAndExceptions =
-        Context.BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
-    // Restrict to target with errno, for example, MacOS doesn't set errno.
-    // TODO: Support builtin function with complex type returned, eg: cacosh
-    if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
-        !CGF.Builder.getIsFPConstrained() && Call.isScalar() &&
-        HasNoIndirectArgumentsOrResults(*FnInfo)) {
-      // Emit "int" TBAA metadata on FP math libcalls.
-      clang::QualType IntTy = Context.IntTy;
-      TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
-      CGF.CGM.DecorateInstructionWithTBAA(callOrInvoke, TBAAInfo);
-    }
-  }
-  return Call;
+  return CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot(),
+                      /*Chain=*/nullptr, &callOrInvoke, &FnInfo);
 }
 
 /// Emit a call to llvm.{sadd,uadd,ssub,usub,smul,umul}.with.overflow.*
@@ -2277,10 +2242,9 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
         if (!isa<Constant>(ArgVal)) {
           CleanupKind Cleanup = getARCCleanupKind();
           QualType Ty = TheExpr->getType();
-          RawAddress Alloca = RawAddress::invalid();
-          RawAddress Addr = CreateMemTemp(Ty, "os.log.arg", &Alloca);
+          RawAddress Alloca = CreateMemTempWithoutCast(Ty, "os.log.arg");
           ArgVal = EmitARCRetain(Ty, ArgVal);
-          Builder.CreateStore(ArgVal, Addr);
+          Builder.CreateStore(ArgVal, Alloca);
           pushLifetimeExtendedDestroy(Cleanup, Alloca, Ty,
                                       CodeGenFunction::destroyARCStrongPrecise,
                                       Cleanup & EHCleanup);
@@ -2838,6 +2802,10 @@ private:
     }
 
     for (auto *Field : R->fields()) {
+      // Treat unnamed bitfields as padding.
+      if (Field->isUnnamedBitField())
+        continue;
+
       auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
       if (Field->isBitField()) {
         OccuppiedIntervals.push_back(BitInterval{
@@ -4837,14 +4805,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getType()->getAs<VectorType>()->getElementType(), nullptr);
 
     llvm::Value *Result;
-    if (BuiltinID == Builtin::BI__builtin_masked_load) {
+    if (BuiltinID == Builtin::BI__builtin_masked_load)
       Result = Builder.CreateMaskedLoad(RetTy, Ptr, Align.getAsAlign(), Mask,
                                         PassThru, "masked_load");
-    } else {
-      Function *F = CGM.getIntrinsic(Intrinsic::masked_expandload, {RetTy});
-      Result =
-          Builder.CreateCall(F, {Ptr, Mask, PassThru}, "masked_expand_load");
-    }
+    else
+      Result = Builder.CreateMaskedExpandLoad(RetTy, Ptr, MaybeAlign(), Mask,
+                                              PassThru, "masked_expand_load");
+
     return RValue::get(Result);
   };
   case Builtin::BI__builtin_masked_gather: {
@@ -4874,20 +4841,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Val = EmitScalarExpr(E->getArg(1));
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(2));
 
-    QualType ValTy = E->getArg(1)->getType();
-    llvm::Type *ValLLTy = CGM.getTypes().ConvertType(ValTy);
-
     CharUnits Align = CGM.getNaturalTypeAlignment(
         E->getArg(1)->getType()->getAs<VectorType>()->getElementType(),
         nullptr);
 
-    if (BuiltinID == Builtin::BI__builtin_masked_store) {
+    if (BuiltinID == Builtin::BI__builtin_masked_store)
       Builder.CreateMaskedStore(Val, Ptr, Align.getAsAlign(), Mask);
-    } else {
-      llvm::Function *F =
-          CGM.getIntrinsic(llvm::Intrinsic::masked_compressstore, {ValLLTy});
-      Builder.CreateCall(F, {Val, Ptr, Mask});
-    }
+    else
+      Builder.CreateMaskedCompressStore(Val, Ptr, MaybeAlign(), Mask);
+
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_masked_scatter: {
@@ -6694,13 +6656,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           getContext().getSizeType(), ArraySize, nullptr,
           ArraySizeModifier::Normal,
           /*IndexTypeQuals=*/0);
-      auto Tmp = CreateMemTemp(SizeArrayTy, "block_sizes");
-      llvm::Value *TmpPtr = Tmp.getPointer();
-      // The EmitLifetime* pair expect a naked Alloca as their last argument,
-      // however for cases where the default AS is not the Alloca AS, Tmp is
-      // actually the Alloca ascasted to the default AS, hence the
-      // stripPointerCasts()
-      llvm::Value *Alloca = TmpPtr->stripPointerCasts();
+      auto Tmp = CreateMemTempWithoutCast(SizeArrayTy, "block_sizes");
+      llvm::Value *Alloca = Tmp.getPointer();
       llvm::Value *ElemPtr;
       EmitLifetimeStart(Alloca);
       // Each of the following arguments specifies the size of the corresponding
@@ -6717,8 +6674,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Builder.CreateAlignedStore(
             V, GEP, CGM.getDataLayout().getPrefTypeAlign(SizeTy));
       }
-      // Return the Alloca itself rather than a potential ascast as this is only
-      // used by the paired EmitLifetimeEnd.
       return {ElemPtr, Alloca};
     };
 

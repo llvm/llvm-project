@@ -1532,8 +1532,7 @@ define i64 @pr137274(ptr %ptr) {
 define i64 @umaddl_or(i32 %a, i32 %b, i64 %c) {
 ; CHECK-LABEL: umaddl_or:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    umull x8, w0, w1
-; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    umaddl x0, w0, w1, x2
 ; CHECK-NEXT:    ret
 entry:
   %ae = zext i32 %a to i64
@@ -1546,8 +1545,7 @@ entry:
 define i64 @smaddl_or(i32 %a, i32 %b, i64 %c) {
 ; CHECK-LABEL: smaddl_or:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    smull x8, w0, w1
-; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    smaddl x0, w0, w1, x2
 ; CHECK-NEXT:    ret
 entry:
   %ae = sext i32 %a to i64
@@ -1561,8 +1559,7 @@ define i64 @umaddl_or_3(i32 %a, i32 %b, i64 %c) {
 ; CHECK-LABEL: umaddl_or_3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #23 // =0x17
-; CHECK-NEXT:    umull x8, w0, w8
-; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    umaddl x0, w0, w8, x2
 ; CHECK-NEXT:    ret
 entry:
   %ae = zext i32 %a to i64
@@ -1575,8 +1572,7 @@ define i64 @smaddl_or_inreg3(i64 %a, i32 %b, i64 %c) {
 ; CHECK-LABEL: smaddl_or_inreg3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #23 // =0x17
-; CHECK-NEXT:    smull x8, w0, w8
-; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    smaddl x0, w0, w8, x2
 ; CHECK-NEXT:    ret
 entry:
   %at = trunc i64 %a to i32
@@ -1590,8 +1586,7 @@ define i64 @umaddl_ldrb_h_or(ptr %x0, i32 %x1, i64 %x2) {
 ; CHECK-LABEL: umaddl_ldrb_h_or:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    umull x8, w8, w1
-; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    umaddl x0, w8, w1, x2
 ; CHECK-NEXT:    ret
 entry:
   %ext64 = load i8, ptr %x0
@@ -1606,8 +1601,7 @@ define i64 @smaddl_ldrb_h_or(ptr %x0, i32 %x1, i64 %x2) {
 ; CHECK-LABEL: smaddl_ldrb_h_or:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsb x8, [x0]
-; CHECK-NEXT:    smull x8, w8, w1
-; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    smaddl x0, w8, w1, x2
 ; CHECK-NEXT:    ret
 entry:
   %ext64 = load i8, ptr %x0
@@ -1623,8 +1617,7 @@ define i64 @umaddl_ldrb2_or(ptr %x0, ptr %x1, i64 %x2) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    ldrb w9, [x1]
-; CHECK-NEXT:    umull x8, w9, w8
-; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    umaddl x0, w9, w8, x2
 ; CHECK-NEXT:    ret
 entry:
   %ext64 = load i8, ptr %x0
@@ -1641,8 +1634,7 @@ define i64 @smaddl_ldrb2_or(ptr %x0, ptr %x1, i64 %x2) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsb x8, [x0]
 ; CHECK-NEXT:    ldrsb x9, [x1]
-; CHECK-NEXT:    smull x8, w9, w8
-; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    smaddl x0, w9, w8, x2
 ; CHECK-NEXT:    ret
 entry:
   %ext64 = load i8, ptr %x0

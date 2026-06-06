@@ -104,6 +104,27 @@ LogicalResult verifyNoUnsupportedFuncOps(Operation *op) {
   return failure(result.wasInterrupted());
 }
 
+LogicalResult verifyGraphConstantIdAttrs(Operation *op) {
+  WalkResult result = op->walk([](Operation *op) -> WalkResult {
+    if (!isa<tosa::ConstOp, tosa::ConstShapeOp>(op))
+      return WalkResult::advance();
+
+    auto graphConstantId =
+        op->getAttrOfType<IntegerAttr>(graphARMGraphConstantIdAttrName);
+    if (!graphConstantId)
+      return WalkResult::advance();
+
+    if (graphConstantId.getType().isSignlessInteger(32))
+      return WalkResult::advance();
+
+    op->emitOpError() << "requires `" << graphARMGraphConstantIdAttrName
+                      << "` to be a signless i32 integer attribute";
+    return WalkResult::interrupt();
+  });
+
+  return failure(result.wasInterrupted());
+}
+
 struct TosaToSPIRVTosa final : impl::TosaToSPIRVTosaBase<TosaToSPIRVTosa> {
   void runOnOperation() override {
     MLIRContext *context = &getContext();
@@ -116,7 +137,8 @@ struct TosaToSPIRVTosa final : impl::TosaToSPIRVTosaBase<TosaToSPIRVTosa> {
     }
 
     if (failed(verifyGraphTargetEnv(op, targetAttr)) ||
-        failed(verifyNoUnsupportedFuncOps(op))) {
+        failed(verifyNoUnsupportedFuncOps(op)) ||
+        failed(verifyGraphConstantIdAttrs(op))) {
       signalPassFailure();
       return;
     }
