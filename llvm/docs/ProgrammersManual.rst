@@ -2383,7 +2383,7 @@ same allocation with the string data immediately after the element object.
 This container guarantees the "``(char*)(&Value+1)``" points to the key string
 for a value.
 
-The ``StringMap`` is very fast for several reasons: quadratic probing is very cache
+The ``StringMap`` is very fast for several reasons: linear probing is very cache
 efficient for lookups, the hash value of strings in buckets is not recomputed
 when looking up an element, ``StringMap`` rarely has to touch the memory for
 unrelated objects when looking up a value (even when hash collisions happen),

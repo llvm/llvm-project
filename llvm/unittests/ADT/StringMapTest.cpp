@@ -12,6 +12,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "gtest/gtest.h"
 #include <limits>
+#include <map>
 #include <tuple>
 using namespace llvm;
 
@@ -178,6 +179,46 @@ TEST_F(StringMapTest, SmallFullMapTest) {
   EXPECT_EQ(0, Map.lookup("drei"));
   EXPECT_EQ(4, Map.lookup("veir"));
   EXPECT_EQ(5, Map.lookup("funf"));
+}
+
+// Stress the backward-shift deletion (Knuth TAOCP 6.4 Algorithm R) used by
+// erase: interleave inserts and erases so that probe clusters form, shrink, and
+// straddle the wrap-around, then verify every surviving key is still findable
+// and every erased key is gone. A broken shift leaves keys stranded behind a
+// hole and would be caught here.
+TEST_F(StringMapTest, EraseStressTest) {
+  llvm::StringMap<unsigned> Map;
+  std::map<std::string, unsigned> Ref;
+
+  // Simple deterministic LCG so the sequence is reproducible across platforms.
+  uint64_t State = 0x1234567;
+  auto Next = [&] {
+    return (State = State * 6364136223846793005ULL + 1) >> 33;
+  };
+
+  for (unsigned Iter = 0; Iter != 20000; ++Iter) {
+    std::string Key = Twine(Next() % 500).str();
+    if (Next() & 1) {
+      Map[Key] = Iter;
+      Ref[Key] = Iter;
+    } else {
+      EXPECT_EQ(Map.erase(Key), Ref.erase(Key) != 0);
+    }
+
+    // Periodically cross-check the whole map against the reference.
+    if (Iter % 997 == 0) {
+      EXPECT_EQ(Map.size(), Ref.size());
+      for (const auto &KV : Ref) {
+        auto It = Map.find(KV.first);
+        ASSERT_NE(It, Map.end()) << "missing key " << KV.first;
+        EXPECT_EQ(It->second, KV.second);
+      }
+    }
+  }
+
+  EXPECT_EQ(Map.size(), Ref.size());
+  for (const auto &KV : Ref)
+    EXPECT_EQ(Map.lookup(KV.first), KV.second);
 }
 
 TEST_F(StringMapTest, CopyCtorTest) {
