@@ -497,8 +497,6 @@ private:
   // The comparison and hash functions take the file name and architecture
   // triple into account.
   struct ModuleCacheInfo {
-    static ModuleCacheKey getEmptyKey() { return ModuleCacheKey(); }
-
     static unsigned getHashValue(const ModuleCacheKey &key) {
       return llvm::hash_combine(key.first, key.second);
     }
