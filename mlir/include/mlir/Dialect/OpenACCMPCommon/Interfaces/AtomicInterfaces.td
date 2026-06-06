@@ -289,10 +289,12 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
         auto secondReadStmt = dyn_cast<AtomicReadOpInterface>(secondOp);
         auto secondUpdateStmt = dyn_cast<AtomicUpdateOpInterface>(secondOp);
         auto secondWriteStmt = dyn_cast<AtomicWriteOpInterface>(secondOp);
+        auto secondCompareStmt = dyn_cast<AtomicCompareOpInterface>(secondOp);
 
         if (!((firstUpdateStmt && secondReadStmt) ||
               (firstReadStmt && secondUpdateStmt) ||
-              (firstReadStmt && secondWriteStmt)))
+              (firstReadStmt && secondWriteStmt) ||
+              (firstReadStmt && secondCompareStmt)))
           return ops.front().emitError()
                 << "invalid sequence of operations in the capture region";
         if (firstUpdateStmt && secondReadStmt &&
@@ -307,6 +309,11 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
                     "operation";
         if (firstReadStmt && secondWriteStmt &&
             firstReadStmt.getX() != secondWriteStmt.getX())
+          return firstReadStmt.emitError()
+                << "captured variable in atomic.read must be updated in "
+                    "second operation";
+        if (firstReadStmt && secondCompareStmt &&
+            firstReadStmt.getX() != secondCompareStmt.getX())
           return firstReadStmt.emitError()
                 << "captured variable in atomic.read must be updated in "
                     "second operation";
