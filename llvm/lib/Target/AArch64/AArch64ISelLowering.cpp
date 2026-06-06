@@ -12324,6 +12324,54 @@ static SDValue emitFloatCompareMask(SDValue LHS, SDValue RHS, SDValue TVal,
   return Cmp;
 }
 
+static bool isGTorGE(ISD::CondCode CC) {
+  return CC == ISD::SETGT || CC == ISD::SETGE;
+}
+
+static bool isLTorLE(ISD::CondCode CC) {
+  return CC == ISD::SETLT || CC == ISD::SETLE;
+}
+
+// See if a conditional (LHS CC RHS ? TrueVal : FalseVal) is lower-saturating.
+// All of these conditions (and their <= and >= counterparts) will do:
+//          x < k ? k : x
+//          x > k ? x : k
+//          k < x ? x : k
+//          k > x ? k : x
+static bool isLowerSaturate(ISD::CondCode CC, SDValue LHS, SDValue RHS,
+                            SDValue TrueVal, SDValue FalseVal, SDValue K) {
+  return (isGTorGE(CC) &&
+          ((K == LHS && K == TrueVal) || (K == RHS && K == FalseVal))) ||
+         (isLTorLE(CC) &&
+          ((K == RHS && K == TrueVal) || (K == LHS && K == FalseVal)));
+}
+
+// Check if a condition of the type x < k ? k : x can be converted into a
+// bit operation instead of conditional moves when k is 0 or -1.
+static bool isLowerSaturatingConditional(ISD::CondCode CC, SDValue LHS,
+                                         SDValue RHS, SDValue TrueVal,
+                                         SDValue FalseVal, SDValue &SatValue,
+                                         SDValue &LowerSatConstant) {
+  SDValue *K = isa<ConstantSDNode>(LHS)   ? &LHS
+               : isa<ConstantSDNode>(RHS) ? &RHS
+                                          : nullptr;
+  if (!K)
+    return false;
+
+  SDValue KTmp = isa<ConstantSDNode>(TrueVal) ? TrueVal : FalseVal;
+  SatValue = (KTmp == TrueVal) ? FalseVal : TrueVal;
+  SDValue VTmp = (*K == LHS) ? RHS : LHS;
+
+  if (*K != KTmp || SatValue != VTmp)
+    return false;
+
+  if (!isLowerSaturate(CC, LHS, RHS, TrueVal, FalseVal, *K))
+    return false;
+
+  LowerSatConstant = *K;
+  return true;
+}
+
 SDValue AArch64TargetLowering::LowerSELECT_CC(
     ISD::CondCode CC, SDValue LHS, SDValue RHS, SDValue TVal, SDValue FVal,
     iterator_range<SDNode::user_iterator> Users, SDNodeFlags Flags,
@@ -12356,24 +12404,6 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FVal);
     ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TVal);
     ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
-
-    // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
-    // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
-    // (SELECT_CC setlt, lhs, 0, lhs, 0) -> (AND lhs, (SRA lhs, typesize-1))
-    // Both require less instructions than compare and conditional select.
-    if ((CC == ISD::SETGT || CC == ISD::SETLT) && LHS == TVal &&
-        RHSC && RHSC->isZero() && CFVal && CFVal->isZero() &&
-        LHS.getValueType() == RHS.getValueType()) {
-      EVT VT = LHS.getValueType();
-      SDValue Shift =
-          DAG.getNode(ISD::SRA, DL, VT, LHS,
-                      DAG.getConstant(VT.getSizeInBits() - 1, DL, VT));
-
-      if (CC == ISD::SETGT)
-        Shift = DAG.getNOT(DL, Shift, VT);
-
-      return DAG.getNode(ISD::AND, DL, VT, LHS, Shift);
-    }
 
     // Check for sign bit test patterns that can use TST optimization.
     // (SELECT_CC setlt, sign_extend_inreg, 0, tval, fval)
@@ -12416,6 +12446,43 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
         FVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
         TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
       }
+    }
+
+    // Try to convert expressions of the form x < k ? k : x (and similar forms)
+    // into more efficient bit operations, which is possible when k is 0 or -1.
+    // Only allow this transformation on full-width operations.
+    SDValue LowerSatConstant;
+    SDValue SatValue;
+    if (isLowerSaturatingConditional(CC, LHS, RHS, TVal, FVal, SatValue,
+                                     LowerSatConstant)) {
+      EVT SatVT = SatValue.getValueType();
+      SDValue ShiftV =
+          DAG.getNode(ISD::SRA, DL, SatVT, SatValue,
+                      DAG.getConstant(SatVT.getSizeInBits() - 1, DL, SatVT));
+      if (isNullConstant(LowerSatConstant)) {
+        ShiftV = DAG.getNOT(DL, ShiftV, SatVT);
+        return DAG.getNode(ISD::AND, DL, SatVT, SatValue, ShiftV);
+      }
+      if (isAllOnesConstant(LowerSatConstant))
+        return DAG.getNode(ISD::OR, DL, SatVT, SatValue, ShiftV);
+    }
+
+    // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
+    // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
+    // (SELECT_CC setlt, lhs, 0, lhs, 0) -> (AND lhs, (SRA lhs, typesize-1))
+    // Both require less instructions than compare and conditional select.
+    if ((CC == ISD::SETGT || CC == ISD::SETLT) && LHS == TVal && RHSC &&
+        RHSC->isZero() && CFVal && CFVal->isZero() &&
+        LHS.getValueType() == RHS.getValueType()) {
+      EVT VT = LHS.getValueType();
+      SDValue Shift =
+          DAG.getNode(ISD::SRA, DL, VT, LHS,
+                      DAG.getConstant(VT.getSizeInBits() - 1, DL, VT));
+
+      if (CC == ISD::SETGT)
+        Shift = DAG.getNOT(DL, Shift, VT);
+
+      return DAG.getNode(ISD::AND, DL, VT, LHS, Shift);
     }
 
     unsigned Opcode = AArch64ISD::CSEL;

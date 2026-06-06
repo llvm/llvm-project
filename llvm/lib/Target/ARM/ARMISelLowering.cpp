@@ -5121,8 +5121,7 @@ static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
 // It returns true if the transformation can be made, and in such case
 // returns x in V, and k in SatK.
 static bool isLowerSaturatingConditional(const SDValue &Op, SDValue &V,
-                                         SDValue &SatK)
-{
+                                         SDValue &SatK) {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
@@ -5222,11 +5221,11 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       return SatValue;
 
   // Try to convert expressions of the form x < k ? k : x (and similar forms)
-  // into more efficient bit operations, which is possible when k is 0 or -1
+  // into more efficient bit operations, which is possible when k is 0 or -1.
   // On ARM and Thumb-2 which have flexible operand 2 this will result in
   // single instructions. On Thumb the shift and the bit operation will be two
   // instructions.
-  // Only allow this transformation on full-width (32-bit) operations
+  // Only allow this transformation on full-width (32-bit) operations.
   SDValue LowerSatConstant;
   SDValue SatValue;
   if (VT == MVT::i32 &&
@@ -5250,6 +5249,12 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
   if (Op.getValueType().isInteger()) {
 
+    // (SELECT_CC setlt, x, 0, 1, 0) -> SRL(x, bw-1)
+    if (CC == ISD::SETLT && isNullConstant(RHS) && isOneConstant(TrueVal) &&
+        isNullConstant(FalseVal) && LHS.getValueType() == VT)
+      return DAG.getNode(ISD::SRL, dl, VT, LHS,
+                         DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
+
     // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
     // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
     // (SELECT_CC setlt, lhs, 0, lhs, 0) -> (AND lhs, (SRA lhs, typesize-1))
@@ -5267,12 +5272,6 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 
       return DAG.getNode(ISD::AND, dl, VT, LHS, Shift);
     }
-
-    // (SELECT_CC setlt, x, 0, 1, 0) -> SRL(x, bw-1)
-    if (CC == ISD::SETLT && isNullConstant(RHS) && isOneConstant(TrueVal) &&
-        isNullConstant(FalseVal) && LHS.getValueType() == VT)
-      return DAG.getNode(ISD::SRL, dl, VT, LHS,
-                         DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
   }
 
   if (LHS.getValueType() == MVT::i32) {
