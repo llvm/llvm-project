@@ -4791,7 +4791,6 @@ public:
 template <> struct DenseMapInfo<DebugVariable> {
   using FragmentInfo = DIExpression::FragmentInfo;
 
-  /// Empty key: no key should be generated that has no DILocalVariable.
   static unsigned getHashValue(const DebugVariable &D) {
     unsigned HV = 0;
     const std::optional<FragmentInfo> Fragment = D.getFragment();
