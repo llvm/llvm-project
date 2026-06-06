@@ -767,7 +767,6 @@ struct OrderedPredicate {
 struct OrderedPredicateDenseInfo {
   using Base = DenseMapInfo<std::pair<Position *, Qualifier *>>;
 
-  static OrderedPredicate getEmptyKey() { return Base::getEmptyKey(); }
   static bool isEqual(const OrderedPredicate &lhs,
                       const OrderedPredicate &rhs) {
     return lhs.position == rhs.position && lhs.question == rhs.question;
