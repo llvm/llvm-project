@@ -491,14 +491,28 @@ static bool concurrentWithMMAScratch(Value *V, SmallPtrSetImpl<Value *> &Seen) {
 static bool mergeByteMMA(Module &M,
                          SmallVectorImpl<GlobalVariable *> &ByteGlobals,
                          SmallVectorImpl<GlobalVariable *> &MMAGlobals) {
-  if (ByteGlobals.empty() || MMAGlobals.size() != 1)
+  if (ByteGlobals.empty())
     return false;
 
+  GlobalVariable *CvtGV = nullptr;
+  unsigned CvtCount = 0;
   for (auto &GV : M.globals()) {
     if (GV.getAddressSpace() != ASThreadgroup)
       continue;
-    if (GV.getName().starts_with("__tg_cvt_"))
+    if (GV.getName().starts_with("__tg_cvt_")) {
+      CvtCount++;
+      CvtGV = &GV;
+    }
+  }
+
+  bool CvtOverlay = false;
+  if (MMAGlobals.size() != 1) {
+    if (!MMAGlobals.empty() || CvtCount != 1)
       return false;
+    MMAGlobals.push_back(CvtGV);
+    CvtOverlay = true;
+  } else if (CvtCount != 0) {
+    return false;
   }
 
   bool Changed = false;
@@ -544,15 +558,16 @@ static bool mergeByteMMA(Module &M,
     uint64_t BBytes = BAT->getNumElements();
     Type *Inferred = inferElementType(ByteGlobals[I]);
     bool TypeMatch =
-        Inferred && (Inferred == MMAElemTy ||
-                     (Inferred->isIntegerTy(32) && MMAElemTy->isFloatTy()) ||
-                     (Inferred->isFloatTy() && MMAElemTy->isIntegerTy(32)));
+        Inferred &&
+        (Inferred == MMAElemTy ||
+         (!CvtOverlay && ((Inferred->isIntegerTy(32) && MMAElemTy->isFloatTy()) ||
+                          (Inferred->isFloatTy() && MMAElemTy->isIntegerTy(32)))));
     if (TypeMatch && BBytes > BestBytes) {
       BestIdx = I;
       BestBytes = BBytes;
     }
   }
-  if (BestIdx < 0) {
+  if (BestIdx < 0 && !CvtOverlay) {
     for (int I = 0; I < (int)ByteGlobals.size(); I++) {
       auto *BAT = cast<ArrayType>(ByteGlobals[I]->getValueType());
       if (BAT->getNumElements() > BestBytes) {
@@ -561,6 +576,9 @@ static bool mergeByteMMA(Module &M,
       }
     }
   }
+
+  if (CvtOverlay && BestIdx < 0)
+    return Changed;
 
   ByteGV = ByteGlobals[BestIdx >= 0 ? BestIdx : 0];
   auto *ByteAT = cast<ArrayType>(ByteGV->getValueType());
