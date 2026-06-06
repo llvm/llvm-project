@@ -1459,7 +1459,7 @@ types you may want to format.
 You can find further examples here:
 
 - [LLVM Data Formatters](https://github.com/llvm/llvm-project/blob/main/llvm/utils/lldbDataFormatters.py)
-- [Coca (Objective-C) Formatters](https://github.com/llvm/llvm-project/tree/main/lldb/examples/summaries/cocoa)
+- [Cocoa (Objective-C) Formatters](https://github.com/llvm/llvm-project/tree/main/lldb/examples/summaries/cocoa)
 
 <!-- TODO: Add libc++ formatters here -->
 
