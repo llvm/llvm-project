@@ -382,6 +382,19 @@ Improvements to Clang's diagnostics
   code can automatically be made portable to other host platforms that don't
   support backslashes.
 
+- Added ``-Wweakened-alignment``, which warns when an explicitly requested
+  alignment (e.g. ``alignas`` or the ``aligned`` attribute) is reduced by
+  another feature such as ``#pragma pack`` or the ``packed`` attribute. An
+  accompanying note points at the feature responsible. This is not emitted
+  under the Microsoft C++ ABI. For example:
+
+  .. code-block:: c++
+
+    #pragma pack(2)      // itanium-note {{'#pragma pack' forces a maximum alignment of 2 bytes}}
+    struct D1 {
+      char m1;
+      alignas(8) int m4; // itanium-warning {{explicit alignment of m4 (8 bytes) was weakened to 2 bytes}}
+
 Improvements to Clang's time-trace
 ----------------------------------
 

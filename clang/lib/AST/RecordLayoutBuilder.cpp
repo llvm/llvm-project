@@ -680,6 +680,10 @@ protected:
   /// Valid if UseExternalLayout is true.
   ExternalLayout External;
 
+  // Used to locate the feature (#pragma pack or packed attribute) that
+  // weakened an explicit alignment for -Wweakened-alignment.
+  const Decl *RecordBeingLaidOut = nullptr;
+
   ItaniumRecordLayoutBuilder(const ASTContext &Context,
                              EmptySubobjectMap *EmptySubobjects)
       : Context(Context), EmptySubobjects(EmptySubobjects), Size(0),
@@ -817,6 +821,9 @@ protected:
 
   ItaniumRecordLayoutBuilder(const ItaniumRecordLayoutBuilder &) = delete;
   void operator=(const ItaniumRecordLayoutBuilder &) = delete;
+
+  void DiagnoseAlignmentWeakeningSource(const Decl *RD, CharUnits Weakened,
+                                        bool DueToPackedAttr);
 };
 } // end anonymous namespace
 
@@ -1210,15 +1217,16 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
       HasExternalLayout = External.getExternalNVBaseOffset(Base->Class, Offset);
   }
 
+  // Clang <= 6 incorrectly applied the 'packed' attribute to base classes.
+  // Per GCC's documentation, it only applies to non-static data members.
+  const bool PackedAppliesToBases =
+      Packed && ((Context.getLangOpts().getClangABICompat() <=
+                  LangOptions::ClangABI::Ver6) ||
+                 Context.getTargetInfo().getTriple().isPS() ||
+                 Context.getTargetInfo().getTriple().isOSAIX());
+
   auto getBaseOrPreferredBaseAlignFromUnpacked = [&](CharUnits UnpackedAlign) {
-    // Clang <= 6 incorrectly applied the 'packed' attribute to base classes.
-    // Per GCC's documentation, it only applies to non-static data members.
-    return (Packed && ((Context.getLangOpts().getClangABICompat() <=
-                        LangOptions::ClangABI::Ver6) ||
-                       Context.getTargetInfo().getTriple().isPS() ||
-                       Context.getTargetInfo().getTriple().isOSAIX()))
-               ? CharUnits::One()
-               : UnpackedAlign;
+    return PackedAppliesToBases ? CharUnits::One() : UnpackedAlign;
   };
 
   CharUnits UnpackedBaseAlign = Layout.getNonVirtualAlignment();
@@ -1272,8 +1280,11 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
       Context.toCharUnitsFromBits(Base->Class->getMaxAlignment());
   if (!MaxAlignmentInChars.isZero() && MaxAlignmentInChars > BaseAlign) {
     Diag(Base->Class->getLocation(), diag::warn_explicit_alignment_weakened)
-        << Base->Class->getName() << MaxAlignmentInChars.getQuantity()
-        << BaseAlign.getQuantity();
+        << Base->Class
+        << static_cast<unsigned>(MaxAlignmentInChars.getQuantity())
+        << static_cast<unsigned>(BaseAlign.getQuantity());
+    DiagnoseAlignmentWeakeningSource(RecordBeingLaidOut, BaseAlign,
+                                     PackedAppliesToBases);
   }
 
   CharUnits AlignTo =
@@ -1314,6 +1325,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
 }
 
 void ItaniumRecordLayoutBuilder::InitializeLayout(const Decl *D) {
+  RecordBeingLaidOut = D;
   if (const RecordDecl *RD = dyn_cast<RecordDecl>(D)) {
     IsUnion = RD->isUnion();
     IsMsStruct = RD->isMsStruct(Context);
@@ -2058,8 +2070,10 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
   if (!MaxAlignmentInChars.isZero() && MaxAlignmentInChars > AlignTo) {
     Diag(D->getLocation(), diag::warn_explicit_alignment_weakened)
-        << D->getName() << MaxAlignmentInChars.getQuantity()
-        << AlignTo.getQuantity();
+        << D << static_cast<unsigned>(MaxAlignmentInChars.getQuantity())
+        << static_cast<unsigned>(AlignTo.getQuantity());
+    DiagnoseAlignmentWeakeningSource(RecordBeingLaidOut, AlignTo,
+                                     /*DueToPackedAttr=*/false);
   }
 
   // Round up the current record size to the field's alignment boundary.
@@ -2466,6 +2480,41 @@ static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
   }
 
   llvm_unreachable("bad tail-padding use kind");
+}
+
+void ItaniumRecordLayoutBuilder::DiagnoseAlignmentWeakeningSource(
+    const Decl *RD, CharUnits Weakened, bool DueToPackedAttr) {
+  enum WeakeningSource {
+    WS_PragmaPack,
+    WS_PackedAttr,
+    WS_PragmaOptionsAlign,
+    WS_CommandLine,
+  };
+  WeakeningSource Source;
+  SourceLocation Loc;
+
+  if (DueToPackedAttr) {
+    Source = WS_PackedAttr;
+    if (const auto *PA = RD->getAttr<PackedAttr>())
+      Loc = PA->getLocation();
+  } else if (RD->hasAttr<AlignMac68kAttr>()) {
+    Source = WS_PragmaOptionsAlign;
+    if (const auto *A = RD->getAttr<AlignMac68kAttr>())
+      Loc = A->getLocation();
+  } else if (const auto *MFAA = RD->getAttr<MaxFieldAlignmentAttr>()) {
+    Source = WS_PragmaPack;
+    Loc = MFAA->getLocation();
+  } else {
+    Source = WS_CommandLine;
+  }
+
+  // Fall back to the record location.
+  if (Loc.isInvalid())
+    Loc = RD->getLocation();
+
+  Diag(Loc, diag::note_weakened_alignment_source)
+      << static_cast<unsigned>(Source)
+      << static_cast<unsigned>(Weakened.getQuantity());
 }
 
 // This section contains an implementation of struct layout that is, up to the

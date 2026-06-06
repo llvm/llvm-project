@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686-apple-darwin9 %s -fsyntax-only -verify -Wno-weakened-alignment
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -fsyntax-only -verify -Wno-weakened-alignment
+// RUN: %clang_cc1 -triple i686-apple-darwin9 %s -fsyntax-only -verify
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -fsyntax-only -verify
 // expected-no-diagnostics
 
 #pragma pack(4)

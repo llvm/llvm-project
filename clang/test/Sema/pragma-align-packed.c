@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -verify %s -Wno-weakened-alignment
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 #pragma pack(push, 1)

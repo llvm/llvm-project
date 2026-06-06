@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=i686-apple-darwin9 -Wno-weakened-alignment
-// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=arm-linux-gnueabihf -Wno-weakened-alignment
-// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=aarch64-linux-gnu -Wno-weakened-alignment
-// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=x86_64-pc-linux-gnu -Wno-weakened-alignment
-// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=i686-apple-darwin9  -Wms-bitfield-padding  -Wno-weakened-alignment
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=i686-apple-darwin9
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=arm-linux-gnueabihf
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=aarch64-linux-gnu
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=x86_64-pc-linux-gnu
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=i686-apple-darwin9  -Wms-bitfield-padding 
 // expected-no-diagnostics
 
 #define CHECK_SIZE(name, size) \

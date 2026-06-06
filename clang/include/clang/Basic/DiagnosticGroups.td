@@ -845,7 +845,6 @@ def Packed : DiagGroup<"packed", [PackedNonPod]>;
 def PaddedBitField : DiagGroup<"padded-bitfield">;
 def Padded : DiagGroup<"padded", [PaddedBitField]>;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
-def WeakenedAlignment : DiagGroup<"weakened-alignment">;
 def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-padding"> {
   code Documentation = [{
     Under the Microsoft ABI, adjacent bit-fields are not packed if the

@@ -67,7 +67,8 @@ void Sema::AddAlignmentAttributesForRecord(RecordDecl *RD) {
   } else if (IsPackSet) {
     // Check to see if we need a max field alignment attribute.
     RD->addAttr(MaxFieldAlignmentAttr::CreateImplicit(
-        Context, InfoVal.getPackNumber() * 8));
+        Context, InfoVal.getPackNumber() * 8,
+        SourceRange(AlignPackStack.CurrentPragmaLocation)));
   }
 
   if (IsXLPragma && M == AlignPackInfo::Natural)
