@@ -9,7 +9,6 @@
 ;     A[INT_MIN*j + 6] = 1;
 ; }
 ;
-;
 ; There is a dependency between the two stores.
 ;
 ; memory access    | i == 1 | j == 0

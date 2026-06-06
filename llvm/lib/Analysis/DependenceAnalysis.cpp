@@ -1198,9 +1198,11 @@ static std::optional<bool> findGCD(unsigned Bits, const APInt &AM,
   LLVM_DEBUG(dbgs() << "\t    Delta = " << Delta << "\n");
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
   APInt B0(Bits, 0, true), B1(Bits, 1, true);
+
+  // APInt::abs will overflow. In that case, bail out early.
   if (AM.isMinSignedValue() || BM.isMinSignedValue())
-    // APInt::abs will overflow.
     return std::nullopt;
+
   APInt G0 = AM.abs();
   APInt G1 = BM.abs();
   APInt Q = G0; // these need to be initialized
@@ -1573,8 +1575,9 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   APInt CM = ConstDelta->getAPInt();
   unsigned Bits = AM.getBitWidth();
   std::optional<bool> GCDRes = findGCD(Bits, AM, BM, CM, G, X, Y);
+
+  // GCD calculation failed so we cannot proceed with this test.
   if (!GCDRes)
-    // GCD calculation failed so we cannot proceed with this test.
     return false;
   if (*GCDRes) {
     // gcd doesn't divide Delta, no dependence
