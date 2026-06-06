@@ -238,7 +238,7 @@ public:
   inline bool hasOneUse() const;
 };
 
-template<> struct DenseMapInfo<SDValue> {
+template <> struct DenseMapInfo<SDValue> {
   static unsigned getHashValue(const SDValue &Val) {
     return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
             (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();

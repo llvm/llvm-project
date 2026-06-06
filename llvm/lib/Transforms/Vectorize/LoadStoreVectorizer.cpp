@@ -1817,7 +1817,6 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
         : std::pair<Instruction *, Chain>(I, {}) {}
   };
   struct InstrListElemDenseMapInfo {
-    using PtrInfo = DenseMapInfo<InstrListElem *>;
     using IInfo = DenseMapInfo<Instruction *>;
     static unsigned getHashValue(const InstrListElem *E) {
       return IInfo::getHashValue(E->first);

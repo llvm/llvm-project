@@ -456,7 +456,6 @@ struct DenseMapInfo<AA::ValueScope> : public DenseMapInfo<unsigned char> {
 template <>
 struct DenseMapInfo<const AA::InstExclusionSetTy *>
     : public DenseMapInfo<void *> {
-  using super = DenseMapInfo<void *>;
   static unsigned getHashValue(const AA::InstExclusionSetTy *BES) {
     unsigned H = 0;
     if (BES)
