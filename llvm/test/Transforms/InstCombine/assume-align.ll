@@ -272,7 +272,6 @@ define ptr @assume_align_1(ptr %p) {
 
 define ptr @redundant_assume_align_null() {
 ; CHECK-LABEL: @redundant_assume_align_null(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr null, i64 8) ]
 ; CHECK-NEXT:    call void @foo(ptr null)
 ; CHECK-NEXT:    ret ptr null
 ;
