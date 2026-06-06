@@ -66,8 +66,9 @@ LIBC_INLINE bfloat16 acosbf16(bfloat16 x) {
     // and acos(x) = acos(|x|) for x >= 0, pi - acos(|x|) for x < 0
     float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
     float t_sqrt = fputil::sqrt<float>(t);
-    // TODO: Use bfloat16 version for inv_trigf_utils_internals after they are available
-    // Tracking issue : https://github.com/llvm/llvm-project/issues/202079
+    // TODO: Use bfloat16 version for inv_trigf_utils_internals after they are
+    // available Tracking issue :
+    // https://github.com/llvm/llvm-project/issues/202079
     float tp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(t));
     float asin_sqrt_t = t_sqrt * (fputil::multiply_add(t, tp, 1.0f));
 
