@@ -308,6 +308,7 @@ public:
   void incrementCheckedPtrCount() { ++m_ptrCount; }
   void decrementCheckedPtrCount() { --m_ptrCount; }
   void method();
+  void constMethod() const;
   int trivial() { return 123; }
   CheckedObj* next();
 
