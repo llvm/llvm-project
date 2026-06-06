@@ -14,5 +14,7 @@ define i32 @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %fmt = alloca [18 x i8], align 1 => ptr 0x8 [fmt]
 ; CHECK-NEXT:   store [18 x i8] c"Ints: %d, %i, %u\0A\00", ptr %fmt, align 1
-; CHECK-NEXT: Immediate UB detected: Not enough arguments provided for the format string.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   %1 = call i32 (ptr, ...) @printf(ptr %fmt, i32 42, i32 -42) at @main
+; CHECK-NEXT: Immediate UB detected: Not enough arguments provided for the format string. Required argument for 'u'.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

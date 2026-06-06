@@ -9,5 +9,7 @@ define i32 @main() {
   ret i32 0
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   %1 = call i32 @puts(ptr null) at @main
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

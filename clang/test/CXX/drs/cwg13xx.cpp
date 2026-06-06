@@ -296,6 +296,25 @@ namespace cwg1330 { // cwg1330: 4 c++11
 
 // cwg1334: sup 1719
 
+namespace cwg1336 { // cwg1336: 3.1
+#if __cplusplus >= 201103L
+struct A {
+  A(int, int);
+};
+
+struct B {
+  explicit B(int, int); // #cwg1336-B-ctor
+};
+
+void f() {
+  A a = {1, 2};
+  B b = {1, 2};
+  // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
+  //   expected-note@#cwg1336-B-ctor {{explicit constructor declared here}}
+}
+#endif
+} // namespace cwg1336
+
 namespace cwg1340 { // cwg1340: 2.9
 struct A;
 struct B;

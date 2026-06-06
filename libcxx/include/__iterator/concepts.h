@@ -20,6 +20,7 @@
 #include <__concepts/invocable.h>
 #include <__concepts/movable.h>
 #include <__concepts/predicate.h>
+#include <__concepts/primary_template.h>
 #include <__concepts/regular.h>
 #include <__concepts/relation.h>
 #include <__concepts/same_as.h>
@@ -38,10 +39,8 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_pointer.h>
-#include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_referenceable.h>
-#include <__type_traits/is_valid_expansion.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
@@ -80,7 +79,7 @@ template <class _Tp>
 concept __specialization_of_projected = requires {
   typename __projected_iterator_t<_Tp>;
   typename __projected_projection_t<_Tp>;
-} && __is_primary_template<_Tp>::value;
+} && __primary_template<_Tp>;
 
 template <class _Tp>
 struct __indirect_value_t_impl {
@@ -153,8 +152,7 @@ concept sized_sentinel_for =
 
 template <class _Iter>
 struct __iter_traits_cache {
-  using type _LIBCPP_NODEBUG =
-      _If<__is_primary_template<iterator_traits<_Iter> >::value, _Iter, iterator_traits<_Iter> >;
+  using type _LIBCPP_NODEBUG = _If<__primary_template<iterator_traits<_Iter> >, _Iter, iterator_traits<_Iter> >;
 };
 template <class _Iter>
 using _ITER_TRAITS _LIBCPP_NODEBUG = typename __iter_traits_cache<_Iter>::type;
@@ -169,12 +167,13 @@ struct __iter_concept_category_test {
 };
 struct __iter_concept_random_fallback {
   template <class _Iter>
-  using _Apply _LIBCPP_NODEBUG =
-      __enable_if_t<__is_primary_template<iterator_traits<_Iter> >::value, random_access_iterator_tag>;
+  using _Apply _LIBCPP_NODEBUG = __enable_if_t<__primary_template<iterator_traits<_Iter> >, random_access_iterator_tag>;
 };
 
 template <class _Iter, class _Tester>
-struct __test_iter_concept : _IsValidExpansion<_Tester::template _Apply, _Iter>, _Tester {};
+    struct __test_iter_concept : bool_constant < requires {
+  typename _Tester::template _Apply<_Iter>;
+} >, _Tester{};
 
 template <class _Iter>
 struct __iter_concept_cache {

@@ -61,6 +61,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -947,11 +948,11 @@ struct NVPTX final : public VariadicABIInfo {
   bool vaListPassedInSSARegister() override { return true; }
 
   Type *vaListType(LLVMContext &Ctx) override {
-    return PointerType::getUnqual(Ctx);
+    return PointerType::get(Ctx, NVPTXAS::ADDRESS_SPACE_LOCAL);
   }
 
   Type *vaListParameterType(Module &M) override {
-    return PointerType::getUnqual(M.getContext());
+    return PointerType::get(M.getContext(), NVPTXAS::ADDRESS_SPACE_LOCAL);
   }
 
   Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,

@@ -1,6 +1,7 @@
 header: wctype.h
 types:
   - type_name: wint_t
+  - type_name: wctype_t
 functions:
   - name: iswalpha
     standards:
@@ -74,3 +75,16 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswctype
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+      - type: wctype_t
+  - name: wctype
+    standards:
+      - stdc
+    return_type: wctype_t
+    arguments:
+      - type: const char*

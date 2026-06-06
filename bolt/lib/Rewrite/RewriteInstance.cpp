@@ -82,6 +82,7 @@ extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> KeepNops;
+extern cl::opt<bool> LargeCodeModel;
 extern cl::opt<bool> Lite;
 extern cl::list<std::string> PrintOnly;
 extern cl::opt<std::string> PrintOnlyFile;
@@ -364,7 +365,7 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 #endif
 
 #ifdef RISCV_AVAILABLE
-  if (Arch == Triple::riscv64)
+  if (Arch == Triple::riscv64 || Arch == Triple::riscv32)
     return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
@@ -426,7 +427,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   // Read RISCV subtarget features from input file
   std::unique_ptr<SubtargetFeatures> Features;
   Triple TheTriple = File->makeTriple();
-  if (TheTriple.getArch() == llvm::Triple::riscv64) {
+  if (TheTriple.isRISCV()) {
     Expected<SubtargetFeatures> FeaturesOrErr = File->getFeatures();
     if (auto E = FeaturesOrErr.takeError()) {
       Err = std::move(E);
@@ -1040,8 +1041,11 @@ void RewriteInstance::discoverFileObjects() {
 
     FileSymRefs.emplace(SymbolAddress, Symbol);
 
-    // Skip section symbols that will be registered by disassemblePLT().
-    if (SymbolType == SymbolRef::ST_Debug) {
+    // Skip symbols in PLT sections that will be registered by disassemblePLT().
+    // ST_Debug covers section markers (lld/GNU ld), ST_Function covers
+    // explicit stub symbols emitted by mold (e.g., malloc$plt).
+    if (SymbolType == SymbolRef::ST_Debug ||
+        SymbolType == SymbolRef::ST_Function) {
       ErrorOr<BinarySection &> BSection =
           BC->getSectionForAddress(SymbolAddress);
       if (BSection && getPLTSectionInfo(BSection->getName()))
@@ -2161,13 +2165,11 @@ void RewriteInstance::relocateEHFrameSection() {
       return;
 
     // Only fix references that are relative to other locations.
-    if (!(DwarfType & dwarf::DW_EH_PE_pcrel) &&
-        !(DwarfType & dwarf::DW_EH_PE_textrel) &&
-        !(DwarfType & dwarf::DW_EH_PE_funcrel) &&
-        !(DwarfType & dwarf::DW_EH_PE_datarel))
-      return;
-
-    if (!(DwarfType & dwarf::DW_EH_PE_sdata4))
+    const uint64_t Mask = 0xf0 & ~dwarf::DW_EH_PE_indirect;
+    if ((DwarfType & Mask) != dwarf::DW_EH_PE_pcrel &&
+        (DwarfType & Mask) != dwarf::DW_EH_PE_textrel &&
+        (DwarfType & Mask) != dwarf::DW_EH_PE_funcrel &&
+        (DwarfType & Mask) != dwarf::DW_EH_PE_datarel)
       return;
 
     uint32_t RelType;
@@ -2241,8 +2243,18 @@ Error RewriteInstance::readSpecialSections() {
                   "Use -update-debug-sections to keep it.\n";
   }
 
-  HasTextRelocations = (bool)BC->getUniqueSectionByName(
-      ".rela" + std::string(BC->getMainCodeSectionName()));
+  if (opts::LargeCodeModel.getNumOccurrences() == 0 && !BC->UseLargeCodeModel &&
+      BC->getUniqueSectionByName(".ltext")) {
+    BC->outs() << "BOLT-INFO: .ltext detected - enabling large code model\n";
+    BC->UseLargeCodeModel = true;
+    BC->updateLSDAEncoding();
+  }
+
+  HasTextRelocations =
+      (bool)BC->getUniqueSectionByName(std::string(".rela") +
+                                       BC->getMainCodeSectionName()) ||
+      (bool)BC->getUniqueSectionByName(std::string(".crel") +
+                                       BC->getMainCodeSectionName());
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
 
@@ -2312,6 +2324,17 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (BC->isAArch64() && !BC->HasRelocations)
     BC->errs() << "BOLT-WARNING: non-relocation mode for AArch64 is not fully "
                   "supported\n";
+
+  // RV32 support is currently limited to statically linked, non-PIE
+  // programs. Reject anything that requires features still out of scope
+  // (PLT, GOT, dynamic relocations, TLS, instrumentation runtime).
+  if (BC->TheTriple->getArch() == llvm::Triple::riscv32 &&
+      (!BC->IsStaticExecutable || !BC->HasFixedLoadAddress ||
+       BC->HasInterpHeader)) {
+    BC->errs() << "BOLT-ERROR: RV32 support is currently limited to "
+                  "statically linked, non-PIE binaries\n";
+    exit(1);
+  }
 
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
     RtLibrary->adjustCommandLineOptions(*BC);
@@ -2464,6 +2487,10 @@ int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
   case ELF::SHT_RELA: {
     const Elf_Rela *RelA = Obj->getRela(Rel);
     Addend = RelA->r_addend;
+    break;
+  }
+  case ELF::SHT_CREL: {
+    Addend = Obj->getCrel(Rel).r_addend;
     break;
   }
   }
@@ -4871,7 +4898,8 @@ template <typename ELFShdrTy>
 bool RewriteInstance::shouldStrip(const ELFShdrTy &Section,
                                   StringRef SectionName) {
   // Strip non-allocatable relocation sections.
-  if (!(Section.sh_flags & ELF::SHF_ALLOC) && Section.sh_type == ELF::SHT_RELA)
+  if (!(Section.sh_flags & ELF::SHF_ALLOC) &&
+      (Section.sh_type == ELF::SHT_RELA || Section.sh_type == ELF::SHT_CREL))
     return true;
 
   // Strip debug sections if not updating them.
@@ -6427,6 +6455,7 @@ void RewriteInstance::writeEHFrameHeader() {
 
   // If there was not enough space, allocate more memory for .eh_frame_hdr.
   if (!OldEHFrameHdrSection) {
+    Out->os().seek(getFileOffsetForAddress(NextAvailableAddress));
     NextAvailableAddress =
         appendPadding(Out->os(), NextAvailableAddress, EHFrameHdrAlign);
 

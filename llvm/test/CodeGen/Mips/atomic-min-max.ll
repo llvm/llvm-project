@@ -1007,7 +1007,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $1, $zero, -4
 ; MIPS-NEXT:    and $6, $4, $1
@@ -1049,7 +1048,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    addiu $sp, $sp, -8
 ; MIPS2-NEXT:    .cfi_def_cfa_offset 8
-; MIPS2-NEXT:    # kill: def $at killed $a1
 ; MIPS2-NEXT:    sync
 ; MIPS2-NEXT:    addiu $1, $zero, -4
 ; MIPS2-NEXT:    and $6, $4, $1
@@ -1101,7 +1099,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $1, $zero, -4
 ; MIPSR6-NEXT:    and $6, $4, $1
@@ -1143,7 +1140,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
 ; MM-NEXT:    addiu $1, $zero, -4
 ; MM-NEXT:    and $6, $4, $1
@@ -1183,7 +1179,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $1, $zero, -4
 ; MMR6-NEXT:    and $6, $4, $1
@@ -1224,7 +1219,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    # kill: def $at killed $a1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    addiu $1, $zero, -4
 ; MIPS32-NEXT:    and $6, $4, $1
@@ -1266,7 +1260,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $1, $zero, -4
 ; MIPSEL-NEXT:    and $6, $4, $1
@@ -1307,7 +1300,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $1, $zero, -4
 ; MIPSELR6-NEXT:    and $6, $4, $1
@@ -1348,7 +1340,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiu $1, $zero, -4
 ; MMEL-NEXT:    and $6, $4, $1
@@ -1387,7 +1378,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $1, $zero, -4
 ; MMELR6-NEXT:    and $6, $4, $1
@@ -1599,7 +1589,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $1, $zero, -4
 ; MIPS-NEXT:    and $6, $4, $1
@@ -1641,7 +1630,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    addiu $sp, $sp, -8
 ; MIPS2-NEXT:    .cfi_def_cfa_offset 8
-; MIPS2-NEXT:    # kill: def $at killed $a1
 ; MIPS2-NEXT:    sync
 ; MIPS2-NEXT:    addiu $1, $zero, -4
 ; MIPS2-NEXT:    and $6, $4, $1
@@ -1693,7 +1681,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $1, $zero, -4
 ; MIPSR6-NEXT:    and $6, $4, $1
@@ -1735,7 +1722,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
 ; MM-NEXT:    addiu $1, $zero, -4
 ; MM-NEXT:    and $6, $4, $1
@@ -1775,7 +1761,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $1, $zero, -4
 ; MMR6-NEXT:    and $6, $4, $1
@@ -1816,7 +1801,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    # kill: def $at killed $a1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    addiu $1, $zero, -4
 ; MIPS32-NEXT:    and $6, $4, $1
@@ -1858,7 +1842,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $1, $zero, -4
 ; MIPSEL-NEXT:    and $6, $4, $1
@@ -1899,7 +1882,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $1, $zero, -4
 ; MIPSELR6-NEXT:    and $6, $4, $1
@@ -1940,7 +1922,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiu $1, $zero, -4
 ; MMEL-NEXT:    and $6, $4, $1
@@ -1979,7 +1960,6 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $1, $zero, -4
 ; MMELR6-NEXT:    and $6, $4, $1
@@ -2190,7 +2170,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $1, $zero, -4
 ; MIPS-NEXT:    and $6, $4, $1
@@ -2232,7 +2211,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    addiu $sp, $sp, -8
 ; MIPS2-NEXT:    .cfi_def_cfa_offset 8
-; MIPS2-NEXT:    # kill: def $at killed $a1
 ; MIPS2-NEXT:    sync
 ; MIPS2-NEXT:    addiu $1, $zero, -4
 ; MIPS2-NEXT:    and $6, $4, $1
@@ -2283,7 +2261,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $1, $zero, -4
 ; MIPSR6-NEXT:    and $6, $4, $1
@@ -2325,7 +2302,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
 ; MM-NEXT:    addiu $1, $zero, -4
 ; MM-NEXT:    and $6, $4, $1
@@ -2365,7 +2341,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $1, $zero, -4
 ; MMR6-NEXT:    and $6, $4, $1
@@ -2406,7 +2381,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    # kill: def $at killed $a1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    addiu $1, $zero, -4
 ; MIPS32-NEXT:    and $6, $4, $1
@@ -2447,7 +2421,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $1, $zero, -4
 ; MIPSEL-NEXT:    and $6, $4, $1
@@ -2488,7 +2461,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $1, $zero, -4
 ; MIPSELR6-NEXT:    and $6, $4, $1
@@ -2529,7 +2501,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiu $1, $zero, -4
 ; MMEL-NEXT:    and $6, $4, $1
@@ -2568,7 +2539,6 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $1, $zero, -4
 ; MMELR6-NEXT:    and $6, $4, $1
@@ -2779,7 +2749,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $1, $zero, -4
 ; MIPS-NEXT:    and $6, $4, $1
@@ -2821,7 +2790,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    addiu $sp, $sp, -8
 ; MIPS2-NEXT:    .cfi_def_cfa_offset 8
-; MIPS2-NEXT:    # kill: def $at killed $a1
 ; MIPS2-NEXT:    sync
 ; MIPS2-NEXT:    addiu $1, $zero, -4
 ; MIPS2-NEXT:    and $6, $4, $1
@@ -2872,7 +2840,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $1, $zero, -4
 ; MIPSR6-NEXT:    and $6, $4, $1
@@ -2914,7 +2881,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
 ; MM-NEXT:    addiu $1, $zero, -4
 ; MM-NEXT:    and $6, $4, $1
@@ -2954,7 +2920,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $1, $zero, -4
 ; MMR6-NEXT:    and $6, $4, $1
@@ -2995,7 +2960,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    # kill: def $at killed $a1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    addiu $1, $zero, -4
 ; MIPS32-NEXT:    and $6, $4, $1
@@ -3036,7 +3000,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $1, $zero, -4
 ; MIPSEL-NEXT:    and $6, $4, $1
@@ -3077,7 +3040,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $1, $zero, -4
 ; MIPSELR6-NEXT:    and $6, $4, $1
@@ -3118,7 +3080,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiu $1, $zero, -4
 ; MMEL-NEXT:    and $6, $4, $1
@@ -3157,7 +3118,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $1, $zero, -4
 ; MMELR6-NEXT:    and $6, $4, $1
@@ -3369,7 +3329,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $1, $zero, -4
 ; MIPS-NEXT:    and $6, $4, $1
@@ -3411,7 +3370,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    addiu $sp, $sp, -8
 ; MIPS2-NEXT:    .cfi_def_cfa_offset 8
-; MIPS2-NEXT:    # kill: def $at killed $a1
 ; MIPS2-NEXT:    sync
 ; MIPS2-NEXT:    addiu $1, $zero, -4
 ; MIPS2-NEXT:    and $6, $4, $1
@@ -3463,7 +3421,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $1, $zero, -4
 ; MIPSR6-NEXT:    and $6, $4, $1
@@ -3505,7 +3462,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
 ; MM-NEXT:    addiu $1, $zero, -4
 ; MM-NEXT:    and $6, $4, $1
@@ -3545,7 +3501,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $1, $zero, -4
 ; MMR6-NEXT:    and $6, $4, $1
@@ -3586,7 +3541,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    # kill: def $at killed $a1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    addiu $1, $zero, -4
 ; MIPS32-NEXT:    and $6, $4, $1
@@ -3628,7 +3582,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $1, $zero, -4
 ; MIPSEL-NEXT:    and $6, $4, $1
@@ -3669,7 +3622,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $1, $zero, -4
 ; MIPSELR6-NEXT:    and $6, $4, $1
@@ -3710,7 +3662,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiu $1, $zero, -4
 ; MMEL-NEXT:    and $6, $4, $1
@@ -3749,7 +3700,6 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $1, $zero, -4
 ; MMELR6-NEXT:    and $6, $4, $1
@@ -3960,7 +3910,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $1, $zero, -4
 ; MIPS-NEXT:    and $6, $4, $1
@@ -4002,7 +3951,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    addiu $sp, $sp, -8
 ; MIPS2-NEXT:    .cfi_def_cfa_offset 8
-; MIPS2-NEXT:    # kill: def $at killed $a1
 ; MIPS2-NEXT:    sync
 ; MIPS2-NEXT:    addiu $1, $zero, -4
 ; MIPS2-NEXT:    and $6, $4, $1
@@ -4054,7 +4002,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $1, $zero, -4
 ; MIPSR6-NEXT:    and $6, $4, $1
@@ -4096,7 +4043,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
 ; MM-NEXT:    addiu $1, $zero, -4
 ; MM-NEXT:    and $6, $4, $1
@@ -4136,7 +4082,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $1, $zero, -4
 ; MMR6-NEXT:    and $6, $4, $1
@@ -4177,7 +4122,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    # kill: def $at killed $a1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    addiu $1, $zero, -4
 ; MIPS32-NEXT:    and $6, $4, $1
@@ -4219,7 +4163,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $1, $zero, -4
 ; MIPSEL-NEXT:    and $6, $4, $1
@@ -4260,7 +4203,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $1, $zero, -4
 ; MIPSELR6-NEXT:    and $6, $4, $1
@@ -4301,7 +4243,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiu $1, $zero, -4
 ; MMEL-NEXT:    and $6, $4, $1
@@ -4340,7 +4281,6 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $1, $zero, -4
 ; MMELR6-NEXT:    and $6, $4, $1
@@ -4551,7 +4491,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $1, $zero, -4
 ; MIPS-NEXT:    and $6, $4, $1
@@ -4593,7 +4532,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    addiu $sp, $sp, -8
 ; MIPS2-NEXT:    .cfi_def_cfa_offset 8
-; MIPS2-NEXT:    # kill: def $at killed $a1
 ; MIPS2-NEXT:    sync
 ; MIPS2-NEXT:    addiu $1, $zero, -4
 ; MIPS2-NEXT:    and $6, $4, $1
@@ -4644,7 +4582,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $1, $zero, -4
 ; MIPSR6-NEXT:    and $6, $4, $1
@@ -4686,7 +4623,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
 ; MM-NEXT:    addiu $1, $zero, -4
 ; MM-NEXT:    and $6, $4, $1
@@ -4726,7 +4662,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $1, $zero, -4
 ; MMR6-NEXT:    and $6, $4, $1
@@ -4767,7 +4702,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    # kill: def $at killed $a1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    addiu $1, $zero, -4
 ; MIPS32-NEXT:    and $6, $4, $1
@@ -4808,7 +4742,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $1, $zero, -4
 ; MIPSEL-NEXT:    and $6, $4, $1
@@ -4849,7 +4782,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $1, $zero, -4
 ; MIPSELR6-NEXT:    and $6, $4, $1
@@ -4890,7 +4822,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiu $1, $zero, -4
 ; MMEL-NEXT:    and $6, $4, $1
@@ -4929,7 +4860,6 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $1, $zero, -4
 ; MMELR6-NEXT:    and $6, $4, $1
@@ -5140,7 +5070,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $1, $zero, -4
 ; MIPS-NEXT:    and $6, $4, $1
@@ -5182,7 +5111,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    addiu $sp, $sp, -8
 ; MIPS2-NEXT:    .cfi_def_cfa_offset 8
-; MIPS2-NEXT:    # kill: def $at killed $a1
 ; MIPS2-NEXT:    sync
 ; MIPS2-NEXT:    addiu $1, $zero, -4
 ; MIPS2-NEXT:    and $6, $4, $1
@@ -5233,7 +5161,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $1, $zero, -4
 ; MIPSR6-NEXT:    and $6, $4, $1
@@ -5275,7 +5202,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
 ; MM-NEXT:    addiu $1, $zero, -4
 ; MM-NEXT:    and $6, $4, $1
@@ -5315,7 +5241,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $1, $zero, -4
 ; MMR6-NEXT:    and $6, $4, $1
@@ -5356,7 +5281,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    # kill: def $at killed $a1
 ; MIPS32-NEXT:    sync
 ; MIPS32-NEXT:    addiu $1, $zero, -4
 ; MIPS32-NEXT:    and $6, $4, $1
@@ -5397,7 +5321,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $1, $zero, -4
 ; MIPSEL-NEXT:    and $6, $4, $1
@@ -5438,7 +5361,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $1, $zero, -4
 ; MIPSELR6-NEXT:    and $6, $4, $1
@@ -5479,7 +5401,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiu $1, $zero, -4
 ; MMEL-NEXT:    and $6, $4, $1
@@ -5518,7 +5439,6 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $1, $zero, -4
 ; MMELR6-NEXT:    and $6, $4, $1

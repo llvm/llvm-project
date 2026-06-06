@@ -32,6 +32,14 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
+# Expose the shared `runtimes-libc-*` targets to compiler-rt subcomponents
+# (same as libcxx / libcxxabi / libunwind).
+if(LLVM_RUNTIMES_BUILD)
+  list(APPEND CMAKE_MODULE_PATH
+       "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules")
+  include(HandleLibC)
+endif()
+
 if(CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_CFG_RESOLVED_INTDIR "${CMAKE_CFG_INTDIR}/")
 else()
@@ -362,7 +370,7 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
   list(APPEND SANITIZER_COMMON_CFLAGS -fno-emulated-tls)
   string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -fno-emulated-tls")
 endif()
-if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
   append_list_if(UBSAN_COMMON_SUPPORTED_ARCH -ffreestanding SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto SANITIZER_COMMON_CFLAGS)
@@ -387,7 +395,7 @@ append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SANIT
 if(NOT COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
   append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
 endif()
-if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
   append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 endif()
 

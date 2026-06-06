@@ -1004,6 +1004,13 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
     if (Name.consume_front("sve.")) {
       // 'aarch64.sve.*'.
       if (Name.consume_front("bf")) {
+        if (Name == "mmla") {
+          Type *Tys[] = {F->getReturnType(),
+                         std::next(F->arg_begin())->getType()};
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), Intrinsic::aarch64_sve_fmmla, Tys);
+          return true;
+        }
         if (Name.consume_back(".lane")) {
           // 'aarch64.sve.bf*.lane'.
           Intrinsic::ID ID =
@@ -1862,10 +1869,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     // intrinsics declared to return a struct, not for intrinsics with
     // overloaded return type, in which case the exact struct type will be
     // mangled into the name.
-    SmallVector<Intrinsic::IITDescriptor> Desc;
-    Intrinsic::getIntrinsicInfoTableEntries(F->getIntrinsicID(), Desc);
-    if (Desc.front().Kind == Intrinsic::IITDescriptor::Struct) {
-      auto *FT = F->getFunctionType();
+    if (Intrinsic::hasStructReturnType(F->getIntrinsicID())) {
+      FunctionType *FT = F->getFunctionType();
       auto *NewST = StructType::get(ST->getContext(), ST->elements());
       auto *NewFT = FunctionType::get(NewST, FT->params(), FT->isVarArg());
       std::string Name = F->getName().str();
@@ -1906,7 +1911,7 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   if (Intrinsic::ID id = F->getIntrinsicID()) {
     // Only do this if the intrinsic signature is valid.
     SmallVector<Type *> OverloadTys;
-    if (Intrinsic::getIntrinsicSignature(id, F->getFunctionType(), OverloadTys))
+    if (Intrinsic::isSignatureValid(id, F->getFunctionType(), OverloadTys))
       F->setAttributes(
           Intrinsic::getAttributes(F->getContext(), id, F->getFunctionType()));
   }
@@ -2720,16 +2725,22 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
              Name.starts_with("atomic.load.add.f64.p")) {
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
-    Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
-                                  AtomicOrdering::Monotonic);
+    Rep = Builder.CreateAtomicRMW(
+        AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(), AtomicOrdering::Monotonic,
+        CI->getContext().getOrInsertSyncScopeID("device"));
+    // The default scope for atomic.load.* intrinsics is device
+    // (= gpu scope in ptx), but the default LLVM atomic scope is
+    // "system"
   } else if (Name.starts_with("atomic.load.inc.32.p") ||
              Name.starts_with("atomic.load.dec.32.p")) {
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
     auto Op = Name.starts_with("atomic.load.inc") ? AtomicRMWInst::UIncWrap
                                                   : AtomicRMWInst::UDecWrap;
-    Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
-                                  AtomicOrdering::Monotonic);
+    Rep = Builder.CreateAtomicRMW(
+        Op, Ptr, Val, MaybeAlign(), AtomicOrdering::Monotonic,
+        CI->getContext().getOrInsertSyncScopeID("device"));
+    // See comment above.
   } else if (Name == "clz.ll") {
     // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
     Value *Arg = CI->getArgOperand(0);

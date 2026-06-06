@@ -79,8 +79,9 @@ void ScriptedThreadPlan::DidPush() {
   // the constructor, and doesn't have to care about the details of DidPush.
   m_did_push = true;
   if (m_interface) {
+    ScriptedMetadata scripted_metadata(m_class_name, {});
     auto obj_or_err = m_interface->CreatePluginObject(
-        m_class_name, this->shared_from_this(), m_args_data);
+        scripted_metadata, this->shared_from_this(), m_args_data);
     if (!obj_or_err) {
       m_error_str = llvm::toString(obj_or_err.takeError());
       SetPlanComplete(false);

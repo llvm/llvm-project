@@ -292,12 +292,6 @@ bool llvm::isAllocationFn(
 }
 
 /// Tests if a value is a call or invoke to a library function that
-/// allocates memory via new.
-bool llvm::isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, OpNewLike, TLI).has_value();
-}
-
-/// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
 bool llvm::isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   // TODO: Function behavior does not match name.
@@ -1016,7 +1010,7 @@ ObjectSizeOffsetVisitor::visitConstantPointerNull(ConstantPointerNull &CPN) {
   // TODO: How should this work with address space casts? We currently just drop
   // them on the floor, but it's unclear what we should do when a NULL from
   // addrspace(1) gets casted to addrspace(0) (or vice-versa).
-  if (Options.NullIsUnknownSize || CPN.getType()->getAddressSpace())
+  if (Options.NullIsUnknownSize || CPN.getPointerType()->getAddressSpace())
     return ObjectSizeOffsetVisitor::unknown();
   return OffsetSpan(Zero, Zero);
 }

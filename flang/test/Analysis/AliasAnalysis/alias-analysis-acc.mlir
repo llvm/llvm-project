@@ -544,3 +544,22 @@ func.func @testBothInsideKernels() {
   }
   return
 }
+
+// -----
+
+// Test passing through acc.compute_region boundary inside acc routine.
+// The two dummy arguments cannot alias:
+// CHECK-LABEL: Testing : "test_acc_routine__0"
+// CHECK-DAG: arg_a#0 <-> arg_b#0: NoAlias
+func.func @test_acc_routine__0(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}, %arg1: !fir.ref<f32> {fir.bindc_name = "b"}) attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_0, <vector>, "test_acc_routine_">, fir.internal_name = "_QPtest_acc_routine"} {
+  %0 = acc.par_width {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%arg2 = %0) ins(%arg3 = %arg0, %arg4 = %arg1) : (!fir.ref<f32>, !fir.ref<f32>) {
+    %1 = fir.dummy_scope : !fir.dscope
+    %2 = fir.declare %arg3 dummy_scope %1 arg 1 {uniq_name = "_QFtest_acc_routineEa", test.ptr = "arg_a"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %3 = fir.declare %arg4 dummy_scope %1 arg 2 {uniq_name = "_QFtest_acc_routineEb", test.ptr = "arg_b"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %4 = fir.load %3 : !fir.ref<f32>
+    fir.store %4 to %2 : !fir.ref<f32>
+    acc.yield
+  } {origin = "acc.routine"}
+  return
+}

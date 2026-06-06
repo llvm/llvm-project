@@ -336,10 +336,7 @@ public:
   void VisitStringLiteral(StringLiteral *e) { emitAggLoadOfLValue(e); }
   void VisitCompoundLiteralExpr(CompoundLiteralExpr *e);
 
-  void VisitPredefinedExpr(const PredefinedExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitPredefinedExpr");
-  }
+  void VisitPredefinedExpr(const PredefinedExpr *e) { emitAggLoadOfLValue(e); }
   void VisitBinaryOperator(const BinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitBinaryOperator");
@@ -368,7 +365,7 @@ public:
       cgf.cgm.errorNYI(e->getBeginLoc(), "aggregate three-way comparison");
 
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
-    CIRGenBuilderTy builder = cgf.getBuilder();
+    CIRGenBuilderTy &builder = cgf.getBuilder();
 
     if (e->getType()->isAnyComplexType())
       cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: complex type");
@@ -518,8 +515,11 @@ public:
   }
 
   void VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitImplicitValueInitExpr");
+    QualType ty = e->getType();
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    AggValueSlot slot = ensureSlot(loc, ty);
+    emitNullInitializationToLValue(loc,
+                                   cgf.makeAddrLValue(slot.getAddress(), ty));
   }
   void VisitNoInitExpr(NoInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitNoInitExpr");
@@ -540,7 +540,7 @@ public:
   /// real initializer list.
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
     ASTContext &ctx = cgf.getContext();
-    CIRGenBuilderTy builder = cgf.getBuilder();
+    CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
 
     LValue array = cgf.emitLValue(e->getSubExpr());
@@ -813,8 +813,6 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
 
-          assert(!cir::MissingFeatures::requiresCleanups());
-
           // Emit the actual filler expression.
           LValue elementLV = cgf.makeAddrLValue(
               Address(currentElement, cirElementType, elementAlign),
@@ -1021,24 +1019,8 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
 }
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
-  mlir::OpBuilder::InsertPoint scopeBegin;
-
-  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                       [&](mlir::OpBuilder &b, mlir::Location loc) {
-                         scopeBegin = b.saveInsertionPoint();
-                       });
-
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(scopeBegin);
-    CIRGenFunction::LexicalScope lexScope{cgf, scopeLoc,
-                                          builder.getInsertionBlock()};
-
-    CIRGenFunction::FullExprCleanupScope fullExprScope(cgf, e->getSubExpr());
-    Visit(e->getSubExpr());
-  }
+  CIRGenFunction::FullExprCleanupScope fullExprScope(cgf, e->getSubExpr());
+  Visit(e->getSubExpr());
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {

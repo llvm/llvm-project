@@ -156,6 +156,11 @@ public:
 
   GlobalDecl curSEHParent;
 
+  /// If a ParmVarDecl had the pass_object_size attribute, this will contain a
+  /// mapping from said ParmVarDecl to its implicit "object_size" parameter.
+  llvm::SmallDenseMap<const ParmVarDecl *, const ImplicitParamDecl *>
+      sizeArguments;
+
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
   llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
@@ -545,6 +550,12 @@ public:
   };
 
   bool isLValueSuitableForInlineAtomic(LValue lv);
+
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc,
+                        AggValueSlot slot = AggValueSlot::ignored());
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc, cir::MemOrder order,
+                        bool isVolatile = false,
+                        AggValueSlot slot = AggValueSlot::ignored());
 
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
@@ -1094,6 +1105,11 @@ public:
   /// true at the current insertion point (inside the conditional branch).
   Address createCleanupActiveFlag();
 
+  /// Set up the last cleanup that was pushed as a conditional
+  /// full-expression cleanup.
+  void initFullExprCleanup();
+  void initFullExprCleanupWithFlag(Address activeFlag);
+
   /// Promote a single pending cleanup entry onto the EH scope stack. If the
   /// entry has a valid activeFlag, the cleanup is configured as conditional.
   /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
@@ -1395,6 +1411,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind, Address addr,
+                             QualType type);
+
   void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
                    QualType type);
 
@@ -1519,6 +1538,7 @@ public:
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+  LValue emitInitListLValue(const InitListExpr *e);
 
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
@@ -1548,6 +1568,8 @@ public:
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
 
+  RValue emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                AggValueSlot slot = AggValueSlot::ignored());
   LValue emitPseudoObjectLValue(const PseudoObjectExpr *E);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
@@ -1668,6 +1690,8 @@ public:
   cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
   cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
                                        mlir::Value coroframeAddr);
+
+  cir::CallOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
@@ -1689,8 +1713,8 @@ public:
   void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
                                   mlir::Value numElements, Address arrayBase,
                                   const CXXConstructExpr *e,
-                                  bool newPointerIsChecked,
-                                  bool zeroInitialize);
+                                  bool newPointerIsChecked, bool zeroInitialize,
+                                  Address endOfInit);
   void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, AggValueSlot thisAVS,
@@ -1780,6 +1804,8 @@ public:
     virtual mlir::LogicalResult operator()(CIRGenFunction &cgf) = 0;
     virtual ~cxxTryBodyEmitter() = default;
   };
+
+  void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
                                      cxxTryBodyEmitter &bodyCallback);
@@ -1999,6 +2025,13 @@ public:
   std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
                                                    const CallExpr *expr);
 
+  /// Emit a call to an NVPTX builtin function.
+  std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
+  /// Emit a device-side printf call for NVPTX targets.
+  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
+
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
   LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
@@ -2039,8 +2072,7 @@ public:
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
-  /// Emit a guarded initializer for a static local variable or a static
-  /// data member of a class template instantiation.
+  /// Emit a guarded initializer for a static local variable.
   void emitCXXGuardedInit(const VarDecl &varDecl, cir::GlobalOp globalOp,
                           bool performInit);
 
@@ -2052,9 +2084,11 @@ public:
                          bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
+  void emitStoreThroughExtVectorComponentLValue(RValue src, LValue dst);
+
   /// Store the specified rvalue into the specified
-  /// lvalue, where both are guaranteed to the have the same type, and that type
-  /// is 'Ty'.
+  /// lvalue, where both are guaranteed to the have the same type, and that
+  /// type is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
@@ -2252,11 +2286,22 @@ public:
                            mlir::Value arraySize = nullptr,
                            Address *alloca = nullptr,
                            mlir::OpBuilder::InsertPoint ip = {});
+  Address createTempAlloca(mlir::Type ty,
+                           mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                           CharUnits align, mlir::Location loc,
+                           const Twine &name = "tmp",
+                           mlir::Value arraySize = nullptr,
+                           Address *alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
   Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
                                       mlir::Location loc,
                                       const Twine &name = "tmp",
                                       mlir::Value arraySize = nullptr,
                                       mlir::OpBuilder::InsertPoint ip = {});
+  Address
+  maybeCastStackAddressSpace(Address alloca,
+                             mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                             mlir::Value arraySize);
   Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
                                        const Twine &name);
 

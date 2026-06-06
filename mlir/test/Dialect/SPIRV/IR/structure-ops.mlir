@@ -66,6 +66,8 @@ func.func @const() -> () {
   // CHECK: spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
   // CHECK: spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   // CHECK: spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant [1 : i32, 2.000000e+00 : f32] : !spirv.struct<(i32, f32)>
+  // CHECK: spirv.Constant [1 : i32, [dense<2> : vector<2xi32>]] : !spirv.struct<(i32, !spirv.array<1 x vector<2xi32>>)>
 
   %0 = spirv.Constant true
   %1 = spirv.Constant 42 : i32
@@ -81,6 +83,8 @@ func.func @const() -> () {
   %11 = spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
   %12 = spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   %13 = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  %14 = spirv.Constant [1 : i32, 2.0 : f32] : !spirv.struct<(i32, f32)>
+  %15 = spirv.Constant [1 : i32, [dense<2> : vector<2xi32>]] : !spirv.struct<(i32, !spirv.array<1 x vector<2xi32>>)>
   return
 }
 
@@ -103,7 +107,7 @@ func.func @array_constant() -> () {
 // -----
 
 func.func @array_constant() -> () {
-  // expected-error @+1 {{must have spirv.array result type for array value}}
+  // expected-error @+1 {{must have spirv.array or spirv.struct result type for array value}}
   %0 = spirv.Constant [dense<3.0> : vector<2xf32>] : !spirv.rtarray<vector<2xf32>>
   return
 }
@@ -144,6 +148,30 @@ func.func @coop_matrix_const_non_splat() -> () {
     // expected-error @+1 {{expected a splat dense attribute for cooperative matrix constant, but found}}
     %0 = spirv.Constant dense<[[1.0, 2.0], [3.0, 4.0]]> : !spirv.coopmatrix<2x2xf32, Subgroup, MatrixAcc>
     return
+}
+
+// -----
+
+func.func @struct_constant_wrong_member_count() -> () {
+  // expected-error @+1 {{number of constituents (1) does not match number of struct members (2)}}
+  %0 = spirv.Constant [1 : i32] : !spirv.struct<(i32, f32)>
+  return
+}
+
+// -----
+
+func.func @struct_constant_wrong_member_type() -> () {
+  // expected-error @+1 {{result type ('f32') does not match value type ('i32')}}
+  %0 = spirv.Constant [1 : i32, 2 : i32] : !spirv.struct<(i32, f32)>
+  return
+}
+
+// -----
+
+func.func @struct_constant_identified() -> () {
+  // expected-error @+1 {{cannot have an identified struct as a constant type}}
+  %0 = spirv.Constant [1 : i32] : !spirv.struct<S, (i32)>
+  return
 }
 
 // -----
@@ -589,6 +617,19 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.SpecConstant @sc = 1.0 : f32
+  // expected-error @+1 {{op with Import linkage type must not have an initializer}}
+  spirv.GlobalVariable @var0 initializer(@sc) {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "importedVar",
+      linkage_type = <Import>
+    >
+  } : !spirv.ptr<f32, Private>
+}
+
+// -----
+
 spirv.module Logical GLSL450 {
   spirv.func @foo() "None" {
     // expected-error @+1 {{op must appear in a module-like op's block}}
@@ -953,6 +994,57 @@ spirv.module Logical GLSL450 {
   spirv.SpecConstant @sc3 = 3.5 : f32
   // expected-error @+1 {{has incorrect types of operands: expected 'f32', but provided 'i32'}}
   spirv.SpecConstantComposite @scc (@sc1, @sc2, @sc3) : vector<3xf32>
+}
+
+// -----
+
+// Nested composite: array of arrays
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1.5 : f32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstantComposite @scc_inner (@sc1, @sc2) : !spirv.array<2 x f32>
+  // CHECK: spirv.SpecConstantComposite @scc_nested (@scc_inner, @scc_inner) : !spirv.array<2 x !spirv.array<2 x f32>>
+  spirv.SpecConstantComposite @scc_nested (@scc_inner, @scc_inner) : !spirv.array<2 x !spirv.array<2 x f32>>
+}
+
+// -----
+
+// Struct with composite and scalar constituents
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1 : i32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstant @sc3 = 3.5 : f32
+  spirv.SpecConstantComposite @scc_vec (@sc2, @sc3) : vector<2xf32>
+  // CHECK: spirv.SpecConstantComposite @scc_struct (@sc1, @scc_vec) : !spirv.struct<(i32, vector<2xf32>)>
+  spirv.SpecConstantComposite @scc_struct (@sc1, @scc_vec) : !spirv.struct<(i32, vector<2xf32>)>
+}
+
+// -----
+
+// Type mismatch with composite constituent
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc1 = 1.5 : f32
+  spirv.SpecConstant @sc2 = 2.5 : f32
+  spirv.SpecConstantComposite @scc_inner (@sc1, @sc2) : !spirv.array<2 x f32>
+  // expected-error @+1 {{has incorrect types of operands: expected '!spirv.array<3 x f32>', but provided '!spirv.array<2 x f32>'}}
+  spirv.SpecConstantComposite @scc_bad (@scc_inner) : !spirv.array<1 x !spirv.array<3 x f32>>
+}
+
+// -----
+
+// Unsupported constituent (not a SpecConstant or SpecConstantComposite)
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @gv : !spirv.ptr<f32, Private>
+  // expected-error @+1 {{unsupported constituent "gv": must reference a spirv.SpecConstant or spirv.SpecConstantComposite}}
+  spirv.SpecConstantComposite @scc (@gv) : !spirv.array<1 x f32>
+}
+
+// -----
+
+// Unknown constituent symbol
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{unknown constituent symbol "does_not_exist"}}
+  spirv.SpecConstantComposite @scc (@does_not_exist) : !spirv.array<1 x f32>
 }
 
 //===----------------------------------------------------------------------===//

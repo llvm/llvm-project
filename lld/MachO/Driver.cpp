@@ -293,6 +293,12 @@ struct DeferredFile {
   StringRef path;
   bool isLazy;
   MemoryBufferRef buffer;
+  LoadType loadType = LoadType::CommandLine;
+  bool isNeeded = false;
+  bool isWeak = false;
+  bool isReexport = false;
+  bool isHidden = false;
+  bool isExplicit = true;
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
@@ -461,15 +467,15 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           StringRef reason;
           switch (loadType) {
-            case LoadType::LCLinkerOption:
-              reason = "LC_LINKER_OPTION";
-              break;
-            case LoadType::CommandLineForce:
-              reason = "-force_load";
-              break;
-            case LoadType::CommandLine:
-              reason = "-all_load";
-              break;
+          case LoadType::LCLinkerOption:
+            reason = "LC_LINKER_OPTION";
+            break;
+          case LoadType::CommandLineForce:
+            reason = "-force_load";
+            break;
+          case LoadType::CommandLine:
+            reason = "-all_load";
+            break;
           }
           if (Error e = file->fetch(c, reason)) {
             if (config->warnThinArchiveMissingMembers)
@@ -580,33 +586,57 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                      isExplicit, isBundleLoader, isForceHidden);
 }
 
-static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
+static DenseSet<StringRef> loadedObjectFrameworks;
+
+static void applyDylibMetadata(InputFile *file, bool isNeeded, bool isWeak,
+                               bool isReexport) {
+  if (auto *dylibFile = dyn_cast_or_null<DylibFile>(file)) {
+    dylibFile->forceNeeded |= isNeeded;
+    dylibFile->forceWeakImport |= isWeak;
+    if (isReexport) {
+      config->hasReexports = true;
+      dylibFile->reexport = true;
+    }
+  }
+}
+
+static void checkAndCacheFramework(InputFile *file, StringRef path) {
+  if (isa_and_nonnull<ObjFile>(file) || isa_and_nonnull<BitcodeFile>(file)) {
+    if (path.contains(".framework"))
+      loadedObjectFrameworks.insert(path);
+  }
+}
+
+static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred,
+                      LoadType loadType = LoadType::CommandLine,
+                      bool isNeeded = false, bool isWeak = false,
+                      bool isReexport = false, bool isHidden = false,
+                      bool isExplicit = true) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   if (config->readWorkers)
-    deferred.push_back({path, isLazy, *buffer});
-  else
-    processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
+    deferred.push_back({path, isLazy, *buffer, loadType, isNeeded, isWeak,
+                        isReexport, isHidden, isExplicit});
+  else {
+    if (loadedObjectFrameworks.contains(path))
+      return;
+
+    InputFile *file =
+        processFile(buffer, nullptr, path, loadType, isLazy, isExplicit,
+                    /*isBundleLoader=*/false, isHidden);
+    applyDylibMetadata(file, isNeeded, isWeak, isReexport);
+    checkAndCacheFramework(file, path);
+  }
 }
 
 static std::vector<StringRef> missingAutolinkWarnings;
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        bool isReexport, bool isHidden, bool isExplicit,
-                       LoadType loadType) {
+                       LoadType loadType, DeferredFiles &deferred) {
   if (std::optional<StringRef> path = findLibrary(name)) {
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, loadType, /*isLazy=*/false, isExplicit,
-                    /*isBundleLoader=*/false, isHidden))) {
-      if (isNeeded)
-        dylibFile->forceNeeded = true;
-      if (isWeak)
-        dylibFile->forceWeakImport = true;
-      if (isReexport) {
-        config->hasReexports = true;
-        dylibFile->reexport = true;
-      }
-    }
+    deferFile(*path, /*isLazy=*/false, deferred, loadType, isNeeded, isWeak,
+              isReexport, isHidden, isExplicit);
     return;
   }
   if (loadType == LoadType::LCLinkerOption) {
@@ -617,33 +647,15 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
   error("library not found for -l" + name);
 }
 
-static DenseSet<StringRef> loadedObjectFrameworks;
 static void addFramework(StringRef name, bool isNeeded, bool isWeak,
-                         bool isReexport, bool isExplicit, LoadType loadType) {
+                         bool isReexport, bool isExplicit, LoadType loadType,
+                         DeferredFiles &deferred) {
   if (std::optional<StringRef> path = findFramework(name)) {
     if (loadedObjectFrameworks.contains(*path))
       return;
 
-    InputFile *file =
-        addFile(*path, loadType, /*isLazy=*/false, isExplicit, false);
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(file)) {
-      if (isNeeded)
-        dylibFile->forceNeeded = true;
-      if (isWeak)
-        dylibFile->forceWeakImport = true;
-      if (isReexport) {
-        config->hasReexports = true;
-        dylibFile->reexport = true;
-      }
-    } else if (isa_and_nonnull<ObjFile>(file) ||
-               isa_and_nonnull<BitcodeFile>(file)) {
-      // Cache frameworks containing object or bitcode files to avoid duplicate
-      // symbols. Frameworks containing static archives are cached separately
-      // in addFile() to share caching with libraries, and frameworks
-      // containing dylibs should allow overwriting of attributes such as
-      // forceNeeded by subsequent loads
-      loadedObjectFrameworks.insert(*path);
-    }
+    deferFile(*path, /*isLazy=*/false, deferred, loadType, isNeeded, isWeak,
+              isReexport, /*isHidden=*/false, isExplicit);
     return;
   }
   if (loadType == LoadType::LCLinkerOption) {
@@ -693,22 +705,35 @@ void macho::resolveLCLinkerOptions() {
     SmallVector<StringRef> LCLinkerOptions(unprocessedLCLinkerOptions);
     unprocessedLCLinkerOptions.clear();
 
+    DeferredFiles deferred;
     for (unsigned i = 0; i < LCLinkerOptions.size(); ++i) {
       StringRef arg = LCLinkerOptions[i];
       if (arg.consume_front("-l")) {
         assert(!config->ignoreAutoLinkOptions.contains(arg));
         addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
                    /*isReexport=*/false, /*isHidden=*/false,
-                   /*isExplicit=*/false, LoadType::LCLinkerOption);
+                   /*isExplicit=*/false, LoadType::LCLinkerOption, deferred);
       } else if (arg == "-framework") {
         StringRef name = LCLinkerOptions[++i];
         assert(!config->ignoreAutoLinkOptions.contains(name));
         addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
                      /*isReexport=*/false, /*isExplicit=*/false,
-                     LoadType::LCLinkerOption);
+                     LoadType::LCLinkerOption, deferred);
       } else {
         error(arg + " is not allowed in LC_LINKER_OPTION");
       }
+    }
+
+    for (auto &file : deferred) {
+      if (loadedObjectFrameworks.contains(file.path))
+        continue;
+
+      auto inputFile = processFile(file.buffer, nullptr, file.path,
+                                   file.loadType, file.isLazy, file.isExplicit,
+                                   /*isBundleLoader=*/false, file.isHidden);
+      applyDylibMetadata(inputFile, file.isNeeded, file.isWeak,
+                         file.isReexport);
+      checkAndCacheFramework(inputFile, file.path);
     }
   }
 }
@@ -1383,32 +1408,29 @@ static void createFiles(const InputArgList &args) {
       deferFile(rerootPath(arg->getValue()), isLazy, deferredFiles);
       break;
     case OPT_needed_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), LoadType::CommandLine)))
-        dylibFile->forceNeeded = true;
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLine, /*isNeeded=*/true);
       break;
     case OPT_reexport_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), LoadType::CommandLine))) {
-        config->hasReexports = true;
-        dylibFile->reexport = true;
-      }
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLine, /*isNeeded=*/false, /*isWeak=*/false,
+                /*isReexport=*/true);
       break;
     case OPT_weak_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), LoadType::CommandLine)))
-        dylibFile->forceWeakImport = true;
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLine, /*isNeeded=*/false, /*isWeak=*/true);
       break;
     case OPT_filelist:
       addFileList(arg->getValue(), isLazy, deferredFiles);
       break;
     case OPT_force_load:
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLineForce);
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLineForce);
       break;
     case OPT_load_hidden:
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLine,
-              /*isLazy=*/false, /*isExplicit=*/true, /*isBundleLoader=*/false,
-              /*isForceHidden=*/true);
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLine, /*isNeeded=*/false, /*isWeak=*/false,
+                /*isReexport=*/false, /*isHidden=*/true);
       break;
     case OPT_l:
     case OPT_needed_l:
@@ -1418,7 +1440,7 @@ static void createFiles(const InputArgList &args) {
       addLibrary(arg->getValue(), opt.getID() == OPT_needed_l,
                  opt.getID() == OPT_weak_l, opt.getID() == OPT_reexport_l,
                  opt.getID() == OPT_hidden_l,
-                 /*isExplicit=*/true, LoadType::CommandLine);
+                 /*isExplicit=*/true, LoadType::CommandLine, deferredFiles);
       break;
     case OPT_framework:
     case OPT_needed_framework:
@@ -1427,7 +1449,7 @@ static void createFiles(const InputArgList &args) {
       addFramework(arg->getValue(), opt.getID() == OPT_needed_framework,
                    opt.getID() == OPT_weak_framework,
                    opt.getID() == OPT_reexport_framework, /*isExplicit=*/true,
-                   LoadType::CommandLine);
+                   LoadType::CommandLine, deferredFiles);
       break;
     case OPT_start_lib:
       if (inLib)
@@ -1452,18 +1474,23 @@ static void createFiles(const InputArgList &args) {
     multiThreadedPageIn(deferredFiles);
 
     DeferredFiles archiveContents;
-    std::vector<ArchiveFile *> archives;
     for (auto &file : deferredFiles) {
+      if (loadedObjectFrameworks.contains(file.path))
+        continue;
+
       auto inputFile = processFile(file.buffer, &archiveContents, file.path,
-                                   LoadType::CommandLine, file.isLazy);
+                                   file.loadType, file.isLazy, file.isExplicit,
+                                   /*isBundleLoader=*/false, file.isHidden);
+      applyDylibMetadata(inputFile, file.isNeeded, file.isWeak,
+                         file.isReexport);
+      checkAndCacheFramework(inputFile, file.path);
+
       if (ArchiveFile *archive = dyn_cast<ArchiveFile>(inputFile))
-        archives.push_back(archive);
+        archive->addLazySymbols();
     }
 
     if (!archiveContents.empty())
       multiThreadedPageIn(archiveContents);
-    for (auto *archive : archives)
-      archive->addLazySymbols();
 
     pageInQueue.stopAllWork = true;
   }

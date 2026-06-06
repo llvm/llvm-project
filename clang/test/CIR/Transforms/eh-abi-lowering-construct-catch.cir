@@ -1,0 +1,218 @@
+// RUN: cir-opt %s -cir-eh-abi-lowering -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+// Test the Itanium ABI lowering of cir.construct_catch_param.
+//
+// The input is the form produced by cir-flatten-cfg: catch-copy thunks are
+// already plain `cir.func`s carrying the `cir.eh.catch_copy_thunk`
+// attribute, and each `cir.try` catch handler that needs a non-trivial copy
+// begins with `cir.construct_catch_param` referring to its thunk.
+//
+// The lowering must:
+//   - At each use, insert `__cxa_get_exception_ptr` + bitcast and clone the
+//     thunk's body in place; any potentially-throwing `cir.call` becomes a
+//     `cir.try_call` whose unwind path runs `__clang_call_terminate`
+//     (Itanium's terminate scope around the catch-parameter copy). The
+//     terminate block is appended at the end of the function as a cold
+//     landing pad.
+//   - Drop any catch-copy thunks that end up uncalled after lowering.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+!rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.global "private" external @_ZTVN10__cxxabiv117__class_type_infoE
+    : !cir.ptr<!cir.ptr<!u8i>>
+cir.global linkonce_odr @_ZTS1E
+    = #cir.const_array<"1E" : !cir.array<!s8i x 2>, trailing_zeros>
+    : !cir.array<!s8i x 3>
+cir.global constant linkonce_odr @_ZTI1E
+    = #cir.typeinfo<{
+        #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
+            : !cir.ptr<!u8i>,
+        #cir.global_view<@_ZTS1E> : !cir.ptr<!u8i>}>
+    : !rec_anon_struct
+
+cir.func private @_Z8mayThrowv()
+cir.func private @_ZN1EC1ERKS_(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)
+cir.func private @_ZN1ED1Ev(!cir.ptr<!rec_E>) attributes {nothrow}
+
+//===----------------------------------------------------------------------===//
+// Case 1: basic non_trivial_copy with a single-block catch-copy thunk.
+//===----------------------------------------------------------------------===//
+
+cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk} {
+  cir.call @_ZN1EC1ERKS_(%arg0, %arg1)
+      : (!cir.ptr<!rec_E>, !cir.ptr<!rec_E>) -> ()
+  cir.return
+}
+
+cir.func @test_basic_construct_catch() {
+  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb7
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.construct_catch_param non_trivial_copy %eh_token.1 to %0
+      using @__clang_cir_catch_copy__ZTS1E : !cir.ptr<!rec_E>
+  %ct, %exn = cir.begin_catch %eh_token.1
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.call @_ZN1ED1Ev(%0) nothrow : (!cir.ptr<!rec_E>) -> ()
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb7
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb7:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_basic_construct_catch()
+// CHECK-SAME:    personality(@__gxx_personality_v0)
+//
+// Normal flow: the original try_call to mayThrow with its landing pad.
+// CHECK:         cir.try_call @_Z8mayThrowv() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// Landing pad: typed catch list materialized from the dispatch.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         cir.eh.inflight_exception [@_ZTI1E]
+//
+// Catch-handler entry: __cxa_get_exception_ptr + bitcast, then the inlined
+// thunk body. The plain (potentially-throwing) ctor call must become a
+// cir.try_call whose unwind destination runs __clang_call_terminate.
+// CHECK:         %[[ADJUSTED_RAW:.*]] = cir.call @__cxa_get_exception_ptr(%{{.*}}) nothrow
+// CHECK:         %[[ADJUSTED:.*]] = cir.cast bitcast %[[ADJUSTED_RAW]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_E>
+// CHECK:         cir.try_call @_ZN1EC1ERKS_(%{{.*}}, %[[ADJUSTED]]) ^{{bb[0-9]+}}, ^[[TERMINATE:bb[0-9]+]]
+//
+// Normal continuation of the catch handler runs begin_catch, the user's
+// destructor call, and end_catch.
+// CHECK:         cir.call @__cxa_begin_catch
+// CHECK:         cir.call @_ZN1ED1Ev
+// CHECK:         cir.call @__cxa_end_catch()
+//
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+//
+// Terminate scope appended at the end of the function: control reaches it
+// only if the catch-parameter copy throws.
+// CHECK:       ^[[TERMINATE]]:
+// CHECK:         %[[T_EXN:.*]], %{{.*}} = cir.eh.inflight_exception catch_all
+// CHECK:         cir.call @__clang_call_terminate(%[[T_EXN]]){{.*}}noreturn
+// CHECK:         cir.unreachable
+
+//===----------------------------------------------------------------------===//
+// Case 2: two callers share a single thunk.
+//===----------------------------------------------------------------------===//
+
+cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E_shared(
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk} {
+  cir.call @_ZN1EC1ERKS_(%arg0, %arg1)
+      : (!cir.ptr<!rec_E>, !cir.ptr<!rec_E>) -> ()
+  cir.return
+}
+
+cir.func @test_shared_thunk_caller_a() {
+  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb7
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.construct_catch_param non_trivial_copy %eh_token.1 to %0
+      using @__clang_cir_catch_copy__ZTS1E_shared : !cir.ptr<!rec_E>
+  %ct, %exn = cir.begin_catch %eh_token.1
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.call @_ZN1ED1Ev(%0) nothrow : (!cir.ptr<!rec_E>) -> ()
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb7
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb7:
+  cir.return
+}
+
+cir.func @test_shared_thunk_caller_b() {
+  %0 = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+  cir.try_call @_Z8mayThrowv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb7
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.construct_catch_param non_trivial_copy %eh_token.1 to %0
+      using @__clang_cir_catch_copy__ZTS1E_shared : !cir.ptr<!rec_E>
+  %ct, %exn = cir.begin_catch %eh_token.1
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.call @_ZN1ED1Ev(%0) nothrow : (!cir.ptr<!rec_E>) -> ()
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb7
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb7:
+  cir.return
+}
+
+// Both callers should have the body inlined: each gets its own
+// __cxa_get_exception_ptr / try_call to the actual ctor.
+// CHECK-LABEL: cir.func @test_shared_thunk_caller_a()
+// CHECK:         cir.call @__cxa_get_exception_ptr
+// CHECK:         cir.try_call @_ZN1EC1ERKS_
+
+// CHECK-LABEL: cir.func @test_shared_thunk_caller_b()
+// CHECK:         cir.call @__cxa_get_exception_ptr
+// CHECK:         cir.try_call @_ZN1EC1ERKS_
+
+//===----------------------------------------------------------------------===//
+// Case 3: a thunk-tagged function with no caller is erased outright.
+//===----------------------------------------------------------------------===//
+
+cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E_unused(
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk} {
+  cir.call @_ZN1EC1ERKS_(%arg0, %arg1)
+      : (!cir.ptr<!rec_E>, !cir.ptr<!rec_E>) -> ()
+  cir.return
+}
+
+// All three catch-copy thunks above (basic, shared, unused) are unreferenced
+// after inlining and must be erased by the lowering pass.
+// CHECK-NOT: cir.eh.catch_copy_thunk
+// CHECK-NOT: @__clang_cir_catch_copy__ZTS1E
+
+// Module-level runtime helper declarations introduced by the lowering.
+// CHECK: cir.func private @__cxa_get_exception_ptr(!cir.ptr<!void>) -> !cir.ptr<!u8i>
+// CHECK: cir.func {{.*}} @__clang_call_terminate(%{{.*}}: !cir.ptr<!void>) attributes {noreturn}
+
+}

@@ -118,7 +118,11 @@ public:
     /// Vectorize loops using scalable vectors or fixed-width vectors, but favor
     /// scalable vectors when the cost-model is inconclusive. This is the
     /// default when the scalable.enable hint is enabled through a pragma.
-    SK_PreferScalable = 1
+    SK_PreferScalable = 1,
+    /// Always vectorize loops using scalable vectors if feasible (i.e. the plan
+    /// has a valid cost and is not restricted by fixed-length dependence
+    /// distances).
+    SK_AlwaysScalable = 2
   };
 
   LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
@@ -135,8 +139,10 @@ public:
   void emitRemarkWithHints() const;
 
   ElementCount getWidth() const {
-    return ElementCount::get(Width.Value, (ScalableForceKind)Scalable.Value ==
-                                              SK_PreferScalable);
+    return ElementCount::get(
+        Width.Value,
+        (ScalableForceKind)Scalable.Value == SK_PreferScalable ||
+            (ScalableForceKind)Scalable.Value == SK_AlwaysScalable);
   }
 
   unsigned getInterleave() const {
@@ -162,9 +168,11 @@ public:
     return (ScalableForceKind)Scalable.Value == SK_FixedWidthOnly;
   }
 
-  /// If hints are provided that force vectorization, use the AlwaysPrint
-  /// pass name to force the frontend to print the diagnostic.
-  const char *vectorizeAnalysisPassName() const;
+  /// \return true if scalable vectorization is always preferred over
+  /// fixed-length when feasible, regardless of cost.
+  bool isScalableVectorizationAlwaysPreferred() const {
+    return (ScalableForceKind)Scalable.Value == SK_AlwaysScalable;
+  }
 
   /// When enabling loop hints are provided we allow the vectorizer to change
   /// the order of operations that is given by the scalar loop. This is not

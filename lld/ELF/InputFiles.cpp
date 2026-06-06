@@ -207,7 +207,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 }
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
-    : ctx(ctx), mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {}
+    : ctx(ctx), mb(m), fileKind(k) {}
 
 InputFile::~InputFile() {}
 
@@ -1256,7 +1256,6 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
   if (!firstGlobal)
     return;
   SymbolUnion *locals = makeThreadLocalN<SymbolUnion>(firstGlobal);
-  memset(locals, 0, sizeof(SymbolUnion) * firstGlobal);
 
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
   for (size_t i = 0, end = firstGlobal; i != end; ++i) {
@@ -1292,7 +1291,6 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     else
       new (symbols[i]) Defined(ctx, this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
-    symbols[i]->partition = 1;
     symbols[i]->isUsedInRegularObj = true;
   }
 }

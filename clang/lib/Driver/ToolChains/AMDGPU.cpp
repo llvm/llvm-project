@@ -22,8 +22,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 #include <system_error>
 
@@ -633,6 +633,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);
+  addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
 
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
@@ -658,11 +659,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      std::vector<StringRef> &Features) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
-  StringRef TargetID;
-  if (Args.hasArg(options::OPT_mcpu_EQ))
-    TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  else if (Args.hasArg(options::OPT_march_EQ))
-    TargetID = Args.getLastArgValue(options::OPT_march_EQ);
+  StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
   if (!TargetID.empty()) {
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
@@ -700,6 +697,8 @@ AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
     : Generic_ELF(D, Triple, Args),
       OptionsDefault(
           {{options::OPT_O, "3"}, {options::OPT_cl_std_EQ, "CL1.2"}}) {
+  loadMultilibsFromYAML(Args, D);
+
   // Check code object version options. Emit warnings for legacy options
   // and errors for the last invalid code object version options.
   // It is done here to avoid repeated warning or error messages for
@@ -726,6 +725,13 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   for (Arg *A : Args)
     DAL->append(A);
 
+  // AMDGPU is intended to use `-mcpu` but we accept `-march` for legacy.
+  if (Arg *A = DAL->getLastArg(options::OPT_march_EQ)) {
+    DAL->eraseArg(options::OPT_march_EQ);
+    if (!DAL->hasArg(options::OPT_mcpu_EQ))
+      DAL->AddJoinedArg(A, Opts.getOption(options::OPT_mcpu_EQ), A->getValue());
+  }
+
   // Replace -mcpu=native with detected GPU.
   Arg *LastMCPUArg = DAL->getLastArg(options::OPT_mcpu_EQ);
   if (LastMCPUArg && StringRef(LastMCPUArg->getValue()) == "native") {
@@ -733,14 +739,12 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     auto GPUsOrErr = getSystemGPUArchs(Args);
     if (!GPUsOrErr) {
       getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-          << llvm::Triple::getArchTypeName(getArch())
-          << llvm::toString(GPUsOrErr.takeError()) << "-mcpu";
+          << getArchName() << llvm::toString(GPUsOrErr.takeError()) << "-mcpu";
     } else {
       auto &GPUs = *GPUsOrErr;
-      if (llvm::SmallSet<std::string, 1>(GPUs.begin(), GPUs.end()).size() > 1)
+      if (!llvm::all_equal(GPUs))
         getDriver().Diag(diag::warn_drv_multi_gpu_arch)
-            << llvm::Triple::getArchTypeName(getArch())
-            << llvm::join(GPUs, ", ") << "-mcpu";
+            << getArchName() << llvm::join(GPUs, ", ") << "-mcpu";
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ),
                         Args.MakeArgString(GPUs.front()));
     }
@@ -880,6 +884,18 @@ void AMDGPUToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
+
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (getDriver().getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
 
   if (std::optional<std::string> Path = getStdlibIncludePath())
     addSystemInclude(DriverArgs, CC1Args, *Path);
@@ -1060,7 +1076,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 ROCMToolChain::getCommonDeviceLibNames(
-    const llvm::opt::ArgList &DriverArgs, const std::string &GPUArch,
+    const llvm::opt::ArgList &DriverArgs, llvm::StringRef GPUArch,
     Action::OffloadKind DeviceOffloadingKind) const {
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
   const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);

@@ -14,7 +14,7 @@ define float @sitofp_and(i8 %x) {
 
 define half @sitofp_const(i8 %x) {
 ; CHECK-LABEL: @sitofp_const(
-; CHECK-NEXT:    ret half 0xH5140
+; CHECK-NEXT:    ret half 4.200000e+01
 ;
   %r = sitofp i8 42 to half
   ret half %r

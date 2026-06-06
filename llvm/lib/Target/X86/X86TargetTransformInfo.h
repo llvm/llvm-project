@@ -37,6 +37,7 @@ class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
   const X86TargetLowering *getTLI() const { return TLI; }
 
   const FeatureBitset InlineFeatureIgnoreList = {
+      // clang-format off
       // This indicates the CPU is 64 bit capable not that we are in 64-bit
       // mode.
       X86::FeatureX86_64,
@@ -78,6 +79,7 @@ class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
       X86::TuningSlowDivide32,
       X86::TuningSlowDivide64,
       X86::TuningSlowIncDec,
+      X86::TuningSlowIndirectCall,
       X86::TuningSlowLEA,
       X86::TuningSlowPMADDWD,
       X86::TuningSlowPMULLD,
@@ -107,6 +109,7 @@ class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
 
       // CPU name enums. These just follow CPU string.
       X86::ProcIntelAtom
+      // clang-format on
   };
 
 public:

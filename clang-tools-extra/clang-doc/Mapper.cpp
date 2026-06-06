@@ -43,6 +43,9 @@ void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   if (CDCtx.FTimeTrace)
     llvm::timeTraceProfilerInitialize(200, "clang-doc");
   TraverseDecl(Context.getTranslationUnitDecl());
+
+  TransientArena.Reset();
+
   if (CDCtx.FTimeTrace)
     llvm::timeTraceProfilerFinishThread();
 }

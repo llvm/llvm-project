@@ -30,6 +30,8 @@ macros:
     macro_header: pthread-macros.h
   - macro_name: "PTHREAD_MUTEX_INITIALIZER"
     macro_header: pthread-macros.h
+  - macro_name: "PTHREAD_COND_INITIALIZER"
+    macro_header: pthread-macros.h
   - macro_name: "PTHREAD_RWLOCK_INITIALIZER"
     macro_header: pthread-macros.h
   - macro_name: "PTHREAD_STACK_MIN"
@@ -56,11 +58,15 @@ types:
   - type_name: pthread_barrier_t
   - type_name: pthread_barrierattr_t
   - type_name: pthread_key_t
+  - type_name: pthread_cond_t
   - type_name: pthread_condattr_t
   - type_name: pthread_rwlock_t
   - type_name: pthread_rwlockattr_t
   - type_name: pthread_attr_t
   - type_name: pthread_spinlock_t
+  - type_name: pthread_id_np_t
+    standards:
+      - llvm_libc_ext
 functions:
   - name: pthread_atfork
     return_type: int
@@ -156,6 +162,41 @@ functions:
     arguments:
       - type: pthread_condattr_t *
       - type: int
+  - name: pthread_cond_broadcast
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *
+  - name: pthread_cond_clockwait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
+      - type: clockid_t
+      - type: const struct timespec *__restrict
+  - name: pthread_cond_destroy
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *
+  - name: pthread_cond_init
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: const pthread_condattr_t *__restrict
+  - name: pthread_cond_signal
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *
+  - name: pthread_cond_timedwait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
+      - type: const struct timespec *__restrict
+  - name: pthread_cond_wait
+    return_type: int
+    arguments:
+      - type: pthread_cond_t *__restrict
+      - type: pthread_mutex_t *__restrict
   - name: pthread_create
     return_type: int
     arguments:
@@ -406,3 +447,16 @@ functions:
     return_type: int
     arguments:
       - type: pthread_spinlock_t *
+  - name: pthread_getthreadid_np
+    standards:
+      - llvm_libc_ext
+    return_type: pthread_id_np_t
+    arguments:
+      - type: void
+  - name: pthread_getunique_np
+    standards:
+      - llvm_libc_ext
+    return_type: int
+    arguments:
+      - type: const pthread_t *__restrict
+      - type: pthread_id_np_t *__restrict

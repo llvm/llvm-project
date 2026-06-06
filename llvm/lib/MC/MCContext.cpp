@@ -62,22 +62,21 @@ static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
   SMD.print(nullptr, errs());
 }
 
-MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
-                     const MCRegisterInfo *mri, const MCSubtargetInfo *msti,
+MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo &mai,
+                     const MCRegisterInfo &mri, const MCSubtargetInfo &msti,
                      const SourceMgr *mgr, bool DoAutoReset,
                      StringRef Swift5ReflSegmentName)
     : Swift5ReflectionSegmentName(Swift5ReflSegmentName), TT(TheTriple),
       SrcMgr(mgr), InlineSrcMgr(nullptr), DiagHandler(defaultDiagHandler),
-      MAI(mai), MRI(mri), MSTI(msti), Symbols(Allocator),
+      MAI(mai), MRI(&mri), MSTI(&msti), Symbols(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset) {
-  assert(MAI && MAI->getTargetOptions() &&
-         "MCAsmInfo and MCTargetOptions must be available");
-  SaveTempLabels = getTargetOptions()->MCSaveTempLabels;
+  const MCTargetOptions &TO = getTargetOptions();
+  SaveTempLabels = TO.MCSaveTempLabels;
   if (SaveTempLabels)
     setUseNamesOnTempLabels(true);
-  SecureLogFile = getTargetOptions()->AsSecureLogFile;
+  SecureLogFile = TO.AsSecureLogFile;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
     MainFileName = std::string(SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())
@@ -119,8 +118,8 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
   }
 }
 
-const MCTargetOptions *MCContext::getTargetOptions() const {
-  return MAI->getTargetOptions();
+const MCTargetOptions &MCContext::getTargetOptions() const {
+  return MAI.getTargetOptions();
 }
 
 MCContext::~MCContext() {
@@ -214,7 +213,7 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
 
   MCSymbolTableEntry &Entry = getSymbolTableEntry(NameRef);
   if (!Entry.second.Symbol) {
-    bool IsRenamable = NameRef.starts_with(MAI->getInternalSymbolPrefix());
+    bool IsRenamable = NameRef.starts_with(MAI.getInternalSymbolPrefix());
     bool IsTemporary = IsRenamable && !SaveTempLabels;
     if (!Entry.second.Used) {
       Entry.second.Used = true;
@@ -259,17 +258,17 @@ MCSymbol *MCContext::parseSymbol(const Twine &Name) {
 
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,
                                                  unsigned Idx) {
-  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + FuncName +
+  return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + FuncName +
                            "$frame_escape_" + Twine(Idx));
 }
 
 MCSymbol *MCContext::getOrCreateParentFrameOffsetSymbol(const Twine &FuncName) {
-  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + FuncName +
+  return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + FuncName +
                            "$parent_frame_offset");
 }
 
 MCSymbol *MCContext::getOrCreateLSDASymbol(const Twine &FuncName) {
-  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + "__ehtable$" +
+  return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + "__ehtable$" +
                            FuncName);
 }
 
@@ -366,23 +365,23 @@ MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
 MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
   if (!UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, /*IsTemporary=*/true);
-  return createRenamableSymbol(MAI->getInternalSymbolPrefix() + Name,
+  return createRenamableSymbol(MAI.getInternalSymbolPrefix() + Name,
                                AlwaysAddSuffix, /*IsTemporary=*/true);
 }
 
 MCSymbol *MCContext::createNamedTempSymbol(const Twine &Name) {
-  return createRenamableSymbol(MAI->getInternalSymbolPrefix() + Name, true,
+  return createRenamableSymbol(MAI.getInternalSymbolPrefix() + Name, true,
                                /*IsTemporary=*/!SaveTempLabels);
 }
 
 MCSymbol *MCContext::createBlockSymbol(const Twine &Name, bool AlwaysEmit) {
   if (AlwaysEmit)
-    return getOrCreateSymbol(MAI->getPrivateLabelPrefix() + Name);
+    return getOrCreateSymbol(MAI.getPrivateLabelPrefix() + Name);
 
   bool IsTemporary = !SaveTempLabels;
   if (IsTemporary && !UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, IsTemporary);
-  return createRenamableSymbol(MAI->getPrivateLabelPrefix() + Name,
+  return createRenamableSymbol(MAI.getPrivateLabelPrefix() + Name,
                                /*AlwaysAddSuffix=*/false, IsTemporary);
 }
 
@@ -391,7 +390,7 @@ MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
 }
 
 MCSymbol *MCContext::createLinkerPrivateSymbol(const Twine &Name) {
-  return createRenamableSymbol(MAI->getLinkerPrivateGlobalPrefix() + Name,
+  return createRenamableSymbol(MAI.getLinkerPrivateGlobalPrefix() + Name,
                                /*AlwaysAddSuffix=*/true,
                                /*IsTemporary=*/false);
 }
@@ -501,7 +500,7 @@ MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
       OriginalName.starts_with("_Renamed.."))
     reportError(SMLoc(), "invalid symbol name from source");
 
-  if (MAI->isValidUnquotedName(OriginalName))
+  if (MAI.isValidUnquotedName(OriginalName))
     return new (Name, *this) MCSymbolXCOFF(Name, IsTemporary);
 
   // Now we have a name that contains invalid character(s) for XCOFF symbol.
@@ -519,7 +518,7 @@ MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
   // Append the hex values of '_' and invalid characters with "_Renamed..";
   // at the same time replace invalid characters with '_'.
   for (char &C : InvalidName) {
-    if (!MAI->isAcceptableChar(C) || C == '_') {
+    if (!MAI.isAcceptableChar(C) || C == '_') {
       raw_svector_ostream(ValidName).write_hex(C);
       C = '_';
     }
@@ -994,11 +993,11 @@ void MCContext::RemapDebugPaths() {
 //===----------------------------------------------------------------------===//
 
 EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
-  return getTargetOptions()->EmitDwarfUnwind;
+  return getTargetOptions().EmitDwarfUnwind;
 }
 
 bool MCContext::emitCompactUnwindNonCanonical() const {
-  return getTargetOptions()->EmitCompactUnwindNonCanonical;
+  return getTargetOptions().EmitCompactUnwindNonCanonical;
 }
 
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
@@ -1133,9 +1132,9 @@ void MCContext::reportError(SMLoc Loc, const Twine &Msg) {
 }
 
 void MCContext::reportWarning(SMLoc Loc, const Twine &Msg) {
-  if (getTargetOptions()->MCNoWarn)
+  if (getTargetOptions().MCNoWarn)
     return;
-  if (getTargetOptions()->MCFatalWarnings) {
+  if (getTargetOptions().MCFatalWarnings) {
     reportError(Loc, Msg);
   } else {
     reportCommon(Loc, [&](SMDiagnostic &D, const SourceMgr *SMP) {

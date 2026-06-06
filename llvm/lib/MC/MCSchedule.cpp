@@ -11,14 +11,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include <optional>
 #include <type_traits>
 
 using namespace llvm;
+
+static constexpr float DefaultReservationStationScaleFactor = 1.0f;
+
+static cl::opt<float> ReservationStationScaleFactor(
+    "sched-model-reservation-station-scale-factor", cl::Hidden,
+    cl::init(DefaultReservationStationScaleFactor),
+    cl::desc("Scale the buffer size of all reservation stations by a positive "
+             "factor. Buffer sizes of -1/0/1 (unlimited/unbuffered/in-order) "
+             "are preserved. Likewise, if the scaled result is <= 1, the "
+             "original size is kept. Computed sizes "
+             "are truncated towards zero."));
 
 static_assert(std::is_trivial_v<MCSchedModel>,
               "MCSchedModel is required to be a trivial type");
@@ -211,4 +225,43 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
 
   // Unable to find WriteResourceID in MCReadAdvanceEntry Entries
   return 0;
+}
+
+/// Return the buffer size of the resource. If a positive scale factor
+/// is provided and the original buffer size is > 1, the size is scaled
+/// accordingly.
+int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
+  int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
+
+  // Skip scaling when factor is 1 (the default).
+  // Use native float comparison to avoid overhead on the hot fast
+  // path, as 1.0f is exactly representable
+  if (LLVM_LIKELY(ReservationStationScaleFactor ==
+                  DefaultReservationStationScaleFactor))
+    return BufferSize;
+
+  // Skip scaling for special buffer sizes (-1,0,1)
+  if (BufferSize <= 1)
+    return BufferSize;
+
+  // Skip invalid (non-positive) scale factors
+  APFloat Scale(ReservationStationScaleFactor);
+  if (Scale.isNegative() || Scale.isZero())
+    return BufferSize;
+
+  // Scale and truncate the positive computed size towards zero
+  APFloat Product(static_cast<float>(BufferSize));
+  Product.multiply(Scale, APFloat::rmTowardZero);
+  APSInt Result(32, /*IsUnsigned=*/false);
+  bool IsExact;
+  if (Product.convertToInteger(Result, APFloat::rmTowardZero, &IsExact) &
+      APFloat::opInvalidOp)
+    return BufferSize;
+  int Scaled = static_cast<int>(Result.getExtValue());
+
+  // Avoid producing special buffer sizes (-1,0,1)
+  if (Scaled <= 1)
+    return BufferSize;
+
+  return Scaled;
 }

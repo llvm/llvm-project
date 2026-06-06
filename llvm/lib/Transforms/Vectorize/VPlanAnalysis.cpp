@@ -24,26 +24,6 @@ using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
-VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
-    : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {
-  if (auto LoopRegion = Plan.getVectorLoopRegion()) {
-    if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
-            &LoopRegion->getEntryBasicBlock()->front())) {
-      CanonicalIVTy = CanIV->getScalarType();
-      return;
-    }
-  }
-
-  // If there's no canonical IV, retrieve the type from the trip count
-  // expression.
-  auto *TC = Plan.getTripCount();
-  if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {
-    CanonicalIVTy = TCIRV->getType();
-    return;
-  }
-  CanonicalIVTy = cast<VPExpandSCEVRecipe>(TC)->getSCEV()->getType();
-}
-
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
   Type *ResTy = inferScalarType(R->getIncomingValue(0));
   for (unsigned I = 1, E = R->getNumIncomingValues(); I != E; ++I) {
@@ -75,9 +55,17 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return SetResultTyFromOp();
 
   switch (Opcode) {
-  case Instruction::ExtractElement:
-  case Instruction::Freeze:
   case Instruction::PHI:
+    for (VPValue *Op : R->operands()) {
+      if (auto *VIR = dyn_cast<VPIRValue>(Op))
+        return VIR->getType();
+      if (auto *Ty = CachedTypes.lookup(Op))
+        return Ty;
+    }
+  LLVM_FALLTHROUGH;
+  case Instruction::ExtractElement:
+  case Instruction::InsertElement:
+  case Instruction::Freeze:
   case VPInstruction::Broadcast:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExitingIVValue:
@@ -106,8 +94,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
                inferScalarType(R->getOperand(1)) &&
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
-  case VPInstruction::ComputeAnyOfResult:
-    return inferScalarType(R->getOperand(1));
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -139,6 +125,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case Instruction::Store:
+  case Instruction::Switch:
     return Type::getVoidTy(Ctx);
   case Instruction::Load:
     return cast<LoadInst>(R->getUnderlyingValue())->getType();
@@ -208,17 +195,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   llvm_unreachable("Unhandled opcode!");
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
-  auto &CI = *cast<CallInst>(R->getUnderlyingInstr());
-  return CI.getType();
-}
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
-  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)) &&
-         "Store recipes should not define any values");
-  return cast<LoadInst>(&R->getIngredient())->getType();
-}
-
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
   unsigned Opcode = R->getUnderlyingInstr()->getOpcode();
 
@@ -279,49 +255,35 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (auto *IRV = dyn_cast<VPIRValue>(V))
-    return IRV->getType();
-
-  if (isa<VPSymbolicValue>(V)) {
-    // All VPValues without any underlying IR value (like the vector trip count
-    // or the backedge-taken count) have the same type as the canonical IV.
-    return CanonicalIVTy;
+  if (isa<VPIRValue, VPRegionValue, VPSymbolicValue, VPMultiDefValue,
+          VPExpandSCEVRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
+          VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe, VPWidenCastRecipe,
+          VPWidenIntrinsicRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
+          VPVectorEndPointerRecipe, VPWidenCallRecipe, VPWidenLoadRecipe,
+          VPWidenLoadEVLRecipe>(V)) {
+    Type *Ty = V->getScalarType();
+    assert(Ty && "Scalar type must be set by recipe construction");
+    return Ty;
   }
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
-                VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPWidenPointerInductionRecipe, VPCurrentIterationPHIRecipe>(
-              [this](const auto *R) {
-                // Handle header phi recipes, except VPWidenIntOrFpInduction
-                // which needs special handling due it being possibly truncated.
-                // TODO: consider inferring/caching type of siblings, e.g.,
-                // backedge value, here and in cases below.
-                return inferScalarType(R->getStartValue());
-              })
+          .Case<VPActiveLaneMaskPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
+                VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
+                VPCurrentIterationPHIRecipe>([this](const auto *R) {
+            // Handle header phi recipes, except VPWidenIntOrFpInduction
+            // which needs special handling due it being possibly truncated.
+            // TODO: consider inferring/caching type of siblings, e.g.,
+            // backedge value, here and in cases below.
+            return inferScalarType(R->getStartValue());
+          })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
-          .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
-                VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe>(
-              [this](const VPRecipeBase *R) {
-                return inferScalarType(R->getOperand(0));
-              })
           // VPInstructionWithType must be handled before VPInstruction.
-          .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
-                VPWidenCastRecipe>(
+          .Case<VPInstructionWithType>(
               [](const auto *R) { return R->getResultType(); })
-          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryRecipe>(
+          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case([V](const VPInterleaveBase *R) {
-            // TODO: Use info from interleave group.
-            return V->getUnderlyingValue()->getType();
-          })
-          .Case([](const VPExpandSCEVRecipe *R) {
-            return R->getSCEV()->getType();
-          })
           .Case([this](const VPReductionRecipe *R) {
             return inferScalarType(R->getChainOp());
           })
@@ -394,24 +356,26 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   return Base::properlyDominates(ParentA, ParentB);
 }
 
-InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
-                                           unsigned OverrideMaxNumRegs) const {
+InstructionCost
+VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
+                           TargetTransformInfo::TargetCostKind CostKind,
+                           unsigned OverrideMaxNumRegs) const {
   InstructionCost Cost;
   for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
     unsigned AvailableRegs = OverrideMaxNumRegs > 0
                                  ? OverrideMaxNumRegs
-                                 : Ctx.TTI.getNumberOfRegisters(RegClass);
+                                 : TTI.getNumberOfRegisters(RegClass);
     if (MaxUsers > AvailableRegs) {
       // Assume that for each register used past what's available we get one
       // spill and reload.
       unsigned Spills = MaxUsers - AvailableRegs;
       InstructionCost SpillCost =
-          Ctx.TTI.getRegisterClassSpillCost(RegClass, Ctx.CostKind) +
-          Ctx.TTI.getRegisterClassReloadCost(RegClass, Ctx.CostKind);
+          TTI.getRegisterClassSpillCost(RegClass, CostKind) +
+          TTI.getRegisterClassReloadCost(RegClass, CostKind);
       InstructionCost TotalCost = Spills * SpillCost;
       LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
                         << Spills << " spills of "
-                        << Ctx.TTI.getRegisterClassName(RegClass) << "\n");
+                        << TTI.getRegisterClassName(RegClass) << "\n");
       Cost += TotalCost;
     }
   }
@@ -510,6 +474,11 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
   };
 
+  VPValue *CanIV = LoopRegion->getCanonicalIV();
+  // Note: canonical IVs are retained even if they have no users.
+  if (CanIV->getNumUsers() != 0)
+    OpenIntervals.insert(CanIV);
+
   // We scan the instructions linearly and record each time that a new interval
   // starts, by placing it in a set. If we find this value in TransposEnds then
   // we remove it from the set. The max register usage is the maximum register
@@ -558,7 +527,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           continue;
 
         if (VFs[J].isScalar() ||
-            isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
+            isa<VPRegionValue, VPReplicateRecipe, VPDerivedIVRecipe,
                 VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&

@@ -10206,4 +10206,26 @@ TEST(APFloatTest, isValidArbitraryFPFormat) {
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("unknown"));
 }
 
+TEST(APFloatTest, DecimalStringPreservesInexactStatus) {
+  APFloat F(APFloat::IEEEsingle());
+
+  auto StatusOr = F.convertFromString("10384593717069655257060992658440193.0",
+                                      APFloat::rmNearestTiesToEven);
+  EXPECT_TRUE(!!StatusOr);
+
+  APFloat::opStatus Status = *StatusOr;
+
+  // The value is 2^113 + 1, not exactly representable in float.
+  EXPECT_TRUE(Status & APFloat::opInexact);
+
+  // But it should round to exactly 2^113.
+  APFloat Expected(APFloat::IEEEsingle());
+  auto ExpectedStatus =
+      Expected.convertFromString("0x1p113", APFloat::rmNearestTiesToEven);
+  EXPECT_TRUE(!!ExpectedStatus);
+  EXPECT_FALSE(*ExpectedStatus & APFloat::opInexact);
+
+  EXPECT_EQ(F.bitcastToAPInt(), Expected.bitcastToAPInt());
+}
+
 } // namespace

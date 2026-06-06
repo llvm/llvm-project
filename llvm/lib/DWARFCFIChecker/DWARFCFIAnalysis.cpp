@@ -103,7 +103,7 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
       nullptr, MCRI->getDwarfRegNum(MCRI->getProgramCounter(), IsEH)));
 
   for (auto &&InitialFrameStateCFIDirective :
-       Context->getAsmInfo()->getInitialFrameState())
+       Context->getAsmInfo().getInitialFrameState())
     State.update(InitialFrameStateCFIDirective);
 
   auto MaybeCurrentRow = State.getCurrentUnwindRow();

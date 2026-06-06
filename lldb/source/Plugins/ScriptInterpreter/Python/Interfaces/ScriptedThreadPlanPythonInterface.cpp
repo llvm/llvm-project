@@ -6,14 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-// clang-format off
-// LLDB Python header must be included first
-#include "../lldb-python.h"
-//clang-format on
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -29,9 +26,9 @@ ScriptedThreadPlanPythonInterface::ScriptedThreadPlanPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedThreadPlanPythonInterface::CreatePluginObject(
-    const llvm::StringRef class_name, lldb::ThreadPlanSP thread_plan_sp,
-    const StructuredDataImpl &args_sp) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
+    const ScriptedMetadata &scripted_metadata,
+    lldb::ThreadPlanSP thread_plan_sp, const StructuredDataImpl &args_sp) {
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      thread_plan_sp, args_sp);
 }
 

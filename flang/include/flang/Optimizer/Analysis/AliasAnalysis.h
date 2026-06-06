@@ -190,6 +190,11 @@ struct AliasAnalysis {
         });
       }
 
+      bool operator==(const AccessPath &o) const {
+        return isApproximate == o.isApproximate && steps == o.steps;
+      }
+      bool operator!=(const AccessPath &o) const { return !(*this == o); }
+
       void print(llvm::raw_ostream &os) const;
     };
 

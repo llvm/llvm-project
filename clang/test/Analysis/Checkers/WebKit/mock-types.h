@@ -372,7 +372,7 @@ private:
   template <typename U> friend class CanMakeWeakPtr;
   template <typename U> friend class WeakPtr;
 
-  WeakPtrImpl& createWeakPtrImpl() {
+  WeakPtrImpl& [[clang::annotate_type("webkit.nodelete")]] createWeakPtrImpl() {
     if (!impl)
       impl = WeakPtrImpl::create(static_cast<T&>(*this));
     return *impl;
@@ -414,6 +414,9 @@ public:
       impl = nullptr;
     return *this;
   }
+
+  T* operator->() { return get(); }
+  operator T*() { return get(); }
 
   T* get() {
     return impl ? impl->get<T>() : nullptr;

@@ -253,7 +253,8 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
     MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
     uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
     MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
-    MlirAttribute associated) {
+    MlirAttribute associated, MlirAttribute identifier,
+    MlirAttribute discriminator) {
   SmallVector<Attribute> elementsStorage;
   elementsStorage.reserve(nElements);
 
@@ -266,6 +267,8 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
       cast<DIExpressionAttr>(unwrap(rank)),
       cast<DIExpressionAttr>(unwrap(allocated)),
       cast<DIExpressionAttr>(unwrap(associated)),
+      cast<StringAttr>(unwrap(identifier)),
+      cast<DIDerivedTypeAttr>(unwrap(discriminator)),
       llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
                           llvm::CastTo<DINodeAttr>)));
 }
@@ -286,7 +289,7 @@ MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)),
       cast<DIFileAttr>(unwrap(file)), line, cast<DIScopeAttr>(unwrap(scope)),
       cast<DITypeAttr>(unwrap(baseType)), sizeInBits, alignInBits, offsetInBits,
-      addressSpace, DIFlags(flags), cast<DINodeAttr>(unwrap(extraData))));
+      addressSpace, DIFlags(flags), unwrap(extraData)));
 }
 
 MlirStringRef mlirLLVMDIDerivedTypeAttrGetName(void) {

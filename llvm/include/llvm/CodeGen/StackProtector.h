@@ -82,7 +82,7 @@ public:
                                      SSPLayoutMap *Layout = nullptr);
 };
 
-class StackProtectorPass : public PassInfoMixin<StackProtectorPass> {
+class StackProtectorPass : public RequiredPassInfoMixin<StackProtectorPass> {
   const TargetMachine *TM;
 
 public:

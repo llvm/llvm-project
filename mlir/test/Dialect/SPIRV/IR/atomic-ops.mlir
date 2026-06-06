@@ -177,6 +177,36 @@ func.func @atomic_isub(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i
   return %0 : i32
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicLoad
+//===----------------------------------------------------------------------===//
+
+func.func @atomic_load(%ptr : !spirv.ptr<i32, Workgroup>) -> i32 {
+  // CHECK: spirv.AtomicLoad <Workgroup> <Acquire> %{{.*}} : !spirv.ptr<i32, Workgroup>
+  %0 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<i32, Workgroup>
+  return %0 : i32
+}
+
+// -----
+
+func.func @atomic_load_float(%ptr : !spirv.ptr<f32, StorageBuffer>) -> f32 {
+  // CHECK: spirv.AtomicLoad <Device> <None> %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  %0 = spirv.AtomicLoad <Device> <None> %ptr : !spirv.ptr<f32, StorageBuffer>
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_load_mismatch(%ptr : !spirv.ptr<i32, Workgroup>) -> i64 {
+  // expected-error @+1 {{'spirv.AtomicLoad' op failed to verify that `result` type matches pointee type of `pointer`}}
+  %0 = "spirv.AtomicLoad"(%ptr) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<Acquire>} : (!spirv.ptr<i32, Workgroup>) -> (i64)
+  return %0 : i64
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.AtomicOr
 //===----------------------------------------------------------------------===//
@@ -206,6 +236,36 @@ func.func @atomic_smin(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i
   %0 = spirv.AtomicSMin <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicStore
+//===----------------------------------------------------------------------===//
+
+func.func @atomic_store(%ptr : !spirv.ptr<i32, Workgroup>, %value : i32) {
+  // CHECK: spirv.AtomicStore <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
+  spirv.AtomicStore <Workgroup> <Release> %ptr, %value : !spirv.ptr<i32, Workgroup>
+  return
+}
+
+// -----
+
+func.func @atomic_store_float(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) {
+  // CHECK: spirv.AtomicStore <Device> <None> %{{.*}}, %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  spirv.AtomicStore <Device> <None> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  return
+}
+
+// -----
+
+func.func @atomic_store_mismatch(%ptr : !spirv.ptr<i32, Workgroup>, %value : i64) {
+  // expected-error @+1 {{'spirv.AtomicStore' op failed to verify that `value` type matches pointee type of `pointer`}}
+  "spirv.AtomicStore"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<Release>} : (!spirv.ptr<i32, Workgroup>, i64) -> ()
+  return
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // spirv.AtomicUMax

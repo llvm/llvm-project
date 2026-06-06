@@ -70,15 +70,16 @@ protected:
   /// Build the VPlan for the loop starting from \p LoopHeader.
   VPlanPtr buildVPlan(
       BasicBlock *LoopHeader,
-      UncountableExitStyle Style = UncountableExitStyle::NoUncountableExit) {
+      UncountableExitStyle Style = UncountableExitStyle::NoUncountableExit,
+      bool CreateLoopRegions = true) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
-                                             {}, PSE);
+    auto Plan =
+        VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64), PSE);
 
     if (Style != UncountableExitStyle::NoUncountableExit) {
       Inductions.clear();
@@ -95,10 +96,12 @@ protected:
           /*AllowReordering=*/false);
     }
 
+    VPlanTransforms::addCanonicalIVRecipes(*Plan, {});
     VPlanTransforms::handleEarlyExits(*Plan, Style, L, PSE, *DT, AC.get());
     VPlanTransforms::addMiddleCheck(*Plan, false);
 
-    VPlanTransforms::createLoopRegions(*Plan);
+    if (CreateLoopRegions)
+      VPlanTransforms::createLoopRegions(*Plan);
     return Plan;
   }
 
@@ -109,8 +112,10 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    return VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64), {},
-                                        PSE);
+    auto Plan =
+        VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64), PSE);
+    VPlanTransforms::addCanonicalIVRecipes(*Plan, {});
+    return Plan;
   }
 };
 
@@ -131,7 +136,8 @@ protected:
   }
 
   VPlan &getPlan() {
-    Plans.push_back(std::make_unique<VPlan>(ScalarHeader));
+    Plans.push_back(
+        std::make_unique<VPlan>(ScalarHeader, IntegerType::get(C, 64)));
     VPlan &Plan = *Plans.back();
     VPValue *DefaultTC = Plan.getConstantInt(32, 1024);
     Plan.setTripCount(DefaultTC);

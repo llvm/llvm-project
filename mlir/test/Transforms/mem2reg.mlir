@@ -153,3 +153,31 @@ func.func @cyclic_unused_merge_points(%cond: i1) -> i32 {
 ^exit:
   return %c0 : i32
 }
+
+// -----
+
+// This function contains a loop bb1 -> bb2 -> bb1, and to promote the alloca, we
+// need to insert a poison value that gets used initially instead of the stored
+// value in case %cond2 is false. This poison value becomes a bb arg in bb1 and
+// bb2, so the entry block must also pass the poison value to bb1. Make sure the
+// poison value is generated in the entry block where it dominates all uses.
+
+// CHECK-LABEL: func.func @poison_insertion_point
+// CHECK-NEXT: ub.poison
+func.func @poison_insertion_point(%val: f64) {
+  cf.br ^bb1
+^bb1:
+  %alloca = memref.alloca() : memref<f64>
+  %cond1 = "test.get"() : () -> i1
+  cf.cond_br %cond1, ^bb2, ^bb3
+^bb2:
+  %cond2 = "test.get"() : () -> i1
+  scf.if %cond2 {
+    memref.store %val, %alloca[] : memref<f64>
+  }
+  %reload = memref.load %alloca[] : memref<f64>
+  "test.use"(%reload) : (f64) -> ()
+  cf.br ^bb1
+^bb3:
+  return
+}

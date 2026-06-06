@@ -27,7 +27,7 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+    - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       id: artifact-url
       with:
         script: |
@@ -47,12 +47,19 @@ runs:
 
           console.log(response)
 
-          artifacts_to_download = []
+          // Jobs rerun uploads fresh artifacts alongside the old ones with the
+          // same name, keep only the newest per name so downloads don't clobber.
+          latest_by_name = new Map()
           for (artifact of response.data.artifacts) {
-            if (artifact.name.startsWith("${{ inputs.artifact-name }}")) {
-              artifacts_to_download.push(artifact)
+            if (!artifact.name.startsWith("${{ inputs.artifact-name }}")) {
+              continue
+            }
+            existing = latest_by_name.get(artifact.name)
+            if (!existing || new Date(artifact.created_at) > new Date(existing.created_at)) {
+              latest_by_name.set(artifact.name, artifact)
             }
           }
+          artifacts_to_download = Array.from(latest_by_name.values())
 
           for (artifact of artifacts_to_download) {
             console.log(artifact);
