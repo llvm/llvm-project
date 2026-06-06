@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes='dxil-cbuffer-access' %s -o - | FileCheck %s --check-prefixes=CHECK
-; RUN: llc %s -o - | FileCheck %s --check-prefixes=CHECK-LOWERED
-; RUN: llc %s -O3 -o - | FileCheck %s --check-prefixes=CHECK-LOWERED
+; RUN: llc -disable-dxil-remove-unused-resources %s -o - | FileCheck %s --check-prefixes=CHECK-LOWERED
+; RUN: llc -disable-dxil-remove-unused-resources %s -O3 -o - | FileCheck %s --check-prefixes=CHECK-LOWERED
 
 target triple = "dxil-unknown-shadermodel6.6-compute"
 

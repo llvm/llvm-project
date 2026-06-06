@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes='spirv-cbuffer-access' %s -o - | FileCheck %s
-; RUN: llc %s -o - | FileCheck %s
-; RUN: llc %s -O3 -o - | FileCheck %s
+; RUN: llc -disable-dxil-remove-unused-resources %s -o - | FileCheck %s
+; RUN: llc -disable-dxil-remove-unused-resources %s -O3 -o - | FileCheck %s
 
 target triple = "spirv-unknown-vulkan1.3-compute"
 
