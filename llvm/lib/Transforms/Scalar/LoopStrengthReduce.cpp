@@ -2228,6 +2228,10 @@ class LSRInstance {
   // instructions to form LCSSA for them later.
   SmallSetVector<Instruction *, 4> InsertedNonLCSSAInsts;
 
+  // Track casts inserted during ImplementSolution so that getOrCreateCast()
+  // can reuse a dominating cast or become such one.
+  mutable DenseMap<Value *, SmallVector<CastInst *, 2>> InsertedCasts;
+
   void OptimizeShadowIV();
   bool FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse);
   Instruction *OptimizeMax(ICmpInst *Cond, IVStrideUse *&CondUse);
@@ -2313,6 +2317,9 @@ class LSRInstance {
   BasicBlock::iterator AdjustInsertPositionForExpand(BasicBlock::iterator IP,
                                                      const LSRFixup &LF,
                                                      const LSRUse &LU) const;
+
+  CastInst *getOrCreateCast(Instruction::CastOps Op, Value *V, Type *Ty,
+                            const Twine &Name, BasicBlock::iterator IP) const;
 
   Value *Expand(const LSRUse &LU, const LSRFixup &LF, const Formula &F,
                 BasicBlock::iterator IP,
@@ -5732,6 +5739,46 @@ BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
   return IP;
 }
 
+/// Return a cast of V to Ty with opcode Op inserted before IP, reusing a
+/// previously inserted cast when possible.  If an existing cast does not
+/// dominate IP but IP dominates the cast, the cast is moved earlier so it
+/// dominates both.  This deduplicates casts that arise when multiple ICmpZero
+/// fixups share the same IV value.
+CastInst *LSRInstance::getOrCreateCast(Instruction::CastOps Op, Value *V,
+                                       Type *Ty, const Twine &Name,
+                                       BasicBlock::iterator IP) const {
+  auto It = InsertedCasts.find(V);
+  if (It != InsertedCasts.end()) {
+    CastInst *MovableC = nullptr;
+    for (CastInst *C : It->second) {
+      if (C->getOpcode() != Op || C->getType() != Ty)
+        continue;
+      // Prefer a cast that already dominates - no move needed.
+      if (DT.dominates(C, &*IP)) {
+        LLVM_DEBUG(dbgs() << "getOrCreateCast reusing (" << *C << ")\n");
+        return C;
+      }
+      // Remember the first cast we could move to IP.
+      if (!MovableC && DT.dominates(&*IP, C))
+        MovableC = C;
+    }
+    // No dominating cast found - move the first movable one to IP.
+    if (MovableC) {
+      assert(
+          (!isa<Instruction>(V) || DT.dominates(cast<Instruction>(V), &*IP)) &&
+          "Cast operand must dominate the new insertion point");
+      MovableC->moveBefore(*IP->getParent(), IP);
+      LLVM_DEBUG(dbgs() << "getOrCreateCast moved and reusing (" << *MovableC
+                        << ")\n");
+      return MovableC;
+    }
+  }
+  CastInst *C = CastInst::Create(Op, V, Ty, Name, IP);
+  LLVM_DEBUG(dbgs() << "getOrCreateCast created (" << *C << ")\n");
+  InsertedCasts[V].push_back(C);
+  return C;
+}
+
 /// Emit instructions for the leading candidate expression for this LSRUse (this
 /// is called "expanding").
 Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
@@ -5890,7 +5937,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
                            "a scale at the same time!");
     if (F.Scale == -1) {
       if (ICmpScaledV->getType() != OpTy) {
-        Instruction *Cast = CastInst::Create(
+        Instruction *Cast = getOrCreateCast(
             CastInst::getCastOpcode(ICmpScaledV, false, OpTy, false),
             ICmpScaledV, OpTy, "tmp", CI->getIterator());
         ICmpScaledV = Cast;
@@ -5988,11 +6035,12 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
 
         // If this is reuse-by-noop-cast, insert the noop cast.
         Type *OpTy = LF.OperandValToReplace->getType();
-        if (FullV->getType() != OpTy)
-          FullV = CastInst::Create(
+        if (FullV->getType() != OpTy) {
+          FullV = getOrCreateCast(
               CastInst::getCastOpcode(FullV, false, OpTy, false), FullV,
               LF.OperandValToReplace->getType(), "tmp",
               BB->getTerminator()->getIterator());
+        }
 
         // If the incoming block for this value is not in the loop, it means the
         // current PHI is not in a loop exit, so we must create a LCSSA PHI for
@@ -6062,8 +6110,8 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     Type *OpTy = LF.OperandValToReplace->getType();
     if (FullV->getType() != OpTy) {
       Instruction *Cast =
-          CastInst::Create(CastInst::getCastOpcode(FullV, false, OpTy, false),
-                           FullV, OpTy, "tmp", LF.UserInst->getIterator());
+          getOrCreateCast(CastInst::getCastOpcode(FullV, false, OpTy, false),
+                          FullV, OpTy, "tmp", LF.UserInst->getIterator());
       FullV = Cast;
     }
 
