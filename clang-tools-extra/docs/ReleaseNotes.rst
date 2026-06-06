@@ -416,6 +416,12 @@ Changes in existing checks
   positives on project headers that use the same name as a standard library
   header.
 
+- Improve :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` checks to insert a space when
+  replacing ``*it`` with the loop variable in expressions like ``delete*it``
+  , where the missing space would cause the keyword and the new variable to
+  merge into a single identifier.
+
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
