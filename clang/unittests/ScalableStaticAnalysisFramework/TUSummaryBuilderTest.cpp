@@ -336,4 +336,55 @@ TEST_F(TUSummaryBuilderLinkageTest, ConstGlobalHasInternalLinkage) {
   EXPECT_EQ(getLinkageFor(Extractor.addEntity(VD)), Internal);
 }
 
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfExternalFunctionIsExternal) {
+  AST = tooling::buildASTFromCode("void target(int *p) {}");
+  const auto *PVD = findDeclByName<ParmVarDecl>("p", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfInlineFunctionIsExternal) {
+  AST = tooling::buildASTFromCode("inline void target(int *p) {}");
+  const auto *PVD = findDeclByName<ParmVarDecl>("p", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfStaticFunctionIsInternal) {
+  AST = tooling::buildASTFromCode("static void target(int *p) {}");
+  const auto *PVD = findDeclByName<ParmVarDecl>("p", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), Internal);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ParamOfAnonNamespaceFunctionIsInternal) {
+  AST = tooling::buildASTFromCode("namespace {\n"
+                                  "  void target(int *p) {}\n"
+                                  "}");
+  const auto *PVD = findDeclByName<ParmVarDecl>("p", AST->getASTContext());
+  ASSERT_TRUE(PVD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(PVD)), Internal);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, FieldOfExternalClassIsExternal) {
+  AST = tooling::buildASTFromCode("struct S { int *p; };");
+  const auto *FD = findDeclByName<FieldDecl>("p", AST->getASTContext());
+  ASSERT_TRUE(FD);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(FD)), External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ReturnSlotInheritsParentLinkage) {
+  AST = tooling::buildASTFromCode("int *target() { return nullptr; }");
+  const FunctionDecl *Fn = findFnByName("target");
+  ASSERT_TRUE(Fn);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntityForReturn(Fn)), External);
+}
+
+TEST_F(TUSummaryBuilderLinkageTest, ReturnSlotInheritsParentLinkageInternal) {
+  AST = tooling::buildASTFromCode("static int *target() { return nullptr; }");
+  const FunctionDecl *Fn = findFnByName("target");
+  ASSERT_TRUE(Fn);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntityForReturn(Fn)), Internal);
+}
+
 } // namespace

@@ -15,7 +15,7 @@
 namespace clang::ssaf {
 
 enum class EntityLinkageType {
-  None,     ///< local variables, function parameters
+  None,     ///< no linkage
   Internal, ///< static functions/variables, anonymous namespace
   External  ///< globally visible across translation units
 };

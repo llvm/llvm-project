@@ -18,6 +18,16 @@ using namespace clang;
 using namespace ssaf;
 
 static EntityLinkageType getLinkageForDecl(const Decl *D) {
+  // Per the C++ standard, function parameter and return entities have no linkage.
+  // For the purpose of relating them across translation units, we assign them
+  // the linkage of their enclosing function.=
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    if (const auto *FD =
+            dyn_cast_or_null<FunctionDecl>(PVD->getParentFunctionOrMethod()))
+      return getLinkageForDecl(FD);
+    return EntityLinkageType::None;
+  }
+
   const auto *ND = dyn_cast<NamedDecl>(D);
   if (!ND)
     return EntityLinkageType::None;
