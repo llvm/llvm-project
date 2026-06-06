@@ -2535,7 +2535,8 @@ Decl *TemplateDeclInstantiator::VisitVarTemplatePartialSpecializationDecl(
 
   // Lookup the already-instantiated declaration and return that.
   DeclContext::lookup_result Found = Owner->lookup(VarTemplate->getDeclName());
-  assert(!Found.empty() && "Instantiation found nothing?");
+  if (Found.empty())
+    return nullptr;
 
   VarTemplateDecl *InstVarTemplate = dyn_cast<VarTemplateDecl>(Found.front());
   assert(InstVarTemplate && "Instantiation did not find a variable template?");
