@@ -9754,9 +9754,10 @@ void ResolveNamesVisitor::HandleProcedureName(
   // by an explcit declaration. Make sure the symbol is still implicit
   // before doing anything.
   if (WasDeclaredByOmpDeclareTarget(symbol)) {
-    bool isImplicit{symbol->flags().test(Symbol::Flag::Implicit)};
+    bool isImplicit{symbol->test(Symbol::Flag::Implicit)};
     bool inEquivalence{FindEquivalenceSet(*symbol) != nullptr};
-    if (isImplicit && !inEquivalence) {
+    bool inCommonBlock{symbol->test(Symbol::Flag::InCommonBlock)};
+    if (isImplicit && !inEquivalence && !inCommonBlock) {
       // Implicit declaration of a symbol caused by being on a declare_target
       // should only declare it as an object, not a procedure. This is because
       // the 'x' in declare_target(x) looks like a use of a variable, not a
