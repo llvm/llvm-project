@@ -100,8 +100,6 @@ private:
 /// ObjectStore::getReferenceKind() can expect the type of reference without
 /// asking for unloaded objects to be loaded.
 class ObjectRef : public ReferenceBase {
-  struct DenseMapTag {};
-
 public:
   friend bool operator==(const ObjectRef &LHS, const ObjectRef &RHS) {
     return LHS.hasSameInternalRef(RHS);

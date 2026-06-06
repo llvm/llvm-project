@@ -80,7 +80,7 @@ public:
     if (LHS.Context == RHS.Context)
       return LHS.Hash == RHS.Hash;
 
-    // EmptyKey or TombstoneKey.
+    // TombstoneKey.
     if (!LHS.Context || !RHS.Context)
       return false;
 
@@ -99,7 +99,7 @@ public:
   }
 
   const CASContext &getContext() const {
-    assert(Context && "Tombstone or empty key for DenseMap?");
+    assert(Context && "Tombstone key for DenseMap?");
     return *Context;
   }
 
