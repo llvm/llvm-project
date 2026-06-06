@@ -76,24 +76,9 @@ struct DenseMapInfo<T*> {
   static bool isEqual(const T *LHS, const T *RHS) { return LHS == RHS; }
 };
 
-// Provide DenseMapInfo for chars.
-template<> struct DenseMapInfo<char> {
-  static unsigned getHashValue(const char& Val) { return Val * 37U; }
-
-  static bool isEqual(const char &LHS, const char &RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for all integral types except char.
-//
-// The "char" case is excluded because it uses ~0 as the empty key despite
-// "char" being a signed type.  "std::is_same_v<T, char>" is included below
-// for clarity; technically, we do not need it because the explicit
-// specialization above "wins",
+// Provide DenseMapInfo for all integral types.
 template <typename T>
-struct DenseMapInfo<
-    T, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, char>>> {
+struct DenseMapInfo<T, std::enable_if_t<std::is_integral_v<T>>> {
   static unsigned getHashValue(const T &Val) {
     if constexpr (std::is_unsigned_v<T> && sizeof(T) > sizeof(unsigned))
       return densemap::detail::mix(Val);
