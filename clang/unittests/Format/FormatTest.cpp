@@ -5967,22 +5967,33 @@ TEST_F(FormatTest, HashInMacroDefinition) {
   verifyFormat("#define A(c) uR#c");
   verifyFormat("#define A(c) UR#c");
   verifyFormat("#define A(c) u8R#c");
-  verifyFormat("#define A \\\n  b #c;", getLLVMStyleWithColumns(11));
+
+  auto Style = getLLVMStyleWithColumns(11);
+  verifyFormat("#define A \\\n  b #c;", Style);
   verifyFormat("#define A  \\\n"
                "  {        \\\n"
                "    f(#c); \\\n"
                "  }",
-               getLLVMStyleWithColumns(11));
+               Style);
 
+  Style.ColumnLimit = 22;
   verifyFormat("#define A(X)         \\\n"
                "  void function##X()",
-               getLLVMStyleWithColumns(22));
-
+               Style);
   verifyFormat("#define A(a, b, c)   \\\n"
                "  void a##b##c()",
-               getLLVMStyleWithColumns(22));
+               Style);
+  verifyFormat("#define A void # ## #", Style);
 
-  verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
+  Style.ColumnLimit = 60;
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat(
+      "#define MACRO(Name) \\\n"
+      "  struct LongPrefix##Name##LongSuffix< \\\n"
+      "      VeryLongTemplateArgument> {};",
+      "#define MACRO(Name) \\\n"
+      "  struct LongPrefix##Name##LongSuffix<VeryLongTemplateArgument> {};",
+      Style);
 
   verifyFormat("{\n"
                "  {\n"
