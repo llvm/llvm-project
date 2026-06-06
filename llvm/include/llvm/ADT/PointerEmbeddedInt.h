@@ -101,8 +101,6 @@ struct DenseMapInfo<PointerEmbeddedInt<IntT, Bits>> {
   using T = PointerEmbeddedInt<IntT, Bits>;
   using IntInfo = DenseMapInfo<IntT>;
 
-  static inline T getEmptyKey() { return IntInfo::getEmptyKey(); }
-
   static unsigned getHashValue(const T &Arg) {
     return IntInfo::getHashValue(Arg);
   }

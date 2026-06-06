@@ -52,7 +52,6 @@ inline unsigned combineHashValue(unsigned a, unsigned b) {
 /// just be `void`.
 template<typename T, typename Enable = void>
 struct DenseMapInfo {
-  // static constexpr T getEmptyKey();
   // static unsigned getHashValue(const T &Val);
   // static bool isEqual(const T &LHS, const T &RHS);
 };
@@ -70,12 +69,6 @@ struct DenseMapInfo<T*> {
   //               "Log2MaxAlign bits of alignment");
   static constexpr uintptr_t Log2MaxAlign = 12;
 
-  static constexpr T *getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    Val <<= Log2MaxAlign;
-    return reinterpret_cast<T*>(Val);
-  }
-
   static unsigned getHashValue(const T *PtrVal) {
     return densemap::detail::mix(reinterpret_cast<uintptr_t>(PtrVal));
   }
@@ -85,7 +78,6 @@ struct DenseMapInfo<T*> {
 
 // Provide DenseMapInfo for chars.
 template<> struct DenseMapInfo<char> {
-  static constexpr char getEmptyKey() { return ~0; }
   static unsigned getHashValue(const char& Val) { return Val * 37U; }
 
   static bool isEqual(const char &LHS, const char &RHS) {
@@ -102,8 +94,6 @@ template<> struct DenseMapInfo<char> {
 template <typename T>
 struct DenseMapInfo<
     T, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, char>>> {
-  static constexpr T getEmptyKey() { return std::numeric_limits<T>::max(); }
-
   static unsigned getHashValue(const T &Val) {
     if constexpr (std::is_unsigned_v<T> && sizeof(T) > sizeof(unsigned))
       return densemap::detail::mix(Val);
@@ -121,10 +111,6 @@ struct DenseMapInfo<std::pair<T, U>> {
   using Pair = std::pair<T, U>;
   using FirstInfo = DenseMapInfo<T>;
   using SecondInfo = DenseMapInfo<U>;
-
-  static constexpr Pair getEmptyKey() {
-    return {FirstInfo::getEmptyKey(), SecondInfo::getEmptyKey()};
-  }
 
   static unsigned getHashValue(const Pair& PairVal) {
     return detail::combineHashValue(FirstInfo::getHashValue(PairVal.first),
@@ -148,10 +134,6 @@ struct DenseMapInfo<std::pair<T, U>> {
 // Provide DenseMapInfo for all tuples whose members have info.
 template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   using Tuple = std::tuple<Ts...>;
-
-  static constexpr Tuple getEmptyKey() {
-    return Tuple(DenseMapInfo<Ts>::getEmptyKey()...);
-  }
 
   template <unsigned I> static unsigned getHashValueImpl(const Tuple &values) {
     if constexpr (I == sizeof...(Ts)) {
@@ -195,11 +177,6 @@ struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
   // If you hit this error, you can fix by switching to `enum class`, or adding
   // an explicit underlying type (e.g. `enum X : int`) to the enum's definition.
 
-  static constexpr Enum getEmptyKey() {
-    constexpr Enum V = static_cast<Enum>(Info::getEmptyKey());
-    return V;
-  }
-
   static unsigned getHashValue(const Enum &Val) {
     return Info::getHashValue(static_cast<UnderlyingType>(Val));
   }
@@ -211,12 +188,10 @@ template <typename T> struct DenseMapInfo<std::optional<T>> {
   using Optional = std::optional<T>;
   using Info = DenseMapInfo<T>;
 
-  static constexpr Optional getEmptyKey() { return {Info::getEmptyKey()}; }
-
   static unsigned getHashValue(const Optional &OptionalVal) {
-    return detail::combineHashValue(
-        OptionalVal.has_value(),
-        Info::getHashValue(OptionalVal.value_or(Info::getEmptyKey())));
+    if (OptionalVal)
+      return detail::combineHashValue(1, Info::getHashValue(*OptionalVal));
+    return detail::combineHashValue(0, 0);
   }
 
   static bool isEqual(const Optional &LHS, const Optional &RHS) {

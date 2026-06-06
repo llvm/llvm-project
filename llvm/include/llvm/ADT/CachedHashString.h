@@ -48,11 +48,7 @@ public:
 };
 
 template <> struct DenseMapInfo<CachedHashStringRef> {
-  static CachedHashStringRef getEmptyKey() {
-    return CachedHashStringRef(DenseMapInfo<StringRef>::getEmptyKey(), 0);
-  }
   static unsigned getHashValue(const CachedHashStringRef &S) {
-    assert(!isEqual(S, getEmptyKey()) && "Cannot hash the empty key!");
     return S.hash();
   }
   static bool isEqual(const CachedHashStringRef &LHS,
@@ -72,7 +68,10 @@ class CachedHashString {
   uint32_t Size;
   uint32_t Hash;
 
-  static char *getEmptyKeyPtr() { return DenseMapInfo<char *>::getEmptyKey(); }
+  static char *getEmptyKeyPtr() {
+    return reinterpret_cast<char *>(static_cast<uintptr_t>(-1)
+                                    << DenseMapInfo<char *>::Log2MaxAlign);
+  }
 
   bool isEmpty() const { return P == getEmptyKeyPtr(); }
 
@@ -142,12 +141,7 @@ public:
 };
 
 template <> struct DenseMapInfo<CachedHashString> {
-  static CachedHashString getEmptyKey() {
-    return CachedHashString(CachedHashString::ConstructEmptyTy(),
-                            CachedHashString::getEmptyKeyPtr());
-  }
   static unsigned getHashValue(const CachedHashString &S) {
-    assert(!isEqual(S, getEmptyKey()) && "Cannot hash the empty key!");
     return S.hash();
   }
   static bool isEqual(const CachedHashString &LHS,
