@@ -14,7 +14,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
@@ -34,7 +33,7 @@
 using namespace llvm;
 using namespace SPIRV;
 
-using BlockSet = DenseSet<BasicBlock *>;
+using BlockSet = SmallPtrSet<BasicBlock *, 0>;
 using Edge = std::pair<BasicBlock *, BasicBlock *>;
 
 // Helper function to do a partial order visit from the block |Start|, calling
@@ -63,7 +62,7 @@ getRegionForHeader(const ConvergenceRegion *Node, BasicBlock *BB) {
 // Returns the single BasicBlock exiting the convergence region `CR`,
 // nullptr if no such exit exists.
 static BasicBlock *getExitFor(const ConvergenceRegion *CR) {
-  DenseSet<BasicBlock *> ExitTargets;
+  SmallPtrSet<BasicBlock *, 0> ExitTargets;
   for (BasicBlock *Exit : CR->Exits) {
     for (BasicBlock *Successor : successors(Exit)) {
       if (CR->Blocks.count(Successor) == 0)
@@ -427,7 +426,7 @@ class SPIRVStructurizer : public FunctionPass {
     // clang-format on
     std::vector<Edge>
     createAliasBlocksForComplexEdges(std::vector<Edge> Edges) {
-      DenseSet<BasicBlock *> Seen;
+      SmallPtrSet<BasicBlock *, 0> Seen;
       std::vector<Edge> Output;
       Output.reserve(Edges.size());
 

@@ -15,7 +15,7 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -73,7 +73,7 @@ class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
 
-  DenseSet<BasicBlock *> Queued = {};
+  SmallPtrSet<BasicBlock *, 0> Queued = {};
   std::queue<BasicBlock *> ToVisit = {};
 
   struct OrderInfo {
@@ -86,7 +86,7 @@ class PartialOrderingVisitor {
   std::vector<BasicBlock *> Order = {};
 
   // Get all basic-blocks reachable from Start.
-  DenseSet<BasicBlock *> getReachableFrom(BasicBlock *Start);
+  SmallPtrSet<BasicBlock *, 0> getReachableFrom(BasicBlock *Start);
 
   // Internal function used to determine the partial ordering.
   // Visits |BB| with the current rank being |Rank|.

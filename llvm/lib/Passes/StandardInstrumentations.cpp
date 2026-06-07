@@ -15,7 +15,7 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -1635,7 +1635,7 @@ public:
       : DisplayElement(Colour), Content(Content) {}
 
   // Iterator to the child nodes.  Required by GraphWriter.
-  using ChildIterator = DenseSet<DisplayNode *>::const_iterator;
+  using ChildIterator = SmallPtrSet<DisplayNode *, 0>::const_iterator;
   ChildIterator children_begin() const { return Children.begin(); }
   ChildIterator children_end() const { return Children.end(); }
 
@@ -1673,7 +1673,7 @@ protected:
   std::vector<DisplayEdge> Edges;
 
   std::vector<DisplayEdge *> EdgePtrs;
-  DenseSet<DisplayNode *> Children;
+  SmallPtrSet<DisplayNode *, 0> Children;
   DenseMap<const DisplayNode *, const DisplayEdge *> EdgeMap;
 
   // Safeguard adding of edges.

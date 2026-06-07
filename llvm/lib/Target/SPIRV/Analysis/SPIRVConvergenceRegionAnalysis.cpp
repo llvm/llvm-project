@@ -14,7 +14,7 @@
 
 #include "SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -210,10 +210,10 @@ private:
     return false;
   }
 
-  DenseSet<BasicBlock *>
+  SmallPtrSet<BasicBlock *, 0>
   findPathsToMatch(LoopInfo &LI, BasicBlock *From,
                    std::function<bool(const BasicBlock *)> isMatch) const {
-    DenseSet<BasicBlock *> Output;
+    SmallPtrSet<BasicBlock *, 0> Output;
 
     if (isMatch(From))
       Output.insert(From);

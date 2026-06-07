@@ -15,7 +15,7 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVBinaryReader.h"
@@ -63,7 +63,7 @@ class LVDWARFReader final : public LVBinaryReader {
   std::optional<LVAddress> TombstoneAddress;
 
   // Cross references (Elements).
-  using LVElementSet = DenseSet<LVElement *>;
+  using LVElementSet = SmallPtrSet<LVElement *, 0>;
   struct LVElementEntry {
     LVElement *Element;
     LVElementSet References;

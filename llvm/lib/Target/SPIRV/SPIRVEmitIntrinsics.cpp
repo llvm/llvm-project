@@ -19,6 +19,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -189,10 +190,10 @@ class SPIRVEmitIntrinsics
   bool HaveFunPtrs = false;
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
-  DenseSet<Instruction *> AggrStores;
+  SmallPtrSet<Instruction *, 0> AggrStores;
   SmallPtrSet<Instruction *, 8> DeletedInstrs;
   GlobalVariableUsers GVUsers;
-  DenseSet<Value *> Named;
+  SmallPtrSet<Value *, 0> Named;
 
   // map of function declarations to <pointer arg index => element type>
   DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
@@ -224,7 +225,7 @@ class SPIRVEmitIntrinsics
   }
   // a register of Instructions that were visited by deduceOperandElementType()
   // to validate operand types with an instruction
-  DenseSet<Instruction *> TypeValidated;
+  SmallPtrSet<Instruction *, 0> TypeValidated;
 
   // well known result types of builtins
   enum WellKnownTypes { Event };
@@ -232,22 +233,24 @@ class SPIRVEmitIntrinsics
   // deduce element type of untyped pointers
   Type *deduceElementType(Value *I, bool UnknownElemTypeI8);
   Type *deduceElementTypeHelper(Value *I, bool UnknownElemTypeI8);
-  Type *deduceElementTypeHelper(Value *I, DenseSet<Value *> &Visited,
+  Type *deduceElementTypeHelper(Value *I, SmallPtrSet<Value *, 0> &Visited,
                                 bool UnknownElemTypeI8,
                                 bool IgnoreKnownType = false);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
                                      bool UnknownElemTypeI8);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
-                                     DenseSet<Value *> &Visited,
+                                     SmallPtrSet<Value *, 0> &Visited,
                                      bool UnknownElemTypeI8);
-  Type *deduceElementTypeByUsersDeep(Value *Op, DenseSet<Value *> &Visited,
+  Type *deduceElementTypeByUsersDeep(Value *Op,
+                                     SmallPtrSet<Value *, 0> &Visited,
                                      bool UnknownElemTypeI8);
   void maybeAssignPtrType(Type *&Ty, Value *I, Type *RefTy,
                           bool UnknownElemTypeI8);
 
   // deduce nested types of composites
   Type *deduceNestedTypeHelper(User *U, bool UnknownElemTypeI8);
-  Type *deduceNestedTypeHelper(User *U, Type *Ty, DenseSet<Value *> &Visited,
+  Type *deduceNestedTypeHelper(User *U, Type *Ty,
+                               SmallPtrSet<Value *, 0> &Visited,
                                bool UnknownElemTypeI8);
 
   // deduce Types of operands of the Instruction if possible
@@ -285,7 +288,7 @@ class SPIRVEmitIntrinsics
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
   Type *deduceFunParamElementType(Function *F, unsigned OpIdx);
   Type *deduceFunParamElementType(Function *F, unsigned OpIdx,
-                                  DenseSet<Function *> &FVisited);
+                                  SmallPtrSet<Function *, 0> &FVisited);
 
   bool deduceOperandElementTypeCalledFunction(
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
@@ -308,7 +311,7 @@ class SPIRVEmitIntrinsics
                        DenseSet<std::pair<Value *, Value *>> &VisitedSubst);
   void propagateElemTypeRec(Value *Op, Type *PtrElemTy, Type *CastElemTy,
                             DenseSet<std::pair<Value *, Value *>> &VisitedSubst,
-                            DenseSet<Value *> &Visited,
+                            SmallPtrSet<Value *, 0> &Visited,
                             DenseMap<Function *, CallInst *> Ptrcasts);
 
   void replaceAllUsesWith(Value *Src, Value *Dest, bool DeleteOld = true);
@@ -645,7 +648,7 @@ void SPIRVEmitIntrinsics::propagateElemType(
 void SPIRVEmitIntrinsics::propagateElemTypeRec(
     Value *Op, Type *PtrElemTy, Type *CastElemTy,
     DenseSet<std::pair<Value *, Value *>> &VisitedSubst) {
-  DenseSet<Value *> Visited;
+  SmallPtrSet<Value *, 0> Visited;
   DenseMap<Function *, CallInst *> Ptrcasts;
   propagateElemTypeRec(Op, PtrElemTy, CastElemTy, VisitedSubst, Visited,
                        std::move(Ptrcasts));
@@ -654,7 +657,8 @@ void SPIRVEmitIntrinsics::propagateElemTypeRec(
 void SPIRVEmitIntrinsics::propagateElemTypeRec(
     Value *Op, Type *PtrElemTy, Type *CastElemTy,
     DenseSet<std::pair<Value *, Value *>> &VisitedSubst,
-    DenseSet<Value *> &Visited, DenseMap<Function *, CallInst *> Ptrcasts) {
+    SmallPtrSet<Value *, 0> &Visited,
+    DenseMap<Function *, CallInst *> Ptrcasts) {
   if (!Visited.insert(Op).second)
     return;
   SmallVector<User *> Users(Op->users());
@@ -677,15 +681,14 @@ void SPIRVEmitIntrinsics::propagateElemTypeRec(
 Type *
 SPIRVEmitIntrinsics::deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
                                                   bool UnknownElemTypeI8) {
-  DenseSet<Value *> Visited;
+  SmallPtrSet<Value *, 0> Visited;
   return deduceElementTypeByValueDeep(ValueTy, Operand, Visited,
                                       UnknownElemTypeI8);
 }
 
-Type *
-SPIRVEmitIntrinsics::deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
-                                                  DenseSet<Value *> &Visited,
-                                                  bool UnknownElemTypeI8) {
+Type *SPIRVEmitIntrinsics::deduceElementTypeByValueDeep(
+    Type *ValueTy, Value *Operand, SmallPtrSet<Value *, 0> &Visited,
+    bool UnknownElemTypeI8) {
   Type *Ty = ValueTy;
   if (Operand) {
     if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
@@ -702,7 +705,7 @@ SPIRVEmitIntrinsics::deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
 
 // Traverse User instructions to deduce an element pointer type of the operand.
 Type *SPIRVEmitIntrinsics::deduceElementTypeByUsersDeep(
-    Value *Op, DenseSet<Value *> &Visited, bool UnknownElemTypeI8) {
+    Value *Op, SmallPtrSet<Value *, 0> &Visited, bool UnknownElemTypeI8) {
   if (!Op || !isPointerTy(Op->getType()) || isa<ConstantPointerNull>(Op) ||
       isa<UndefValue>(Op))
     return nullptr;
@@ -740,7 +743,7 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
 // or nullptr otherwise.
 Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(Value *I,
                                                    bool UnknownElemTypeI8) {
-  DenseSet<Value *> Visited;
+  SmallPtrSet<Value *, 0> Visited;
   return deduceElementTypeHelper(I, Visited, UnknownElemTypeI8);
 }
 
@@ -927,10 +930,9 @@ Type *SPIRVEmitIntrinsics::getGEPType(GetElementPtrInst *Ref) {
   return Ty;
 }
 
-Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(Value *I,
-                                                   DenseSet<Value *> &Visited,
-                                                   bool UnknownElemTypeI8,
-                                                   bool IgnoreKnownType) {
+Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
+    Value *I, SmallPtrSet<Value *, 0> &Visited, bool UnknownElemTypeI8,
+    bool IgnoreKnownType) {
   // allow to pass nullptr as an argument
   if (!I)
     return nullptr;
@@ -1088,13 +1090,14 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(Value *I,
 // information is found or needed.
 Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(User *U,
                                                   bool UnknownElemTypeI8) {
-  DenseSet<Value *> Visited;
+  SmallPtrSet<Value *, 0> Visited;
   return deduceNestedTypeHelper(U, U->getType(), Visited, UnknownElemTypeI8);
 }
 
-Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(User *U, Type *OrigTy,
-                                                  DenseSet<Value *> &Visited,
-                                                  bool UnknownElemTypeI8) {
+Type *
+SPIRVEmitIntrinsics::deduceNestedTypeHelper(User *U, Type *OrigTy,
+                                            SmallPtrSet<Value *, 0> &Visited,
+                                            bool UnknownElemTypeI8) {
   if (!U)
     return OrigTy;
 
@@ -3050,18 +3053,17 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
 
 Type *SPIRVEmitIntrinsics::deduceFunParamElementType(Function *F,
                                                      unsigned OpIdx) {
-  DenseSet<Function *> FVisited;
+  SmallPtrSet<Function *, 0> FVisited;
   return deduceFunParamElementType(F, OpIdx, FVisited);
 }
 
-Type *
-SPIRVEmitIntrinsics::deduceFunParamElementType(Function *F, unsigned OpIdx,
-                                               DenseSet<Function *> &FVisited) {
+Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
+    Function *F, unsigned OpIdx, SmallPtrSet<Function *, 0> &FVisited) {
   // maybe a cycle
   if (!FVisited.insert(F).second)
     return nullptr;
 
-  DenseSet<Value *> Visited;
+  SmallPtrSet<Value *, 0> Visited;
   SmallVector<std::pair<Function *, unsigned>> Lookup;
   // search in function's call sites
   for (User *U : F->users()) {
@@ -3546,7 +3548,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
     // Try to improve the type deduced after all Functions are processed.
     if (auto *CI = dyn_cast<Instruction>(Op)) {
       CurrF = CI->getParent()->getParent();
-      DenseSet<Value *> Visited;
+      SmallPtrSet<Value *, 0> Visited;
       if (Type *ElemTy = deduceElementTypeHelper(Op, Visited, false, true)) {
         if (ElemTy != KnownTy) {
           DenseSet<std::pair<Value *, Value *>> VisitedSubst;
