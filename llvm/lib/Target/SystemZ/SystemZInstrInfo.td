@@ -1329,7 +1329,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm NC : MemorySS<"nc", 0xD4, z_nc>;
 }
-defm : RMWIByte<and, NI, NIY>;
+defm : RMWIByte<and, NI, NIY, imm16ll8c, imm32ll8c, imm64ll8c>;
 
 //===----------------------------------------------------------------------===//
 // OR
@@ -1385,7 +1385,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm OC : MemorySS<"oc", 0xD6, z_oc>;
 }
-defm : RMWIByte<or,  OI, OIY>;
+defm : RMWIByte<or,  OI, OIY, immLSB8, immLSB8, immLSB8>;
 
 //===----------------------------------------------------------------------===//
 // XOR
@@ -1424,7 +1424,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm XC : MemorySS<"xc", 0xD7, z_xc>;
 }
-defm : RMWIByte<xor, XI, XIY>;
+defm : RMWIByte<xor, XI, XIY, immLSB8, immLSB8, immLSB8>;
 
 //===----------------------------------------------------------------------===//
 // Combined logical operations

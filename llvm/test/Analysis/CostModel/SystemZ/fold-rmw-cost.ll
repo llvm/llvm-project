@@ -203,10 +203,10 @@ define void @test_and_i32_valid(ptr %p) {
 }
 
 ; Zero-extended i16 context.
-define void @test_and_i32_zext_valid(ptr %p) {
-; CHECK-LABEL: 'test_and_i32_zext_valid'
-; CHECK: cost of 0 {{.*}} and i32 %v, 65281
-; CHECK: cost of 0 {{.*}} store i32
+define void @test_and_i32_zext_invalid(ptr %p) {
+; CHECK-LABEL: 'test_and_i32_zext_invalid'
+; CHECK: cost of 1 {{.*}} and i32 %v, 65281
+; CHECK: cost of 1 {{.*}} store i32
   %v = load i32, ptr %p
   %res = and i32 %v, 65281 ; 0x0000ff01
   store i32 %res, ptr %p
@@ -214,8 +214,8 @@ define void @test_and_i32_zext_valid(ptr %p) {
 }
 
 ; One bit down from zero-extended threshold.
-define void @test_and_i32_invalid_zext_below(ptr %p) {
-; CHECK-LABEL: 'test_and_i32_invalid_zext_below'
+define void @test_and_i32_zext_below_invalid(ptr %p) {
+; CHECK-LABEL: 'test_and_i32_zext_below_invalid'
 ; CHECK: cost of 1 {{.*}} and i32 %v, 65025
 ; CHECK: cost of 1 {{.*}} store i32
   %v = load i32, ptr %p
@@ -225,8 +225,8 @@ define void @test_and_i32_invalid_zext_below(ptr %p) {
 }
 
 ; One bit above zero-extended threshold.
-define void @test_and_i32_invalid_zext_above(ptr %p) {
-; CHECK-LABEL: 'test_and_i32_invalid_zext_above'
+define void @test_and_i32_zext_above_invalid(ptr %p) {
+; CHECK-LABEL: 'test_and_i32_zext_above_invalid'
 ; CHECK: cost of 1 {{.*}} and i32 %v, 130817
 ; CHECK: cost of 1 {{.*}} store i32
   %v = load i32, ptr %p
