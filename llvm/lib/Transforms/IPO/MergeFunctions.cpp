@@ -114,6 +114,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
@@ -121,6 +122,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <optional>
 #include <set>
 #include <utility>
 #include <vector>
@@ -730,6 +732,7 @@ static void copyMetadataIfPresent(Function *From, Function *To,
 // For better debugability, under MergeFunctionsPDI, we do not modify G's
 // call sites to point to F even when within the same translation unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
+  auto GEC = G->getEntryCount(/*AllowSynthetic=*/true);
   BasicBlock *GEntryBlock = nullptr;
   std::vector<Instruction *> PDIUnrelatedWL;
   std::vector<DbgVariableRecord *> PDVRUnrelatedWL;
@@ -799,6 +802,8 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
                << G->getName() << "()\n");
   } else {
     NewG->copyAttributesFrom(G);
+    if (GEC)
+      NewG->setEntryCount(*GEC);
     NewG->takeName(G);
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(G, NewG, "type");
@@ -872,6 +877,25 @@ static bool isODR(const Function *F) {
   return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
 }
 
+static void mergeEntryCountsInto(Function *F,
+                                 std::optional<Function::ProfileCount> FC,
+                                 std::optional<Function::ProfileCount> GC) {
+  if (!FC && !GC)
+    return;
+  uint64_t Sum = SaturatingAdd(FC ? FC->getCount() : uint64_t{0},
+                               GC ? GC->getCount() : uint64_t{0});
+  Function::ProfileCountType PCT =
+      ((FC && FC->isSynthetic()) || (GC && GC->isSynthetic()))
+          ? Function::PCT_Synthetic
+          : Function::PCT_Real;
+  if (FC && FC->getType() != PCT) {
+    F->setMetadata(LLVMContext::MD_prof, nullptr);
+    F->setEntryCount(Function::ProfileCount(Sum, PCT));
+    return;
+  }
+  F->setEntryCount(Sum, PCT);
+}
+
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
@@ -900,6 +924,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");
+    auto FEC = F->getEntryCount(/*AllowSynthetic=*/true);
+    auto GEC = G->getEntryCount(/*AllowSynthetic=*/true);
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
@@ -916,6 +942,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     const MaybeAlign GAlign = G->getAlign();
 
     writeThunkOrAliasIfNeeded(F, G);
+    if (FEC)
+      NewF->setEntryCount(*FEC);
     writeThunkOrAliasIfNeeded(F, NewF);
 
     if (NewFAlign || GAlign)
@@ -923,9 +951,13 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     else
       F->setAlignment(std::nullopt);
     F->setLinkage(GlobalValue::PrivateLinkage);
+    mergeEntryCountsInto(F, FEC, GEC);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
   } else {
+    auto FEC = F->getEntryCount(/*AllowSynthetic=*/true);
+    auto GEC = G->getEntryCount(/*AllowSynthetic=*/true);
+
     // For better debugability, under MergeFunctionsPDI, we do not modify G's
     // call sites to point to F even when within the same translation unit.
     if (!G->isInterposable() && !MergeFunctionsPDI) {
@@ -950,12 +982,14 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // stop here and delete G. There's no need for a thunk. (See note on
     // MergeFunctionsPDI above).
     if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
+      mergeEntryCountsInto(F, FEC, GEC);
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
     }
 
     if (writeThunkOrAliasIfNeeded(F, G)) {
+      mergeEntryCountsInto(F, FEC, GEC);
       ++NumFunctionsMerged;
     }
   }
