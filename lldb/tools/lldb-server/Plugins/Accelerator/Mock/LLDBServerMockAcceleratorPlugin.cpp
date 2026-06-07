@@ -48,3 +48,15 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
   }
   return response;
 }
+
+std::optional<AcceleratorDynamicLoaderResponse>
+LLDBServerMockAcceleratorPlugin::GetDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  AcceleratorDynamicLoaderResponse response;
+  AcceleratorDynamicLoaderLibraryInfo lib;
+  lib.pathname = "/usr/lib/libmock_accel.so";
+  lib.load = true;
+  lib.load_address = 0x7f000000;
+  response.library_infos.push_back(std::move(lib));
+  return response;
+}

@@ -23,6 +23,10 @@ public:
   llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
 
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args) override;
+
 private:
   static constexpr int64_t kBreakpointIDInitialize = 1;
   static constexpr int64_t kBreakpointIDExit = 2;

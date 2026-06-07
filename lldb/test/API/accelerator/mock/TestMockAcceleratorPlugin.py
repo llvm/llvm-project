@@ -120,3 +120,28 @@ class MockAcceleratorPluginTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertGreater(len(new_bps), 0)
         self.assertEqual(new_bps[0]["identifier"], 2)
         self.assertEqual(new_bps[0]["by_name"]["function_name"], "exit")
+
+    @add_test_categories(["llgs"])
+    def test_jAcceleratorPluginGetDynamicLoaderLibraryInfo(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        self.prep_debug_monitor_and_inferior()
+
+        self.add_qSupported_packets()
+        self.expect_gdbremote_sequence()
+
+        dyld_args = {"plugin_name": "mock", "full": True}
+        dyld_json = json.dumps(dyld_args, separators=(",", ":"))
+        escaped_json = escape_binary(dyld_json)
+        response = self.send_and_decode_json(
+            "jAcceleratorPluginGetDynamicLoaderLibraryInfo:" + escaped_json
+        )
+
+        self.assertIn("library_infos", response)
+        libs = response["library_infos"]
+        self.assertGreater(len(libs), 0)
+
+        lib = libs[0]
+        self.assertEqual(lib["pathname"], "/usr/lib/libmock_accel.so")
+        self.assertTrue(lib["load"])
+        self.assertEqual(lib["load_address"], 0x7F000000)
