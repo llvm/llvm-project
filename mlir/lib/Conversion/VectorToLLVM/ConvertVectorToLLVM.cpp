@@ -256,10 +256,19 @@ public:
                                          "could not resolve alignment");
 
     // Resolve address.
+    // Per vector.load/store spec, indices must be in-bounds (0 <= idx <
+    // dim_size). Emit inbounds|nuw so LLVM can apply no-wrap optimizations on
+    // the generated index arithmetic and GEP. Masked variants are designed for
+    // near-boundary access, so they conservatively omit these flags.
+    LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
+    if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
+                  std::is_same_v<LoadOrStoreOp, vector::StoreOp>)
+      noWrapFlags = LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw;
     auto vtype = cast<VectorType>(
         this->typeConverter->convertType(loadOrStoreOp.getVectorType()));
-    Value dataPtr = this->getStridedElementPtr(
-        rewriter, loc, memRefTy, adaptor.getBase(), adaptor.getIndices());
+    Value dataPtr =
+        this->getStridedElementPtr(rewriter, loc, memRefTy, adaptor.getBase(),
+                                   adaptor.getIndices(), noWrapFlags);
     replaceLoadOrStoreOp(loadOrStoreOp, adaptor, vtype, dataPtr, align,
                          rewriter);
     return success();

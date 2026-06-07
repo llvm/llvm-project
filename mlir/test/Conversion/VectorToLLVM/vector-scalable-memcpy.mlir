@@ -12,11 +12,11 @@ func.func @vector_scalable_memcopy(%src : memref<?xf32>, %dst : memref<?xf32>, %
   scf.for %i0 = %c0 to %size step %step {
     // CHECK: [[DATAIDX:%[0-9]+]] = builtin.unrealized_conversion_cast [[LOOPIDX]] : index to i64
     // CHECK: [[SRCMEM:%[0-9]+]] = llvm.extractvalue [[SRCMRS]][1] : !llvm.struct<(ptr
-    // CHECK-NEXT: [[SRCPTR:%[0-9]+]] = llvm.getelementptr [[SRCMEM]]{{.}}[[DATAIDX]]{{.}} : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    // CHECK-NEXT: [[SRCPTR:%[0-9]+]] = llvm.getelementptr inbounds|nuw [[SRCMEM]]{{.}}[[DATAIDX]]{{.}} : (!llvm.ptr, i64) -> !llvm.ptr, f32
     // CHECK-NEXT: [[LDVAL:%[0-9]+]] = llvm.load [[SRCPTR]]{{.*}}: !llvm.ptr -> vector<[4]xf32>
     %0 = vector.load %src[%i0] : memref<?xf32>, vector<[4]xf32>
     // CHECK: [[DSTMEM:%[0-9]+]] = llvm.extractvalue [[DSTMRS]][1] : !llvm.struct<(ptr
-    // CHECK-NEXT: [[DSTPTR:%[0-9]+]] = llvm.getelementptr [[DSTMEM]]{{.}}[[DATAIDX]]{{.}} : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    // CHECK-NEXT: [[DSTPTR:%[0-9]+]] = llvm.getelementptr inbounds|nuw [[DSTMEM]]{{.}}[[DATAIDX]]{{.}} : (!llvm.ptr, i64) -> !llvm.ptr, f32
     // CHECK-NEXT: llvm.store [[LDVAL]], [[DSTPTR]]{{.*}}: vector<[4]xf32>, !llvm.ptr
     vector.store %0, %dst[%i0] : memref<?xf32>, vector<[4]xf32>
   }

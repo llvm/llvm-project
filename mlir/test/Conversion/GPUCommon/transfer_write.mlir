@@ -3,7 +3,7 @@
 // CHECK-LABEL: @warp_extract
 // CHECK-SAME: %[[VEC:[a-zA-Z0-9_]+]]: vector<1xf32>
 // CHECK:%[[BASE:[0-9]+]] = llvm.extractvalue
-// CHECK:%[[PTR:[0-9]+]] = llvm.getelementptr %[[BASE]]
+// CHECK:%[[PTR:[0-9]+]] = llvm.getelementptr inbounds|nuw %[[BASE]]
 // CHECK:llvm.store %[[VEC]], %[[PTR]] {alignment = 4 : i64} : vector<1xf32>, !llvm.ptr
 
 func.func @warp_extract(%arg0: index, %arg1: memref<1024x1024xf32>, %arg2: vector<1xf32>) {

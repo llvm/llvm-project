@@ -298,7 +298,7 @@ func.func @transfer_read_1d_inbounds(%A : memref<?xf32>, %base: index) -> vector
 //  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<17xf32>
 //
 // 1. Bitcast to vector form.
-//       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
+//       CHECK: %[[gep:.*]] = llvm.getelementptr inbounds|nuw {{.*}} :
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 2. Rewrite as a load.
@@ -314,7 +314,7 @@ func.func @transfer_read_1d_inbounds_scalable(%A : memref<?xf32>, %base: index) 
 //  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<[17]xf32>
 //
 // 1. Bitcast to vector form.
-//       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
+//       CHECK: %[[gep:.*]] = llvm.getelementptr inbounds|nuw {{.*}} :
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 2. Rewrite as a load.
