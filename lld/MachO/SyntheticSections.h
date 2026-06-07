@@ -618,7 +618,7 @@ public:
 private:
   std::vector<WordLiteralInputSection *> inputs;
 
-  // DenseMap supports all possible integer values.
+  // Literal values can be any bit pattern.
   llvm::DenseMap<UInt128, uint64_t> literal16Map;
   llvm::DenseMap<uint64_t, uint64_t> literal8Map;
   llvm::DenseMap<uint32_t, uint64_t> literal4Map;
