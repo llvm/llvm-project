@@ -1933,6 +1933,63 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
 
+  // OpPtrAccessChain requires a scalar pointer result; scalarize per-lane
+  // GEPs that return <N x ptr> and rebuild the vector via insertelement.
+  if (auto *RetVTy = dyn_cast<FixedVectorType>(I.getType())) {
+    unsigned N = RetVTy->getNumElements();
+    Value *PtrOp = I.getPointerOperand();
+    bool PtrIsVec = isa<VectorType>(PtrOp->getType());
+    Type *ResultPtrTy = RetVTy->getElementType();
+    Type *ScalarPtrTy = PtrOp->getType()->getScalarType();
+    SmallVector<Type *, 2> GepTypes = {ResultPtrTy, ScalarPtrTy};
+    Value *InBounds = B.getInt1(I.isInBounds());
+    Type *LanePointeeTy = getGEPType(&I);
+    Type *SrcElemTy = I.getSourceElementType();
+
+    // Pin the lane pointee type on the vector operand and on each extracted
+    // lane so the prelegalizer wraps them as OpTypeVector/OpTypePointer of
+    // the right element type instead of defaulting to i8.
+    if (PtrIsVec)
+      GR->buildAssignPtr(B, SrcElemTy, PtrOp);
+
+    Value *VecResult = PoisonValue::get(RetVTy);
+    for (unsigned Lane = 0; Lane < N; ++Lane) {
+      Value *LaneIdx = B.getInt32(Lane);
+      Value *ScalarPtr = PtrOp;
+      if (PtrIsVec) {
+        SmallVector<Type *, 3> ExtractTypes = {ScalarPtrTy, PtrOp->getType(),
+                                               LaneIdx->getType()};
+        ScalarPtr = B.CreateIntrinsic(Intrinsic::spv_extractelt, {ExtractTypes},
+                                      {PtrOp, LaneIdx});
+        GR->buildAssignPtr(B, SrcElemTy, ScalarPtr);
+      }
+      SmallVector<Value *, 4> Args;
+      Args.push_back(InBounds);
+      Args.push_back(ScalarPtr);
+      for (Value *Idx : I.indices()) {
+        if (isa<VectorType>(Idx->getType()))
+          Args.push_back(B.CreateExtractElement(Idx, LaneIdx));
+        else
+          Args.push_back(Idx);
+      }
+      Value *ScalarGep = B.CreateIntrinsic(Intrinsic::spv_gep, GepTypes, Args);
+      GR->buildAssignPtr(B, LanePointeeTy, ScalarGep);
+      VecResult = B.CreateInsertElement(VecResult, ScalarGep, LaneIdx);
+    }
+
+    auto *NewI = cast<Instruction>(VecResult);
+    replaceAllUsesWithAndErase(B, &I, NewI);
+
+    if (CallInst *Old = GR->findAssignPtrTypeInstr(NewI)) {
+      Old->eraseFromParent();
+      GR->addAssignPtrTypeInstr(NewI, nullptr);
+    }
+    setInsertPointAfterDef(B, NewI);
+    GR->buildAssignPtr(B, LanePointeeTy, NewI);
+
+    return NewI;
+  }
+
   if (TM.getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(&I)) {
     // Logical SPIR-V cannot use the OpPtrAccessChain instruction. If the first
     // index of the GEP is not 0, then we need to try to adjust it.
@@ -3115,6 +3172,19 @@ void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
   B.SetInsertPointPastAllocas(F);
   for (unsigned OpIdx = 0; OpIdx < F->arg_size(); ++OpIdx) {
     Argument *Arg = F->getArg(OpIdx);
+    // Vector-of-pointers arg: deduce pointee from a GEP user so the function
+    // type isn't emitted with the default i8 pointee.
+    if (isUntypedPointerVectorTy(Arg->getType()) &&
+        !GR->findDeducedElementType(Arg)) {
+      for (User *U : Arg->users()) {
+        auto *GEP = dyn_cast<GetElementPtrInst>(U);
+        if (GEP && GEP->getPointerOperand() == Arg) {
+          GR->buildAssignPtr(B, GEP->getSourceElementType(), Arg);
+          break;
+        }
+      }
+      continue;
+    }
     if (!isUntypedPointerTy(Arg->getType()))
       continue;
     Type *ElemTy = GR->findDeducedElementType(Arg);
