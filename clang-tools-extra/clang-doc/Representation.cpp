@@ -180,70 +180,38 @@ void mergeUnkeyed<CommentInfo>(DocList<CommentInfo> &Target,
   }
 }
 
+template <typename T>
+static llvm::Error mergeTypedInfo(Info *&Reduced, Info *NewInfo,
+                                  llvm::BumpPtrAllocator &Arena) {
+  if (!Reduced)
+    Reduced = allocatePtr<T>(Arena, NewInfo->USR);
+  cast<T>(Reduced)->merge(std::move(*cast<T>(NewInfo)));
+  return llvm::Error::success();
+}
+
 llvm::Error mergeSingleInfo(doc::Info *&Reduced, doc::Info *NewInfo,
                             llvm::BumpPtrAllocator &Arena) {
-  if (!Reduced) {
-    switch (NewInfo->IT) {
-    case InfoType::IT_namespace:
-      Reduced = allocatePtr<NamespaceInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_record:
-      Reduced = allocatePtr<RecordInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_enum:
-      Reduced = allocatePtr<EnumInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_function:
-      Reduced = allocatePtr<FunctionInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_typedef:
-      Reduced = allocatePtr<TypedefInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_concept:
-      Reduced = allocatePtr<ConceptInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_variable:
-      Reduced = allocatePtr<VarInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_friend:
-      Reduced = allocatePtr<FriendInfo>(Arena, NewInfo->USR);
-      break;
-    default:
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "unknown info type");
-    }
-  }
-
-  if (Reduced->IT != NewInfo->IT)
+  if (Reduced && Reduced->IT != NewInfo->IT)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "info types mismatch");
 
-  switch (Reduced->IT) {
+  switch (NewInfo->IT) {
   case InfoType::IT_namespace:
-    cast<NamespaceInfo>(Reduced)->merge(
-        std::move(*cast<NamespaceInfo>(NewInfo)));
-    break;
+    return mergeTypedInfo<NamespaceInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_record:
-    cast<RecordInfo>(Reduced)->merge(std::move(*cast<RecordInfo>(NewInfo)));
-    break;
+    return mergeTypedInfo<RecordInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_enum:
-    cast<EnumInfo>(Reduced)->merge(std::move(*cast<EnumInfo>(NewInfo)));
-    break;
+    return mergeTypedInfo<EnumInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_function:
-    cast<FunctionInfo>(Reduced)->merge(std::move(*cast<FunctionInfo>(NewInfo)));
-    break;
+    return mergeTypedInfo<FunctionInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_typedef:
-    cast<TypedefInfo>(Reduced)->merge(std::move(*cast<TypedefInfo>(NewInfo)));
-    break;
+    return mergeTypedInfo<TypedefInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_concept:
-    cast<ConceptInfo>(Reduced)->merge(std::move(*cast<ConceptInfo>(NewInfo)));
-    break;
+    return mergeTypedInfo<ConceptInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_variable:
-    cast<VarInfo>(Reduced)->merge(std::move(*cast<VarInfo>(NewInfo)));
-    break;
+    return mergeTypedInfo<VarInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_friend:
-    cast<FriendInfo>(Reduced)->merge(std::move(*cast<FriendInfo>(NewInfo)));
-    break;
+    return mergeTypedInfo<FriendInfo>(Reduced, NewInfo, Arena);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unknown info type");
