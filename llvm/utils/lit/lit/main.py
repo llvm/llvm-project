@@ -259,10 +259,21 @@ def mark_excluded(discovered_tests, selected_tests):
 
 def run_tests(tests, lit_config, opts, discovered_tests):
     workers = min(len(tests), opts.workers)
-    display = lit.display.create_display(opts, tests, discovered_tests, workers)
+    workers_min = opts.workers_min
+    load_limit_fraction = opts.load_limit_fraction
+    display = lit.display.create_display(
+        opts, tests, discovered_tests, workers, load_limit_fraction
+    )
 
     run = lit.run.Run(
-        tests, lit_config, workers, display.update, opts.max_failures, opts.timeout
+        tests,
+        lit_config,
+        workers,
+        workers_min,
+        display.update,
+        opts.max_failures,
+        opts.timeout,
+        load_limit_fraction,
     )
 
     display.print_header()

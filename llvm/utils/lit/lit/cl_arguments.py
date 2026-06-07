@@ -95,6 +95,32 @@ def parse_args():
         default=os.getenv("LIT_MAX_WORKERS", lit.util.usable_core_count()),
     )
     parser.add_argument(
+        "-jmin",
+        "--threads_min",
+        "--workers_min",
+        dest="workers_min",
+        metavar="N",
+        help="Minimal number of workers used for testing if `--load-limit FRAC` is enabled",
+        type=_positive_int,
+        default=os.getenv("LIT_MIN_WORKERS", 1),
+    )
+    parser.add_argument(
+        "-l",
+        "--load-limit",
+        dest="load_limit_fraction",
+        metavar="FRAC",
+        help="Aim to keep the 1-minute system load average near "
+        "FRAC * number-of-CPU-cores, by smoothly adjusting the number "
+        "of concurrent tests up or down (similar to 'make -l'). FRAC "
+        "must be in (0, 2] -- e.g. 0.8 targets 80%% of CPU capacity, "
+        "2 targets 200%% of CPU capacity (Not recommended). "
+        "Concurrency is capped at -j workers and never less than 1, so "
+        "progress is never blocked. Ignored on platforms without "
+        "os.getloadavg().",
+        type=_bounded_float(0, 2, lo_inclusive=False, hi_inclusive=True),
+        default=os.getenv("LIT_LOAD_LIMIT"),
+    )
+    parser.add_argument(
         "--config-prefix",
         dest="configPrefix",
         metavar="NAME",
@@ -524,6 +550,21 @@ def parse_args():
             "WARNING: --incremental is deprecated. Failing tests now always run first."
         )
 
+    if opts.workers_min > opts.workers:
+        print(
+            "WARNING: --threads_min %d is bigger than --threads %d. "
+            "Used default --threads_min 1."
+            % (opts.workers_min, opts.workers)
+        )
+        opts.workers_min = 1
+
+    if opts.load_limit_fraction is not None and not hasattr(os, "getloadavg"):
+        print(
+            "WARNING: --load-limit is ignored: os.getloadavg() is not "
+            "available on this platform."
+        )
+        opts.load_limit_fraction = None
+
     if opts.numShards or opts.runShard:
         if not opts.numShards or not opts.runShard:
             parser.error("--num-shards and --run-shard must be used together")
@@ -586,6 +627,24 @@ def _float(arg, kind, pred):
             f"conversion error - requires {kind} float, but found '{arg}'"
         )
     return f
+
+
+def _bounded_float(lo, hi, lo_inclusive=True, hi_inclusive=True):
+    """Return an argparse validator for floats in the given range."""
+    lo_op = "[" if lo_inclusive else "("
+    hi_op = "]" if hi_inclusive else ")"
+    desc = "requires number in %s%g, %g%s, but found '{}'" % (lo_op, lo, hi, hi_op)
+    def _check(arg):
+        try:
+            f = float(arg)
+        except ValueError:
+            raise _error(desc, arg)
+        if (lo_inclusive and f < lo) or (not lo_inclusive and f <= lo):
+            raise _error(desc, arg)
+        if (hi_inclusive and f > hi) or (not hi_inclusive and f >= hi):
+            raise _error(desc, arg)
+        return f
+    return _check
 
 
 def _case_insensitive_regex(arg):

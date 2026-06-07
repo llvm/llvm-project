@@ -5,13 +5,19 @@ from argparse import Namespace
 from lit.Test import Test
 
 
-def create_display(opts, tests, total_tests, workers):
+def create_display(opts, tests, total_tests, workers, load_limit_fraction):
     if opts.print_result_after == "off" and not opts.useProgressBar:
         return NopDisplay()
 
     num_tests = len(tests)
     of_total = (" of %d" % total_tests) if (num_tests != total_tests) else ""
-    header = "-- Testing: %d%s tests, %d workers --" % (num_tests, of_total, workers)
+    parts = [
+        "%d%s tests" % (num_tests, of_total),
+        ", %d workers" % workers,
+        # render load_limit_fraction as a percentage
+        (", load-limit %g%%" % (load_limit_fraction * 100)) if load_limit_fraction is not None else "",
+    ]
+    header = "-- Testing: " + "".join(parts) + " --"
 
     progress_bar = None
     if opts.useProgressBar:
