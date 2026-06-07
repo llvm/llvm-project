@@ -15896,7 +15896,8 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   uint64_t RHSIdx = cast<ConstantSDNode>(RHS.getOperand(1))->getLimitedValue();
   SDValue SrcVec = RHS.getOperand(0);
   EVT SrcVecVT = SrcVec.getValueType();
-  assert(SrcVecVT.getVectorElementType() == VT);
+  if (SrcVecVT.getVectorElementType() != VT)
+    return SDValue();
   if (SrcVecVT.isScalableVector())
     return SDValue();
 
