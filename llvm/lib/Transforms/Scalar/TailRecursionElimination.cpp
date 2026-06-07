@@ -74,6 +74,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -83,6 +84,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cmath>
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "tailcallelim"
 
@@ -404,61 +406,38 @@ static bool isPseudoAssociative(Instruction *I) {
 static Constant *getReturnValue(Function &F) {
   Constant *BaseCaseVal = nullptr;
 
-  // Local lambda with conservative bail-out: It isn't so trivial to perform TRE
-  // if the return value depends on the result of a recursive call, because the
-  // return value will be different for different iterations of the recursion.
-  // So we ignore return values that depend on recursive calls.
-  auto TryGetConstantBaseCase = [&](Value *RV) -> Constant * {
-    // Case 1: direct constant return.
-    if (auto *C = dyn_cast<Constant>(RV))
-      return C;
-
-    // Case 2: PHI with one constant incoming.
-    if (auto *PN = dyn_cast<PHINode>(RV)) {
-      if (PN->getNumIncomingValues() != 2)
-        return nullptr;
-      for (unsigned I = 0; I < 2; ++I) {
-        if (auto *C = dyn_cast<Constant>(PN->getIncomingValue(I)))
-          return C;
-      }
-      return nullptr;
-    }
-
-    // Case 3: select with a constant arm.
-    if (auto *SI = dyn_cast<SelectInst>(RV)) {
-      if (auto *CTrue = dyn_cast<Constant>(SI->getTrueValue()))
-        return CTrue;
-      if (auto *CFalse = dyn_cast<Constant>(SI->getFalseValue()))
-        return CFalse;
-      return nullptr;
-    }
-
-    return nullptr;
-  };
-
   for (BasicBlock &BB : F) {
-    if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
-      Value *RV = RI->getReturnValue();
-      Constant *Candidate = TryGetConstantBaseCase(RV);
-      if (!Candidate)
-        return nullptr;
+    auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
+    if (!RI)
+      continue;
 
-      if (!BaseCaseVal)
-        BaseCaseVal = Candidate;
-      else if (BaseCaseVal != Candidate)
-        return nullptr;
+    Value *RV = RI->getReturnValue();
+    Constant *Candidate = nullptr;
+
+    if (match(RV, m_Constant(Candidate))) {
+      // Direct constant return.
+    } else if (auto *PN = dyn_cast<PHINode>(RV)) {
+      for (Value *Inc : PN->incoming_values())
+        if (match(Inc, m_Constant(Candidate)))
+          break;
+    } else if (match(RV,
+                     m_Select(m_Value(), m_Constant(Candidate), m_Value())) ||
+               match(RV,
+                     m_Select(m_Value(), m_Value(), m_Constant(Candidate)))) {
+      // Select with a constant arm.
     }
+
+    if (!Candidate)
+      return nullptr;
+
+    if (!BaseCaseVal)
+      BaseCaseVal = Candidate;
+    else if (BaseCaseVal != Candidate)
+      return nullptr;
   }
 
   return BaseCaseVal;
 }
-
-namespace {
-struct AccumulatorRecursionInfo {
-  bool CanTransform = false;
-  Constant *BaseCaseConst = nullptr;
-};
-} // namespace
 
 // This function checks whether the instruction I can be used
 // to perform accumulator recursion elimination for the
@@ -466,44 +445,41 @@ struct AccumulatorRecursionInfo {
 // In the presence of pseudo-associative operations, it returns
 // the base case constant value in BaseCaseConst to both indicate success and
 // provide the value needed to initialize the accumulator.
-static AccumulatorRecursionInfo canTransformAccumulatorRecursion(Instruction *I,
-                                                                 CallInst *CI) {
+static Constant *canTransformAccumulatorRecursion(Instruction *I,
+                                                  CallInst *CI) {
   auto IsPseudoAssociative = isPseudoAssociative(I);
   if ((!I->isAssociative() || !I->isCommutative()) && !IsPseudoAssociative)
-    return {};
+    return nullptr;
 
   assert(I->getNumOperands() >= 2 &&
          "Associative/commutative operations should have at least 2 args!");
 
-  Constant *BaseCaseConst = nullptr;
+  Constant *AccInitVal = nullptr;
   if (IsPseudoAssociative) {
     // For pseudo-associative operations, we require that the recursive call
     // is always on the first operand.
     if (I->getOperand(0) != CI)
-      return {};
+      return nullptr;
 
-    BaseCaseConst = getReturnValue(*CI->getCalledFunction());
-    if (!BaseCaseConst)
-      return {};
+    AccInitVal = getReturnValue(*CI->getCalledFunction());
+    if (!AccInitVal)
+      return nullptr;
   } else {
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      // Accumulators must have an identity.
-      if (!ConstantExpr::getIntrinsicIdentity(II->getIntrinsicID(),
-                                              I->getType()))
-        return {};
-    }
+    AccInitVal = ConstantExpr::getIdentity(I, I->getType());
+    if (!AccInitVal)
+      return nullptr;
 
     // Exactly one operand should be the result of the call instruction.
     if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
         (I->getOperand(0) != CI && I->getOperand(1) != CI))
-      return {};
+      return nullptr;
   }
 
   // The only user of this instruction we allow is a single return instruction.
   if (!I->hasOneUse() || !isa<ReturnInst>(I->user_back()))
-    return {};
+    return nullptr;
 
-  return {true, BaseCaseConst};
+  return AccInitVal;
 }
 
 namespace {
@@ -545,7 +521,7 @@ class TailRecursionEliminator {
 
   // The base case return value. It exists only if the accumulator
   // operation is pseudo-associative.
-  Constant *BaseCaseValue = nullptr;
+  Constant *AccumulatorInitialValue = nullptr;
 
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
@@ -705,17 +681,19 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   for (pred_iterator PI = PB; PI != PE; ++PI) {
     BasicBlock *P = *PI;
     if (P == &F.getEntryBlock()) {
-      Constant *InitialValue =
-          ConstantExpr::getIdentity(AccRecInstr, AccRecInstr->getType());
-      if (!InitialValue) {
-        // We are in the presence of a pseudo-associative operation like shift.
-        // We didn't pass `AllowRHSConstant = true` in getIdentity above because
-        // the identity for shifts is zero, which is not valid for the LHS.
-        // We need the value of the base case(s) of the function to
-        // initialize the accumulator.
-        InitialValue = BaseCaseValue;
-      }
-      AccPN->addIncoming(InitialValue, P);
+      // Constant *InitialValue =
+      //     ConstantExpr::getIdentity(AccRecInstr, AccRecInstr->getType());
+      // if (!InitialValue) {
+      //   // We are in the presence of a pseudo-associative operation like
+      //   shift.
+      //   // We didn't pass `AllowRHSConstant = true` in getIdentity above
+      //   because
+      //   // the identity for shifts is zero, which is not valid for the LHS.
+      //   // We need the value of the base case(s) of the function to
+      //   // initialize the accumulator.
+      //   InitialValue = BaseCaseValue;
+      // }
+      AccPN->addIncoming(AccumulatorInitialValue, P);
     } else {
       AccPN->addIncoming(AccPN, P);
     }
@@ -790,19 +768,18 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // operation that could be transformed using accumulator recursion
     // elimination. Check to see if this is the case, and if so, remember which
     // instruction accumulates for later.
-    AccumulatorRecursionInfo AccRecInfo =
-        canTransformAccumulatorRecursion(&*BBI, CI);
+    Constant *AccInitVal = canTransformAccumulatorRecursion(&*BBI, CI);
 
-    if (AccPN || !AccRecInfo.CanTransform)
+    if (AccPN || !AccInitVal)
       return false; // We cannot eliminate the tail recursion!
 
     // Yes, this is accumulator recursion.  Remember which instruction
     // accumulates.
     AccRecInstr = &*BBI;
 
-    // Keep track of the base case return value if any.
-    if (AccRecInfo.BaseCaseConst)
-      BaseCaseValue = AccRecInfo.BaseCaseConst;
+    // Keep track of the base case (i.e., initial value) of the accumulator
+    // return value if any.
+    AccumulatorInitialValue = AccInitVal;
   }
 
   BasicBlock *BB = Ret->getParent();
@@ -945,18 +922,15 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           if (!RI)
             continue;
 
-          // Again, the BaseCaseValue exists only if the accumulator
-          // operation is pseudo-associative. In that case the accumulator PHI
-          // already holds the final result (it is initialized from the base
-          // case), so we should return it directly rather than applying the
-          // accumulation instruction one more time.
-          if (BaseCaseValue) {
+          if (isPseudoAssociative(AccRecInstr)) {
+            // Base-case initialization: the accumulator PHI already holds the
+            // final result, so return it directly.
             RI->setOperand(0, AccPN);
           } else {
-            // Otherwise, since the accumulator starts with the identity value,
-            // before the return we need to apply the accumulation instruction
-            // one more time to combine the last value with the result of the
-            // recursive call.
+            // Since the accumulator starts with the identity value, before the
+            // return we need to apply the accumulation instruction one more
+            // time to combine the last value with the result of the recursive
+            // call.
             Instruction *AccRecInstrNew = AccRecInstr->clone();
             AccRecInstrNew->setName("accumulator.ret.tr");
             AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
@@ -988,13 +962,17 @@ void TailRecursionEliminator::cleanupAndFinalize() {
         // of the selects we inserted, and select its result instead.
         Instruction *AccRecInstr = AccumulatorRecursionInstr;
         for (SelectInst *SI : RetSelects) {
-          Instruction *AccRecInstrNew = AccRecInstr->clone();
-          AccRecInstrNew->setName("accumulator.ret.tr");
-          AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
-                                     SI->getFalseValue());
-          AccRecInstrNew->insertBefore(SI->getIterator());
-          AccRecInstrNew->dropLocation();
-          SI->setFalseValue(AccRecInstrNew);
+          if (isPseudoAssociative(AccRecInstr)) {
+            SI->setFalseValue(AccPN);
+          } else {
+            Instruction *AccRecInstrNew = AccRecInstr->clone();
+            AccRecInstrNew->setName("accumulator.ret.tr");
+            AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
+                                       SI->getFalseValue());
+            AccRecInstrNew->insertBefore(SI->getIterator());
+            AccRecInstrNew->dropLocation();
+            SI->setFalseValue(AccRecInstrNew);
+          }
         }
       }
     }
