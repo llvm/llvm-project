@@ -26,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -36,6 +37,10 @@ using namespace CodeGen;
 namespace {
 constexpr unsigned CudaFatMagic = 0x466243b1;
 constexpr unsigned HIPFatMagic = 0x48495046; // "HIPF"
+
+static std::string getOffloadProfilingNamesVarName(llvm::StringRef CUIDHash) {
+  return (llvm::Twine(llvm::getInstrProfNamesVarName()) + "_" + CUIDHash).str();
+}
 
 class CGNVCUDARuntime : public CGCUDARuntime {
 
@@ -78,6 +83,11 @@ private:
   /// __hipRegisterVar (non-RDC) or an offloading entry (RDC) so the runtime
   /// can locate the device-side table by name.
   llvm::GlobalVariable *OffloadProfShadow = nullptr;
+  struct OffloadProfSectionShadowInfo {
+    llvm::GlobalVariable *Shadow;
+    std::string DeviceName;
+  };
+  llvm::SmallVector<OffloadProfSectionShadowInfo, 16> OffloadProfSectionShadows;
   /// Whether we generate relocatable device code.
   bool RelocatableDeviceCode;
   /// Mangle context for device.
@@ -774,6 +784,27 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     Builder.CreateCall(RegisterShadow, {OffloadProfShadow});
   }
 
+  if (!OffloadProfSectionShadows.empty()) {
+    llvm::FunctionCallee RegisterSectionShadow = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(VoidTy, {PtrTy}, false),
+        "__llvm_profile_offload_register_section_shadow_variable");
+    for (const auto &Info : OffloadProfSectionShadows) {
+      llvm::Constant *Name = makeConstantString(Info.DeviceName);
+      llvm::Value *RegisterVarArgs[] = {
+          &GpuBinaryHandlePtr,
+          Info.Shadow,
+          Name,
+          Name,
+          llvm::ConstantInt::get(IntTy, /*Extern=*/0),
+          llvm::ConstantInt::get(VarSizeTy,
+                                 CGM.getDataLayout().getPointerSize()),
+          llvm::ConstantInt::get(IntTy, /*Constant=*/0),
+          llvm::ConstantInt::get(IntTy, 0)};
+      Builder.CreateCall(RegisterVar, RegisterVarArgs);
+      Builder.CreateCall(RegisterSectionShadow, {Info.Shadow});
+    }
+  }
+
   Builder.CreateRetVoid();
   return RegisterKernelsFunc;
 }
@@ -1311,6 +1342,9 @@ void CGNVCUDARuntime::createOffloadingEntries() {
     llvm::FunctionCallee RegisterShadow = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(VoidTy, {PtrTy}, false),
         "__llvm_profile_offload_register_shadow_variable");
+    llvm::FunctionCallee RegisterSectionShadow = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(VoidTy, {PtrTy}, false),
+        "__llvm_profile_offload_register_section_shadow_variable");
     auto *CtorFn = llvm::Function::Create(
         llvm::FunctionType::get(VoidTy, false),
         llvm::GlobalValue::InternalLinkage,
@@ -1318,6 +1352,13 @@ void CGNVCUDARuntime::createOffloadingEntries() {
     auto *Entry = llvm::BasicBlock::Create(Ctx, "entry", CtorFn);
     llvm::IRBuilder<> B(Entry);
     B.CreateCall(RegisterShadow, {OffloadProfShadow});
+    for (const auto &Info : OffloadProfSectionShadows) {
+      llvm::offloading::emitOffloadingEntry(
+          M, Kind, Info.Shadow, Info.DeviceName,
+          CGM.getDataLayout().getPointerSize(),
+          llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
+      B.CreateCall(RegisterSectionShadow, {Info.Shadow});
+    }
     B.CreateRetVoid();
     llvm::appendToGlobalCtors(M, CtorFn, /*Priority=*/65535);
   }
@@ -1350,50 +1391,23 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
     return;
 
   if (CGM.getLangOpts().CUDAIsDevice) {
-    // Device side: emit the populated struct. Section start/stop symbols
-    // are linker-defined (ELF auto-generates __start_/__stop_ for any
-    // section whose name is a valid C identifier; AMDGPU is ELF).
+    // Device side: emit only the per-TU names postfix marker. The sections
+    // struct is emitted later by the InstrProfiling pass, which emits it only
+    // when the TU has profile data, avoiding dangling section references.
     unsigned GlobalAS = M.getDataLayout().getDefaultGlobalsAddressSpace();
-    auto *PtrTy = llvm::PointerType::get(Ctx, GlobalAS);
-    auto getOrDeclare = [&](StringRef SymName) {
-      if (auto *GV = M.getNamedGlobal(SymName))
-        return GV;
-      auto *GV = new llvm::GlobalVariable(
-          M, llvm::Type::getInt8Ty(Ctx), /*isConstant=*/false,
-          llvm::GlobalValue::ExternalLinkage, /*Initializer=*/nullptr, SymName,
+    std::string NamesVarPostfixVarName =
+        std::string(llvm::getInstrProfNamesVarPostfixVarName());
+    if (!M.getNamedValue(NamesVarPostfixVarName)) {
+      auto *NamesVarPostfix = llvm::ConstantDataArray::getString(
+          Ctx, (llvm::Twine("_") + CUIDHash).str(), true);
+      auto *NamesGV = new llvm::GlobalVariable(
+          M, NamesVarPostfix->getType(), /*isConstant=*/true,
+          llvm::GlobalValue::PrivateLinkage, NamesVarPostfix,
+          NamesVarPostfixVarName,
           /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
           GlobalAS);
-      GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-      return GV;
-    };
-    auto *VersionGV = M.getNamedGlobal("__llvm_profile_raw_version");
-    if (!VersionGV) {
-      VersionGV = new llvm::GlobalVariable(
-          M, llvm::Type::getInt64Ty(Ctx), /*isConstant=*/true,
-          llvm::GlobalValue::ExternalLinkage, /*Initializer=*/nullptr,
-          "__llvm_profile_raw_version",
-          /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-          GlobalAS);
+      CGM.addCompilerUsedGlobal(NamesGV);
     }
-
-    auto *StructTy = llvm::StructType::get(
-        Ctx, {PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy});
-    llvm::Constant *Fields[] = {
-        getOrDeclare("__start___llvm_prf_names"),
-        getOrDeclare("__stop___llvm_prf_names"),
-        getOrDeclare("__start___llvm_prf_cnts"),
-        getOrDeclare("__stop___llvm_prf_cnts"),
-        getOrDeclare("__start___llvm_prf_data"),
-        getOrDeclare("__stop___llvm_prf_data"),
-        VersionGV,
-    };
-    auto *Init = llvm::ConstantStruct::get(StructTy, Fields);
-    auto *GV = new llvm::GlobalVariable(
-        M, StructTy, /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage,
-        Init, Name, /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-        GlobalAS);
-    GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
-    CGM.addCompilerUsedGlobal(GV);
     return;
   }
 
@@ -1407,6 +1421,25 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
       M, PtrTy, /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage,
       llvm::ConstantPointerNull::get(PtrTy), Name);
   CGM.addCompilerUsedGlobal(OffloadProfShadow);
+
+  auto AddSectionShadow = [&](StringRef Kind, StringRef DeviceName) {
+    std::string ShadowName =
+        (Twine("__llvm_profile_shadow_") + Kind + "_" + CUIDHash + "_" +
+         Twine(OffloadProfSectionShadows.size()))
+            .str();
+    auto *Shadow = new llvm::GlobalVariable(
+        M, PtrTy, /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage,
+        llvm::ConstantPointerNull::get(PtrTy), ShadowName);
+    CGM.addCompilerUsedGlobal(Shadow);
+    OffloadProfSectionShadows.push_back({Shadow, DeviceName.str()});
+  };
+
+  for (auto &&I : EmittedKernels) {
+    std::string KernelName = getDeviceSideName(cast<NamedDecl>(I.D));
+    AddSectionShadow("data", std::string("__profd_") + KernelName);
+    AddSectionShadow("cnts", std::string("__profc_") + KernelName);
+    AddSectionShadow("names", getOffloadProfilingNamesVarName(CUIDHash));
+  }
 }
 
 // Returns module constructor to be added.
