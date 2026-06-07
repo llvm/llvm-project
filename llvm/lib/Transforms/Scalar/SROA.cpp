@@ -4683,6 +4683,14 @@ public:
         if (!LI || !CandidateLoadSet.count(LI) ||
             !isAddressOperandSlice(S, *LI))
           continue;
+        // Skip if max-offset cannot fit in address space's index width.
+        unsigned IdxBits = DL.getIndexSizeInBits(LI->getPointerAddressSpace());
+        auto *VTy = cast<FixedVectorType>(LI->getType());
+        uint64_t EltByteSize =
+            DL.getTypeStoreSize(VTy->getElementType()).getFixedValue();
+        uint64_t MaxOffset = (VTy->getNumElements() - 1) * EltByteSize;
+        if (!llvm::isUIntN(IdxBits, MaxOffset))
+          continue;
 
         // Check if vector loads overlap with any store slices.
         if (any_of(StoreSlices, [&](const Slice *StoreSlice) {
