@@ -915,6 +915,9 @@ libclang
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 - The clang_Module_getASTFile API is deprecated and now always returns nullptr
 - The clang_Cursor_getCommentRange API will now return a comment range for macro definitions that have documentation comments.
+- Added CXType_PredefinedSugar for __ptrdiff_t, __size_t, and
+  __signed_size_t types, which are no longer exposed as
+  CXType_Unexposed.
 
 Code Completion
 ---------------
