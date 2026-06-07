@@ -1820,7 +1820,9 @@ size_t Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
                                          bp_sites_in_range)) {
     bp_sites_in_range.ForEach([bp_addr, size,
                                buf](BreakpointSite *bp_site) -> void {
-      if (bp_site->GetType() == BreakpointSite::eSoftware) {
+      if (bp_site->GetType() == BreakpointSite::eSoftware ||
+          (bp_site->GetType() == BreakpointSite::eExternal &&
+           !ReportsOriginalOpcodes())) {
         addr_t intersect_addr;
         size_t intersect_size;
         size_t opcode_offset;

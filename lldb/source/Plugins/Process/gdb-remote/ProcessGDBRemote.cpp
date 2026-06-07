@@ -2794,6 +2794,10 @@ void ProcessGDBRemote::WillPublicStop() {
   }
 }
 
+bool ProcessGDBRemote::ReportsOriginalOpcodes() const {
+  return m_gdb_comm.GetReportsOriginalInstructions();
+}
+
 // Process Memory
 size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                                       Status &error) {

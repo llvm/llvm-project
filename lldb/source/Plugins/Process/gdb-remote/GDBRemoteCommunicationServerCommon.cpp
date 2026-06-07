@@ -1386,5 +1386,6 @@ std::vector<std::string> GDBRemoteCommunicationServerCommon::HandleFeatures(
       "QStartNoAckMode+",
       "qEcho+",
       "native-signals+",
+      "reportsOriginalInstructions+",
   };
 }

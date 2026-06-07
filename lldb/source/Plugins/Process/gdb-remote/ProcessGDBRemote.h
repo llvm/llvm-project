@@ -484,6 +484,8 @@ private:
   void HandleStopReply() override;
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
 
+  bool ReportsOriginalOpcodes() const override;
+
   lldb::ThreadSP
   HandleThreadAsyncInterrupt(uint8_t signo,
                              const std::string &description) override;

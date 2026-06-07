@@ -2333,6 +2333,12 @@ public:
 
   Status ClearBreakpointSiteByID(lldb::user_id_t break_id);
 
+  /// Check if this process reports the original opcodes when memory is read
+  /// around a breakpoint site. Some debuggers/stubs can provide the original
+  /// instruction bytes that were replaced by the breakpoint trap. If false,
+  /// LLDB will attempt to perform the opcode substitution itself.
+  virtual bool ReportsOriginalOpcodes() const { return false; }
+
   lldb::break_id_t CreateBreakpointSite(const lldb::BreakpointLocationSP &owner,
                                         bool use_hardware);
 

@@ -449,6 +449,8 @@ public:
 
   bool GetMemoryTaggingSupported();
 
+  bool GetReportsOriginalInstructions() const;
+
   bool UsesNativeSignals();
 
   lldb::DataBufferSP ReadMemoryTags(lldb::addr_t addr, size_t len,
@@ -582,6 +584,7 @@ protected:
   LazyBool m_supports_reverse_step = eLazyBoolCalculate;
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
   LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
+  LazyBool m_supports_reportingOriginalInsts = eLazyBoolNo;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,
@@ -591,8 +594,7 @@ protected:
       m_supports_qSymbol : 1, m_qSymbol_requests_done : 1,
       m_supports_qModuleInfo : 1, m_supports_jThreadsInfo : 1,
       m_supports_jModulesInfo : 1, m_supports_vFileSize : 1,
-      m_supports_vFileMode : 1, m_supports_vFileExists : 1,
-      m_supports_vRun : 1;
+      m_supports_vFileMode : 1, m_supports_vFileExists : 1, m_supports_vRun : 1;
 
   /// Current gdb remote protocol process identifier for all other operations
   lldb::pid_t m_curr_pid = LLDB_INVALID_PROCESS_ID;
