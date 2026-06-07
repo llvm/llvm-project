@@ -153,14 +153,7 @@ SCEVExpander::findInsertPointAfter(Instruction *I,
   } else {
     assert(SE.DT.dominates(I, MustDominate) &&
            "instruction must dominate the insertion point");
-    if (isa<CallBrInst>(I)) {
-      // Def is available in multiple successors, so use the point that needs
-      // to be dominated.
-      IP = MustDominate->getIterator();
-    } else {
-      // catchswitch blocks don't have any legal insertion point.
-      IP = MustDominate->getParent()->getFirstInsertionPt();
-    }
+    IP = MustDominate->getIterator();
   }
 
   // Adjust insert point to be after instructions inserted by the expander, so
