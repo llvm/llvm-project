@@ -19,6 +19,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -71,8 +72,8 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
 static bool isDereferenceableAndAlignedPointer(
     const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
     const Instruction *CtxI, AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI, SmallPtrSetImpl<const Value *> &Visited,
-    unsigned MaxDepth) {
+    const TargetLibraryInfo *TLI, const TargetTransformInfo *TTI,
+    SmallPtrSetImpl<const Value *> &Visited, unsigned MaxDepth) {
   assert(V->getType()->isPointerTy() && "Base must be pointer");
 
   // Recursion limit.
@@ -106,24 +107,24 @@ static bool isDereferenceableAndAlignedPointer(
     // addrspacecast, so we can't do arithmetic directly on the APInt values.
     return isDereferenceableAndAlignedPointer(
         Base, Alignment, Offset + Size.sextOrTrunc(Offset.getBitWidth()), DL,
-        CtxI, AC, DT, TLI, Visited, MaxDepth);
+        CtxI, AC, DT, TLI, TTI, Visited, MaxDepth);
   }
 
   // bitcast instructions are no-ops as far as dereferenceability is concerned.
   if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V)) {
     if (BC->getSrcTy()->isPointerTy())
-      return isDereferenceableAndAlignedPointer(
-        BC->getOperand(0), Alignment, Size, DL, CtxI, AC, DT, TLI,
-          Visited, MaxDepth);
+      return isDereferenceableAndAlignedPointer(BC->getOperand(0), Alignment,
+                                                Size, DL, CtxI, AC, DT, TLI,
+                                                TTI, Visited, MaxDepth);
   }
 
   // Recurse into both hands of select.
   if (const SelectInst *Sel = dyn_cast<SelectInst>(V)) {
     return isDereferenceableAndAlignedPointer(Sel->getTrueValue(), Alignment,
-                                              Size, DL, CtxI, AC, DT, TLI,
+                                              Size, DL, CtxI, AC, DT, TLI, TTI,
                                               Visited, MaxDepth) &&
            isDereferenceableAndAlignedPointer(Sel->getFalseValue(), Alignment,
-                                              Size, DL, CtxI, AC, DT, TLI,
+                                              Size, DL, CtxI, AC, DT, TLI, TTI,
                                               Visited, MaxDepth);
   }
 
@@ -184,8 +185,8 @@ static bool isDereferenceableAndAlignedPointer(
   if (const auto *Call = dyn_cast<CallBase>(V)) {
     if (auto *RP = getArgumentAliasingToReturnedPointer(
             Call, /*MustPreserveOffset=*/true))
-      return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
-                                                AC, DT, TLI, Visited, MaxDepth);
+      return isDereferenceableAndAlignedPointer(
+          RP, Alignment, Size, DL, CtxI, AC, DT, TLI, TTI, Visited, MaxDepth);
 
     // If we have a call we can't recurse through, check to see if this is an
     // allocation function for which we can establish an minimum object size.
@@ -219,12 +220,18 @@ static bool isDereferenceableAndAlignedPointer(
   if (const GCRelocateInst *RelocateInst = dyn_cast<GCRelocateInst>(V))
     return isDereferenceableAndAlignedPointer(RelocateInst->getDerivedPtr(),
                                               Alignment, Size, DL, CtxI, AC, DT,
-                                              TLI, Visited, MaxDepth);
+                                              TLI, TTI, Visited, MaxDepth);
 
-  if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V))
-    return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
-                                              Size, DL, CtxI, AC, DT, TLI,
-                                              Visited, MaxDepth);
+  if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V)) {
+    unsigned SrcAS = ASC->getSrcAddressSpace();
+    unsigned DstAS = ASC->getDestAddressSpace();
+    // When TTI is available look through if the cast is a no-op.
+    if (SrcAS == DstAS || !TTI || TTI->isNoopAddrSpaceCast(SrcAS, DstAS))
+      return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
+                                                Size, DL, CtxI, AC, DT, TLI,
+                                                TTI, Visited, MaxDepth);
+    return false;
+  }
 
   return AC && isDereferenceableAndAlignedPointerViaAssumption(
                    V, Alignment,
@@ -237,7 +244,7 @@ static bool isDereferenceableAndAlignedPointer(
 bool llvm::isDereferenceableAndAlignedPointer(
     const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
     const Instruction *CtxI, AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI) {
+    const TargetLibraryInfo *TLI, const TargetTransformInfo *TTI) {
   // Note: At the moment, Size can be zero.  This ends up being interpreted as
   // a query of whether [Base, V] is dereferenceable and V is aligned (since
   // that's what the implementation happened to do).  It's unclear if this is
@@ -245,13 +252,13 @@ bool llvm::isDereferenceableAndAlignedPointer(
 
   SmallPtrSet<const Value *, 32> Visited;
   return ::isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, AC,
-                                              DT, TLI, Visited, 16);
+                                              DT, TLI, TTI, Visited, 16);
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(
     const Value *V, Type *Ty, Align Alignment, const DataLayout &DL,
     const Instruction *CtxI, AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI) {
+    const TargetLibraryInfo *TLI, const TargetTransformInfo *TTI) {
   // For unsized types or scalable vectors we don't know exactly how many bytes
   // are dereferenced, so bail out.
   if (!Ty->isSized() || Ty->isScalableTy())
@@ -265,7 +272,7 @@ bool llvm::isDereferenceableAndAlignedPointer(
   APInt AccessSize(DL.getPointerTypeSizeInBits(V->getType()),
                    DL.getTypeStoreSize(Ty));
   return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, DL, CtxI,
-                                            AC, DT, TLI);
+                                            AC, DT, TLI, TTI);
 }
 
 bool llvm::isDereferenceablePointer(const Value *V, Type *Ty,

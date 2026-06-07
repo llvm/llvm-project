@@ -33,6 +33,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Argument.h"
@@ -7214,16 +7215,17 @@ bool llvm::isNotCrossLaneOperation(const Instruction *I) {
 bool llvm::isSafeToSpeculativelyExecute(
     const Instruction *Inst, const Instruction *CtxI, AssumptionCache *AC,
     const DominatorTree *DT, const TargetLibraryInfo *TLI, bool UseVariableInfo,
-    bool IgnoreUBImplyingAttrs) {
+    bool IgnoreUBImplyingAttrs, const TargetTransformInfo *TTI) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
                                                 AC, DT, TLI, UseVariableInfo,
-                                                IgnoreUBImplyingAttrs);
+                                                IgnoreUBImplyingAttrs, TTI);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
     AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
-    bool UseVariableInfo, bool IgnoreUBImplyingAttrs) {
+    bool UseVariableInfo, bool IgnoreUBImplyingAttrs,
+    const TargetTransformInfo *TTI) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -7286,7 +7288,7 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     const DataLayout &DL = LI->getDataLayout();
     return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
                                               LI->getType(), LI->getAlign(), DL,
-                                              CtxI, AC, DT, TLI);
+                                              CtxI, AC, DT, TLI, TTI);
   }
   case Instruction::Call: {
     auto *CI = dyn_cast<const CallInst>(Inst);
