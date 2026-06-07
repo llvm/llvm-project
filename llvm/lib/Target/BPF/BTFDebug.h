@@ -14,13 +14,13 @@
 #ifndef LLVM_LIB_TARGET_BPF_BTFDEBUG_H
 #define LLVM_LIB_TARGET_BPF_BTFDEBUG_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include <cstdint>
 #include <map>
 #include <set>
-#include <unordered_map>
 
 namespace llvm {
 
@@ -142,12 +142,12 @@ public:
 /// Handle function pointer.
 class BTFTypeFuncProto : public BTFTypeBase {
   const DISubroutineType *STy;
-  std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  DenseMap<uint32_t, StringRef> FuncArgNames;
   std::vector<struct BTF::BTFParam> Parameters;
 
 public:
   BTFTypeFuncProto(const DISubroutineType *STy, uint32_t NumParams,
-                   const std::unordered_map<uint32_t, StringRef> &FuncArgNames);
+                   const DenseMap<uint32_t, StringRef> &FuncArgNames);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + Parameters.size() * BTF::BTFParamSize;
   }
@@ -295,7 +295,7 @@ class BTFDebug : public DebugHandlerBase {
   bool MapDefNotCollected;
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
-  std::unordered_map<const DIType *, uint32_t> DIToIdMap;
+  DenseMap<const DIType *, uint32_t> DIToIdMap;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
@@ -323,10 +323,9 @@ class BTFDebug : public DebugHandlerBase {
   void visitTypeEntry(const DIType *Ty, uint32_t &TypeId, bool CheckPointer,
                       bool SeenPointer);
   void visitBasicType(const DIBasicType *BTy, uint32_t &TypeId);
-  void visitSubroutineType(
-      const DISubroutineType *STy, bool ForSubprog,
-      const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
-      uint32_t &TypeId);
+  void visitSubroutineType(const DISubroutineType *STy, bool ForSubprog,
+                           const DenseMap<uint32_t, StringRef> &FuncArgNames,
+                           uint32_t &TypeId);
   void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
                         uint32_t &TypeId);
   void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId);

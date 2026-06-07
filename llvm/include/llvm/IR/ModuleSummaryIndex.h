@@ -45,7 +45,6 @@
 #include <optional>
 #include <set>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1401,7 +1400,7 @@ using ModuleToSummariesForIndexTy =
     std::map<std::string, GVSummaryMapTy, std::less<>>;
 
 /// A set of global value summary pointers.
-using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
+using GVSummaryPtrSet = DenseSet<GlobalValueSummary *>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).

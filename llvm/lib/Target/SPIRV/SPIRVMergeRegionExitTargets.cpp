@@ -18,6 +18,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -166,7 +167,7 @@ static void validateRegionExits(const SPIRV::ConvergenceRegion *CR) {
   for (auto *Child : CR->Children)
     validateRegionExits(Child);
 
-  std::unordered_set<BasicBlock *> ExitTargets;
+  DenseSet<BasicBlock *> ExitTargets;
   for (auto *Exit : CR->Exits) {
     for (auto *BB : successors(Exit)) {
       if (CR->Blocks.count(BB) == 0)

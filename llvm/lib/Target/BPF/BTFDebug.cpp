@@ -398,7 +398,7 @@ std::string BTFTypeStruct::getName() { return std::string(STy->getName()); }
 /// for subprogram.
 BTFTypeFuncProto::BTFTypeFuncProto(
     const DISubroutineType *STy, uint32_t VLen,
-    const std::unordered_map<uint32_t, StringRef> &FuncArgNames)
+    const DenseMap<uint32_t, StringRef> &FuncArgNames)
     : STy(STy), FuncArgNames(FuncArgNames) {
   Kind = BTF::BTF_KIND_FUNC_PROTO;
   BTFType.Info = (Kind << 24) | VLen;
@@ -626,8 +626,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
 /// Handle subprogram or subroutine types.
 void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
-    const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
-    uint32_t &TypeId) {
+    const DenseMap<uint32_t, StringRef> &FuncArgNames, uint32_t &TypeId) {
   DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
@@ -1036,8 +1035,7 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
   if (const auto *BTy = dyn_cast<DIBasicType>(Ty))
     visitBasicType(BTy, TypeId);
   else if (const auto *STy = dyn_cast<DISubroutineType>(Ty))
-    visitSubroutineType(STy, false, std::unordered_map<uint32_t, StringRef>(),
-                        TypeId);
+    visitSubroutineType(STy, false, DenseMap<uint32_t, StringRef>(), TypeId);
   else if (const auto *CTy = dyn_cast<DICompositeType>(Ty))
     visitCompositeType(CTy, TypeId);
   else if (const auto *DTy = dyn_cast<DIDerivedType>(Ty))
@@ -1331,7 +1329,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   // Collect all types locally referenced in this function.
   // Use RetainedNodes so we can collect all argument names
   // even if the argument is not used.
-  std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  DenseMap<uint32_t, StringRef> FuncArgNames;
   for (const DINode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       // Collect function arguments for subprogram func type.
@@ -1713,7 +1711,7 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
     return;
 
   uint32_t ProtoTypeId;
-  const std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  const DenseMap<uint32_t, StringRef> FuncArgNames;
   visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
   uint32_t FuncId = processDISubprogram(SP, ProtoTypeId, BTF::FUNC_EXTERN);
 

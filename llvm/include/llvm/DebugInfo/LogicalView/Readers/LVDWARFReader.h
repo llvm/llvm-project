@@ -14,10 +14,11 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVBinaryReader.h"
-#include <unordered_set>
 
 namespace llvm {
 namespace logicalview {
@@ -62,14 +63,14 @@ class LVDWARFReader final : public LVBinaryReader {
   std::optional<LVAddress> TombstoneAddress;
 
   // Cross references (Elements).
-  using LVElementSet = std::unordered_set<LVElement *>;
+  using LVElementSet = DenseSet<LVElement *>;
   struct LVElementEntry {
     LVElement *Element;
     LVElementSet References;
     LVElementSet Types;
     LVElementEntry(LVElement *Element = nullptr) : Element(Element) {}
   };
-  using LVElementReference = std::unordered_map<LVOffset, LVElementEntry>;
+  using LVElementReference = DenseMap<LVOffset, LVElementEntry>;
   LVElementReference ElementTable;
 
   Error loadTargetInfo(const object::ObjectFile &Obj);

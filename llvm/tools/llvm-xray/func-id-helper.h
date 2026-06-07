@@ -15,14 +15,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
-#include <unordered_map>
 
 namespace llvm::xray {
 
 // This class consolidates common operations related to Function IDs.
 class FuncIdConversionHelper {
 public:
-  using FunctionAddressMap = std::unordered_map<int32_t, uint64_t>;
+  using FunctionAddressMap = DenseMap<int32_t, uint64_t>;
 
 private:
   std::string BinaryInstrMap;

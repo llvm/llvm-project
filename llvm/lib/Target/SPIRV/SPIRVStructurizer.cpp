@@ -14,6 +14,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
@@ -29,12 +30,11 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include <stack>
-#include <unordered_set>
 
 using namespace llvm;
 using namespace SPIRV;
 
-using BlockSet = std::unordered_set<BasicBlock *>;
+using BlockSet = DenseSet<BasicBlock *>;
 using Edge = std::pair<BasicBlock *, BasicBlock *>;
 
 // Helper function to do a partial order visit from the block |Start|, calling
@@ -63,7 +63,7 @@ getRegionForHeader(const ConvergenceRegion *Node, BasicBlock *BB) {
 // Returns the single BasicBlock exiting the convergence region `CR`,
 // nullptr if no such exit exists.
 static BasicBlock *getExitFor(const ConvergenceRegion *CR) {
-  std::unordered_set<BasicBlock *> ExitTargets;
+  DenseSet<BasicBlock *> ExitTargets;
   for (BasicBlock *Exit : CR->Exits) {
     for (BasicBlock *Successor : successors(Exit)) {
       if (CR->Blocks.count(Successor) == 0)
@@ -427,7 +427,7 @@ class SPIRVStructurizer : public FunctionPass {
     // clang-format on
     std::vector<Edge>
     createAliasBlocksForComplexEdges(std::vector<Edge> Edges) {
-      std::unordered_set<BasicBlock *> Seen;
+      DenseSet<BasicBlock *> Seen;
       std::vector<Edge> Output;
       Output.reserve(Edges.size());
 
@@ -465,14 +465,14 @@ class SPIRVStructurizer : public FunctionPass {
       std::vector<Edge> FixedEdges = createAliasBlocksForComplexEdges(Edges);
 
       std::vector<BasicBlock *> Dsts;
-      std::unordered_map<BasicBlock *, ConstantInt *> DstToIndex;
+      DenseMap<BasicBlock *, ConstantInt *> DstToIndex;
       auto NewExit = BasicBlock::Create(F.getContext(),
                                         Header->getName() + ".new.exit", &F);
       IRBuilder<> ExitBuilder(NewExit);
       for (auto &[Src, Dst] : FixedEdges) {
         if (DstToIndex.count(Dst) != 0)
           continue;
-        DstToIndex.emplace(Dst, ExitBuilder.getInt32(DstToIndex.size()));
+        DstToIndex.try_emplace(Dst, ExitBuilder.getInt32(DstToIndex.size()));
         Dsts.push_back(Dst);
       }
 

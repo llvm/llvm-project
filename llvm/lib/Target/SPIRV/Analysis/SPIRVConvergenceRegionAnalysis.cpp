@@ -14,6 +14,7 @@
 
 #include "SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -21,7 +22,6 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include <optional>
 #include <queue>
-#include <unordered_set>
 
 #define DEBUG_TYPE "spirv-convergence-region-analysis"
 
@@ -210,10 +210,10 @@ private:
     return false;
   }
 
-  std::unordered_set<BasicBlock *>
+  DenseSet<BasicBlock *>
   findPathsToMatch(LoopInfo &LI, BasicBlock *From,
                    std::function<bool(const BasicBlock *)> isMatch) const {
-    std::unordered_set<BasicBlock *> Output;
+    DenseSet<BasicBlock *> Output;
 
     if (isMatch(From))
       Output.insert(From);

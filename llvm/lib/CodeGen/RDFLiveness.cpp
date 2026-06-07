@@ -471,8 +471,7 @@ void Liveness::computePhiInfo() {
   // phi use -> (map: reaching phi -> set of registers defined in between)
   std::map<NodeId, std::map<NodeId, RegisterAggr>> PhiUp;
   std::vector<NodeId> PhiUQ; // Work list of phis for upward propagation.
-  std::unordered_map<NodeId, RegisterAggr>
-      PhiDRs; // Phi -> registers defined by it.
+  DenseMap<NodeId, RegisterAggr> PhiDRs; // Phi -> registers defined by it.
 
   // Go over all phis.
   for (NodeAddr<PhiNode *> PhiA : Phis) {

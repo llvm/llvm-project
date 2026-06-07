@@ -2152,7 +2152,7 @@ void addInstrRequirements(const MachineInstr &MI,
 
     // Check Layout operand in case if it's not a standard one and add the
     // appropriate capability.
-    std::unordered_map<unsigned, unsigned> LayoutToInstMap = {
+    DenseMap<unsigned, unsigned> LayoutToInstMap = {
         {SPIRV::OpCooperativeMatrixLoadKHR, 3},
         {SPIRV::OpCooperativeMatrixStoreKHR, 2},
         {SPIRV::OpCooperativeMatrixLoadCheckedINTEL, 5},

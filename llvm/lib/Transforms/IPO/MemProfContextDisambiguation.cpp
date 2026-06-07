@@ -49,7 +49,6 @@
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include <deque>
 #include <sstream>
-#include <unordered_map>
 #include <vector>
 using namespace llvm;
 using namespace llvm::memprof;
@@ -1103,8 +1102,8 @@ private:
   // frames that we discover while building the graph.
   // It maps from the summary of the function making the tail call, to a map
   // of callee ValueInfo to corresponding synthesized callsite info.
-  std::unordered_map<FunctionSummary *,
-                     std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
+  DenseMap<FunctionSummary *,
+           std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
       FunctionCalleesToSynthesizedCallsiteInfos;
 };
 } // namespace
