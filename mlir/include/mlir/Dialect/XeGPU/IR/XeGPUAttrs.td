@@ -927,6 +927,47 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
 
 }
 
+def XeGPU_CoalesceHintAttr : XeGPUAttr<"CoalesceHint", "coalesce_hint"> {
+  let summary = [{Per-op hint stamped by the coalesce-gather-scatter analysis.}];
+
+  let description = [{
+    `CoalesceHintAttr` is a discardable attribute attached by the
+    coalesce-gather-scatter analysis to `xegpu.load` / `xegpu.store` ops
+    whose offsets describe a contiguous-per-lane access pattern. It records
+    the chosen `lane_data` factor along the fastest-changing dim (FCD) of
+    the value vector. The `lane_layout` along the FCD is *not* stored here;
+    it is re-derived at apply time from the op's offsets inner extent and
+    the chip's subgroup size, mirroring `xegpu-propagate-layout`'s default
+    rule.
+
+    The attribute is consumed and removed by `applyCoalesceGatherScatterHint`,
+    which installs an equivalent `xegpu.layout` on the op. A producer that
+    decides not to apply the hint (for example, a propagator that detects a
+    conflict with an anchor-driven layout) should remove the attribute
+    rather than leave it dangling.
+
+    Example:
+    ```mlir
+    %v = xegpu.load %ptr[%offsets], %mask
+            <{chunk_size = 1 : i64,
+              xegpu.coalesce_hint = #xegpu.coalesce_hint<factor = 4>}>
+            : i64, vector<64xindex>, vector<64xi1> -> vector<64xf32>
+    ```
+  }];
+
+  let parameters = (ins "IntegerAttr": $factor);
+
+  let builders = [
+    AttrBuilder<(ins "int64_t":$factor), [{
+      return $_get($_ctxt, IntegerAttr::get(IntegerType::get($_ctxt, 64),
+                                            factor));
+    }]>
+  ];
+
+  let assemblyFormat = "`<` `factor` `=` $factor `>`";
+  let genVerifyDecl = 1;
+}
+
 def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
   let cppNamespace = "::mlir::xegpu";
 

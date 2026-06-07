@@ -861,7 +861,7 @@ xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
     DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims,
-    int numSg, const xegpu::uArch::uArch *uArch) {
+    int numSg, const xegpu::uArch::uArch *uArch, int coalesceFactor) {
 
   auto srcShape = srcVecTy.getShape();
   int srcRank = srcShape.size();
@@ -874,6 +874,25 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   };
 
   const int subgroupSize = uArch->getSubgroupSize();
+  // Coalescing of the *reduced* FCD: the single reduction dim is the FCD and
+  // the factor cleanly partitions the reduced extent across the lanes. Each
+  // lane folds `factor` contiguous reduced elements locally before the
+  // cross-lane butterfly. The factor lands on the reduced dim only (which the
+  // result slice removes), so the RESULT carries no factor.
+  int fcd = srcRank - 1;
+  int coalesce = std::max(1, coalesceFactor);
+  bool coalesceFcd = coalesce > 1 && reductionDims.size() == 1 &&
+                     reductionDims[0] == fcd &&
+                     srcShape[fcd] % (subgroupSize * coalesce) == 0;
+  // Coalescing of a *surviving* FCD: a single non-FCD reduction whose source
+  // FCD is coalesced (factor on dim `fcd`, which is NOT reduced). The factor
+  // stays on the surviving FCD and is inherited by the result slice, so the
+  // reduction result/store carry it too (lane_data[resultFCD] = factor),
+  // matching the coalesced load and store. No cross-lane fold of the factor is
+  // needed here — the FCD is not reduced.
+  bool coalesceSurvivingFcd = coalesce > 1 && reductionDims.size() == 1 &&
+                              reductionDims[0] != fcd &&
+                              srcShape[fcd] % (subgroupSize * coalesce) == 0;
   int64_t maxReduceVectorSize = 1; // could extend to spirv vector Size
   xegpu::DistributeLayoutAttr srcLayout;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
@@ -950,6 +969,17 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
           std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
     instData[srcRank - 1] =
         std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
+    // Coalesced FCD reduction: grow inst_data on the FCD to
+    // lane_layout * lane_data = subgroupSize * factor so blocking keeps the
+    // reduced run in one instruction tile (rather than splitting into
+    // `factor` separate subgroupSize-wide blocks).
+    if (coalesceFcd)
+      instData[fcd] = subgroupSize * coalesce;
+    // Coalesced surviving FCD (non-FCD reduction): grow inst_data on the
+    // surviving FCD the same way; the result slice keeps it (the FCD is not
+    // reduced), so the reduction result/store stay coalesced.
+    if (coalesceSurvivingFcd)
+      instData[fcd] = subgroupSize * coalesce;
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
 
@@ -959,6 +989,20 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     if (srcRank >= 2)
       laneData[srcRank - 2] =
           std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
+    // Coalesced FCD reduction: each lane owns `factor` contiguous elements of
+    // the reduced dim. lane_layout[FCD] shrinks to subgroupSize and
+    // lane_data[FCD] becomes the factor (lane_layout * lane_data partitions
+    // the reduced extent). The downstream SgToWi reduction lowering folds the
+    // `factor` elements per lane before the cross-lane butterfly.
+    if (coalesceFcd)
+      laneData[fcd] = coalesce;
+    // Coalesced surviving FCD (non-FCD reduction): each lane owns `factor`
+    // contiguous elements of the surviving FCD. lane_layout[FCD] is already
+    // subgroupSize; set lane_data[FCD] = factor. The result slice keeps this
+    // dim, so the reduction result/store inherit lane_data[resultFCD] = factor
+    // and agree with the coalesced load/store — no convert_layout.
+    if (coalesceSurvivingFcd)
+      laneData[fcd] = coalesce;
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
                                        toInt32Attr(laneData));
   }
@@ -1305,7 +1349,7 @@ static xegpu::DistributeLayoutAttr
 setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
                               mlir::MLIRContext *context, bool isChunkedStore,
                               int maxChunkSize, ArrayRef<int64_t> srcShape,
-                              int subgroupSize) {
+                              int subgroupSize, int coalesceFactor = 1) {
 
   int srcShapeSize = srcShape.size();
   SmallVector<int> instData(srcShapeSize, 1);
@@ -1319,13 +1363,34 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
   }
 
   if (!isChunkedStore) {
+    int64_t inner = srcShape.back();
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData[srcShapeSize - 1] =
-          std::min(subgroupSize, static_cast<int>(srcShape.back()));
+      // Coalescing sink: grow inst_data[FCD] to subgroupSize * factor (capped
+      // by the inner extent and only when it divides evenly) so XeGPUBlocking
+      // keeps the coalesced run in one instruction tile. factor == 1
+      // reproduces the default `min(subgroupSize, inner)`.
+      int factor = std::max(1, coalesceFactor);
+      int instInner = subgroupSize * factor;
+      if (factor == 1 || inner % instInner != 0)
+        instInner = std::min(subgroupSize, static_cast<int>(inner));
+      instData[srcShapeSize - 1] = instInner;
       return xegpu::LayoutAttr::get(context, instData);
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneLayout[srcShapeSize - 1] =
-          std::min(subgroupSize, static_cast<int>(srcShape.back()));
+      // Coalescing sink: seed lane_data[FCD] = coalesceFactor (capped so
+      // lane_layout * lane_data divides the inner extent), then shrink
+      // lane_layout[FCD] accordingly. coalesceFactor == 1 reproduces the
+      // default (lane_layout = min(subgroupSize, inner), lane_data = 1).
+      int factor = std::max(1, coalesceFactor);
+      int laneLayoutInner = std::min<int64_t>(subgroupSize, inner / factor);
+      if (laneLayoutInner < 1)
+        laneLayoutInner = 1;
+      // Fall back to the trivial layout if the factor doesn't divide cleanly.
+      if (factor > 1 && inner % (laneLayoutInner * factor) != 0) {
+        factor = 1;
+        laneLayoutInner = std::min<int64_t>(subgroupSize, inner);
+      }
+      laneLayout[srcShapeSize - 1] = laneLayoutInner;
+      laneData[srcShapeSize - 1] = factor;
       return xegpu::LayoutAttr::get(context, laneLayout, laneData);
     }
   } else {
@@ -1344,10 +1409,9 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
 }
 
 /// Sets up the anchor layout for a store scatter operation.
-xegpu::DistributeLayoutAttr
-xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
-                                     VectorType srcVecTy, int chunkSize,
-                                     const uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr xegpu::setupStoreScatterAnchorLayout(
+    xegpu::LayoutKind layoutKind, VectorType srcVecTy, int chunkSize,
+    const uArch::uArch *uArch, int coalesceFactor) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
@@ -1358,15 +1422,17 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
       dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
+  // A coalescing sink can carry at most `maxLaneStoreSize` per lane.
+  int factor = std::min(std::max(1, coalesceFactor), maxChunkSize);
   return setupGenericStoreAnchorLayout(layoutKind, context, (chunkSize > 1),
-                                       maxChunkSize, srcShape, subgroupSize);
+                                       maxChunkSize, srcShape, subgroupSize,
+                                       factor);
 }
 
 /// Sets up the anchor layout for a store matrix operation.
-xegpu::DistributeLayoutAttr
-xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                    VectorType srcVecTy,
-                                    const xegpu::uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr xegpu::setupStoreMatrixAnchorLayout(
+    xegpu::LayoutKind layoutKind, VectorType srcVecTy,
+    const xegpu::uArch::uArch *uArch, int coalesceFactor) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
@@ -1379,7 +1445,7 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
 
   return setupGenericStoreAnchorLayout(layoutKind, context, false, maxChunkSize,
-                                       srcShape, subgroupSize);
+                                       srcShape, subgroupSize, coalesceFactor);
 }
 
 // This function returns the default lane layout for a given vector type.
@@ -1828,7 +1894,45 @@ xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
   if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
     if (idx == 0) {
       SmallVector<int64_t> reductionDims(reduction.getReductionDims());
-      return xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
+      xegpu::DistributeLayoutAttr srcLayout =
+          xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
+      // Coalesced FCD reduction: the result layout (reduced dim removed) does
+      // not carry the coalesce factor, so re-deriving the source from it drops
+      // it — yielding lane_data/inst_data = 1 on the reduced FCD and a
+      // disagreement with the already-coalesced producer (an unlowerable
+      // convert, and a round-robin tiling by XeGPUBlocking). The producer's
+      // permanent layout (e.g. a coalesced xegpu.load with inst_data[FCD] =
+      // subgroupSize*factor or lane_data[FCD] = factor) is the source of truth
+      // here and survives the temporary-layout wipe, so adopt its FCD value
+      // when it exceeds the result-derived one. This keeps the contiguous
+      // per-lane chunk through blocking; the SgToLane reduction lowering then
+      // folds the `factor` per-lane elements before the cross-lane butterfly.
+      if (srcLayout && reductionDims.size() == 1) {
+        int rank = srcLayout.getRank();
+        int fcd = rank - 1;
+        if (reductionDims[0] == fcd) {
+          if (auto prod = xegpu::getDistributeLayoutAttr(operand.get())) {
+            SmallVector<int64_t> prodInst = prod.getEffectiveInstDataAsInt();
+            SmallVector<int64_t> prodLane = prod.getEffectiveLaneDataAsInt();
+            SmallVector<int64_t> srcInst =
+                srcLayout.getEffectiveInstDataAsInt();
+            SmallVector<int64_t> srcLane =
+                srcLayout.getEffectiveLaneDataAsInt();
+            bool isLane = !srcLayout.getEffectiveLaneLayoutAsInt().empty();
+            if (isLane && fcd < (int)srcLane.size() &&
+                fcd < (int)prodLane.size() && prodLane[fcd] > srcLane[fcd])
+              srcLayout = srcLayout.setDimData(fcd, /*sgData=*/-1,
+                                               /*instData=*/-1,
+                                               /*laneData=*/prodLane[fcd]);
+            else if (!isLane && fcd < (int)srcInst.size() &&
+                     fcd < (int)prodInst.size() && prodInst[fcd] > srcInst[fcd])
+              srcLayout = srcLayout.setDimData(fcd, /*sgData=*/-1,
+                                               /*instData=*/prodInst[fcd],
+                                               /*laneData=*/-1);
+          }
+        }
+      }
+      return srcLayout;
     }
     if (idx == 1)
       return resLayout;
