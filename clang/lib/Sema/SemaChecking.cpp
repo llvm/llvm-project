@@ -6492,9 +6492,14 @@ bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
 
   // Argument 0 is checked for us and the remaining arguments must be
   // constant integers.
-  for (unsigned i = 1; i != NumArgs; ++i)
+  for (unsigned i = 1; i != NumArgs; ++i) {
     if (BuiltinConstantArgRange(TheCall, i, 0, i == 1 ? 1 : 3))
       return true;
+
+    ExprResult Arg =
+        ImpCastExprToType(TheCall->getArg(i), Context.IntTy, CK_IntegralCast);
+    TheCall->setArg(i, Arg.get());
+  }
 
   return false;
 }
