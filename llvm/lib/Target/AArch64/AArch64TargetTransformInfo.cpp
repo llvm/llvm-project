@@ -6046,6 +6046,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   // USDot is natively supported with +i8mm. With plain +dotprod, SUMLA is
   // lowered to two udots plus an eor and a sub.
   if (IsUSDot && !ST->hasMatMulInt8() && !ST->hasDotProd())
+    // FIXME: Remove this early bailout in favour of expand cost.
     return Invalid;
 
   unsigned Ratio =
