@@ -97,8 +97,8 @@ FXC are marked with \*.
 
 #. `DXIL`_† - Stores the DXIL bytecode.
 #. `HASH`_† - Stores the shader MD5 hash.
-#. ILDB† - Stores the DXIL bytecode with LLVM Debug Information embedded in the module.
-#. ILDN† - Stores shader debug name for external debug information.
+#. `ILDB`_† - Stores the DXIL bytecode with LLVM Debug Information embedded in the module.
+#. `ILDN`_† - Stores shader debug name for external debug information.
 #. `ISG1`_ - Stores the input signature for Shader Model 5.1+.
 #. ISGN\* - Stores the input signature for Shader Model 4 and earlier.
 #. `OSG1`_ - Stores the output signature for Shader Model 5.1+.
@@ -116,9 +116,9 @@ FXC are marked with \*.
 #. SHDR\* - Stores compiled DXBC bytecode.
 #. SHEX\* - Stores compiled DXBC bytecode.
 #. DXBC\* - Stores compiled DXBC bytecode.
-#. SRCI† - Stores shader source information.
+#. `SRCI`_† - Stores shader source information.
 #. STAT† - Stores shader statistics.
-#. VERS† - Stores shader compiler version information.
+#. `VERS`_† - Stores shader compiler version information.
 
 DXIL Part
 ---------
@@ -142,6 +142,270 @@ The HASH part contains a 32-bit unsigned integer with the shader hash flags, and
 a 128-bit MD5 hash digest. The flags field can either have the value ``0`` to
 indicate no flags, or ``1`` to indicate that the file hash was computed
 including the source code that produced the binary.
+
+ILDB Part
+---------
+.. _ILDB:
+
+The ILDB part follows the structure of the `DXIL`_ part. It stores the
+unstripped DXIL bitcode module with debug information embedded.
+
+The ILDB part is emitted when the shader is compiled with debug information.
+The stripped `DXIL`_ part has the ``Dwarf Version`` and ``Debug Info Version``
+module flags removed, and ``dx.source`` metadata nodes are stripped from it.
+Those nodes are preserved in the ILDB module when source is embedded in the
+debug module; otherwise they are replaced with empty placeholder values in the
+ILDB module written to the companion PDB file.
+
+By default, when debug information is present and no companion PDB file is
+requested, the ILDB part is embedded in the main DXContainer output. When a
+companion PDB file is requested, the ILDB part is written to the PDB unless
+llc's ``--dx-embed-debug`` is specified, in which case it is written to both the main
+DXContainer and the PDB.
+
+.. rubric:: Reading this part
+
+When the ILDB part is present in a DXContainer file, :program:`obj2yaml` prints
+it under a ``Program`` mapping with the embedded DXIL bitcode. Use
+:program:`llvm-objcopy` to extract the raw bitcode, then :program:`llvm-dis` to
+disassemble it::
+
+  llvm-objcopy --dump-section=ILDB=shader.bc shader.dxbc
+  llvm-dis shader.bc
+
+When the ILDB part is stored in a companion PDB file, use :program:`llvm-pdbutil`
+to access it (see :doc:`llvm-pdbutil <../CommandGuide/llvm-pdbutil>`).
+
+ILDN Part
+---------
+.. _ILDN:
+
+The ILDN part stores the name of the companion PDB file used for external
+debug information. It is always emitted when the shader is compiled with debug
+information, and is included in both the main DXContainer output and the
+companion PDB file.
+
+The part begins with a ``DebugNameHeader`` followed by a null-terminated UTF-8
+string containing the debug file name:
+
+.. code-block:: c
+
+  struct DebugNameHeader {
+    uint16_t Flags;
+    uint16_t NameLength;
+  };
+
+The ``Flags`` field is reserved and must be zero. ``NameLength`` is the length
+of the debug file name in bytes, not including the null terminator.
+
+If no PDB output path is specified, the debug file name defaults to
+``<MD5 hash>.pdb``, where ``<MD5 hash>`` is the stringified MD5 digest from the
+`HASH`_ part. When the ``-dx-Zss`` flag is used, the digest is computed from the
+ILDB bitcode; otherwise it is computed from the stripped `DXIL`_ bitcode. If a
+PDB output path is specified with `-dx-Fd`, that path is used as the debug file name.
+When the path names a directory, the default ``<MD5 hash>.pdb`` file name is placed in
+that directory.
+
+.. rubric:: Reading this part
+
+When the ILDN part is present in a DXContainer file, :program:`obj2yaml` prints
+it under a ``DebugName`` mapping.
+
+SRCI Part
+---------
+.. _SRCI:
+
+The SRCI part stores shader source information extracted from ``dx.source``
+metadata in the LLVM module. It is emitted when source information is available
+and source is not embedded in the debug module. When source is embedded in the
+debug module, the ``dx.source`` metadata nodes remain in the `ILDB`_ module
+instead and the SRCI part is not generated.
+
+The SRCI part is written to the companion PDB file. It consists of a part
+header followed by three 4-byte aligned sections. Each section begins with a
+``SectionHeader`` and is followed by section-specific data:
+
+.. code-block:: c
+
+  struct Header {
+    uint32_t AlignedSizeInBytes;
+    uint16_t Flags;
+    uint16_t SectionCount;
+  };
+
+  struct SectionHeader {
+    uint32_t AlignedSizeInBytes;
+    uint16_t Flags;
+    uint16_t Type;
+  };
+
+The part ``Flags`` field is reserved and must be zero. ``SectionCount`` must be
+``3``. Each section ``Flags`` field is reserved and must be zero. The
+``Type`` field identifies the section. The section type values are:
+
+.. code-block:: c
+
+  SOURCE_INFO_TYPE(0, SourceContents)
+  SOURCE_INFO_TYPE(1, SourceNames)
+  SOURCE_INFO_TYPE(2, Args)
+
+Source Names Section
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The source names section stores the file names of the HLSL translation units
+that contributed source to the shader. It begins with a section header of type
+``SourceNames``, followed by a section-specific header and a sequence of name
+entries:
+
+.. code-block:: c
+
+  struct SourceNamesHeader {
+    uint32_t Flags;
+    uint32_t Count;
+    uint16_t EntriesSizeInBytes;
+  };
+
+  struct SourceNamesEntry {
+    uint32_t AlignedSizeInBytes;
+    uint32_t Flags;
+    uint32_t NameSizeInBytes;
+    uint32_t ContentSizeInBytes;
+  };
+
+The section-specific ``Flags`` field is reserved and must be zero. ``Count`` is
+the number of entries that follow. ``EntriesSizeInBytes`` is the total size of
+the entry data following the section-specific header, including entry padding.
+
+Each entry is 4-byte aligned. The first entry is usually the main shader source
+file, and the remaining entries are sorted by file name.
+
+Each entry is followed by a null-terminated UTF-8 file name of length
+``NameSizeInBytes``. The ``ContentSizeInBytes`` field records the size of the
+corresponding source content entry in the source contents section, including its
+null terminator.
+
+Source Contents Section
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The source contents section stores the HLSL source text for each file named in
+the source names section. It begins with a section header of type
+``SourceContents``, followed by a section-specific header and the (optionally
+compressed) entry data:
+
+.. code-block:: c
+
+  struct SourceContentsHeader {
+    uint32_t AlignedSizeInBytes;
+    uint16_t Flags;
+    uint16_t Type;
+    uint32_t EntriesSizeInBytes;
+    uint32_t UncompressedEntriesSizeInBytes;
+    uint32_t Count;
+  };
+
+  struct SourceContentsEntry {
+    uint32_t AlignedSizeInBytes;
+    uint32_t Flags;
+    uint32_t ContentSizeInBytes;
+  };
+
+The section-specific ``Flags`` field is reserved and must be zero. The
+``Type`` field specifies the compression applied to the entry data. The
+compression type values are:
+
+.. code-block:: c
+
+  COMPRESSION_TYPE(0, None)
+  COMPRESSION_TYPE(1, Zlib)
+
+When no compression is used, ``EntriesSizeInBytes`` and
+``UncompressedEntriesSizeInBytes`` are equal.
+
+When Zlib compression is used, the bytes following the section-specific header
+contain the compressed aggregate of all entries. After decompression, the data is
+a sequence of ``Count`` entries.
+
+Each uncompressed entry is 4-byte aligned and is followed by a null-terminated
+UTF-8 string containing the file source text.
+
+The entries must appear in the same order as the entries in the source names
+section.
+
+Args Section
+~~~~~~~~~~~~~~~~~
+
+The args section stores the HLSL compiler command-line arguments used to produce
+the shader. It begins with a section header of type ``Args``, followed by a
+section-specific header and the argument data:
+
+.. code-block:: c
+
+  struct ArgsHeader {
+    uint32_t Flags;
+    uint32_t SizeInBytes;
+    uint32_t Count;
+  };
+
+The section-specific ``Flags`` field is reserved and must be zero.
+``SizeInBytes`` is the total size of the argument data following the
+section-specific header. ``Count`` is the number of argument pairs that
+follow.
+
+The header is followed by ``Count`` argument pairs. Each pair consists of two
+null-terminated UTF-8 strings: an argument name and an argument value.
+
+Padding is not applied between argument pairs. The section is padded with zero
+bytes at the end to a 4-byte boundary.
+
+.. rubric:: Reading this part
+
+The SRCI part is normally found in a companion PDB file rather than the main
+DXContainer output. When present, :program:`obj2yaml` prints it under a
+``SourceInfo`` mapping.
+
+To read SRCI part from a companion PDB file, use :program:`llvm-pdbutil`.
+
+VERS Part
+---------
+.. _VERS:
+
+The VERS part stores compiler version information. It is emitted when the
+shader is compiled with debug information. When a companion PDB file is produced,
+the VERS part is written to that file. When compiling a shader library, the VERS
+part is also written to the main DXContainer output.
+
+The part begins with a ``CompilerVersionHeader`` followed by two sequential
+null-terminated UTF-8 strings: the compiler commit SHA and a custom version
+string:
+
+.. code-block:: c
+
+  struct CompilerVersionHeader {
+    uint16_t Major;
+    uint16_t Minor;
+    uint32_t Flags;
+    uint32_t CommitCount;
+    uint32_t ContentSizeInBytes;
+  };
+
+``Major`` and ``Minor`` encode the compiler version. ``CommitCount`` is the
+value produced by ``git rev-list --count HEAD`` in the compiler repository, or
+``0`` when that value is unavailable. ``ContentSizeInBytes`` is the combined
+size of the commit SHA and custom version strings, including their null
+terminators but excluding any trailing part padding.
+
+The ``Flags`` field is a bitmask. The flag values are:
+
+* ``Default`` (``0``) - default value
+* ``Debug`` (``1``) - indicates whether the compiler was built in debug mode
+* ``Internal`` (``2``) - indicates whether the shader was modified by a validator
+
+.. rubric:: Reading this part
+
+When the VERS part is present in a DXContainer file, :program:`obj2yaml` prints
+it under a ``CompilerVersion`` mapping.
+
+To read VERS part from a companion PDB file, use :program:`llvm-pdbutil`.
 
 Program Signature (SG1) Parts
 -----------------------------
