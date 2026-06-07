@@ -120,7 +120,6 @@ private:
     using BaseInfo =
         DenseMapInfo<llvm::PointerIntPair<CallGraphNode *, 2, Edge::Kind>>;
 
-    static Edge getEmptyKey() { return Edge(BaseInfo::getEmptyKey()); }
     static unsigned getHashValue(const Edge &edge) {
       return BaseInfo::getHashValue(edge.targetAndKind);
     }

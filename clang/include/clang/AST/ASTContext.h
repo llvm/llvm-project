@@ -70,9 +70,6 @@ struct ScalableVecTyKey {
 // Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
 // as a key in DenseMap.
 template <> struct DenseMapInfo<ScalableVecTyKey> {
-  static inline ScalableVecTyKey getEmptyKey() {
-    return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
-  }
   static unsigned getHashValue(const ScalableVecTyKey &Val) {
     return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
                         Val.NumElts, Val.NumFields);
@@ -947,6 +944,9 @@ public:
   /// Returns empty type if there is no appropriate target types.
   QualType getIntTypeForBitwidth(unsigned DestWidth,
                                  unsigned Signed) const;
+
+  QualType getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                      unsigned Signed) const;
 
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
@@ -4005,8 +4005,6 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
   return Value;
 }
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
-  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
-
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
     return Val.ComputeHash();
   }

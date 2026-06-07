@@ -13045,6 +13045,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
   case TSK_ExplicitInstantiationDeclaration:
     return GVA_AvailableExternally;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     External = GVA_DiscardableODR;
     break;
@@ -13234,6 +13235,7 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
   case TSK_ExplicitInstantiationDeclaration:
     return GVA_AvailableExternally;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     return GVA_DiscardableODR;
   }
@@ -13537,6 +13539,12 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
   if (!QualTy && DestWidth == 128)
     return Signed ? Int128Ty : UnsignedInt128Ty;
   return QualTy;
+}
+
+QualType ASTContext::getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                                unsigned Signed) const {
+  return getFromTargetType(
+      getTargetInfo().getLeastIntTypeByWidth(DestWidth, Signed));
 }
 
 /// getRealTypeForBitwidth -

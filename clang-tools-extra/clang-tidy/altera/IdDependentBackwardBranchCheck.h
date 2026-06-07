@@ -54,16 +54,16 @@ private:
   /// Stores the location an ID-dependent field is created from a call to an ID
   /// function in IdDepFieldsMap.
   void saveIdDepField(const Stmt *Statement, const FieldDecl *Field);
-  /// Stores the location an ID-dependent variable is created from a reference
-  /// to another ID-dependent variable or field in IdDepVarsMap.
-  void saveIdDepVarFromReference(const DeclRefExpr *RefExpr,
-                                 const MemberExpr *MemExpr,
-                                 const VarDecl *PotentialVar);
-  /// Stores the location an ID-dependent field is created from a reference to
-  /// another ID-dependent variable or field in IdDepFieldsMap.
-  void saveIdDepFieldFromReference(const DeclRefExpr *RefExpr,
-                                   const MemberExpr *MemExpr,
-                                   const FieldDecl *PotentialField);
+  /// Stores the location an ID-dependent variable is created from a potential
+  /// reference to another ID-dependent variable or field in IdDepVarsMap.
+  void saveIdDepVarFromPotentialReference(const DeclRefExpr *RefExpr,
+                                          const MemberExpr *MemExpr,
+                                          const VarDecl *PotentialVar);
+  /// Stores the location an ID-dependent field is created from a potential
+  /// reference to another ID-dependent variable or field in IdDepFieldsMap.
+  void saveIdDepFieldFromPotentialReference(const DeclRefExpr *RefExpr,
+                                            const MemberExpr *MemExpr,
+                                            const FieldDecl *PotentialField);
   /// Returns the loop type.
   LoopType getLoopType(const Stmt *Loop);
 
