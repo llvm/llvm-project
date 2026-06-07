@@ -31,7 +31,7 @@ define void @test_poison(float %b, ptr %p) {
 define i32 @test_bitcast(i32 %i) {
 ; CHECK-LABEL: define i32 @test_bitcast(
 ; CHECK-SAME: i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x i32> <i32 1, i32 0, i32 2, i32 0>, i32 [[I]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x i32> bitcast (<2 x i64> <i64 1, i64 2> to <4 x i32>), i32 [[I]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %e = extractelement <4 x i32> bitcast (<2 x i64> <i64 1, i64 2> to <4 x i32>), i32 %i

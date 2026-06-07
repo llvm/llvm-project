@@ -187,7 +187,7 @@ define i32 @one_constexpr(i8 %cond, i32 %x) {
 ; CHECK-NEXT:      i8 1, label [[C:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @glb, i64 2) to i32)
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 ptrtoint (ptr getelementptr inbounds (i8, ptr @glb, i64 2) to i32)
 ; CHECK-NEXT:    br label [[D:%.*]]
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[D]]

@@ -68,7 +68,7 @@ define ptr addrspace(3) @test_constant_fold_inttoptr_as_pointer_larger() {
 
 define i8 @const_fold_ptrtoint() {
 ; CHECK-LABEL: @const_fold_ptrtoint(
-; CHECK-NEXT:    ret i8 4
+; CHECK-NEXT:    ret i8 ptrtoint (ptr addrspace(2) inttoptr (i4 4 to ptr addrspace(2)) to i8)
 ;
   ret i8 ptrtoint (ptr addrspace(2) inttoptr (i4 4 to ptr addrspace(2)) to i8)
 }
@@ -77,7 +77,7 @@ define i8 @const_fold_ptrtoint() {
 ; the original
 define i8 @const_fold_ptrtoint_mask() {
 ; CHECK-LABEL: @const_fold_ptrtoint_mask(
-; CHECK-NEXT:    ret i8 1
+; CHECK-NEXT:    ret i8 ptrtoint (ptr addrspace(3) inttoptr (i32 257 to ptr addrspace(3)) to i8)
 ;
   ret i8 ptrtoint (ptr addrspace(3) inttoptr (i32 257 to ptr addrspace(3)) to i8)
 }
@@ -86,7 +86,7 @@ define i8 @const_fold_ptrtoint_mask() {
 ; 64-bits instead of 32
 define i64 @const_fold_ptrtoint_mask_small_as0() {
 ; CHECK-LABEL: @const_fold_ptrtoint_mask_small_as0(
-; CHECK-NEXT:    ret i64 -1
+; CHECK-NEXT:    ret i64 ptrtoint (ptr addrspace(1) inttoptr (i128 -1 to ptr addrspace(1)) to i64)
 ;
   ret i64 ptrtoint (ptr addrspace(1) inttoptr (i128 -1 to ptr addrspace(1)) to i64)
 }
@@ -109,7 +109,7 @@ define i16 @const_ptrtoint() {
 
 define i16 @const_inttoptr_ptrtoint() {
 ; CHECK-LABEL: @const_inttoptr_ptrtoint(
-; CHECK-NEXT:    ret i16 9
+; CHECK-NEXT:    ret i16 ptrtoint (ptr addrspace(3) inttoptr (i16 9 to ptr addrspace(3)) to i16)
 ;
   ret i16 ptrtoint (ptr addrspace(3) inttoptr (i16 9 to ptr addrspace(3)) to i16)
 }

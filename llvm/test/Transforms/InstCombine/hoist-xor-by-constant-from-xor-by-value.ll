@@ -94,7 +94,7 @@ entry:
 
 define i16 @constantexpr2() {
 ; CHECK-LABEL: @constantexpr2(
-; CHECK-NEXT:    [[I0:%.*]] = icmp ne ptr getelementptr inbounds nuw (i8, ptr @global_constant3, i64 40), @global_constant4
+; CHECK-NEXT:    [[I0:%.*]] = icmp ne ptr getelementptr inbounds ([6 x [1 x i64]], ptr @global_constant3, i16 0, i16 5, i16 0), @global_constant4
 ; CHECK-NEXT:    [[I1:%.*]] = zext i1 [[I0]] to i16
 ; CHECK-NEXT:    [[I2:%.*]] = load ptr, ptr @global_constant5, align 1
 ; CHECK-NEXT:    [[I3:%.*]] = load i16, ptr [[I2]], align 1

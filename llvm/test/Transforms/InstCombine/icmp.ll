@@ -281,7 +281,8 @@ define <2 x i1> @test11_vec(<2 x i32> %x) {
 define i1 @test12(i1 %A) {
 ; CHECK-LABEL: define i1 @test12(
 ; CHECK-SAME: i1 [[A:%.*]]) {
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[A]], i64 -4294967295, i64 8589934591
+; CHECK-NEXT:    [[NOT_A:%.*]] = icmp ne i64 [[S]], bitcast (<2 x i32> <i32 1, i32 -1> to i64)
 ; CHECK-NEXT:    ret i1 [[NOT_A]]
 ;
   %S = select i1 %A, i64 -4294967295, i64 8589934591

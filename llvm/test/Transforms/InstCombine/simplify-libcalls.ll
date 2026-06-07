@@ -32,7 +32,7 @@ define ptr @test1() {
 ; CHECK32-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @str, i32 3)
 ;
 ; CHECK16-LABEL: @test1(
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str, i32 2), i32 103)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr ([5 x i8], ptr @str, i32 0, i32 2), i32 103)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
   %tmp3 = tail call ptr @strchr( ptr getelementptr ([5 x i8], ptr @str, i32 0, i32 2), i32 103 )              ; <ptr> [#uses=1]
@@ -48,7 +48,7 @@ define ptr @test2() {
 ; CHECK32-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @str1, i32 7)
 ;
 ; CHECK16-LABEL: @test2(
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str1, i32 2), i32 0)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr ([8 x i8], ptr @str1, i32 0, i32 2), i32 0)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
   %tmp3 = tail call ptr @strchr( ptr getelementptr ([8 x i8], ptr @str1, i32 0, i32 2), i32 0 )               ; <ptr> [#uses=1]
@@ -62,7 +62,7 @@ define ptr @test3() {
 ;
 ; CHECK16-LABEL: @test3(
 ; CHECK16-NEXT:  entry:
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str2, i32 1), i32 80)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr ([5 x i8], ptr @str2, i32 0, i32 1), i32 80)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
 entry:
@@ -160,7 +160,7 @@ define i32 @PR4645(i1 %c1) {
 ; CHECK32:       lor.lhs.false:
 ; CHECK32-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN]], label [[FOR_COND:%.*]]
 ; CHECK32:       if.then:
-; CHECK32-NEXT:    call void @exit(i32 1) #[[ATTR6:[0-9]+]]
+; CHECK32-NEXT:    call void @exit(i32 1) #[[ATTR5:[0-9]+]]
 ; CHECK32-NEXT:    br label [[FOR_COND]]
 ; CHECK32:       for.cond:
 ; CHECK32-NEXT:    unreachable
@@ -226,7 +226,7 @@ define void @test9(ptr %x) {
 ; CHECK32-NEXT:    ret void
 ;
 ; CHECK16-LABEL: @test9(
-; CHECK16-NEXT:    [[Y:%.*]] = call i32 @strcmp(ptr [[X:%.*]], ptr [[X]]) #[[ATTR6:[0-9]+]]
+; CHECK16-NEXT:    [[Y:%.*]] = call i32 @strcmp(ptr [[X:%.*]], ptr [[X]]) #[[ATTR5:[0-9]+]]
 ; CHECK16-NEXT:    ret void
 ;
   %y = call i32 @strcmp(ptr %x, ptr %x) #1

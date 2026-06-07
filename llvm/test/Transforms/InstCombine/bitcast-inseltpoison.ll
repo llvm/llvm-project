@@ -487,14 +487,14 @@ define i8 @test8() {
 
 define void @constant_fold_vector_to_double() {
 ; CHECK-LABEL: @constant_fold_vector_to_double(
-; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
-; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
-; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
-; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double bitcast (<1 x i64> splat (i64 4607182418800017408) to double), ptr undef, align 8
+; CHECK-NEXT:    store volatile double bitcast (<2 x i32> <i32 0, i32 1072693248> to double), ptr undef, align 8
+; CHECK-NEXT:    store volatile double bitcast (<4 x i16> <i16 0, i16 0, i16 0, i16 16368> to double), ptr undef, align 8
+; CHECK-NEXT:    store volatile double bitcast (<8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 -16, i8 63> to double), ptr undef, align 8
 ; CHECK-NEXT:    store volatile double -nan(0x7FFFFFFFFFFFF), ptr undef, align 8
-; CHECK-NEXT:    store volatile double f0x0000162E000004D2, ptr undef, align 8
+; CHECK-NEXT:    store volatile double bitcast (<2 x i32> <i32 1234, i32 5678> to double), ptr undef, align 8
 ; CHECK-NEXT:    store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (ptr @g to i32)> to double), ptr undef, align 8
-; CHECK-NEXT:    store volatile double f0x400000003F800000, ptr undef, align 8
+; CHECK-NEXT:    store volatile double bitcast (<2 x float> <float 1.000000e+00, float 2.000000e+00> to double), ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
@@ -525,10 +525,10 @@ define void @constant_fold_vector_to_double() {
 
 define void @constant_fold_vector_to_float() {
 ; CHECK-LABEL: @constant_fold_vector_to_float(
-; CHECK-NEXT:    store volatile float 1.000000e+00, ptr undef, align 4
-; CHECK-NEXT:    store volatile float 1.000000e+00, ptr undef, align 4
-; CHECK-NEXT:    store volatile float 1.000000e+00, ptr undef, align 4
-; CHECK-NEXT:    store volatile float 1.000000e+00, ptr undef, align 4
+; CHECK-NEXT:    store volatile float bitcast (<1 x i32> splat (i32 1065353216) to float), ptr undef, align 4
+; CHECK-NEXT:    store volatile float bitcast (<2 x i16> <i16 0, i16 16256> to float), ptr undef, align 4
+; CHECK-NEXT:    store volatile float bitcast (<4 x i8> <i8 0, i8 0, i8 -128, i8 63> to float), ptr undef, align 4
+; CHECK-NEXT:    store volatile float bitcast (<32 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false> to float), ptr undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   store volatile float bitcast (<1 x i32> <i32 1065353216> to float), ptr undef
@@ -541,8 +541,8 @@ define void @constant_fold_vector_to_float() {
 
 define void @constant_fold_vector_to_half() {
 ; CHECK-LABEL: @constant_fold_vector_to_half(
-; CHECK-NEXT:    store volatile half 2.000000e+00, ptr undef, align 2
-; CHECK-NEXT:    store volatile half 2.000000e+00, ptr undef, align 2
+; CHECK-NEXT:    store volatile half bitcast (<2 x i8> <i8 0, i8 64> to half), ptr undef, align 2
+; CHECK-NEXT:    store volatile half bitcast (<4 x i4> <i4 0, i4 0, i4 0, i4 4> to half), ptr undef, align 2
 ; CHECK-NEXT:    ret void
 ;
   store volatile half bitcast (<2 x i8> <i8 0, i8 64> to half), ptr undef

@@ -1427,11 +1427,8 @@ define i64 @PR28745() {
 }
 
 define i32 @test89() {
-; BE-LABEL: @test89(
-; BE-NEXT:    ret i32 393216
-;
-; LE-LABEL: @test89(
-; LE-NEXT:    ret i32 6
+; ALL-LABEL: @test89(
+; ALL-NEXT:    ret i32 bitcast (<2 x i16> <i16 6, i16 poison> to i32)
 ;
   ret i32 bitcast (<2 x i16> <i16 6, i16 poison> to i32)
 }

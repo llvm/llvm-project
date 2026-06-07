@@ -79,21 +79,21 @@ define ptr addrspace(1) @addrspacecast_typed_to_opaque_constexpr() {
 
 define ptr @gep_constexpr_1(ptr %a) {
 ; CHECK-LABEL: @gep_constexpr_1(
-; CHECK-NEXT:    ret ptr inttoptr (i64 6 to ptr)
+; CHECK-NEXT:    ret ptr getelementptr (i16, ptr null, i32 3)
 ;
   ret ptr getelementptr (i16, ptr null, i32 3)
 }
 
 define ptr @gep_constexpr_2(ptr %a) {
 ; CHECK-LABEL: @gep_constexpr_2(
-; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 3)
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i32 3)
 ;
   ret ptr getelementptr (i8, ptr @g, i32 3)
 }
 
 define ptr addrspace(1) @gep_constexpr_3(ptr %a) {
 ; CHECK-LABEL: @gep_constexpr_3(
-; CHECK-NEXT:    ret ptr addrspace(1) getelementptr (i8, ptr addrspace(1) addrspacecast (ptr @g to ptr addrspace(1)), i64 3)
+; CHECK-NEXT:    ret ptr addrspace(1) getelementptr ([0 x i8], ptr addrspace(1) addrspacecast (ptr @g to ptr addrspace(1)), i64 0, i32 3)
 ;
   ret ptr addrspace(1) getelementptr ([0 x i8], ptr addrspace(1) addrspacecast (ptr @g to ptr addrspace(1)), i64 0, i32 3)
 }

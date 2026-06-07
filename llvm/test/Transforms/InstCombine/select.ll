@@ -5365,7 +5365,7 @@ define <2 x i8> @select_freeze_constant_expression_vector_add(i1 %cond, <2 x i8>
 define <2 x ptr> @select_freeze_constant_expression_vector_gep(i1 %cond, <2 x ptr> noundef %y) {
 ; CHECK-LABEL: define <2 x ptr> @select_freeze_constant_expression_vector_gep(
 ; CHECK-SAME: i1 [[COND:%.*]], <2 x ptr> noundef [[Y:%.*]]) {
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <2 x ptr> <ptr poison, ptr getelementptr inbounds nuw (i8, ptr @glb.struct.1, i64 800)>
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <2 x ptr> <ptr poison, ptr getelementptr inbounds ([[STRUCT_1:%.*]], ptr @glb.struct.1, i64 100)>
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], <2 x ptr> [[Y]], <2 x ptr> [[FREEZE]]
 ; CHECK-NEXT:    ret <2 x ptr> [[SEL]]
 ;

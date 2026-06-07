@@ -62,7 +62,7 @@ define i1 @baz() nounwind {
 define void @test1(ptr %q, i32 %x) nounwind noinline {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds nuw (i8, ptr @window, i32 10), i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds ([0 x i8], ptr @window, i32 0, i32 10), i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %"47", label %"46"
 ; CHECK:       "46":

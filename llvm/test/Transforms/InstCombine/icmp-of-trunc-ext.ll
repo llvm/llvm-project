@@ -659,7 +659,7 @@ define i1 @test_slt_nuw(i32 %x, i16 %y) {
 
 define i1 @constexpr_trunc() {
 ; CHECK-LABEL: @constexpr_trunc(
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ne i16 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr @bar to i64), i64 ptrtoint (ptr @foo to i64)), i64 8) to i16), trunc (i64 sub (i64 sub (i64 0, i64 ptrtoint (ptr @foo to i64)), i64 8) to i16)
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ne i16 trunc (i64 sub (i64 sub nuw nsw (i64 ptrtoint (ptr @bar to i64), i64 ptrtoint (ptr @foo to i64)), i64 8) to i16), -8
 ; CHECK-NEXT:    ret i1 [[CMP5]]
 ;
   %conv = zext i16 trunc (i64 sub (i64 sub nuw nsw (i64 ptrtoint (ptr @bar to i64), i64 ptrtoint (ptr @foo to i64)), i64 8) to i16) to i32

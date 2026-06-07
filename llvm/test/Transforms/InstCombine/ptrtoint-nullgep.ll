@@ -22,14 +22,8 @@ define i64 @constant_fold_ptrtoint_gep_zero() {
   ret i64 ptrtoint (ptr addrspace(1) null to i64)
 }
 define i64 @constant_fold_ptrtoint_gep_nonzero() {
-; LLPARSER-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
-; LLPARSER-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr (i32, ptr addrspace(1) null, i64 1234) to i64)
-;
-; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
-; INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr (i32, ptr addrspace(1) null, i64 1234) to i64)
-;
-; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
-; INSTCOMBINE-NEXT:    ret i64 4936
+; ALL-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
+; ALL-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr (i32, ptr addrspace(1) null, i64 1234) to i64)
 ;
   ret i64 ptrtoint (ptr addrspace(1) getelementptr (i32, ptr addrspace(1) null, i64 1234) to i64)
 }
@@ -45,64 +39,28 @@ define i64 @constant_fold_ptrtoint_gep_zero_inbounds() {
 ; implementations that don't use __builtin_offsetof.
 ; TODO: should Clang special case ((INTEGER)&((TYPE *)0)->MEMBER) to emit a non-inbounds GEP?
 define i64 @constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; LLPARSER-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; LLPARSER-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i32, ptr addrspace(1) null, i64 1234) to i64)
-;
-; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i32, ptr addrspace(1) null, i64 1234) to i64)
-;
-; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; INSTCOMBINE-NEXT:    ret i64 4936
+; ALL-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
+; ALL-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i32, ptr addrspace(1) null, i64 1234) to i64)
 ;
   ret i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i32, ptr addrspace(1) null, i64 1234) to i64)
 }
 
 ; Check all combinations of inbounds+non-inbounds GEP with the outer GEP having a non-zero offset
 define void @constant_fold_ptrtoint_of_gep_of_nullgep() {
-; LLPARSER-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
-; LLPARSER-NEXT:    ret void
-;
-; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
-; INSTSIMPLIFY-NEXT:    ret void
-;
-; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 1234)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
-; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
-; INSTCOMBINE-NEXT:    ret void
+; ALL-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; ALL-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; ALL-NEXT:    ret void
 ;
   call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
   call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))

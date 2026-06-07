@@ -29,7 +29,7 @@ define void @foo(ptr %P, ptr %X) {
 
 define ptr @test1() {
 ; CHECK32-LABEL: @test1(
-; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str, i32 2), i16 103)
+; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr ([5 x i8], ptr @str, i32 0, i16 2), i16 103)
 ; CHECK32-NEXT:    ret ptr [[TMP3]]
 ;
 ; CHECK16-LABEL: @test1(
@@ -45,7 +45,7 @@ declare ptr @strchr(ptr, i16)
 
 define ptr @test2() {
 ; CHECK32-LABEL: @test2(
-; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str1, i32 2), i16 0)
+; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr ([8 x i8], ptr @str1, i32 0, i32 2), i16 0)
 ; CHECK32-NEXT:    ret ptr [[TMP3]]
 ;
 ; CHECK16-LABEL: @test2(
@@ -58,7 +58,7 @@ define ptr @test2() {
 define ptr @test3() {
 ; CHECK32-LABEL: @test3(
 ; CHECK32-NEXT:  entry:
-; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str2, i32 1), i16 80)
+; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr ([5 x i8], ptr @str2, i32 0, i32 1), i16 80)
 ; CHECK32-NEXT:    ret ptr [[TMP3]]
 ;
 ; CHECK16-LABEL: @test3(
@@ -162,7 +162,7 @@ define i32 @PR4645(i1 %c1) {
 ; CHECK16:       lor.lhs.false:
 ; CHECK16-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN]], label [[FOR_COND:%.*]]
 ; CHECK16:       if.then:
-; CHECK16-NEXT:    call void @exit(i16 1) #[[ATTR6:[0-9]+]]
+; CHECK16-NEXT:    call void @exit(i16 1) #[[ATTR5:[0-9]+]]
 ; CHECK16-NEXT:    br label [[FOR_COND]]
 ; CHECK16:       for.cond:
 ; CHECK16-NEXT:    unreachable
@@ -212,7 +212,7 @@ declare i16 @strcmp(ptr, ptr) #0
 
 define void @test9(ptr %x) {
 ; CHECK32-LABEL: @test9(
-; CHECK32-NEXT:    [[Y:%.*]] = call i16 @strcmp(ptr [[X:%.*]], ptr [[X]]) #[[ATTR6:[0-9]+]]
+; CHECK32-NEXT:    [[Y:%.*]] = call i16 @strcmp(ptr [[X:%.*]], ptr [[X]]) #[[ATTR5:[0-9]+]]
 ; CHECK32-NEXT:    ret void
 ;
 ; CHECK16-LABEL: @test9(

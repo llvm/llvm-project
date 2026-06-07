@@ -317,7 +317,7 @@ define i64 @test24b(ptr %P, i64 %A){
 define i64 @test25(ptr %P, i64 %A){
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i64 [[A:%.*]], 1
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i64 [[B_IDX]], -84
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[B_IDX]], -84
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %B = getelementptr inbounds [42 x i16], ptr @Arr, i64 0, i64 %A
@@ -396,7 +396,7 @@ define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
 ; CHECK-LABEL: @test25_as1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i16 [[TMP1]], 1
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i16 [[B_IDX]], -84
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i16 [[B_IDX]], -84
 ; CHECK-NEXT:    ret i16 [[GEPDIFF]]
 ;
   %B = getelementptr inbounds [42 x i16], ptr addrspace(1) @Arr_as1, i64 0, i64 %A

@@ -147,7 +147,7 @@ declare void @bar_as1(ptr addrspace(1) nocapture)
 ;; Should be able to eliminate the alloca.
 define void @test3_nocapture() {
 ; CHECK-LABEL: @test3_nocapture(
-; CHECK-NEXT:    call void @bar(ptr nonnull @G) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @bar(ptr nonnull @G) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
@@ -161,7 +161,7 @@ define void @test3_may_capture() {
 ; CHECK-LABEL: @test3_may_capture(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[A]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i1 false)
-; CHECK-NEXT:    call void @bar_may_capture(ptr nonnull [[A]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar_may_capture(ptr nonnull [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
@@ -172,7 +172,7 @@ define void @test3_may_capture() {
 
 define void @test3_addrspacecast() {
 ; CHECK-LABEL: @test3_addrspacecast(
-; CHECK-NEXT:    call void @bar(ptr nonnull @G) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull @G) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
@@ -212,7 +212,7 @@ declare void @baz(ptr byval(i8))
 
 define void @test6() {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    call void @bar(ptr nonnull @H) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull @H) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
@@ -223,7 +223,7 @@ define void @test6() {
 
 define void @test7() {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    call void @bar(ptr nonnull @H) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull @H) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
@@ -235,8 +235,8 @@ define void @test7() {
 define void @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds nuw (i8, ptr @H, i64 20), i64 20, i1 false)
-; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr ([2 x [[U]]], ptr @H, i64 0, i32 1), i64 20, i1 false)
+; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %al = alloca %U, align 16
@@ -249,8 +249,8 @@ define void @test8() {
 define void @test8_addrspacecast() {
 ; CHECK-LABEL: @test8_addrspacecast(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr @H, i64 20) to ptr addrspace(1)), i64 20, i1 false)
-; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr ([2 x [[U]]], ptr @H, i64 0, i32 1) to ptr addrspace(1)), i64 20, i1 false)
+; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %Al = alloca %U, align 16
@@ -261,7 +261,7 @@ define void @test8_addrspacecast() {
 
 define void @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds nuw (i8, ptr @H, i64 20)) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr getelementptr ([2 x [[U:%.*]]], ptr @H, i64 0, i32 1)) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -272,7 +272,7 @@ define void @test9() {
 
 define void @test9_addrspacecast() {
 ; CHECK-LABEL: @test9_addrspacecast(
-; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds nuw (i8, ptr @H, i64 20)) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr getelementptr ([2 x [[U:%.*]]], ptr @H, i64 0, i32 1)) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -354,7 +354,7 @@ entry:
 ; Tests that we can eliminate allocas copied from readonly noalias pointers.
 define void @memcpy_from_readonly_noalias(ptr readonly noalias align 8 dereferenceable(124) %arg) {
 ; CHECK-LABEL: @memcpy_from_readonly_noalias(
-; CHECK-NEXT:    call void @bar(ptr nonnull [[ARG:%.*]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull [[ARG:%.*]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca %T, align 8
@@ -368,7 +368,7 @@ define void @memcpy_from_just_readonly(ptr readonly align 8 dereferenceable(124)
 ; CHECK-LABEL: @memcpy_from_just_readonly(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[ALLOCA]], ptr noundef nonnull align 8 dereferenceable(124) [[ARG:%.*]], i64 124, i1 false)
-; CHECK-NEXT:    call void @bar(ptr nonnull [[ALLOCA]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull [[ALLOCA]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca %T, align 8
@@ -382,7 +382,7 @@ define void @volatile_memcpy() {
 ; CHECK-LABEL: @volatile_memcpy(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 @H, i64 20, i1 true)
-; CHECK-NEXT:    call void @bar(ptr nonnull [[A]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
