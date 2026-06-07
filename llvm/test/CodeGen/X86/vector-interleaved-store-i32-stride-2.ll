@@ -307,7 +307,7 @@ define void @store_i32_stride2_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.ve
 ; AVX2-NEXT:    vmovaps (%rsi), %ymm1
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[0,1],ymm2[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX2-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX2-NEXT:    vmovaps %ymm1, (%rdx)
@@ -320,7 +320,7 @@ define void @store_i32_stride2_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.ve
 ; AVX2-FP-NEXT:    vmovaps (%rsi), %ymm1
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[0,1],ymm2[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX2-FP-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX2-FP-NEXT:    vmovaps %ymm1, (%rdx)
@@ -333,7 +333,7 @@ define void @store_i32_stride2_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.ve
 ; AVX2-FCP-NEXT:    vmovaps (%rsi), %ymm1
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[0,1],ymm2[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX2-FCP-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX2-FCP-NEXT:    vmovaps %ymm1, (%rdx)
@@ -490,11 +490,11 @@ define void @store_i32_stride2_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm4 = ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[6],ymm2[6],ymm0[7],ymm2[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[4],ymm2[4],ymm0[5],ymm2[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm4[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],ymm4[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm4 = ymm1[2],ymm3[2],ymm1[3],ymm3[3],ymm1[6],ymm3[6],ymm1[7],ymm3[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[1],ymm3[1],ymm1[4],ymm3[4],ymm1[5],ymm3[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm1[2,3],ymm4[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[0,1],ymm4[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX2-NEXT:    vmovaps %ymm1, 64(%rdx)
 ; AVX2-NEXT:    vmovaps %ymm3, 96(%rdx)
 ; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
@@ -511,11 +511,11 @@ define void @store_i32_stride2_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm4 = ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[6],ymm2[6],ymm0[7],ymm2[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[4],ymm2[4],ymm0[5],ymm2[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm4[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],ymm4[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm4 = ymm1[2],ymm3[2],ymm1[3],ymm3[3],ymm1[6],ymm3[6],ymm1[7],ymm3[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[1],ymm3[1],ymm1[4],ymm3[4],ymm1[5],ymm3[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm1[2,3],ymm4[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[0,1],ymm4[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX2-FP-NEXT:    vmovaps %ymm1, 64(%rdx)
 ; AVX2-FP-NEXT:    vmovaps %ymm3, 96(%rdx)
 ; AVX2-FP-NEXT:    vmovaps %ymm0, (%rdx)
@@ -532,11 +532,11 @@ define void @store_i32_stride2_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm4 = ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[6],ymm2[6],ymm0[7],ymm2[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[4],ymm2[4],ymm0[5],ymm2[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm4[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],ymm4[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm4 = ymm1[2],ymm3[2],ymm1[3],ymm3[3],ymm1[6],ymm3[6],ymm1[7],ymm3[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[1],ymm3[1],ymm1[4],ymm3[4],ymm1[5],ymm3[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm1[2,3],ymm4[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[0,1],ymm4[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX2-FCP-NEXT:    vmovaps %ymm1, 64(%rdx)
 ; AVX2-FCP-NEXT:    vmovaps %ymm3, 96(%rdx)
 ; AVX2-FCP-NEXT:    vmovaps %ymm0, (%rdx)
@@ -768,19 +768,19 @@ define void @store_i32_stride2_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm0[2],ymm4[2],ymm0[3],ymm4[3],ymm0[6],ymm4[6],ymm0[7],ymm4[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[1],ymm4[1],ymm0[4],ymm4[4],ymm0[5],ymm4[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[2,3],ymm8[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],ymm8[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm8, %ymm0, %ymm0
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm1[2],ymm5[2],ymm1[3],ymm5[3],ymm1[6],ymm5[6],ymm1[7],ymm5[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm1 = ymm1[0],ymm5[0],ymm1[1],ymm5[1],ymm1[4],ymm5[4],ymm1[5],ymm5[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm1[2,3],ymm8[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[0,1],ymm8[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm8, %ymm1, %ymm1
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm2[2],ymm6[2],ymm2[3],ymm6[3],ymm2[6],ymm6[6],ymm2[7],ymm6[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm2 = ymm2[0],ymm6[0],ymm2[1],ymm6[1],ymm2[4],ymm6[4],ymm2[5],ymm6[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm2[2,3],ymm8[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm2[0,1],ymm8[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm8, %ymm2, %ymm2
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm3[2],ymm7[2],ymm3[3],ymm7[3],ymm3[6],ymm7[6],ymm3[7],ymm7[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm3 = ymm3[0],ymm7[0],ymm3[1],ymm7[1],ymm3[4],ymm7[4],ymm3[5],ymm7[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm3[2,3],ymm8[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[0,1],ymm8[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm8, %ymm3, %ymm3
 ; AVX2-NEXT:    vmovaps %ymm3, 192(%rdx)
 ; AVX2-NEXT:    vmovaps %ymm7, 224(%rdx)
 ; AVX2-NEXT:    vmovaps %ymm2, 128(%rdx)
@@ -805,19 +805,19 @@ define void @store_i32_stride2_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm0[2],ymm4[2],ymm0[3],ymm4[3],ymm0[6],ymm4[6],ymm0[7],ymm4[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[1],ymm4[1],ymm0[4],ymm4[4],ymm0[5],ymm4[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[2,3],ymm8[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],ymm8[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm8, %ymm0, %ymm0
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm1[2],ymm5[2],ymm1[3],ymm5[3],ymm1[6],ymm5[6],ymm1[7],ymm5[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm1 = ymm1[0],ymm5[0],ymm1[1],ymm5[1],ymm1[4],ymm5[4],ymm1[5],ymm5[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm1[2,3],ymm8[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[0,1],ymm8[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm8, %ymm1, %ymm1
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm2[2],ymm6[2],ymm2[3],ymm6[3],ymm2[6],ymm6[6],ymm2[7],ymm6[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm2 = ymm2[0],ymm6[0],ymm2[1],ymm6[1],ymm2[4],ymm6[4],ymm2[5],ymm6[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm2[2,3],ymm8[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm2[0,1],ymm8[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm8, %ymm2, %ymm2
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm3[2],ymm7[2],ymm3[3],ymm7[3],ymm3[6],ymm7[6],ymm3[7],ymm7[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm3 = ymm3[0],ymm7[0],ymm3[1],ymm7[1],ymm3[4],ymm7[4],ymm3[5],ymm7[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm3[2,3],ymm8[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[0,1],ymm8[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm8, %ymm3, %ymm3
 ; AVX2-FP-NEXT:    vmovaps %ymm3, 192(%rdx)
 ; AVX2-FP-NEXT:    vmovaps %ymm7, 224(%rdx)
 ; AVX2-FP-NEXT:    vmovaps %ymm2, 128(%rdx)
@@ -842,19 +842,19 @@ define void @store_i32_stride2_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm0[2],ymm4[2],ymm0[3],ymm4[3],ymm0[6],ymm4[6],ymm0[7],ymm4[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[1],ymm4[1],ymm0[4],ymm4[4],ymm0[5],ymm4[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[2,3],ymm8[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],ymm8[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm8, %ymm0, %ymm0
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm1[2],ymm5[2],ymm1[3],ymm5[3],ymm1[6],ymm5[6],ymm1[7],ymm5[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm1 = ymm1[0],ymm5[0],ymm1[1],ymm5[1],ymm1[4],ymm5[4],ymm1[5],ymm5[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm1[2,3],ymm8[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[0,1],ymm8[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm8, %ymm1, %ymm1
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm2[2],ymm6[2],ymm2[3],ymm6[3],ymm2[6],ymm6[6],ymm2[7],ymm6[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm2 = ymm2[0],ymm6[0],ymm2[1],ymm6[1],ymm2[4],ymm6[4],ymm2[5],ymm6[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm2[2,3],ymm8[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm2[0,1],ymm8[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm8, %ymm2, %ymm2
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm8 = ymm3[2],ymm7[2],ymm3[3],ymm7[3],ymm3[6],ymm7[6],ymm3[7],ymm7[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm3 = ymm3[0],ymm7[0],ymm3[1],ymm7[1],ymm3[4],ymm7[4],ymm3[5],ymm7[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm3[2,3],ymm8[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[0,1],ymm8[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm8, %ymm3, %ymm3
 ; AVX2-FCP-NEXT:    vmovaps %ymm3, 192(%rdx)
 ; AVX2-FCP-NEXT:    vmovaps %ymm7, 224(%rdx)
 ; AVX2-FCP-NEXT:    vmovaps %ymm2, 128(%rdx)
@@ -1285,37 +1285,37 @@ define void @store_i32_stride2_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm2 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[4],ymm2[4],ymm1[5],ymm2[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm2[2,3],ymm15[2,3]
 ; AVX2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm2[0,1],ymm15[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm15, %ymm2, %ymm2
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm4[2],ymm5[2],ymm4[3],ymm5[3],ymm4[6],ymm5[6],ymm4[7],ymm5[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm5 = ymm4[0],ymm5[0],ymm4[1],ymm5[1],ymm4[4],ymm5[4],ymm4[5],ymm5[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm5[2,3],ymm15[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm5[0,1],ymm15[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm15, %ymm5, %ymm5
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm7[2],ymm13[2],ymm7[3],ymm13[3],ymm7[6],ymm13[6],ymm7[7],ymm13[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm13 = ymm7[0],ymm13[0],ymm7[1],ymm13[1],ymm7[4],ymm13[4],ymm7[5],ymm13[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm13[2,3],ymm15[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm13 = ymm13[0,1],ymm15[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm15, %ymm13, %ymm13
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm9[2],ymm14[2],ymm9[3],ymm14[3],ymm9[6],ymm14[6],ymm9[7],ymm14[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm9 = ymm9[0],ymm14[0],ymm9[1],ymm14[1],ymm9[4],ymm14[4],ymm9[5],ymm14[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm14 = ymm9[2,3],ymm15[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm9 = ymm9[0,1],ymm15[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm15, %ymm9, %ymm9
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm8[2],ymm12[2],ymm8[3],ymm12[3],ymm8[6],ymm12[6],ymm8[7],ymm12[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm8 = ymm8[0],ymm12[0],ymm8[1],ymm12[1],ymm8[4],ymm12[4],ymm8[5],ymm12[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm12 = ymm8[2,3],ymm15[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm8 = ymm8[0,1],ymm15[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm15, %ymm8, %ymm8
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm6[2],ymm11[2],ymm6[3],ymm11[3],ymm6[6],ymm11[6],ymm6[7],ymm11[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm6 = ymm6[0],ymm11[0],ymm6[1],ymm11[1],ymm6[4],ymm11[4],ymm6[5],ymm11[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm11 = ymm6[2,3],ymm15[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm6[0,1],ymm15[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm15, %ymm6, %ymm6
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm3[2],ymm10[2],ymm3[3],ymm10[3],ymm3[6],ymm10[6],ymm3[7],ymm10[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm3 = ymm3[0],ymm10[0],ymm3[1],ymm10[1],ymm3[4],ymm10[4],ymm3[5],ymm10[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm10 = ymm3[2,3],ymm15[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[0,1],ymm15[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm15, %ymm3, %ymm3
 ; AVX2-NEXT:    vmovaps 224(%rsi), %ymm15
 ; AVX2-NEXT:    vmovaps %ymm0, %ymm1
 ; AVX2-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm15[2],ymm0[3],ymm15[3],ymm0[6],ymm15[6],ymm0[7],ymm15[7]
 ; AVX2-NEXT:    vunpcklps {{.*#+}} ymm15 = ymm1[0],ymm15[0],ymm1[1],ymm15[1],ymm1[4],ymm15[4],ymm1[5],ymm15[5]
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm15[2,3],ymm0[2,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm15[0,1],ymm0[0,1]
+; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm15, %ymm0
 ; AVX2-NEXT:    vmovaps %ymm0, 448(%rdx)
 ; AVX2-NEXT:    vmovaps %ymm1, 480(%rdx)
 ; AVX2-NEXT:    vmovaps %ymm3, 384(%rdx)
@@ -1357,37 +1357,37 @@ define void @store_i32_stride2_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm2 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[4],ymm2[4],ymm1[5],ymm2[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm2[2,3],ymm15[2,3]
 ; AVX2-FP-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm2[0,1],ymm15[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm15, %ymm2, %ymm2
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm4[2],ymm5[2],ymm4[3],ymm5[3],ymm4[6],ymm5[6],ymm4[7],ymm5[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm5 = ymm4[0],ymm5[0],ymm4[1],ymm5[1],ymm4[4],ymm5[4],ymm4[5],ymm5[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm5[2,3],ymm15[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm5[0,1],ymm15[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm15, %ymm5, %ymm5
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm7[2],ymm13[2],ymm7[3],ymm13[3],ymm7[6],ymm13[6],ymm7[7],ymm13[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm13 = ymm7[0],ymm13[0],ymm7[1],ymm13[1],ymm7[4],ymm13[4],ymm7[5],ymm13[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm13[2,3],ymm15[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm13 = ymm13[0,1],ymm15[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm15, %ymm13, %ymm13
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm9[2],ymm14[2],ymm9[3],ymm14[3],ymm9[6],ymm14[6],ymm9[7],ymm14[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm9 = ymm9[0],ymm14[0],ymm9[1],ymm14[1],ymm9[4],ymm14[4],ymm9[5],ymm14[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm14 = ymm9[2,3],ymm15[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm9 = ymm9[0,1],ymm15[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm15, %ymm9, %ymm9
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm8[2],ymm12[2],ymm8[3],ymm12[3],ymm8[6],ymm12[6],ymm8[7],ymm12[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm8 = ymm8[0],ymm12[0],ymm8[1],ymm12[1],ymm8[4],ymm12[4],ymm8[5],ymm12[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm12 = ymm8[2,3],ymm15[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm8 = ymm8[0,1],ymm15[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm15, %ymm8, %ymm8
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm6[2],ymm11[2],ymm6[3],ymm11[3],ymm6[6],ymm11[6],ymm6[7],ymm11[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm6 = ymm6[0],ymm11[0],ymm6[1],ymm11[1],ymm6[4],ymm11[4],ymm6[5],ymm11[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm11 = ymm6[2,3],ymm15[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm6[0,1],ymm15[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm15, %ymm6, %ymm6
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm3[2],ymm10[2],ymm3[3],ymm10[3],ymm3[6],ymm10[6],ymm3[7],ymm10[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm3 = ymm3[0],ymm10[0],ymm3[1],ymm10[1],ymm3[4],ymm10[4],ymm3[5],ymm10[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm10 = ymm3[2,3],ymm15[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[0,1],ymm15[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm15, %ymm3, %ymm3
 ; AVX2-FP-NEXT:    vmovaps 224(%rsi), %ymm15
 ; AVX2-FP-NEXT:    vmovaps %ymm0, %ymm1
 ; AVX2-FP-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm15[2],ymm0[3],ymm15[3],ymm0[6],ymm15[6],ymm0[7],ymm15[7]
 ; AVX2-FP-NEXT:    vunpcklps {{.*#+}} ymm15 = ymm1[0],ymm15[0],ymm1[1],ymm15[1],ymm1[4],ymm15[4],ymm1[5],ymm15[5]
 ; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm15[2,3],ymm0[2,3]
-; AVX2-FP-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm15[0,1],ymm0[0,1]
+; AVX2-FP-NEXT:    vinsertf128 $1, %xmm0, %ymm15, %ymm0
 ; AVX2-FP-NEXT:    vmovaps %ymm0, 448(%rdx)
 ; AVX2-FP-NEXT:    vmovaps %ymm1, 480(%rdx)
 ; AVX2-FP-NEXT:    vmovaps %ymm3, 384(%rdx)
@@ -1429,37 +1429,37 @@ define void @store_i32_stride2_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.v
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm2 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[4],ymm2[4],ymm1[5],ymm2[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm2[2,3],ymm15[2,3]
 ; AVX2-FCP-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm2[0,1],ymm15[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm15, %ymm2, %ymm2
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm4[2],ymm5[2],ymm4[3],ymm5[3],ymm4[6],ymm5[6],ymm4[7],ymm5[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm5 = ymm4[0],ymm5[0],ymm4[1],ymm5[1],ymm4[4],ymm5[4],ymm4[5],ymm5[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm5[2,3],ymm15[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm5[0,1],ymm15[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm15, %ymm5, %ymm5
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm7[2],ymm13[2],ymm7[3],ymm13[3],ymm7[6],ymm13[6],ymm7[7],ymm13[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm13 = ymm7[0],ymm13[0],ymm7[1],ymm13[1],ymm7[4],ymm13[4],ymm7[5],ymm13[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm13[2,3],ymm15[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm13 = ymm13[0,1],ymm15[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm15, %ymm13, %ymm13
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm9[2],ymm14[2],ymm9[3],ymm14[3],ymm9[6],ymm14[6],ymm9[7],ymm14[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm9 = ymm9[0],ymm14[0],ymm9[1],ymm14[1],ymm9[4],ymm14[4],ymm9[5],ymm14[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm14 = ymm9[2,3],ymm15[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm9 = ymm9[0,1],ymm15[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm15, %ymm9, %ymm9
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm8[2],ymm12[2],ymm8[3],ymm12[3],ymm8[6],ymm12[6],ymm8[7],ymm12[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm8 = ymm8[0],ymm12[0],ymm8[1],ymm12[1],ymm8[4],ymm12[4],ymm8[5],ymm12[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm12 = ymm8[2,3],ymm15[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm8 = ymm8[0,1],ymm15[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm15, %ymm8, %ymm8
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm6[2],ymm11[2],ymm6[3],ymm11[3],ymm6[6],ymm11[6],ymm6[7],ymm11[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm6 = ymm6[0],ymm11[0],ymm6[1],ymm11[1],ymm6[4],ymm11[4],ymm6[5],ymm11[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm11 = ymm6[2,3],ymm15[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm6[0,1],ymm15[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm15, %ymm6, %ymm6
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm15 = ymm3[2],ymm10[2],ymm3[3],ymm10[3],ymm3[6],ymm10[6],ymm3[7],ymm10[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm3 = ymm3[0],ymm10[0],ymm3[1],ymm10[1],ymm3[4],ymm10[4],ymm3[5],ymm10[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm10 = ymm3[2,3],ymm15[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[0,1],ymm15[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm15, %ymm3, %ymm3
 ; AVX2-FCP-NEXT:    vmovaps 224(%rsi), %ymm15
 ; AVX2-FCP-NEXT:    vmovaps %ymm0, %ymm1
 ; AVX2-FCP-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm15[2],ymm0[3],ymm15[3],ymm0[6],ymm15[6],ymm0[7],ymm15[7]
 ; AVX2-FCP-NEXT:    vunpcklps {{.*#+}} ymm15 = ymm1[0],ymm15[0],ymm1[1],ymm15[1],ymm1[4],ymm15[4],ymm1[5],ymm15[5]
 ; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm15[2,3],ymm0[2,3]
-; AVX2-FCP-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm15[0,1],ymm0[0,1]
+; AVX2-FCP-NEXT:    vinsertf128 $1, %xmm0, %ymm15, %ymm0
 ; AVX2-FCP-NEXT:    vmovaps %ymm0, 448(%rdx)
 ; AVX2-FCP-NEXT:    vmovaps %ymm1, 480(%rdx)
 ; AVX2-FCP-NEXT:    vmovaps %ymm3, 384(%rdx)

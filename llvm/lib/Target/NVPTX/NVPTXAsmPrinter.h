@@ -112,6 +112,9 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
     unsigned getBufferSize() const { return Size; }
 
+    // Number of bytes written so far.
+    unsigned getCurpos() const { return curpos; }
+
     // Copy Num bytes from Ptr.
     // if Bytes > Num, zero fill up to Bytes.
     void addBytes(const unsigned char *Ptr, unsigned Num, unsigned Bytes) {

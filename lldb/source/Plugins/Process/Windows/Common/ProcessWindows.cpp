@@ -36,6 +36,7 @@
 #include "lldb/Utility/State.h"
 
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -43,8 +44,8 @@
 #include "DebuggerThread.h"
 #include "ExceptionRecord.h"
 #include "ForwardDecl.h"
+#include "IOHandlerProcessSTDIOWindows.h"
 #include "LocalDebugDelegate.h"
-#include "MSVCRTCFrameRecognizer.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
 
@@ -61,7 +62,7 @@ std::string GetProcessExecutableName(HANDLE process_handle) {
   do {
     file_name_size *= 2;
     file_name.resize(file_name_size);
-    copied = ::GetModuleFileNameExW(process_handle, NULL, file_name.data(),
+    copied = ::GetModuleFileNameExW(process_handle, nullptr, file_name.data(),
                                     file_name_size);
   } while (copied >= file_name_size);
   file_name.resize(copied);
@@ -74,7 +75,7 @@ std::string GetProcessExecutableName(DWORD pid) {
   std::string file_name;
   HANDLE process_handle =
       ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-  if (process_handle != NULL) {
+  if (process_handle != nullptr) {
     file_name = GetProcessExecutableName(process_handle);
     ::CloseHandle(process_handle);
   }
@@ -126,7 +127,7 @@ ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
           RegisterContextWindows::GetNumHardwareBreakpointSlots(),
           LLDB_INVALID_BREAK_ID) {}
 
-ProcessWindows::~ProcessWindows() {}
+ProcessWindows::~ProcessWindows() = default;
 
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
@@ -303,8 +304,6 @@ void ProcessWindows::DidLaunch() {
 
 void ProcessWindows::DidAttach(ArchSpec &arch_spec) {
   llvm::sys::ScopedLock lock(m_mutex);
-
-  RegisterMSVCRTCFrameRecognizer(*this);
 
   // The initial stop won't broadcast the state change event, so account for
   // that here.
@@ -643,7 +642,7 @@ lldb::addr_t ProcessWindows::GetImageInfoAddress() {
 }
 
 DynamicLoaderWindowsDYLD *ProcessWindows::GetDynamicLoader() {
-  if (m_dyld_up.get() == NULL)
+  if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderWindowsDYLD::GetPluginNameStatic()));
   return static_cast<DynamicLoaderWindowsDYLD *>(m_dyld_up.get());
@@ -871,7 +870,91 @@ void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
     dyld->OnUnloadModule(module_addr);
 }
 
-void ProcessWindows::OnDebugString(const std::string &string) {}
+void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
+                                   bool is_unicode,
+                                   uint16_t length_lower_word) {
+  Log *log = GetLog(WindowsLog::Process);
+
+  llvm::SmallVector<char, 256> buffer;
+  llvm::Error err =
+      ReadDebugString(debug_string_addr, is_unicode, length_lower_word, buffer);
+  if (err) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "Failed to read debug string at {1:x} (size & 0xffff={2}, "
+                   "unicode={3}): {0}",
+                   debug_string_addr, length_lower_word, is_unicode);
+    return;
+  }
+  if (buffer.empty())
+    return;
+
+  if (is_unicode) {
+    assert(buffer.size() % 2 == 0);
+    llvm::ArrayRef<unsigned short> utf16(
+        reinterpret_cast<const unsigned short *>(buffer.data()),
+        buffer.size() / 2);
+    std::string out;
+    if (!llvm::convertUTF16ToUTF8String(utf16, out)) {
+      LLDB_LOG(log, "Debug string is not valid Utf 16");
+      return;
+    }
+
+    AppendSTDOUT(out.data(), out.size());
+  } else {
+    AppendSTDOUT(buffer.data(), buffer.size());
+  }
+}
+
+llvm::Error
+ProcessWindows::ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                                uint16_t length_lower_word,
+                                llvm::SmallVectorImpl<char> &output) {
+  if (is_unicode && length_lower_word % 2 != 0)
+    return llvm::createStringError(
+        "Utf16 string can't have uneven size in bytes");
+
+  const auto is_zero_terminated = [&] {
+    // The zero terminator is always at the end of the buffer.
+    if (is_unicode)
+      return output.size() >= 2 && output.back() == 0 &&
+             output[output.size() - 2] == 0;
+
+    return !output.empty() && output.back() == 0;
+  };
+
+  // Read at most 1 MiB ((1 << 16) * 16 - 1 Bytes) since we don't know the exact
+  // size of the string. We know that `strlen(string) & 0xffff ==
+  // length_lower_word`, so we read in chunks until we reach the terminator:
+  // - 0: `length_lower_word` Bytes
+  // - 1..16: 64 KiB (= 2^16 Bytes)
+  size_t start = length_lower_word == 0 ? 1 : 0;
+  for (size_t i = start; i < 16; ++i) {
+    output.resize_for_overwrite(length_lower_word + i * (1 << 16));
+    size_t chunk_size = i == 0 ? length_lower_word : (1 << 16);
+    lldb::addr_t addr = debug_string_addr + output.size_in_bytes() - chunk_size;
+
+    Status error;
+    size_t bytes_read =
+        DoReadMemory(addr, output.end() - chunk_size, chunk_size, error);
+    if (error.Fail())
+      return error.takeError();
+
+    if (bytes_read != chunk_size) {
+      return llvm::createStringErrorV(
+          "Expected to read {0} bytes, but read {1}", chunk_size, bytes_read);
+    }
+
+    if (is_zero_terminated())
+      break;
+  }
+
+  if (!is_zero_terminated())
+    return llvm::createStringError("String is 1 MiB or larger");
+
+  // Remove null terminator.
+  output.pop_back_n(is_unicode ? 2 : 1);
+  return llvm::Error::success();
+}
 
 void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
@@ -1002,184 +1085,15 @@ Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   return error;
 }
 
-class IOHandlerProcessSTDIOWindows : public IOHandler {
-public:
-  IOHandlerProcessSTDIOWindows(Process *process, HANDLE conpty_input)
-      : IOHandler(process->GetTarget().GetDebugger(),
-                  IOHandler::Type::ProcessIO),
-        m_process(process),
-        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
-        m_write_file(conpty_input),
-        m_interrupt_event(
-            CreateEvent(/*lpEventAttributes=*/NULL, /*bManualReset=*/FALSE,
-                        /*bInitialState=*/FALSE, /*lpName=*/NULL)) {}
-
-  ~IOHandlerProcessSTDIOWindows() override {
-    if (m_interrupt_event != INVALID_HANDLE_VALUE)
-      ::CloseHandle(m_interrupt_event);
+size_t ProcessWindows::PutSTDIN(const char *src, size_t src_len,
+                                Status &error) {
+  if (!m_stdio_communication.IsConnected()) {
+    error = Status::FromErrorString("stdin not connected");
+    return 0;
   }
-
-  void SetIsRunning(bool running) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(!running);
-    m_is_running = running;
-  }
-
-  /// Peek the console for input. If it has any, drain the pipe until text input
-  /// is found or the pipe is empty.
-  ///
-  /// \param hStdin
-  ///     The handle to the standard input's pipe.
-  ///
-  /// \return
-  ///     true if the pipe has text input.
-  llvm::Expected<bool> ConsoleHasTextInput(const HANDLE hStdin) {
-    // Check if there are already characters buffered. Pressing enter counts as
-    // 2 characters '\r\n' and only one of them is a keyDown event.
-    DWORD bytesAvailable = 0;
-    if (PeekNamedPipe(hStdin, NULL, 0, NULL, &bytesAvailable, NULL)) {
-      if (bytesAvailable > 0)
-        return true;
-    }
-
-    while (true) {
-      INPUT_RECORD inputRecord;
-      DWORD numRead = 0;
-      if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
-        return llvm::createStringError("failed to peek standard input");
-
-      if (numRead == 0)
-        return false;
-
-      if (inputRecord.EventType == KEY_EVENT &&
-          inputRecord.Event.KeyEvent.bKeyDown &&
-          inputRecord.Event.KeyEvent.uChar.AsciiChar != 0)
-        return true;
-
-      if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead))
-        return llvm::createStringError("failed to read standard input");
-    }
-  }
-
-  void Run() override {
-    if (!m_read_file.IsValid() || m_write_file == INVALID_HANDLE_VALUE) {
-      SetIsDone(true);
-      return;
-    }
-
-    SetIsDone(false);
-    SetIsRunning(true);
-
-    HANDLE hStdin = m_read_file.GetWaitableHandle();
-    HANDLE waitHandles[2] = {hStdin, m_interrupt_event};
-
-    DWORD consoleMode;
-    bool isConsole = GetConsoleMode(hStdin, &consoleMode) != 0;
-    // With ENABLE_LINE_INPUT, ReadFile returns only when a carriage return is
-    // read. This will block lldb in ReadFile until the user hits enter. Save
-    // the previous console mode to restore it later and remove
-    // ENABLE_LINE_INPUT.
-    DWORD oldConsoleMode = consoleMode;
-    SetConsoleMode(hStdin,
-                   consoleMode & ~ENABLE_LINE_INPUT & ~ENABLE_ECHO_INPUT);
-
-    while (true) {
-      {
-        std::lock_guard<std::mutex> guard(m_mutex);
-        if (GetIsDone())
-          goto exit_loop;
-      }
-
-      DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
-      switch (result) {
-      case WAIT_FAILED:
-        goto exit_loop;
-      case WAIT_OBJECT_0: {
-        if (isConsole) {
-          auto hasInputOrErr = ConsoleHasTextInput(hStdin);
-          if (!hasInputOrErr) {
-            Log *log = GetLog(WindowsLog::Process);
-            LLDB_LOG_ERROR(log, hasInputOrErr.takeError(),
-                           "failed to process debuggee's IO: {0}");
-            goto exit_loop;
-          }
-
-          // If no text input is ready, go back to waiting.
-          if (!*hasInputOrErr)
-            continue;
-        }
-
-        char ch = 0;
-        DWORD read = 0;
-        if (!ReadFile(hStdin, &ch, 1, &read, nullptr) || read != 1)
-          goto exit_loop;
-
-        DWORD written = 0;
-        if (!WriteFile(m_write_file, &ch, 1, &written, nullptr) || written != 1)
-          goto exit_loop;
-        break;
-      }
-      case WAIT_OBJECT_0 + 1: {
-        ControlOp op = m_pending_op.exchange(eControlOpNone);
-        if (op == eControlOpQuit)
-          goto exit_loop;
-        if (op == eControlOpInterrupt &&
-            StateIsRunningState(m_process->GetState()))
-          m_process->SendAsyncInterrupt();
-        break;
-      }
-      default:
-        goto exit_loop;
-      }
-    }
-
-  exit_loop:;
-    SetIsRunning(false);
-    SetIsDone(true);
-    SetConsoleMode(hStdin, oldConsoleMode);
-  }
-
-  void Cancel() override {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(true);
-    if (m_is_running) {
-      m_pending_op.store(eControlOpQuit);
-      ::SetEvent(m_interrupt_event);
-    }
-  }
-
-  bool Interrupt() override {
-    if (m_active) {
-      m_pending_op.store(eControlOpInterrupt);
-      ::SetEvent(m_interrupt_event);
-      return true;
-    }
-    if (StateIsRunningState(m_process->GetState())) {
-      m_process->SendAsyncInterrupt();
-      return true;
-    }
-    return false;
-  }
-
-  void GotEOF() override {}
-
-private:
-  enum ControlOp : char {
-    eControlOpQuit = 'q',
-    eControlOpInterrupt = 'i',
-    eControlOpNone = 0,
-  };
-
-  Process *m_process;
-  /// Read from this file (usually actual STDIN for LLDB)
-  NativeFile m_read_file;
-  /// Write to this file (usually the primary pty for getting io to debuggee)
-  HANDLE m_write_file = INVALID_HANDLE_VALUE;
-  HANDLE m_interrupt_event = INVALID_HANDLE_VALUE;
-  std::atomic<ControlOp> m_pending_op{eControlOpNone};
-  std::mutex m_mutex;
-  bool m_is_running = false;
-};
+  ConnectionStatus status;
+  return m_stdio_communication.WriteAll(src, src_len, status, &error);
+}
 
 void ProcessWindows::SetPseudoConsoleHandle() {
   if (m_pty == nullptr)
@@ -1195,8 +1109,8 @@ void ProcessWindows::SetPseudoConsoleHandle() {
     {
       std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
       if (!m_process_input_reader)
-        m_process_input_reader = std::make_shared<IOHandlerProcessSTDIOWindows>(
-            this, m_pty->GetSTDINHandle());
+        m_process_input_reader =
+            std::make_shared<IOHandlerProcessSTDIOWindows>(this);
     }
   }
 }

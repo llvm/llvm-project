@@ -563,6 +563,9 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
 
+        if lldbplatformutil.getArchitecture() == "arm64e":
+            return "simulators do not support arm64e."
+
         # Make sure we recognize the platform.
         mapping = {
             "iphone": "ios",
@@ -1132,11 +1135,14 @@ def skipUnlessMSVC(func):
     """Decorate the item to skip test unless msvc is available."""
 
     def is_msvc_in_path():
-        result = subprocess.run(
-            ["cl.exe"],
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["cl.exe"],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            return f"Test requires MSVC to be in the Path."
         if result.returncode != 0:
             return f"Test requires MSVC to be in the Path."
         return None

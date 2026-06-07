@@ -710,6 +710,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       CI->setCalledFunction(Intrinsic::getOrInsertDeclaration(
           CI->getModule(), Intrinsic::ldexp,
           {CI->getType(), CI->getArgOperand(1)->getType()}));
+      CI->setCallingConv(CallingConv::C);
       return true;
     }
     case AMDGPULibFunc::EI_POW:
@@ -1175,14 +1176,15 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
     // rootn(x, 2) = sqrt(x)
     LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> sqrt(" << *opr0 << ")\n");
 
-    CallInst *NewCall = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
+    Value *NewCall = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
     NewCall->takeName(CI);
 
     // OpenCL rootn has a looser ulp of 2 requirement than sqrt, so add some
     // metadata.
     MDBuilder MDHelper(M->getContext());
     MDNode *FPMD = MDHelper.createFPMath(std::max(FPOp->getFPAccuracy(), 2.0f));
-    NewCall->setMetadata(LLVMContext::MD_fpmath, FPMD);
+    if (auto *NewCallI = dyn_cast<Instruction>(NewCall))
+      NewCallI->setMetadata(LLVMContext::MD_fpmath, FPMD);
 
     replaceCall(CI, NewCall);
     return true;
@@ -1221,10 +1223,11 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
     FastMathFlags FMF = FPOp->getFastMathFlags();
     FMF.setAllowContract(true);
 
-    CallInst *Sqrt = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
+    Value *Sqrt = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
     Instruction *RSqrt = cast<Instruction>(
         B.CreateFDiv(ConstantFP::get(opr0->getType(), 1.0), Sqrt));
-    Sqrt->setFastMathFlags(FMF);
+    if (auto *SqrtI = dyn_cast<Instruction>(Sqrt))
+      SqrtI->setFastMathFlags(FMF);
     RSqrt->setFastMathFlags(FMF);
     RSqrt->setMetadata(LLVMContext::MD_fpmath, FPMD);
 
@@ -1869,7 +1872,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     return true;
 
   case AMDGPULibFunc::EI_EXP:
-    Res0 = APFloat{exp(opr0)};
+    Res0 = APFloat{std::exp(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_EXP2:

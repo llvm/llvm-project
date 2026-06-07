@@ -263,10 +263,6 @@ module std_core [system] {
       header "__type_traits/is_reference.h"
       export std_core.type_traits.integral_constant
     }
-    module is_referenceable {
-      header "__type_traits/is_referenceable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -841,7 +837,11 @@ module std [system] {
       header "__algorithm/stable_sort.h"
       export std.memory.unique_temporary_buffer // TODO: Workaround for https://llvm.org/PR120108
     }
-    module swap_ranges                            { header "__algorithm/swap_ranges.h" }
+    module swap_ranges                            {
+      header "__algorithm/swap_ranges.h"
+      export std.algorithm.iterator_operations
+      export std.algorithm.iter_swap
+    }
     module three_way_comp_ref_type                { header "__algorithm/three_way_comp_ref_type.h" }
     module transform                              { header "__algorithm/transform.h" }
     module uniform_random_bit_generator_adaptor   { header "__algorithm/uniform_random_bit_generator_adaptor.h" }
@@ -1088,6 +1088,7 @@ module std [system] {
     module movable                  { header "__concepts/movable.h" }
     module predicate                { header "__concepts/predicate.h" }
     module primary_template         { header "__concepts/primary_template.h" }
+    module referenceable            { header "__concepts/referenceable.h" }
     module regular                  { header "__concepts/regular.h" }
     module relation                 { header "__concepts/relation.h" }
     module same_as                  { header "__concepts/same_as.h" }
@@ -1613,13 +1614,13 @@ module std [system] {
       textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
+      textual header "__locale_dir/support/openbsd.h"
       textual header "__locale_dir/support/windows.h"
     }
 
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
-      textual header "__locale_dir/locale_base_api/openbsd.h"
     }
     export *
   }
@@ -1699,6 +1700,7 @@ module std [system] {
     }
     module uninitialized_algorithms {
       header "__memory/uninitialized_algorithms.h"
+      export std.memory.destroy
       export std.utility.pair
     }
     module unique_ptr {
@@ -1837,7 +1839,10 @@ module std [system] {
     module clamp_to_integral                  { header "__random/clamp_to_integral.h" }
     module default_random_engine              { header "__random/default_random_engine.h" }
     module discard_block_engine               { header "__random/discard_block_engine.h" }
-    module discrete_distribution              { header "__random/discrete_distribution.h" }
+    module discrete_distribution              {
+      header "__random/discrete_distribution.h"
+      export std.vector.vector
+    }
     module exponential_distribution           { header "__random/exponential_distribution.h" }
     module extreme_value_distribution         { header "__random/extreme_value_distribution.h" }
     module fisher_f_distribution              { header "__random/fisher_f_distribution.h" }
@@ -1889,6 +1894,7 @@ module std [system] {
       export std.functional.bind_back
     }
     module common_view                    { header "__ranges/common_view.h" }
+    module concat_view                    { header "__ranges/concat_view.h" }
     module concepts                       { header "__ranges/concepts.h" }
     module container_compatible_range     { header "__ranges/container_compatible_range.h" }
     module counted {

@@ -143,6 +143,9 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
     NewCall->copyFastMathFlags(&OldIntr);
+  // Copy attributes
+  AttributeList OldAttrList = OldIntr.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   // Erase and replace uses
   if (!InstToReplace.getType()->isVoidTy())
@@ -286,9 +289,10 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
         // Obtain the original image sample intrinsic's signature
         // and replace its return type with the half-vector for D16 folding
         SmallVector<Type *, 8> OverloadTys;
-        Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys);
-        OverloadTys[0] = HalfVecTy;
+        if (!Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys))
+          return std::nullopt;
 
+        OverloadTys[0] = HalfVecTy;
         Module *M = II.getModule();
         Function *HalfDecl = Intrinsic::getOrInsertDeclaration(
             M, ImageDimIntr->Intr, OverloadTys);
@@ -882,6 +886,29 @@ matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
          XorMask << AMDGPU::Swizzle::BITMASK_XOR_SHIFT;
 }
 
+/// Match a GFX9+ DS_SWIZZLE rotate-mode permutation: a cyclic left-rotation
+/// of all 32 lanes within each 32-lane group by a constant N in [0, 31],
+/// i.e. dst_lane = (src_lane + N) % 32. On wave64, hasPeriodicLayout<32>
+/// ensures both 32-lane groups rotate by the same amount.
+static std::optional<unsigned>
+matchDsSwizzleRotatePattern(ArrayRef<uint8_t> Ids) {
+  if (!hasPeriodicLayout<32>(Ids))
+    return std::nullopt;
+
+  // Determine the rotation amount from lane 0: every lane must read from
+  // lane (I + N) % 32 where N = Ids[0] and 0 <= N <= 31.
+  unsigned N = Ids[0];
+  if (N >= 32)
+    return std::nullopt;
+
+  for (unsigned I = 0; I < 32; ++I)
+    if (Ids[I] != (I + N) % 32)
+      return std::nullopt;
+
+  return AMDGPU::Swizzle::ROTATE_MODE_ENC |
+         (N << AMDGPU::Swizzle::ROTATE_SIZE_SHIFT);
+}
+
 /// Emit v_mov_b32_dpp with the given control word, row/bank masks 0xF, and
 /// bound_ctrl=1 so out-of-bounds lanes are well-defined and the DPP mov can
 /// be folded into a consuming VALU op by GCNDPPCombine.
@@ -986,7 +1013,7 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
       return createMovDpp8(B, Src, *Sel);
   }
 
-  if (ST.hasPermLaneX16()) {
+  if (ST.hasPermlane16Insts()) {
     if (isFullRowPattern(Ids)) {
       uint64_t Sel = computePermlane16Masks(Ids);
       return createPermlane16(B, Src, Lo_32(Sel), Hi_32(Sel));
@@ -1003,6 +1030,13 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
   // is available on every target that has ds_swizzle.
   if (std::optional<unsigned> Imm = matchDsSwizzleBitmaskPattern(Ids))
     return createDsSwizzle(B, Src, *Imm, DL);
+
+  // DS_SWIZZLE rotate mode (GFX9+): handles cyclic 32-lane rotations that
+  // bitmask mode cannot express (e.g. +1 mod 32 requires inter-bit carry).
+  if (ST.hasDsSwizzleRotateMode()) {
+    if (std::optional<unsigned> Imm = matchDsSwizzleRotatePattern(Ids))
+      return createDsSwizzle(B, Src, *Imm, DL);
+  }
 
   if (ST.hasPermLane64() && matchHalfWaveSwapPattern(Ids))
     return createPermlane64(B, Src);
@@ -1047,7 +1081,6 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
 
   return IC.replaceInstUsesWith(II, Result);
 }
-
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -2378,6 +2411,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
+  AttributeList OldAttrList = II.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   if (IsLoad) {
     if (NewNumElts == 1) {

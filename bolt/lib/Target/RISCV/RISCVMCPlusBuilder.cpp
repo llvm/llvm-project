@@ -28,6 +28,14 @@ using namespace bolt;
 namespace {
 
 class RISCVMCPlusBuilder : public MCPlusBuilder {
+  bool isRV64() const { return STI->hasFeature(RISCV::Feature64Bit); }
+  unsigned regSize() const { return isRV64() ? 8 : 4; }
+  unsigned loadOpc() const { return isRV64() ? RISCV::LD : RISCV::LW; }
+  unsigned storeOpc() const { return isRV64() ? RISCV::SD : RISCV::SW; }
+  unsigned atomicAddOpc() const {
+    return isRV64() ? RISCV::AMOADD_D : RISCV::AMOADD_W;
+  }
+
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
@@ -154,8 +162,10 @@ public:
     }
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  void
+  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
+                         const MCSymbol *TBB, MCContext *Ctx,
+                         DataflowInfoManager *DIM = nullptr) const override {
     auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
     Inst.setOpcode(Opcode);
     replaceBranchTarget(Inst, TBB, Ctx);
@@ -378,7 +388,7 @@ public:
 
     assert(I != End);
     auto &LD = *I++;
-    assert(LD.getOpcode() == RISCV::LD);
+    assert(LD.getOpcode() == loadOpc());
     assert(LD.getOperand(0).getReg() == RISCV::X28);
     assert(LD.getOperand(1).getReg() == RISCV::X28);
 
@@ -511,24 +521,24 @@ public:
 
   void loadReg(MCInst &Inst, MCPhysReg To, MCPhysReg From,
                int64_t offset) const {
-    Inst = MCInstBuilder(RISCV::LD).addReg(To).addReg(From).addImm(offset);
+    Inst = MCInstBuilder(loadOpc()).addReg(To).addReg(From).addImm(offset);
   }
 
   void storeReg(MCInst &Inst, MCPhysReg From, MCPhysReg To,
                 int64_t offset) const {
-    Inst = MCInstBuilder(RISCV::SD).addReg(From).addReg(To).addImm(offset);
+    Inst = MCInstBuilder(storeOpc()).addReg(From).addReg(To).addImm(offset);
   }
 
   void spillRegs(InstructionListType &Insts,
                  const SmallVector<unsigned> &Regs) const {
     Insts.emplace_back();
-    createStackPointerIncrement(Insts.back(), Regs.size() * 8);
+    createStackPointerIncrement(Insts.back(), Regs.size() * regSize());
 
     int64_t Offset = 0;
     for (auto Reg : Regs) {
       Insts.emplace_back();
       storeReg(Insts.back(), Reg, RISCV::X2, Offset);
-      Offset += 8;
+      Offset += regSize();
     }
   }
 
@@ -538,16 +548,16 @@ public:
     for (auto Reg : Regs) {
       Insts.emplace_back();
       loadReg(Insts.back(), Reg, RISCV::X2, Offset);
-      Offset += 8;
+      Offset += regSize();
     }
 
     Insts.emplace_back();
-    createStackPointerDecrement(Insts.back(), Regs.size() * 8);
+    createStackPointerDecrement(Insts.back(), Regs.size() * regSize());
   }
 
   void atomicAdd(MCInst &Inst, MCPhysReg RegAtomic, MCPhysReg RegTo,
                  MCPhysReg RegCnt) const {
-    Inst = MCInstBuilder(RISCV::AMOADD_D)
+    Inst = MCInstBuilder(atomicAddOpc())
                .addReg(RegAtomic)
                .addReg(RegTo)
                .addReg(RegCnt);

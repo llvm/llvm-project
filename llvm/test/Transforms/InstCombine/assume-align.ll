@@ -257,6 +257,14 @@ define ptr @assume_align_1(ptr %p) {
   ret ptr %p
 }
 
+define void @redundant_assume_align_null() {
+; CHECK-LABEL: @redundant_assume_align_null(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr null, i64 8) ]
+  ret void
+}
+
 declare void @foo(ptr)
 
 ; !align must have a constant integer alignment.
