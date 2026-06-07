@@ -462,7 +462,7 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 
 define float @fabs_squared(float %x) {
 ; CHECK-LABEL: @fabs_squared(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_FR:%.*]], [[X_FR]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
@@ -472,11 +472,51 @@ define float @fabs_squared(float %x) {
 
 define float @fabs_squared_fast(float %x) {
 ; CHECK-LABEL: @fabs_squared_fast(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X_FR:%.*]], [[X_FR]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
   %mul = fmul fast float %x.fabs, %x.fabs
+  ret float %mul
+}
+
+define float @fabs_squared_nnan(float %x) {
+; CHECK-LABEL: @fabs_squared_nnan(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %mul = fmul nnan float %x.fabs, %x.fabs
+  ret float %mul
+}
+
+define float @fabs_squared_ninf(float %x) {
+; CHECK-LABEL: @fabs_squared_ninf(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %mul = fmul ninf float %x.fabs, %x.fabs
+  ret float %mul
+}
+
+define float @fabs_squared_nsz(float %x) {
+; CHECK-LABEL: @fabs_squared_nsz(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[X_FR:%.*]], [[X_FR]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %mul = fmul nsz float %x.fabs, %x.fabs
+  ret float %mul
+}
+
+define float @fabs_squared_noundef(float noundef %x) {
+; CHECK-LABEL: @fabs_squared_noundef(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %mul = fmul float %x.fabs, %x.fabs
   ret float %mul
 }
 

@@ -591,7 +591,7 @@ define float @fdiv_fneg1_extra_use(float %x, float %y) {
 
 define float @fabs_same_op(float %x) {
 ; CHECK-LABEL: @fabs_same_op(
-; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X_FR:%.*]], [[X_FR]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = call float @llvm.fabs.f32(float %x)
@@ -601,14 +601,34 @@ define float @fabs_same_op(float %x) {
 
 define float @fabs_same_op_extra_use(float %x) {
 ; CHECK-LABEL: @fabs_same_op_extra_use(
-; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[X_FR:%.*]])
 ; CHECK-NEXT:    call void @use_f32(float [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf float [[X]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf float [[X_FR]], [[X_FR]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = call float @llvm.fabs.f32(float %x)
   call void @use_f32(float %a)
   %r = fdiv ninf reassoc float %a, %a
+  ret float %r
+}
+
+define float @fabs_same_op_ninf(float %x) {
+; CHECK-LABEL: @fabs_same_op_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fdiv ninf float [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = call float @llvm.fabs.f32(float %x)
+  %r = fdiv ninf float %a, %a
+  ret float %r
+}
+
+define float @fabs_same_op_nsz(float %x) {
+; CHECK-LABEL: @fabs_same_op_nsz(
+; CHECK-NEXT:    [[R:%.*]] = fdiv nsz float [[X_FR:%.*]], [[X_FR]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = call float @llvm.fabs.f32(float %x)
+  %r = fdiv nsz float %a, %a
   ret float %r
 }
 
