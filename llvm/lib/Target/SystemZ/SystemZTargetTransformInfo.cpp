@@ -568,8 +568,7 @@ static bool isFoldableRMW(const Instruction *I, Type *Ty) {
     if (Opcode == Instruction::And) {
       if (BitWidth == 16 && (Val & 0xff00ULL) != 0xff00ULL)
         return false;
-      if (BitWidth == 32 && (Val & 0xffffff00ULL) != 0xffffff00ULL &&
-          (Val & 0xffffff00ULL) != 0x0000ff00ULL)
+      if (BitWidth == 32 && (Val & 0xffffff00ULL) != 0xffffff00ULL)
         return false;
       if (BitWidth == 64 &&
           (Val & 0xffffffffffffff00ULL) != 0xffffffffffffff00ULL)

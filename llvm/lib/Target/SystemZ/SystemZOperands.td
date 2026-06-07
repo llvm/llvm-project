@@ -444,20 +444,19 @@ defm imm64hh16c : Immediate<i64, [{
          SystemZ::isImmHH(uint64_t(~Imm.getZExtValue()));
 }], HH16, "U16Imm">;
 
-// Immediates for the 8-bit LSB chunk of an i32, with the other bits being one
-// or zero-extended from a 16-bit.
+// Immediates for the 8-bit LSB chunk of an i32, with the other bits being one.
 defm imm32ll8c : Immediate<i32, [{
   if (!Imm.isIntN(32)) return false;
   uint64_t Val = Imm.getZExtValue();
-  // Case 1: Upper 24 bits are all ones.
-  if ((Val & 0xffffff00ULL) == 0xffffff00ULL)
-    return true;
-  // Case 2: Zero-extended i16 where the upper 16 bits are zero and the 
-  // second least significant byte is 0xff (0x0000ff00).
-  if ((Val & 0xffffff00ULL) == 0x0000ff00ULL) {
-    return true;
-  }
-  return false;
+  return (Val & 0xffffff00ULL) == 0xffffff00ULL;
+}], UIMM8, "U8Imm">;
+
+// Immediates for the second 8-bit LSB chunk of an i32, with the other bits
+// being one.
+defm imm16ll8c : Immediate<i32, [{
+  if (!Imm.isIntN(32)) return false;
+  uint64_t Val = Imm.getZExtValue();
+  return (Val & 0xff00ULL) == 0xff00ULL;
 }], UIMM8, "U8Imm">;
 
 // Immediates for the 8-bit LSB chunk of an i64, with the other bits being one.

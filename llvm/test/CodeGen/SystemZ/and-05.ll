@@ -82,7 +82,7 @@ define void @f2_i32(ptr %ptr) {
 ; Check i32 with zero-extended i16 pattern (0x0000FFxx).
 define void @f2_i32_zext(ptr %ptr) {
 ; CHECK-LABEL: f2_i32_zext:
-; CHECK: ni 3(%r2), 254
+; CHECK: n %r0, 0(%r2)
 ; CHECK: br %r14
   %val = load i32, ptr %ptr
   %and = and i32 %val, 65534  ; 0x0000FFFE
