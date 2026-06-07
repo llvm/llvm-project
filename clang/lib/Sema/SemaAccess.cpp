@@ -297,23 +297,24 @@ static void AddFriendTemplateDeductionCandidate(
       MakeDeductionFailureInfo(S.Context, Result, Info));
 }
 
-static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
-                                       TemplateDecl *TD,
-                                       ArrayRef<TemplateArgument> PatternArgs,
-                                       ArrayRef<TemplateArgument> Args,
-                                       SourceLocation Loc,
-                                       TemplateSpecCandidateSet *FailedTSC) {
-  auto Equal =
-      llvm::equal(PatternArgs, Args,
-                  [](const TemplateArgument &LHS, const TemplateArgument &RHS) {
-                    return LHS.structurallyEquals(RHS);
-                  });
-  if (Equal)
-    return true;
+static bool
+AreTemplateArgumentsStructurallyEqual(ArrayRef<TemplateArgument> LHS,
+                                      ArrayRef<TemplateArgument> RHS) {
+  return llvm::equal(
+      LHS, RHS, [](const TemplateArgument &LHS, const TemplateArgument &RHS) {
+        return LHS.structurallyEquals(RHS);
+      });
+}
 
+static bool DeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
+                                    TemplateDecl *TD,
+                                    ArrayRef<TemplateArgument> PatternArgs,
+                                    ArrayRef<TemplateArgument> Args,
+                                    TemplateDeductionInfo &Info,
+                                    TemplateSpecCandidateSet *FailedTSC,
+                                    bool CopyDeducedArgs) {
   EnterExpressionEvaluationContext Unevaluated(
       S, Sema::ExpressionEvaluationContext::Unevaluated);
-  TemplateDeductionInfo Info(FailedTSC ? FailedTSC->getLocation() : Loc);
   Sema::SFINAETrap Trap(S, Info);
   LocalInstantiationScope InstantiationScope(S);
   SmallVector<DeducedTemplateArgument, 4> Deduced(TPL->size());
@@ -326,8 +327,8 @@ static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
     return false;
   }
 
-  SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
-  Sema::InstantiatingTemplate Inst(S, Info.getLocation(), TD, DeducedArgs);
+  SmallVector<TemplateArgument, 4> InstArgs(Deduced.begin(), Deduced.end());
+  Sema::InstantiatingTemplate Inst(S, Info.getLocation(), TD, InstArgs);
   if (Inst.isInvalid()) {
     AddFriendTemplateDeductionCandidate(
         S, TD, TD->getTemplatedDecl(), Info,
@@ -338,7 +339,8 @@ static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
   TemplateDeductionResult Result;
   S.runWithSufficientStackSpace(Info.getLocation(), [&] {
     Result = S.FinishTemplateArgumentDeduction(
-        TD, TPL, PatternArgs, Args, Deduced, Info, /*CopyDeducedArgs=*/false);
+        TD, TPL, PatternArgs, Args, Deduced, Info,
+        /*CopyDeducedArgs=*/CopyDeducedArgs);
   });
 
   if (Result != TemplateDeductionResult::Success || Trap.hasErrorOccurred()) {
@@ -354,9 +356,51 @@ static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
   return true;
 }
 
+static bool
+DeduceTemplateArguments(Sema &S, TemplateParameterList *TPL, TemplateDecl *TD,
+                        ArrayRef<TemplateArgument> PatternArgs,
+                        ArrayRef<TemplateArgument> Args, SourceLocation Loc,
+                        TemplateSpecCandidateSet *FailedTSC,
+                        SmallVectorImpl<TemplateArgument> &DeducedArgs) {
+  if (AreTemplateArgumentsStructurallyEqual(PatternArgs, Args)) {
+    DeducedArgs.assign(Args.begin(), Args.end());
+    return true;
+  }
+
+  TemplateDeductionInfo Info(FailedTSC ? FailedTSC->getLocation() : Loc);
+  if (!DeduceTemplateArguments(S, TPL, TD, PatternArgs, Args, Info, FailedTSC,
+                               /*CopyDeducedArgs=*/true))
+    return false;
+
+  TemplateArgumentList *CanonicalDeducedArgs = Info.takeCanonical();
+  DeducedArgs.assign(CanonicalDeducedArgs->asArray().begin(),
+                     CanonicalDeducedArgs->asArray().end());
+
+  return true;
+}
+
+static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
+                                       TemplateDecl *TD,
+                                       ArrayRef<TemplateArgument> PatternArgs,
+                                       ArrayRef<TemplateArgument> Args,
+                                       SourceLocation Loc,
+                                       TemplateSpecCandidateSet *FailedTSC) {
+  if (AreTemplateArgumentsStructurallyEqual(PatternArgs, Args))
+    return true;
+
+  TemplateDeductionInfo Info(FailedTSC ? FailedTSC->getLocation() : Loc);
+  return DeduceTemplateArguments(S, TPL, TD, PatternArgs, Args, Info, FailedTSC,
+                                 /*CopyDeducedArgs=*/false);
+}
+
+static CanQual<FunctionProtoType> GetCanonicalFunctionProto(Sema &S,
+                                                            QualType Ty) {
+  return S.Context.getCanonicalType(Ty)->getAs<FunctionProtoType>();
+}
+
 static CanQual<FunctionProtoType>
 GetCanonicalFunctionProto(Sema &S, const FunctionDecl *FD) {
-  return S.Context.getCanonicalType(FD->getType())->getAs<FunctionProtoType>();
+  return GetCanonicalFunctionProto(S, FD->getType());
 }
 
 static const TemplateSpecializationType *
@@ -397,12 +441,11 @@ static FunctionTemplateDecl *TryGetFunctionTemplateDecl(FunctionDecl *FD) {
   return nullptr;
 }
 
-static bool MatchesFriendContext(Sema &S, DeclContext *DC,
-                                 ClassTemplateDecl *FriendCTD,
-                                 ArrayRef<TemplateArgument> FriendArgs,
-                                 TemplateParameterList *FriendTPL,
-                                 SourceLocation Loc,
-                                 TemplateSpecCandidateSet *FailedTSC) {
+static bool DeduceFriendContextTemplateArguments(
+    Sema &S, DeclContext *DC, ClassTemplateDecl *FriendCTD,
+    ArrayRef<TemplateArgument> FriendArgs, TemplateParameterList *FriendTPL,
+    SourceLocation Loc, TemplateSpecCandidateSet *FailedTSC,
+    SmallVectorImpl<TemplateArgument> &DeducedArgs) {
   const auto *RD = dyn_cast<CXXRecordDecl>(DC);
   if (!RD)
     return false;
@@ -422,8 +465,19 @@ static bool MatchesFriendContext(Sema &S, DeclContext *DC,
   if (ContextCTD->getCanonicalDecl() != FriendCTD->getCanonicalDecl())
     return false;
 
-  return CanDeduceTemplateArguments(S, FriendTPL, FriendCTD, FriendArgs,
-                                    ContextArgs, Loc, FailedTSC);
+  return DeduceTemplateArguments(S, FriendTPL, FriendCTD, FriendArgs,
+                                 ContextArgs, Loc, FailedTSC, DeducedArgs);
+}
+
+static bool MatchesFriendContext(Sema &S, DeclContext *DC,
+                                 ClassTemplateDecl *FriendCTD,
+                                 ArrayRef<TemplateArgument> FriendArgs,
+                                 TemplateParameterList *FriendTPL,
+                                 SourceLocation Loc,
+                                 TemplateSpecCandidateSet *FailedTSC) {
+  SmallVector<TemplateArgument, 4> DeducedArgs;
+  return DeduceFriendContextTemplateArguments(
+      S, DC, FriendCTD, FriendArgs, FriendTPL, Loc, FailedTSC, DeducedArgs);
 }
 
 static bool MatchesFriendContext(Sema &S, DeclContext *DC,
@@ -904,9 +958,6 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendTPL)
     return OnFailure;
 
-  CanQual<FunctionProtoType> FriendProto =
-      GetCanonicalFunctionProto(S, FriendFD);
-
   ArrayRef<TemplateArgument> FriendArgs = FriendTST->template_arguments();
   SourceLocation FriendLoc = FriendTD->getLocation();
 
@@ -914,11 +965,29 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     if (!MightInstantiateTo(S, FD->getDeclName(), FriendFD->getDeclName()))
       continue;
 
-    if (!MatchesFriendContext(S, FD->getDeclContext(), FriendCTD, FriendArgs,
-                              FriendTPL, FriendLoc, FailedTSC))
+    SmallVector<TemplateArgument, 4> DeducedArgs;
+    if (!DeduceFriendContextTemplateArguments(
+            S, FD->getDeclContext(), FriendCTD, FriendArgs, FriendTPL,
+            FriendLoc, FailedTSC, DeducedArgs))
       continue;
 
     CanQual<FunctionProtoType> ContextProto = GetCanonicalFunctionProto(S, FD);
+    Sema::InstantiatingTemplate Inst(S, FriendFD->getLocation(), FriendCTD,
+                                     DeducedArgs);
+    if (Inst.isInvalid())
+      continue;
+
+    TemplateDeductionInfo Info(FriendFD->getLocation());
+    Sema::SFINAETrap Trap(S, Info);
+    MultiLevelTemplateArgumentList Args(FriendCTD, DeducedArgs, /*Final=*/true);
+    QualType FriendType =
+        S.SubstType(FriendFD->getType(), Args, FriendFD->getLocation(),
+                    FriendFD->getDeclName());
+    if (FriendType.isNull() || Trap.hasErrorOccurred())
+      continue;
+
+    CanQual<FunctionProtoType> FriendProto =
+        GetCanonicalFunctionProto(S, FriendType);
     if (MightInstantiateTo(S, ContextProto, FriendProto))
       return AR_accessible;
   }
