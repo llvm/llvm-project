@@ -1394,8 +1394,9 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
   InnerOp.dropPoisonGeneratingAnnotations();
   InnerOp.dropUBImplyingAttrsAndMetadata();
   replaceOperand(OuterOp, OuterValIdx, InnerVal0);
-  ClearSubclassDataAfterReassociation(OuterOp);
-  OuterOp.dropUnknownNonDebugMetadata();
+  if (!isa<FPMathOperator>(OuterOp))
+    OuterOp.dropPoisonGeneratingFlags();
+  OuterOp.dropUBImplyingAttrsAndMetadata();
   return true;
 }
 
