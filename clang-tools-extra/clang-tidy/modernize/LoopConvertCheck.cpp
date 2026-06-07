@@ -552,6 +552,21 @@ static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
   return false;
 }
 
+// Returns true if the token at `BeginLocation` is immediately preceded by an
+// identifier or keyword token with no space between them.
+static bool
+isPrecededByAdjacentIdentifierOrKeyword(SourceManager &SourceMgr,
+                                        const LangOptions &LangOpts,
+                                        SourceLocation BeginLocation) {
+  std::optional<Token> PrevToken =
+      Lexer::findPreviousToken(BeginLocation, SourceMgr, LangOpts, true);
+  assert(PrevToken && "Expected a token before the dereference operator");
+  // Check whether the token at `BeginLocation` is immediately adjacent to
+  // the previous token with no space between them.
+  const bool IsAdjacentToPrevToken = PrevToken->getEndLoc() == BeginLocation;
+  return PrevToken->isAnyIdentifier() && IsAdjacentToPrevToken;
+}
+
 // Returns true if the replacement text needs a leading space to avoid merging
 // with the preceding token. This occurs when `*it` is immediately adjacent to
 // a keyword, e.g. `delete*it`, where replacing `*it` with `it` would
@@ -563,14 +578,8 @@ static bool requiresLeadingSpace(SourceManager &SourceMgr,
   if (!Lexer::getRawToken(BeginLocation, StarToken, SourceMgr, LangOpts,
                           false) &&
       StarToken.is(tok::star)) {
-    std::optional<Token> PrevToken =
-        Lexer::findPreviousToken(BeginLocation, SourceMgr, LangOpts, true);
-    assert(PrevToken && "Expected a token before the dereference operator");
-    // Check whether StarToken has leading space or not
-    const bool StarTokenHasNoLeadingSpace =
-        PrevToken->getEndLoc() == BeginLocation;
-    if (PrevToken->isAnyIdentifier() && StarTokenHasNoLeadingSpace)
-      return true;
+    return isPrecededByAdjacentIdentifierOrKeyword(SourceMgr, LangOpts,
+                                                   BeginLocation);
   }
   return false;
 }
@@ -738,7 +747,10 @@ void LoopConvertCheck::doConversion(
             // removed except in case of a `sizeof` operator call.
             const DynTypedNodeList GrandParents = Context->getParents(*Paren);
             if (GrandParents.size() != 1 ||
-                GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr) {
+                (GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr &&
+                 !isPrecededByAdjacentIdentifierOrKeyword(
+                     Context->getSourceManager(), getLangOpts(),
+                     Parents[0].getSourceRange().getBegin()))) {
               Range = Paren->getSourceRange();
             }
           } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
