@@ -2438,19 +2438,40 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
-    assert((!isPositionIndependent() || TT.isOSWindows()) &&
-           "long-calls codegen is not position independent!");
+    bool isPIC = isPositionIndependent() && !TT.isOSWindows();
+    if (isPIC && Subtarget->genExecuteOnly())
+      report_fatal_error(Twine("long-calls with execute-only and "
+                               "position-independent code is not supported"),
+                         /*gen_crash_diag=*/false);
+    if (Subtarget->isROPI())
+      report_fatal_error(
+          Twine("long-calls with ROPI is not currently supported"),
+          /*gen_crash_diag=*/false);
+
     // Handle a global address or an external symbol. If it's not one of
     // those, the target's already in a register, so we don't need to do
     // anything extra.
     if (isa<GlobalAddressSDNode>(Callee)) {
       if (Subtarget->genExecuteOnly()) {
+        // Execute-only forbids constant pools in .text, so use movw/movt.
+        // fPIC is not supported with execute-only.
         if (Subtarget->useMovt())
           ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
                              DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
+      } else if (isPIC) {
+        // PIC without execute-only: use GOT-based addressing.
+        // DSO-local symbols use a plain PC-relative WrapperPIC;
+        // non-DSO-local symbols additionally load the address from the GOT.
+        SDValue G = DAG.getTargetGlobalAddress(
+            GVal, dl, PtrVt, 0, GVal->isDSOLocal() ? 0 : ARMII::MO_GOT);
+        Callee = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVt, G);
+        if (!GVal->isDSOLocal())
+          Callee =
+              DAG.getLoad(PtrVt, dl, DAG.getEntryNode(), Callee,
+                          MachinePointerInfo::getGOT(DAG.getMachineFunction()));
       } else {
-        // Create a constant pool entry for the callee address
+        // Neither execute-only nor PIC: load the address from a constant pool.
         unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
         ARMConstantPoolValue *CPV = ARMConstantPoolConstant::Create(
             GVal, ARMPCLabelIndex, ARMCP::CPValue, 0);
@@ -2466,12 +2487,31 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       const char *Sym = S->getSymbol();
 
       if (Subtarget->genExecuteOnly()) {
+        // Execute-only forbids constant pools in .text, so use movw/movt.
+        // fPIC is not supported with execute-only.
         if (Subtarget->useMovt())
           ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
-                             DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
+                             DAG.getTargetExternalSymbol(Sym, PtrVt, 0));
+      } else if (isPIC) {
+        // PIC without execute-only: use GOT-based addressing via a GOT_PREL
+        // constant pool entry.
+        unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
+        ARMConstantPoolValue *CPV = ARMConstantPoolSymbol::Create(
+            *DAG.getContext(), Sym, ARMPCLabelIndex, /*PCAdj=*/0,
+            ARMCP::GOT_PREL);
+        SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVt, Align(4));
+        CPAddr = DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, CPAddr);
+        SDValue GOTOffset = DAG.getLoad(
+            PtrVt, dl, DAG.getEntryNode(), CPAddr,
+            MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+        SDValue PICLabel = DAG.getConstant(ARMPCLabelIndex, dl, MVT::i32);
+        Callee = DAG.getNode(ARMISD::PIC_ADD, dl, PtrVt, GOTOffset, PICLabel);
+        Callee =
+            DAG.getLoad(PtrVt, dl, DAG.getEntryNode(), Callee,
+                        MachinePointerInfo::getGOT(DAG.getMachineFunction()));
       } else {
-        // Create a constant pool entry for the callee address
+        // Neither execute-only nor PIC: load the address from a constant pool.
         unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
         ARMConstantPoolValue *CPV = ARMConstantPoolSymbol::Create(
             *DAG.getContext(), Sym, ARMPCLabelIndex, 0);
