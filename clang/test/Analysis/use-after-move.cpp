@@ -1016,21 +1016,15 @@ struct OtherMoveSafeClasses {
   }
 };
 
-void safeOperatorAfterMove() {
-  std::list<std::string> l1;
-  l1.push_back("l1");
-  std::list<std::string> l2;
-
-  std::move(l1.begin(), l1.end(), std::back_inserter(l2));
-  *l2.cbegin(); // no-warning
+template<class Container>
+void safeOperatorAfterMove(Container lst) {
+    Container dest;
+    lst.push_back(typename Container::value_type {});
+    std::move(lst.begin(), lst.end(), std::back_inserter(dest)); // no-warning
+    lst.size();
 }
 
-void sizeAfterMove() {
-  std::list<std::string> l1;
-  l1.push_back("l1");
-  l1.push_back("l2");
-  std::list<std::string> l2;
-
-  std::move(l1.begin(), l1.end(), std::back_inserter(l2));
-  l1.size(); // no-warning
-}
+template void safeOperatorAfterMove<std::list<int>>(std::list<int>);
+template void safeOperatorAfterMove<std::list<std::string>>(std::list<std::string>);
+template void safeOperatorAfterMove<std::vector<int>>(std::vector<int>);
+template void safeOperatorAfterMove<std::vector<std::string>>(std::vector<std::string>);
