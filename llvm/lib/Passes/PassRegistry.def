@@ -816,12 +816,13 @@ LOOP_PASS_WITH_PARAMS(
     "loop-rotate", "LoopRotatePass",
     [](LoopRotateOptions Params) {
       return LoopRotatePass(Params.EnableHeaderDuplication, Params.PrepareForLTO,
-                            Params.CheckExitCount);
+                            Params.CheckExitCount, Params.UpdateBranchWeights);
     },
     parseLoopRotateOptions,
     "no-header-duplication;header-duplication;"
     "no-prepare-for-lto;prepare-for-lto;"
-    "no-check-exit-count;check-exit-count")
+    "no-check-exit-count;check-exit-count;"
+    "no-update-branch-weights;update-branch-weights")
 LOOP_PASS_WITH_PARAMS(
     "simple-loop-unswitch", "SimpleLoopUnswitchPass",
     [](std::pair<bool, bool> Params) {

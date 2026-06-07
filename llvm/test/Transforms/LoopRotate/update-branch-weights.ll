@@ -187,7 +187,8 @@ loop_exit:
 ; IR:   br i1 %cmp1, label %loop_exit, label %loop_body.lr.ph, !prof [[PROF_FUNC4_0:![0-9]+]]
 
 ; IR: loop_body:
-; IR:   br i1 %cmp, label %loop_header.loop_exit_crit_edge, label %loop_body, !prof [[PROF_FUNC4_0]]
+; IR-NOT:   !prof
+; IR:   br i1 %cmp, label %loop_header.loop_exit_crit_edge, label %loop_body{{$}}
 
 define void @func4_zero_branch_weight(i32 %n) !prof !3 {
 entry:
@@ -212,7 +213,8 @@ loop_exit:
 ; IR:   br i1 %cmp1, label %loop_exit, label %loop_body.lr.ph, !prof [[PROF_FUNC5_0:![0-9]+]]
 
 ; IR: loop_body:
-; IR:   br i1 %cmp, label %loop_header.loop_exit_crit_edge, label %loop_body, !prof [[PROF_FUNC5_0]]
+; IR-NOT:   !prof
+; IR:   br i1 %cmp, label %loop_header.loop_exit_crit_edge, label %loop_body{{$}}
 
 define void @func5_zero_branch_weight(i32 %n) !prof !3 {
 entry:

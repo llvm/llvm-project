@@ -1293,6 +1293,7 @@ struct LoopRotateOptions {
   bool EnableHeaderDuplication = true;
   bool PrepareForLTO = false;
   bool CheckExitCount = false;
+  bool UpdateBranchWeights = false;
 };
 
 Expected<LoopRotateOptions> parseLoopRotateOptions(StringRef Params) {
@@ -1308,6 +1309,8 @@ Expected<LoopRotateOptions> parseLoopRotateOptions(StringRef Params) {
       Result.PrepareForLTO = Enable;
     } else if (ParamName == "check-exit-count") {
       Result.CheckExitCount = Enable;
+    } else if (ParamName == "update-branch-weights") {
+      Result.UpdateBranchWeights = Enable;
     } else {
       return make_error<StringError>(
           formatv("invalid LoopRotate pass parameter '{}'", ParamName).str(),

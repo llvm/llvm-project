@@ -12,6 +12,8 @@
 
 #include "llvm/Transforms/Scalar/LoopRotation.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -48,9 +50,10 @@ static cl::opt<bool> EnableLoopHeaderDuplicationAtMinSize(
     cl::desc("Enable loop header duplication even for minsize"));
 
 LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO,
-                               bool CheckExitCount)
+                               bool CheckExitCount, bool UpdateBranchWeights)
     : EnableHeaderDuplication(EnableHeaderDuplication),
-      PrepareForLTO(PrepareForLTO), CheckExitCount(CheckExitCount) {}
+      PrepareForLTO(PrepareForLTO), CheckExitCount(CheckExitCount),
+      UpdateBranchWeights(UpdateBranchWeights) {}
 
 void LoopRotatePass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -67,7 +70,11 @@ void LoopRotatePass::printPipeline(
 
   if (!CheckExitCount)
     OS << "no-";
-  OS << "check-exit-count";
+  OS << "check-exit-count;";
+
+  if (!UpdateBranchWeights)
+    OS << "no-";
+  OS << "update-branch-weights";
   OS << ">";
 }
 
@@ -89,10 +96,24 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   std::optional<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = MemorySSAUpdater(AR.MSSA);
+
+  // On the post-PGO path, recover loop entry count from BFI so
+  // LoopRotation emits correct weights for multi-exit loops.
+  // Built locally since loop passes cannot safely access invalidatable
+  // function analyses.
+  BlockFrequencyInfo *BFI = nullptr;
+  std::optional<BlockFrequencyInfo> LocalBFI;
+  Function &F = *L.getHeader()->getParent();
+  if (UpdateBranchWeights && F.hasProfileData()) {
+    BranchProbabilityInfo BPI(F, AR.LI, &AR.TLI, &AR.DT);
+    LocalBFI.emplace(F, BPI, AR.LI);
+    BFI = &*LocalBFI;
+  }
+
   bool Changed =
       LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
                    MSSAU ? &*MSSAU : nullptr, SQ, false, Threshold, false,
-                   PrepareForLTO || PrepareForLTOOption, CheckExitCount);
+                   PrepareForLTO || PrepareForLTOOption, CheckExitCount, BFI);
 
   if (!Changed)
     return PreservedAnalyses::all();

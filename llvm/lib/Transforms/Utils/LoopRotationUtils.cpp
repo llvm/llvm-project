@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -35,6 +37,8 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <limits>
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-rotate"
@@ -64,17 +68,18 @@ class LoopRotate {
   bool IsUtilMode;
   bool PrepareForLTO;
   bool CheckExitCount;
+  BlockFrequencyInfo *BFI;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
              const TargetTransformInfo *TTI, AssumptionCache *AC,
              DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
              const SimplifyQuery &SQ, bool RotationOnly, bool IsUtilMode,
-             bool PrepareForLTO, bool CheckExitCount)
+             bool PrepareForLTO, bool CheckExitCount, BlockFrequencyInfo *BFI)
       : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE),
         MSSAU(MSSAU), SQ(SQ), RotationOnly(RotationOnly),
         IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO),
-        CheckExitCount(CheckExitCount) {}
+        CheckExitCount(CheckExitCount), BFI(BFI) {}
   bool processLoop(Loop *L);
 
 private:
@@ -210,8 +215,9 @@ static bool profitableToRotateLoopExitingLatch(Loop *L, ScalarEvolution *SE) {
 }
 
 static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
-                                bool HasConditionalPreHeader,
-                                bool SuccsSwapped) {
+                                bool HasConditionalPreHeader, bool SuccsSwapped,
+                                std::optional<uint64_t> PreHeaderEntries,
+                                std::optional<uint64_t> HeaderEntries) {
   MDNode *WeightMD = getBranchWeightMDNode(PreHeaderBI);
   if (WeightMD == nullptr)
     return;
@@ -232,6 +238,31 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
   if (SuccsSwapped)
     std::swap(OrigLoopExitWeight, OrigLoopBackedgeWeight);
 
+  // PreHeaderEntries, when present, holds the loop entry count from BFI.
+  // Scale it to the original header weight so it fits raw branch_weights,
+  // including ratio-based profiles.
+  std::optional<uint64_t> ScaledPreHeaderEntries;
+  if (PreHeaderEntries && HeaderEntries && *HeaderEntries != 0) {
+    APInt ScaledPE(128, *PreHeaderEntries);
+    APInt HeaderWeight(128, static_cast<uint64_t>(OrigLoopExitWeight) +
+                                static_cast<uint64_t>(OrigLoopBackedgeWeight));
+    APInt HeaderCount(128, *HeaderEntries);
+    ScaledPE *= HeaderWeight;
+    ScaledPE = (ScaledPE + HeaderCount.lshr(1)).udiv(HeaderCount);
+    ScaledPreHeaderEntries = ScaledPE.getLimitedValue();
+  }
+
+  bool PreHeaderEntriesKnown = ScaledPreHeaderEntries.has_value();
+  uint64_t PE = PreHeaderEntriesKnown ? *ScaledPreHeaderEntries : 0;
+
+  // A valid profile requires x <= pe <= x + y.
+  // Otherwise, ignore pe and fall back to the single-exit estimate.
+  if (PreHeaderEntriesKnown &&
+      (PE < static_cast<uint64_t>(OrigLoopExitWeight) ||
+       PE > static_cast<uint64_t>(OrigLoopExitWeight) +
+                static_cast<uint64_t>(OrigLoopBackedgeWeight)))
+    PreHeaderEntriesKnown = false;
+
   // Update branch weights. Consider the following edge-counts:
   //
   //    |  |--------             |
@@ -249,7 +280,8 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
   //
   // The following must hold:
   //  -  x == x0 + x1        # counts to "exit" must stay the same.
-  //  - y0 == x - x0 == x1   # how often loop was entered at all.
+  //  - y0 == pe - x0        # preheader budget; in single-exit loops pe == x,
+  //                         # so this reduces to the historical y0 == x1.
   //  - y1 == y - y0         # How often loop was repeated (after first iter.).
   //
   // We cannot generally deduce how often we had a zero-trip count loop so we
@@ -275,6 +307,13 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
           if ((OrigLoopBackedgeWeight & HighBit) != 0 ||
               (OrigLoopExitWeight & HighBit) != 0)
             break;
+          // Keep pe on the same scale as the header weights.
+          if (PreHeaderEntriesKnown) {
+            if ((PE & HighBit) != 0)
+              PreHeaderEntriesKnown = false;
+            else
+              PE <<= 1;
+          }
           OrigLoopBackedgeWeight <<= 1;
           OrigLoopExitWeight <<= 1;
         }
@@ -292,11 +331,30 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
       if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
         OrigLoopBackedgeWeight = OrigLoopExitWeight;
     }
+
+    // Raise ExitWeight0 so EnterWeight (y0 == pe - x0) stays within the
+    // original backedge weight.
+    if (PreHeaderEntriesKnown &&
+        PE > static_cast<uint64_t>(OrigLoopBackedgeWeight)) {
+      uint64_t MinExitWeight0 = PE - OrigLoopBackedgeWeight;
+      if (MinExitWeight0 > OrigLoopExitWeight)
+        MinExitWeight0 = OrigLoopExitWeight;
+      if (MinExitWeight0 > ExitWeight0)
+        ExitWeight0 = static_cast<uint32_t>(MinExitWeight0);
+    }
     assert(OrigLoopExitWeight >= ExitWeight0 && "Bad branch weight");
     ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
-    EnterWeight = ExitWeight1;
-    assert(OrigLoopBackedgeWeight >= EnterWeight && "Bad branch weight");
-    LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
+    uint64_t EnterWeight64 = PreHeaderEntriesKnown
+                                 ? PE - static_cast<uint64_t>(ExitWeight0)
+                                 : static_cast<uint64_t>(ExitWeight1);
+    if (EnterWeight64 > std::numeric_limits<uint32_t>::max())
+      EnterWeight64 = std::numeric_limits<uint32_t>::max();
+    EnterWeight = static_cast<uint32_t>(EnterWeight64);
+    assert((OrigLoopBackedgeWeight >= EnterWeight || PreHeaderEntriesKnown) &&
+           "Bad branch weight");
+    LoopBackWeight = OrigLoopBackedgeWeight >= EnterWeight
+                         ? OrigLoopBackedgeWeight - EnterWeight
+                         : 0;
   } else if (OrigLoopExitWeight == 0) {
     if (OrigLoopBackedgeWeight == 0) {
       // degenerate case... keep everything zero...
@@ -316,7 +374,13 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
   } else {
     // loop is never entered.
     assert(OrigLoopBackedgeWeight == 0 && "remaining case is backedge zero");
-    ExitWeight0 = 1;
+    if (PreHeaderEntriesKnown && PE > 0) {
+      uint64_t X0 =
+          std::min<uint64_t>(PE, std::numeric_limits<uint32_t>::max());
+      ExitWeight0 = static_cast<uint32_t>(X0);
+    } else {
+      ExitWeight0 = 1;
+    }
     ExitWeight1 = 1;
     EnterWeight = 0;
     LoopBackWeight = 0;
@@ -326,7 +390,10 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
       SuccsSwapped ? LoopBackWeight : ExitWeight1,
       SuccsSwapped ? ExitWeight1 : LoopBackWeight,
   };
-  setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
+  if (EnterWeight == 0 && LoopBackWeight == 0)
+    LoopBI.setMetadata(LLVMContext::MD_prof, nullptr);
+  else
+    setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
   if (HasConditionalPreHeader) {
     const uint32_t PreHeaderBIWeights[] = {
         SuccsSwapped ? EnterWeight : ExitWeight0,
@@ -426,6 +493,15 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // indirectbr in it, just give up.
   if (!OrigPreheader || !L->hasDedicatedExits())
     return Rotated;
+
+  // Capture block counts before CFG changes. updateBranchWeights scales the
+  // preheader count to the original header branch-weight scale.
+  std::optional<uint64_t> PreHeaderEntries;
+  std::optional<uint64_t> HeaderEntries;
+  if (BFI) {
+    PreHeaderEntries = BFI->getBlockProfileCount(OrigPreheader);
+    HeaderEntries = BFI->getBlockProfileCount(OrigHeader);
+  }
 
   // Anything ScalarEvolution may know about this loop or the PHI nodes
   // in its header will soon be invalidated. We should also invalidate
@@ -756,7 +832,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       !isa<ConstantInt>(Cond) ||
       PHBI->getSuccessor(cast<ConstantInt>(Cond)->isZero()) != NewHeader;
 
-  updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped);
+  updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped,
+                      PreHeaderEntries, HeaderEntries);
 
   if (HasConditionalPreHeader) {
     // The conditional branch can't be folded, handle the general case.
@@ -976,8 +1053,8 @@ bool llvm::LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
                         const SimplifyQuery &SQ, bool RotationOnly = true,
                         unsigned Threshold = unsigned(-1),
                         bool IsUtilMode = true, bool PrepareForLTO,
-                        bool CheckExitCount) {
+                        bool CheckExitCount, BlockFrequencyInfo *BFI) {
   LoopRotate LR(Threshold, LI, TTI, AC, DT, SE, MSSAU, SQ, RotationOnly,
-                IsUtilMode, PrepareForLTO, CheckExitCount);
+                IsUtilMode, PrepareForLTO, CheckExitCount, BFI);
   return LR.processLoop(L);
 }

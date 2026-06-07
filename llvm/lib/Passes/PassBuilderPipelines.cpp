@@ -883,9 +883,14 @@ void PassBuilder::addPostPGOLoopRotation(ModulePassManager &MPM,
                                          OptimizationLevel Level) {
   if (EnablePostPGOLoopRotation) {
     // Disable header duplication in loop rotation at -Oz.
+    // Enable profile-based branch-weight updates so rotated multi-exit
+    // loops receive correct weights from the applied PGO profile.
     MPM.addPass(createModuleToFunctionPassAdaptor(
-        createFunctionToLoopPassAdaptor(LoopRotatePass(),
-                                        /*UseMemorySSA=*/false),
+        createFunctionToLoopPassAdaptor(
+            LoopRotatePass(/*EnableHeaderDuplication=*/true,
+                           /*PrepareForLTO=*/false, /*CheckExitCount=*/false,
+                           /*UpdateBranchWeights=*/true),
+            /*UseMemorySSA=*/false),
         PTO.EagerlyInvalidateAnalyses));
   }
 }
