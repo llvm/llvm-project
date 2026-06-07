@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
-  using namespace sincosf_utils_internal;
+
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits xbits(x);
 
@@ -68,7 +68,11 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
   uint32_t x_abs_d = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
   double sin_k, cos_k, sin_y, cosm1_y;
 
-  sincosf_eval(xd, x_abs_d, sin_k, cos_k, sin_y, cosm1_y);
+  // TODO: Use bfloat16 version for inv_trigf_utils_internals after they are
+  // available
+  // Tracking issue :
+  // https://github.com/llvm/llvm-project/issues/202079
+  sincosf_utils_internal::sincosf_eval(xd, x_abs_d, sin_k, cos_k, sin_y, cosm1_y);
 
   return fputil::cast<bfloat16>(
       fputil::multiply_add(sin_y, cos_k,
