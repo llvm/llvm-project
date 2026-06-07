@@ -127,7 +127,7 @@ public:
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
                     RegisterContext &reg_ctx, const RegisterInfo &reg_info,
-                    bool print_flags, size_t reg_name_right_align_at = 0) {
+                    bool print_flags, size_t reg_name_right_align_at) {
     RegisterValue reg_value;
     if (!reg_ctx.ReadRegister(&reg_info, reg_value))
       return false;
