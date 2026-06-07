@@ -561,19 +561,19 @@ llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                             const ClangDocContext &CDCtx) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    genMarkdown(CDCtx, *static_cast<clang::doc::NamespaceInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<NamespaceInfo>(I), OS);
     break;
   case InfoType::IT_record:
-    genMarkdown(CDCtx, *static_cast<clang::doc::RecordInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<RecordInfo>(I), OS);
     break;
   case InfoType::IT_enum:
-    genMarkdown(CDCtx, *static_cast<clang::doc::EnumInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<EnumInfo>(I), OS);
     break;
   case InfoType::IT_function:
-    genMarkdown(CDCtx, *static_cast<clang::doc::FunctionInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<FunctionInfo>(I), OS);
     break;
   case InfoType::IT_typedef:
-    genMarkdown(CDCtx, *static_cast<clang::doc::TypedefInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<TypedefInfo>(I), OS);
     break;
   case InfoType::IT_concept:
   case InfoType::IT_variable:
