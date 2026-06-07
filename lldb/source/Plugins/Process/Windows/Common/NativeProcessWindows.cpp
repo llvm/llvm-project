@@ -350,7 +350,7 @@ Status NativeProcessWindows::CacheLoadedModules() {
   if (!m_loaded_modules.empty())
     return Status();
 
-  // Retrieve loaded modules by a Target/Module free implemenation.
+  // Retrieve loaded modules by a Target/Module-free implementation.
   AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
   if (snapshot.IsValid()) {
     MODULEENTRY32W me;
@@ -663,17 +663,9 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
 void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
                                         uint32_t exit_code) {
   llvm::sys::ScopedLock lock(m_mutex);
-  NativeThreadWindows *thread = GetThreadByID(thread_id);
-  if (!thread)
-    return;
-
-  for (auto t = m_threads.begin(); t != m_threads.end();) {
-    if ((*t)->GetID() == thread_id) {
-      t = m_threads.erase(t);
-    } else {
-      ++t;
-    }
-  }
+  llvm::erase_if(m_threads, [thread_id](const auto &t) {
+    return t->GetID() == thread_id;
+  });
 }
 
 void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
