@@ -529,7 +529,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   // Replace predicated replicate recipe with a replicate recipe without a
   // mask but in the replicate region.
   auto *RecipeWithoutMask = new VPReplicateRecipe(
-      PredRecipe->getUnderlyingInstr(), drop_end(PredRecipe->operands()),
+      PredRecipe->getUnderlyingInstr(), PredRecipe->operandsWithoutMask(),
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
   auto *Pred =
