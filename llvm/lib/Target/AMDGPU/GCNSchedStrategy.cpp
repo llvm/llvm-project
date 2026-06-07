@@ -1318,7 +1318,7 @@ void RewriteMFMAFormStage::findReachingDefs(
 }
 
 void RewriteMFMAFormStage::findReachingUses(
-    MachineInstr *DefMI, LiveIntervals *LIS,
+    const MachineInstr *DefMI, LiveIntervals *LIS,
     SmallVectorImpl<MachineOperand *> &ReachingUses) {
   SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
   for (MachineOperand &UseMO :
@@ -2265,15 +2265,15 @@ static bool isReachingDefAGPRForm(
   return false;
 }
 
-bool RewriteMFMAFormStage::hasEscapingUse(
+bool RewriteMFMAFormStage::hasUseRequiringVGPR(
     ArrayRef<SlotIndex> Src2ReachingDefs,
     const SmallPtrSetImpl<MachineInstr *> &RewriteSet) {
   for (SlotIndex RDIdx : Src2ReachingDefs) {
-    MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+    const MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
     SmallVector<MachineOperand *, 8> ReachingUses;
     findReachingUses(RD, DAG.LIS, ReachingUses);
-    for (MachineOperand *UseMO : ReachingUses) {
-      MachineInstr *UseMI = UseMO->getParent();
+    for (const MachineOperand *UseMO : ReachingUses) {
+      const MachineInstr *UseMI = UseMO->getParent();
       if (UseMI->isCopy())
         continue;
       if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI))
@@ -2361,11 +2361,11 @@ bool RewriteMFMAFormStage::initHeuristics(
 
         // If src2 has a use that must remain VGPR, it cannot be reclassified to
         // AGPR.
-        bool Src2Escapes = hasEscapingUse(Src2ReachingDefs, RewriteSet);
+        bool Src2NeedsVGPR = hasUseRequiringVGPR(Src2ReachingDefs, RewriteSet);
 
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-          if (!Src2Escapes &&
+          if (!Src2NeedsVGPR &&
               isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII))
             continue;
           CopyForDef.insert(RD);
@@ -2626,11 +2626,12 @@ bool RewriteMFMAFormStage::rewrite(
 
       // If src2 has a use that must remain VGPR, it cannot be reclassified to
       // AGPR.
-      bool Src2Escapes = hasEscapingUse(Src2ReachingDefs, RewriteCandsSet);
+      bool Src2NeedsVGPR =
+          hasUseRequiringVGPR(Src2ReachingDefs, RewriteCandsSet);
 
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (!Src2Escapes &&
+        if (!Src2NeedsVGPR &&
             isReachingDefAGPRForm(RD, RewriteCandsSet, RewriteSrc2Regs, *TII))
           continue;
 
