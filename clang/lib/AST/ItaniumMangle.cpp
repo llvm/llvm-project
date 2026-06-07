@@ -2206,7 +2206,7 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
   assert(!isa<LinkageSpecDecl>(DC) && "prefix cannot be LinkageSpecDecl");
 
   while (DC->isRequiresExprBody())
-      DC = Context.getEffectiveParentContext(DC);
+    DC = Context.getEffectiveParentContext(DC);
 
   if (DC->isTranslationUnit())
     return;
