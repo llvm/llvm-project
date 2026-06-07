@@ -489,10 +489,12 @@ class DenseMapSynthetic:
 
         # Occupancy is tracked in a packed 1-bit-per-bucket "used" array of
         # uint32_t words. A bucket holds a valid entry iff its bit is set;
-        # empty and erased buckets are clear.
+        # empty and erased buckets are clear. Read the whole array in one go
+        # rather than fetching each word with a separate expression path.
+        num_words = (num_buckets + 31) // 32
+        words = used.GetPointeeData(0, num_words).uint32
         for index in range(num_buckets):
-            word = used.GetValueForExpressionPath(f"[{index >> 5}]").unsigned
-            if (word >> (index & 31)) & 1:
+            if (words[index >> 5] >> (index & 31)) & 1:
                 self.child_buckets.append(index)
 
 
