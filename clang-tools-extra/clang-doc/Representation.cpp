@@ -25,17 +25,18 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
-namespace clang {
-namespace doc {
+using namespace llvm;
+
+namespace clang::doc {
 
 // Thread local arenas usable in each thread pool
-llvm::BumpPtrAllocator &getTransientArena() {
-  thread_local llvm::BumpPtrAllocator TransientArena;
+BumpPtrAllocator &getTransientArena() {
+  thread_local BumpPtrAllocator TransientArena;
   return TransientArena;
 }
 
-llvm::BumpPtrAllocator &getPersistentArena() {
-  thread_local llvm::BumpPtrAllocator PersistentArena;
+BumpPtrAllocator &getPersistentArena() {
+  thread_local BumpPtrAllocator PersistentArena;
   return PersistentArena;
 }
 
@@ -44,8 +45,8 @@ ConcurrentStringPool &getGlobalStringPool() {
   return GlobalPool;
 }
 
-CommentKind stringToCommentKind(llvm::StringRef KindStr) {
-  static const llvm::StringMap<CommentKind> KindMap = {
+CommentKind stringToCommentKind(StringRef KindStr) {
+  static const StringMap<CommentKind> KindMap = {
       {"FullComment", CommentKind::CK_FullComment},
       {"ParagraphComment", CommentKind::CK_ParagraphComment},
       {"TextComment", CommentKind::CK_TextComment},
@@ -67,7 +68,7 @@ CommentKind stringToCommentKind(llvm::StringRef KindStr) {
   return CommentKind::CK_Unknown;
 }
 
-llvm::StringRef commentKindToString(CommentKind Kind) {
+StringRef commentKindToString(CommentKind Kind) {
   switch (Kind) {
   case CommentKind::CK_FullComment:
     return "FullComment";
@@ -102,10 +103,9 @@ llvm::StringRef commentKindToString(CommentKind Kind) {
 const SymbolID EmptySID = SymbolID();
 
 template <typename T>
-static llvm::Expected<Info *> reduce(SmallVectorImpl<Info *> &Values) {
+static Expected<Info *> reduce(SmallVectorImpl<Info *> &Values) {
   if (Values.empty() || !Values[0])
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "no value to reduce");
+    return createStringError(inconvertibleErrorCode(), "no value to reduce");
   T *Merged = allocateTransient<T>(Values[0]->USR);
   for (auto &I : Values)
     Merged->merge(std::move(*cast<T>(I)));
@@ -213,18 +213,17 @@ llvm::Error mergeSingleInfo(doc::Info *&Reduced, doc::Info *NewInfo,
   case InfoType::IT_friend:
     return mergeTypedInfo<FriendInfo>(Reduced, NewInfo, Arena);
   default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "unknown info type");
+    return createStringError(inconvertibleErrorCode(), "unknown info type");
   }
 
-  return llvm::Error::success();
+  return Error::success();
 }
 
 // Dispatch function.
-llvm::Expected<Info *> mergeInfos(SmallVectorImpl<Info *> &Values) {
+Expected<Info *> mergeInfos(SmallVectorImpl<Info *> &Values) {
   if (Values.empty() || !Values[0])
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "no info values to merge");
+    return createStringError(inconvertibleErrorCode(),
+                             "no info values to merge");
 
   switch (Values[0]->IT) {
   case InfoType::IT_namespace:
@@ -244,20 +243,18 @@ llvm::Expected<Info *> mergeInfos(SmallVectorImpl<Info *> &Values) {
   case InfoType::IT_friend:
     return reduce<FriendInfo>(Values);
   case InfoType::IT_default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "unexpected info type");
+    return createStringError(inconvertibleErrorCode(), "unexpected info type");
   }
   llvm_unreachable("unhandled enumerator");
 }
 
 TemplateSpecializationInfo::TemplateSpecializationInfo(
-    const TemplateSpecializationInfo &Other, llvm::BumpPtrAllocator &Arena)
+    const TemplateSpecializationInfo &Other, BumpPtrAllocator &Arena)
     : SpecializationOf(Other.SpecializationOf) {
   Params = allocateArray(Other.Params, Arena);
 }
 
-TemplateInfo::TemplateInfo(const TemplateInfo &Other,
-                           llvm::BumpPtrAllocator &Arena) {
+TemplateInfo::TemplateInfo(const TemplateInfo &Other, BumpPtrAllocator &Arena) {
   Params = allocateArray(Other.Params, Arena);
   if (Other.Specialization)
     Specialization = TemplateSpecializationInfo(*Other.Specialization, Arena);
@@ -298,8 +295,7 @@ bool CommentInfo::operator<(const CommentInfo &Other) const {
   return false;
 }
 
-CommentInfo::CommentInfo(const CommentInfo &Other,
-                         llvm::BumpPtrAllocator &Arena) {
+CommentInfo::CommentInfo(const CommentInfo &Other, BumpPtrAllocator &Arena) {
   Kind = Other.Kind;
   Direction = Other.Direction;
   Name = Other.Name;
@@ -316,30 +312,31 @@ CommentInfo::CommentInfo(const CommentInfo &Other,
     for (size_t Idx = 0; Idx < Other.Children.size(); ++Idx) {
       new (NewArray + Idx) CommentInfo(Other.Children[Idx], Arena);
     }
-    Children = llvm::ArrayRef<CommentInfo>(NewArray, Other.Children.size());
+    Children = ArrayRef<CommentInfo>(NewArray, Other.Children.size());
   }
 }
 
-static llvm::SmallString<64>
-calculateRelativeFilePath(const InfoType &Type, const StringRef &Path,
-                          const StringRef &Name, const StringRef &CurrentPath) {
-  llvm::SmallString<64> FilePath;
+static SmallString<64> calculateRelativeFilePath(const InfoType &Type,
+                                                 const StringRef &Path,
+                                                 const StringRef &Name,
+                                                 const StringRef &CurrentPath) {
+  using namespace llvm::sys;
+  SmallString<64> FilePath;
 
   if (CurrentPath != Path) {
     // iterate back to the top
-    for (llvm::sys::path::const_iterator I =
-             llvm::sys::path::begin(CurrentPath);
-         I != llvm::sys::path::end(CurrentPath); ++I)
-      llvm::sys::path::append(FilePath, "..");
-    llvm::sys::path::append(FilePath, Path);
+    for (path::const_iterator I = path::begin(CurrentPath);
+         I != path::end(CurrentPath); ++I)
+      path::append(FilePath, "..");
+    path::append(FilePath, Path);
   }
 
   // Namespace references have a Path to the parent namespace, but
   // the file is actually in the subdirectory for the namespace.
   if (Type == doc::InfoType::IT_namespace)
-    llvm::sys::path::append(FilePath, Name);
+    path::append(FilePath, Name);
 
-  return llvm::sys::path::relative_path(FilePath);
+  return path::relative_path(FilePath);
 }
 
 StringRef Reference::getRelativeFilePath(const StringRef &CurrentPath) const {
@@ -394,7 +391,7 @@ void FriendInfo::merge(FriendInfo &&Other) {
   SymbolInfo::merge(std::move(Other));
 }
 
-FriendInfo::FriendInfo(const FriendInfo &Other, llvm::BumpPtrAllocator &Arena)
+FriendInfo::FriendInfo(const FriendInfo &Other, BumpPtrAllocator &Arena)
     : SymbolInfo(Other, Arena) {
   Ref = Other.Ref;
   if (Other.Template)
@@ -406,7 +403,7 @@ FriendInfo::FriendInfo(const FriendInfo &Other, llvm::BumpPtrAllocator &Arena)
   IsClass = Other.IsClass;
 }
 
-Info::Info(const Info &Other, llvm::BumpPtrAllocator &Arena)
+Info::Info(const Info &Other, BumpPtrAllocator &Arena)
     : Path(Other.Path), Name(Other.Name),
       DocumentationFileName(Other.DocumentationFileName), USR(Other.USR),
       ParentUSR(Other.ParentUSR), IT(Other.IT) {
@@ -442,7 +439,7 @@ bool Info::mergeable(const Info &Other) {
   return IT == Other.IT && USR == Other.USR;
 }
 
-SymbolInfo::SymbolInfo(const SymbolInfo &Other, llvm::BumpPtrAllocator &Arena)
+SymbolInfo::SymbolInfo(const SymbolInfo &Other, BumpPtrAllocator &Arena)
     : Info(Other, Arena), DefLoc(Other.DefLoc), MangledName(Other.MangledName),
       IsStatic(Other.IsStatic) {
   if (!Other.Loc.empty()) {
@@ -485,7 +482,7 @@ void NamespaceInfo::merge(NamespaceInfo &&Other) {
 RecordInfo::RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
     : SymbolInfo(InfoType::IT_record, USR, Name, Path) {}
 
-RecordInfo::RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena)
+RecordInfo::RecordInfo(const RecordInfo &Other, BumpPtrAllocator &Arena)
     : SymbolInfo(Other, Arena), TagType(Other.TagType),
       IsTypeDef(Other.IsTypeDef) {
   Members = deepCopyArray(Other.Members, Arena);
@@ -496,7 +493,7 @@ RecordInfo::RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena)
 }
 
 MemberTypeInfo::MemberTypeInfo(const MemberTypeInfo &Other,
-                               llvm::BumpPtrAllocator &Arena)
+                               BumpPtrAllocator &Arena)
     : FieldTypeInfo(Other), Access(Other.Access), IsStatic(Other.IsStatic) {
   if (!Other.Description.empty()) {
     for (const auto &Desc : Other.Description) {
@@ -532,7 +529,7 @@ void RecordInfo::merge(RecordInfo &&Other) {
 }
 
 EnumValueInfo::EnumValueInfo(const EnumValueInfo &Other,
-                             llvm::BumpPtrAllocator &Arena)
+                             BumpPtrAllocator &Arena)
     : Name(Other.Name), Value(Other.Value), ValueExpr(Other.ValueExpr) {
   if (!Other.Description.empty()) {
     for (const auto &Desc : Other.Description) {
@@ -608,7 +605,7 @@ void VarInfo::merge(VarInfo &&Other) {
 BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
 
 BaseRecordInfo::BaseRecordInfo(const BaseRecordInfo &Other,
-                               llvm::BumpPtrAllocator &Arena)
+                               BumpPtrAllocator &Arena)
     : RecordInfo(Other, Arena), Access(Other.Access),
       IsVirtual(Other.IsVirtual), IsParent(Other.IsParent) {}
 
@@ -635,21 +632,21 @@ StringRef Info::extractName() const {
     // one.
     return "GlobalNamespace";
   case InfoType::IT_record:
-    return internString("@nonymous_record_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_record_" + toHex(toStringRef(USR)));
   case InfoType::IT_enum:
-    return internString("@nonymous_enum_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_enum_" + toHex(toStringRef(USR)));
   case InfoType::IT_typedef:
-    return internString("@nonymous_typedef_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_typedef_" + toHex(toStringRef(USR)));
   case InfoType::IT_function:
-    return internString("@nonymous_function_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_function_" + toHex(toStringRef(USR)));
   case InfoType::IT_concept:
-    return internString("@nonymous_concept_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_concept_" + toHex(toStringRef(USR)));
   case InfoType::IT_variable:
-    return internString("@nonymous_variable_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_variable_" + toHex(toStringRef(USR)));
   case InfoType::IT_friend:
-    return internString("@nonymous_friend_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_friend_" + toHex(toStringRef(USR)));
   case InfoType::IT_default:
-    return internString("@nonymous_" + toHex(llvm::toStringRef(USR)));
+    return internString("@nonymous_" + toHex(toStringRef(USR)));
   }
   llvm_unreachable("Invalid InfoType.");
   return "";
@@ -694,7 +691,7 @@ ClangDocContext::ClangDocContext(
       SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
       Base(Base), Diags(Diags), Format(Format), PublicOnly(PublicOnly),
       FTimeTrace(FTimeTrace), Pretty(Pretty) {
-  llvm::SmallString<128> SourceRootDir(SourceRoot);
+  SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
     llvm::sys::fs::current_path(SourceRootDir);
@@ -719,5 +716,4 @@ void ScopeChildren::sort() {
   Concepts.sort();
   Variables.sort();
 }
-} // namespace doc
-} // namespace clang
+} // namespace clang::doc

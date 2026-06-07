@@ -23,9 +23,6 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/StringSaver.h"
 #include <array>
 #include <memory>
 #include <optional>
