@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
@@ -31,6 +32,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -665,24 +667,74 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
       numSg = numSgOrErr.value();
   }
 
+  // Coalesced reduction: if the source is produced by a coalescible op that
+  // carries a `xegpu.coalesce_hint`, and the reduction kind is
+  // associative-commutative (so reordering the fold is safe), request the
+  // factor on the source's FCD lane_data. Each lane then folds `factor`
+  // contiguous elements locally before the cross-lane reduction. Only at the
+  // lane level; inst/subgroup grow inst_data to match (see layout setup).
+  int coalesceFactor = 1;
+  if (layoutKind == xegpu::LayoutKind::Lane ||
+      layoutKind == xegpu::LayoutKind::InstData) {
+    auto isAssocCommutative = [](vector::CombiningKind k) {
+      using vector::CombiningKind;
+      return k == CombiningKind::ADD || k == CombiningKind::MUL ||
+             k == CombiningKind::MINUI || k == CombiningKind::MINSI ||
+             k == CombiningKind::MAXUI || k == CombiningKind::MAXSI ||
+             k == CombiningKind::AND || k == CombiningKind::OR ||
+             k == CombiningKind::XOR || k == CombiningKind::MINNUMF ||
+             k == CombiningKind::MAXNUMF || k == CombiningKind::MINIMUMF ||
+             k == CombiningKind::MAXIMUMF;
+    };
+    if (isAssocCommutative(reduction.getKind())) {
+      if (Operation *srcDefOp = reduction.getSource().getDefiningOp()) {
+        if (auto hint = srcDefOp->getAttrOfType<xegpu::CoalesceHintAttr>(
+                xegpu::getCoalesceHintAttrName()))
+          coalesceFactor = static_cast<int>(hint.getFactor().getInt());
+      }
+    }
+  }
+
   // The result layout represents the layout requirements of the operation.
   // it is recorded to anchor layout or temporary layout.
   // it must be honored for current op and may conflict with the layout
   // propagated from consumer op, the conflict is resolved in later phase by
   // converting the required result layout to the consumer layout
-  auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
-      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch);
+  //
+  // Where the coalesce factor lands on the RESULT depends on which dim is
+  // reduced:
+  //  - FCD reduction (reduced dim == source FCD): the factor lives on the
+  //    reduced FCD, which the result slice removes. The RESULT/ACCUMULATOR
+  //    carry NO factor (building them with the factor would put lane_data=N on
+  //    a reduced-away dim and disagree with the real consumer). So result/acc
+  //    use factor = 1, source uses the factor.
+  //  - Non-FCD reduction (reduced dim != source FCD): the factor lives on the
+  //    SURVIVING FCD, which the result slice keeps. The RESULT/ACCUMULATOR
+  //    must ALSO carry the factor (lane_data[resultFCD] = factor) so they
+  //    agree with the coalesced store. So result/acc and source all use the
+  //    factor.
+  int srcRank = sourceTy.getRank();
+  bool reducedIsFcd =
+      reductionDims.size() == 1 && reductionDims[0] == srcRank - 1;
+  int resultCoalesceFactor = reducedIsFcd ? 1 : coalesceFactor;
 
-  xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
+  auto resultLayoutAttr = xegpu::setupMultiReductionResultLayout(
+      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch,
+      resultCoalesceFactor);
+  auto srcReqLayoutAttr = xegpu::setupMultiReductionResultLayout(
+      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch,
+      coalesceFactor);
 
-  // derive the source layout from the dominant layout and reduction dims
-  auto srcLayoutAttr = xegpu::inferMultiReductionSourceLayout(
-      requiredResLayoutAttr, reductionDims);
+  xegpu::setTemporaryLayout(reduction->getResult(0), resultLayoutAttr);
+
+  // derive the source layout from the (coalesced) required layout
+  auto srcLayoutAttr =
+      xegpu::inferMultiReductionSourceLayout(srcReqLayoutAttr, reductionDims);
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
   // Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1],
-                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+                     operands[1]->meet(LayoutInfo(resultLayoutAttr)));
 }
 
 void LayoutInfoPropagation::visitVectorReductionOp(
@@ -1275,8 +1327,22 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
+    // A coalesce hint (stamped by the coalesce-gather-scatter analysis at the
+    // start of lane/inst propagation) seeds a non-trivial lane_data (or grown
+    // inst_data) on the FCD so each lane stores `factor` contiguous elements.
+    // This factor flows backward to producers via the operand `meet` below.
+    // It must be honored at BOTH the inst and lane levels: at inst level it
+    // grows inst_data[FCD] so XeGPUBlocking keeps the coalesced run whole; at
+    // lane level it sets lane_data[FCD].
+    int coalesceFactor = 1;
+    if (layoutKind == xegpu::LayoutKind::Lane ||
+        layoutKind == xegpu::LayoutKind::InstData) {
+      if (auto hint = storeScatter->getAttrOfType<xegpu::CoalesceHintAttr>(
+              xegpu::getCoalesceHintAttrName()))
+        coalesceFactor = static_cast<int>(hint.getFactor().getInt());
+    }
     requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, uArch);
+        layoutKind, srcVecTy, chunkSize, uArch, coalesceFactor);
     storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
@@ -1795,6 +1861,34 @@ struct XeGPUPropagateLayoutPass final
 LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
                                       LayoutKind layoutKind,
                                       unsigned indexBitWidth, bool printOnly) {
+  // At the lane and inst-data levels, run the coalesce-gather-scatter analysis
+  // up front so every coalescible xegpu.load/store carries an
+  // `xegpu.coalesce_hint`. The hint is consumed by the gather/scatter
+  // anchor-layout setup below: a coalescing store seeds a non-trivial
+  // lane_data (or inst_data) on its FCD, which flows backward to producers via
+  // the operand `meet`. A consumer that requires a different lane_data (e.g. a
+  // reduction over the FCD) naturally overrides it, so no unlowerable
+  // convert_layout is created.
+  //
+  // Running it at the inst-data level too is what makes coalescing survive the
+  // workgroup pipeline: `inst_data[FCD]` is grown to `subgroupSize * factor`,
+  // so XeGPUBlocking keeps the coalesced run in one instruction tile instead
+  // of pre-splitting it into `factor` separate subgroupSize-wide blocks (which
+  // would leave no room for lane-level coalescing afterwards).
+  //
+  // Hints that propagation did not turn into a layout are stripped after the
+  // run.
+  bool coalesce =
+      (layoutKind == LayoutKind::Lane || layoutKind == LayoutKind::InstData) &&
+      !printOnly;
+  if (coalesce)
+    runCoalesceGatherScatterAnalysis(target);
+  auto cleanupFn = [&] {
+    if (coalesce)
+      clearCoalesceGatherScatterHints(target);
+  };
+  llvm::scope_exit<decltype(cleanupFn)> hintCleanup(std::move(cleanupFn));
+
   RunLayoutInfoPropagation analysis(target, layoutKind, indexBitWidth);
   // Print the analysis result and exit. (for debugging purposes)
   if (printOnly) {
@@ -1889,6 +1983,7 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     signalPassFailure();
     return;
   }
+
   // Resolve layout conflicts if any.
   if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
     signalPassFailure();
