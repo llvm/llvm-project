@@ -560,7 +560,8 @@ isPrecededByAdjacentIdentifierOrKeyword(SourceManager &SourceMgr,
                                         SourceLocation BeginLocation) {
   std::optional<Token> PrevToken =
       Lexer::findPreviousToken(BeginLocation, SourceMgr, LangOpts, true);
-  assert(PrevToken && "Expected a token before the dereference operator");
+  if (!PrevToken)
+    return false;
   // Check whether the token at `BeginLocation` is immediately adjacent to
   // the previous token with no space between them.
   const bool IsAdjacentToPrevToken = PrevToken->getEndLoc() == BeginLocation;
