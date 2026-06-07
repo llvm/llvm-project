@@ -1067,8 +1067,13 @@ struct SPIRV final : public VariadicABIInfo {
     StringRef DemangledName(Demangled);
 
     // Skip any SPIR-V builtins.
+    // Note: an unmangled C `printf` declaration demangles to "printf" with no
+    // argument list, so the "printf(" prefix check below misses it. Match the
+    // bare name as well so OpenCL/HIP printf (emitted unmangled) is left as a
+    // variadic call for the backend's OpenCL.std printf lowering to expand
+    // inline, rather than being packed into a vararg buffer here.
     if (DemangledName.starts_with("__spirv_") ||
-        DemangledName.starts_with("printf("))
+        DemangledName.starts_with("printf(") || F->getName() == "printf")
       return true;
 
     return false;
