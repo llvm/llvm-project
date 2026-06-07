@@ -184,9 +184,6 @@ CreateFrontendAction(CompilerInstance &CI) {
 
   const FrontendOptions &FEOpts = CI.getFrontendOpts();
 
-  if (CLANG_USE_EXPERIMENTAL_CONST_INTERP)
-    CI.getLangOpts().EnableNewConstInterp = true;
-
   if (CI.getLangOpts().HLSL)
     Act = std::make_unique<HLSLFrontendAction>(std::move(Act));
 

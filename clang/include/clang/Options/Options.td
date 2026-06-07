@@ -2162,10 +2162,10 @@ def fconstexpr_steps_EQ : Joined<["-"], "fconstexpr-steps=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of steps in constexpr function evaluation (0 = no limit)">,
   MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "1048576">;
-def fexperimental_new_constant_interpreter : Flag<["-"], "fexperimental-new-constant-interpreter">, Group<f_Group>,
-  HelpText<"Enable the experimental new constant interpreter">,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"EnableNewConstInterp">>;
+defm experimental_new_constant_interpreter : BoolFOption<"experimental-new-constant-interpreter",
+  LangOpts<"EnableNewConstInterp">, Default<"CLANG_USE_EXPERIMENTAL_CONST_INTERP">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 def fconstexpr_backtrace_limit_EQ : Joined<["-"], "fconstexpr-backtrace-limit=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of entries to print in a constexpr evaluation backtrace (0 = no limit)">,
