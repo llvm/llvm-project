@@ -552,6 +552,29 @@ static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
   return false;
 }
 
+// Returns true if the replacement text needs a leading space to avoid merging
+// with the preceding token. This occurs when `*it` is immediately adjacent to
+// a keyword, e.g. `delete*it`, where replacing `*it` with `it` would
+// incorrectly produce `deleteit`. So we insert a space b/w `delete` and `it`.
+static bool requiresLeadingSpace(SourceManager &SourceMgr,
+                                 const LangOptions &LangOpts,
+                                 SourceLocation BeginLocation) {
+  Token StarToken;
+  if (!Lexer::getRawToken(BeginLocation, StarToken, SourceMgr, LangOpts,
+                          false) &&
+      StarToken.is(tok::star)) {
+    std::optional<Token> PrevToken =
+        Lexer::findPreviousToken(BeginLocation, SourceMgr, LangOpts, true);
+    assert(PrevToken && "Expected a token before the dereference operator");
+    // Check whether StarToken has leading space or not
+    const bool StarTokenHasNoLeadingSpace =
+        PrevToken->getEndLoc() == BeginLocation;
+    if (PrevToken->isAnyIdentifier() && StarTokenHasNoLeadingSpace)
+      return true;
+  }
+  return false;
+}
+
 LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
       MaxCopySize(Options.get("MaxCopySize", 16ULL)),
@@ -622,28 +645,6 @@ void LoopConvertCheck::getAliasRange(SourceManager &SM, SourceRange &Range) {
   const unsigned Offset = std::strspn(TextAfter, " \t\r\n");
   Range =
       SourceRange(Range.getBegin(), Range.getEnd().getLocWithOffset(Offset));
-}
-
-// Returns `true` if `ReplaceText` needs to be prepended with a space else
-// false. In cases like `delete*it`, we can't just change it to `deleteit` we
-// need to introduce space after `delete` to make it `delete it`.
-static bool requiresLeadingSpace(SourceManager &SourceMgr,
-                                 const LangOptions &LangOpts,
-                                 SourceRange Range) {
-  Token StarToken;
-  if (!Lexer::getRawToken(Range.getBegin(), StarToken, SourceMgr, LangOpts,
-                          false) &&
-      StarToken.is(tok::star)) {
-    std::optional<Token> PrevToken =
-        Lexer::findPreviousToken(Range.getBegin(), SourceMgr, LangOpts, true);
-    assert(PrevToken && "Expected a token before the dereference operator");
-    // Check whether StarToken has leading space or not
-    const bool StarTokenHasNoLeadingSpace =
-        PrevToken->getEndLoc() == StarToken.getLocation();
-    if (PrevToken->isAnyIdentifier() && StarTokenHasNoLeadingSpace)
-      return true;
-  }
-  return false;
 }
 
 /// Computes the changes needed to convert a given for loop, and
@@ -722,7 +723,7 @@ void LoopConvertCheck::doConversion(
       if (Usage.Expression) {
         if (Usage.Kind == Usage::UK_Default &&
             requiresLeadingSpace(Context->getSourceManager(), getLangOpts(),
-                                 Usage.Range))
+                                 Usage.Range.getBegin()))
           ReplaceText = " ";
         // If this is an access to a member through the arrow operator, after
         // the replacement it must be accessed through the '.' operator.
