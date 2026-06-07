@@ -434,6 +434,14 @@ public:
     V.Destroy(getAllocator());
   }
 
+  bool erase(StringRef Key) {
+    iterator I = find(Key);
+    if (I == end())
+      return false;
+    erase(I);
+    return true;
+  }
+
   /// Remove entries that match the given predicate. \p Pred is invoked with a
   /// reference to each live entry and must not access the map being modified.
   /// This is the safe replacement for erase-while-iterating.
@@ -457,14 +465,6 @@ public:
     if (Removed)
       incrementEpoch();
     return Removed;
-  }
-
-  bool erase(StringRef Key) {
-    iterator I = find(Key);
-    if (I == end())
-      return false;
-    erase(I);
-    return true;
   }
 };
 
