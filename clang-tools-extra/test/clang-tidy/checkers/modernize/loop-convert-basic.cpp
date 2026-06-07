@@ -1107,6 +1107,14 @@ void test() {
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
   // CHECK-FIXES: for (auto & it : v12) {
   // CHECK-FIXES-NEXT: auto H1 = [&it]() { return it; };
+
+  Nested<int*> v13;
+  for (auto it=v13.begin(); it != v13.end(); ++it) {
+    sizeof(*it);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v13) {
+  // CHECK-FIXES-NEXT: sizeof(it);
 }
 
 int* test2() {
