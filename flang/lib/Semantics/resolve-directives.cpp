@@ -990,7 +990,8 @@ private:
       Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
   Symbol::Flags privateDataSharingAttributeFlags{Symbol::Flag::OmpPrivate,
-      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate};
+      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
+      Symbol::Flag::OmpLinear};
 
   Symbol::Flags ompFlagsRequireNewSymbol{Symbol::Flag::OmpPrivate,
       Symbol::Flag::OmpLinear, Symbol::Flag::OmpFirstPrivate,
@@ -1833,11 +1834,14 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
           // TODO: why didn't name resolution set the right name originally?
           name.symbol = found;
         } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
-          // 2.5.14.
-          if (context_.IsEnabled(
-                  common::LanguageFeature::AccDefaultNoneScalars) &&
-              IsAccScalar(symbol)) {
-            context_.Warn(common::UsageWarning::AccImplicitScalar, name.source,
+          // 2.5.14. Pre-OpenACC-3.2 behavior: implicit scalars warn instead of
+          // error unless strict mode is enabled.
+          if (IsAccScalar(symbol) &&
+              !context_.IsEnabled(
+                  common::LanguageFeature::OpenAccDefaultNoneScalarsStrict)) {
+            context_.Warn(
+                common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
+                name.source,
                 "Implicit attribute inferred for DEFAULT(NONE) scalar '%s'"_warn_en_US,
                 symbol.name());
           } else {
@@ -3259,6 +3263,8 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     clauseName = "FIRSTPRIVATE";
   } else if (ompFlag == Symbol::Flag::OmpLastPrivate) {
     clauseName = "LASTPRIVATE";
+  } else if (ompFlag == Symbol::Flag::OmpLinear) {
+    clauseName = "LINEAR";
   }
 
   if (SymbolOrEquivalentIsInNamelist(symbol)) {

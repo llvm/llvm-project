@@ -266,6 +266,11 @@ public:
     virtual void
     NewSubprocess(NativeProcessProtocol *parent_process,
                   std::unique_ptr<NativeProcessProtocol> child_process) = 0;
+
+    /// Called by the platform when the inferior writes to stdout/stderr
+    /// through a redirected pseudoconsole that the platform owns.
+    virtual void NewProcessOutput(NativeProcessProtocol *process,
+                                  llvm::StringRef data) {}
   };
 
   virtual Status GetLoadedModuleFileSpec(const char *module_path,

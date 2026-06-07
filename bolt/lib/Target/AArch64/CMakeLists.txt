@@ -29,7 +29,11 @@ add_llvm_library(LLVMBOLTTargetAArch64
   AArch64CommonTableGen
   )
 
-target_link_libraries(LLVMBOLTTargetAArch64 PRIVATE LLVMBOLTCore LLVMBOLTUtils)
+target_link_libraries(LLVMBOLTTargetAArch64 PRIVATE
+  LLVMBOLTCore
+  LLVMBOLTPasses
+  LLVMBOLTUtils
+  )
 
 include_directories(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/AArch64

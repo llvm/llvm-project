@@ -1399,11 +1399,7 @@ private:
         }
         break;
       }
-      if (Line.First->isOneOf(Keywords.kw_module, Keywords.kw_import) ||
-          Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
-          Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
-        Tok->setType(TT_ModulePartitionColon);
-      } else if (Line.First->is(tok::kw_asm)) {
+      if (Line.First->is(tok::kw_asm)) {
         Tok->setType(TT_InlineASMColon);
       } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
@@ -4314,7 +4310,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
 
     Current->CanBreakBefore =
-        Current->MustBreakBefore || canBreakBefore(Line, *Current);
+        !Line.IsModuleOrImportDecl &&
+        (Current->MustBreakBefore || canBreakBefore(Line, *Current));
 
     if (Current->is(TT_FunctionDeclarationLParen)) {
       InParameterList = true;
@@ -6498,6 +6495,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
             !(Right.Next &&
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
+  if (Left.is(tok::hashhash) || Right.is(tok::hashhash))
+    return false;
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
                     TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;

@@ -19944,15 +19944,25 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
 
   // FIXME: We should be able to use node-level FMF here.
   EVT VT = N->getValueType(0);
-  if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
+  if (!TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT))
     return SDValue();
 
   bool IsUnsigned = N->getOpcode() == ISD::UINT_TO_FP;
   bool IsSigned = N->getOpcode() == ISD::SINT_TO_FP;
   assert(IsSigned || IsUnsigned);
 
-  bool IsSignedZeroSafe = DAG.getTarget().Options.NoSignedZerosFPMath ||
-                          DAG.canIgnoreSignBitOfZero(SDValue(N, 0));
+  // Don't fold if the individual cast operations are already legal,
+  // as FTRUNC may have a more expensive custom expansion.
+  EVT IntVT = N->getOperand(0).getValueType();
+  EVT LegalIntVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntVT);
+  unsigned FPToIntOp = IsUnsigned ? ISD::FP_TO_UINT : ISD::FP_TO_SINT;
+  unsigned IntToFPOp = N->getOpcode(); // UINT_TO_FP or SINT_TO_FP
+  if (!TLI.isOperationLegal(ISD::FTRUNC, VT) &&
+      TLI.isOperationLegal(FPToIntOp, LegalIntVT) &&
+      TLI.isOperationLegal(IntToFPOp, VT))
+    return SDValue();
+
+  bool IsSignedZeroSafe = DAG.canIgnoreSignBitOfZero(SDValue(N, 0));
   // For signed conversions: The optimization changes signed zero behavior.
   if (IsSigned && !IsSignedZeroSafe)
     return SDValue();
@@ -19996,7 +20006,6 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   }
 
   // Check that the sequence ends with the correct kind of fpto[us]i.
-  unsigned FPToIntOp = IsUnsigned ? ISD::FP_TO_UINT : ISD::FP_TO_SINT;
   if (IntVal.getOpcode() != FPToIntOp ||
       IntVal.getOperand(0).getValueType() != VT)
     return SDValue();
@@ -23953,6 +23962,19 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
 
   if (LoadPos == 1)
     Mask = DAG.getNOT(Dl, Mask, Mask.getValueType());
+
+  // A masked store follows the IR convention of a vXi1 mask (one bit per
+  // element). A vselect condition may instead be a wider boolean vector, e.g.
+  // a vXi32/vXi64 comparison result produced on AVX512 targets without VLX.
+  // When the matching vXi1 type is legal, narrow the mask to it so that targets
+  // expecting a vXi1 mask lower it correctly. Targets where vXi1 is illegal
+  // (e.g. AVX/AVX2) keep the wide mask and lower it as a blend/vmaskmov.
+  EVT MaskVT = Mask.getValueType();
+  if (MaskVT.getVectorElementType() != MVT::i1) {
+    EVT BoolVT = MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
+    if (TLI.isTypeLegal(BoolVT))
+      Mask = DAG.getNode(ISD::TRUNCATE, Dl, BoolVT, Mask);
+  }
 
   return DAG.getMaskedStore(Store->getChain(), Dl, OtherVec, StorePtr,
                             StoreOffset, Mask, VT, Store->getMemOperand(),
