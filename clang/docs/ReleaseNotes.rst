@@ -733,6 +733,7 @@ Bug Fixes to C++ Support
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
+- Fixed incorrect ambiguity diagnostics involving friend inline function redeclarations. (#GH180851)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
