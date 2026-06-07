@@ -16,8 +16,8 @@
 @import simple;
 const int x = MODULE_MACRO;
 
-// CHECK: PLEASE submit a bug report to {{.*}} and include the crash backtrace, preprocessed source, and associated run script.
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE submit a bug report to {{.*}} and include the crash backtrace and dumped files.
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 

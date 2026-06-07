@@ -14,6 +14,7 @@
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
 #include "L0Defs.h"
+#include "L0Event.h"
 #include "L0Trace.h"
 #include "PluginInterface.h"
 
@@ -45,8 +46,6 @@ public:
 
   /// Clear data.
   void reset() { resetImpl(); }
-
-  ze_command_list_handle_t getCmdList() const { return CmdList->getCmdList(); }
 
   Error init();
   Error deinit();
@@ -83,12 +82,40 @@ public:
     return launchKernelImpl(Kernel, KEnv);
   }
 
+  Error dataFence() { return dataFenceImpl(); }
+
+  Error appendSignalEvent(L0EventTy *Event) {
+    return appendSignalEventImpl(Event->getZeEvent());
+  }
+  Error appendWaitOnEvent(L0EventTy *Event) {
+    if (Event->getQueue() == this)
+      return Plugin::success();
+    return appendWaitOnEventImpl(Event->getZeEvent());
+  }
+  Error synchronizeEvent(L0EventTy *Event) {
+    if (hasPendingMemoryCopies())
+      if (auto Err = synchronize())
+        return Err;
+    return Event->synchronize();
+  }
+  Expected<bool> isEventComplete(L0EventTy *Event) {
+    if (hasPendingMemoryCopies()) {
+      auto PendingWorkOrErr = hasPendingWork();
+      if (!PendingWorkOrErr)
+        return PendingWorkOrErr.takeError();
+      if (*PendingWorkOrErr)
+        return false;
+    }
+    return Event->isComplete();
+  }
+
   virtual Error initImpl() { return Plugin::success(); }
   virtual Error deinitImpl() { return Plugin::success(); }
   virtual void resetImpl() {}
 
   virtual Error synchronizeImpl() = 0;
   virtual Expected<bool> hasPendingWorkImpl() = 0;
+  virtual bool hasPendingMemoryCopies() { return false; }
   virtual Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) = 0;
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                                  int64_t Size) {
@@ -103,6 +130,14 @@ public:
   virtual Error memoryFillImpl(void *Ptr, const void *Pattern,
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
+  }
+  virtual Error dataFenceImpl() = 0;
+
+  virtual Error appendSignalEventImpl(ze_event_handle_t Event) {
+    return CmdList->appendSignalEvent(Event);
+  }
+  virtual Error appendWaitOnEventImpl(ze_event_handle_t Event) {
+    return CmdList->appendWaitOnEvent(Event);
   }
 };
 
@@ -142,6 +177,9 @@ public:
   void resetImpl() override;
   Error synchronizeImpl() override;
   Expected<bool> hasPendingWorkImpl() override;
+  bool hasPendingMemoryCopies() override {
+    return !H2MList.empty() || !USM2MList.empty();
+  }
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                          int64_t Size) override;
@@ -150,6 +188,7 @@ public:
                          L0LaunchEnvTy &KEnv) override;
   Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
                        size_t Size) override;
+  Error dataFenceImpl() override;
 };
 
 class L0AsyncOrderedQueueTy : public L0AsyncQueueTy {
@@ -165,6 +204,7 @@ public:
   Error synchronizeImpl() override;
   std::tuple<size_t, ze_event_handle_t *> getMemCopyEvents() override;
   std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents() override;
+  Error dataFenceImpl() override { return Plugin::success(); }
 };
 
 class L0InorderQueueTy : public L0QueueTy {
@@ -182,6 +222,7 @@ public:
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error dataFenceImpl() override { return Plugin::success(); }
 };
 
 class L0SyncQueueTy : public L0InorderQueueTy {

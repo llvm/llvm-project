@@ -260,11 +260,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
     ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: %not_a_mask:_(s64) = G_CONSTANT i64 26
     ; CHECK-NEXT: %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    ; CHECK-NEXT: %and:_(s64) = G_AND %binop, %not_a_mask
-    ; CHECK-NEXT: %or:_(s64) = G_OR %and, %binop
-    ; CHECK-NEXT: $x0 = COPY %or(s64)
+    ; CHECK-NEXT: $x0 = COPY %binop(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %binop_lhs:_(s64) = COPY $x0
     %binop_rhs:_(s64) = COPY $x1

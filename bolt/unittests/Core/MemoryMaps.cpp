@@ -21,7 +21,7 @@ using namespace llvm::ELF;
 using namespace bolt;
 
 namespace opts {
-extern cl::opt<std::string> ReadPerfEvents;
+extern cl::opt<bool> ReadPreAggregated;
 } // namespace opts
 
 namespace {
@@ -68,6 +68,17 @@ protected:
     ASSERT_FALSE(!BC);
   }
 
+  void createTempFileWithContent(std::string &Buffer,
+                                 SmallVector<char, 256> &Path) {
+    int FD;
+    sys::fs::createTemporaryFile("perf-script-mmap", "text", FD, Path);
+    ASSERT_GE(FD, 0);
+
+    llvm::raw_fd_ostream FileStream(FD, true);
+    FileStream << Buffer;
+    FileStream.flush();
+  }
+
   char ElfBuf[sizeof(typename ELF64LE::Ehdr)] = {};
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
@@ -93,19 +104,28 @@ INSTANTIATE_TEST_SUITE_P(AArch64, MemoryMapsTester,
 TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   const int Pid = 1234;
   StringRef Filename = "BINARY";
-  opts::ReadPerfEvents = formatv(
-      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
-      "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
-      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
-      "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
-      Pid, Filename);
+  opts::ReadPreAggregated = true;
+  std::string MemEvents =
+      formatv(
+          "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+          "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
+          "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+          "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
+          Pid, Filename)
+          .str();
+  std::string Buffer =
+      formatv("PERFTEXT;MMAP={0:x-};\n{1}", MemEvents.size(), MemEvents).str();
+
+  SmallVector<char, 256> Path{};
+  createTempFileWithContent(Buffer, Path);
 
   BC->SegmentMapInfo[0x11da000] = SegmentInfo{
       0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true, false};
   BC->SegmentMapInfo[0x31d0000] = SegmentInfo{
       0x31d0000, 0x51ac82c, 0x31d0000, 0x3000000, 0x200000, true, false};
 
-  DataAggregator DA("");
+  DataAggregator DA(Path.data());
+  DA.setParsingBuffer(MemEvents);
   BC->setFilename(Filename);
   Error Err = DA.preprocessProfile(*BC);
 
@@ -117,6 +137,7 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   // Check that memory mapping is present and has the expected size.
   ASSERT_NE(El, BinaryMMapInfo.end());
   ASSERT_EQ(El->second.Size, static_cast<uint64_t>(0xb1d0000));
+  sys::fs::remove(Path);
 }
 
 /// Check that DataAggregator aborts when pre-processing an input binary
@@ -124,12 +145,21 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
 TEST_P(MemoryMapsTester, MultipleSegmentsMismatchedBaseAddress) {
   const int Pid = 1234;
   StringRef Filename = "BINARY";
-  opts::ReadPerfEvents = formatv(
-      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
-      "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
-      "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
-      "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
-      Pid, Filename);
+  opts::ReadPreAggregated = true;
+  std::string MemEvents =
+      formatv(
+          "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+          "[0xabc0000000(0x1000000) @ 0x11c0000 103:01 1573523 0]: r-xp {1}\n"
+          "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
+          "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
+          Pid, Filename)
+          .str();
+
+  std::string Buffer =
+      formatv("PERFTEXT;MMAP={0:x-};\n{1}", MemEvents.size(), MemEvents).str();
+
+  SmallVector<char, 256> Path{};
+  createTempFileWithContent(Buffer, Path);
 
   BC->SegmentMapInfo[0x11da000] = SegmentInfo{
       0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true, false};
@@ -138,9 +168,11 @@ TEST_P(MemoryMapsTester, MultipleSegmentsMismatchedBaseAddress) {
   BC->SegmentMapInfo[0x31d0000] = SegmentInfo{
       0x31d0000, 0x51ac82c, 0x31d0fff, 0x3000000, 0x200000, true, false};
 
-  DataAggregator DA("");
+  DataAggregator DA(Path.data());
+  DA.setParsingBuffer(MemEvents);
   BC->setFilename(Filename);
   ASSERT_DEBUG_DEATH(
       { Error Err = DA.preprocessProfile(*BC); },
       "Base address on multiple segment mappings should match");
+  sys::fs::remove(Path);
 }

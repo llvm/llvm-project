@@ -6,16 +6,16 @@
 ;
 ; Test when explicit -triple= is used. Input does not supply a triple.
 ; RUN: llvm-as %t/no-triple.ll -o %t/no-triple.bc
-; RUN: clang-sycl-linker -triple=spirv64 %t/no-triple.bc -o %t/no-triple-input.out
-; RUN: llvm-objdump --offloading %t/no-triple-input.out | FileCheck %s --check-prefix=NO-TRIPLE-INPUT
-; NO-TRIPLE-INPUT: triple          spirv64
+; RUN: clang-sycl-linker --dry-run -v -triple=spirv64 %t/no-triple.bc -o %t/no-triple-input.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NO-TRIPLE-INPUT
+; NO-TRIPLE-INPUT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ;
 ; Test that triple was inferred from inputs and recorded in the offload image.
 ; RUN: llvm-as %t/input1.ll -o %t/input1.bc
 ; RUN: llvm-as %t/input2.ll -o %t/input2.bc
-; RUN: clang-sycl-linker --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out
-; RUN: llvm-objdump --offloading %t/spirv.out | FileCheck %s --check-prefix=TRIPLE-INFERENCE
-; TRIPLE-INFERENCE: triple          spirv64
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=TRIPLE-INFERENCE
+; TRIPLE-INFERENCE: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ;
 ; Test error on mismatched triple between inputs.
 ; RUN: llvm-as %t/input-mismatch.ll -o %t/input-mismatch.bc
@@ -63,6 +63,8 @@ define spir_kernel void @kernel_c() #0 {
 attributes #0 = { "sycl-module-id"="TU3.cpp" }
 
 ;--- no-triple.ll
+target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+
 define spir_kernel void @kernel_d() #0 {
   ret void
 }
