@@ -376,19 +376,21 @@ Sema::actOnInlineCommand(SourceLocation CommandLocBegin,
       getInlineCommandRenderKind(CommandName), CommandMarker, Args);
 }
 
-InlineContentComment *Sema::actOnUnknownCommand(SourceLocation LocBegin,
-                                                SourceLocation LocEnd,
-                                                StringRef CommandName) {
+InlineContentComment *
+Sema::actOnUnknownCommand(SourceLocation LocBegin, SourceLocation LocEnd,
+                          StringRef CommandName,
+                          CommandMarkerKind CommandMarker) {
   unsigned CommandID = Traits.registerUnknownCommand(CommandName)->getID();
-  return actOnUnknownCommand(LocBegin, LocEnd, CommandID);
+  return actOnUnknownCommand(LocBegin, LocEnd, CommandID, CommandMarker);
 }
 
-InlineContentComment *Sema::actOnUnknownCommand(SourceLocation LocBegin,
-                                                SourceLocation LocEnd,
-                                                unsigned CommandID) {
+InlineContentComment *
+Sema::actOnUnknownCommand(SourceLocation LocBegin, SourceLocation LocEnd,
+                          unsigned CommandID, CommandMarkerKind CommandMarker) {
   ArrayRef<InlineCommandComment::Argument> Args;
-  return new (Allocator) InlineCommandComment(
-      LocBegin, LocEnd, CommandID, InlineCommandRenderKind::Normal, Args);
+  return new (Allocator) InlineCommandComment(LocBegin, LocEnd, CommandID,
+                                              InlineCommandRenderKind::Normal,
+                                              CommandMarker, Args);
 }
 
 TextComment *Sema::actOnText(SourceLocation LocBegin,

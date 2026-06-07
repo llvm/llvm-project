@@ -10,6 +10,7 @@
 #include "support/Markup.h"
 #include "clang/Basic/CommentOptions.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -729,6 +730,105 @@ line
     EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
     EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
     EXPECT_EQ(Doc.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
+  }
+}
+
+TEST(SymbolDocumentation, ParameterDocToString) {
+  CommentOptions CommentOpts;
+
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedOutputString;
+    llvm::StringRef ParameterName;
+  } Cases[] = {
+      {"This documentation does not contain parameter docs", "", "a"},
+      {"@param a this is a parameter", "", "not_exists"},
+      {"@param a this is a parameter", " this is a parameter", "a"},
+      {R"(@param a parameter doc with an \p inline command)",
+       R"( parameter doc with an \p inline command)", "a"},
+      {R"(@param a parameter doc with an \unknown command)",
+       R"( parameter doc with an \unknown command)", "a"},
+      {"@param a parameter doc with an @unknown command",
+       " parameter doc with an @unknown command", "a"},
+      {R"(@param a parameter doc with
+multiple lines)",
+       R"( parameter doc with
+multiple lines)",
+       "a"},
+      {R"(@param a parameter doc with an
+@unknown command starting a new line)",
+       R"( parameter doc with an
+@unknown command starting a new line)",
+       "a"},
+      {R"(@param a parameter doc with a
+@note command which is a new block command and therefore ends the parameter doc paragraph)",
+       R"( parameter doc with a
+)",
+       "a"},
+      {R"(Unrelated docs
+@param a parameter doc
+
+New paragraph with unrelated docs)",
+       " parameter doc", "a"},
+  };
+  for (const auto &C : Cases) {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
+
+    SymbolDoc.parameterDocToString(C.ParameterName, OS);
+
+    EXPECT_EQ(Result, C.ExpectedOutputString);
+  }
+}
+
+TEST(SymbolDocumentation, TemplateParameterDocToString) {
+  CommentOptions CommentOpts;
+
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedOutputString;
+    llvm::StringRef TemplateParameterName;
+  } Cases[] = {
+      {"This documentation does not contain parameter docs", "", "a"},
+      {"@tparam a this is a template type parameter", "", "not_exists"},
+      {"@tparam a this is a template type parameter",
+       " this is a template type parameter", "a"},
+      {R"(@tparam a template type parameter doc with an \p inline command)",
+       R"( template type parameter doc with an \p inline command)", "a"},
+      {R"(@tparam a template type parameter doc with an \unknown command)",
+       R"( template type parameter doc with an \unknown command)", "a"},
+      {"@tparam a template type parameter doc with an @unknown command",
+       " template type parameter doc with an @unknown command", "a"},
+      {R"(@tparam a template type parameter doc with
+multiple lines)",
+       R"( template type parameter doc with
+multiple lines)",
+       "a"},
+      {R"(@tparam a template type parameter doc with an
+@unknown command starting a new line)",
+       R"( template type parameter doc with an
+@unknown command starting a new line)",
+       "a"},
+      {R"(@tparam a template type parameter doc with a
+@note command which is a new block command and therefore ends the template type parameter doc paragraph)",
+       R"( template type parameter doc with a
+)",
+       "a"},
+      {R"(Unrelated docs
+@tparam a template type parameter doc
+
+New paragraph with unrelated docs)",
+       " template type parameter doc", "a"},
+  };
+  for (const auto &C : Cases) {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
+
+    SymbolDoc.templateTypeParmDocToString(C.TemplateParameterName, OS);
+
+    EXPECT_EQ(Result, C.ExpectedOutputString);
   }
 }
 
