@@ -94,14 +94,14 @@ extern llvm::cl::opt<bool> HotText;
 extern llvm::cl::opt<bool> Hugify;
 extern llvm::cl::opt<bool> Instrument;
 extern llvm::cl::opt<std::string> OutputFilename;
-extern llvm::cl::opt<std::string> PerfData;
+extern llvm::cl::list<std::string> PerfData;
 extern llvm::cl::opt<bool> PrintCacheMetrics;
 extern llvm::cl::opt<bool> PrintSections;
 extern llvm::cl::opt<bool> UpdateBranchProtection;
 extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
-enum ProfileFormatKind { PF_Fdata, PF_YAML };
+enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg, PF_PerfScript };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
 extern llvm::cl::opt<bool> ShowDensity;
@@ -123,6 +123,10 @@ extern llvm::cl::opt<bool> UpdateDebugSections;
 // errs() for errors and warnings.
 // dbgs() for output within DEBUG().
 extern llvm::cl::opt<unsigned> Verbosity;
+
+// Option to control whether liveness analysis should be used by
+// FixupBranches and LongJmpPass. Needed for branch inversion on AArch64.
+extern llvm::cl::opt<bool> LivenessAnalysis;
 
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();

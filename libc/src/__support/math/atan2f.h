@@ -239,7 +239,7 @@ LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
 // 0x1.aec6f...p-100
 // which is about rounding errors of double-double (2^-104).
 
-LIBC_INLINE constexpr float atan2f(float y, float x) {
+LIBC_INLINE float atan2f(float y, float x) {
   using namespace atan2f_internal;
   using namespace inv_trigf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;

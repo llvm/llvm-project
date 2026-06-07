@@ -1220,10 +1220,10 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
   // Clang <= 6 incorrectly applied the 'packed' attribute to base classes.
   // Per GCC's documentation, it only applies to non-static data members.
   const bool PackedAppliesToBases =
-      Packed && ((Context.getLangOpts().getClangABICompat() <=
-                  LangOptions::ClangABI::Ver6) ||
-                 Context.getTargetInfo().getTriple().isPS() ||
-                 Context.getTargetInfo().getTriple().isOSAIX());
+      Packed &&
+      (Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver6) ||
+       Context.getTargetInfo().getTriple().isPS() ||
+       Context.getTargetInfo().getTriple().isOSAIX());
 
   auto getBaseOrPreferredBaseAlignFromUnpacked = [&](CharUnits UnpackedAlign) {
     return PackedAppliesToBases ? CharUnits::One() : UnpackedAlign;
@@ -1980,13 +1980,13 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     }
   }
 
-  bool FieldPacked = (Packed && (!FieldClass || FieldClass->isPOD() ||
-                                 FieldClass->hasAttr<PackedAttr>() ||
-                                 Context.getLangOpts().getClangABICompat() <=
-                                     LangOptions::ClangABI::Ver15 ||
-                                 Target.isPS() || Target.isOSDarwin() ||
-                                 Target.isOSAIX())) ||
-                     D->hasAttr<PackedAttr>();
+  bool FieldPacked =
+      (Packed &&
+       (!FieldClass || FieldClass->isPOD() ||
+        FieldClass->hasAttr<PackedAttr>() ||
+        Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver15) ||
+        Target.isPS() || Target.isOSDarwin() || Target.isOSAIX())) ||
+      D->hasAttr<PackedAttr>();
 
   // When used as part of a typedef, or together with a 'packed' attribute, the
   // 'aligned' attribute can be used to decrease alignment. In that case, it
@@ -2233,8 +2233,7 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
     if (Packed && UnpackedAlignment <= Alignment &&
         UnpackedSizeInBits == getSizeInBits() && !HasPackedField &&
         (!CXXRD || CXXRD->isPOD() ||
-         Context.getLangOpts().getClangABICompat() <=
-             LangOptions::ClangABI::Ver15))
+         Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver15)))
       Diag(D->getLocation(), diag::warn_unnecessary_packed)
           << Context.getCanonicalTagType(RD);
   }

@@ -131,15 +131,3 @@
 ; Test extracting inner OffloadBinary with --image filter.
 ; RUN: llvm-offload-binary %t7 --image=file=%t8,arch=nested,triple=x-y-z
 ; RUN: diff %t5 %t8
-
-; Test malformed outer OffloadBinary is handled gracefully.
-; RUN: printf "\020\377\020\255\012" > %t9
-; RUN: not llvm-offload-binary %t9 2>&1 | FileCheck --check-prefix=MALFORMED-OUTER %s
-
-; MALFORMED-OUTER: llvm-offload-binary: error: Invalid data was encountered while parsing the file
-
-; Test malformed inner OffloadBinary is handled gracefully.
-; RUN: llvm-offload-binary -o %t10 --image=file=%t9,arch=nested,triple=x-y-z
-; RUN: not llvm-offload-binary %t10 2>&1 | FileCheck --check-prefix=MALFORMED-INNER %s
-
-; MALFORMED-INNER: llvm-offload-binary: error: Invalid data was encountered while parsing the file

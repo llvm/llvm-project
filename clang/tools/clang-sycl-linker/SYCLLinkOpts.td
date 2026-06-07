@@ -17,12 +17,28 @@ def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
 def output : Separate<["--"], "output-file">, Alias<o>, Flags<[HelpHidden]>,
   HelpText<"Alias for -o">;
 
-def library_path_EQ : Joined<["--", "-"], "library-path=">,
-  Flags<[HelpHidden]>, HelpText<"Add <dir> to the library search path">;
+def library_path : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
+  HelpText<"Add <dir> to the library search path">;
+def library_path_S : Separate<["--", "-"], "library-path">, Flags<[HelpHidden]>,
+  Alias<library_path>;
+def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
+  Alias<library_path>;
 
-def device_libs_EQ : CommaJoined<["--", "-"], "device-libs=">,
-  Flags<[LinkerOnlyOption]>,
-  HelpText<"A comma separated list of device libraries that are linked during the device link.">;
+def library : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
+  HelpText<"Search for library <libname>">;
+def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
+  Alias<library>;
+def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
+  Alias<library>;
+
+def whole_archive : Flag<["--", "-"], "whole-archive">,
+  HelpText<"Include all archive members in the link">;
+def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
+  HelpText<"Only include archive members that resolve undefined symbols (default)">;
+
+def u : JoinedOrSeparate<["-"], "u">, MetaVarName<"<symbol>">,
+  HelpText<"Force undefined symbol during linking">;
+def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
 
 def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,

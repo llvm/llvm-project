@@ -5,6 +5,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+struct S1 {
+  short x, y, z;
+};
+
 _Atomic int g1;
 _Atomic int g2 = 42;
 // CIR: cir.global external @g2 = #cir.int<42> : !s32i {alignment = 4 : i64}
@@ -82,6 +86,49 @@ void f4(_Atomic(float) *p) {
 
 // OGCG-LABEL: @f4
 // OGCG: store atomic float 3.140000e+00, ptr %{{.+}} seq_cst, align 4
+
+void init_with_padding(_Atomic struct S1 *p) {
+  // CIR-LABEL: @init_with_padding
+  // LLVM-LABEL: @init_with_padding
+  // OGCG-LABEL: @init_with_padding
+
+  __c11_atomic_init(p, (struct S1){1, 2, 3});
+
+  // CIR:      %[[PTR_VOID:.+]] = cir.cast bitcast %[[PTR:.+]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[MEMSET_VALUE:.+]] = cir.const #cir.int<0> : !u8i
+  // CIR-NEXT: %[[MEMSET_SIZE:.+]] = cir.const #cir.int<8> : !u64i
+  // CIR-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[PTR_VOID]] align(8) to %[[MEMSET_VALUE]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR-NEXT: %[[VALUE_PTR:.+]] = cir.get_member %[[PTR]][0] {name = "value"} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_S1>
+  // CIR-NEXT: %[[X_PTR:.+]] = cir.get_member %[[VALUE_PTR]][0] {name = "x"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %[[X_INIT:.+]] = cir.const #cir.int<1> : !s16i
+  // CIR-NEXT: cir.store align(8) %[[X_INIT]], %[[X_PTR]] : !s16i, !cir.ptr<!s16i>
+  // CIR-NEXT: %[[Y_PTR:.+]] = cir.get_member %[[VALUE_PTR]][1] {name = "y"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %[[Y_INIT:.+]] = cir.const #cir.int<2> : !s16i
+  // CIR-NEXT: cir.store align(2) %[[Y_INIT]], %[[Y_PTR]] : !s16i, !cir.ptr<!s16i>
+  // CIR-NEXT: %[[Z_PTR:.+]] = cir.get_member %[[VALUE_PTR]][2] {name = "z"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %[[Z_INIT:.+]] = cir.const #cir.int<3> : !s16i
+  // CIR-NEXT: cir.store align(4) %[[Z_INIT]], %[[Z_PTR]] : !s16i, !cir.ptr<!s16i>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: call void @llvm.memset.p0.i64(ptr align 8 %[[PTR]], i8 0, i64 8, i1 false)
+  // LLVM-NEXT: %[[VALUE_PTR:.+]] = getelementptr inbounds nuw { %struct.S1, [2 x i8] }, ptr %[[PTR]], i32 0, i32 0
+  // LLVM-NEXT: %[[X_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 0
+  // LLVM-NEXT: store i16 1, ptr %[[X_PTR]], align 8
+  // LLVM-NEXT: %[[Y_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 1
+  // LLVM-NEXT: store i16 2, ptr %[[Y_PTR]], align 2
+  // LLVM-NEXT: %[[Z_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 2
+  // LLVM-NEXT: store i16 3, ptr %[[Z_PTR]], align 4
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG-NEXT: call void @llvm.memset.p0.i64(ptr align 8 %[[PTR]], i8 0, i64 8, i1 false)
+  // OGCG-NEXT: %[[VALUE_PTR:.+]] = getelementptr inbounds nuw { %struct.S1, [2 x i8] }, ptr %[[PTR]], i32 0, i32 0
+  // OGCG-NEXT: %[[X_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 0
+  // OGCG-NEXT: store i16 1, ptr %[[X_PTR]], align 8
+  // OGCG-NEXT: %[[Y_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 1
+  // OGCG-NEXT: store i16 2, ptr %[[Y_PTR]], align 2
+  // OGCG-NEXT: %[[Z_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 2
+  // OGCG-NEXT: store i16 3, ptr %[[Z_PTR]], align 4
+}
 
 void atomic_to_non_atomic(_Atomic int *ptr, _Atomic volatile int *vptr) {
   // CIR-LABEL: @atomic_to_non_atomic
@@ -600,6 +647,35 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
 }
 
+void atomic_cmpxchg_fp_to_int_cast(float *ptr, float *expected, float *desired) {
+  // CIR-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  // LLVM-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  // OGCG-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  
+  __atomic_compare_exchange(ptr, expected, desired, 0, __ATOMIC_SEQ_CST,
+                            __ATOMIC_SEQ_CST);
+  // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[EXP_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[DES_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[EXP_DEREF:.*]] = cir.load align(4) %[[EXP_CAST]] : !cir.ptr<!u32i>, !u32i
+  // CIR: %[[DES_DEREF:.*]] = cir.load align(4) %[[DES_CAST]] : !cir.ptr<!u32i>, !u32i
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %[[PTR_CAST]], %[[EXP_DEREF]], %[[DES_DEREF]] align(4) : (!cir.ptr<!u32i>, !u32i, !u32i) -> (!u32i, !cir.bool)
+
+  // LLVM: %[[PTR_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[EXP_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[DES_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[EXP_DEREF:.*]] = load i32, ptr %[[EXP_LOAD]]
+  // LLVM: %[[DES_DEREF:.*]] = load i32, ptr %[[DES_LOAD]]
+  // LLVM: cmpxchg ptr %[[PTR_LOAD]], i32 %[[EXP_DEREF]], i32 %[[DES_DEREF]] seq_cst seq_cst, align 4
+
+  // OGCG: %[[PTR_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[EXP_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[DES_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[EXP_DEREF:.*]] = load i32, ptr %[[EXP_LOAD]]
+  // OGCG: %[[DES_DEREF:.*]] = load i32, ptr %[[DES_LOAD]]
+  // OGCG: cmpxchg ptr %[[PTR_LOAD]], i32 %[[EXP_DEREF]], i32 %[[DES_DEREF]] seq_cst seq_cst, align 4
+}
+
 void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // CIR-LABEL: @atomic_cmpxchg_n
   // LLVM-LABEL: @atomic_cmpxchg_n
@@ -932,15 +1008,13 @@ float *atomic_fetch_ptr_to_ptr(float **ptr, int value) {
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
-  // CIR: %[[RESULT_CAST:.*]] = cir.cast int_to_ptr %[[RESULT]] : !s64i -> !cir.ptr<!cir.float>
-  // CIR: cir.store align(8) %[[RESULT_CAST]], %[[ATOMIC_TEMP]] : !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>
+  // CIR: %[[ATOMIC_TEMP_CAST:.*]] = cir.cast bitcast %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
+  // CIR: cir.store align(8) %[[RESULT]], %[[ATOMIC_TEMP_CAST]] : !s64i, !cir.ptr<!s64i>
 
   // LLVM: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %{{.*}} seq_cst, align 8
-  // LLVM: %[[RESULT_CAST:.*]] = inttoptr i64 %[[RESULT]] to ptr
-  // LLVM: store ptr %[[RESULT_CAST]], ptr %{{.*}}, align 8
+  // LLVM: store i64 %[[RESULT]], ptr %{{.*}}, align 8
 
   // OGCG: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %{{.*}} seq_cst, align 8
-  // OGCG Skips the cast and just stores it directly.
   // OGCG: store i64 %[[RESULT]], ptr %{{.*}}, align 8
 }
 
@@ -954,17 +1028,15 @@ float *atomic_fetch_ptr_to_ptr2(float **ptr, int value) {
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
-  // CIR: %[[RESULT_CAST:.*]] = cir.cast int_to_ptr %[[RESULT]] : !s64i -> !cir.ptr<!cir.float>
-  // CIR: cir.store align(8) %[[RESULT_CAST]], %[[ATOMIC_TEMP]] : !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>
+  // CIR: %[[ATOMIC_TEMP_CAST:.*]] = cir.cast bitcast %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
+  // CIR: cir.store align(8) %[[RESULT]], %[[ATOMIC_TEMP_CAST]] : !s64i, !cir.ptr<!s64i>
 
   // LLVM: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %[[VAL:.*]] seq_cst, align 8
   // LLVM: %[[ADD_RES:.*]] = add i64 %[[RESULT]], %[[VAL]]
-  // LLVM: %[[RESULT_CAST:.*]] = inttoptr i64 %[[ADD_RES]] to ptr
-  // LLVM: store ptr %[[RESULT_CAST]], ptr %{{.*}}, align 8
+  // LLVM: store i64 %[[ADD_RES]], ptr %{{.*}}, align 8
 
   // OGCG: %[[RESULT:.*]] = atomicrmw add ptr %{{.*}}, i64 %[[VAL:.*]] seq_cst, align 8
   // OGCG: %[[ADD_RES:.*]] = add i64 %[[RESULT]], %[[VAL]]
-  // OGCG Skips the cast and just stores it directly.
   // OGCG: store i64 %[[ADD_RES]], ptr %{{.*}}, align 8
 }
 
@@ -981,6 +1053,37 @@ int atomic_fetch_add(int *ptr, int value) {
 
   // OGCG:      %[[RES:.+]] = atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+}
+
+int *atomic_fetch_add_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
+  // CIR-LABEL: @atomic_fetch_add_ptr
+  // LLVM-LABEL: @atomic_fetch_add_ptr
+  // OGCG-LABEL: @atomic_fetch_add_ptr
+
+  return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  // CIR:      %[[OFFSET:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NOT:  cir.mul
+  // CIR:      %[[PTR_INT:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR:      %[[ADD:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
+  // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // LLVM-NOT:  mul
+  // LLVM:      %[[RESULT:.+]] = atomicrmw add ptr %[[PTR]], i64 %[[ADD:.+]] seq_cst, align 8
+  // LLVM-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
+  // LLVM-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // OGCG-NOT:  mul
+  // OGCG:      %[[RESULT:.+]] = atomicrmw add ptr %[[PTR]], i64 %[[ADD:.+]] seq_cst, align 8
+  // OGCG-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
+  // OGCG-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
 }
 
 int atomic_add_fetch(int *ptr, int value) {
@@ -1000,6 +1103,39 @@ int atomic_add_fetch(int *ptr, int value) {
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 }
 
+int *atomic_add_fetch_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
+  // CIR-LABEL: @atomic_add_fetch_ptr
+  // LLVM-LABEL: @atomic_add_fetch_ptr
+  // OGCG-LABEL: @atomic_add_fetch_ptr
+
+  return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  // CIR:      %[[OFFSET:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NOT:  cir.mul
+  // CIR:      %[[PTR_INT:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR:      %[[ADD:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_INT]], %[[ADD]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
+  // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // LLVM-NOT:  mul
+  // LLVM:      %[[OLD:.+]] = atomicrmw add ptr %[[PTR]], i64 %[[VAL:.+]] seq_cst, align 8
+  // LLVM-NEXT: %[[NEW:.+]] = add i64 %[[OLD]], %[[VAL]]
+  // LLVM-NEXT: store i64 %[[NEW]], ptr %[[RESULT_SLOT:.+]], align 8
+  // LLVM-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // OGCG-NOT:  mul
+  // OGCG:      %[[OLD:.+]] = atomicrmw add ptr %[[PTR]], i64 %[[VAL:.+]] seq_cst, align 8
+  // OGCG-NEXT: %[[NEW:.+]] = add i64 %[[OLD]], %[[VAL]]
+  // OGCG-NEXT: store i64 %[[NEW]], ptr %[[RESULT_SLOT:.+]], align 8
+  // OGCG-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+}
+
 int c11_atomic_fetch_add(_Atomic(int) *ptr, int value) {
   // CIR-LABEL: @c11_atomic_fetch_add
   // LLVM-LABEL: @c11_atomic_fetch_add
@@ -1015,6 +1151,40 @@ int c11_atomic_fetch_add(_Atomic(int) *ptr, int value) {
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 }
 
+int *c11_atomic_fetch_add_ptr(_Atomic(int *) *ptr, __PTRDIFF_TYPE__ value) {
+  // CIR-LABEL: @c11_atomic_fetch_add_ptr
+  // LLVM-LABEL: @c11_atomic_fetch_add_ptr
+  // OGCG-LABEL: @c11_atomic_fetch_add_ptr
+
+  return __c11_atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR:      %[[OFFSET:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<4> : !s64i
+  // CIR-NEXT: %[[ADD:.+]] = cir.mul %[[OFFSET]], %[[SIZE]] : !s64i
+  // CIR-NEXT: cir.store align(8) %[[ADD]], %[[ADD_SLOT:.+]] : !s64i, !cir.ptr<!s64i>
+  // CIR-NEXT: %[[PTR_INT:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR-NEXT: %[[ADD2:.+]] = cir.load align(8) %[[ADD_SLOT]] : !cir.ptr<!s64i>, !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD2]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
+  // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+
+  // LLVM:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[ADD:.+]] = mul i64 %[[OFFSET]], 4
+  // LLVM-NEXT: store i64 %[[ADD]], ptr %[[ADD_SLOT:.+]], align 8
+  // LLVM-NEXT: %[[ADD2:.+]] = load i64, ptr %[[ADD_SLOT]], align 8
+  // LLVM-NEXT: %[[RESULT:.+]] = atomicrmw add ptr %8, i64 %[[ADD2]] seq_cst, align 8
+  // LLVM-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
+  // LLVM-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+
+  // OGCG:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // OGCG-NEXT: %[[ADD:.+]] = mul i64 %[[OFFSET]], 4
+  // OGCG-NEXT: store i64 %[[ADD]], ptr %[[ADD_SLOT:.+]], align 8
+  // OGCG-NEXT: %[[ADD2:.+]] = load i64, ptr %[[ADD_SLOT]], align 8
+  // OGCG-NEXT: %[[RESULT:.+]] = atomicrmw add ptr %0, i64 %[[ADD2]] seq_cst, align 8
+  // OGCG-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
+  // OGCG-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+}
+
 int atomic_fetch_sub(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_sub
   // LLVM-LABEL: @atomic_fetch_sub
@@ -1028,6 +1198,37 @@ int atomic_fetch_sub(int *ptr, int value) {
 
   // OGCG:      %[[RES:.+]] = atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+}
+
+int *atomic_fetch_sub_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
+  // CIR-LABEL: @atomic_fetch_sub_ptr
+  // LLVM-LABEL: @atomic_fetch_sub_ptr
+  // OGCG-LABEL: @atomic_fetch_sub_ptr
+
+  return __atomic_fetch_sub(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  // CIR:      %[[OFFSET:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NOT:  cir.mul
+  // CIR:      %[[PTR_INT:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR:      %[[SUB:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[SUB]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
+  // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // LLVM-NOT:  mul
+  // LLVM:      %[[RESULT:.+]] = atomicrmw sub ptr %[[PTR]], i64 %[[SUB:.+]] seq_cst, align 8
+  // LLVM-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
+  // LLVM-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // OGCG-NOT:  mul
+  // OGCG:      %[[RESULT:.+]] = atomicrmw sub ptr %[[PTR]], i64 %[[SUB:.+]] seq_cst, align 8
+  // OGCG-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
+  // OGCG-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
 }
 
 int atomic_sub_fetch(int *ptr, int value) {
@@ -1047,6 +1248,39 @@ int atomic_sub_fetch(int *ptr, int value) {
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 }
 
+int *atomic_sub_fetch_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
+  // CIR-LABEL: @atomic_sub_fetch_ptr
+  // LLVM-LABEL: @atomic_sub_fetch_ptr
+  // OGCG-LABEL: @atomic_sub_fetch_ptr
+
+  return __atomic_sub_fetch(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  // CIR:      %[[OFFSET:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NOT:  cir.mul
+  // CIR:      %[[PTR_INT:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR:      %[[SUB:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) %[[PTR_INT]], %[[SUB]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
+  // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // LLVM-NOT:  mul
+  // LLVM:      %[[OLD:.+]] = atomicrmw sub ptr %[[PTR]], i64 %[[VAL:.+]] seq_cst, align 8
+  // LLVM-NEXT: %[[NEW:.+]] = sub i64 %[[OLD]], %[[VAL]]
+  // LLVM-NEXT: store i64 %[[NEW]], ptr %[[RESULT_SLOT:.+]], align 8
+  // LLVM-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // OGCG-NOT:  mul
+  // OGCG:      %[[OLD:.+]] = atomicrmw sub ptr %[[PTR]], i64 %[[VAL:.+]] seq_cst, align 8
+  // OGCG-NEXT: %[[NEW:.+]] = sub i64 %[[OLD]], %[[VAL]]
+  // OGCG-NEXT: store i64 %[[NEW]], ptr %[[RESULT_SLOT:.+]], align 8
+  // OGCG-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+}
+
 int c11_atomic_fetch_sub(_Atomic(int) *ptr, int value) {
   // CIR-LABEL: @c11_atomic_fetch_sub
   // LLVM-LABEL: @c11_atomic_fetch_sub
@@ -1060,6 +1294,40 @@ int c11_atomic_fetch_sub(_Atomic(int) *ptr, int value) {
 
   // OGCG:      %[[RES:.+]] = atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+}
+
+int *c11_atomic_fetch_sub_ptr(_Atomic(int *) *ptr, __PTRDIFF_TYPE__ value) {
+  // CIR-LABEL: @c11_atomic_fetch_sub_ptr
+  // LLVM-LABEL: @c11_atomic_fetch_sub_ptr
+  // OGCG-LABEL: @c11_atomic_fetch_sub_ptr
+
+  return __c11_atomic_fetch_sub(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR:      %[[OFFSET:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
+  // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<4> : !s64i
+  // CIR-NEXT: %[[ADD:.+]] = cir.mul %[[OFFSET]], %[[SIZE]] : !s64i
+  // CIR-NEXT: cir.store align(8) %[[ADD]], %[[ADD_SLOT:.+]] : !s64i, !cir.ptr<!s64i>
+  // CIR-NEXT: %[[PTR_INT:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR-NEXT: %[[ADD2:.+]] = cir.load align(8) %[[ADD_SLOT]] : !cir.ptr<!s64i>, !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD2]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
+  // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
+  // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+
+  // LLVM:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[ADD:.+]] = mul i64 %[[OFFSET]], 4
+  // LLVM-NEXT: store i64 %[[ADD]], ptr %[[ADD_SLOT:.+]], align 8
+  // LLVM-NEXT: %[[ADD2:.+]] = load i64, ptr %[[ADD_SLOT]], align 8
+  // LLVM-NEXT: %[[RESULT:.+]] = atomicrmw sub ptr %8, i64 %[[ADD2]] seq_cst, align 8
+  // LLVM-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
+  // LLVM-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
+
+  // OGCG:      %[[OFFSET:.+]] = load i64, ptr %{{.+}}, align 8
+  // OGCG-NEXT: %[[ADD:.+]] = mul i64 %[[OFFSET]], 4
+  // OGCG-NEXT: store i64 %[[ADD]], ptr %[[ADD_SLOT:.+]], align 8
+  // OGCG-NEXT: %[[ADD2:.+]] = load i64, ptr %[[ADD_SLOT]], align 8
+  // OGCG-NEXT: %[[RESULT:.+]] = atomicrmw sub ptr %0, i64 %[[ADD2]] seq_cst, align 8
+  // OGCG-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
+  // OGCG-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
 }
 
 float atomic_fetch_add_fp(float *ptr, float value) {

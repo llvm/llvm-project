@@ -28,7 +28,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-MASKED-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-MASKED-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP2]], <2 x i1> [[TMP0]])
 ; CHECK-MASKED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; CHECK-MASKED-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IV]], splat (i64 2)
+; CHECK-MASKED-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[VEC_IV]], splat (i64 2)
 ; CHECK-MASKED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-MASKED-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-MASKED:       [[MIDDLE_BLOCK]]:
@@ -73,7 +73,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-PREDICATE-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK-PREDICATE:       [[PRED_STORE_CONTINUE2]]:
 ; CHECK-PREDICATE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; CHECK-PREDICATE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-PREDICATE-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-PREDICATE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-PREDICATE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-PREDICATE:       [[MIDDLE_BLOCK]]:

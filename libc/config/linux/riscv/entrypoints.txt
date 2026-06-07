@@ -303,6 +303,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
     libc.src.sys.socket.recvmsg
+    libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
 
     # sys/stat.h entrypoints
@@ -420,6 +421,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswprint
     libc.src.wctype.iswctype
     libc.src.wctype.wctype
+    libc.src.wctype.towlower
+    libc.src.wctype.towupper
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -784,6 +787,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
+    libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
@@ -1411,6 +1415,9 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.regex.regexec
       libc.src.regex.regerror
       libc.src.regex.regfree
+
+      # sys/ptrace.h entrypoints
+      libc.src.sys.ptrace.ptrace
     )
   endif()
 endif()

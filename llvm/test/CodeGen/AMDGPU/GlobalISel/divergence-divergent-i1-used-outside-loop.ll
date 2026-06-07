@@ -142,17 +142,18 @@ define void @divergent_i1_xor_used_outside_loop(float %val, float %pre.cond.val,
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v1, s6
 ; GFX10-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX10-NEXT:    s_add_i32 s6, s6, 1
-; GFX10-NEXT:    s_xor_b32 s5, s5, s8
+; GFX10-NEXT:    s_xor_b32 s8, s5, s8
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v1, v0
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX10-NEXT:    s_andn2_b32 s7, s7, exec_lo
-; GFX10-NEXT:    s_and_b32 s8, exec_lo, s5
-; GFX10-NEXT:    s_or_b32 s7, s7, s8
+; GFX10-NEXT:    s_and_b32 s9, exec_lo, s5
+; GFX10-NEXT:    s_mov_b32 s5, s8
+; GFX10-NEXT:    s_or_b32 s7, s7, s9
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX10-NEXT:  ; %bb.2: ; %exit
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s7
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s7
 ; GFX10-NEXT:    flat_store_dword v[2:3], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -181,25 +182,26 @@ define void @divergent_i1_xor_used_outside_loop_twice(float %val, float %pre.con
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_lt_f32_e64 s5, 1.0, v1
 ; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    s_mov_b32 s7, 0
-; GFX10-NEXT:    ; implicit-def: $sgpr6
+; GFX10-NEXT:    s_mov_b32 s6, 0
+; GFX10-NEXT:    ; implicit-def: $sgpr7
 ; GFX10-NEXT:  .LBB3_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_cvt_f32_u32_e32 v1, s7
+; GFX10-NEXT:    v_cvt_f32_u32_e32 v1, s6
 ; GFX10-NEXT:    s_mov_b32 s8, exec_lo
-; GFX10-NEXT:    s_add_i32 s7, s7, 1
-; GFX10-NEXT:    s_xor_b32 s5, s5, s8
+; GFX10-NEXT:    s_add_i32 s6, s6, 1
+; GFX10-NEXT:    s_xor_b32 s8, s5, s8
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v1, v0
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX10-NEXT:    s_andn2_b32 s6, s6, exec_lo
-; GFX10-NEXT:    s_and_b32 s8, exec_lo, s5
-; GFX10-NEXT:    s_or_b32 s6, s6, s8
+; GFX10-NEXT:    s_andn2_b32 s7, s7, exec_lo
+; GFX10-NEXT:    s_and_b32 s9, exec_lo, s5
+; GFX10-NEXT:    s_mov_b32 s5, s8
+; GFX10-NEXT:    s_or_b32 s7, s7, s9
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX10-NEXT:  ; %bb.2: ; %exit
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s6
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, -1.0, 2.0, s6
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s7
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, 2.0, -1.0, s7
 ; GFX10-NEXT:    flat_store_dword v[2:3], v0
 ; GFX10-NEXT:    flat_store_dword v[4:5], v1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)

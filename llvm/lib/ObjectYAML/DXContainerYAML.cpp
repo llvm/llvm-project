@@ -542,6 +542,18 @@ void MappingTraits<DXContainerYAML::DebugName>::mapping(
   IO.mapRequired("DebugName", DebugName.Filename);
 }
 
+void MappingTraits<DXContainerYAML::CompilerVersion>::mapping(
+    IO &IO, DXContainerYAML::CompilerVersion &CompilerVersion) {
+  IO.mapOptional("Major", CompilerVersion.Major);
+  IO.mapOptional("Minor", CompilerVersion.Minor);
+  IO.mapOptional("IsDebugBuild", CompilerVersion.IsDebugBuild);
+  IO.mapOptional("IsValidated", CompilerVersion.IsValidated);
+  IO.mapOptional("CommitCount", CompilerVersion.CommitCount);
+  IO.mapOptional("ContentSizeInBytes", CompilerVersion.ContentSizeInBytes);
+  IO.mapOptional("CommitSha", CompilerVersion.CommitSha);
+  IO.mapOptional("CustomVersionString", CompilerVersion.CustomVersionString);
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -553,6 +565,8 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Signature", P.Signature);
   IO.mapOptional("RootSignature", P.RootSignature);
   IO.mapOptional("DebugName", P.DebugName);
+  IO.mapOptional("CompilerVersion", P.CompilerVersion);
+  IO.mapOptional("SourceInfo", P.SourceInfo);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -701,6 +715,113 @@ void ScalarEnumerationTraits<dxbc::ComparisonFunc>::enumeration(
     IO.enumCase(Value, E.Name, E.Value);
 }
 
+void ScalarEnumerationTraits<llvm::dxbc::SourceInfo::SectionType>::enumeration(
+    IO &IO, llvm::dxbc::SourceInfo::SectionType &Value) {
+  for (const auto &E : dxbc::SourceInfo::getSectionTypes())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<
+    llvm::dxbc::SourceInfo::Contents::CompressionType>::
+    enumeration(IO &IO,
+                llvm::dxbc::SourceInfo::Contents::CompressionType &Value) {
+  for (const auto &E : dxbc::SourceInfo::Contents::getCompressionTypes())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::Header>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::Header &H) {
+  IO.mapOptional("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapOptional("SectionCount", H.SectionCount);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SectionHeader>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::SectionHeader &H) {
+  IO.mapOptional("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapOptional("Type", H.Type);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames::Header>::
+    mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames::Header &H) {
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapOptional("Count", H.Count);
+  IO.mapOptional("EntriesSizeInBytes", H.EntriesSizeInBytes);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames::Entry>::
+    mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames::Entry &E) {
+  IO.mapOptional("AlignedSizeInBytes", E.AlignedSizeInBytes);
+  IO.mapOptional("Flags", E.Flags);
+  IO.mapOptional("NameSizeInBytes", E.NameSizeInBytes);
+  IO.mapOptional("ContentSizeInBytes", E.ContentSizeInBytes);
+  IO.mapRequired("FileName", E.FileName);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Entries", S.Entries);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceContents::Header>::
+    mapping(IO &IO,
+            llvm::DXContainerYAML::SourceInfo::SourceContents::Header &H) {
+  IO.mapOptional("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapRequired("Type", H.Type);
+  IO.mapOptional("EntriesSizeInBytes", H.EntriesSizeInBytes);
+  IO.mapOptional("UncompressedEntriesSizeInBytes",
+                 H.UncompressedEntriesSizeInBytes);
+  IO.mapOptional("Count", H.Count);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceContents::Entry>::
+    mapping(IO &IO,
+            llvm::DXContainerYAML::SourceInfo::SourceContents::Entry &E) {
+  IO.mapOptional("AlignedSizeInBytes", E.AlignedSizeInBytes);
+  IO.mapOptional("Flags", E.Flags);
+  IO.mapOptional("ContentSizeInBytes", E.ContentSizeInBytes);
+  IO.mapRequired("FileContent", E.FileContent);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceContents>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::SourceContents &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Entries", S.Entries);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::ProgramArgs::Header>::
+    mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::ProgramArgs::Header &H) {
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapOptional("SizeInBytes", H.SizeInBytes);
+  IO.mapOptional("Count", H.Count);
+}
+
+void MappingTraits<mcdxbc::SourceInfo::ProgramArgs::Entry>::mapping(
+    IO &IO, mcdxbc::SourceInfo::ProgramArgs::Entry &E) {
+  IO.mapRequired("Arg", E.first);
+  IO.mapRequired("Value", E.second);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::ProgramArgs>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::ProgramArgs &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Args", S.Args);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo &S) {
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Names", S.Names);
+  IO.mapRequired("Contents", S.Contents);
+  IO.mapRequired("Args", S.Args);
+}
+
 } // namespace yaml
 
 void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
@@ -803,6 +924,13 @@ dumpSignature(const object::DirectX::Signature &Sig) {
         Param.SystemValue, Param.CompType, Param.Register, Param.Mask,
         Param.ExclusiveMask, Param.MinPrecision});
   return YAML;
+}
+
+static void assign(DXContainerYAML::SourceInfo::SectionHeader &Dst,
+                   const dxbc::SourceInfo::SectionHeader &Src) {
+  Dst.AlignedSizeInBytes = Src.AlignedSizeInBytes;
+  Dst.Flags = Src.Flags;
+  Dst.Type = Src.Type;
 }
 
 Expected<std::unique_ptr<DXContainerYAML::Object>>
@@ -950,7 +1078,7 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
       break;
     case dxbc::PartType::Unknown:
       break;
-    case dxbc::PartType::RTS0:
+    case dxbc::PartType::RTS0: {
       std::optional<object::DirectX::RootSignature> RS =
           Container.getRootSignature();
       if (RS.has_value()) {
@@ -962,8 +1090,87 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
       }
       break;
     }
+    case dxbc::PartType::SRCI: {
+      std::optional<mcdxbc::SourceInfo> SourceInfo = Container.getSourceInfo();
+      assert(SourceInfo && "Since we are iterating and found a SRCI part, this "
+                           "should never not have a value");
+      auto &SourceInfoYAML = NewPart.SourceInfo.emplace();
+      SourceInfoYAML.Parameters.AlignedSizeInBytes =
+          SourceInfo->Parameters.AlignedSizeInBytes;
+      SourceInfoYAML.Parameters.Flags = SourceInfo->Parameters.Flags;
+      SourceInfoYAML.Parameters.SectionCount =
+          SourceInfo->Parameters.SectionCount;
+
+      auto &NamesYAML = SourceInfoYAML.Names;
+      auto &Names = SourceInfo->Names;
+      assign(NamesYAML.GenericHeader, SourceInfo->Names.GenericHeader);
+      NamesYAML.Parameters.Flags = Names.Parameters.Flags;
+      NamesYAML.Parameters.Count = Names.Parameters.Count;
+      NamesYAML.Parameters.EntriesSizeInBytes =
+          Names.Parameters.EntriesSizeInBytes;
+      NamesYAML.Entries.reserve(Names.Entries.size());
+      for (const auto &NameEntry : Names.Entries) {
+        DXContainerYAML::SourceInfo::SourceNames::Entry NameEntryYAML;
+        NameEntryYAML.AlignedSizeInBytes =
+            NameEntry.Parameters.AlignedSizeInBytes;
+        NameEntryYAML.Flags = NameEntry.Parameters.Flags;
+        NameEntryYAML.NameSizeInBytes = NameEntry.Parameters.NameSizeInBytes;
+        NameEntryYAML.ContentSizeInBytes =
+            NameEntry.Parameters.ContentSizeInBytes;
+        NameEntryYAML.FileName = NameEntry.FileName;
+        NamesYAML.Entries.emplace_back(NameEntryYAML);
+      }
+
+      auto &ContentsYAML = SourceInfoYAML.Contents;
+      auto &Contents = SourceInfo->Contents;
+      assign(ContentsYAML.GenericHeader, Contents.GenericHeader);
+      ContentsYAML.Parameters.AlignedSizeInBytes =
+          Contents.Parameters.AlignedSizeInBytes;
+      ContentsYAML.Parameters.Flags = Contents.Parameters.Flags;
+      ContentsYAML.Parameters.Type = Contents.Parameters.Type;
+      ContentsYAML.Parameters.EntriesSizeInBytes =
+          Contents.Parameters.EntriesSizeInBytes;
+      ContentsYAML.Parameters.UncompressedEntriesSizeInBytes =
+          Contents.Parameters.UncompressedEntriesSizeInBytes;
+      ContentsYAML.Parameters.Count = Contents.Parameters.Count;
+      ContentsYAML.Entries.reserve(Contents.Entries.size());
+      for (const auto &ContentEntry : Contents.Entries) {
+        DXContainerYAML::SourceInfo::SourceContents::Entry ContentEntryYAML;
+        ContentEntryYAML.AlignedSizeInBytes =
+            ContentEntry.Parameters.AlignedSizeInBytes;
+        ContentEntryYAML.Flags = ContentEntry.Parameters.Flags;
+        ContentEntryYAML.ContentSizeInBytes =
+            ContentEntry.Parameters.ContentSizeInBytes;
+        ContentEntryYAML.FileContent = ContentEntry.FileContent;
+        ContentsYAML.Entries.emplace_back(ContentEntryYAML);
+      }
+
+      auto &ArgsYAML = SourceInfoYAML.Args;
+      auto &Args = SourceInfo->Args;
+      assign(ArgsYAML.GenericHeader, Args.GenericHeader);
+      ArgsYAML.Parameters.Flags = Args.Parameters.Flags;
+      ArgsYAML.Parameters.SizeInBytes = Args.Parameters.SizeInBytes;
+      ArgsYAML.Parameters.Count = Args.Parameters.Count;
+      ArgsYAML.Args = Args.Args;
+      break;
+    }
+    case dxbc::PartType::VERS: {
+      std::optional<mcdxbc::CompilerVersion> Version =
+          Container.getCompilerVersionInfo();
+      assert(Version && "Since we are iterating and found a VERS part, this "
+                        "should never not have a value");
+      NewPart.CompilerVersion.emplace(DXContainerYAML::CompilerVersion{
+          Version->Parameters.Major, Version->Parameters.Minor,
+          !!(Version->Parameters.Flags & dxbc::CompilerVersionFlags::Debug),
+          !!(Version->Parameters.Flags & dxbc::CompilerVersionFlags::Internal),
+          Version->Parameters.CommitCount,
+          Version->Parameters.ContentSizeInBytes, Version->CommitSha.str(),
+          Version->CustomVersionString.str()});
+      break;
+    }
+    }
   }
-  return Obj;
+  return std::move(Obj);
 }
 
 } // namespace llvm
