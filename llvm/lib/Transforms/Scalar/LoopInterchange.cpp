@@ -179,8 +179,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   for (BasicBlock *BB : L->blocks()) {
     // Scan the BB and collect legal loads and stores.
     for (Instruction &I : *BB) {
-      if (!isa<Instruction>(I))
-        return false;
       NumInsts++;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())

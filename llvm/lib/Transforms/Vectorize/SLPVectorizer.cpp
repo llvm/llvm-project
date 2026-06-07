@@ -6463,12 +6463,6 @@ private:
   /// A DenseMapInfo implementation for holding DenseMaps and DenseSets of
   /// sorted SmallVectors of unsigned.
   struct OrdersTypeDenseMapInfo {
-    static OrdersType getEmptyKey() {
-      OrdersType V;
-      V.push_back(~1U);
-      return V;
-    }
-
     static unsigned getHashValue(const OrdersType &V) {
       return static_cast<unsigned>(hash_combine_range(V));
     }
@@ -6523,11 +6517,6 @@ private:
 template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
   using FirstInfo = DenseMapInfo<BoUpSLP::TreeEntry *>;
   using SecondInfo = DenseMapInfo<unsigned>;
-  static BoUpSLP::EdgeInfo getEmptyKey() {
-    return BoUpSLP::EdgeInfo(FirstInfo::getEmptyKey(),
-                             SecondInfo::getEmptyKey());
-  }
-
   static unsigned getHashValue(const BoUpSLP::EdgeInfo &Val) {
     return detail::combineHashValue(FirstInfo::getHashValue(Val.UserTE),
                                     SecondInfo::getHashValue(Val.EdgeIdx));
@@ -9278,6 +9267,14 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                "Expected exactly 2 entries.");
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
           TreeEntry &OpTE = *VectorizableTree[P.first];
+          // The order of an operand that has both reordered and reused scalars
+          // cannot be absorbed into the split node cleanly: clearing the
+          // reorder indices while keeping the reuse mask (or vice versa)
+          // desyncs the split node scalars from the operand effective order.
+          // Skip reordering for such operands.
+          if (OpTE.State != TreeEntry::SplitVectorize &&
+              !OpTE.ReorderIndices.empty() && !OpTE.ReuseShuffleIndices.empty())
+            continue;
           OrdersType Order = OpTE.ReorderIndices;
           if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
             if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
@@ -9298,19 +9295,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           });
           Data.first->reorderSplitNode(P.second ? 1 : 0, Mask, MaskOrder);
           // Clear ordering of the operand.
-          if (OpTE.State != TreeEntry::SplitVectorize &&
-              !OpTE.ReuseShuffleIndices.empty() &&
-              !OpTE.ReorderIndices.empty()) {
-            // The operand has both reordered and reused scalars. The absorbed
-            // order (computed by getReorderingData above) already folds in the
-            // reorder indices, so fold them into the reuse mask too and reorder
-            // it, to keep the operand effective order in sync with the
-            // reordered split node, then drop the applied reorder indices.
-            SmallVector<int> NewReuses = OpTE.getCommonMask();
-            reorderReuses(NewReuses, Mask);
-            OpTE.ReuseShuffleIndices.assign(NewReuses.begin(), NewReuses.end());
-            OpTE.ReorderIndices.clear();
-          } else if (!OpTE.ReorderIndices.empty()) {
+          if (!OpTE.ReorderIndices.empty()) {
             OpTE.ReorderIndices.clear();
           } else if (!OpTE.ReuseShuffleIndices.empty()) {
             reorderReuses(OpTE.ReuseShuffleIndices, Mask);
