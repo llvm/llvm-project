@@ -963,6 +963,9 @@ bool PeepholeOptimizer::optimizeCmpInstr(
   LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
   ++NumCmps;
 
+  // MI erased/rewritten, drop it before foldLoadInto can reuse its memory.
+  LocalMIs.erase(&MI);
+
   // The eliminated compare may have been the extra use preventing a
   // load from being folded into the flag-setting instruction.
   if (SrcReg.isVirtual() && MRI->hasOneNonDBGUser(SrcReg)) {
@@ -1843,7 +1846,7 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       }
 
       if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
-        LocalMIs.erase(MI);
+        // optimizeCmpInstr already removed MI from LocalMIs.
         Changed = true;
         continue;
       }
