@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoCodeView
   DebugInfoLogicalView
   DebugInfoPDB
+  IRReader
   MC
   MCDisassembler
   Object

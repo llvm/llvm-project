@@ -46,10 +46,12 @@ add_llvm_component_library(LLVMDebugInfoLogicalView
   BinaryFormat
   Core
   Demangle
+  IRReader
   Object
   MC
   Support
   TargetParser
+  TransformUtils
   DebugInfoCodeView
   DebugInfoDWARF
   DebugInfoDWARFLowLevel

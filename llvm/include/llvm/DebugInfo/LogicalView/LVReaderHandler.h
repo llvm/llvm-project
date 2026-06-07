@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -32,8 +33,8 @@ namespace logicalview {
 using LVReaders = std::vector<std::unique_ptr<LVReader>>;
 using ArgVector = std::vector<std::string>;
 using InputHandle =
-    PointerUnion<object::ObjectFile *, pdb::PDBFile *, object::IRObjectFile *,
-                 MemoryBufferRef *, StringRef *>;
+    std::variant<StringRef *, MemoryBufferRef *, object::ObjectFile *,
+                 object::IRObjectFile *, pdb::PDBFile *>;
 
 // This class performs the following tasks:
 // - Creates a logical reader for every binary file in the command line,

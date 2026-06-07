@@ -42,7 +42,7 @@ class LVType;
 struct LVSourceLanguage;
 
 class LVIRReader final : public LVReader {
-  PointerUnion<object::IRObjectFile *, MemoryBufferRef *> InputFile;
+  PointerUnion<MemoryBufferRef *, object::IRObjectFile *> InputFile;
 
   // Used by the metadata 'dump' functions, so the metadata nodes will be
   // numbered canonically; otherwise, pointer addresses are substituted.

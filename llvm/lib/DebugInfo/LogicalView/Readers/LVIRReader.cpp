@@ -1089,8 +1089,8 @@ LVScope *LVIRReader::getOrCreateInlinedScope(const DILocation *DL) {
     });
     addInlinedInfo(OriginScope, InlinedScope);
 
-    DILocalScope *AbstractContext = InlinedAt->getScope();
     LLVM_DEBUG({
+      DILocalScope *AbstractContext = InlinedAt->getScope();
       dbgs() << "AbstractContext: ";
       AbstractContext->dump(TheModule);
     });
@@ -1984,8 +1984,8 @@ void LVIRReader::printAllInstructions(BasicBlock *BB) {
   const Function *F = BB->getParent();
   if (!F)
     return;
-  const DISubprogram *SP = cast<DISubprogram>(F->getSubprogram());
   LLVM_DEBUG({
+    const DISubprogram *SP = cast<DISubprogram>(F->getSubprogram());
     dbgs() << "\nBegin all instructions: '" << SP->getName() << "'\n";
     for (Instruction &I : *BB) {
       dbgs() << "I: '" << I << "'\n";

@@ -45,8 +45,8 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
                                     StringRef FileFormatName,
                                     StringRef ExePath) {
   auto CreateOneReader = [&]() -> std::unique_ptr<LVReader> {
-    if (isa<ObjectFile *>(Input)) {
-      ObjectFile &Obj = *cast<ObjectFile *>(Input);
+    if (std::holds_alternative<ObjectFile *>(Input)) {
+      ObjectFile &Obj = *std::get<ObjectFile *>(Input);
       if (Obj.isCOFF()) {
         COFFObjectFile *COFF = cast<COFFObjectFile>(&Obj);
         return std::make_unique<LVCodeViewReader>(Filename, FileFormatName,
@@ -56,15 +56,17 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
         return std::make_unique<LVDWARFReader>(Filename, FileFormatName, Obj,
                                                W);
     }
-    if (isa<PDBFile *>(Input)) {
-      PDBFile &Pdb = *cast<PDBFile *>(Input);
+    if (std::holds_alternative<PDBFile *>(Input)) {
+      PDBFile &Pdb = *std::get<PDBFile *>(Input);
       return std::make_unique<LVCodeViewReader>(Filename, FileFormatName, Pdb,
                                                 W, ExePath);
     }
-    if (IRObjectFile *Ir = dyn_cast<IRObjectFile *>(Input)) {
+    if (std::holds_alternative<IRObjectFile *>(Input)) {
+      IRObjectFile *Ir = std::get<IRObjectFile *>(Input);
       return std::make_unique<LVIRReader>(Filename, FileFormatName, Ir, W);
     }
-    if (MemoryBufferRef *MemBuf = dyn_cast<MemoryBufferRef *>(Input)) {
+    if (std::holds_alternative<MemoryBufferRef *>(Input)) {
+      MemoryBufferRef *MemBuf = std::get<MemoryBufferRef *>(Input);
       // If the filename extension is '.ll' create an IR reader.
       const StringRef IRFileExt = ".ll";
       if (llvm::sys::path::extension(Filename) == IRFileExt)
@@ -259,9 +261,10 @@ Error LVReaderHandler::handleMach(LVReaders &Readers, StringRef Filename,
 
 Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
                                     Binary &Binary) {
-  if (InputHandle Input = dyn_cast<ObjectFile>(&Binary))
-    return createReader(Filename, Readers, Input,
-                        cast<ObjectFile *>(Input)->getFileFormatName());
+  if (ObjectFile *ObjFile = dyn_cast<ObjectFile>(&Binary)) {
+    InputHandle Input = ObjFile;
+    return createReader(Filename, Readers, Input, ObjFile->getFileFormatName());
+  }
 
   if (MachOUniversalBinary *Fat = dyn_cast<MachOUniversalBinary>(&Binary))
     return handleMach(Readers, Filename, *Fat);
@@ -269,8 +272,10 @@ Error LVReaderHandler::handleObject(LVReaders &Readers, StringRef Filename,
   if (Archive *Arch = dyn_cast<Archive>(&Binary))
     return handleArchive(Readers, Filename, *Arch);
 
-  if (InputHandle Input = dyn_cast<IRObjectFile>(&Binary))
+  if (IRObjectFile *IRObjFile = dyn_cast<IRObjectFile>(&Binary)) {
+    InputHandle Input = IRObjFile;
     return createReader(Filename, Readers, Input, "Bitcode IR");
+  }
 
   return createStringError(errc::not_supported,
                            "Binary object format in '%s' is not supported.",
