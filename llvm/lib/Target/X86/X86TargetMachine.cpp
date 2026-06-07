@@ -431,6 +431,7 @@ void X86PassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createTargetBitwiseImmRewritePass());
     addPass(createInterleavedAccessPass());
     addPass(createX86PartialReductionLegacyPass());
   }

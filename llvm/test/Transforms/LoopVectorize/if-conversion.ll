@@ -48,7 +48,7 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP4]], -4
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP4]], 8589934588
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[N_VEC]], [[TMP0]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

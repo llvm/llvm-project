@@ -39162,6 +39162,24 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 //                           X86 Optimization Hooks
 //===----------------------------------------------------------------------===//
 
+bool X86TargetLowering::isPreferredBitwiseImmCandidate(
+    unsigned Opc, const APInt &Imm, unsigned BitWidth) const {
+  return Opc == Instruction::And && BitWidth > 32 && !Imm.isSignedIntN(32);
+}
+
+std::optional<APInt> X86TargetLowering::getPreferredBitwiseImmForDemandedBits(
+    unsigned Opc, const APInt &Imm, const APInt &DemandedBits,
+    unsigned BitWidth) const {
+  if (!isPreferredBitwiseImmCandidate(Opc, Imm, BitWidth))
+    return std::nullopt;
+
+  APInt Candidate = Imm | ~DemandedBits;
+  if (Candidate == Imm || !Candidate.isSignedIntN(32))
+    return std::nullopt;
+
+  return Candidate;
+}
+
 bool
 X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
                                                 const APInt &DemandedBits,

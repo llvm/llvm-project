@@ -55,14 +55,8 @@ static bool ShrinkDemandedConstant(Instruction *I, unsigned OpNo,
   if (C->isSubsetOf(Demanded))
     return false;
 
-  APInt NewC = *C & Demanded;
-
-  // Don't grow a sign-extendable 32-bit immediate into a wider one.
-  if (C->isSignedIntN(32) && !NewC.isSignedIntN(32))
-    return false;
-
   // This instruction is producing bits that are not demanded. Shrink the RHS.
-  I->setOperand(OpNo, ConstantInt::get(Op->getType(), NewC));
+  I->setOperand(OpNo, ConstantInt::get(Op->getType(), *C & Demanded));
 
   return true;
 }

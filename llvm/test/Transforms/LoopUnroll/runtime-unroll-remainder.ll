@@ -13,7 +13,7 @@ define i32 @unroll(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %N)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_BODY_LR_PH_NEW:%.*]]
 ; CHECK:       for.body.lr.ph.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -4
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0

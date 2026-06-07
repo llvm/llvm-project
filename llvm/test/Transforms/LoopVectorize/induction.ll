@@ -60,7 +60,7 @@ define void @multi_int_induction(ptr %A, i32 %N) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934590
 ; IND-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; IND-NEXT:    [[IND_END:%.*]] = add i32 [[DOTCAST]], 190
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -101,7 +101,7 @@ define void @multi_int_induction(ptr %A, i32 %N) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588
 ; UNROLL-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NEXT:    [[IND_END:%.*]] = add i32 [[DOTCAST]], 190
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -190,7 +190,7 @@ define void @multi_int_induction(ptr %A, i32 %N) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 7
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -8
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934584
 ; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; INTERLEAVE-NEXT:    [[IND_END:%.*]] = add i32 [[DOTCAST]], 190
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -654,7 +654,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -2
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -676,7 +676,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; IND:       for.body:
 ; IND-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; IND-NEXT:    [[SUM:%.*]] = phi i64 [ [[TMP6:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; IND-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[I]]
+; IND-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[A]], i64 [[I]]
 ; IND-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
 ; IND-NEXT:    [[TMP6]] = add i64 [[TMP5]], [[SUM]]
 ; IND-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -692,7 +692,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -4
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -719,7 +719,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; UNROLL-NEXT:    [[SUM:%.*]] = phi i64 [ [[TMP8:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[I]]
+; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[A]], i64 [[I]]
 ; UNROLL-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 8
 ; UNROLL-NEXT:    [[TMP8]] = add i64 [[TMP7]], [[SUM]]
 ; UNROLL-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -779,7 +779,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -8
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775800
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -806,7 +806,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; INTERLEAVE-NEXT:    [[SUM:%.*]] = phi i64 [ [[TMP8:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[I]]
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[A]], i64 [[I]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 8
 ; INTERLEAVE-NEXT:    [[TMP8]] = add i64 [[TMP7]], [[SUM]]
 ; INTERLEAVE-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -916,7 +916,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp eq i64 [[TMP1]], 0
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 4611686018427387902
 ; IND-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 3
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
@@ -976,7 +976,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 25
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 4611686018427387900
 ; UNROLL-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 3
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
@@ -1274,7 +1274,7 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -2
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
 ; IND-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i64 0
 ; IND-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1304,7 +1304,7 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; IND-NEXT:    br label [[FOR_BODY:%.*]]
 ; IND:       for.body:
 ; IND-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; IND-NEXT:    [[F_SPLIT:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[I]]
+; IND-NEXT:    [[F_SPLIT:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[I]]
 ; IND-NEXT:    [[F:%.*]] = getelementptr inbounds nuw i8, ptr [[F_SPLIT]], i64 4
 ; IND-NEXT:    [[TMP11:%.*]] = load i32, ptr [[F]], align 8
 ; IND-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP11]], [[Y]]
@@ -1321,7 +1321,7 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -4
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i64 0
 ; UNROLL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1364,7 +1364,7 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; UNROLL-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; UNROLL-NEXT:    [[F_SPLIT:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[I]]
+; UNROLL-NEXT:    [[F_SPLIT:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[I]]
 ; UNROLL-NEXT:    [[F:%.*]] = getelementptr inbounds nuw i8, ptr [[F_SPLIT]], i64 4
 ; UNROLL-NEXT:    [[TMP22:%.*]] = load i32, ptr [[F]], align 8
 ; UNROLL-NEXT:    [[TMP23:%.*]] = xor i32 [[TMP22]], [[Y]]
@@ -1618,7 +1618,7 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; IND-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; IND-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934590
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1649,9 +1649,9 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; IND:       for.body:
 ; IND-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; IND-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[I]], 4
-; IND-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[DOTIDX]]
+; IND-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[DOTIDX]]
 ; IND-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 1
-; IND-NEXT:    [[DOTSPLIT4:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[I]]
+; IND-NEXT:    [[DOTSPLIT4:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[I]]
 ; IND-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT4]], i64 4
 ; IND-NEXT:    store i32 [[TMP21]], ptr [[TMP22]], align 1
 ; IND-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -1683,7 +1683,7 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; UNROLL-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; UNROLL-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1728,9 +1728,9 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; UNROLL-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[I]], 4
-; UNROLL-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[DOTIDX]]
+; UNROLL-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[DOTIDX]]
 ; UNROLL-NEXT:    [[TMP32:%.*]] = load i32, ptr [[TMP31]], align 1
-; UNROLL-NEXT:    [[DOTSPLIT6:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[I]]
+; UNROLL-NEXT:    [[DOTSPLIT6:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[I]]
 ; UNROLL-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT6]], i64 4
 ; UNROLL-NEXT:    store i32 [[TMP32]], ptr [[TMP33]], align 1
 ; UNROLL-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -2461,7 +2461,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934590
 ; IND-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
 ; IND-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2493,7 +2493,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; IND-NEXT:    [[TMP11:%.*]] = trunc i64 [[I]] to i32
 ; IND-NEXT:    [[TMP12:%.*]] = add i32 [[A]], [[TMP11]]
 ; IND-NEXT:    [[TMP13:%.*]] = trunc i32 [[TMP12]] to i16
-; IND-NEXT:    [[DOTSPLIT2:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[I]]
+; IND-NEXT:    [[DOTSPLIT2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I]]
 ; IND-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT2]], i64 2
 ; IND-NEXT:    store i16 [[TMP13]], ptr [[TMP14]], align 2
 ; IND-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -2511,7 +2511,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
 ; UNROLL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2554,7 +2554,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; UNROLL-NEXT:    [[TMP19:%.*]] = trunc i64 [[I]] to i32
 ; UNROLL-NEXT:    [[TMP20:%.*]] = add i32 [[A]], [[TMP19]]
 ; UNROLL-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
-; UNROLL-NEXT:    [[DOTSPLIT4:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[I]]
+; UNROLL-NEXT:    [[DOTSPLIT4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I]]
 ; UNROLL-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT4]], i64 2
 ; UNROLL-NEXT:    store i16 [[TMP21]], ptr [[TMP22]], align 2
 ; UNROLL-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -2632,7 +2632,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 7
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -8
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934584
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2691,7 +2691,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP31:%.*]] = trunc i64 [[I]] to i32
 ; INTERLEAVE-NEXT:    [[TMP32:%.*]] = add i32 [[A]], [[TMP31]]
 ; INTERLEAVE-NEXT:    [[TMP33:%.*]] = trunc i32 [[TMP32]] to i16
-; INTERLEAVE-NEXT:    [[DOTSPLIT8:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[I]]
+; INTERLEAVE-NEXT:    [[DOTSPLIT8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I]]
 ; INTERLEAVE-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT8]], i64 2
 ; INTERLEAVE-NEXT:    store i16 [[TMP33]], ptr [[TMP34]], align 2
 ; INTERLEAVE-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -4267,7 +4267,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; IND-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
 ; IND-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -2
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 4294967294
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -4307,7 +4307,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
 ; UNROLL-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -4
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 4294967292
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -4395,7 +4395,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; INTERLEAVE-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
 ; INTERLEAVE-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -8
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], 4294967288
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -4717,7 +4717,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -2
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
 ; IND-NEXT:    [[IND_END:%.*]] = shl nuw i64 [[N_VEC]], 1
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
@@ -4739,7 +4739,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; IND:       for.body:
 ; IND-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; IND-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; IND-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[I]]
+; IND-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[I]]
 ; IND-NEXT:    [[VAR1:%.*]] = trunc i64 [[J]] to i32
 ; IND-NEXT:    store i32 [[VAR1]], ptr [[VAR0]], align 4
 ; IND-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -4755,7 +4755,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -4
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
 ; UNROLL-NEXT:    [[IND_END:%.*]] = shl nuw i64 [[N_VEC]], 1
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
@@ -4780,7 +4780,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; UNROLL-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; UNROLL-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[I]]
+; UNROLL-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[I]]
 ; UNROLL-NEXT:    [[VAR1:%.*]] = trunc i64 [[J]] to i32
 ; UNROLL-NEXT:    store i32 [[VAR1]], ptr [[VAR0]], align 4
 ; UNROLL-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -4838,7 +4838,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -8
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775800
 ; INTERLEAVE-NEXT:    [[IND_END:%.*]] = shl nuw i64 [[N_VEC]], 1
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
@@ -4863,7 +4863,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; INTERLEAVE-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; INTERLEAVE-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[I]]
+; INTERLEAVE-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[I]]
 ; INTERLEAVE-NEXT:    [[VAR1:%.*]] = trunc i64 [[J]] to i32
 ; INTERLEAVE-NEXT:    store i32 [[VAR1]], ptr [[VAR0]], align 4
 ; INTERLEAVE-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1

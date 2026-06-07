@@ -98,7 +98,7 @@ define void @PR37005(ptr %base, ptr %in) {
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds [8 x i8], ptr [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], splat (i64 14)
-; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], splat (i64 -128)
+; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], splat (i64 1125899906842496)
 ; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], <2 x i64> [[SL1]]
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E5]], i64 80
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
@@ -129,7 +129,7 @@ define void @PR37005_2(ptr %base, ptr %in) {
 ; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint ptr [[E2]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[PI1]], 14
-; CHECK-NEXT:    [[SL1:%.*]] = and i64 [[TMP0]], -128
+; CHECK-NEXT:    [[SL1:%.*]] = and i64 [[TMP0]], 1125899906842496
 ; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE:%.*]], i64 [[SL1]]
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, ptr [[E5]], <2 x i64> <i64 80, i64 60>
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
@@ -160,7 +160,7 @@ define void @PR37005_3(<2 x ptr> %base, ptr %in) {
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds [8 x i8], ptr [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], splat (i64 14)
-; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], splat (i64 -128)
+; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], splat (i64 1125899906842496)
 ; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, <2 x ptr> [[BASE:%.*]], <2 x i64> [[SL1]]
 ; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E5]], i64 80
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
