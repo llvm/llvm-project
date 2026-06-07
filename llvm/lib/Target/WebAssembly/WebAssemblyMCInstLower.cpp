@@ -37,6 +37,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -48,9 +49,9 @@ static cl::opt<bool>
                                " instruction output for test purposes only."),
                       cl::init(false));
 
-static bool getWasmGlobalMutable(const GlobalValue *Global,
-                                 const Function &CurrentFunc,
-                                 const DiagnosticLocation &DL) {
+static std::optional<bool> getWasmGlobalMutable(const GlobalValue *Global,
+                                                const Function &CurrentFunc,
+                                                const DiagnosticLocation &DL) {
   const auto *BaseObject = Global->getAliaseeObject();
   const auto *GV = dyn_cast_or_null<GlobalVariable>(BaseObject);
   if (!GV) {
@@ -59,7 +60,7 @@ static bool getWasmGlobalMutable(const GlobalValue *Global,
         "wasm_var address space symbol must resolve to a "
         "GlobalVariable",
         DL));
-    return false;
+    return std::nullopt;
   }
   return !GV->isConstant();
 }
@@ -81,14 +82,16 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       const TargetMachine &TM = MF.getTarget();
       const Function &CurrentFunc = MF.getFunction();
 
-      bool Mutable =
+      std::optional<bool> Mutable =
           getWasmGlobalMutable(Global, CurrentFunc, MI.getDebugLoc());
+      if (!Mutable)
+        return WasmSym;
 
       Type *GlobalVT = Global->getValueType();
       SmallVector<MVT, 1> VTs;
       computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
 
-      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs, Mutable);
+      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs, *Mutable);
     }
     return WasmSym;
   }
@@ -122,25 +125,25 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   unsigned TargetFlags = MO.getTargetFlags();
 
   switch (TargetFlags) {
-  case WebAssemblyII::MO_NO_FLAG:
-    break;
-  case WebAssemblyII::MO_GOT_TLS:
-    Spec = WebAssembly::S_GOT_TLS;
-    break;
-  case WebAssemblyII::MO_GOT:
-    Spec = WebAssembly::S_GOT;
-    break;
-  case WebAssemblyII::MO_MEMORY_BASE_REL:
-    Spec = WebAssembly::S_MBREL;
-    break;
-  case WebAssemblyII::MO_TLS_BASE_REL:
-    Spec = WebAssembly::S_TLSREL;
-    break;
-  case WebAssemblyII::MO_TABLE_BASE_REL:
-    Spec = WebAssembly::S_TBREL;
-    break;
-  default:
-    llvm_unreachable("Unknown target flag on GV operand");
+    case WebAssemblyII::MO_NO_FLAG:
+      break;
+    case WebAssemblyII::MO_GOT_TLS:
+      Spec = WebAssembly::S_GOT_TLS;
+      break;
+    case WebAssemblyII::MO_GOT:
+      Spec = WebAssembly::S_GOT;
+      break;
+    case WebAssemblyII::MO_MEMORY_BASE_REL:
+      Spec = WebAssembly::S_MBREL;
+      break;
+    case WebAssemblyII::MO_TLS_BASE_REL:
+      Spec = WebAssembly::S_TLSREL;
+      break;
+    case WebAssemblyII::MO_TABLE_BASE_REL:
+      Spec = WebAssembly::S_TBREL;
+      break;
+    default:
+      llvm_unreachable("Unknown target flag on GV operand");
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);

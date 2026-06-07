@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=wasm32-unknown-unknown -filetype=asm %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=wasm32-unknown-unknown -filetype=asm %s -o %t 2>&1 | FileCheck %s
 
 ; CHECK-NOT: LLVM ERROR
 ; CHECK: in function use i32 (): wasm_var address space symbol must resolve to a GlobalVariable
