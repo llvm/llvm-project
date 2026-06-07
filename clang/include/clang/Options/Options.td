@@ -8119,6 +8119,16 @@ def fsanitize_coverage_trace_stores
       Group<fsan_cov_Group>,
       HelpText<"Enable tracing of stores">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceStores">>;
+def fsanitize_coverage_trace_args
+    : Flag<["-"], "fsanitize-coverage-trace-args">,
+      Group<fsan_cov_Group>,
+      HelpText<"Enable dataflow tracing of function arguments">,
+      MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceArgs">>;
+def fsanitize_coverage_trace_ret
+    : Flag<["-"], "fsanitize-coverage-trace-ret">,
+      Group<fsan_cov_Group>,
+      HelpText<"Enable dataflow tracing of return values">,
+      MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceRet">>;
 def fexperimental_sanitize_metadata_EQ_covered
     : Flag<["-"], "fexperimental-sanitize-metadata=covered">,
       HelpText<"Emit PCs for code covered with binary analysis sanitizers">,

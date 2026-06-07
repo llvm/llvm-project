@@ -251,6 +251,8 @@ getSancovOptsFromCGOpts(const CodeGenOptions &CGOpts) {
   Opts.StackDepthCallbackMin = CGOpts.SanitizeCoverageStackDepthCallbackMin;
   Opts.TraceLoads = CGOpts.SanitizeCoverageTraceLoads;
   Opts.TraceStores = CGOpts.SanitizeCoverageTraceStores;
+  Opts.TraceArgs = CGOpts.SanitizeCoverageTraceArgs;
+  Opts.TraceRet = CGOpts.SanitizeCoverageTraceRet;
   Opts.CollectControlFlow = CGOpts.SanitizeCoverageControlFlow;
   return Opts;
 }

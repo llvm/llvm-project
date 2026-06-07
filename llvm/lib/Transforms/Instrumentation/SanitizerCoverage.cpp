@@ -15,9 +15,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
@@ -46,6 +48,8 @@ const char SanCovTracePCIndirName[] = "__sanitizer_cov_trace_pc_indir";
 const char SanCovTracePCName[] = "__sanitizer_cov_trace_pc";
 const char SanCovTracePCEntryName[] = "__sanitizer_cov_trace_pc_entry";
 const char SanCovTracePCExitName[] = "__sanitizer_cov_trace_pc_exit";
+const char SanCovTraceArgsName[] = "__sanitizer_cov_trace_args";
+const char SanCovTraceRetName[] = "__sanitizer_cov_trace_ret";
 const char SanCovTraceCmp1[] = "__sanitizer_cov_trace_cmp1";
 const char SanCovTraceCmp2[] = "__sanitizer_cov_trace_cmp2";
 const char SanCovTraceCmp4[] = "__sanitizer_cov_trace_cmp4";
@@ -157,6 +161,15 @@ static cl::opt<bool> ClGEPTracing("sanitizer-coverage-trace-geps",
                                   cl::Hidden);
 
 static cl::opt<bool>
+    ClTraceArgs("sanitizer-coverage-trace-args",
+                   cl::desc("Dataflow tracing of function arguments"),
+                   cl::Hidden);
+
+static cl::opt<bool>
+    ClTraceRet("sanitizer-coverage-trace-ret",
+                  cl::desc("Dataflow tracing of return values"), cl::Hidden);
+
+static cl::opt<bool>
     ClPruneBlocks("sanitizer-coverage-prune-blocks",
                   cl::desc("Reduce the number of instrumented blocks"),
                   cl::Hidden, cl::init(true));
@@ -226,10 +239,13 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
                                            ClStackDepthCallbackMin.getValue());
   Options.TraceLoads |= ClLoadTracing;
   Options.TraceStores |= ClStoreTracing;
+  Options.TraceArgs |= ClTraceArgs;
+  Options.TraceRet |= ClTraceRet;
   Options.GatedCallbacks |= ClGatedCallbacks;
   if (!Options.TracePCGuard && !Options.TracePC && !Options.TracePCEntryExit &&
       !Options.Inline8bitCounters && !Options.StackDepth &&
-      !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores)
+      !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores &&
+      !Options.TraceArgs && !Options.TraceRet)
     Options.TracePCGuard = true; // TracePCGuard is default.
   Options.CollectControlFlow |= ClCollectCF;
   return Options;
@@ -265,6 +281,8 @@ private:
   void InjectTraceForLoadsAndStores(Function &F, ArrayRef<LoadInst *> Loads,
                                     ArrayRef<StoreInst *> Stores);
   void InjectTraceForExits(Function &F);
+  void InjectTraceForArgs(Function &F);
+  void InjectTraceForRet(Function &F);
   void InjectTraceForSwitch(Function &F,
                             ArrayRef<Instruction *> SwitchTraceTargets,
                             Value *&FunctionGateCmp);
@@ -298,6 +316,7 @@ private:
   FunctionCallee SanCovTracePCIndir;
   FunctionCallee SanCovTracePC, SanCovTracePCGuard;
   FunctionCallee SanCovTracePCEntry, SanCovTracePCExit;
+  FunctionCallee SanCovTraceArgsFunc, SanCovTraceRetFunc;
   std::array<FunctionCallee, 4> SanCovTraceCmpFunction;
   std::array<FunctionCallee, 4> SanCovTraceConstCmpFunction;
   std::array<FunctionCallee, 5> SanCovLoadFunction;
@@ -542,6 +561,16 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   SanCovTracePCGuard =
       M.getOrInsertFunction(SanCovTracePCGuardName, VoidTy, PtrTy);
 
+  // __sanitizer_cov_trace_args(i64 pc, i32 arg_idx, i32 arg_size, ptr arg, ptr
+  // offsets, i32 num_fields)
+  SanCovTraceArgsFunc =
+      M.getOrInsertFunction(SanCovTraceArgsName, VoidTy, Int64Ty, Int32Ty,
+                            Int32Ty, PtrTy, PtrTy, Int32Ty);
+  // __sanitizer_cov_trace_ret(i64 pc, i32 ret_size, ptr ret_val, ptr offsets,
+  // i32 num_fields)
+  SanCovTraceRetFunc = M.getOrInsertFunction(
+      SanCovTraceRetName, VoidTy, Int64Ty, Int32Ty, PtrTy, PtrTy, Int32Ty);
+
   SanCovStackDepthCallback =
       M.getOrInsertFunction(SanCovStackDepthCallbackName, VoidTy);
 
@@ -767,6 +796,12 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
 
   if (Options.TracePCEntryExit)
     InjectTraceForExits(F);
+
+  if (Options.TraceArgs)
+    InjectTraceForArgs(F);
+
+  if (Options.TraceRet)
+    InjectTraceForRet(F);
 }
 
 GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
@@ -1265,4 +1300,210 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
   FunctionCFsArray->setInitializer(
       ConstantArray::get(ArrayType::get(PtrTy, CFs.size()), CFs));
   FunctionCFsArray->setConstant(true);
+}
+
+// Helper: Given a DIType, resolve typedefs/qualifiers to the underlying type.
+static DIType *stripDITypedefs(DIType *Ty) {
+  while (Ty) {
+    if (auto *Derived = dyn_cast<DIDerivedType>(Ty)) {
+      unsigned Tag = Derived->getTag();
+      if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
+          Tag == dwarf::DW_TAG_volatile_type ||
+          Tag == dwarf::DW_TAG_restrict_type) {
+        Ty = Derived->getBaseType();
+        continue;
+      }
+      // pointer type - stop
+      break;
+    }
+    break;
+  }
+  return Ty;
+}
+
+// Helper: If Ty is a pointer to a struct (DICompositeType), collect byte
+// offsets of all scalar members. Returns the offsets array global and
+// num_fields.
+static std::pair<GlobalVariable *, unsigned>
+getStructFieldOffsets(DIType *Ty, Module &M, const DataLayout &DL) {
+  if (!Ty)
+    return {nullptr, 0};
+
+  Ty = stripDITypedefs(Ty);
+
+  // Must be a pointer to something
+  auto *PtrTy = dyn_cast_or_null<DIDerivedType>(Ty);
+  if (!PtrTy || PtrTy->getTag() != dwarf::DW_TAG_pointer_type)
+    return {nullptr, 0};
+
+  DIType *PointeeTy = stripDITypedefs(PtrTy->getBaseType());
+  auto *Composite = dyn_cast_or_null<DICompositeType>(PointeeTy);
+  if (!Composite || Composite->getTag() != dwarf::DW_TAG_structure_type)
+    return {nullptr, 0};
+
+  SmallVector<uint64_t, 16> Offsets;
+  for (auto *Element : Composite->getElements()) {
+    auto *Member = dyn_cast<DIDerivedType>(Element);
+    if (!Member || Member->getTag() != dwarf::DW_TAG_member)
+      continue;
+    uint64_t OffsetBits = Member->getOffsetInBits();
+    uint64_t SizeBits = Member->getSizeInBits();
+    if (SizeBits == 0)
+      continue;
+    // Record byte offset and size in bytes as pairs: [offset, size]
+    Offsets.push_back(OffsetBits / 8);
+    Offsets.push_back(SizeBits / 8);
+  }
+
+  if (Offsets.empty())
+    return {nullptr, 0};
+
+  // Enhance #4: Compute type name hash from struct name
+  uint64_t TypeHash = 0;
+  if (auto Name = Composite->getName(); !Name.empty()) {
+    // Simple FNV-1a hash of the struct name
+    TypeHash = 0xcbf29ce484222325ULL;
+    for (char C : Name) {
+      TypeHash ^= (uint64_t)(unsigned char)C;
+      TypeHash *= 0x100000001b3ULL;
+    }
+  }
+
+  // Layout: [type_hash, off0, sz0, off1, sz1, ...]
+  // We pass &array[1] as the offsets pointer, so kernel can read array[0] as
+  // hash
+  LLVMContext &C = M.getContext();
+  Type *I64Ty = Type::getInt64Ty(C);
+  SmallVector<Constant *, 16> OffsetConstants;
+  OffsetConstants.push_back(
+      ConstantInt::get(I64Ty, TypeHash)); // index 0 = hash
+  for (uint64_t V : Offsets)
+    OffsetConstants.push_back(ConstantInt::get(I64Ty, V));
+
+  ArrayType *ArrTy = ArrayType::get(I64Ty, OffsetConstants.size());
+  auto *GV = new GlobalVariable(M, ArrTy, true, GlobalVariable::PrivateLinkage,
+                                ConstantArray::get(ArrTy, OffsetConstants),
+                                "__sancov_offsets_");
+  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  return {GV, (unsigned)(Offsets.size() / 2)};
+}
+
+void ModuleSanitizerCoverage::InjectTraceForArgs(Function &F) {
+  DISubprogram *SP = F.getSubprogram();
+  if (!SP)
+    return;
+
+  BasicBlock &EntryBB = F.getEntryBlock();
+  Instruction *InsertPt = &*EntryBB.getFirstInsertionPt();
+  InstrumentationIRBuilder IRB(InsertPt);
+
+  // Get PC as the function address cast to i64
+  Value *PC = IRB.CreatePtrToInt(&F, Int64Ty);
+
+  // For each argument, emit a trace call
+  unsigned ArgIdx = 0;
+  for (auto &Arg : F.args()) {
+    // Get debug info for this argument
+    DIType *ArgDIType = nullptr;
+    if (SP->getType()) {
+      auto *SubroutineType = SP->getType();
+      auto TypeArray = SubroutineType->getTypeArray();
+      // TypeArray[0] is return type, TypeArray[1..] are params
+      if (ArgIdx + 1 < TypeArray.size())
+        ArgDIType = TypeArray[ArgIdx + 1];
+    }
+
+    auto [OffsetsGV, NumFields] = getStructFieldOffsets(ArgDIType, M, *DL);
+
+    Value *ArgPtr;
+    if (Arg.getType()->isPointerTy()) {
+      ArgPtr = &Arg;
+    } else {
+      // Spill non-pointer arg to stack so we can pass its address
+      AllocaInst *Alloca = IRB.CreateAlloca(Arg.getType());
+      IRB.CreateStore(&Arg, Alloca);
+      ArgPtr = Alloca;
+    }
+
+    // Compute arg byte size
+    unsigned ArgByteSize = Arg.getType()->isPointerTy()
+                               ? DL->getPointerSize()
+                               : DL->getTypeStoreSize(Arg.getType());
+
+    // OffsetsGV layout: [hash, off0, sz0, off1, sz1, ...]
+    // Pass pointer to &array[1] so kernel sees field data at offsets[0],
+    // and can read offsets[-1] for the type hash.
+    Value *OffsetsPtr;
+    if (OffsetsGV) {
+      Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
+                          ConstantInt::get(Int64Ty, 1)};
+      OffsetsPtr =
+          IRB.CreateInBoundsGEP(OffsetsGV->getValueType(), OffsetsGV, Indices);
+    } else {
+      OffsetsPtr = Constant::getNullValue(PtrTy);
+    }
+    Value *NF = ConstantInt::get(Int32Ty, NumFields);
+    Value *ArgIdxVal = ConstantInt::get(Int32Ty, ArgIdx);
+    Value *ArgSizeVal = ConstantInt::get(Int32Ty, ArgByteSize);
+
+    IRB.CreateCall(SanCovTraceArgsFunc,
+                   {PC, ArgIdxVal, ArgSizeVal, ArgPtr, OffsetsPtr, NF});
+    ArgIdx++;
+  }
+}
+
+void ModuleSanitizerCoverage::InjectTraceForRet(Function &F) {
+  DISubprogram *SP = F.getSubprogram();
+
+  // Get return type debug info
+  DIType *RetDIType = nullptr;
+  if (SP && SP->getType()) {
+    auto TypeArray = SP->getType()->getTypeArray();
+    if (TypeArray.size() > 0)
+      RetDIType = TypeArray[0];
+  }
+
+  auto [OffsetsGV, NumFields] = getStructFieldOffsets(RetDIType, M, *DL);
+
+  EscapeEnumerator EE(F, "sancov_trace_ret");
+  while (IRBuilder<> *AtExit = EE.Next()) {
+    InstrumentationIRBuilder::ensureDebugInfo(*AtExit, F);
+
+    Value *PC = AtExit->CreatePtrToInt(&F, Int64Ty);
+
+    // Get the return value
+    auto *RI = dyn_cast<ReturnInst>(AtExit->GetInsertPoint());
+    Value *RetVal = nullptr;
+    if (RI)
+      RetVal = RI->getReturnValue();
+
+    Value *RetPtr;
+    unsigned RetByteSize = 0;
+    if (RetVal && RetVal->getType()->isPointerTy()) {
+      RetPtr = RetVal;
+      RetByteSize = DL->getPointerSize();
+    } else if (RetVal && !RetVal->getType()->isVoidTy()) {
+      AllocaInst *Alloca = AtExit->CreateAlloca(RetVal->getType());
+      AtExit->CreateStore(RetVal, Alloca);
+      RetPtr = Alloca;
+      RetByteSize = DL->getTypeStoreSize(RetVal->getType());
+    } else {
+      RetPtr = Constant::getNullValue(PtrTy);
+    }
+
+    Value *OffsetsPtr;
+    if (OffsetsGV) {
+      Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
+                          ConstantInt::get(Int64Ty, 1)};
+      OffsetsPtr = AtExit->CreateInBoundsGEP(OffsetsGV->getValueType(),
+                                             OffsetsGV, Indices);
+    } else {
+      OffsetsPtr = Constant::getNullValue(PtrTy);
+    }
+    Value *NF = ConstantInt::get(Int32Ty, NumFields);
+    Value *RetSizeVal = ConstantInt::get(Int32Ty, RetByteSize);
+
+    AtExit->CreateCall(SanCovTraceRetFunc,
+                       {PC, RetSizeVal, RetPtr, OffsetsPtr, NF});
+  }
 }
