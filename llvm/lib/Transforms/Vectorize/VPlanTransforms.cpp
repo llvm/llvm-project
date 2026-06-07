@@ -1483,8 +1483,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   // value and the address are uniform across VF and UF.
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(Def);
       RepR && RepR->isPredicated() && RepR->getOpcode() == Instruction::Store &&
-      all_of(RepR->operandsWithoutMask(),
-             [](VPValue *Op) { return vputils::isUniformAcrossVFsAndUFs(Op); }) &&
+      all_of(RepR->operandsWithoutMask(), vputils::isUniformAcrossVFsAndUFs) &&
       vputils::isHeaderMask(RepR->getMask(), *Plan)) {
     auto *Unmasked = new VPReplicateRecipe(
         RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
