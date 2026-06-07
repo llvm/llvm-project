@@ -14,7 +14,7 @@
 #include "benchmark/benchmark.h"
 
 namespace {
-void run_sizes(auto benchmark) {
+void run_sizes(benchmark::Benchmark* benchmark) {
   benchmark->Arg(0)
       ->Arg(1)
       ->Arg(2)

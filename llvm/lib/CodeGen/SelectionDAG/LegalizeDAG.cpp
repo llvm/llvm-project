@@ -5639,6 +5639,21 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     ReplacedNode(Node);
     break;
   }
+  case ISD::SCMP:
+  case ISD::UCMP: {
+    unsigned ExtOp =
+        Node->getOpcode() == ISD::UCMP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+    MVT OpVT = Node->getOperand(0).getSimpleValueType();
+    // Compare at least at operand width; NVT is the legal type for the op
+    // result.
+    MVT ResVT = OpVT.bitsGT(NVT) ? OpVT : NVT;
+    Tmp1 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(Node->getOpcode(), dl, ResVT, Tmp1, Tmp2);
+    // Result is -1/0/1; truncate to the original result type.
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    break;
+  }
   case ISD::MUL:
   case ISD::SDIV:
   case ISD::SREM:

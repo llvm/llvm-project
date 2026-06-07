@@ -142,8 +142,20 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       mlir::LLVM::DIExpressionAttr::get(context, ops);
   ops.clear();
 
-  mlir::LLVM::DITypeAttr elemTy =
-      convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
+  // For a descriptor-based array of characters with non-constant (assumed or
+  // deferred) length, the length of each element is stored in the descriptor.
+  // We generate a string length expression that reads it from there. The data
+  // location of the elements is provided by the enclosing array so we do not
+  // generate a string location expression for the element type itself.
+  mlir::LLVM::DITypeAttr elemTy;
+  if (auto charTy =
+          mlir::dyn_cast_if_present<fir::CharacterType>(seqTy.getEleTy());
+      charTy && !charTy.hasConstantLen())
+    elemTy = convertCharacterType(charTy, fileAttr, scope, declOp,
+                                  /*hasDescriptor=*/true,
+                                  /*genStringLocation=*/false);
+  else
+    elemTy = convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
 
   // Assumed-rank arrays
   if (seqTy.hasUnknownShape()) {
@@ -612,7 +624,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     fir::CharacterType charTy, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
-    bool hasDescriptor) {
+    bool hasDescriptor, bool genStringLocation) {
   mlir::MLIRContext *context = module.getContext();
 
   // DWARF 5 says the following about the character encoding in 5.1.1.2.
@@ -638,9 +650,14 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     lenExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
-    addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_deref, {});
-    locExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+    // When the character is an element of a descriptor-based array, the data
+    // location is provided by the enclosing array type and a string location
+    // expression must not be generated for the element itself.
+    if (genStringLocation) {
+      addOp(llvm::dwarf::DW_OP_push_object_address, {});
+      addOp(llvm::dwarf::DW_OP_deref, {});
+      locExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+    }
   } else if (charTy.hasConstantLen()) {
     sizeInBits =
         charTy.getLen() * kindMapping.getCharacterBitsize(charTy.getFKind());

@@ -60,17 +60,7 @@ struct PtrLikeInt { int value; };
 
 namespace llvm {
 
-template<> struct DenseMapInfo<PtrLikeInt *> {
-  static PtrLikeInt *getEmptyKey() {
-    static PtrLikeInt EmptyKey;
-    return &EmptyKey;
-  }
-
-  static PtrLikeInt *getTombstoneKey() {
-    static PtrLikeInt TombstoneKey;
-    return &TombstoneKey;
-  }
-
+template <> struct DenseMapInfo<PtrLikeInt *> {
   static int getHashValue(const PtrLikeInt *P) {
     return P->value;
   }

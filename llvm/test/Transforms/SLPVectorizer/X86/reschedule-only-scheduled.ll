@@ -21,9 +21,7 @@ define i16 @test() {
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <28 x i1> [[RDX_OP]] to i28
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i28 @llvm.ctpop.i28(i28 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc i28 [[TMP12]] to i16
-; CHECK-NEXT:    [[TMP14:%.*]] = call i4 @llvm.ctpop.i4(i4 -8)
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i4 [[TMP14]] to i16
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = add i16 [[TMP15]], [[TMP13]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = add i16 1, [[TMP13]]
 ; CHECK-NEXT:    ret i16 [[OP_RDX4]]
 ;
 entry:

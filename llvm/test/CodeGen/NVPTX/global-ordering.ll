@@ -20,3 +20,11 @@
 ; PTX64-NEXT: .visible .global .align 8 .u64 b2[2] = {b, b};
 @b2 = addrspace(1) global [2 x ptr addrspace(1)] [ptr addrspace(1) @b, ptr addrspace(1) @b]
 @b = addrspace(1) global i8 1
+
+
+; Emit a global aggregate with a field computed from the address of another
+; global.
+@g = addrspace(1) global i8 0
+
+; PTX64: .visible .global .align 8 .u64 sadd[2] = {g+4, 7};
+@sadd = addrspace(1) global { i64, i64 } { i64 add (i64 ptrtoint (ptr addrspace(1) @g to i64), i64 4), i64 7 }
