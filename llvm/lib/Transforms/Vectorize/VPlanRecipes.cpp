@@ -2965,9 +2965,6 @@ VPWidenIntOrFpInductionRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   // A widened induction generates a vector phi and increments it by the
   // splatted step each iteration.
-  // TODO: Also handle truncated inductions.
-  assert(!getTruncInst() &&
-         "truncated inductions should be costed by the legacy model");
   const InductionDescriptor &ID = getInductionDescriptor();
   InstructionCost Cost = Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
   Type *StepTy = getScalarType();
