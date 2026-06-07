@@ -348,6 +348,45 @@ will not be instrumented.
   void __sanitizer_cov_store16(__int128 *addr);
 
 
+Tracking function arguments and return values
+==============================================
+
+With ``-fsanitize-coverage=trace-args`` and ``-fsanitize-coverage=trace-ret``
+the compiler will insert callbacks at function entry and before return instructions
+to track function arguments and return values, respectively.
+
+These flags are designed for the Linux kernel's KCOV dataflow subsystem, which uses
+the callbacks to capture struct field values for memory corruption analysis.
+
+When debug info is available (``-g``), the compiler uses ``DICompositeType`` metadata
+to extract struct field layouts (byte offset and size pairs). A FNV-1a hash of the
+struct type name is prepended to the offsets array for identification. Without ``-g``,
+the pass returns early and no callbacks are emitted.
+
+Both flags imply edge coverage when used alone.
+
+.. code-block:: c++
+
+  // Called at function entry for each argument.
+  // pc: address of the instrumented function
+  // arg_idx: zero-based argument index
+  // arg_size: size of the argument in bytes
+  // ptr: pointer to the argument value (stack-spilled for scalars)
+  // offsets: array of [byte_offset, byte_size] pairs for struct fields (null if not a struct pointer)
+  // num_fields: number of struct fields (0 if not a struct pointer)
+  void __sanitizer_cov_trace_args(uint64_t pc, uint32_t arg_idx, uint32_t arg_size,
+                                  void *ptr, uint64_t *offsets, uint32_t num_fields);
+
+  // Called before each return instruction.
+  // pc: address of the instrumented function
+  // ret_size: size of the return value in bytes
+  // ptr: pointer to the return value (stack-spilled for scalars, null for void)
+  // offsets: array of [byte_offset, byte_size] pairs for struct fields (null if not a struct pointer)
+  // num_fields: number of struct fields (0 if not a struct pointer)
+  void __sanitizer_cov_trace_ret(uint64_t pc, uint32_t ret_size,
+                                 void *ptr, uint64_t *offsets, uint32_t num_fields);
+
+
 Tracing control flow
 ====================
 
