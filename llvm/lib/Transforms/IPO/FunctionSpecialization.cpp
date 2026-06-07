@@ -633,8 +633,6 @@ void FunctionSpecializer::cleanUpSSA() {
 }
 
 template <> struct llvm::DenseMapInfo<SpecSig> {
-  static inline SpecSig getEmptyKey() { return {~0U, {}}; }
-
   static unsigned getHashValue(const SpecSig &S) {
     return static_cast<unsigned>(hash_value(S));
   }

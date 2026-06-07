@@ -363,17 +363,17 @@ static std::string serialize(const T &I, DiagnosticsEngine &Diags) {
 std::string serialize(const Info &I, DiagnosticsEngine &Diags) {
   switch (I.IT) {
   case InfoType::IT_namespace:
-    return serialize(static_cast<const NamespaceInfo &>(I), Diags);
+    return serialize(cast<NamespaceInfo>(I), Diags);
   case InfoType::IT_record:
-    return serialize(static_cast<const RecordInfo &>(I), Diags);
+    return serialize(cast<RecordInfo>(I), Diags);
   case InfoType::IT_enum:
-    return serialize(static_cast<const EnumInfo &>(I), Diags);
+    return serialize(cast<EnumInfo>(I), Diags);
   case InfoType::IT_function:
-    return serialize(static_cast<const FunctionInfo &>(I), Diags);
+    return serialize(cast<FunctionInfo>(I), Diags);
   case InfoType::IT_concept:
-    return serialize(static_cast<const ConceptInfo &>(I), Diags);
+    return serialize(cast<ConceptInfo>(I), Diags);
   case InfoType::IT_variable:
-    return serialize(static_cast<const VarInfo &>(I), Diags);
+    return serialize(cast<VarInfo>(I), Diags);
   case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:

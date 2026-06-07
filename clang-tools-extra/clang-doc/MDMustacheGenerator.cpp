@@ -16,9 +16,9 @@
 
 #include "Generators.h"
 
-namespace clang {
 using namespace llvm;
-namespace doc {
+using namespace clang::doc;
+
 static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
 
 static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
@@ -27,9 +27,10 @@ static std::unique_ptr<MustacheTemplateFile> AllFilesTemplate = nullptr;
 
 static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
 
+namespace {
 struct MDMustacheGenerator : public MustacheGenerator {
   static const char *Format;
-  Error generateDocumentation(StringRef RootDir, StringMap<doc::Info *> Infos,
+  Error generateDocumentation(StringRef RootDir, StringMap<Info *> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error setupTemplateFiles(const ClangDocContext &CDCtx) override;
@@ -42,6 +43,7 @@ struct MDMustacheGenerator : public MustacheGenerator {
   Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                            const ClangDocContext &CDCtx) override;
 };
+} // namespace
 
 Error MDMustacheGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
   std::string ClassFilePath = CDCtx.MustacheTemplates.lookup("class-template");
@@ -74,7 +76,7 @@ Error MDMustacheGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
 }
 
 Error MDMustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<doc::Info *> Infos,
+    StringRef RootDir, StringMap<Info *> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string Dirname) {
   return MustacheGenerator::generateDocumentation(RootDir, std::move(Infos),
                                                   CDCtx, "md");
@@ -112,6 +114,8 @@ static GeneratorRegistry::Add<MDMustacheGenerator>
     MDMustache(MDMustacheGenerator::Format,
                "Generator for mustache Markdown output.");
 
+namespace clang {
+namespace doc {
 volatile int MDMustacheGeneratorAnchorSource = 0;
 } // namespace doc
 } // namespace clang

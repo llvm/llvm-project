@@ -1817,15 +1817,11 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
         : std::pair<Instruction *, Chain>(I, {}) {}
   };
   struct InstrListElemDenseMapInfo {
-    using PtrInfo = DenseMapInfo<InstrListElem *>;
     using IInfo = DenseMapInfo<Instruction *>;
-    static InstrListElem *getEmptyKey() { return PtrInfo::getEmptyKey(); }
     static unsigned getHashValue(const InstrListElem *E) {
       return IInfo::getHashValue(E->first);
     }
     static bool isEqual(const InstrListElem *A, const InstrListElem *B) {
-      if (A == getEmptyKey() || B == getEmptyKey())
-        return A == getEmptyKey() && B == getEmptyKey();
       return IInfo::isEqual(A->first, B->first);
     }
   };

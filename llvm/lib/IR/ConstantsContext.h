@@ -565,10 +565,6 @@ private:
   struct MapInfo {
     using ConstantClassInfo = DenseMapInfo<ConstantClass *>;
 
-    static inline ConstantClass *getEmptyKey() {
-      return ConstantClassInfo::getEmptyKey();
-    }
-
     static unsigned getHashValue(const ConstantClass *CP) {
       SmallVector<Constant *, 32> Storage;
       return getHashValue(LookupKey(CP->getType(), ValType(CP, Storage)));
@@ -587,8 +583,6 @@ private:
     }
 
     static bool isEqual(const LookupKey &LHS, const ConstantClass *RHS) {
-      if (RHS == getEmptyKey())
-        return false;
       if (LHS.first != RHS->getType())
         return false;
       return LHS.second == RHS;

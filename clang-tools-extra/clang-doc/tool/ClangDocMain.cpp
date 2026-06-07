@@ -231,14 +231,10 @@ static llvm::Error getMdFiles(const char *Argv0,
 static void sortUsrToInfo(llvm::StringMap<doc::Info *> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
-    if (Info->IT == doc::InfoType::IT_namespace) {
-      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info);
+    if (auto *Namespace = dyn_cast<doc::NamespaceInfo>(Info))
       Namespace->Children.sort();
-    }
-    if (Info->IT == doc::InfoType::IT_record) {
-      auto *Record = static_cast<clang::doc::RecordInfo *>(Info);
+    else if (auto *Record = dyn_cast<doc::RecordInfo>(Info))
       Record->Children.sort();
-    }
   }
 }
 

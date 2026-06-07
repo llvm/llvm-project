@@ -529,7 +529,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   // Replace predicated replicate recipe with a replicate recipe without a
   // mask but in the replicate region.
   auto *RecipeWithoutMask = new VPReplicateRecipe(
-      PredRecipe->getUnderlyingInstr(), drop_end(PredRecipe->operands()),
+      PredRecipe->getUnderlyingInstr(), PredRecipe->operandsWithoutMask(),
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
   auto *Pred =
@@ -2409,10 +2409,6 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
-  static bool isSentinel(const VPSingleDefRecipe *Def) {
-    return Def == getEmptyKey();
-  }
-
   /// If recipe \p R will lower to a GEP with a non-i8 source element type,
   /// return that source element type.
   static Type *getGEPSourceElementType(const VPSingleDefRecipe *R) {
@@ -2465,8 +2461,6 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 
   /// Check equality of underlying data of \p L and \p R.
   static bool isEqual(const VPSingleDefRecipe *L, const VPSingleDefRecipe *R) {
-    if (isSentinel(L) || isSentinel(R))
-      return L == R;
     if (L->getVPRecipeID() != R->getVPRecipeID() ||
         getOpcodeOrIntrinsicID(L) != getOpcodeOrIntrinsicID(R) ||
         getGEPSourceElementType(L) != getGEPSourceElementType(R) ||
@@ -5470,8 +5464,11 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
     if (!Expanded)
       continue;
     ExpSCEV->replaceAllUsesWith(Expanded);
+    // TripCount should not be used after expansion to VPInstructions. Reset to
+    // poison to avoid dangling references.
     if (Plan.getTripCount() == ExpSCEV)
-      Plan.resetTripCount(Expanded);
+      Plan.resetTripCount(
+          Plan.getOrAddLiveIn(PoisonValue::get(ExpSCEV->getScalarType())));
     ExpSCEV->eraseFromParent();
   }
 }

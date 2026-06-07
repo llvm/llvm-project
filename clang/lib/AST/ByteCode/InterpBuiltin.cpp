@@ -370,6 +370,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
+  if (StrPtr.isConstexprUnknown())
+    return false;
+
   if (!CheckArray(S, OpPC, StrPtr))
     return false;
 

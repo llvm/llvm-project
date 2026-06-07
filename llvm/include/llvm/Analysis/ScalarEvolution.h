@@ -201,11 +201,6 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 };
 
 template <> struct DenseMapInfo<SCEVUse> {
-  static inline SCEVUse getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
   static unsigned getHashValue(SCEVUse U) {
     return hash_value(U.getOpaqueValue());
   }
@@ -2729,11 +2724,6 @@ private:
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
-  static inline ScalarEvolution::FoldID getEmptyKey() {
-    ScalarEvolution::FoldID ID(0);
-    return ID;
-  }
-
   static unsigned getHashValue(const ScalarEvolution::FoldID &Val) {
     return Val.computeHash();
   }

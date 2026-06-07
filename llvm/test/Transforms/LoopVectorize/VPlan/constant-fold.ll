@@ -16,7 +16,6 @@ define void @f1() {
 ; CHECK-LABEL: VPlan for loop in 'f1' after VPlanTransforms::simplifyRecipes
 ; CHECK-NEXT:  VPlan ' for UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VF:%[0-9]+]]> = VF
-; CHECK-NEXT:  Live-in ir<2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<bb1>:
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph

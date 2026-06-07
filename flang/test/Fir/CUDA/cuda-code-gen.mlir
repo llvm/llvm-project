@@ -427,3 +427,33 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK-LABEL: llvm.func @_QQmain()
 // CHECK: llvm.call @_FortranACUFAllocDescriptor(
 // CHECK: gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel
+
+// -----
+
+// Test that an embox whose converted result is passed to gpu.launch_func gets a
+// managed descriptor so the GPU kernel can access it.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, gpu.container_module} {
+  func.func @_QQmain() {
+    %c0_i32 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : index
+    %c10 = arith.constant 10 : index
+    %c20 = arith.constant 20 : index
+    %base = fir.alloca !fir.array<10x20xi32>
+    %box = fircg.ext_embox %base(%c10, %c20) : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.box<!fir.array<10x20xi32>>
+    %arg = fir.convert %box : (!fir.box<!fir.array<10x20xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+    gpu.launch_func @cuda_device_mod::@kernel blocks in (%c1, %c1, %c1) threads in (%c1, %c1, %c1) dynamic_shared_memory_size %c0_i32 args(%arg : !fir.box<!fir.array<?x?xi32>>) {cuf.proc_attr = #cuf.cuda_proc<global>}
+    return
+  }
+  gpu.module @cuda_device_mod {
+    gpu.func @kernel(%arg0: !fir.box<!fir.array<?x?xi32>>) kernel {
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: %[[DESC:.*]] = llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: %[[BOX:.*]] = builtin.unrealized_conversion_cast %[[DESC]] : !llvm.ptr to !fir.box<!fir.array<?x?xi32>>
+// CHECK: llvm.store %{{.*}}, %[[DESC]]
+// CHECK: gpu.launch_func {{.*}} args(%[[BOX]] : !fir.box<!fir.array<?x?xi32>>)

@@ -189,8 +189,6 @@ private:
 
 private:
   struct KeyInfo {
-    static SmallString<0> getEmptyKey() { return SmallString<0>(""); }
-
     static bool isEqual(const SmallString<0> &LHS, const SmallString<0> &RHS) {
       return LHS == RHS;
     }

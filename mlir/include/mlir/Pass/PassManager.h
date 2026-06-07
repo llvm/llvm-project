@@ -487,10 +487,9 @@ private:
   std::unique_ptr<detail::PassCrashReproducerGenerator> crashReproGenerator;
 
   /// Hash keys used to detect when reinitialization is necessary.
-  llvm::hash_code initializationKey =
-      DenseMapInfo<llvm::hash_code>::getEmptyKey();
+  llvm::hash_code initializationKey = llvm::hash_code(static_cast<size_t>(-1));
   llvm::hash_code pipelineInitializationKey =
-      DenseMapInfo<llvm::hash_code>::getEmptyKey();
+      llvm::hash_code(static_cast<size_t>(-1));
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;

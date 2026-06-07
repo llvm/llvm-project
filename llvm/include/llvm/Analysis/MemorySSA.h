@@ -1203,11 +1203,6 @@ struct UpwardDefsElem {
 };
 
 template <> struct DenseMapInfo<UpwardDefsElem> {
-  static inline UpwardDefsElem getEmptyKey() {
-    return {DenseMapInfo<MemoryAccess *>::getEmptyKey(),
-            DenseMapInfo<MemoryLocation>::getEmptyKey(), false};
-  }
-
   static unsigned getHashValue(const UpwardDefsElem &Val) {
     return hash_combine(DenseMapInfo<MemoryAccess *>::getHashValue(Val.MA),
                         DenseMapInfo<MemoryLocation>::getHashValue(Val.Loc),

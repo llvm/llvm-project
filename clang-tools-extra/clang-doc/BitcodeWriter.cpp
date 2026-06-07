@@ -768,28 +768,28 @@ void ClangDocBitcodeWriter::emitBlock(const VarInfo &I) {
 bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    emitBlock(*static_cast<NamespaceInfo *>(I));
+    emitBlock(*cast<NamespaceInfo>(I));
     break;
   case InfoType::IT_record:
-    emitBlock(*static_cast<RecordInfo *>(I));
+    emitBlock(*cast<RecordInfo>(I));
     break;
   case InfoType::IT_enum:
-    emitBlock(*static_cast<EnumInfo *>(I));
+    emitBlock(*cast<EnumInfo>(I));
     break;
   case InfoType::IT_function:
-    emitBlock(*static_cast<FunctionInfo *>(I));
+    emitBlock(*cast<FunctionInfo>(I));
     break;
   case InfoType::IT_typedef:
-    emitBlock(*static_cast<TypedefInfo *>(I));
+    emitBlock(*cast<TypedefInfo>(I));
     break;
   case InfoType::IT_concept:
-    emitBlock(*static_cast<ConceptInfo *>(I));
+    emitBlock(*cast<ConceptInfo>(I));
     break;
   case InfoType::IT_variable:
-    emitBlock(*static_cast<VarInfo *>(I));
+    emitBlock(*cast<VarInfo>(I));
     break;
   case InfoType::IT_friend:
-    emitBlock(*static_cast<FriendInfo *>(I));
+    emitBlock(*cast<FriendInfo>(I));
     break;
   case InfoType::IT_default:
     unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Error,

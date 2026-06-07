@@ -425,7 +425,6 @@ private:
 
   /// Keys are already djbHash values, so use identity as the hash function.
   struct IdentityHashKeyInfo {
-    static constexpr uint32_t getEmptyKey() { return ~0U; }
     static unsigned getHashValue(uint32_t Val) { return Val; }
     static bool isEqual(uint32_t LHS, uint32_t RHS) { return LHS == RHS; }
   };

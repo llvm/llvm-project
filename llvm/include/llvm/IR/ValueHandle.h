@@ -129,9 +129,7 @@ public:
 protected:
   Value *getValPtr() const { return Val; }
 
-  static bool isValid(Value *V) {
-    return V && V != DenseMapInfo<Value *>::getEmptyKey();
-  }
+  static bool isValid(Value *V) { return V; }
 
   /// Remove this ValueHandle from its current use list.
   LLVM_ABI void RemoveFromUseList();
@@ -206,10 +204,6 @@ template <> struct simplify_type<const WeakVH> {
 
 // Specialize DenseMapInfo to allow WeakVH to participate in DenseMap.
 template <> struct DenseMapInfo<WeakVH> {
-  static inline WeakVH getEmptyKey() {
-    return WeakVH(DenseMapInfo<Value *>::getEmptyKey());
-  }
-
   static unsigned getHashValue(const WeakVH &Val) {
     return DenseMapInfo<Value *>::getHashValue(Val);
   }
@@ -576,12 +570,6 @@ public:
 
 // Specialize DenseMapInfo to allow PoisoningVH to participate in DenseMap.
 template <typename T> struct DenseMapInfo<PoisoningVH<T>> {
-  static inline PoisoningVH<T> getEmptyKey() {
-    PoisoningVH<T> Res;
-    Res.setRawValPtr(DenseMapInfo<Value *>::getEmptyKey());
-    return Res;
-  }
-
   static unsigned getHashValue(const PoisoningVH<T> &Val) {
     return DenseMapInfo<Value *>::getHashValue(Val.getRawValPtr());
   }

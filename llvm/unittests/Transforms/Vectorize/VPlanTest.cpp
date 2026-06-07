@@ -874,7 +874,7 @@ TEST_F(VPBasicBlockTest, print) {
   Plan.printDOT(OS);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in ir\<1024\> = original trip-count\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -968,7 +968,6 @@ TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4},UF>=1' {
-Live-in ir<1024> = original trip-count
 
 preheader:
 Successor(s): bb1
@@ -991,7 +990,6 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF>=1' {
-Live-in ir<1024> = original trip-count
 
 preheader:
 Successor(s): bb1
@@ -1014,7 +1012,6 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF={4}' {
-Live-in ir<1024> = original trip-count
 
 preheader:
 Successor(s): bb1
@@ -1054,7 +1051,7 @@ TEST_F(VPBasicBlockTest, cloneAndPrint) {
   VPBlockUtils::connectBlocks(VPBB0, VPBB1);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in ir\<1024\> = original trip-count\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true

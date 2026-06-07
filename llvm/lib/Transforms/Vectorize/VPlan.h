@@ -3481,6 +3481,11 @@ public:
     return getOperand(getNumOperands() - 1);
   }
 
+  /// Return the recipe's operands, excluding the mask of a predicated recipe.
+  operand_range operandsWithoutMask() {
+    return isPredicated() ? drop_end(operands()) : operands();
+  }
+
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 
 protected:

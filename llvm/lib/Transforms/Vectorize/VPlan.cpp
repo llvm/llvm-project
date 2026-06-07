@@ -1123,7 +1123,7 @@ void VPlan::printLiveIns(raw_ostream &O) const {
   }
 
   O << "\n";
-  if (TripCount) {
+  if (TripCount && TripCount->getNumUsers() > 0) {
     if (isa<VPIRValue>(TripCount))
       O << "Live-in ";
     TripCount->printAsOperand(O, SlotTracker);

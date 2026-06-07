@@ -2865,10 +2865,12 @@ const Init *TGParser::ParseOperationSwitch(Record *CurRec,
 
     // Parse the mandatory default value.
     if (consume(tgtok::r_paren)) {
-      // The default value was parsed without the ItemType hint. Coerce it now
-      // to match case-value parses.
-      if (const Init *Coerced = V->convertInitializerTo(ItemType))
-        V = Coerced;
+      if (ItemType) {
+        // The default value was parsed without the ItemType hint. Coerce it now
+        // to match case-value parses.
+        if (const Init *Coerced = V->convertInitializerTo(ItemType))
+          V = Coerced;
+      }
       // Push the default value as the last element of the vector for
       // type-checking.
       Vals.push_back(V);
