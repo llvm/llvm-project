@@ -1415,6 +1415,11 @@ public:
 
   unsigned getOpcode() const { return Opcode; }
 
+  /// Add \p Op as operand of this VPInstruction. Only supported for AnyOf,
+  /// ComputeReductionResult, BuildVector, BuildStructVector, ExtractLane,
+  /// ExtractLastActive, FirstActiveLane, LastActiveLane.
+  void addOperand(VPValue *Op);
+
   /// Generate the instruction.
   /// TODO: We currently execute only per-part unless a specific instance is
   /// provided.
@@ -1473,7 +1478,9 @@ public:
     assert(!isMasked() && "recipe is already masked");
     if (alwaysUnmasked())
       return;
-    addOperand(Mask);
+    assert(Mask->getScalarType()->isIntegerTy(1) &&
+           "Mask must be an i1 (vector)");
+    VPUser::addOperand(Mask);
   }
 
   /// Returns the mask for the VPInstruction. Returns nullptr for unmasked
@@ -1646,6 +1653,15 @@ public:
   /// Removes the incoming value for \p IncomingBlock, which must be a
   /// predecessor.
   void removeIncomingValueFor(VPBlockBase *IncomingBlock) const;
+
+  /// Append \p IncomingV as an incoming value to the phi-like recipe.
+  void addIncoming(VPValue *IncomingV) {
+    auto *R = const_cast<VPRecipeBase *>(getAsRecipe());
+    assert((R->getNumOperands() == 0 ||
+            IncomingV->getScalarType() == R->getOperand(0)->getScalarType()) &&
+           "all incoming values must have the same type");
+    R->addOperand(IncomingV);
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2278,6 +2294,14 @@ public:
   /// Offset = Stride * (VF - 1) + Part * Stride * VF.
   void materializeOffset(unsigned Part = 0);
 
+  /// Append \p Offset as the offset operand. The offset is an integer index
+  /// expressed in units of SourceElementTy.
+  void addOffset(VPValue *Offset) {
+    assert(Offset->getScalarType()->isIntegerTy() &&
+           "offset must be an integer index");
+    VPUser::addOperand(Offset);
+  }
+
   void execute(VPTransformState &State) override;
 
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -2306,7 +2330,7 @@ public:
         getPointer(), getVFValue(), getSourceElementType(), getStride(),
         getGEPNoWrapFlags(), getDebugLoc());
     if (auto *Offset = getOffset())
-      VEPR->addOperand(Offset);
+      VEPR->addOffset(Offset);
     return VEPR;
   }
 
@@ -2341,6 +2365,13 @@ public:
     return getNumOperands() > 2 ? getOperand(2) : nullptr;
   }
 
+  /// Add the per-part offset (VFxPart) used for unrolled parts > 0.
+  void addPerPartOffset(VPValue *VFxPart) {
+    assert(VFxPart->getScalarType()->isIntegerTy() &&
+           "per-part offset must be an integer index");
+    VPUser::addOperand(VFxPart);
+  }
+
   void execute(VPTransformState &State) override;
 
   Type *getSourceElementType() const { return SourceElementTy; }
@@ -2364,7 +2395,7 @@ public:
         new VPVectorPointerRecipe(getOperand(0), SourceElementTy, getStride(),
                                   getGEPNoWrapFlags(), getDebugLoc());
     if (auto *VFxPart = getVFxPart())
-      Clone->addOperand(VFxPart);
+      Clone->addPerPartOffset(VFxPart);
     return Clone;
   }
 
@@ -2457,6 +2488,15 @@ public:
   /// Update the incoming value from the loop backedge.
   void setBackedgeValue(VPValue *V) { setOperand(1, V); }
 
+  /// Add \p V as the incoming value from the loop backedge.
+  void addBackedgeValue(VPValue *V) {
+    assert(getNumOperands() == 1 &&
+           "backedge value must be appended right after construction");
+    assert(V->getScalarType() == getScalarType() &&
+           "backedge value must have the same type as the start value");
+    VPUser::addOperand(V);
+  }
+
   /// Returns the backedge value as a recipe. The backedge value is guaranteed
   /// to be a recipe.
   virtual VPRecipeBase &getBackedgeRecipe() {
@@ -2489,6 +2529,20 @@ public:
                          Type *ResultTy, DebugLoc DL)
       : VPHeaderPHIRecipe(Kind, IV, Start, ResultTy, DL), IndDesc(IndDesc) {
     addOperand(Step);
+  }
+
+  /// After unrolling, append the splat-VF step (`VF * step`) and the value of
+  /// the induction at the last unrolled part.
+  void addUnrolledPartOperands(VPValue *SplatVFStep, VPValue *LastPart) {
+    assert(LastPart->getScalarType() == getScalarType() &&
+           "last-part value must match the induction recipe's scalar type");
+    assert((getScalarType()->isPointerTy()
+                ? SplatVFStep->getScalarType()->isIntegerTy()
+                : SplatVFStep->getScalarType() == getScalarType()) &&
+           "splat-step must match the induction type for non-pointer "
+           "inductions, or be an integer index for pointer inductions");
+    VPUser::addOperand(SplatVFStep);
+    VPUser::addOperand(LastPart);
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -2964,6 +3018,7 @@ public:
   /// Set mask number \p Idx to \p V.
   void setMask(unsigned Idx, VPValue *V) {
     assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
+    assert(V->getScalarType()->isIntegerTy(1) && "Mask must be an i1 (vector)");
     Idx == 0 ? setOperand(1, V) : setOperand(Idx * 2 + !isNormalized(), V);
   }
 
@@ -3426,6 +3481,11 @@ public:
     return getOperand(getNumOperands() - 1);
   }
 
+  /// Return the recipe's operands, excluding the mask of a predicated recipe.
+  operand_range operandsWithoutMask() {
+    return isPredicated() ? drop_end(operands()) : operands();
+  }
+
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 
 protected:
@@ -3699,6 +3759,8 @@ protected:
     assert(!IsMasked && "cannot re-set mask");
     if (!Mask)
       return;
+    assert(Mask->getScalarType()->isIntegerTy(1) &&
+           "Mask must be an i1 (vector)");
     getAsRecipe()->addOperand(Mask);
     IsMasked = true;
   }
@@ -3995,7 +4057,7 @@ public:
   VPActiveLaneMaskPHIRecipe *clone() override {
     auto *R = new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
     if (getNumOperands() == 2)
-      R->addOperand(getOperand(1));
+      R->addBackedgeValue(getOperand(1));
     return R;
   }
 
@@ -4073,7 +4135,7 @@ public:
     auto *WideCanIV =
         new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlags());
     if (VPValue *Step = getStepValue())
-      WideCanIV->addOperand(Step);
+      WideCanIV->addPerPartStep(Step);
     return WideCanIV;
   }
 
@@ -4097,6 +4159,13 @@ public:
 
   VPValue *getStepValue() const {
     return getNumOperands() == 2 ? getOperand(1) : nullptr;
+  }
+
+  /// Add the per-part step (VF * Part) used for unrolled parts.
+  void addPerPartStep(VPValue *Step) {
+    assert(Step->getScalarType() == getScalarType() &&
+           "per-part step must have the same type as the canonical IV");
+    VPUser::addOperand(Step);
   }
 
 protected:

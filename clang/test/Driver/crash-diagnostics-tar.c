@@ -1,3 +1,4 @@
+// REQUIRES: backtrace
 // RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: rm -rf %t && mkdir %t
 // RUN: cd %t

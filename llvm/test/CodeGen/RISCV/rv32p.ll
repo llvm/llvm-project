@@ -732,6 +732,26 @@ define i32 @sadd_i32(i32 %x, i32 %y) {
   ret i32 %a
 }
 
+define i32 @ssh1sadd_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: ssh1sadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssh1sadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = call i32 @llvm.sshl.sat.i32(i32 %x, i32 1)
+  %a = call i32 @llvm.sadd.sat.i32(i32 %shl, i32 %y)
+  ret i32 %a
+}
+
+define i32 @ssh1sadd_i32_addself(i32 %x, i32 %y) {
+; CHECK-LABEL: ssh1sadd_i32_addself:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssh1sadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %x)
+  %a = call i32 @llvm.sadd.sat.i32(i32 %shl, i32 %y)
+  ret i32 %a
+}
+
 define i8 @ssub_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: ssub_i8:
 ; CHECK:       # %bb.0:
