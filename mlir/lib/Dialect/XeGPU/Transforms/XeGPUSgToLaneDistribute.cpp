@@ -500,9 +500,37 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
         castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
 
     Value distSource = adaptor.getSource();
+
+    // Coalesced case: the layout assigns a genuine chunk on the FCD —
+    // `lane_data[FCD] = D > 1` AND that chunk is the lane's *entire* per-lane
+    // fragment (one round: lane_layout[FCD] * D == FCD extent, so
+    // laneElems == D). Only then does the lane own a single run of D
+    // contiguous elements `{base, base+1, ..., base+D-1}`, which the XeVM
+    // lowering expects as a chunked access (scalar base offset + scalar mask
+    // + chunk_size = D + value vector<D>).
+    //
+    // This must NOT fire for the round-robin case (`lane_data[FCD] = 1` with
+    // multiple rounds, e.g. a reduction source where lane l owns
+    // `{l, l+SG, l+2*SG, ...}`): there laneElems > 1 too, but the elements are
+    // strided, not contiguous, so emitting chunk_size = laneElems would load
+    // the wrong (contiguous) elements.
+    int64_t laneElems = distResultTy1D.getNumElements();
+    int64_t innerLaneData = 1;
+    if (auto laneDataArr = layout.getEffectiveLaneDataAsInt();
+        !laneDataArr.empty())
+      innerLaneData = laneDataArr.back();
+    IntegerAttr chunkSizeAttr = op.getChunkSizeAttr();
+    if (chunkSize == 1 && innerLaneData > 1 && laneElems == innerLaneData) {
+      distOffsets = vector::ExtractOp::create(
+          rewriter, op.getLoc(), distOffsets, ArrayRef<int64_t>{0});
+      distMask = vector::ExtractOp::create(rewriter, op.getLoc(), distMask,
+                                           ArrayRef<int64_t>{0});
+      chunkSizeAttr = rewriter.getI64IntegerAttr(laneElems);
+    }
+
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
-        distMask, op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
+        distMask, chunkSizeAttr, op.getL1HintAttr(), op.getL2HintAttr(),
         op.getL3HintAttr(), /*layout=*/nullptr);
 
     Value result = newOp->getResult(0);
@@ -605,16 +633,28 @@ struct SgToLaneMultiDimReduction
             op, "only unit leading dimensions are supported for "
                 "multi_reduction with rank > 2");
     }
+    // Number of lanes that participate in the cross-lane reduction along
+    // `reductionDim`. With a non-coalesced layout this equals the original
+    // reduction-dim extent. With a *coalesced* reduction the source carries
+    // `lane_data[FCD] > 1`, so each lane already holds a contiguous chunk and
+    // the distributed source still has a non-unit extent on `reductionDim`:
+    // the butterfly width must be `origExtent / distExtent` (the number of
+    // distinct lanes), NOT the full original extent — otherwise the shuffle
+    // reduces across more lanes than exist and double-counts.
+    auto crossLaneCount = [&](int64_t reductionDim) -> int64_t {
+      int64_t origExtent = op.getSourceVectorType().getShape()[reductionDim];
+      int64_t distExtent = cast<VectorType>(adaptor.getSource().getType())
+                               .getShape()[reductionDim];
+      return distExtent ? origExtent / distExtent : origExtent;
+    };
     // Handle scalar result: full reduction of a distributed vector to a
     // scalar. First do a local vector reduction, then cross-lane shuffles.
     if (op.getType().isIntOrFloat()) {
       auto reductionDim = reductionDims[0];
-      VectorType origSourceType = op.getSourceVectorType();
-      int64_t reductionDimSize = origSourceType.getShape()[reductionDim];
       // Local reduction to scalar, then cross-lane butterfly shuffles.
       result =
           xegpu::subgroupReduction(op.getLoc(), rewriter, adaptor.getSource(),
-                                   op.getKind(), reductionDimSize);
+                                   op.getKind(), crossLaneCount(reductionDim));
       // Combine with accumulator if present.
       if (adaptor.getAcc())
         result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
@@ -630,12 +670,10 @@ struct SgToLaneMultiDimReduction
           reductionDim, op.getLoc(), rewriter);
     } else {
       auto reductionDim = reductionDims[0];
-      VectorType sourceType = op.getSourceVectorType();
-      int64_t reductionDimSize = sourceType.getShape()[reductionDim];
       result = xegpu::lowerCrossLaneReductionToShuffles(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
-          reductionDim, reductionDimSize, op.getLoc(), rewriter);
+          reductionDim, crossLaneCount(reductionDim), op.getLoc(), rewriter);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -1031,8 +1069,29 @@ struct SgToLaneStoreScatter
         castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
 
     Value distDest = adaptor.getDest();
+
+    // Coalesced case (mirror of the load path): the layout assigns a genuine
+    // contiguous chunk on the FCD (`lane_data[FCD] = D > 1`) that is the
+    // lane's *entire* per-lane fragment (one round: laneElems == D). Emit a
+    // chunked store (scalar base offset + scalar mask + chunk_size = D) so the
+    // XeVM lowering writes the D contiguous elements the lane owns. Must NOT
+    // fire for round-robin (`lane_data[FCD] = 1`, multi-round, strided).
+    int64_t laneElems = distValueTy1D.getNumElements();
+    int64_t innerLaneData = 1;
+    if (auto laneDataArr = layout.getEffectiveLaneDataAsInt();
+        !laneDataArr.empty())
+      innerLaneData = laneDataArr.back();
+    IntegerAttr chunkSizeAttr = op.getChunkSizeAttr();
+    if (chunkSize == 1 && innerLaneData > 1 && laneElems == innerLaneData) {
+      distOffsets = vector::ExtractOp::create(
+          rewriter, op.getLoc(), distOffsets, ArrayRef<int64_t>{0});
+      distMask = vector::ExtractOp::create(rewriter, op.getLoc(), distMask,
+                                           ArrayRef<int64_t>{0});
+      chunkSizeAttr = rewriter.getI64IntegerAttr(laneElems);
+    }
+
     xegpu::StoreScatterOp::create(rewriter, op.getLoc(), distValue, distDest,
-                                  distOffsets, distMask, op.getChunkSizeAttr(),
+                                  distOffsets, distMask, chunkSizeAttr,
                                   op.getL1HintAttr(), op.getL2HintAttr(),
                                   op.getL3HintAttr(), /*layout=*/nullptr);
     rewriter.eraseOp(op);

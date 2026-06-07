@@ -1215,22 +1215,25 @@ gpu.func @vector_broadcast_scalar_to_vector_uniform(%laneid: index) {
 
 // -----
 gpu.module @xevm_module {
+// The source vector<32xf32> distributes to vector<2xf32> per lane: 16 lanes
+// each owning 2 contiguous elements (lane_data = 2). Each lane folds its 2
+// elements locally (vector.reduction over vector<2xf32>), then the cross-lane
+// butterfly spans only the 16 lanes (4 steps: offsets 1,2,4,8 at width 16),
+// not the full 32-element extent.
 // CHECK-LABEL: gpu.func @vector_multi_reduction_1d_to_scalar
 // CHECK:     %[[SRC:.*]] = "some_op"() {{.*}} : () -> vector<32xf32>
 // CHECK:     %[[DIST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<32xf32> to vector<2xf32>
 // CHECK:     %[[ACC:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:     %[[LANE_RED:.*]] = vector.reduction <add>, %[[DIST]] : vector<2xf32> into f32
-// CHECK:     %[[SHFL1:.*]], %{{.*}} = gpu.shuffle xor %[[LANE_RED]], %[[C1:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[SHFL1:.*]], %{{.*}} = gpu.shuffle xor %[[LANE_RED]], %[[C1:.*]], %[[C16:.*]] : f32
 // CHECK:     %[[ADD1:.*]] = arith.addf %[[LANE_RED]], %[[SHFL1]] : f32
-// CHECK:     %[[SHFL2:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1]], %[[C2:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[SHFL2:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1]], %[[C2:.*]], %[[C16:.*]] : f32
 // CHECK:     %[[ADD2:.*]] = arith.addf %[[ADD1]], %[[SHFL2]] : f32
-// CHECK:     %[[SHFL3:.*]], %{{.*}} = gpu.shuffle xor %[[ADD2]], %[[C4:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[SHFL3:.*]], %{{.*}} = gpu.shuffle xor %[[ADD2]], %[[C4:.*]], %[[C16:.*]] : f32
 // CHECK:     %[[ADD3:.*]] = arith.addf %[[ADD2]], %[[SHFL3]] : f32
-// CHECK:     %[[SHFL4:.*]], %{{.*}} = gpu.shuffle xor %[[ADD3]], %[[C8:.*]], %[[C32:.*]] : f32
+// CHECK:     %[[SHFL4:.*]], %{{.*}} = gpu.shuffle xor %[[ADD3]], %[[C8:.*]], %[[C16:.*]] : f32
 // CHECK:     %[[ADD4:.*]] = arith.addf %[[ADD3]], %[[SHFL4]] : f32
-// CHECK:     %[[SHFL5:.*]], %{{.*}} = gpu.shuffle xor %[[ADD4]], %[[C16:.*]], %[[C32:.*]] : f32
-// CHECK:     %[[ADD5:.*]] = arith.addf %[[ADD4]], %[[SHFL5]] : f32
-// CHECK:     %[[FINAL:.*]] = arith.addf %[[ADD5]], %[[ACC]] : f32
+// CHECK:     %[[FINAL:.*]] = arith.addf %[[ADD4]], %[[ACC]] : f32
 gpu.func @vector_multi_reduction_1d_to_scalar() {
     %src = "some_op"()
       : () -> vector<32xf32>
