@@ -1276,7 +1276,7 @@ define i1 @neg_trunc_i1_usub_sat_one_multi_use(i8 %x) {
 
 define i32 @zext_i32_trunc_nuw_i8(i16 %x, i32 %y) {
 ; CHECK-LABEL: @zext_i32_trunc_nuw_i8(
-; CHECK-NEXT:    [[TRUNC1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC1:%.*]] = zext nneg i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[TRUNC1]]
 ; CHECK-NEXT:    [[E:%.*]] = and i32 [[OR]], 255
 ; CHECK-NEXT:    ret i32 [[E]]
@@ -1290,7 +1290,7 @@ define i32 @zext_i32_trunc_nuw_i8(i16 %x, i32 %y) {
 
 define i16 @zext_i16_trunc_nuw_nsw_i8(i32 %x) {
 ; CHECK-LABEL: @zext_i16_trunc_nuw_nsw_i8(
-; CHECK-NEXT:    [[C:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[C:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[E:%.*]] = and i16 [[C]], 255
 ; CHECK-NEXT:    ret i16 [[E]]
 ;
@@ -1301,7 +1301,7 @@ define i16 @zext_i16_trunc_nuw_nsw_i8(i32 %x) {
 
 define i16 @zext_i16_trunc_nsw_i8(i32 %x) {
 ; CHECK-LABEL: @zext_i16_trunc_nsw_i8(
-; CHECK-NEXT:    [[C:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[C:%.*]] = trunc nsw i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[E:%.*]] = and i16 [[C]], 255
 ; CHECK-NEXT:    ret i16 [[E]]
 ;
@@ -1312,7 +1312,7 @@ define i16 @zext_i16_trunc_nsw_i8(i32 %x) {
 
 define i16 @zext_i16_trunc_nuw_i8(i32 %x) {
 ; CHECK-LABEL: @zext_i16_trunc_nuw_i8(
-; CHECK-NEXT:    [[C:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[C:%.*]] = trunc nuw i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[E:%.*]] = and i16 [[C]], 255
 ; CHECK-NEXT:    ret i16 [[E]]
 ;

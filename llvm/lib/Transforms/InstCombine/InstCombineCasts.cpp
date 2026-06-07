@@ -86,6 +86,20 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
     // This also handles the case of zext(trunc(x)) -> zext(x).
     Res = CastInst::CreateIntegerCast(I->getOperand(0), Ty,
                                       Opc == Instruction::SExt);
+    if (auto *Trunc = dyn_cast<TruncInst>(I)) {
+      if (auto *NewTrunc = dyn_cast<TruncInst>(Res)) {
+        if (Trunc->getType()->getScalarSizeInBits() <=
+            Ty->getScalarSizeInBits()) {
+          if (Trunc->hasNoSignedWrap())
+            NewTrunc->setHasNoSignedWrap(true);
+          if (Trunc->hasNoUnsignedWrap())
+            NewTrunc->setHasNoUnsignedWrap(true);
+        }
+      } else if (auto *NewZExt = dyn_cast<ZExtInst>(Res)) {
+        if (Trunc->hasNoUnsignedWrap())
+          NewZExt->setNonNeg();
+      }
+    }
     break;
   case Instruction::Select: {
     Value *True = EvaluateInDifferentTypeImpl(I->getOperand(1), Ty, isSigned,
