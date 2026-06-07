@@ -495,3 +495,28 @@ gpu.module @xevm_module {
     gpu.return
   }
 }
+
+// -----
+// Coalesced gather/scatter: the load/store layout has lane_data[FCD] = 2
+// (chunk_size = 1), i.e. each lane owns 2 contiguous elements. lane_data is
+// contiguous-per-lane, so this is a chunked access. Distribution must emit
+// the chunked form the XeVM lowering accepts: a scalar base offset + scalar
+// mask + chunk_size = 2 + value vector<2xf32> (taking element 0 of the
+// per-lane offsets/mask as the base), NOT a 2-wide offsets/mask vector.
+gpu.module @xevm_module {
+    // CHECK-LABEL: gpu.func @coalesced_load_store
+    // CHECK: %[[LD:.*]] = xegpu.load %{{.*}}[%[[BASE:.*]]], %{{.*}} <{chunk_size = 2 : i64}> : i64, index, i1 -> vector<2xf32>
+    // CHECK: %[[MUL:.*]] = arith.mulf %[[LD]], %{{.*}} : vector<2xf32>
+    // CHECK: xegpu.store %[[MUL]], %{{.*}}[%[[BASE]]], %{{.*}} <{chunk_size = 2 : i64}> : vector<2xf32>, i64, index, i1
+  gpu.func @coalesced_load_store(%src: i64, %dst: i64) {
+    %step = vector.step : vector<32xindex>
+    %mask = arith.constant dense<true> : vector<32xi1>
+    %v = xegpu.load %src[%step], %mask <{chunk_size = 1 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}>
+        : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+    %c = arith.constant dense<2.0> : vector<32xf32>
+    %p = arith.mulf %v, %c {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} : vector<32xf32>
+    xegpu.store %p, %dst[%step], %mask <{chunk_size = 1 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}>
+        : vector<32xf32>, i64, vector<32xindex>, vector<32xi1>
+    gpu.return
+  }
+}
