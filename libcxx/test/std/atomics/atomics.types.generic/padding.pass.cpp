@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cstring>
 #include <type_traits>
 
@@ -161,8 +162,10 @@ void test_compare_exchange_weak_success_padding_only() {
   Foo original_expected = make_foo(10, 'a', 0xAA);
   assert_foo_padding(original_expected, 0xAA);
 
-  bool r = false;
+  bool r              = false;
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
   while (!r) {
+    assert(std::chrono::steady_clock::now() < deadline && "compare_exchange_weak did not succeed within 3 seconds");
     Foo expected = make_foo(10, 'a', 0xAA);
     assert_foo_padding(expected, 0xAA);
     r = a.compare_exchange_weak(expected, new_value);
