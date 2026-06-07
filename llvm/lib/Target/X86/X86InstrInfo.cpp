@@ -9110,27 +9110,6 @@ bool X86InstrInfo::isSafeToMoveRegClassDefs(
            RC == &X86::RFP80RegClass);
 }
 
-/// Return a virtual register initialized with the
-/// the global base register value. Output instructions required to
-/// initialize the register in the function entry block, if necessary.
-///
-/// TODO: Eliminate this and move the code to X86MachineFunctionInfo.
-///
-Register X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
-  X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
-  Register GlobalBaseReg = X86FI->getGlobalBaseReg();
-  if (GlobalBaseReg)
-    return GlobalBaseReg;
-
-  // Create the register. The code to initialize it is inserted
-  // later, by the CGBR pass (below).
-  MachineRegisterInfo &RegInfo = MF->getRegInfo();
-  GlobalBaseReg = RegInfo.createVirtualRegister(
-      Subtarget.is64Bit() ? &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass);
-  X86FI->setGlobalBaseReg(GlobalBaseReg);
-  return GlobalBaseReg;
-}
-
 // FIXME: Some shuffle and unpack instructions have equivalents in different
 // domains, but they require a bit more work than just switching opcodes.
 

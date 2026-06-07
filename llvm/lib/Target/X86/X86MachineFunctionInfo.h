@@ -232,7 +232,14 @@ public:
   void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
 
   Register getGlobalBaseReg() const { return GlobalBaseReg; }
-  void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }
+
+  /// Return a virtual register for the PIC global base, creating it on first
+  /// use. Call initGlobalBaseReg() to insert initialization code.
+  Register getGlobalBaseReg(MachineFunction &MF);
+
+  /// Insert PIC global base initialization into the function entry block.
+  /// Returns true if code was inserted.
+  bool initGlobalBaseReg(MachineFunction &MF);
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Idx) { VarArgsFrameIndex = Idx; }

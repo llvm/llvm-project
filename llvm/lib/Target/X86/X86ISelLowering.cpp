@@ -29015,8 +29015,8 @@ SDValue X86TargetLowering::lowerEH_SJLJ_SETJMP(SDValue Op,
   // Otherwise, we will end up in a situation where we will
   // reference a virtual register that is not defined!
   if (!Subtarget.is64Bit()) {
-    const X86InstrInfo *TII = Subtarget.getInstrInfo();
-    (void)TII->getGlobalBaseReg(&DAG.getMachineFunction());
+    MachineFunction &MF = DAG.getMachineFunction();
+    (void)MF.getInfo<X86MachineFunctionInfo>()->getGlobalBaseReg(MF);
   }
   return DAG.getNode(X86ISD::EH_SJLJ_SETJMP, DL,
                      DAG.getVTList(MVT::i32, MVT::Other),
@@ -37714,9 +37714,12 @@ X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
     addDirectMem(MIB, X86::EAX);
     MIB.addReg(X86::EAX, RegState::ImplicitDefine).addRegMask(RegMask);
   } else {
+    MachineFunction &MF = *F;
+    Register GlobalBaseReg =
+        MF.getInfo<X86MachineFunctionInfo>()->getGlobalBaseReg(MF);
     MachineInstrBuilder MIB =
         BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), X86::EAX)
-            .addReg(TII->getGlobalBaseReg(F))
+            .addReg(GlobalBaseReg)
             .addImm(0)
             .addReg(0)
             .addGlobalAddress(MI.getOperand(3).getGlobal(), 0,
@@ -37999,13 +38002,15 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
               .addMBB(restoreMBB)
               .addReg(0);
     } else {
-      const X86InstrInfo *XII = static_cast<const X86InstrInfo*>(TII);
+      MachineFunction &MFunc = *MF;
+      Register GlobalBaseReg =
+          MFunc.getInfo<X86MachineFunctionInfo>()->getGlobalBaseReg(MFunc);
       MIB = BuildMI(*thisMBB, MI, MIMD, TII->get(X86::LEA32r), LabelReg)
-              .addReg(XII->getGlobalBaseReg(MF))
-              .addImm(0)
-              .addReg(0)
-              .addMBB(restoreMBB, Subtarget.classifyBlockAddressReference())
-              .addReg(0);
+                .addReg(GlobalBaseReg)
+                .addImm(0)
+                .addReg(0)
+                .addMBB(restoreMBB, Subtarget.classifyBlockAddressReference())
+                .addReg(0);
     }
   } else
     PtrStoreOpc = (PVT == MVT::i64) ? X86::MOV64mi32 : X86::MOV32mi;

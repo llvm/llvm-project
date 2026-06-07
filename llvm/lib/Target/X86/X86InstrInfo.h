@@ -555,12 +555,6 @@ public:
   /// not marked dead.
   bool hasLiveCondCodeDef(MachineInstr &MI) const;
 
-  /// getGlobalBaseReg - Return a virtual register initialized with the
-  /// the global base register value. Output instructions required to
-  /// initialize the register in the function entry block, if necessary.
-  ///
-  Register getGlobalBaseReg(MachineFunction *MF) const;
-
   std::pair<uint16_t, uint16_t>
   getExecutionDomain(const MachineInstr &MI) const override;
 

@@ -3334,7 +3334,9 @@ bool X86DAGToDAGISel::tryFoldBroadcast(SDNode *Root, SDNode *P, SDValue N,
 /// Output instructions required to initialize the global base register,
 /// if necessary.
 SDNode *X86DAGToDAGISel::getGlobalBaseReg() {
-  Register GlobalBaseReg = getInstrInfo()->getGlobalBaseReg(MF);
+  MachineFunction &MFunc = CurDAG->getMachineFunction();
+  Register GlobalBaseReg =
+      MFunc.getInfo<X86MachineFunctionInfo>()->getGlobalBaseReg(MFunc);
   auto &DL = MF->getDataLayout();
   return CurDAG->getRegister(GlobalBaseReg, TLI->getPointerTy(DL)).getNode();
 }

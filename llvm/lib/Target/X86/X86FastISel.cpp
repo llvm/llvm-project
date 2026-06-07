@@ -743,7 +743,9 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
       // If this reference is relative to the pic base, set it now.
       if (isGlobalRelativeToPICBase(GVFlags)) {
         // FIXME: How do we know Base.Reg is free??
-        AM.Base.Reg = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
+        MachineFunction &MF = *FuncInfo.MF;
+        AM.Base.Reg =
+            MF.getInfo<X86MachineFunctionInfo>()->getGlobalBaseReg(MF);
       }
 
       // Unless the ABI requires an extra load, return a direct reference to
@@ -3486,7 +3488,8 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // ELF / PIC requires GOT in the EBX register before function calls via PLT
   // GOT pointer.
   if (Subtarget->isPICStyleGOT()) {
-    Register Base = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
+    MachineFunction &MF = *FuncInfo.MF;
+    Register Base = MF.getInfo<X86MachineFunctionInfo>()->getGlobalBaseReg(MF);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::COPY), X86::EBX).addReg(Base);
   }
@@ -3805,10 +3808,11 @@ Register X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   // x86-32 PIC requires a PIC base register for constant pools.
   Register PICBase;
   unsigned char OpFlag = Subtarget->classifyLocalReference(nullptr);
+  MachineFunction &MF = *FuncInfo.MF;
   if (OpFlag == X86II::MO_PIC_BASE_OFFSET)
-    PICBase = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
+    PICBase = MF.getInfo<X86MachineFunctionInfo>()->getGlobalBaseReg(MF);
   else if (OpFlag == X86II::MO_GOTOFF)
-    PICBase = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
+    PICBase = MF.getInfo<X86MachineFunctionInfo>()->getGlobalBaseReg(MF);
   else if (Subtarget->is64Bit() && TM.getCodeModel() != CodeModel::Large)
     PICBase = X86::RIP;
 
