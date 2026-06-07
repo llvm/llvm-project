@@ -303,3 +303,47 @@ namespace test14 {
 
   int x = A<int>::B<true>::f(*new A<int>::B<false>);
 }
+
+namespace test15 {
+  template <class T> struct A {
+    T f();
+  };
+
+  template <> struct A<int> {
+    void f();
+  };
+
+  class C {
+    int n; // #test15-C-n
+    template <class T> friend T A<T>::f();
+  };
+
+  void A<int>::f() {
+    C c;
+    c.n = 0;
+    // expected-error@-1 {{'n' is a private member of 'test15::C'}}
+    //   expected-note@#test15-C-n {{implicitly declared private here}}
+  }
+}
+
+namespace test16 {
+  template <class T> struct A {
+    template <T U> T i();
+  };
+
+  template <> struct A<int> {
+    template <int U> void i();
+  };
+
+  class C {
+    int n; // #test16-C-n
+    template <class T> template <T U> friend T A<T>::i();
+  };
+
+  template <int U> void A<int>::i() {
+    C c;
+    c.n = 0;
+    // expected-error@-1 {{'n' is a private member of 'test16::C'}}
+    //   expected-note@#test16-C-n {{implicitly declared private here}}
+  }
+}
