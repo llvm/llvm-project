@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___MEMORY_SHARED_PTR_H
 #define _LIBCPP___MEMORY_SHARED_PTR_H
 
+#include <__atomic/memory_order.h>
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
@@ -59,9 +60,6 @@
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <typeinfo>
-#if _LIBCPP_HAS_ATOMIC_HEADER
-#  include <__atomic/memory_order.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -102,39 +100,27 @@ public:
       : __ptr_(__p), __deleter_(std::move(__d)), __alloc_(std::move(__a)) {}
 
 #if _LIBCPP_HAS_RTTI
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL const void* __get_deleter(const type_info&) const _NOEXCEPT override;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL const void* __get_deleter(const type_info& __t) const _NOEXCEPT override {
+    return __t == typeid(_Dp) ? std::addressof(__deleter_) : nullptr;
+  }
 #endif
 
 private:
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override;
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
+    __deleter_(__ptr_);
+    __deleter_.~_Dp();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
+    typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_pointer>::type _Al;
+    typedef allocator_traits<_Al> _ATraits;
+    typedef pointer_traits<typename _ATraits::pointer> _PTraits;
+
+    _Al __a(__alloc_);
+    __alloc_.~_Alloc();
+    __a.deallocate(_PTraits::pointer_to(*this), 1);
+  }
 };
-
-#if _LIBCPP_HAS_RTTI
-
-template <class _Tp, class _Dp, class _Alloc>
-const void* __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__get_deleter(const type_info& __t) const _NOEXCEPT {
-  return __t == typeid(_Dp) ? std::addressof(__deleter_) : nullptr;
-}
-
-#endif // _LIBCPP_HAS_RTTI
-
-template <class _Tp, class _Dp, class _Alloc>
-void __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__on_zero_shared() _NOEXCEPT {
-  __deleter_(__ptr_);
-  __deleter_.~_Dp();
-}
-
-template <class _Tp, class _Dp, class _Alloc>
-void __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT {
-  typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_pointer>::type _Al;
-  typedef allocator_traits<_Al> _ATraits;
-  typedef pointer_traits<typename _ATraits::pointer> _PTraits;
-
-  _Al __a(__alloc_);
-  __alloc_.~_Alloc();
-  __a.deallocate(_PTraits::pointer_to(*this), 1);
-}
 
 // This tag is used to instantiate an allocator type. The various shared_ptr control blocks
 // detect that the allocator has been instantiated for this type and perform alternative
@@ -1163,44 +1149,93 @@ private:
   __shared_weak_count* __cntrl_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR weak_ptr() _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR weak_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
 
   template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI weak_ptr(shared_ptr<_Yp> const& __r) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI weak_ptr(shared_ptr<_Yp> const& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
+    if (__cntrl_)
+      __cntrl_->__add_weak();
+  }
 
-  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr const& __r) _NOEXCEPT;
-
-  template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr<_Yp> const& __r) _NOEXCEPT;
-
-  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr&& __r) _NOEXCEPT;
-
-  template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr<_Yp>&& __r) _NOEXCEPT;
-
-  _LIBCPP_HIDE_FROM_ABI ~weak_ptr();
-
-  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(weak_ptr const& __r) _NOEXCEPT;
-  template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(weak_ptr<_Yp> const& __r) _NOEXCEPT;
-
-  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(weak_ptr&& __r) _NOEXCEPT;
-  template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(weak_ptr<_Yp>&& __r) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr const& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
+    if (__cntrl_)
+      __cntrl_->__add_weak();
+  }
 
   template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(shared_ptr<_Yp> const& __r) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr<_Yp> const& __r) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {
+    shared_ptr<_Yp> __s = __r.lock();
+    *this               = weak_ptr<_Tp>(__s);
+  }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(weak_ptr& __r) _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI void reset() _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr&& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
+    __r.__ptr_   = nullptr;
+    __r.__cntrl_ = nullptr;
+  }
+
+  template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr<_Yp>&& __r) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {
+    shared_ptr<_Yp> __s = __r.lock();
+    *this               = weak_ptr<_Tp>(__s);
+    __r.reset();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI ~weak_ptr() {
+    if (__cntrl_)
+      __cntrl_->__release_weak();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(weak_ptr const& __r) _NOEXCEPT {
+    weak_ptr(__r).swap(*this);
+    return *this;
+  }
+
+  template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(weak_ptr<_Yp> const& __r) _NOEXCEPT {
+    weak_ptr(__r).swap(*this);
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(weak_ptr&& __r) _NOEXCEPT {
+    weak_ptr(std::move(__r)).swap(*this);
+    return *this;
+  }
+
+  template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(weak_ptr<_Yp>&& __r) _NOEXCEPT {
+    weak_ptr(std::move(__r)).swap(*this);
+    return *this;
+  }
+
+  template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI weak_ptr& operator=(shared_ptr<_Yp> const& __r) _NOEXCEPT {
+    weak_ptr(__r).swap(*this);
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void swap(weak_ptr& __r) _NOEXCEPT {
+    std::swap(__ptr_, __r.__ptr_);
+    std::swap(__cntrl_, __r.__cntrl_);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void reset() _NOEXCEPT { weak_ptr().swap(*this); }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI long use_count() const _NOEXCEPT {
     return __cntrl_ ? __cntrl_->use_count() : 0;
   }
+
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool expired() const _NOEXCEPT {
     return __cntrl_ == nullptr || __cntrl_->use_count() == 0;
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> lock() const _NOEXCEPT;
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> lock() const _NOEXCEPT {
+    shared_ptr<_Tp> __r;
+    __r.__cntrl_ = __cntrl_ ? __cntrl_->lock() : __cntrl_;
+    if (__r.__cntrl_)
+      __r.__ptr_ = __ptr_;
+    return __r;
+  }
+
   template <class _Up>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool owner_before(const shared_ptr<_Up>& __r) const _NOEXCEPT {
     return __cntrl_ < __r.__cntrl_;
@@ -1222,104 +1257,8 @@ weak_ptr(shared_ptr<_Tp>) -> weak_ptr<_Tp>;
 #endif
 
 template <class _Tp>
-inline _LIBCPP_CONSTEXPR weak_ptr<_Tp>::weak_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
-
-template <class _Tp>
-inline weak_ptr<_Tp>::weak_ptr(weak_ptr const& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
-  if (__cntrl_)
-    __cntrl_->__add_weak();
-}
-
-template <class _Tp>
-template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> >
-inline weak_ptr<_Tp>::weak_ptr(shared_ptr<_Yp> const& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
-  if (__cntrl_)
-    __cntrl_->__add_weak();
-}
-
-template <class _Tp>
-template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> >
-inline weak_ptr<_Tp>::weak_ptr(weak_ptr<_Yp> const& __r) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {
-  shared_ptr<_Yp> __s = __r.lock();
-  *this               = weak_ptr<_Tp>(__s);
-}
-
-template <class _Tp>
-inline weak_ptr<_Tp>::weak_ptr(weak_ptr&& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
-  __r.__ptr_   = nullptr;
-  __r.__cntrl_ = nullptr;
-}
-
-template <class _Tp>
-template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> >
-inline weak_ptr<_Tp>::weak_ptr(weak_ptr<_Yp>&& __r) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {
-  shared_ptr<_Yp> __s = __r.lock();
-  *this               = weak_ptr<_Tp>(__s);
-  __r.reset();
-}
-
-template <class _Tp>
-weak_ptr<_Tp>::~weak_ptr() {
-  if (__cntrl_)
-    __cntrl_->__release_weak();
-}
-
-template <class _Tp>
-inline weak_ptr<_Tp>& weak_ptr<_Tp>::operator=(weak_ptr const& __r) _NOEXCEPT {
-  weak_ptr(__r).swap(*this);
-  return *this;
-}
-
-template <class _Tp>
-template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> >
-inline weak_ptr<_Tp>& weak_ptr<_Tp>::operator=(weak_ptr<_Yp> const& __r) _NOEXCEPT {
-  weak_ptr(__r).swap(*this);
-  return *this;
-}
-
-template <class _Tp>
-inline weak_ptr<_Tp>& weak_ptr<_Tp>::operator=(weak_ptr&& __r) _NOEXCEPT {
-  weak_ptr(std::move(__r)).swap(*this);
-  return *this;
-}
-
-template <class _Tp>
-template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> >
-inline weak_ptr<_Tp>& weak_ptr<_Tp>::operator=(weak_ptr<_Yp>&& __r) _NOEXCEPT {
-  weak_ptr(std::move(__r)).swap(*this);
-  return *this;
-}
-
-template <class _Tp>
-template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> >
-inline weak_ptr<_Tp>& weak_ptr<_Tp>::operator=(shared_ptr<_Yp> const& __r) _NOEXCEPT {
-  weak_ptr(__r).swap(*this);
-  return *this;
-}
-
-template <class _Tp>
-inline void weak_ptr<_Tp>::swap(weak_ptr& __r) _NOEXCEPT {
-  std::swap(__ptr_, __r.__ptr_);
-  std::swap(__cntrl_, __r.__cntrl_);
-}
-
-template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI void swap(weak_ptr<_Tp>& __x, weak_ptr<_Tp>& __y) _NOEXCEPT {
   __x.swap(__y);
-}
-
-template <class _Tp>
-inline void weak_ptr<_Tp>::reset() _NOEXCEPT {
-  weak_ptr().swap(*this);
-}
-
-template <class _Tp>
-shared_ptr<_Tp> weak_ptr<_Tp>::lock() const _NOEXCEPT {
-  shared_ptr<_Tp> __r;
-  __r.__cntrl_ = __cntrl_ ? __cntrl_->lock() : __cntrl_;
-  if (__r.__cntrl_)
-    __r.__ptr_ = __ptr_;
-  return __r;
 }
 
 #if _LIBCPP_STD_VER >= 17

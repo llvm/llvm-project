@@ -53,17 +53,6 @@ static cl::opt<bool>
                          cl::desc("Allow enabling loop hints to reorder "
                                   "FP operations during vectorization."));
 
-// TODO: Move size-based thresholds out of legality checking, make cost based
-// decisions instead of hard thresholds.
-static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
-    "vectorize-scev-check-threshold", cl::init(16), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed."));
-
-static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
-    "pragma-vectorize-scev-check-threshold", cl::init(128), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed with a "
-             "vectorize(enable) pragma"));
-
 static cl::opt<LoopVectorizeHints::ScalableForceKind>
     ForceScalableVectorization(
         "scalable-vectorization", cl::init(LoopVectorizeHints::SK_Unspecified),
@@ -421,25 +410,6 @@ static IntegerType *getWiderInductionTy(const DataLayout &DL, Type *Ty0,
   return TyA->getScalarSizeInBits() > TyB->getScalarSizeInBits() ? TyA : TyB;
 }
 
-/// Check that the instruction has outside loop users and is not an
-/// identified reduction variable.
-static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
-                               SmallPtrSetImpl<Value *> &AllowedExit) {
-  // Reductions, Inductions and non-header phis are allowed to have exit users. All
-  // other instructions must not have external users.
-  if (!AllowedExit.count(Inst))
-    // Check that all of the users of the loop are inside the BB.
-    for (User *U : Inst->users()) {
-      Instruction *UI = cast<Instruction>(U);
-      // This user may be a reduction exit value.
-      if (!TheLoop->contains(UI)) {
-        LLVM_DEBUG(dbgs() << "LV: Found an outside user for : " << *UI << '\n');
-        return true;
-      }
-    }
-  return false;
-}
-
 /// Returns true if A and B have same pointer operands or same SCEVs addresses
 static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
                                StoreInst *B) {
@@ -698,9 +668,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   return Result;
 }
 
-void LoopVectorizationLegality::addInductionPhi(
-    PHINode *Phi, const InductionDescriptor &ID,
-    SmallPtrSetImpl<Value *> &AllowedExit) {
+void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
+                                                const InductionDescriptor &ID) {
   Inductions[Phi] = ID;
 
   // In case this induction also comes with casts that we know we can ignore
@@ -739,17 +708,6 @@ void LoopVectorizationLegality::addInductionPhi(
       PrimaryInduction = Phi;
   }
 
-  // Both the PHI node itself, and the "post-increment" value feeding
-  // back into the PHI node may have external users.
-  // We can allow those uses, except if the SCEVs we have for them rely
-  // on predicates that only hold within the loop, since allowing the exit
-  // currently means re-using this SCEV outside the loop (see PR33706 for more
-  // details).
-  if (PSE.getPredicate().isAlwaysTrue()) {
-    AllowedExit.insert(Phi);
-    AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
-  }
-
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
 }
 
@@ -761,7 +719,7 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(&Phi, TheLoop, PSE, ID) &&
         ID.getKind() == InductionDescriptor::IK_IntInduction) {
-      addInductionPhi(&Phi, ID, AllowedExit);
+      addInductionPhi(&Phi, ID);
       return true;
     }
     // Bail out for any Phi in the outer loop header that is not a supported
@@ -864,12 +822,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // can convert it to select during if-conversion. No need to check if
     // the PHIs in this block are induction or reduction variables.
     if (BB != Header) {
-      // Non-header phi nodes that have outside uses can be vectorized. Add
-      // them to the list of allowed exits.
-      // Unsafe cyclic dependencies with header phis are identified during
-      // legalization for reduction, induction and fixed order
-      // recurrences.
-      AllowedExit.insert(&I);
+      // Non-header phi nodes that have outside uses can be vectorized. Unsafe
+      // cyclic dependencies with header phis are identified during legalization
+      // for reduction, induction and fixed order recurrences.
       return true;
     }
 
@@ -886,7 +841,6 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC, DT,
                                              PSE.getSE())) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
-      AllowedExit.insert(RedDes.getLoopExitInstr());
       Reductions[Phi] = std::move(RedDes);
       assert((!RedDes.hasUsesOutsideReductionChain() ||
               RecurrenceDescriptor::isMinMaxRecurrenceKind(
@@ -908,30 +862,15 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
                  ID.getConstIntStepValue() == nullptr;
         };
 
-    // TODO: Instead of recording the AllowedExit, it would be good to
-    // record the complementary set: NotAllowedExit. These include (but may
-    // not be limited to):
-    // 1. Reduction phis as they represent the one-before-last value, which
-    // is not available when vectorized
-    // 2. Induction phis and increment when SCEV predicates cannot be used
-    // outside the loop - see addInductionPhi
-    // 3. Non-Phis with outside uses when SCEV predicates cannot be used
-    // outside the loop - see call to hasOutsideLoopUser in the non-phi
-    // handling below
-    // 4. FixedOrderRecurrence phis that can possibly be handled by
-    // extraction.
-    // By recording these, we can then reason about ways to vectorize each
-    // of these NotAllowedExit.
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID) &&
         !IsDisallowedStridedPointerInduction(ID)) {
-      addInductionPhi(Phi, ID, AllowedExit);
+      addInductionPhi(Phi, ID);
       Requirements->addExactFPMathInst(ID.getExactFPMathInst());
       return true;
     }
 
     if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
-      AllowedExit.insert(Phi);
       FixedOrderRecurrences.insert(Phi);
       return true;
     }
@@ -940,7 +879,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // and re-try classifying it a an induction PHI.
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
         !IsDisallowedStridedPointerInduction(ID)) {
-      addInductionPhi(Phi, ID, AllowedExit);
+      addInductionPhi(Phi, ID);
       return true;
     }
 
@@ -1081,22 +1020,6 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
              !I.isFast()) {
     LLVM_DEBUG(dbgs() << "LV: Found FP op with unsafe algebra.\n");
     Hints->setPotentiallyUnsafe();
-  }
-
-  // Reduction instructions are allowed to have exit users.
-  // All other instructions must not have external users.
-  if (hasOutsideLoopUser(TheLoop, &I, AllowedExit)) {
-    // We can safely vectorize loops where instructions within the loop are
-    // used outside the loop only if the SCEV predicates within the loop is
-    // same as outside the loop. Allowing the exit means reusing the SCEV
-    // outside the loop.
-    if (PSE.getPredicate().isAlwaysTrue()) {
-      AllowedExit.insert(&I);
-      return true;
-    }
-    reportVectorizationFailure("Value cannot be used outside the loop",
-                               "ValueUsedOutsideLoop", ORE, TheLoop, &I);
-    return false;
   }
 
   return true;
@@ -1913,7 +1836,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
       if (&I == Load)
         continue;
 
-      if (I.mayWriteToMemory()) {
+      if (I.mayReadOrWriteMemory()) {
+        // We need to mask all other memory ops.
+        ConditionallyExecutedOps.insert(&I);
+        if (isa<LoadInst>(&I))
+          continue;
         if (auto *SI = dyn_cast<StoreInst>(&I)) {
           AliasResult AR = AA->alias(Ptr, SI->getPointerOperand());
           if (AR == AliasResult::NoAlias)
@@ -2019,12 +1946,23 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // Bail out for ReadWrite loops with uncountable exits for now.
-  if (UncountableExitType == UncountableExitTrait::ReadWrite) {
-    reportVectorizationFailure(
-        "Writes to memory unsupported in early exit loops",
-        "Cannot vectorize early exit loop with writes to memory",
-        "WritesInEarlyExitLoop", ORE, TheLoop);
+  // TODO: Remove this restriction once we're sure it's safe to do so.
+  //       Handling stores to invariant addresses will be slightly different
+  //       based on the vectorization style chosen. If we bail out to a scalar
+  //       tail before executing any lane that would take the uncountable exit,
+  //       then the store that occurs in the scalar loop would suffice.
+  //
+  //       If we instead handle the lane taking the uncountable exit within the
+  //       vectorized loop, then we will have to ensure that we extract the
+  //       last active lane at that point in the loop instead of the last lane
+  //       of the vector before performing a scalar store.
+  if (UncountableExitType != UncountableExitTrait::None &&
+      !LAI->getStoresToInvariantAddresses().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot vectorize early exit loops with stores to "
+                         "loop-invariant addresses\n");
+    reportVectorizationFailure("Cannot vectorize early exit loops with stores "
+                               "to loop-invariant addresses",
+                               "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
   }
 
@@ -2034,23 +1972,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
                               ? " (with a runtime bound check)"
                               : "")
                       << "!\n");
-  }
-
-  unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
-  if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
-    SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
-
-  if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
-    LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
-                         "due to SCEVThreshold");
-    reportVectorizationFailure(
-        "Too many SCEV checks needed",
-        "Too many SCEV assumptions need to be made and checked at runtime",
-        "TooManySCEVRunTimeChecks", ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
   }
 
   // Okay! We've done all the tests. If any have failed, return false. Otherwise

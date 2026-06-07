@@ -20,7 +20,7 @@ The mapping between reStructuredText files and generated documentation is
 `docs/Foo.rst` <-> `<build-dir>/docs//html/Foo.html` <-> `https://llvm.org/docs/Foo.html`.
 
 If you are interested in writing new documentation, you will want to read
-`SphinxQuickstartTemplate.rst` which will get you writing documentation
+`SphinxQuickstartTemplate.md` which will get you writing documentation
 very fast and includes examples of the most important reStructuredText
 markup syntax.
 

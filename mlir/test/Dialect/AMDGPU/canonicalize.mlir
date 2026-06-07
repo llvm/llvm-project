@@ -123,12 +123,14 @@ func.func @dead_store(%arg0: memref<4xf32>, %arg1: f32) {
 
 // -----
 
-// CHECK-LABEL: func @dead_atomic_add
-func.func @dead_atomic_add(%arg0: memref<4xf32>, %arg1: f32) {
+// CHECK-LABEL: func @oob_atomic_add
+func.func @oob_atomic_add(%arg0: memref<4xf32>, %arg1: f32) -> f32 {
   // CHECK-NOT: amdgpu.raw_buffer_atomic_fadd
+  // CHECK: %[[zero:.*]] = arith.constant 0.000000e+00 : f32
+  // CHECK: return %[[zero]] : f32
   %c4_i32 = arith.constant 4 : i32
-  amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %arg1 -> %arg0[%c4_i32] : f32 -> memref<4xf32>, i32
-  func.return
+  %0 = amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %arg1 -> %arg0[%c4_i32] : f32 -> memref<4xf32>, i32
+  func.return %0 : f32
 }
 
 // -----

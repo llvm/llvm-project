@@ -66,6 +66,8 @@ class JSONGenerator : public Generator {
   void serializeMDReference(const Reference &Ref, Object &ReferenceObj,
                             StringRef BasePath);
 
+  void serializeClassSpecializations(SymbolID ClassUSR, Object &ReferenceObj);
+
   // Convenience lambdas to pass to serializeArray.
   auto serializeInfoLambda() {
     return [this](const auto &Info, Object &Object) {
@@ -79,6 +81,7 @@ class JSONGenerator : public Generator {
   }
 
   llvm::DenseMap<const Info *, SmallVector<Context, 4>> ContextsMap;
+  llvm::StringMap<doc::Info *> *Infos = nullptr;
   const ClangDocContext *CDCtx;
   bool Markdown;
 
@@ -448,7 +451,7 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
 
   // Namespaces aren't SymbolInfos, so they dont have a DefLoc
   if (I.IT != InfoType::IT_namespace) {
-    const auto *Symbol = static_cast<const SymbolInfo *>(&I);
+    const auto *Symbol = cast<SymbolInfo>(&I);
     if (Symbol->DefLoc)
       Obj["Location"] = serializeLocation(Symbol->DefLoc.value());
   }
@@ -456,6 +459,42 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
   auto It = ContextsMap.find(&I);
   if (It != ContextsMap.end() && !It->second.empty())
     generateContext(I, Obj);
+}
+
+static auto SerializeTemplateParam = [](const TemplateParamInfo &Param,
+                                        Object &JsonObj) {
+  JsonObj["Param"] = Param.Contents;
+};
+
+static void serializeTemplateSpecialization(TemplateInfo Template,
+                                            Object &TemplateObj) {
+  json::Value TemplateSpecializationVal = Object();
+  auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
+  TemplateSpecializationObj["SpecializationOf"] =
+      toHex(toStringRef(Template.Specialization->SpecializationOf));
+  if (!Template.Specialization->Params.empty()) {
+    bool VerticalDisplay =
+        Template.Specialization->Params.size() > getMaxParamWrapLimit();
+    serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
+                   "Parameters", SerializeTemplateParam, "SpecParamEnd",
+                   [VerticalDisplay](Object &JsonObj) {
+                     JsonObj["VerticalDisplay"] = VerticalDisplay;
+                   });
+  }
+  TemplateObj["Specialization"] = TemplateSpecializationVal;
+}
+
+void JSONGenerator::serializeClassSpecializations(SymbolID ClassUSR,
+                                                  Object &ReferenceObj) {
+  if (!Infos)
+    return;
+  auto *Class = Infos->lookup(toHex(ClassUSR));
+  if (!Class || Class->IT != InfoType::IT_record)
+    return;
+  RecordInfo *ClassInfo = cast<RecordInfo>(Class);
+  if (!ClassInfo->Template || !ClassInfo->Template->Specialization)
+    return;
+  serializeTemplateSpecialization(ClassInfo->Template.value(), ReferenceObj);
 }
 
 void JSONGenerator::serializeReference(const Reference &Ref,
@@ -501,9 +540,14 @@ void JSONGenerator::serializeCommonChildren(
   }
 
   if (!Children.Records.empty()) {
-    ReferenceFunc SerializeReferenceFunc = MDReferenceLambda
-                                               ? MDReferenceLambda.value()
+    ReferenceFunc BaseFunc = MDReferenceLambda ? MDReferenceLambda.value()
                                                : serializeReferenceLambda();
+
+    ReferenceFunc SerializeReferenceFunc =
+        [this, BaseFunc](const Reference &Ref, Object &Object) {
+          BaseFunc(Ref, Object);
+          serializeClassSpecializations(Ref.USR, Object);
+        };
     serializeArray(Children.Records, Obj, "Records", SerializeReferenceFunc);
     Obj["HasRecords"] = true;
   }
@@ -539,27 +583,9 @@ void JSONGenerator::serializeInfo(const ConstraintInfo &I, Object &Obj) {
 void JSONGenerator::serializeInfo(const TemplateInfo &Template, Object &Obj) {
   json::Value TemplateVal = Object();
   auto &TemplateObj = *TemplateVal.getAsObject();
-  auto SerializeTemplateParam = [](const TemplateParamInfo &Param,
-                                   Object &JsonObj) {
-    JsonObj["Param"] = Param.Contents;
-  };
 
-  if (Template.Specialization) {
-    json::Value TemplateSpecializationVal = Object();
-    auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
-    TemplateSpecializationObj["SpecializationOf"] =
-        toHex(toStringRef(Template.Specialization->SpecializationOf));
-    if (!Template.Specialization->Params.empty()) {
-      bool VerticalDisplay =
-          Template.Specialization->Params.size() > getMaxParamWrapLimit();
-      serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
-                     "Parameters", SerializeTemplateParam, "SpecParamEnd",
-                     [VerticalDisplay](Object &JsonObj) {
-                       JsonObj["VerticalDisplay"] = VerticalDisplay;
-                     });
-    }
-    TemplateObj["Specialization"] = TemplateSpecializationVal;
-  }
+  if (Template.Specialization)
+    serializeTemplateSpecialization(Template, TemplateObj);
 
   if (!Template.Params.empty()) {
     bool VerticalDisplay = Template.Params.size() > getMaxParamWrapLimit();
@@ -839,7 +865,7 @@ SmallString<16> JSONGenerator::determineFileName(Info *I,
                                                  SmallString<128> &Path) {
   SmallString<16> FileName;
   if (I->IT == InfoType::IT_record) {
-    auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
+    auto *RecordSymbolInfo = cast<SymbolInfo>(I);
     FileName = RecordSymbolInfo->MangledName;
   } else if (I->IT == InfoType::IT_namespace) {
     FileName = "index";
@@ -972,6 +998,7 @@ Error JSONGenerator::generateDocumentation(StringRef RootDir,
                                            const ClangDocContext &CDCtx,
                                            std::string DirName) {
   this->CDCtx = &CDCtx;
+  this->Infos = &Infos;
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
@@ -1025,10 +1052,10 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
 
   switch (I->IT) {
   case InfoType::IT_namespace:
-    serializeInfo(*static_cast<NamespaceInfo *>(I), Obj);
+    serializeInfo(*cast<NamespaceInfo>(I), Obj);
     break;
   case InfoType::IT_record:
-    serializeInfo(*static_cast<RecordInfo *>(I), Obj);
+    serializeInfo(*cast<RecordInfo>(I), Obj);
     break;
   case InfoType::IT_concept:
   case InfoType::IT_enum:
