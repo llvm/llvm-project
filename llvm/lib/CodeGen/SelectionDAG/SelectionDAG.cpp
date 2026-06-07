@@ -56,6 +56,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -9299,6 +9300,32 @@ static bool shouldLowerMemFuncForSize(const MachineFunction &MF,
   return DAG.shouldOptForSize();
 }
 
+/// Try to identify the stack object a memory function operand refers to.
+/// Targets such as NVPTX lower allocas to a non-generic address space, hiding
+/// the frame index behind an addrspacecast: peek through those, and fall back
+/// to the IR value from the pointer info, which also covers pointers defined
+/// in a different basic block where ISel only sees a CopyFromReg.
+static std::optional<int> findStackObject(SDValue Ptr,
+                                          const MachinePointerInfo &PtrInfo,
+                                          SelectionDAG &DAG) {
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(peekThroughAddrSpaceCasts(Ptr)))
+    return FI->getIndex();
+
+  const Value *V = dyn_cast_if_present<const Value *>(PtrInfo.V);
+  if (!V || PtrInfo.Offset != 0)
+    return std::nullopt;
+  const auto *AI = dyn_cast<AllocaInst>(V->stripPointerCasts());
+  if (!AI)
+    return std::nullopt;
+  FunctionLoweringInfo *FLI = DAG.getFunctionLoweringInfo();
+  if (!FLI)
+    return std::nullopt;
+  auto It = FLI->StaticAllocaMap.find(AI);
+  if (It == FLI->StaticAllocaMap.end())
+    return std::nullopt;
+  return It->second;
+}
+
 static void chainLoadsAndStoresForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                           SmallVector<SDValue, 32> &OutChains, unsigned From,
                           unsigned To, SmallVector<SDValue, 16> &OutLoadChains,
@@ -9346,10 +9373,18 @@ static SDValue getMemcpyLoadsAndStores(
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF, DAG);
-  FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Dst);
-  if (FI && !MFI.isFixedObjectIndex(FI->getIndex()))
+  std::optional<int> DstFI = findStackObject(Dst, DstPtrInfo, DAG);
+  if (DstFI && !MFI.isFixedObjectIndex(*DstFI))
     DstAlignCanChange = true;
   MaybeAlign SrcAlign = DAG.InferPtrAlign(Src);
+  // The source may be a stack object whose alignment is not visible through
+  // the DAG-level pointer; in particular one whose alignment was raised when
+  // it was the destination of a previously expanded memory function.
+  if (std::optional<int> SrcFI = findStackObject(Src, SrcPtrInfo, DAG)) {
+    Align SrcObjAlign = MFI.getObjectAlign(*SrcFI);
+    if (!SrcAlign || SrcObjAlign > *SrcAlign)
+      SrcAlign = SrcObjAlign;
+  }
   if (!SrcAlign || Alignment > *SrcAlign)
     SrcAlign = Alignment;
   assert(SrcAlign && "SrcAlign must be set");
@@ -9382,8 +9417,8 @@ static SDValue getMemcpyLoadsAndStores(
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
-      if (MFI.getObjectAlign(FI->getIndex()) < NewAlign)
-        MFI.setObjectAlignment(FI->getIndex(), NewAlign);
+      if (MFI.getObjectAlign(*DstFI) < NewAlign)
+        MFI.setObjectAlignment(*DstFI, NewAlign);
       Alignment = NewAlign;
     }
   }
@@ -9547,10 +9582,18 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF, DAG);
-  FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Dst);
-  if (FI && !MFI.isFixedObjectIndex(FI->getIndex()))
+  std::optional<int> DstFI = findStackObject(Dst, DstPtrInfo, DAG);
+  if (DstFI && !MFI.isFixedObjectIndex(*DstFI))
     DstAlignCanChange = true;
   MaybeAlign SrcAlign = DAG.InferPtrAlign(Src);
+  // The source may be a stack object whose alignment is not visible through
+  // the DAG-level pointer; in particular one whose alignment was raised when
+  // it was the destination of a previously expanded memory function.
+  if (std::optional<int> SrcFI = findStackObject(Src, SrcPtrInfo, DAG)) {
+    Align SrcObjAlign = MFI.getObjectAlign(*SrcFI);
+    if (!SrcAlign || SrcObjAlign > *SrcAlign)
+      SrcAlign = SrcObjAlign;
+  }
   if (!SrcAlign || Alignment > *SrcAlign)
     SrcAlign = Alignment;
   assert(SrcAlign && "SrcAlign must be set");
@@ -9576,8 +9619,8 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
-      if (MFI.getObjectAlign(FI->getIndex()) < NewAlign)
-        MFI.setObjectAlignment(FI->getIndex(), NewAlign);
+      if (MFI.getObjectAlign(*DstFI) < NewAlign)
+        MFI.setObjectAlignment(*DstFI, NewAlign);
       Alignment = NewAlign;
     }
   }
@@ -9721,8 +9764,8 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF, DAG);
-  FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Dst);
-  if (FI && !MFI.isFixedObjectIndex(FI->getIndex()))
+  std::optional<int> DstFI = findStackObject(Dst, DstPtrInfo, DAG);
+  if (DstFI && !MFI.isFixedObjectIndex(*DstFI))
     DstAlignCanChange = true;
   bool IsZeroVal = isNullConstant(Src);
   unsigned Limit = AlwaysInline ? ~0 : TLI.getMaxStoresPerMemset(OptSize);
@@ -9750,8 +9793,8 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
 
     if (NewAlign > Alignment) {
       // Give the stack frame object a larger alignment if needed.
-      if (MFI.getObjectAlign(FI->getIndex()) < NewAlign)
-        MFI.setObjectAlignment(FI->getIndex(), NewAlign);
+      if (MFI.getObjectAlign(*DstFI) < NewAlign)
+        MFI.setObjectAlignment(*DstFI, NewAlign);
       Alignment = NewAlign;
     }
   }
@@ -13763,6 +13806,12 @@ SDValue llvm::peekThroughTruncates(SDValue V) {
   return V;
 }
 
+SDValue llvm::peekThroughAddrSpaceCasts(SDValue V) {
+  while (V.getOpcode() == ISD::ADDRSPACECAST)
+    V = V.getOperand(0);
+  return V;
+}
+
 bool llvm::isBitwiseNot(SDValue V, bool AllowUndefs) {
   if (V.getOpcode() != ISD::XOR)
     return false;
@@ -14360,6 +14409,10 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
 /// InferPtrAlignment - Infer alignment of a load / store address. Return
 /// std::nullopt if it cannot be inferred.
 MaybeAlign SelectionDAG::InferPtrAlign(SDValue Ptr) const {
+  // Address space casts do not change the underlying object, whose alignment
+  // is what is being inferred here; look through them.
+  Ptr = peekThroughAddrSpaceCasts(Ptr);
+
   // If this is a GlobalAddress + cst, return the alignment.
   const GlobalValue *GV = nullptr;
   int64_t GVOffset = 0;
@@ -14378,11 +14431,13 @@ MaybeAlign SelectionDAG::InferPtrAlign(SDValue Ptr) const {
   int64_t FrameOffset = 0;
   if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Ptr)) {
     FrameIdx = FI->getIndex();
-  } else if (isBaseWithConstantOffset(Ptr) &&
-             isa<FrameIndexSDNode>(Ptr.getOperand(0))) {
+  } else if (isBaseWithConstantOffset(Ptr)) {
     // Handle FI+Cst
-    FrameIdx = cast<FrameIndexSDNode>(Ptr.getOperand(0))->getIndex();
-    FrameOffset = Ptr.getConstantOperandVal(1);
+    SDValue Base = peekThroughAddrSpaceCasts(Ptr.getOperand(0));
+    if (auto *FI = dyn_cast<FrameIndexSDNode>(Base)) {
+      FrameIdx = FI->getIndex();
+      FrameOffset = Ptr.getConstantOperandVal(1);
+    }
   }
 
   if (FrameIdx != INT_MIN) {

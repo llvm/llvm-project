@@ -138,10 +138,10 @@ entry:
 define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-LABEL: variadics2(
 ; CHECK-PTX:       {
-; CHECK-PTX-NEXT:    .local .align 1 .b8 __local_depot2[3];
+; CHECK-PTX-NEXT:    .local .align 2 .b8 __local_depot2[4];
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
-; CHECK-PTX-NEXT:    .reg .b16 %rs<4>;
+; CHECK-PTX-NEXT:    .reg .b16 %rs<6>;
 ; CHECK-PTX-NEXT:    .reg .b32 %r<6>;
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-PTX-EMPTY:
@@ -156,10 +156,11 @@ define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-NEXT:    ld.s8 %r3, [%rd4+4];
 ; CHECK-PTX-NEXT:    ld.b8 %rs1, [%rd4+7];
 ; CHECK-PTX-NEXT:    st.local.b8 [%rd2+2], %rs1;
-; CHECK-PTX-NEXT:    ld.b8 %rs2, [%rd4+6];
-; CHECK-PTX-NEXT:    st.local.b8 [%rd2+1], %rs2;
-; CHECK-PTX-NEXT:    ld.b8 %rs3, [%rd4+5];
-; CHECK-PTX-NEXT:    st.local.b8 [%rd2], %rs3;
+; CHECK-PTX-NEXT:    ld.b8 %rs2, [%rd4+5];
+; CHECK-PTX-NEXT:    ld.b8 %rs3, [%rd4+6];
+; CHECK-PTX-NEXT:    shl.b16 %rs4, %rs3, 8;
+; CHECK-PTX-NEXT:    or.b16 %rs5, %rs4, %rs2;
+; CHECK-PTX-NEXT:    st.local.b16 [%rd2], %rs5;
 ; CHECK-PTX-NEXT:    ld.b64 %rd5, [%rd4+8];
 ; CHECK-PTX-NEXT:    add.s32 %r4, %r1, %r2;
 ; CHECK-PTX-NEXT:    add.s32 %r5, %r4, %r3;
@@ -201,7 +202,7 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot3[24];
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
-; CHECK-PTX-NEXT:    .reg .b16 %rs<4>;
+; CHECK-PTX-NEXT:    .reg .b16 %rs<6>;
 ; CHECK-PTX-NEXT:    .reg .b32 %r<2>;
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-EMPTY:
@@ -212,9 +213,10 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-NEXT:    ld.global.nc.b8 %rs1, [__const_$_bar_$_s1+7];
 ; CHECK-PTX-NEXT:    st.local.b8 [%rd1+2], %rs1;
 ; CHECK-PTX-NEXT:    ld.global.nc.b8 %rs2, [__const_$_bar_$_s1+6];
-; CHECK-PTX-NEXT:    st.local.b8 [%rd1+1], %rs2;
-; CHECK-PTX-NEXT:    ld.global.nc.b8 %rs3, [__const_$_bar_$_s1+5];
-; CHECK-PTX-NEXT:    st.local.b8 [%rd1], %rs3;
+; CHECK-PTX-NEXT:    shl.b16 %rs3, %rs2, 8;
+; CHECK-PTX-NEXT:    ld.global.nc.b8 %rs4, [__const_$_bar_$_s1+5];
+; CHECK-PTX-NEXT:    or.b16 %rs5, %rs3, %rs4;
+; CHECK-PTX-NEXT:    st.local.b16 [%rd1], %rs5;
 ; CHECK-PTX-NEXT:    st.b32 [%SP+8], 1;
 ; CHECK-PTX-NEXT:    st.b8 [%SP+12], 1;
 ; CHECK-PTX-NEXT:    st.b64 [%SP+16], 1;
