@@ -462,7 +462,8 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 
 define float @fabs_squared(float %x) {
 ; CHECK-LABEL: @fabs_squared(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_FR:%.*]], [[X_FR]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze float [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_FR]], [[X_FR]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
@@ -502,7 +503,8 @@ define float @fabs_squared_ninf(float %x) {
 
 define float @fabs_squared_nsz(float %x) {
 ; CHECK-LABEL: @fabs_squared_nsz(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[X_FR:%.*]], [[X_FR]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze float [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[X_FR]], [[X_FR]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
