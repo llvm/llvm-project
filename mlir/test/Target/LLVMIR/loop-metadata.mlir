@@ -292,7 +292,7 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
 
 // -----
 
-#di_file = #llvm.di_file<"metadata-loop.ll" in "/">
+#di_file = #llvm.di_file<"loop-metadata.mlir" in "/">
 
 #loc1 = loc("loop-metadata.mlir":42:4)
 #loc2 = loc("loop-metadata.mlir":52:4)
@@ -302,12 +302,12 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
 #void_type = #llvm.di_subroutine_type<types = #void_return>
 #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "loop_locs", file = #di_file, subprogramFlags = Definition, type = #void_type>
 
-#start_loc_fused = loc(fused<#di_subprogram>[#loc1])
-#end_loc_fused= loc(fused<#di_subprogram>[#loc2])
+#start_loc = #llvm.di_location<#loc1 in #di_subprogram>
+#end_loc = #llvm.di_location<#loc2 in #di_subprogram>
 
 #loopMD = #llvm.loop_annotation<disableNonforced = false,
-        startLoc = #start_loc_fused,
-        endLoc = #end_loc_fused>
+        startLoc = #start_loc,
+        endLoc = #end_loc>
 
 // CHECK-LABEL: @loop_annotation_with_locs
 llvm.func @loop_annotation_with_locs() {
@@ -320,3 +320,38 @@ llvm.func @loop_annotation_with_locs() {
 // CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], ![[START_LOC:.*]], ![[END_LOC:.*]]}
 // CHECK: ![[START_LOC]] = !DILocation(line: 42, column: 4, scope:
 // CHECK: ![[END_LOC]] = !DILocation(line: 52, column: 4, scope:
+
+// -----
+
+// Bare FileLineColLoc startLoc/endLoc fall back to the enclosing function's
+// DISubprogram scope.
+
+#di_file = #llvm.di_file<"metadata-loop.ll" in "/">
+
+#func_file = loc("metadata-loop.ll":1:1)
+#bare_start = loc("loop-metadata.mlir":42:4)
+#bare_end = loc("loop-metadata.mlir":52:4)
+
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
+#di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "loop_locs_fallback", file = #di_file, subprogramFlags = Definition, type = #void_type>
+
+#func_loc = #llvm.di_location<#func_file in #di_subprogram>
+
+#loopMD = #llvm.loop_annotation<disableNonforced = false,
+        startLoc = #bare_start,
+        endLoc = #bare_end>
+
+// CHECK-LABEL: @loop_annotation_bare_file_loc
+llvm.func @loop_annotation_bare_file_loc() {
+// CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
+  llvm.br ^bb1 {loop_annotation = #loopMD}
+^bb1:
+  llvm.return
+} loc(#func_loc)
+
+// CHECK: ![[SUBPROGRAM:[0-9]+]] = distinct !DISubprogram(name: "loop_locs_fallback"
+// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], ![[START_LOC:.*]], ![[END_LOC:.*]]}
+// CHECK-DAG: ![[START_LOC]] = !DILocation(line: 42, column: 4, scope: ![[SUBPROGRAM]])
+// CHECK-DAG: ![[END_LOC]] = !DILocation(line: 52, column: 4, scope: ![[SUBPROGRAM]])

@@ -54,8 +54,8 @@ struct LoopMetadataConversion {
   FailureOr<LoopPeeledAttr> convertPeeledAttr();
   FailureOr<LoopUnswitchAttr> convertUnswitchAttr();
   FailureOr<SmallVector<AccessGroupAttr>> convertParallelAccesses();
-  FusedLoc convertStartLoc();
-  FailureOr<FusedLoc> convertEndLoc();
+  LocationAttr convertStartLoc();
+  FailureOr<LocationAttr> convertEndLoc();
 
   llvm::SmallVector<llvm::DILocation *, 2> locations;
   llvm::StringMap<const llvm::MDNode *> propertyMap;
@@ -410,21 +410,21 @@ LoopMetadataConversion::convertParallelAccesses() {
   return refs;
 }
 
-FusedLoc LoopMetadataConversion::convertStartLoc() {
+LocationAttr LoopMetadataConversion::convertStartLoc() {
   if (locations.empty())
     return {};
-  return dyn_cast<FusedLoc>(
-      loopAnnotationImporter.moduleImport.translateLoc(locations[0]));
+  return loopAnnotationImporter.moduleImport.translateLoc(locations[0]);
 }
 
-FailureOr<FusedLoc> LoopMetadataConversion::convertEndLoc() {
+FailureOr<LocationAttr> LoopMetadataConversion::convertEndLoc() {
   if (locations.size() < 2)
-    return FusedLoc();
+    return LocationAttr();
   if (locations.size() > 2)
     return emitError(loc)
            << "expected loop metadata to have at most two DILocations";
-  return dyn_cast<FusedLoc>(
-      loopAnnotationImporter.moduleImport.translateLoc(locations[1]));
+  LocationAttr endLoc =
+      loopAnnotationImporter.moduleImport.translateLoc(locations[1]);
+  return endLoc;
 }
 
 LoopAnnotationAttr LoopMetadataConversion::convert() {
@@ -455,8 +455,8 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
     return {};
   }
 
-  FailureOr<FusedLoc> startLoc = convertStartLoc();
-  FailureOr<FusedLoc> endLoc = convertEndLoc();
+  FailureOr<LocationAttr> startLoc = convertStartLoc();
+  FailureOr<LocationAttr> endLoc = convertEndLoc();
 
   return createIfNonNull<LoopAnnotationAttr>(
       ctx, disableNonForced, vecAttr, interleaveAttr, unrollAttr,

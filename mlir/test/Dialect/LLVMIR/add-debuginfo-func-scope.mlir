@@ -6,7 +6,7 @@
 // CHECK: loc(#loc[[LOC:[0-9]+]])
 // CHECK: #di_file = #llvm.di_file<"<unknown>" in "">
 // CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_no_debug", linkageName = "func_no_debug", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
-// CHECK: #loc[[LOC]] = loc(fused<#di_subprogram>
+// CHECK: #loc[[LOC]] = #llvm.di_location<{{.*}} in #di_subprogram>
 module {
   llvm.func @func_no_debug() {
     llvm.return loc(unknown)
@@ -31,7 +31,7 @@ module {
 // CHECK: loc(#loc[[LOC:[0-9]+]])
 // CHECK: #di_file = #llvm.di_file<"<unknown>" in "">
 // CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_with_debug", linkageName = "func_with_debug", file = #di_file, line = 42, scopeLine = 42, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
-// CHECK: #loc[[LOC]] = loc(fused<#di_subprogram>
+// CHECK: #loc[[LOC]] = #llvm.di_location<{{.*}} in #di_subprogram>
 // CHECK_OTHER_KIND: emissionKind = DebugDirectivesOnly
 module {
   llvm.func @func_with_debug() {
@@ -59,7 +59,7 @@ module {
 // CHECK-DAG: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C, file = #[[DI_FILE_MODULE]], producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
 // CHECK-DAG: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #[[DI_FILE_FUNC]], name = "propagate_compile_unit", linkageName = "propagate_compile_unit", file = #[[DI_FILE_FUNC]], line = 9, scopeLine = 9, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK-DAG: #loc[[MODULELOC]] = loc(fused<#di_compile_unit>[#loc])
-// CHECK-DAG: #loc[[FUNCLOC]] = loc(fused<#di_subprogram>[#loc[[FUNCFILELOC]]
+// CHECK-DAG: #loc[[FUNCLOC]] = #llvm.di_location<#loc[[FUNCFILELOC]] in #di_subprogram>
 module {
   llvm.func @propagate_compile_unit() {
     llvm.return loc(unknown)

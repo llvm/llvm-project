@@ -487,33 +487,26 @@ static void handleAccessGroups(Operation *call,
 static void
 handleLoopAnnotations(Operation *call,
                       iterator_range<Region::iterator> inlinedBlocks) {
-  // Attempt to extract a DISubprogram from the callee.
+  // Attempt to extract a DISubprogram from the caller.
   auto func = call->getParentOfType<FunctionOpInterface>();
   if (!func)
     return;
-  LocationAttr funcLoc = func->getLoc();
-  auto fusedLoc = dyn_cast_if_present<FusedLoc>(funcLoc);
-  if (!fusedLoc)
-    return;
-  auto scope =
-      dyn_cast_if_present<LLVM::DISubprogramAttr>(fusedLoc.getMetadata());
+  LLVM::DISubprogramAttr scope = LLVM::findSubprogramInLoc(func->getLoc());
   if (!scope)
     return;
-
-  // Helper to build a new fused location that reflects the inlining of the loop
+  // Helper to build a new location that reflects the inlining of the loop
   // annotation.
-  auto updateLoc = [&](FusedLoc loc) -> FusedLoc {
+  auto updateLoc = [&](LocationAttr loc) -> LocationAttr {
     if (!loc)
       return {};
-    Location callSiteLoc = CallSiteLoc::get(loc, call->getLoc());
-    return FusedLoc::get(loc.getContext(), callSiteLoc, scope);
+    return CallSiteLoc::get(loc, call->getLoc());
   };
 
   AttrTypeReplacer replacer;
   replacer.addReplacement([&](LLVM::LoopAnnotationAttr loopAnnotation)
                               -> std::pair<Attribute, WalkResult> {
-    FusedLoc newStartLoc = updateLoc(loopAnnotation.getStartLoc());
-    FusedLoc newEndLoc = updateLoc(loopAnnotation.getEndLoc());
+    LocationAttr newStartLoc = updateLoc(loopAnnotation.getStartLoc());
+    LocationAttr newEndLoc = updateLoc(loopAnnotation.getEndLoc());
     if (!newStartLoc && !newEndLoc)
       return {loopAnnotation, WalkResult::advance()};
     auto newLoopAnnotation = LLVM::LoopAnnotationAttr::get(

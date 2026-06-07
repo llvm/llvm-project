@@ -1141,12 +1141,8 @@ static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
   if (!parentFunc)
     return success();
 
-  auto hasSubprogram = [](Operation *op) {
-    return op->getLoc()
-               ->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>() !=
-           nullptr;
-  };
-  if (!hasSubprogram(parentFunc) || !hasSubprogram(callee))
+  if (!LLVM::findSubprogramInLoc(parentFunc->getLoc()) ||
+      !LLVM::findSubprogramInLoc(callee->getLoc()))
     return success();
   bool containsLoc = !isa<UnknownLoc>(callOp->getLoc());
   if (!containsLoc)

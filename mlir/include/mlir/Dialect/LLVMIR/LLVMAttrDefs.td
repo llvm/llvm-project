@@ -291,8 +291,8 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
     OptionalParameter<"BoolAttr">:$isVectorized,
-    OptionalParameter<"FusedLoc">:$startLoc,
-    OptionalParameter<"FusedLoc">:$endLoc,
+    OptionalParameter<"LocationAttr">:$startLoc,
+    OptionalParameter<"LocationAttr">:$endLoc,
     OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses
   );
 
@@ -667,6 +667,49 @@ def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_
 
   // Generate mnemonic alias for the attribute.
   let genMnemonicAlias = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// DILocationAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DILocationAttr : LocationAttrDef<LLVM_Dialect, "DILocation"> {
+  let description = [{
+    Represents a debug location combining a source position and a debug info
+    scope for instruction-level and function-level debug locations.
+
+    Inlining is represented using `CallSiteLoc` (LLVM proper's `DILocation`
+    uses the `inlinedAt` field for this).
+
+    Note: Older code represents this with a FusedLoc carrying the debug
+    scope as its metadata and a convention on how to interpret it.
+
+    Verifier: when the scope chain reaches a `DIFileAttr`, the source
+    filename in `sourceLoc` must equal either the scope's `DIFile.name` or
+    the directory-joined `<DIFile.directory>/<DIFile.name>` rendering. The
+    check is a no-op when the scope chain has no reachable `DIFileAttr`,
+    when the scope file name is empty, or when the source filename is the
+    `-` sentinel (MLIR's placeholder for an empty filename — see
+    `BuiltinLocationAttributes.td`'s `FileLineColRange::get(StringRef, ...)`
+    builder, which substitutes `-` for `""`).
+  }];
+  let mnemonic = "di_location";
+
+  let parameters = (ins
+    "FileLineColLoc":$sourceLoc,
+    "DILocalScopeAttr":$scope
+  );
+  let assemblyFormat = "`<` $sourceLoc `in` $scope `>`";
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "FileLineColLoc":$sourceLoc, "DILocalScopeAttr":$scope
+    ), [{
+      return $_get(sourceLoc.getContext(), sourceLoc, scope);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

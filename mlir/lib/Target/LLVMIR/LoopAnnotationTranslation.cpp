@@ -33,7 +33,7 @@ struct LoopAnnotationConversion {
   void convertBoolNode(StringRef name, BoolAttr attr, bool negated = false);
   void convertI32Node(StringRef name, IntegerAttr attr);
   void convertFollowupNode(StringRef name, LoopAnnotationAttr attr);
-  void convertLocation(FusedLoc attr);
+  void convertLocation(LocationAttr attr);
 
   /// Conversion functions for each for each loop annotation sub-attribute.
   void convertLoopOptions(LoopVectorizeAttr options);
@@ -188,14 +188,21 @@ void LoopAnnotationConversion::convertLoopOptions(LoopUnswitchAttr options) {
               options.getPartialDisable());
 }
 
-void LoopAnnotationConversion::convertLocation(FusedLoc location) {
-  auto localScopeAttr =
-      dyn_cast_or_null<DILocalScopeAttr>(location.getMetadata());
-  if (!localScopeAttr)
-    return;
-  auto *localScope = dyn_cast<llvm::DILocalScope>(
-      loopAnnotationTranslation.moduleTranslation.translateDebugInfo(
-          localScopeAttr));
+void LoopAnnotationConversion::convertLocation(LocationAttr location) {
+  // Scope precedence: a DILocationAttr inside the location chain (handles
+  // CallSiteLoc<DILocationAttr> from inlining), then the enclosing function's
+  // DISubprogram so bare FileLineColLoc still emits a !DILocation.
+  llvm::DILocalScope *localScope = nullptr;
+  if (auto diLoc = location.findInstanceOf<LLVM::DILocationAttr>()) {
+    localScope = dyn_cast_or_null<llvm::DILocalScope>(
+        loopAnnotationTranslation.moduleTranslation.translateDebugInfo(
+            diLoc.getScope()));
+  } else if (auto func = op->getParentOfType<FunctionOpInterface>()) {
+    if (auto scope = LLVM::findSubprogramInLoc(func->getLoc()))
+      localScope = dyn_cast_or_null<llvm::DILocalScope>(
+          loopAnnotationTranslation.moduleTranslation.translateDebugInfo(
+              scope));
+  }
   if (!localScope)
     return;
   llvm::Metadata *loc =
@@ -209,10 +216,10 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
   auto dummy = llvm::MDNode::getTemporary(ctx, {});
   metadataNodes.push_back(dummy.get());
 
-  if (FusedLoc startLoc = attr.getStartLoc())
+  if (LocationAttr startLoc = attr.getStartLoc())
     convertLocation(startLoc);
 
-  if (FusedLoc endLoc = attr.getEndLoc())
+  if (LocationAttr endLoc = attr.getEndLoc())
     convertLocation(endLoc);
 
   addUnitNode("llvm.loop.disable_nonforced", attr.getDisableNonforced());

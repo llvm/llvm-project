@@ -109,4 +109,21 @@ bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
 
+namespace mlir {
+namespace LLVM {
+
+/// Returns the `DISubprogramAttr` carried by `loc`, looking through
+/// `CallSiteLoc`/`FusedLoc`/`NameLoc` wrappers. Handles both the
+/// `DILocationAttr` shape (scope is the embedded `DILocalScopeAttr`) and the
+/// legacy `FusedLocWith<DISubprogramAttr>` shape. Returns null if neither
+/// shape carries a subprogram.
+DISubprogramAttr findSubprogramInLoc(Location loc);
+
+/// Walk the `getScope()` chain from `scope` and return the first reachable
+/// `DIFileAttr`. Returns null when no scope in the chain carries a file.
+DIFileAttr findFileInScope(DIScopeAttr scope);
+
+} // namespace LLVM
+} // namespace mlir
+
 #endif // MLIR_DIALECT_LLVMIR_LLVMATTRS_H_

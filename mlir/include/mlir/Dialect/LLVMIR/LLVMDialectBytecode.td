@@ -283,6 +283,15 @@ def DILexicalBlockFileAttr : DialectAttribute<(attr
 )>;
 
 //===----------------------------------------------------------------------===//
+// DILocationAttr
+//===----------------------------------------------------------------------===//
+
+def DILocationAttr : DialectAttribute<(attr
+  Attr<"FileLineColLoc">:$sourceLoc,
+  Attr<"DILocalScopeAttr">:$scope
+)>;
+
+//===----------------------------------------------------------------------===//
 // DINamespaceAttr
 //===----------------------------------------------------------------------===//
 
@@ -320,8 +329,8 @@ def LoopAnnotationAttr : DialectAttribute<(attr
   OptionalAttribute<"LoopUnswitchAttr">:$unswitch,
   OptionalAttribute<"BoolAttr">:$mustProgress,
   OptionalAttribute<"BoolAttr">:$isVectorized,
-  OptionalAttribute<"FusedLoc">:$startLoc,
-  OptionalAttribute<"FusedLoc">:$endLoc,
+  OptionalAttribute<"LocationAttr">:$startLoc,
+  OptionalAttribute<"LocationAttr">:$endLoc,
   OptionalArrayRef<"AccessGroupAttr">:$parallelAccesses
 )>;
 
@@ -345,6 +354,7 @@ def LLVMDialectAttributes : DialectAttributes<"LLVM"> {
     DILabelAttr,
     DILexicalBlockAttr,
     DILexicalBlockFileAttr,
+    DILocationAttr,
     DILocalVariableAttr,
     DINamespaceAttr,
     DISubprogramAttr,
