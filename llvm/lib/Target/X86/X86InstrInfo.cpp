@@ -10344,8 +10344,9 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
   }
   case X86::MOV8ri:
   case X86::MOV16ri:
-    // TODO: Handle MOV8ri and MOV16ri.
-    return std::nullopt;
+    if (MI.getOperand(0).getReg() != Reg)
+      return std::nullopt;
+    return ParamLoadedValue(MI.getOperand(1), Expr);
   case X86::MOV32ri:
   case X86::MOV64ri:
   case X86::MOV64ri32:
