@@ -37,9 +37,8 @@ using namespace lldb_private;
 #include "CommandOptions.inc"
 
 static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
-  const char *raw = use_primary_name ? reg_info->name : reg_info->alt_name;
-  std::string str = raw ? std::string(raw) : std::string();
-  return static_cast<size_t>(str.size());
+  const char *reg_name = use_primary_name ? reg_info->name : reg_info->alt_name;
+  return reg_name ? strlen(reg_name) : 0;
 }
 
 static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
