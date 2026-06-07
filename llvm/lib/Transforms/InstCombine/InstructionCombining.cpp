@@ -1381,13 +1381,9 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
   if (!InnerOp.isAssociative() || !InnerOp.hasOneUse())
     return false;
 
-  unsigned OuterValIdx;
-  if (OuterOp.getOperand(0) == OuterVal)
-    OuterValIdx = 0;
-  else if (OuterOp.getOperand(1) == OuterVal)
-    OuterValIdx = 1;
-  else
-    assert(false && "OuterVal must be an operand of OuterOp");
+  unsigned OuterValIdx = OuterOp.getOperand(0) == OuterVal ? 0 : 1;
+  assert(OuterOp.getOperand(OuterValIdx) == OuterVal &&
+         "OuterVal must be an operand of OuterOp");
 
   auto Pair = matchSymmetricPair(InnerVal1, OuterVal);
   if (!Pair)
@@ -1395,9 +1391,11 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
 
   replaceOperand(InnerOp, 0, Pair->first);
   replaceOperand(InnerOp, 1, Pair->second);
-  InnerOp.dropPoisonGeneratingFlags();
+  InnerOp.dropPoisonGeneratingAnnotations();
+  InnerOp.dropUBImplyingAttrsAndMetadata();
   replaceOperand(OuterOp, OuterValIdx, InnerVal0);
   ClearSubclassDataAfterReassociation(OuterOp);
+  OuterOp.dropUnknownNonDebugMetadata();
   return true;
 }
 

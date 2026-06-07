@@ -71,6 +71,20 @@ define i32 @or_disjoint_min_max_assoc(i32 %x, i32 %y, i32 %z) {
   ret i32 %ret
 }
 
+define i32 @or_outer_disjoint_min_max_assoc(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i32 @or_outer_disjoint_min_max_assoc(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[LHS:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RET:%.*]] = or i32 [[Z]], [[LHS]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %min = call i32 @llvm.smin.i32(i32 %x, i32 %y)
+  %lhs = or i32 %z, %min
+  %max = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %ret = or disjoint i32 %lhs, %max
+  ret i32 %ret
+}
+
 define i32 @smul_min_max_assoc(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @smul_min_max_assoc(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
@@ -205,6 +219,20 @@ define i32 @sadd_nuw_min_max_assoc(i32 %x, i32 %y, i32 %z) {
   ret i32 %ret
 }
 
+define i32 @sadd_inner_metadata_outer_annotations(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i32 @sadd_inner_metadata_outer_annotations(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[LHS:%.*]] = add i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[Z]], [[LHS]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %min = call i32 @llvm.smin.i32(i32 %y, i32 %x)
+  %lhs = add i32 %z, %min, !noundef !0
+  %max = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %ret = add nuw nsw i32 %lhs, %max, !noundef !0
+  ret i32 %ret
+}
+
 define float @fp_inner_no_reassoc_cmp(i1 %c, float %a, float %x, float %y) {
 ; CHECK-LABEL: define float @fp_inner_no_reassoc_cmp(
 ; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[X:%.*]], float [[Y:%.*]]) {
@@ -236,3 +264,19 @@ define float @fp_mixed_fmf_cmp(i1 %c, float %a, float %x, float %y) {
   %retf = fadd reassoc nsz nnan ninf float %inner, %s1
   ret float %retf
 }
+
+define float @fp_outer_fmf_metadata(i1 %c, float %a, float %x, float %y) {
+; CHECK-LABEL: define float @fp_outer_fmf_metadata(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[INNER:%.*]] = fadd reassoc nsz float [[X]], [[Y]]
+; CHECK-NEXT:    [[RETF:%.*]] = fadd reassoc nnan ninf nsz float [[A]], [[INNER]]
+; CHECK-NEXT:    ret float [[RETF]]
+;
+  %s0 = select i1 %c, float %x, float %y
+  %s1 = select i1 %c, float %y, float %x
+  %inner = fadd reassoc nnan ninf nsz float %a, %s0, !noundef !0
+  %retf = fadd reassoc nnan ninf nsz float %inner, %s1, !noundef !0
+  ret float %retf
+}
+
+!0 = !{}
