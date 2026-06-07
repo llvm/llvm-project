@@ -155,11 +155,6 @@ defm UnalignedDSAccess : AMDGPUSubtargetFeature<"unaligned-ds-access",
   "Hardware supports unaligned local and region loads and stores"
 >;
 
-defm RelaxedBufferOOBMode : AMDGPUSubtargetFeature<"relaxed-buffer-oob-mode",
-  "Disable strict out-of-bounds buffer guarantees. An OOB access may potentially"
-  "cause an adjacent access to be treated as if it were also OOB"
->;
-
 defm DX10ClampAndIEEEMode : AMDGPUSubtargetFeature<"dx10-clamp-and-ieee-mode",
   "Target has DX10_CLAMP and IEEE_MODE kernel descriptor bits"
 >;
@@ -286,6 +281,10 @@ defm InstFwdPrefetchBug : AMDGPUSubtargetFeature<"inst-fwd-prefetch-bug",
 
 defm VmemPrefInsts : AMDGPUSubtargetFeature<"vmem-pref-insts",
   "Has flat_prefect_b8 and global_prefetch_b8 instructions"
+>;
+
+defm SmemPrefetchInsts : AMDGPUSubtargetFeature<"smem-prefetch-insts",
+  "Has s_prefetch_inst, s_prefetch_inst_pc_rel, s_prefetch_data and s_prefetch_data_pc_rel instructions"
 >;
 
 defm SafeSmemPrefetch : AMDGPUSubtargetFeature<"safe-smem-prefetch",
@@ -433,6 +432,10 @@ defm GFX90AInsts : AMDGPUSubtargetFeature<"gfx90a-insts",
 defm GFX940Insts : AMDGPUSubtargetFeature<"gfx940-insts",
   "Additional instructions for GFX940+",
   /*GenPredicate=*/0
+>;
+
+defm Permlane16Insts : AMDGPUSubtargetFeature<"permlane16-insts",
+  "Has v_permlane16_b32/v_permlanex16_b32 instructions"
 >;
 
 defm Permlane16Swap : AMDGPUSubtargetFeature<"permlane16-swap",
@@ -1509,6 +1512,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts, FeatureGFX8Insts,
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
+   FeaturePermlane16Insts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
@@ -1538,6 +1542,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
+   FeaturePermlane16Insts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
@@ -1565,6 +1570,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8,
+   FeaturePermlane16Insts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
@@ -1591,6 +1597,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8,
+   FeaturePermlane16Insts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess, FeatureImageInsts,
@@ -2101,6 +2108,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureSmemPrefetchInsts,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
    FeatureMTBUFInsts,
@@ -2187,6 +2195,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
+   FeatureSmemPrefetchInsts,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
@@ -2302,6 +2311,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureSmemPrefetchInsts,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2810,6 +2820,9 @@ def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
+def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts()">,
+  AssemblerPredicate<(any_of FeatureDot1Insts, FeatureDot8Insts)>;
 
 def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
 

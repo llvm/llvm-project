@@ -13,7 +13,7 @@ struct S1 {
   unsigned f5:8;
 };
 
-// CIR-DAG: !rec_S1 = !cir.record<struct "S1" {!u8i, !u8i, !u16i}>
+// CIR-DAG: !rec_S1 = !cir.struct<"S1" {!u8i, !u8i, !u16i}>
 // LLVM-DAG: %struct.S1 = type { i8, i8, i16 }
 // OGCG-DAG: %struct.S1 = type { i8, i8, i16 }
 
@@ -23,7 +23,7 @@ struct S2 {
   unsigned long f3:6;
 };
 
-// CIR-DAG: !rec_S2 = !cir.record<struct "S2" padded {!u16i, !u16i, !u8i, !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_S2 = !cir.struct<"S2" padded {!u16i, !u16i, !u8i, !cir.array<!u8i x 3>}>
 // LLVM-DAG: %struct.S2 = type { i16, i16, i8, [3 x i8] }
 // OGCG-DAG: %struct.S2 = type { i16, i16, i8, [3 x i8] }
 
@@ -33,7 +33,7 @@ struct S3 {
   unsigned long f3:32;
 };
 
-// CIR-DAG: !rec_S3 = !cir.record<struct "S3" {!u32i, !u32i}>
+// CIR-DAG: !rec_S3 = !cir.struct<"S3" {!u32i, !u32i}>
 // LLVM-DAG: %struct.S3 = type { i32, i32 }
 // OGCG-DAG: %struct.S3 = type { i32, i32 }
 

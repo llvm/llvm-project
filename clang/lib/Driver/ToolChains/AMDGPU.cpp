@@ -249,7 +249,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   // Deduce ROCm path by the real path of the invoked clang, resolving symbolic
   // link of clang itself.
   llvm::SmallString<256> RealClangPath;
-  llvm::sys::fs::real_path(D.getClangProgramPath(), RealClangPath);
+  llvm::sys::fs::real_path(D.getDriverProgramPath(), RealClangPath);
   auto ParentPath = llvm::sys::path::parent_path(RealClangPath);
   if (ParentPath != InstallDir)
     ROCmSearchDirs.emplace_back(DeduceROCmPath(ParentPath));
@@ -609,9 +609,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
   }
 
-  if (C.getDriver().isUsingLTO()) {
-    const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs, ThinLTO);
+  if (auto LTO = getToolChain().getLTOMode(Args); LTO != LTOK_None) {
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
+                  LTO == LTOK_Thin);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
@@ -846,7 +846,7 @@ void AMDGPUToolChain::addClangTargetOptions(
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat) &&
-      !getEffectiveTriple().isSPIRV()) {
+      !getEffectiveTriple().isSPIRV() && !getDriver().IsFlangMode()) {
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
@@ -907,10 +907,7 @@ AMDGPUToolChain::ParsedTargetIDType
 AMDGPUToolChain::getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const {
   StringRef TargetID = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
   if (TargetID.empty())
-    TargetID = DriverArgs.getLastArgValue(options::OPT_march_EQ);
-
-  if (TargetID.empty())
-    return {std::nullopt, std::nullopt, std::nullopt};
+    return {};
 
   llvm::StringMap<bool> FeatureMap;
   auto OptionalGpuArch = parseTargetID(getTriple(), TargetID, &FeatureMap);
@@ -1119,7 +1116,7 @@ static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
 SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
     StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   SanitizerMask SupportedMask =
-      SanitizerKind::Undefined | SanitizerKind::UndefinedGroup;
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
 
   // Address sanitizer is potentially supported, but depends on the exact target
   // arch xnack support.

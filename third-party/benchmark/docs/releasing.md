@@ -8,16 +8,24 @@
     * `git log $(git describe --abbrev=0 --tags)..HEAD` gives you the list of
       commits between the last annotated tag and HEAD
     * Pick the most interesting.
-* Create one last commit that updates the version saved in `CMakeLists.txt` and `MODULE.bazel`
-  to the release version you're creating. (This version will be used if benchmark is installed
-  from the archive you'll be creating in the next step.)
+* Create one last commit that updates the version saved in `CMakeLists.txt`, `MODULE.bazel`,
+  and `bindings/python/google_benchmark/__init__.py` to the release version you're creating.
+  (This version will be used if benchmark is installed from the archive you'll be creating
+  in the next step.)
 
 ```
-project (benchmark VERSION 1.8.0 LANGUAGES CXX)
+# CMakeLists.txt
+project (benchmark VERSION 1.9.0 LANGUAGES CXX)
 ```
 
 ```
-module(name = "com_github_google_benchmark", version="1.8.0")
+# MODULE.bazel
+module(name = "com_github_google_benchmark", version="1.9.0")
+```
+
+```
+# google_benchmark/__init__.py
+__version__ = "1.9.0"
 ```
 
 * Create a release through github's interface
@@ -28,4 +36,3 @@ module(name = "com_github_google_benchmark", version="1.8.0")
       * `git push --force --tags origin`
 * Confirm that the "Build and upload Python wheels" action runs to completion
     * Run it manually if it hasn't run.
-    * IMPORTANT: When re-running manually, make sure to select the newly created `<tag>` as the workflow version in the "Run workflow" tab on the GitHub Actions page. 

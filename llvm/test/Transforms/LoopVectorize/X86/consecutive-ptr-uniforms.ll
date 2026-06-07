@@ -174,15 +174,15 @@ attributes #0 = { "target-cpu"="knl" }
 define void @PR40816() #1 {
 ; CHECK-LABEL: define void @PR40816(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:  [[PRED_STORE_CONTINUE6:.*]]:
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[PRED_STORE_CONTINUE6]] ], [ [[INC:%.*]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr @b, align 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[RETURN:.*]], label %[[FOR_BODY]]
-; CHECK:       [[RETURN]]:
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[SCALAR_PH:.*]], label %[[MIDDLE_BLOCK]]
+; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    ret void
 ;
 ; FORCE-LABEL: define void @PR40816(

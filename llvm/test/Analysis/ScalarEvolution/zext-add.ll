@@ -13,7 +13,7 @@ define void @test_push_constant_into_zext(ptr %dst, ptr %src, i32 %n, i64 %offse
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %outer.loop ], [ %iv.next, %inner.loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner.loop> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + (1 smax %n))<nsw> LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %src, %outer.loop ], [ %ptr.iv.next, %inner.loop ]
-; CHECK-NEXT:    --> {%src,+,%offset}<%inner.loop> U: full-set S: full-set Exits: (((zext i32 (-1 + (1 smax %n))<nsw> to i64) * %offset) + %src) LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
+; CHECK-NEXT:    --> {%src,+,%offset}<%inner.loop> U: full-set S: full-set Exits: (((-1 + (zext i32 (1 smax %n) to i64))<nsw> * %offset) + %src) LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
 ; CHECK-NEXT:    %l = load i8, ptr %outer.ptr, align 1
 ; CHECK-NEXT:    --> %l U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner.loop: Variant, %outer.loop: Variant }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 %offset

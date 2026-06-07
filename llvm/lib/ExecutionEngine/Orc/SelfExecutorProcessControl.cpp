@@ -178,8 +178,7 @@ void SelfExecutorProcessControl::InProcessDylibManager::lookupSymbolsAsync(
     if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
       R.emplace_back();
     else
-      R.emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
-                                       JITSymbolFlags::Exported));
+      R.emplace_back(ExecutorAddr::fromPtr(Addr));
   }
   Complete(std::move(R));
 }

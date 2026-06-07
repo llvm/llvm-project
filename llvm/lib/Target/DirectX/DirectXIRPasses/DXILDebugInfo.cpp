@@ -9,17 +9,92 @@
 #include "DXILDebugInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "dx-debug-info"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
+// llvm.dbg.value has an additional "offset" operand in DXIL.
+static void replaceDbgVariableIntr(DbgVariableIntrinsic *DVI, Function *NewF,
+                                   DXILDebugInfoMap &Res) {
+  if (DVI->getIntrinsicID() != Intrinsic::dbg_value) {
+    return;
+  }
+
+  Type *Int64Ty = Type::getInt64Ty(DVI->getContext());
+  Constant *ZeroOffset = ConstantInt::get(Int64Ty, 0);
+
+  Value *NewOps[] = {
+      DVI->getOperand(0),
+      ZeroOffset,
+      DVI->getOperand(1),
+      DVI->getOperand(2),
+  };
+
+  CallInst *NewI = CallInst::Create(NewF->getFunctionType(), NewF, NewOps);
+  NewI->setTailCall(DVI->isTailCall());
+  NewI->setDebugLoc(DVI->getDebugLoc());
+  Res.InstReplace.insert({DVI, decltype(Res.InstReplace)::mapped_type(NewI)});
+}
+
+static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
+  Function *F = getDeclarationIfExists(&M, Intrinsic::dbg_value);
+  if (!F)
+    return;
+
+  FunctionType *FT = F->getFunctionType();
+  Type *Int64Ty = Type::getInt64Ty(F->getContext());
+  FunctionType *NewFT = FunctionType::get(
+      FT->getReturnType(),
+      {FT->getParamType(0), Int64Ty, FT->getParamType(1), FT->getParamType(2)},
+      /*isVarArg=*/false);
+  Function *NewF = Function::Create(NewFT, F->getLinkage(), F->getName());
+  NewF->copyAttributesFrom(F);
+  Res.FuncReplace.insert({F, decltype(Res.FuncReplace)::mapped_type(NewF)});
+
+  for (User *U : F->users()) {
+    auto *DVI = cast<DbgVariableIntrinsic>(U);
+    replaceDbgVariableIntr(DVI, NewF, Res);
+  }
+}
+
 DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   DXILDebugInfoMap Res;
   DebugInfoFinder DIF;
   DIF.processModule(M);
+
+  for (auto &F : M) {
+    for (auto &BB : F) {
+      for (auto &I : make_early_inc_range(reverse(BB))) {
+        if (auto *DL = dyn_cast<DbgLabelInst>(&I)) {
+          DL->eraseFromParent();
+          continue;
+        }
+      }
+    }
+  }
+
+  for (DISubprogram *SP : DIF.subprograms()) {
+    if (MDTuple *RN = cast_or_null<MDTuple>(SP->getRawRetainedNodes())) {
+      SmallVector<Metadata *> MDs(RN->operands());
+      MDs.erase(std::remove_if(MDs.begin(), MDs.end(),
+                               [](Metadata *M) { return isa<DILabel>(M); }),
+                MDs.end());
+      SP->replaceRetainedNodes(MDTuple::get(M.getContext(), MDs));
+    }
+  }
+
+  // Re-scan the module to account for removed metadata.
+  DIF.reset();
+  DIF.processModule(M);
+
+  // Replace llvm.dbg.value with equivalent DXIL intrinsics.
+  replaceDbgValue(M, Res);
 
   for (DICompileUnit *CU : DIF.compile_units()) {
     DISourceLanguageName Lang = CU->getSourceLanguage();
@@ -97,6 +172,23 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     const auto *SubprogramsMD = MDTuple::get(M.getContext(), Subprograms);
     Res.MDExtra.insert({NewCU, SubprogramsMD});
   }
+
+  for (const GlobalVariable &GV : M.globals()) {
+    SmallVector<DIGlobalVariableExpression *, 4> GVEs;
+    GV.getDebugInfo(GVEs);
+    for (DIGlobalVariableExpression *GVE : GVEs) {
+      if (GVE->getExpression()->getNumElements())
+        continue;
+      auto [It, Inserted] = Res.MDExtra.insert(
+          {GVE->getVariable(),
+           ValueAsMetadata::get(const_cast<GlobalVariable *>(&GV))});
+      if (!Inserted)
+        It->second = nullptr;
+    }
+  }
+
+  for (DIGlobalVariableExpression *GVE : DIF.global_variables())
+    Res.MDReplace.insert({GVE, GVE->getVariable()});
 
   for (DIType *T : DIF.types()) {
     if (auto *SR = dyn_cast<DISubrangeType>(T)) {

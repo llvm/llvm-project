@@ -2404,6 +2404,41 @@ def atomic_store_128 :
   let MemoryVT = i128;
 }
 
+// Matches store or atomic_store, no alignment requirement.
+def any_store : PatFrags<(ops node:$val, node:$ptr),
+                         [(store node:$val, node:$ptr),
+                          (atomic_store node:$val, node:$ptr)]>;
+
+def any_store_8 : PatFrags<(ops node:$val, node:$ptr),
+                           [(store node:$val, node:$ptr),
+                            (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i8;
+}
+
+def any_store_16 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i16;
+}
+
+def any_store_32 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i32;
+}
+
+def any_store_64 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i64;
+}
+
+def any_store_128 : PatFrags<(ops node:$val, node:$ptr),
+                             [(store node:$val, node:$ptr),
+                              (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i128;
+}
+
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Support.
 //
