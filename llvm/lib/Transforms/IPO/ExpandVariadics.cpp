@@ -619,11 +619,12 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
 
   SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
 
-  Type *ParameterType = ABI->vaListParameterType(M);
+  Value *VaListValue = VaListInstance;
   if (ABI->vaListPassedInSSARegister())
-    Args.push_back(Builder.CreateLoad(ParameterType, VaListInstance));
-  else
-    Args.push_back(Builder.CreateAddrSpaceCast(VaListInstance, ParameterType));
+    VaListValue = Builder.CreateLoad(VaListTy, VaListInstance);
+
+  Type *ParameterType = ABI->vaListParameterType(M);
+  Args.push_back(Builder.CreateAddrSpaceCast(VaListValue, ParameterType));
 
   CallInst *Result = Builder.CreateCall(FixedArityReplacement, Args);
 
