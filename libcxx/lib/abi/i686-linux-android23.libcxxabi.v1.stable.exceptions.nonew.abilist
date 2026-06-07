@@ -50,6 +50,12 @@
 {'is_defined': True, 'name': '_ZNKSt6__ndk110moneypunctIwLb1EE16do_negative_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk110moneypunctIwLb1EE16do_positive_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk110moneypunctIwLb1EE16do_thousands_sepEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk112__stacktrace6_Entry10__write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk112__stacktrace6_Entry11__hash_codeEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk112__stacktrace6_Entry11__to_stringEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk112__stacktrace6_Trace10__write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk112__stacktrace6_Trace11__hash_codeEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk112__stacktrace6_Trace11__to_stringEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk112bad_weak_ptr4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE12find_last_ofEPKcjj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE13find_first_ofEPKcjj', 'type': 'FUNC'}
@@ -612,6 +618,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk112__rs_defaultD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112__rs_defaultD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112__rs_defaultclEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk112__stacktrace6_Trace17__populate_imagesEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112bad_weak_ptrD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112bad_weak_ptrD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112bad_weak_ptrD2Ev', 'type': 'FUNC'}
