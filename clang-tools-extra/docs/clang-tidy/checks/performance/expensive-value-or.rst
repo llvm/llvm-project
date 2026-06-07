@@ -42,7 +42,7 @@ By default, the check only warns in reference-friendly contexts where the copy
 is clearly avoidable: binding to ``const T&``, passing to a ``const T&``
 parameter, or calling a const member function on the temporary. Contexts where
 the caller takes ownership (binding to a value, passing to a by-value
-parameter) are not flagged unless ``WarnOnOwnershipTaking`` is enabled.
+parameter) are not flagged unless :option:`WarnOnOwnershipTaking` is enabled.
 
 Options
 -------
@@ -61,13 +61,6 @@ Options
    names of optional-like class templates to check. The check matches calls to
    ``value_or`` on specializations of these templates. Default is
    `::std::optional;::absl::optional;::boost::optional`.
-
-   Example configuration to also check a project-local optional type:
-
-   .. code-block:: yaml
-
-       CheckOptions:
-         performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::boost::optional;::myproject::.*Optional"
 
 .. option:: WarnOnOwnershipTaking
 
