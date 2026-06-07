@@ -5468,6 +5468,8 @@ bool Sema::DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
     });
   }
 
+  if (auto *Def = FD->getDefinition())
+    FD = Def;
   bool StillUndeduced = FD->getReturnType()->isUndeducedType();
   if (StillUndeduced && Diagnose && !FD->isInvalidDecl()) {
     Diag(Loc, diag::err_auto_fn_used_before_defined) << FD;
