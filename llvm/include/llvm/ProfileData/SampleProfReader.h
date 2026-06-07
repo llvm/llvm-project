@@ -238,6 +238,7 @@
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/OnDiskHashTable.h"
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -781,6 +782,48 @@ public:
 
   /// \brief Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+};
+
+/// Trait class for reading the on-disk function offset hash table mapping
+/// function name GUIDs to their offsets in the SecLBRProfile section.
+class FuncOffsetHashTableInfo {
+public:
+  using key_type = uint64_t;
+  using key_type_ref = uint64_t;
+  using data_type = uint64_t; // Offset
+  using data_type_ref = uint64_t;
+  using hash_value_type = uint32_t;
+  using offset_type = uint32_t;
+  using internal_key_type = uint64_t;
+  using external_key_type = uint64_t;
+
+  static hash_value_type ComputeHash(key_type_ref Key) {
+    return static_cast<hash_value_type>(Key);
+  }
+
+  static bool EqualKey(key_type_ref LHS, key_type_ref RHS) {
+    return LHS == RHS;
+  }
+
+  static key_type GetInternalKey(key_type_ref Key) { return Key; }
+  static external_key_type GetExternalKey(internal_key_type Key) { return Key; }
+
+  static std::pair<offset_type, offset_type>
+  ReadKeyDataLength(const unsigned char *&D) {
+    // Implicit lengths: do NOT read or advance pointer D.
+    return {8, 4};
+  }
+
+  static key_type ReadKey(const unsigned char *D, offset_type Len) {
+    assert(Len == 8 && "Key length must be 8");
+    return support::endian::read64le(D);
+  }
+
+  static data_type ReadData(key_type_ref K, const unsigned char *D,
+                            offset_type Len) {
+    assert(Len == 4 && "Data length must be 4");
+    return support::endian::read32le(D);
+  }
 };
 
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
