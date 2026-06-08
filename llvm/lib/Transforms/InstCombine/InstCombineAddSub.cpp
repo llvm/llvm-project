@@ -2427,6 +2427,17 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
+  {
+    const APInt *C, *OrC;
+    Value *X;
+    if (!I.hasNoSignedWrap() && !I.hasNoUnsignedWrap() &&
+        match(Op0, m_APInt(C)) && C->isMaxSignedValue() &&
+        match(Op1, m_OneUse(m_Or(m_Value(X), m_APInt(OrC)))) && *OrC == *C)
+      return BinaryOperator::CreateAnd(
+          X, Constant::getIntegerValue(I.getType(),
+                                       APInt::getSignMask(C->getBitWidth())));
+  }
+
   auto TryToNarrowDeduceFlags = [this, &I, &Op0, &Op1]() -> Instruction * {
     if (Instruction *Ext = narrowMathIfNoOverflow(I))
       return Ext;
