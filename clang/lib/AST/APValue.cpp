@@ -501,24 +501,33 @@ static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
     ID.AddInteger((uint32_t)V.extractBitsAsZExtValue(std::min(32u, N - I), I));
 }
 
+
+/// [expr.reflect] p5, if a reflect-expression R matches the form
+/// ^^reflection-name it is interpreted as such; the identifier is looked up
+/// and the representation of R is determined as follows:
+/// - if lookup finds a type alias A, R represents the type the underlying
+///   entity of A if A was introduced by the declaration of a template parameter;
+///   otherwise, R represents A.
+
+/// [expr.reflect] p6, Given reflect-expression R of the form ^^type-id,
+/// if type-id is neither a placeholder type nor
+/// in the form of nested-name-specifier_opt template_opt simple-template-id
+/// then R represents the type denoted by the type-id
+
+// In particular, this means that e.g. '^^const Alias' is reflection of
+// a type, not an alias. For example:
+//
+// using foo = const int;
+// ^^int       // Type
+// ^^const int // Type
+// ^^foo       // Alias
+// ^^const foo // Type
 static bool isTypeAliasAsReflectionName(QualType QT) {
-  /// [expr.reflect] p5, if a reflect-expression R matches the form
-  /// ^^reflection-name it is interpreted as such; the identifier is looked up
-  /// and the representation of R is determined as follows:
-  /// - if lookup finds a type alias A, R represents the type the underlying
-  ///   entity of A if A was introduced by the declaration of a template parameter;
-  ///   otherwise, R represents A.
-
-  /// [expr.reflect] p6, Given reflect-expression R of the form ^^type-id,
-  /// if type-id is neither a placeholder type nor
-  /// in the form of nested-name-specifier_opt template_opt simple-template-id
-  /// then R represents the type denoted by the type-id
-
   return QT.getLocalQualifiers() == Qualifiers{};
 }
 
 /// Unwrap reflected type for profiling
-static void unwrapReflectedTypeForProfile(llvm::FoldingSetNodeID &ID,
+static void profileTypeReflection(llvm::FoldingSetNodeID &ID,
                                           QualType QT) {
   // TODO(Reflection)
 
@@ -542,7 +551,7 @@ static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
   case ReflectionKind::Type: {
     const TypeSourceInfo *Info =
         static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
-    unwrapReflectedTypeForProfile(ID, Info->getType());
+    profileTypeReflection(ID, Info->getType());
     return;
   }
   }
