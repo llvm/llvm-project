@@ -136,6 +136,23 @@ bool AddressSpaceAttr::isValidPtrIntCast(
 }
 
 //===----------------------------------------------------------------------===//
+// FunctionMetadataAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+FunctionMetadataAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             StringAttr metadataName, MDNodeAttr node) {
+  (void)node;
+  StringRef name = metadataName.getValue();
+  if (name.empty())
+    return emitError() << "function_metadata entry name must not be empty";
+  if (name == "dbg" || name == "prof")
+    return emitError() << "reserved function_metadata entry '" << name
+                       << "' must use a dedicated LLVM dialect representation";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AliasScopeAttr
 //===----------------------------------------------------------------------===//
 

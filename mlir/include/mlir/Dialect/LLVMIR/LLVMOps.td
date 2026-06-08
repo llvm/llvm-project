@@ -2071,6 +2071,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
+    OptionalAttr<LLVM_FunctionMetadataArrayAttr>:$function_metadata,
     OptionalAttr<UWTableKindAttr>:$uwtable_kind,
     OptionalAttr<BoolAttr>:$use_sample_profile
   );

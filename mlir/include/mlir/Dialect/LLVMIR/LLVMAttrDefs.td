@@ -1788,6 +1788,28 @@ def LLVM_MDNodeArrayAttr
     : TypedArrayAttrBase<LLVM_MDNodeAttr,
                          "array of #llvm.md_node attributes">;
 
+def LLVM_FunctionMetadataAttr
+    : LLVM_Attr<"FunctionMetadata", "func_metadata"> {
+  let summary = "LLVM function metadata attachment";
+  let description = [{
+    Models one LLVM IR function metadata attachment. LLVM IR allows several
+    attachments with the same metadata kind, so function metadata is represented
+    as an ordered list of these entries instead of a dictionary.
+
+    Example:
+    ```mlir
+    #llvm.func_metadata<"type", <#llvm.md_string<"id">>>
+    ```
+  }];
+  let parameters = (ins "StringAttr":$metadataName, "MDNodeAttr":$node);
+  let assemblyFormat = "`<` $metadataName `,` $node `>`";
+  let genVerifyDecl = 1;
+}
+
+def LLVM_FunctionMetadataArrayAttr
+    : TypedArrayAttrBase<LLVM_FunctionMetadataAttr,
+                         "array of #llvm.func_metadata attributes">;
+
 def LLVM_AnyMDAttr : AnyAttrOf<[
     LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDValueAttr, LLVM_MDNodeAttr],
     "LLVM metadata attribute (md_string, md_const, md_value, or md_node)">;

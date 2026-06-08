@@ -1230,3 +1230,25 @@ llvm.named_metadata "foo.kernel" [
     >
   >
 ]
+
+// CHECK-LABEL: llvm.func @generic_function_metadata
+// CHECK-SAME: function_metadata
+// CHECK-SAME: #llvm.func_metadata<"annotation", <#llvm.md_string<"function annotation">>>
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid">>>
+llvm.func @generic_function_metadata() attributes {
+  function_metadata = [
+    #llvm.func_metadata<"annotation", #llvm.md_node<#llvm.md_string<"function annotation">>>,
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid">>>
+  ]
+}
+
+// CHECK-LABEL: llvm.func @repeated_function_metadata
+// CHECK-SAME: function_metadata
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid1">>>
+llvm.func @repeated_function_metadata() attributes {
+  function_metadata = [
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>,
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid1">>>
+  ]
+}
