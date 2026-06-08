@@ -2149,6 +2149,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_global_store_async_from_lds_b128})
       .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
 
+  addRulesForIOpcs({amdgcn_struct_ptr_buffer_load_async_lds})
+      .Any({{},
+            {{}, {IntrId, SgprP8, SgprB32_M0, Imm, Vgpr32, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_struct_buffer_load_async_lds})
+      .Any(
+          {{},
+           {{}, {IntrId, SgprV4S32, SgprB32_M0, Imm, Vgpr32, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_raw_ptr_buffer_load_async_lds})
+      .Any({{}, {{}, {IntrId, SgprP8, SgprB32_M0, Imm, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_raw_buffer_load_async_lds})
+      .Any({{}, {{}, {IntrId, SgprV4S32, SgprB32_M0, Imm, Vgpr32, Sgpr32}}});
+
   addRulesForIOpcs({amdgcn_cluster_load_b32})
       .Any({{UniB32}, {{UniInVgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
       .Any({{DivB32, _, UniP1}, {{VgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
