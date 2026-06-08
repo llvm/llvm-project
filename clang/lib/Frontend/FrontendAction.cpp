@@ -31,6 +31,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LiteralSupport.h"
+#include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/ParseAST.h"
@@ -628,9 +629,7 @@ static std::error_code collectModuleHeaderIncludes(
          Dir != End && !EC; Dir.increment(EC)) {
       // Check whether this entry has an extension typically associated with
       // headers.
-      if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->path()))
-               .Cases({".h", ".H", ".hh", ".hpp"}, true)
-               .Default(false))
+      if (!ModMap.isModularHeaderExtension(Dir->path()))
         continue;
 
       // Compute the relative path from the directory to this file.

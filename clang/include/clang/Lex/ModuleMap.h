@@ -512,6 +512,10 @@ public:
   /// marked 'unavailable'.
   bool isHeaderInUnavailableModule(FileEntryRef Header) const;
 
+  /// Has an extension that is treated as a header when collecting the contents
+  /// of an umbrella  directory (see \c collectModuleHeaderIncludes).
+  static bool isModularHeaderExtension(StringRef FileName);
+
   /// Determine whether the given header is unavailable as part
   /// of the specified module.
   bool isHeaderUnavailableInModule(FileEntryRef Header,

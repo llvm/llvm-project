@@ -841,6 +841,12 @@ bool ModuleMap::isHeaderInUnavailableModule(FileEntryRef Header) const {
   return isHeaderUnavailableInModule(Header, nullptr);
 }
 
+bool ModuleMap::isModularHeaderExtension(StringRef FileName) {
+  return llvm::StringSwitch<bool>(llvm::sys::path::extension(FileName))
+      .Cases({".h", ".H", ".hh", ".hpp"}, true)
+      .Default(false);
+}
+
 bool ModuleMap::isHeaderUnavailableInModule(
     FileEntryRef Header, const Module *RequestingModule) const {
   resolveHeaderDirectives(Header);
