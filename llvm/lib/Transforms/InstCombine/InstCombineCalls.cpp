@@ -3678,6 +3678,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CallBase::removeOperandBundleAt(II, Idx);
       }
 
+      case BundleAttr::Dereferenceable: {
+        auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+
+        if (Count && *Count == 0)
+          return CallBase::removeOperandBundleAt(II, Idx);
+        break;
+      }
+
       case BundleAttr::NonNull: {
         auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
@@ -3718,7 +3726,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       } break;
 
       // TODO: Drop these assumes when they are redundant
-      case BundleAttr::Dereferenceable:
       case BundleAttr::DereferenceableOrNull:
       case BundleAttr::Ignore:
       case BundleAttr::NoUndef:

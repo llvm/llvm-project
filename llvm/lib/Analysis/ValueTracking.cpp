@@ -832,14 +832,10 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
         auto OBU = I->getOperandBundleAt(Elem.Index);
         switch (getBundleAttrFromOBU(OBU)) {
         case BundleAttr::Dereferenceable: {
-          auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
-          if (Ptr != V ||
-              NullPointerIsDefined(Q.CxtI->getFunction(),
-                                   V->getType()->getPointerAddressSpace()))
-            return false;
-
-          auto *CI = dyn_cast<ConstantInt>(Count);
-          return CI && !CI->isZero();
+          auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+          return Ptr == V && Count && *Count != 0 &&
+                 !NullPointerIsDefined(Q.CxtI->getFunction(),
+                                       V->getType()->getPointerAddressSpace());
         }
 
         case BundleAttr::NonNull:
