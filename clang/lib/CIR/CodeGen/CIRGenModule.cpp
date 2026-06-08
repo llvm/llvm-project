@@ -136,6 +136,13 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     theModule->setAttr(
         cir::CIRDialect::getSourceLanguageAttrName(),
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
+  if (langOpts.OpenCL || (langOpts.CUDAIsDevice && getTriple().isSPIRV())) {
+    setOpenCLVersionAttr(cir::CIRDialect::getOpenCLVersionAttrName(),
+                         langOpts.getOpenCLCompatibleVersion());
+    if (langOpts.OpenCLCPlusPlus)
+      setOpenCLVersionAttr(cir::CIRDialect::getOpenCLCXXVersionAttrName(),
+                           langOpts.OpenCLCPlusPlusVersion);
+  }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
   // TODO(CIR): These attributes should eventually be replaced by
@@ -198,6 +205,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 }
 
 CIRGenModule::~CIRGenModule() = default;
+
+void CIRGenModule::setOpenCLVersionAttr(StringRef attrName, unsigned version) {
+  theModule->setAttr(
+      attrName, cir::OpenCLVersionAttr::get(&getMLIRContext(), version / 100,
+                                            (version % 100) / 10));
+}
 
 void CIRGenModule::createCUDARuntime() {
   cudaRuntime.reset(createNVCUDARuntime(*this));
