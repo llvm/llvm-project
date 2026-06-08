@@ -10527,6 +10527,16 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
   return false;
 }
 void ResolveNamesVisitor::Post(const parser::Designator &x) {
+  // If the name of this designator first appeared in OpenMP declare_target,
+  // it was implicitly declared as an object, but with the possibility of
+  // becoming a procedure. When the name is used in a designator, it cannot
+  // subsequently be turned into a procedure. Unmark the corresponding symbol
+  // as declared by a declare_target directive.
+  if (auto *name{parser::Unwrap<parser::Name>(x)}) {
+    if (auto *symbol{currScope().FindSymbol(name->source)}) {
+      WasDeclaredByOmpDeclareTarget(symbol);
+    }
+  }
   ResolveDesignator(x);
 }
 void ResolveNamesVisitor::Post(const parser::SubstringInquiry &x) {
