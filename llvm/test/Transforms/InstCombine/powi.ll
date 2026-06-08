@@ -646,3 +646,32 @@ define <3 x float> @powi_unary_shuffle_ops_use(<3 x float> %x, i32 %power, ptr %
   %r = call <3 x float> @llvm.powi(<3 x float> %sx, i32 %power)
   ret <3 x float> %r
 }
+
+; Negative test: Missing afn flag on call
+define float @pow_i_2_ldexp_1_no_afn(i32 %i) {
+; CHECK-LABEL: @pow_i_2_ldexp_1_no_afn(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call float @llvm.powi.f32.i32(float 2.000000e+00, i32 [[I:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = tail call float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
+  ret float %1
+}
+
+define float @pow_i_2_ldexp_1_afn(i32 %i) {
+; CHECK-LABEL: @pow_i_2_ldexp_1_afn(
+; CHECK-NEXT:    [[TMP1:%.*]] = call afn float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[I:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = tail call afn float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
+  ret float %1
+}
+
+define float @a_fmul_pow_i_2_ldexp_a_afn(float %a, i32 %i) {
+; CHECK-LABEL: @a_fmul_pow_i_2_ldexp_a_afn(
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float [[A:%.*]], i32 [[I:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = tail call afn reassoc float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
+  %2 = fmul reassoc float %a, %1
+  ret float %2
+}
