@@ -701,9 +701,13 @@ private:
     // If copying a node throws, the nodes that have already been constructed and linked into the
     // list have to be deallocated. When this is called from the copy constructor the enclosing
     // __hash_table is not fully constructed yet, so its destructor would not run to release them.
+    // This is also reached from operator= when assigning into an empty table; there the table
+    // stays alive, so we must leave it in a valid empty state: besides releasing the nodes we
+    // clear the bucket pointers, which were made to point into the now-deallocated node list.
     auto __guard = std::__make_exception_guard([&] {
       __deallocate_node_list(__first_node_.__next_);
       __first_node_.__next_ = nullptr;
+      std::fill_n(__bucket_list_.get(), bucket_count(), nullptr);
     });
     {
       __node_holder __new_node = __construct_node_hash(__other_iter->__hash(), __other_iter->__upcast()->__get_value());

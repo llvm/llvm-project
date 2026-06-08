@@ -13,6 +13,10 @@
 // Check that the unordered_map copy constructor does not leak nodes when a node allocation
 // throws partway through copying the elements. The already-copied nodes must be released even
 // though the container itself never finishes constructing.
+//
+// Also check the copy-assignment-into-empty path, which shares the same node-copying helper.
+// There the assigned-to container stays alive, so after a throw it must be left in a valid
+// (usable, leak-free) state with no dangling bucket pointers.
 
 #include <cassert>
 #include <cstddef>
@@ -86,6 +90,30 @@ int main(int, char**) {
     }
     countdown = never_throw;
 
+    assert(globalMemCounter.outstanding_new == outstanding_before);
+  }
+
+  // Same, but through copy-assignment into an empty (default-constructed) map. The destination
+  // survives the exception, so it must be left valid: we exercise it with insert()/find() (which
+  // read the bucket array and would dereference a stale entry under a sanitizer) and confirm no
+  // nodes are leaked once it goes out of scope.
+  for (int fail_at = 0; fail_at < 32; ++fail_at) {
+    const int outstanding_before = globalMemCounter.outstanding_new;
+    {
+      Map dst((Alloc(countdown)));
+      countdown = fail_at;
+      try {
+        dst = src;
+      } catch (const std::bad_alloc&) {
+      }
+      countdown = never_throw;
+
+      // The container must be in a valid state whether or not the assignment threw.
+      for (int i = 0; i < 16; ++i)
+        dst.insert(std::make_pair(i, i));
+      for (int i = 0; i < 16; ++i)
+        assert(dst.find(i) != dst.end());
+    }
     assert(globalMemCounter.outstanding_new == outstanding_before);
   }
 
