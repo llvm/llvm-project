@@ -2819,7 +2819,8 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
           hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
                                          SCEV::FlagAnyWrap),
                    SCEV::FlagNUW)) {
-        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
+        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType(),
+                                 Depth + 1);
       }
     }
   }
