@@ -208,16 +208,6 @@ getInput(const ArgList &Args) {
                          ? offloading::InputDesc::Kind::Library
                          : offloading::InputDesc::Kind::File;
     Desc.WholeArchive = WholeArchive;
-
-    // Validate positional file inputs exist before passing to
-    // resolveArchiveMembers (which silently skips non-existent paths).
-    if (Desc.InputKind == offloading::InputDesc::Kind::File) {
-      if (!sys::fs::exists(Desc.Value))
-        return createStringError("input file not found: '" + Desc.Value + "'");
-      if (sys::fs::is_directory(Desc.Value))
-        return createStringError("'" + Desc.Value + "': Is a directory");
-    }
-
     InputDescs.push_back(Desc);
   }
 

@@ -214,8 +214,10 @@ resolveArchiveMembers(ArrayRef<InputDesc> Order,
       if (sys::fs::is_directory(*Filename))
         return createStringError("'%s': Is a directory", Filename->c_str());
     } else {
-      if (!sys::fs::exists(Desc.Value) || sys::fs::is_directory(Desc.Value))
-        continue;
+      if (!sys::fs::exists(Desc.Value))
+        return createStringError("input file not found: '" + Desc.Value + "'");
+      if (sys::fs::is_directory(Desc.Value))
+        return createStringError("'" + Desc.Value + "': Is a directory");
       Filename = Desc.Value.str();
     }
 
