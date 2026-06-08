@@ -5896,9 +5896,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (BestVPlan.hasEarlyExit())
     ++LoopsEarlyExitVectorized;
 
-  VPlanTransforms::replaceWideCanonicalIVWithWideIV(
-      BestVPlan, *PSE.getSE(), CM.TTI, Config.CostKind, BestVF, BestUF,
-      CM.ValuesToIgnore);
+  RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
+                 *PSE.getSE(), CM.TTI, Config.CostKind, BestVF, BestUF,
+                 CM.ValuesToIgnore);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
@@ -5915,9 +5915,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   if (CM.maskPartialAliasing()) {
     assert(CM.foldTailByMasking() && "Expected tail folding to be enabled");
-    VPlanTransforms::materializeAliasMaskCheckBlock(
-        BestVPlan, *CM.Legal->getRuntimePointerChecking()->getDiffChecks(),
-        HasBranchWeights);
+    RUN_VPLAN_PASS(VPlanTransforms::materializeAliasMaskCheckBlock, BestVPlan,
+                   *CM.Legal->getRuntimePointerChecking()->getDiffChecks(),
+                   HasBranchWeights);
     ++LoopsPartialAliasVectorized;
   }
 
@@ -6597,7 +6597,8 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
     }
 
-    if (auto P = VPlanTransforms::narrowInterleaveGroups(*Plan, TTI))
+    if (auto P =
+            RUN_VPLAN_PASS(VPlanTransforms::narrowInterleaveGroups, *Plan, TTI))
       VPlans.push_back(std::move(P));
 
     RUN_VPLAN_PASS_NO_VERIFY(printOptimizedVPlan, *Plan);
@@ -6615,10 +6616,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   if (Plan->isOuterLoop()) {
     for (ElementCount VF : Range)
       Plan->addVF(VF);
-    if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
+    if (!RUN_VPLAN_PASS(VPlanTransforms::tryToConvertVPInstructionsToVPRecipes,
+                        *Plan, *TLI))
       return nullptr;
-    VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
-                                                   /*FoldTail=*/false);
+    RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE,
+                   /*FoldTail=*/false);
     return Plan;
   }
 
