@@ -469,6 +469,8 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
     auto CopyFromExecInst = findExecCopy(MBB, I);
     if (CopyFromExecInst == E) {
       auto PrepareExecInst = std::next(I);
+      while (PrepareExecInst != E && PrepareExecInst->isDebugInstr())
+        ++PrepareExecInst;
       if (PrepareExecInst == E)
         continue;
       // Fold exec = COPY (S_AND_B64 reg, exec) -> exec = S_AND_B64 reg, exec
@@ -501,6 +503,9 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
              J = std::next(CopyFromExecInst->getIterator()),
              JE = I->getIterator();
          J != JE; ++J) {
+      if (J->isDebugInstr())
+        continue;
+
       if (SaveExecInst && J->readsRegister(LMC.ExecReg, TRI)) {
         LLVM_DEBUG(dbgs() << "exec read prevents saveexec: " << *J << '\n');
         // Make sure this is inserted after any VALU ops that may have been
@@ -759,9 +764,14 @@ void SIOptimizeExecMasking::tryRecordOrSaveexecXorSequence(MachineInstr &MI) {
         XorSrc1.isReg() &&
         (XorSrc0.getReg() == LMC.ExecReg || XorSrc1.getReg() == LMC.ExecReg)) {
 
-      // Peek at the previous instruction and check if this is a relevant
-      // s_or_saveexec instruction.
-      MachineInstr &PossibleOrSaveexec = *MI.getPrevNode();
+      // Peek at the previous non-debug instruction and check if this is a
+      // relevant s_or_saveexec instruction.
+      MachineInstr *Prev = MI.getPrevNode();
+      while (Prev && Prev->isDebugInstr())
+        Prev = Prev->getPrevNode();
+      if (!Prev)
+        return;
+      MachineInstr &PossibleOrSaveexec = *Prev;
       if (PossibleOrSaveexec.getOpcode() != LMC.OrSaveExecOpc)
         return;
 
