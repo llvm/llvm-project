@@ -2153,8 +2153,8 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
 bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
                                 const MachineRegisterInfo &MRI, unsigned MaxLen,
                                 Register &Dst, Register &Src,
-                                uint64_t &KnownLen, Align &DstAlign,
-                                Align &SrcAlign, bool &DstAlignCanChange,
+                                uint64_t &KnownLen, Align &Alignment,
+                                bool &DstAlignCanChange,
                                 std::vector<LLT> &MemOps) {
   const unsigned Opc = MI.getOpcode();
   assert((Opc == TargetOpcode::G_MEMCPY ||
@@ -2165,7 +2165,9 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
   auto MMOIt = MI.memoperands_begin();
   const MachineMemOperand *MemOp = *MMOIt;
 
-  DstAlign = MemOp->getBaseAlign();
+  Align DstAlign = MemOp->getBaseAlign();
+  Align SrcAlign;
+  Alignment = DstAlign;
   Register Len;
   std::tie(Dst, Src, Len) = MI.getFirst3Regs();
 
@@ -2173,6 +2175,7 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
     assert(MMOIt != MI.memoperands_end() && "Expected a second MMO on MI");
     MemOp = *(++MMOIt);
     SrcAlign = MemOp->getBaseAlign();
+    Alignment = std::min(DstAlign, SrcAlign);
   }
 
   // See if this is a constant length copy.
