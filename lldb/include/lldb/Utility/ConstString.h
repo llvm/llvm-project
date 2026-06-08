@@ -412,6 +412,8 @@ protected:
 
   const char *m_string = nullptr;
 };
+static_assert(sizeof(ConstString) <= sizeof(const char *),
+              "High-volume object, size of object must be increased with care");
 
 /// Stream the string value \a str to the stream \a s
 Stream &operator<<(Stream &s, ConstString str);
@@ -427,10 +429,6 @@ template <> struct format_provider<lldb_private::ConstString> {
 /// DenseMapInfo implementation.
 /// \{
 template <> struct DenseMapInfo<lldb_private::ConstString> {
-  static inline lldb_private::ConstString getEmptyKey() {
-    return lldb_private::ConstString::FromStringPoolPointer(
-        DenseMapInfo<const char *>::getEmptyKey());
-  }
   static unsigned getHashValue(lldb_private::ConstString val) {
     return DenseMapInfo<const char *>::getHashValue(val.m_string);
   }

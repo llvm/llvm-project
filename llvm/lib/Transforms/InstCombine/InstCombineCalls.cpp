@@ -31,6 +31,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -3647,66 +3648,46 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(*II);
     }
 
-    for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
-      OperandBundleUse OBU = II->getOperandBundleAt(Idx);
+    for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::None:
+        llvm_unreachable("Unexpected Attribute");
+      case BundleAttr::Align: {
+        // Try to remove redundant alignment assumptions.
+        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
-      // Separate storage assumptions apply to the underlying allocations, not
-      // any particular pointer within them. When evaluating the hints for AA
-      // purposes we getUnderlyingObject them; by precomputing the answers here
-      // we can avoid having to do so repeatedly there.
-      if (OBU.getTagName() == "separate_storage") {
-        assert(OBU.Inputs.size() == 2);
-        auto MaybeSimplifyHint = [&](const Use &U) {
-          Value *Hint = U.get();
-          // Not having a limit is safe because InstCombine removes unreachable
-          // code.
-          Value *UnderlyingObject = getUnderlyingObject(Hint, /*MaxLookup*/ 0);
-          if (Hint != UnderlyingObject)
-            replaceUse(const_cast<Use &>(U), UnderlyingObject);
-        };
-        MaybeSimplifyHint(OBU.Inputs[0]);
-        MaybeSimplifyHint(OBU.Inputs[1]);
-      }
+        if (!Alignment || !Offset || *Offset != 0)
+          break;
 
-      // Try to remove redundant alignment assumptions.
-      if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
-        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
-            *cast<AssumeInst>(II), II->arg_size() + Idx);
-        if (!RK || RK.AttrKind != Attribute::Alignment ||
-            !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
-          continue;
-
-        // Remove align 1 bundles; they don't add any useful information.
-        if (RK.ArgValue == 1)
+        // Remove align 1 and non-power-of-two bundles; they don't add any
+        // useful information.
+        if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
           return CallBase::removeOperandBundleAt(II, Idx);
 
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
         // the align argument attribute disappears.
-        Value *UO = getUnderlyingObject(RK.WasOn);
+        Value *UO = getUnderlyingObject(Ptr);
         if (!UO || isa<Argument>(UO))
-          continue;
+          break;
 
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
-        if ((1ULL << computeKnownBits(RK.WasOn, II).countMinTrailingZeros()) <
-            RK.ArgValue)
+        if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
+            Log2_64(*Alignment))
           continue;
         return CallBase::removeOperandBundleAt(II, Idx);
       }
 
-      if (OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1) {
-        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
-            *cast<AssumeInst>(II), II->arg_size() + Idx);
-        if (!RK || RK.AttrKind != Attribute::NonNull)
-          continue;
+      case BundleAttr::NonNull: {
+        auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
         // Drop assume if we can prove nonnull without it
-        if (isKnownNonZero(RK.WasOn, getSimplifyQuery().getWithInstruction(II)))
+        if (isKnownNonZero(Ptr, getSimplifyQuery().getWithInstruction(II)))
           return CallBase::removeOperandBundleAt(II, Idx);
 
         // Fold the assume into metadata if it's valid at the load
-        if (auto *LI = dyn_cast<LoadInst>(RK.WasOn);
+        if (auto *LI = dyn_cast<LoadInst>(Ptr);
             LI &&
             isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
           MDNode *MD = MDNode::get(II->getContext(), {});
@@ -3716,6 +3697,37 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         }
 
         // TODO: apply nonnull return attributes to calls and invokes
+        break;
+      }
+
+      case BundleAttr::SeparateStorage: {
+        auto [Ptr1, Ptr2] = getAssumeSeparateStorageInfo(OBU);
+        // Separate storage assumptions apply to the underlying allocations, not
+        // any particular pointer within them. When evaluating the hints for AA
+        // purposes we getUnderlyingObject them; by precomputing the answers
+        // here we can avoid having to do so repeatedly there.
+        auto MaybeSimplifyHint = [&](const Use &U) {
+          Value *Hint = U.get();
+          // Not having a limit is safe because InstCombine removes unreachable
+          // code.
+          Value *UnderlyingObject = getUnderlyingObject(Hint, /*MaxLookup*/ 0);
+          if (Hint != UnderlyingObject)
+            replaceUse(const_cast<Use &>(U), UnderlyingObject);
+        };
+        MaybeSimplifyHint(Ptr1);
+        MaybeSimplifyHint(Ptr2);
+      } break;
+
+      // TODO: Drop these assumes when they are redundant
+      case BundleAttr::Dereferenceable:
+      case BundleAttr::DereferenceableOrNull:
+      case BundleAttr::Ignore:
+      case BundleAttr::NoUndef:
+        break;
+
+      // This cannot be simplified
+      case BundleAttr::Cold:
+        break;
       }
     }
 
