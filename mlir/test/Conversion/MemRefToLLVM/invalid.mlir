@@ -52,3 +52,13 @@ func.func @test_atomic_exch(%arg0: memref<?xi32>, %idx: index, %value: i32) {
   }
   func.return
 }
+
+// -----
+
+func.func @invalid_shared_alloca() {
+    // expected-error @+1 {{memref.alloca address space does not match the target's legal stack allocation address space.}}
+    %0 = memref.alloca() : memref<128xf32, 3>
+    return
+  }
+
+}

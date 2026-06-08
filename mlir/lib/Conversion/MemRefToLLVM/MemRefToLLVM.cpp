@@ -360,6 +360,11 @@ struct AllocaOpLowering : public ConvertOpToLLVMPattern<memref::AllocaOp> {
         getTypeConverter()->getMemRefAddressSpace(op.getType());
     assert(succeeded(maybeAddressSpace) && "unsupported address space");
     unsigned addrSpace = *maybeAddressSpace;
+    if (addrSpace != getTypeConverter()->getDataLayout().getAllocaAddrSpace()) {
+        return rewriter.notifyMatchFailure(
+          op, "memref.alloca address space does not match the target's "
+              "legal stack allocation address space.");
+    }    
     auto elementPtrType =
         LLVM::LLVMPointerType::get(rewriter.getContext(), addrSpace);
 
