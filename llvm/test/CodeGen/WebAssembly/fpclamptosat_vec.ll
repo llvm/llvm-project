@@ -484,6 +484,68 @@ entry:
 define <8 x i16> @utest_f16i16(<8 x half> %x) {
 ; CHECK-LABEL: utest_f16i16:
 ; CHECK:         .functype utest_f16i16 (i32, i32, i32, i32, i32, i32, i32, i32) -> (v128)
+; CHECK-NEXT:    .local f32, f32, f32, f32, f32, v128
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 9
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 10
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 11
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 12
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 12
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 3
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 13
+; CHECK-NEXT:    i32x4.min_u
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 1
+; CHECK-NEXT:    local.get 10
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    local.get 11
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 3
+; CHECK-NEXT:    local.get 13
+; CHECK-NEXT:    i32x4.min_u
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %conv = fptoui <8 x half> %x to <8 x i32>
+  %0 = icmp ult <8 x i32> %conv, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
+  %spec.store.select = select <8 x i1> %0, <8 x i32> %conv, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
+  %conv6 = trunc <8 x i32> %spec.store.select to <8 x i16>
+  ret <8 x i16> %conv6
+}
+
+define <8 x i16> @ustest_f16i16(<8 x half> %x) {
+; CHECK-LABEL: ustest_f16i16:
+; CHECK:         .functype ustest_f16i16 (i32, i32, i32, i32, i32, i32, i32, i32) -> (v128)
 ; CHECK-NEXT:    .local f32, f32, f32, f32, f32
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 5
@@ -503,63 +565,6 @@ define <8 x i16> @utest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    local.set 12
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    local.get 12
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 1
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 3
-; CHECK-NEXT:    local.get 9
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 1
-; CHECK-NEXT:    local.get 10
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.get 11
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 3
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
-; CHECK-NEXT:    # fallthrough-return
-entry:
-  %conv = fptoui <8 x half> %x to <8 x i32>
-  %0 = icmp ult <8 x i32> %conv, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  %spec.store.select = select <8 x i1> %0, <8 x i32> %conv, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-  %conv6 = trunc <8 x i32> %spec.store.select to <8 x i16>
-  ret <8 x i16> %conv6
-}
-
-define <8 x i16> @ustest_f16i16(<8 x half> %x) {
-; CHECK-LABEL: ustest_f16i16:
-; CHECK:         .functype ustest_f16i16 (i32, i32, i32, i32, i32, i32, i32, i32) -> (v128)
-; CHECK-NEXT:    .local f32, f32, f32, f32, f32, v128, v128
-; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 9
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 10
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 11
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 12
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.splat
 ; CHECK-NEXT:    local.get 12
@@ -573,12 +578,6 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.replace_lane 3
-; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
-; CHECK-NEXT:    local.tee 13
-; CHECK-NEXT:    i32x4.min_s
-; CHECK-NEXT:    v128.const 0, 0, 0, 0
-; CHECK-NEXT:    local.tee 14
-; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.splat
@@ -591,10 +590,6 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    local.get 11
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.replace_lane 3
-; CHECK-NEXT:    local.get 13
-; CHECK-NEXT:    i32x4.min_s
-; CHECK-NEXT:    local.get 14
-; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
@@ -1850,6 +1845,67 @@ entry:
 define <8 x i16> @utest_f16i16_mm(<8 x half> %x) {
 ; CHECK-LABEL: utest_f16i16_mm:
 ; CHECK:         .functype utest_f16i16_mm (i32, i32, i32, i32, i32, i32, i32, i32) -> (v128)
+; CHECK-NEXT:    .local f32, f32, f32, f32, f32, v128
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 9
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 10
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 11
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    local.set 12
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 12
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 3
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 13
+; CHECK-NEXT:    i32x4.min_u
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 1
+; CHECK-NEXT:    local.get 10
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 2
+; CHECK-NEXT:    local.get 11
+; CHECK-NEXT:    i32.trunc_sat_f32_u
+; CHECK-NEXT:    i32x4.replace_lane 3
+; CHECK-NEXT:    local.get 13
+; CHECK-NEXT:    i32x4.min_u
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %conv = fptoui <8 x half> %x to <8 x i32>
+  %spec.store.select = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %conv, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>)
+  %conv6 = trunc <8 x i32> %spec.store.select to <8 x i16>
+  ret <8 x i16> %conv6
+}
+
+define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
+; CHECK-LABEL: ustest_f16i16_mm:
+; CHECK:         .functype ustest_f16i16_mm (i32, i32, i32, i32, i32, i32, i32, i32) -> (v128)
 ; CHECK-NEXT:    .local f32, f32, f32, f32, f32
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 5
@@ -1869,62 +1925,6 @@ define <8 x i16> @utest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    local.set 12
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    local.get 12
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 1
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 3
-; CHECK-NEXT:    local.get 9
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 1
-; CHECK-NEXT:    local.get 10
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.get 11
-; CHECK-NEXT:    i32.trunc_sat_f32_u
-; CHECK-NEXT:    i32x4.replace_lane 3
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
-; CHECK-NEXT:    # fallthrough-return
-entry:
-  %conv = fptoui <8 x half> %x to <8 x i32>
-  %spec.store.select = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %conv, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>)
-  %conv6 = trunc <8 x i32> %spec.store.select to <8 x i16>
-  ret <8 x i16> %conv6
-}
-
-define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
-; CHECK-LABEL: ustest_f16i16_mm:
-; CHECK:         .functype ustest_f16i16_mm (i32, i32, i32, i32, i32, i32, i32, i32) -> (v128)
-; CHECK-NEXT:    .local f32, f32, f32, f32, f32, v128, v128
-; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    local.get 5
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 4
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 9
-; CHECK-NEXT:    local.get 6
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 10
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 11
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    local.set 12
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.splat
 ; CHECK-NEXT:    local.get 12
@@ -1938,12 +1938,6 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.replace_lane 3
-; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
-; CHECK-NEXT:    local.tee 13
-; CHECK-NEXT:    i32x4.min_s
-; CHECK-NEXT:    v128.const 0, 0, 0, 0
-; CHECK-NEXT:    local.tee 14
-; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.splat
@@ -1956,10 +1950,6 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    local.get 11
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32x4.replace_lane 3
-; CHECK-NEXT:    local.get 13
-; CHECK-NEXT:    i32x4.min_s
-; CHECK-NEXT:    local.get 14
-; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:

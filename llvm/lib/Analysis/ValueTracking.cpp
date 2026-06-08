@@ -732,7 +732,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     CtxIter = AssumeBB->end();
   } else {
     // Same block case: check that Assume comes before CtxI.
-    if (!Assume->comesBefore(CtxI))
+    if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
   }
 
