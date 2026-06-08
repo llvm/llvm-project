@@ -102,6 +102,7 @@ jobs:
       - name: Install Doxygen
         run: |
           curl -L https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz -o doxygen.tar.gz
+          echo "75419ef4f446fc1c24ef12514b574e66e898ee6f527c6ae2ad84f91a905823c2  doxygen.tar.gz" | shasum --check -
           tar -xf doxygen.tar.gz
           sudo install -m 755 doxygen-1.17.0/bin/doxygen /usr/local/bin/doxygen
 
