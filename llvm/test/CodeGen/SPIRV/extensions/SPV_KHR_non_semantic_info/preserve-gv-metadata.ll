@@ -10,12 +10,14 @@
 
 ; CHECK-DAG: %[[#MD0:]] = OpString "hi"
 ; CHECK-DAG: %[[#MD1:]] = OpString "there"
-; CHECK-DAG: %[[#GVName:]] = OpString "a"
 ; CHECK-DAG: %[[#MDName:]] = OpString "some.gv.md"
+
+; The Target operand is the real OpVariable <id>, not an OpString name.
+; CHECK-DAG: OpName %[[#GV:]] "a"
 
 ; CHECK-DAG: %[[#VoidT:]] = OpTypeVoid
 
-; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#GVName]] %[[#MDName]] %[[#MD0]] %[[#MD1]]
+; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#GV]] %[[#MDName]] %[[#MD0]] %[[#MD1]]
 
 target triple = "spir64-unknown-unknown"
 

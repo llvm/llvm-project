@@ -7,15 +7,17 @@
 
 ; CHECK: %[[#Import:]] = OpExtInstImport "NonSemantic.AuxData"
 
-; CHECK-DAG: %[[#GVName:]] = OpString "g"
 ; CHECK-DAG: %[[#Attr0:]] = OpString "flag"
 ; CHECK-DAG: %[[#Attr1LHS:]] = OpString "my-gv-attr"
 ; CHECK-DAG: %[[#Attr1RHS:]] = OpString "7"
 
+; The Target operand is the real OpVariable <id>, not an OpString name.
+; CHECK-DAG: OpName %[[#GV:]] "g"
+
 ; CHECK-DAG: %[[#VoidT:]] = OpTypeVoid
 
-; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#GVName]] %[[#Attr0]]
-; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#GVName]] %[[#Attr1LHS]] %[[#Attr1RHS]]
+; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#GV]] %[[#Attr0]]
+; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#GV]] %[[#Attr1LHS]] %[[#Attr1RHS]]
 
 target triple = "spir64-unknown-unknown"
 

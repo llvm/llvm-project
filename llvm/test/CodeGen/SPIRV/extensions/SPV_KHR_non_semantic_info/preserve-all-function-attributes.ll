@@ -7,11 +7,13 @@
 
 ; CHECK: %[[#Import:]] = OpExtInstImport "NonSemantic.AuxData"
 
-; CHECK-DAG: %[[#Fcn0:]] = OpString "mul_add"
 ; CHECK-DAG: %[[#Attr0:]] = OpString "foo"
-; CHECK-DAG: %[[#Fcn1:]] = OpString "test"
 ; CHECK-DAG: %[[#Attr1LHS:]] = OpString "bar"
 ; CHECK-DAG: %[[#Attr1RHS:]] = OpString "baz"
+
+; The Target operand is the real OpFunction <id>, not an OpString name.
+; CHECK-DAG: OpName %[[#Fcn0:]] "mul_add"
+; CHECK-DAG: OpName %[[#Fcn1:]] "test"
 
 ; CHECK-DAG: %[[#VoidT:]] = OpTypeVoid
 

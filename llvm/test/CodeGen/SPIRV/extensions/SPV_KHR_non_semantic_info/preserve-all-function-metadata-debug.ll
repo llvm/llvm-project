@@ -9,8 +9,8 @@
 ; RUN:   %s -o - | FileCheck %s
 
 ; CHECK: %[[#Import:]] = OpExtInstImport "NonSemantic.AuxData"
-; CHECK-DAG: %[[#Fcn:]] = OpString "foo"
 ; CHECK-DAG: %[[#Attr:]] = OpString "keep-me"
+; CHECK-DAG: OpName %[[#Fcn:]] "foo"
 ; CHECK-DAG: %[[#VoidT:]] = OpTypeVoid
 
 ; CHECK: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn]] %[[#Attr]]

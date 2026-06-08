@@ -19,7 +19,6 @@
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCRegister.h"
@@ -29,6 +28,7 @@
 namespace llvm {
 
 class AsmPrinter;
+class Constant;
 class Function;
 class GlobalObject;
 class Module;
@@ -61,15 +61,25 @@ public:
   void emitAuxData(SPIRV::ModuleAnalysisInfo &MAI);
 
 private:
+  // An ExtInst operand is either an already-emitted OpString (Reg valid) or a
+  // ValueAsMetadata constant whose OpConstant is emitted lazily at section 10
+  // (Const set). Exactly one is populated.
+  struct Operand {
+    MCRegister Reg;
+    const Constant *Const = nullptr;
+  };
+  // The Target operand (the OpFunction / OpVariable <id>) is resolved from
+  // GlobalObjMap at emit time, so records keep the GlobalObject, not a reg.
   struct ExtInstRecord {
     AuxDataOpcode Opcode;
-    SmallVector<MCRegister, 4> Operands;
+    const GlobalObject *Target;
+    SmallVector<Operand, 4> Operands;
   };
 
   AsmPrinter &Asm;
   const Module &Mod;
 
-  SmallVector<const Function *> LinkagePreservedFns;
+  SmallVector<const GlobalObject *> LinkagePreservedGOs;
 
   // Backing storage for non-string-attribute strings; StringRegs keys are
   // StringRefs into it.
@@ -77,22 +87,25 @@ private:
   UniqueStringSaver StringPool{StringAlloc};
 
   DenseMap<StringRef, MCRegister> StringRegs;
+  DenseMap<const Constant *, MCRegister> ConstantRegs;
   SmallVector<ExtInstRecord> PendingRecords;
 
   MCRegister getOrEmitString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
   void collectAttributesFor(const GlobalObject *GO,
-                            function_ref<MCRegister()> GetNameReg,
                             SPIRV::ModuleAnalysisInfo &MAI);
-  void collectMetadataFor(const GlobalObject *GO,
-                          function_ref<MCRegister()> GetNameReg,
-                          ArrayRef<StringRef> MDNames,
+  void collectMetadataFor(const GlobalObject *GO, ArrayRef<StringRef> MDNames,
                           SPIRV::ModuleAnalysisInfo &MAI);
 
   void emitMCInst(MCInst &Inst);
   MCRegister findOrEmitOpTypeVoid(SPIRV::ModuleAnalysisInfo &MAI);
+  MCRegister findOrEmitOpTypeInt(unsigned BitWidth,
+                                 SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister findOrEmitOpTypeUInt32(SPIRV::ModuleAnalysisInfo &MAI);
+  MCRegister findOrEmitOpTypeFloat(unsigned BitWidth,
+                                   SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister emitOpConstantUInt32(uint32_t Value, MCRegister UInt32TypeReg,
                                   SPIRV::ModuleAnalysisInfo &MAI);
+  MCRegister emitConstant(const Constant *C, SPIRV::ModuleAnalysisInfo &MAI);
   void emitAuxDataExtInst(AuxDataOpcode Opcode, MCRegister VoidTypeReg,
                           MCRegister ExtSetReg, ArrayRef<MCRegister> Operands,
                           SPIRV::ModuleAnalysisInfo &MAI);

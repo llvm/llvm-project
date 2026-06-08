@@ -829,6 +829,16 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   Changed |= terminateBlocksAfterTrap(M, Intrinsic::trap);
   Changed |= terminateBlocksAfterTrap(M, Intrinsic::ubsantrap);
 
+  for (GlobalVariable &GV : M.globals()) {
+    // Strip + tag available_externally globals so AuxData can re-emit the
+    // original linkage as NonSemantic.AuxData::Linkage.
+    if (GV.hasAvailableExternallyLinkage() && !GV.isDeclaration()) {
+      GV.addAttribute(SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR);
+      GV.setLinkage(GlobalValue::ExternalLinkage);
+      Changed = true;
+    }
+  }
+
   for (Function &F : M) {
     // MachineFunctionPass skips available_externally; strip + tag so AuxData
     // can re-emit the original linkage as NonSemantic.AuxData::Linkage.
