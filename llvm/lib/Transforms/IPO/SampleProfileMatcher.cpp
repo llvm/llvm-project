@@ -364,6 +364,53 @@ void SampleProfileMatcher::runStaleProfileMatching(
       longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
                             RunCGMatching /* Match unused functions */);
 
+  // Scan through the matched anchors to make sure functions and profiles are
+  // 1:1 mapped. If the profile has already been mapped to another function
+  // during previous fuzzy matching, create a new profile with the same sample
+  // counts and assumed to be pre-inlined.
+  std::unordered_map<uint64_t, uint64_t> StagedMatches;
+  for (const auto &IR : IRAnchors) {
+    bool ProfileConflicted = false;
+    const auto &Loc = IR.first;
+    auto AnchorLoc = MatchedAnchors.find(Loc);
+    if (AnchorLoc == MatchedAnchors.end())
+      continue;
+    const auto &Prof = ProfileAnchors.find(AnchorLoc->second);
+    if (Prof == ProfileAnchors.end())
+      continue;
+
+    // Conflicting profile matched with previous matchings
+    const auto *FSForMatching = getFlattenedSamplesFor(Prof->second);
+    if (!FSForMatching)
+      FSForMatching = Reader.getSamplesFor(Prof->second.stringRef());
+    if (!FSForMatching)
+      continue;
+    auto &PrevMap = getIRToProfileLocationMap(*FSForMatching);
+    if (!PrevMap.empty())
+      ProfileConflicted = true;
+
+    // Conflicting profile matched in the current run
+    if (!ProfileConflicted) {
+      uint64_t IRHash = IR.second.getHashCode();
+      uint64_t ProfHash = Prof->second.getHashCode();
+      auto Cached = StagedMatches.find(ProfHash);
+      if (Cached == StagedMatches.end() || Cached->second == IRHash) {
+        StagedMatches[ProfHash] = IRHash;
+      } else {
+        ProfileConflicted = true;
+      }
+    }
+
+    if (ProfileConflicted) {
+      // Create a flattened profile using the IR function name to avoid profile
+      // name conflicts
+      FunctionSamples &NewFS = FlattenedProfiles.create(IR.second);
+      NewFS.merge(*FSForMatching);
+      FuncToProfileNameMap[const_cast<Function *>(&F)] = IR.second;
+      IRToProfileLocationMap = getIRToProfileLocationMap(NewFS);
+    }
+  }
+
   // CFG level matching:
   // Apply the callsite matchings to infer matching for the basic
   // block(non-callsite) locations and write the result to
