@@ -52,6 +52,20 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.__support.freelist
       libc.src.__support.freetrie
   )
+
+  add_libc_test(
+    tlsf_freestore_test
+    SUITE
+      libc-support-tests
+    SRCS
+      tlsf_freestore_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.limits
+      libc.src.__support.CPP.optional
+      libc.src.__support.block
+      libc.src.__support.freelist
+      libc.src.__support.tlsf_freestore
+  )
 endif()
 
 # TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
