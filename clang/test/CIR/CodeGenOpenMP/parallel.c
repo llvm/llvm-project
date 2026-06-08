@@ -153,6 +153,19 @@ void if_parallel() {
   // CHECK-NEXT: %[[INVALID_CONDITION_DIRECTIVE_U1:.*]] = cir.cast bool_to_int %[[INVALID_CONDITION_DIRECTIVE_BOOL]]
   // CHECK-NEXT: %[[INVALID_CONDITION_DIRECTIVE_I1:.*]] = cir.builtin_int_cast %[[INVALID_CONDITION_DIRECTIVE_U1]]
   // CHECK-NEXT: omp.parallel if(%[[INVALID_CONDITION_DIRECTIVE_I1]]) {
+}
+
+void num_threads_parallel() {
+  // CHECK: omp.parallel num_threads(%{{.*}}: i32) {
+  #pragma omp parallel num_threads(16)
+  {}
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+int numThreads = 4;
+  // CHECK: omp.parallel num_threads(%{{.*}}: i32) {
+#pragma omp parallel num_threads(numThreads) 
+  {}
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }

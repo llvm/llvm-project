@@ -40,8 +40,6 @@ public:
                       llvm::ArrayRef<const OMPClause *> clauses)
       : cgf(cgf), cgm(cgm), builder(builder), loc(loc), clauses(clauses) {}
 
-  bool emitProcBind(mlir::omp::ProcBindClauseOps &result) const;
-
   bool emitIf(mlir::omp::IfClauseOps &result,
               llvm::omp::Directive directiveName) const;
 
@@ -49,6 +47,10 @@ public:
   /// VarDecls corresponding to each map operand.
   bool emitMap(mlir::omp::MapClauseOps &result,
                llvm::SmallVectorImpl<const VarDecl *> *mapSyms = nullptr) const;
+
+  bool emitNumThreads(mlir::omp::NumThreadsClauseOps &result) const;
+
+  bool emitProcBind(mlir::omp::ProcBindClauseOps &result) const;
 
   /// Verify the clauses of a directive to make sure all legal cases are either
   /// implemented or give a NYI error. The \p SupportedClauses and \p
