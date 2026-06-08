@@ -1,19 +1,31 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv6m-none-eabi %s -o %t
-// RUN: echo "SECTIONS { \
-// RUN:       . = SIZEOF_HEADERS; \
-// RUN:       .text_low : { *(.text_low) *(.text_low2) } \
-// RUN:       .text_high 0x2000000 : { *(.text_high) *(.text_high2) } \
-// RUN:       } " > %t.script
-// RUN: ld.lld --no-rosegment --script %t.script %t -o %t2
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv6m-none-eabi | FileCheck %s
-// RUN: ld.lld --no-rosegment --script %t.script %t -o %t3 --pie
-// RUN: llvm-objdump --no-print-imm-hex -d %t3 --triple=armv6m-none-eabi | FileCheck --check-prefix=CHECK-PI %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv6m-none-eabi a.s -o a.o
+// RUN: ld.lld --no-rosegment --script a.lds a.o -o exe
+// RUN: llvm-objdump --no-print-imm-hex -d exe --triple=armv6m-none-eabi | FileCheck %s
+// RUN: ld.lld --no-rosegment --script a-pi.lds a.o -o exe --pie
+// RUN: llvm-objdump --no-print-imm-hex -d exe --triple=armv6m-none-eabi | FileCheck --check-prefix=CHECK-PI %s
 
 // Range extension thunks for Arm Architecture v6m. Only Thumb instructions
 // are permitted which limits the access to instructions that can access the
 // high registers (r8 - r15), this means that the thunks have to spill
 // low registers (r0 - r7) in order to perform the transfer of control.
+
+//--- a.lds
+
+SECTIONS {
+  .text_low 0x94 : AT(0x94) { *(.text_low) *(.text_low2) }
+  .text_high 0x2000000 : AT(0x2000000) { *(.text_high) *(.text_high2) }
+}
+
+//--- a-pi.lds
+
+SECTIONS {
+  .text_low 0x130 : AT(0x130) { *(.text_low) *(.text_low2) }
+  .text_high 0x2000000 : AT(0x2000000) { *(.text_high) *(.text_high2) }
+}
+
+//--- a.s
 
  .syntax unified
  .section .text_low, "ax", %progbits
