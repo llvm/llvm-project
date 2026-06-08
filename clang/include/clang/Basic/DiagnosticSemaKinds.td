@@ -13689,7 +13689,7 @@ def warn_hlsl_availability_unavailable :
   Warning<err_unavailable.Summary>,
   InGroup<HLSLAvailability>, DefaultError;
 def error_hlsl_inout_scalar_extension : Error<"illegal scalar extension cast on argument %0 to %select{|in}1out paramemter">;
-def error_hlsl_inout_lvalue : Error<"cannot bind non-lvalue argument %0 to %select{|in}1out paramemter">;
+def error_hlsl_inout_lvalue : Error<"cannot bind non-lvalue argument %0 to %select{|in}1out parameter">;
 
 def err_hlsl_atomic_arg_addr_space : Error<
   "%ordinal0 argument to atomic builtin must reference groupshared or device "

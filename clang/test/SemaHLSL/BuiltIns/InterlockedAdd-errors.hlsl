@@ -73,7 +73,7 @@ void direct_non_integer_dest() {
 
 void direct_nonlvalue_dest(int v) {
   __builtin_hlsl_interlocked_add(1, v);
-  // expected-error@-1 {{cannot bind non-lvalue argument '1' to out paramemter}}
+  // expected-error@-1 {{cannot bind non-lvalue argument '1' to out parameter}}
 }
 
 void direct_mismatched_value() {
@@ -90,7 +90,7 @@ void direct_mismatched_orig(int v) {
 
 void direct_nonlvalue_orig(int v) {
   __builtin_hlsl_interlocked_add(gs_i32, v, 1);
-  // expected-error@-1 {{cannot bind non-lvalue argument '1' to out paramemter}}
+  // expected-error@-1 {{cannot bind non-lvalue argument '1' to out parameter}}
 }
 
 void direct_default_as_dest(int v) {
