@@ -81,6 +81,8 @@ enum tool_setting_e {
   omp_tool_enabled
 };
 
+typedef void (*ompt_set_target_info_t)(ompt_get_target_info_t);
+
 /*****************************************************************************
  * global variables
  ****************************************************************************/
@@ -102,6 +104,7 @@ kmp_mutex_impl_info_t kmp_mutex_impl_info[] = {
 ompt_callbacks_internal_t ompt_callbacks;
 
 static ompt_start_tool_result_t *ompt_start_tool_result = NULL;
+static ompt_get_target_info_t ompt_get_target_info_impl = NULL;
 
 #if KMP_OS_WINDOWS
 static HMODULE ompt_tool_module = NULL;
@@ -861,7 +864,20 @@ OMPT_API_ROUTINE void ompt_finalize_tool(void) { __kmp_internal_end_atexit(); }
 OMPT_API_ROUTINE int ompt_get_target_info(uint64_t *device_num,
                                           ompt_id_t *target_id,
                                           ompt_id_t *host_op_id) {
-  return 0; // thread is not in a target region
+  if (!ompt_enabled.enabled)
+    return 0;
+
+  if (device_num)
+    *device_num = -2; /* omp_invalid_device */
+  if (target_id)
+    *target_id = ompt_id_none;
+  if (host_op_id)
+    *host_op_id = ompt_id_none;
+
+  if (ompt_get_target_info_impl)
+    return ompt_get_target_info_impl(device_num, target_id, host_op_id);
+
+  return 0;
 }
 
 OMPT_API_ROUTINE int ompt_get_num_devices(void) {
@@ -892,6 +908,10 @@ static ompt_data_t *ompt_get_target_task_data() {
   return __ompt_get_target_task_data();
 }
 
+static void ompt_set_target_info(ompt_get_target_info_t fn) {
+  ompt_get_target_info_impl = fn;
+}
+
 /// Lookup function to query libomp callbacks registered by the tool
 static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
 #define provide_fn(fn)                                                         \
@@ -901,6 +921,7 @@ static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
   provide_fn(ompt_get_callback);
   provide_fn(ompt_get_task_data);
   provide_fn(ompt_get_target_task_data);
+  provide_fn(ompt_set_target_info);
 #undef provide_fn
 
 #define ompt_interface_fn(fn, type, code)                                      \
