@@ -3515,25 +3515,21 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
-  for (BasicBlock &BB : Func)
-    for (PHINode &Phi : BB.phis())
-      if (Phi.getType()->isAggregateType()) {
-        AggrConstTypes[&Phi] = Phi.getType();
-        Phi.mutateType(B.getInt32Ty());
-      }
-
-  // A SelectInst, like a PHINode, takes its result type from its operands.
-  // Aggregate arms are lowered to i32 value-ids (composite constants here,
-  // loads and other producers during the visitor pass below), so mutate an
-  // aggregate select to match, just as the PHI loop above does. Its original
-  // type is tracked in AggrConstTypes (used to assign the SPIR-V type) and its
-  // extractvalue users are lowered to spv_extractv.
-  for (Instruction &I : instructions(Func))
-    if (auto *Sel = dyn_cast<SelectInst>(&I))
-      if (Sel->getType()->isAggregateType()) {
-        AggrConstTypes[Sel] = Sel->getType();
-        Sel->mutateType(B.getInt32Ty());
-      }
+  // A PHINode or SelectInst takes its result type from its operands. Aggregate
+  // arms are lowered to i32 value-ids (composite constants here, loads and
+  // other producers during the visitor pass below), so mutate an aggregate PHI
+  // or select to match. The original type is tracked in AggrConstTypes (used to
+  // assign the SPIR-V type) and its extractvalue users are lowered to
+  // spv_extractv.
+  Type *I32Ty = B.getInt32Ty();
+  for (Instruction &I : instructions(Func)) {
+    if (!isa<PHINode>(I) && !isa<SelectInst>(I))
+      continue;
+    if (!I.getType()->isAggregateType())
+      continue;
+    AggrConstTypes[&I] = I.getType();
+    I.mutateType(I32Ty);
+  }
 
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
