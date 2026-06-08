@@ -42,22 +42,6 @@ static cl::opt<bool> UseConstantIntForFixedLengthSplat(
 static cl::opt<bool> UseConstantIntForScalableSplat(
     "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native scalable vector splat support."));
-static cl::opt<bool> UseConstantPtrNullForFixedLengthSplat(
-    "use-constant-ptrnull-for-fixed-length-splat", cl::init(true), cl::Hidden,
-    cl::desc("Use ConstantPointerNull's native fixed-length vector splat "
-             "support."));
-static cl::opt<bool> UseConstantPtrNullForScalableSplat(
-    "use-constant-ptrnull-for-scalable-splat", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Use ConstantPointerNull's native scalable vector splat support."));
-
-static bool shouldUseConstantPointerNullForVector(VectorType *VTy) {
-  if (!VTy->getElementType()->isPointerTy())
-    return false;
-  return VTy->getElementCount().isScalable()
-             ? UseConstantPtrNullForScalableSplat
-             : UseConstantPtrNullForFixedLengthSplat;
-}
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -79,26 +63,6 @@ bool Constant::isNegativeZeroValue() const {
 
   // Otherwise, just use +0.0.
   return isNullValue();
-}
-
-bool Constant::isNullValue() const {
-  // 0 is null.
-  if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
-    return CI->isZero();
-
-  // 0 is null.
-  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
-    return CB->isZero();
-
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
-    // ppc_fp128 determine isZero using high order double only
-    // so check the bitwise value to make sure all bits are zero.
-    return CFP->getValue().bitcastToAPInt().isZero();
-
-  // constant zero is zero for aggregates, cpnull is null for pointers, none for
-  // tokens.
-  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
 }
 
 bool Constant::isAllOnesValue() const {
@@ -415,7 +379,7 @@ Constant *Constant::getNullValue(Type *Ty) {
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID:
-    if (shouldUseConstantPointerNullForVector(cast<VectorType>(Ty)))
+    if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
       return ConstantPointerNull::get(Ty);
     return ConstantAggregateZero::get(Ty);
   case Type::StructTyID:
@@ -922,6 +886,8 @@ ConstantInt::ConstantInt(Type *Ty, const APInt &V)
   assert(V.getBitWidth() ==
              cast<IntegerType>(Ty->getScalarType())->getBitWidth() &&
          "Invalid constant for type");
+  if (V.isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 ConstantInt *ConstantInt::getTrue(LLVMContext &Context) {
@@ -1047,6 +1013,8 @@ ConstantByte::ConstantByte(Type *Ty, const APInt &V)
   assert(V.getBitWidth() ==
              cast<ByteType>(Ty->getScalarType())->getBitWidth() &&
          "Invalid constant for type");
+  if (V.isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 // Get a ConstantByte from an APInt.
@@ -1232,6 +1200,10 @@ ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
   assert(&V.getSemantics() == &Ty->getScalarType()->getFltSemantics() &&
          "FP type Mismatch");
+  // ppc_fp128 determine isZero using high order double only
+  // so check the bitwise value to make sure all bits are zero.
+  if (V.bitcastToAPInt().isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 bool ConstantFP::isExactlyValue(const APFloat &V) const {
@@ -1579,8 +1551,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isSplatFP = isa<ConstantFP>(C);
   bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
   bool isSplatByte = isa<ConstantByte>(C);
-  bool isSplatPtrNull =
-      UseConstantPtrNullForFixedLengthSplat && isa<ConstantPointerNull>(C);
+  bool isSplatPtrNull = isa<ConstantPointerNull>(C);
 
   if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte ||
       isSplatPtrNull) {
@@ -1623,8 +1594,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
 Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (isa<ConstantPointerNull>(V)) {
     VectorType *VTy = VectorType::get(V->getType(), EC);
-    if (shouldUseConstantPointerNullForVector(VTy))
-      return ConstantPointerNull::get(VTy);
+    return ConstantPointerNull::get(VTy);
   }
 
   if (auto *CB = dyn_cast<ConstantByte>(V))
@@ -2086,7 +2056,7 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 
 BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
     : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
-  setOperand(0, BB);
+  Block = BB;
   BB->setHasAddressTaken(true);
 }
 
@@ -2119,7 +2089,7 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
   // erase invalidates iterators/references, hence the duplicate NewBB lookup.
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
   getContext().pImpl->BlockAddresses[NewBB] = this;
-  setOperand(0, NewBB);
+  Block = NewBB;
   getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.

@@ -2965,7 +2965,11 @@ def err_for_range_dereference : Error<
   "invalid range expression of type %0; did you mean to dereference it "
   "with '*'?">;
 def note_for_range_invalid_iterator : Note <
-  "in implicit call to 'operator%select{!=|*|++}0' for iterator of type %1">;
+  "in implicit call to 'operator%enum_select<InvalidRangeForIterator>{"
+    "%OpNotEq{!=}|"
+    "%OpDeref{*}|"
+    "%OpAdvance{++}"
+  "}0' for iterator of type %1">;
 def note_for_range_begin_end : Note<
   "selected '%select{begin|end}0' %select{function|template }1%2 with iterator type %3">;
 def warn_for_range_const_ref_binds_temp_built_from_ref : Warning<
@@ -10702,6 +10706,9 @@ def warn_missing_format_string : Warning<
 def warn_scanf_nonzero_width : Warning<
   "zero field width in scanf format string is unused">,
   InGroup<Format>;
+def warn_format_unsupported_type : Warning<
+  "format specifies type %0 which is not supported yet">,
+  InGroup<Format>;
 def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
@@ -10999,21 +11006,21 @@ def warn_lifetime_safety_invalidated_global
       DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
-    : Warning<"address of stack memory escapes to a field">,
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingField>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_field_moved
-    : Warning<"address of stack memory escapes to a field. "
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global
-    : Warning<"address of stack memory escapes to global or static storage">,
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingGlobal>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global_moved
-    : Warning<"address of stack memory escapes to global or static storage. "
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
@@ -11526,6 +11533,8 @@ def err_builtin_setjmp_unsupported : Error<
 def err_builtin_longjmp_invalid_val : Error<
   "argument to __builtin_longjmp must be a constant 1">;
 def err_builtin_requires_language : Error<"'%0' is only available in %1">;
+def err_builtin_requires_char_bit_8 : Error<
+  "'%0' is only available on targets where 'CHAR_BIT == 8'">;
 
 def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
