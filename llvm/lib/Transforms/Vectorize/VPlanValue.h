@@ -384,6 +384,8 @@ public:
 class VPUser {
   /// Grant access to removeOperand for VPPhiAccessors, the only supported user.
   friend class VPPhiAccessors;
+  /// Grant access to addOperand for VPWidenMemoryRecipe.
+  friend class VPWidenMemoryRecipe;
 
   SmallVector<VPValue *, 2> Operands;
 
@@ -405,6 +407,11 @@ protected:
       addOperand(Operand);
   }
 
+  void addOperand(VPValue *Operand) {
+    Operands.push_back(Operand);
+    Operand->addUser(*this);
+  }
+
 public:
   VPUser() = delete;
   VPUser(const VPUser &) = delete;
@@ -414,11 +421,6 @@ public:
       Op->removeUser(*this);
   }
 
-  void addOperand(VPValue *Operand) {
-    Operands.push_back(Operand);
-    Operand->addUser(*this);
-  }
-
   unsigned getNumOperands() const { return Operands.size(); }
   inline VPValue *getOperand(unsigned N) const {
     assert(N < Operands.size() && "Operand index out of bounds");
@@ -426,6 +428,9 @@ public:
   }
 
   void setOperand(unsigned I, VPValue *New) {
+    assert((!Operands[I]->getScalarType() || !New->getScalarType() ||
+            Operands[I]->getScalarType() == New->getScalarType()) &&
+           "scalar type of new operand must match the old operand");
     Operands[I]->removeUser(*this);
     Operands[I] = New;
     New->addUser(*this);

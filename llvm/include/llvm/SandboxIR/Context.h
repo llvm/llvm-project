@@ -249,9 +249,9 @@ public:
   /// Convenience function for `getTracker().save()`
   void save() { IRTracker.save(); }
   /// Convenience function for `getTracker().revert()`
-  void revert() { IRTracker.revert(); }
+  void revert(bool RevertAll = false) { IRTracker.revert(RevertAll); }
   /// Convenience function for `getTracker().accept()`
-  void accept() { IRTracker.accept(); }
+  void accept(bool AcceptAll = false) { IRTracker.accept(AcceptAll); }
 
   LLVM_ABI sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {
@@ -318,12 +318,6 @@ template <> struct DenseMapInfo<sandboxir::Context::CallbackID> {
   using CallbackID = sandboxir::Context::CallbackID;
   using ReprInfo = DenseMapInfo<CallbackID::ValTy>;
 
-  static CallbackID getEmptyKey() {
-    return CallbackID{ReprInfo::getEmptyKey()};
-  }
-  static CallbackID getTombstoneKey() {
-    return CallbackID{ReprInfo::getTombstoneKey()};
-  }
   static unsigned getHashValue(const CallbackID &ID) {
     return ReprInfo::getHashValue(ID.Val);
   }

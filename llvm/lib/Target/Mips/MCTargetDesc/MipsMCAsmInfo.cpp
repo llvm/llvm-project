@@ -35,7 +35,6 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
     InternalSymbolPrefix = "$";
   else if (ABI.IsN32() || ABI.IsN64())
     InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = InternalSymbolPrefix;
 
   AlignmentIsInBytes          = false;
   Data16bitsDirective         = "\t.2byte\t";
@@ -59,7 +58,6 @@ MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo(const MCTargetOptions &Options)
   ExceptionsType = ExceptionHandling::WinEH;
 
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
   AllowAtInName = true;
 }
 

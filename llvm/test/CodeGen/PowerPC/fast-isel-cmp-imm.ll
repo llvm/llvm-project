@@ -9,13 +9,14 @@ entry:
 ; ELF64-LABEL: @t1a
 ; SPE-LABEL: @t1a
 ; VSX-LABEL: @t1a
-  %cmp = fcmp nnan ninf oeq float %a, 0.000000e+00
+  %cmp = fcmp oeq float %a, 0.000000e+00
 ; ELF64: addis
 ; ELF64: lfs
 ; ELF64: fcmpu
 ; VSX: addis
 ; VSX: lfs
 ; VSX: fcmpu
+; SPE: lwz
 ; SPE: efscmpeq
   br i1 %cmp, label %if.then, label %if.end
 
@@ -32,13 +33,14 @@ entry:
 ; ELF64-LABEL: @t1b
 ; SPE-LABEL: @t1b
 ; VSX-LABEL: @t1b
-  %cmp = fcmp nnan ninf oeq float %a, -0.000000e+00
+  %cmp = fcmp oeq float %a, -0.000000e+00
 ; ELF64: addis
 ; ELF64: lfs
 ; ELF64: fcmpu
 ; VSX: addis
 ; VSX: lfs
 ; VSX: fcmpu
+; SPE: lwz
 ; SPE: efscmpeq
   br i1 %cmp, label %if.then, label %if.end
 
@@ -55,13 +57,14 @@ entry:
 ; ELF64-LABEL: @t1c
 ; SPE-LABEL: @t1c
 ; VSX-LABEL: @t1c
-  %cmp = fcmp nnan ninf oeq float -0.000000e+00, %a
+  %cmp = fcmp oeq float -0.000000e+00, %a
 ; ELF64: addis
 ; ELF64: lfs
 ; ELF64: fcmpu
 ; VSX: addis
 ; VSX: lfs
 ; VSX: fcmpu
+; SPE: lwz
 ; SPE: efscmpeq
   br i1 %cmp, label %if.then, label %if.end
 
@@ -78,13 +81,14 @@ entry:
 ; ELF64-LABEL: @t2a
 ; SPE-LABEL: @t2a
 ; VSX-LABEL: @t2a
-  %cmp = fcmp nnan ninf oeq double %a, 0.000000e+00
+  %cmp = fcmp oeq double %a, 0.000000e+00
 ; ELF64: addis
 ; ELF64: lfd
 ; ELF64: fcmpu
 ; VSX: addis
 ; VSX: lfd
 ; VSX: xscmpudp
+; SPE: evlddx
 ; SPE: efdcmpeq
   br i1 %cmp, label %if.then, label %if.end
 
@@ -101,13 +105,14 @@ entry:
 ; ELF64-LABEL: @t2b
 ; SPE-LABEL: @t2b
 ; VSX-LABEL: @t2b
-  %cmp = fcmp nnan ninf oeq double %a, -0.000000e+00
+  %cmp = fcmp oeq double %a, -0.000000e+00
 ; ELF64: addis
 ; ELF64: lfd
 ; ELF64: fcmpu
 ; VSX: addis
 ; VSX: lfd
 ; VSX: xscmpudp
+; SPE: evlddx
 ; SPE: efdcmpeq
   br i1 %cmp, label %if.then, label %if.end
 
@@ -124,13 +129,14 @@ entry:
 ; ELF64-LABEL: @t2c
 ; SPE-LABEL: @t2c
 ; VSX-LABEL: @t2c
-  %cmp = fcmp nnan ninf oeq double -0.000000e+00, %a
+  %cmp = fcmp oeq double -0.000000e+00, %a
 ; ELF64: addis
 ; ELF64: lfd
 ; ELF64: fcmpu
 ; VSX: addis
 ; VSX: lfd
 ; VSX: xscmpudp
+; SPE: evlddx
 ; SPE: efdcmpeq
   br i1 %cmp, label %if.then, label %if.end
 

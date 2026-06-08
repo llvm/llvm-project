@@ -6,6 +6,7 @@ add_clang_library(MLIRCIRTargetLowering
   TargetLoweringInfo.cpp
   Targets/AMDGPU.cpp
   Targets/NVPTX.cpp
+  Targets/SPIRV.cpp
 
   DEPENDS
   clangBasic
