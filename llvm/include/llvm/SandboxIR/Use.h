@@ -50,14 +50,14 @@ class Use {
       : LLVMUse(LLVMUse), Usr(Usr), Ctx(&Ctx) {}
   Use() : LLVMUse(nullptr), Ctx(nullptr) {}
 
-  friend class ::llvm::sandboxir::Value;              // For constructor
-  friend class ::llvm::sandboxir::User;               // For constructor
-  friend class ::llvm::sandboxir::OperandUseIterator; // For constructor
-  friend class ::llvm::sandboxir::UserUseIterator;    // For accessing members
-  friend class ::llvm::sandboxir::CallBase;           // For LLVMUse
-  friend class ::llvm::sandboxir::PHINode;            // For LLVMUse
+  friend ::llvm::sandboxir::Value;              // For constructor
+  friend ::llvm::sandboxir::User;               // For constructor
+  friend ::llvm::sandboxir::OperandUseIterator; // For constructor
+  friend ::llvm::sandboxir::UserUseIterator;    // For accessing members
+  friend ::llvm::sandboxir::CallBase;           // For LLVMUse
+  friend ::llvm::sandboxir::PHINode;            // For LLVMUse
   // Friend instructions so that they can call the constructor if needed.
-#define DEF_INSTR(ID, OPC, CLASS) friend class ::llvm::sandboxir::CLASS;
+#define DEF_INSTR(ID, OPC, CLASS) friend ::llvm::sandboxir::CLASS;
 #define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef DEF_INSTR
