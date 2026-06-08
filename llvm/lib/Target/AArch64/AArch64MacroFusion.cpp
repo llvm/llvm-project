@@ -117,15 +117,13 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
-// True unless the pair provably writes different physical registers. Pre-RA
-// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
-// reg).
-static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
-                                 const MachineInstr &SecondMI) {
+// True if the pair writes to the same physical register.
+static bool haveWAWDependency(const MachineInstr &FirstMI,
+                              const MachineInstr &SecondMI) {
   Register DestFirst = FirstMI.getOperand(0).getReg();
   Register DestSecond = SecondMI.getOperand(0).getReg();
-  if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
-    return true;
+  assert(DestFirst.isPhysical() && DestSecond.isPhysical() &&
+         "Pair should have physical registers post-RA");
   return DestFirst == DestSecond;
 }
 
@@ -133,7 +131,8 @@ static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
 static bool isAESPair(const MachineInstr *FirstMI,
                       const MachineInstr &SecondMI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
-  switch (SecondMI.getOpcode()) {
+  unsigned SecondOpcode = SecondMI.getOpcode();
+  switch (SecondOpcode) {
   // AES encode.
   case AArch64::AESMCrr:
   case AArch64::AESMCrrTied:
@@ -141,7 +140,8 @@ static bool isAESPair(const MachineInstr *FirstMI,
       return true;
     if (FirstMI->getOpcode() != AArch64::AESErr)
       return false;
-    return mayHaveWAWDependency(*FirstMI, SecondMI);
+    return SecondOpcode == AArch64::AESMCrrTied ||
+           haveWAWDependency(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
@@ -149,7 +149,8 @@ static bool isAESPair(const MachineInstr *FirstMI,
       return true;
     if (FirstMI->getOpcode() != AArch64::AESDrr)
       return false;
-    return mayHaveWAWDependency(*FirstMI, SecondMI);
+    return SecondOpcode == AArch64::AESIMCrrTied ||
+           haveWAWDependency(*FirstMI, SecondMI);
   }
 
   return false;
