@@ -29,7 +29,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     fir.store %c3_i64_3 to %9 : !fir.ref<i64>
     %10 = fir.embox %0 : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
     mif.alloc_coarray %3 lcobounds %7 ucobounds %10 {uniq_name = "_QFEa"} : (!fir.ref<i32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
-    %11:2 = hlfir.declare %3 {fir.corank = 3 : i32, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %11:2 = hlfir.declare %3 {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %c3 = arith.constant 3 : index
     %12 = fir.alloca !fir.array<3xi32> {bindc_name = "res", uniq_name = "_QFEres"}
     %13 = fir.shape %c3 : (index) -> !fir.shape<1>
@@ -38,37 +38,39 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %15 = fir.alloca !fir.array<3xi64> {bindc_name = "res2", uniq_name = "_QFEres2"}
     %16 = fir.shape %c3_5 : (index) -> !fir.shape<1>
     %17:2 = hlfir.declare %15(%16) {uniq_name = "_QFEres2"} : (!fir.ref<!fir.array<3xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi64>>, !fir.ref<!fir.array<3xi64>>)
-    %18 = mif.coshape coarray %11#0 : (!fir.ref<i32>) -> !fir.box<!fir.array<?xi64>>
-    %19:2 = hlfir.declare %18 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+    %18 = fir.embox %11#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:3>
+    %19 = mif.coshape coarray %18 : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi64>>
+    %20:2 = hlfir.declare %19 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
     %false = arith.constant false
-    %20 = hlfir.as_expr %19#0 move %false : (!fir.box<!fir.array<?xi64>>, i1) -> !hlfir.expr<?xi64>
+    %21 = hlfir.as_expr %20#0 move %false : (!fir.box<!fir.array<?xi64>>, i1) -> !hlfir.expr<?xi64>
     %c0_6 = arith.constant 0 : index
-    %21:3 = fir.box_dims %19#0, %c0_6 : (!fir.box<!fir.array<?xi64>>, index) -> (index, index, index)
-    %22 = fir.shape %21#1 : (index) -> !fir.shape<1>
-    %23 = hlfir.elemental %22 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+    %22:3 = fir.box_dims %20#0, %c0_6 : (!fir.box<!fir.array<?xi64>>, index) -> (index, index, index)
+    %23 = fir.shape %22#1 : (index) -> !fir.shape<1>
+    %24 = hlfir.elemental %23 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
     ^bb0(%arg0: index):
-      %30 = hlfir.apply %20, %arg0 : (!hlfir.expr<?xi64>, index) -> i64
-      %31 = fir.convert %30 : (i64) -> i32
-      hlfir.yield_element %31 : i32
+      %32 = hlfir.apply %21, %arg0 : (!hlfir.expr<?xi64>, index) -> i64
+      %33 = fir.convert %32 : (i64) -> i32
+      hlfir.yield_element %33 : i32
     }
-    hlfir.assign %23 to %14#0 : !hlfir.expr<?xi32>, !fir.ref<!fir.array<3xi32>>
-    hlfir.destroy %23 : !hlfir.expr<?xi32>
-    hlfir.destroy %20 : !hlfir.expr<?xi64>
-    %24 = mif.coshape coarray %11#0 : (!fir.ref<i32>) -> !fir.box<!fir.array<?xi64>>
-    %25:2 = hlfir.declare %24 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+    hlfir.assign %24 to %14#0 : !hlfir.expr<?xi32>, !fir.ref<!fir.array<3xi32>>
+    hlfir.destroy %24 : !hlfir.expr<?xi32>
+    hlfir.destroy %21 : !hlfir.expr<?xi64>
+    %25 = fir.embox %11#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:3>
+    %26 = mif.coshape coarray %25 : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi64>>
+    %27:2 = hlfir.declare %26 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
     %false_7 = arith.constant false
-    %26 = hlfir.as_expr %25#0 move %false_7 : (!fir.box<!fir.array<?xi64>>, i1) -> !hlfir.expr<?xi64>
+    %28 = hlfir.as_expr %27#0 move %false_7 : (!fir.box<!fir.array<?xi64>>, i1) -> !hlfir.expr<?xi64>
     %c0_8 = arith.constant 0 : index
-    %27:3 = fir.box_dims %25#0, %c0_8 : (!fir.box<!fir.array<?xi64>>, index) -> (index, index, index)
-    %28 = fir.shape %27#1 : (index) -> !fir.shape<1>
-    %29 = hlfir.elemental %28 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi64> {
+    %29:3 = fir.box_dims %27#0, %c0_8 : (!fir.box<!fir.array<?xi64>>, index) -> (index, index, index)
+    %30 = fir.shape %29#1 : (index) -> !fir.shape<1>
+    %31 = hlfir.elemental %30 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi64> {
     ^bb0(%arg0: index):
-      %30 = hlfir.apply %26, %arg0 : (!hlfir.expr<?xi64>, index) -> i64
-      hlfir.yield_element %30 : i64
+      %32 = hlfir.apply %28, %arg0 : (!hlfir.expr<?xi64>, index) -> i64
+      hlfir.yield_element %32 : i64
     }
-    hlfir.assign %29 to %17#0 : !hlfir.expr<?xi64>, !fir.ref<!fir.array<3xi64>>
-    hlfir.destroy %29 : !hlfir.expr<?xi64>
-    hlfir.destroy %26 : !hlfir.expr<?xi64>
+    hlfir.assign %31 to %17#0 : !hlfir.expr<?xi64>, !fir.ref<!fir.array<3xi64>>
+    hlfir.destroy %31 : !hlfir.expr<?xi64>
+    hlfir.destroy %28 : !hlfir.expr<?xi64>
     return
   }
 }

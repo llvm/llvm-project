@@ -20,11 +20,12 @@
 #include <tuple>
 
 template <class T>
-static llvm::LogicalResult checkCorankAttr(T op) {
-  mlir::Value coarray = op.getCoarray();
-  if (!coarray.getDefiningOp()->hasAttr(fir::getCorankAttrName()))
-    return op.emitOpError("`coarray` must have a corank integer attribute.");
-  return mlir::success();
+static llvm::LogicalResult checkCorank(T op) {
+  mlir::Type coarrayType = fir::unwrapRefType(op.getCoarray().getType());
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(coarrayType))
+    if (boxTy.isCoarray())
+      return mlir::success();
+  return op.emitOpError("`coarray` must have a corank.");
 }
 
 // Function used to check if a type has POINTER or ALLOCATABLE component.
@@ -76,7 +77,7 @@ llvm::LogicalResult mif::NumImagesOp::verify() {
 void mif::ThisImageOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value coarray,
                              mlir::Value dim, mlir::Value team) {
-  mlir::Type resultTy = builder.getI32Type();
+  mlir::Type resultTy = builder.getI64Type();
   build(builder, result, resultTy, coarray, dim, team);
 }
 
@@ -101,7 +102,7 @@ llvm::LogicalResult mif::ThisImageOp::verify() {
     return emitOpError(
         "`dim` must be provied at the same time as the `coarray` argument.");
   if (getCoarray())
-    return checkCorankAttr(*this);
+    return checkCorank(*this);
   return mlir::success();
 }
 
@@ -295,25 +296,9 @@ llvm::LogicalResult mif::AllocCoarrayOp::verify() {
 // LcoboundOp
 //===----------------------------------------------------------------------===//
 
-void mif::LcoboundOp::build(mlir::OpBuilder &builder,
-                            mlir::OperationState &result, mlir::Value coarray,
-                            mlir::Value dim) {
-  // By default the result type is an I64
-  mlir::Type resultTy = builder.getI64Type();
-  build(builder, result, resultTy, coarray, dim);
-}
-
-void mif::LcoboundOp::build(mlir::OpBuilder &builder,
-                            mlir::OperationState &result, mlir::Value coarray) {
-  mlir::Type i64Ty = builder.getI64Type();
-  mlir::Type resultTy = fir::BoxType::get(
-      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i64Ty));
-  build(builder, result, resultTy, coarray, /*dim*/ mlir::Value{});
-}
-
 llvm::LogicalResult mif::LcoboundOp::verify() {
   if (getCoarray())
-    return checkCorankAttr(*this);
+    return checkCorank(*this);
   return mlir::success();
 }
 
@@ -321,25 +306,9 @@ llvm::LogicalResult mif::LcoboundOp::verify() {
 // UcoboundOp
 //===----------------------------------------------------------------------===//
 
-void mif::UcoboundOp::build(mlir::OpBuilder &builder,
-                            mlir::OperationState &result, mlir::Value coarray,
-                            mlir::Value dim) {
-  // By default the result type is an I64
-  mlir::Type resultTy = builder.getI64Type();
-  build(builder, result, resultTy, coarray, dim);
-}
-
-void mif::UcoboundOp::build(mlir::OpBuilder &builder,
-                            mlir::OperationState &result, mlir::Value coarray) {
-  mlir::Type i64Ty = builder.getI64Type();
-  mlir::Type resultTy = fir::BoxType::get(
-      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i64Ty));
-  build(builder, result, resultTy, coarray, /*dim*/ mlir::Value{});
-}
-
 llvm::LogicalResult mif::UcoboundOp::verify() {
   if (getCoarray())
-    return checkCorankAttr(*this);
+    return checkCorank(*this);
   return mlir::success();
 }
 
@@ -357,7 +326,7 @@ void mif::CoshapeOp::build(mlir::OpBuilder &builder,
 
 llvm::LogicalResult mif::CoshapeOp::verify() {
   if (getCoarray())
-    return checkCorankAttr(*this);
+    return checkCorank(*this);
   return mlir::success();
 }
 
@@ -379,7 +348,7 @@ void mif::ImageIndexOp::build(mlir::OpBuilder &builder,
 
 llvm::LogicalResult mif::ImageIndexOp::verify() {
   if (getCoarray())
-    return checkCorankAttr(*this);
+    return checkCorank(*this);
   return mlir::success();
 }
 

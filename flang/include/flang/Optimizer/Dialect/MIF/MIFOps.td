@@ -162,30 +162,23 @@ def mif_ImageIndexOp : mif_Op<"image_index", [AttrSizedOperandSegments]> {
 }
 
 def mif_LcoboundOp : mif_Op<"lcobound", [NoMemoryEffect]> {
-  let summary = "Returns the lower cobound(s) associated with a coarray.";
+  let summary =
+      "Returns the lower cobound for a given codimension of a coarray.";
   let description = [{
-    This operation returns the lower cobound(s) associated with a coarray.
+    This operation returns the lower cobound for a given codimension of a coarray.
     Arguments: 
       - `coarray`: Shall be a coarray of any type.
-      - `dim`(optional) : Shall be an integer scalar. Its value shall be in the range of
+      - `dim` : Shall be an integer scalar. Its value shall be in the range of
           `1 <= DIM <= N`, where `N` is the corank of the coarray.
-    Results:
-      - Case(1): If `dim` is present, the result is an integer scalar equal to
-        the lower cobound for codimension `dim`.
-      - Case(2): `dim` is absent, so the result is an array whose size matches
-        the corank of the indicated coarray.
+    The result is an integer scalar equal to the lower cobound for codimension `dim`.
   }];
 
-  let arguments = (ins AnyType:$coarray, Optional<AnyInteger>:$dim);
-  let results = (outs AnyType);
-
-  let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$dim)>,
-                  OpBuilder<(ins "mlir::Value":$coarray)>];
+  let arguments = (ins AnyType:$coarray, AnyInteger:$dim);
+  let results = (outs AnyInteger);
 
   let hasVerifier = 1;
   let assemblyFormat = [{
-    `coarray` $coarray 
-    ( `dim` $dim^ )? 
+    `coarray` $coarray `dim` $dim 
     attr-dict `:` functional-type(operands, results)
   }];
 }
@@ -196,25 +189,17 @@ def mif_UcoboundOp : mif_Op<"ucobound", [NoMemoryEffect]> {
     This operation returns the upper cobound(s) associated with a coarray.
     Arguments: 
       - `coarray`: Shall be a coarray of any type.
-      - `dim`(optional) : Shall be an integer scalar. Its value shall be in the range of
+      - `dim` : Shall be an integer scalar. Its value shall be in the range of
           `1 <= DIM <= N`, where `N` is the corank of the coarray.
-    Results:
-      - Case(1): If `dim` is present, the result is an integer scalar equal to
-        the upper cobound for codimension `dim`.
-      - Case(2): `dim` is absent, so the result is an array whose size matches
-        the corank of the indicated coarray.
+    The result is an integer scalar equal to the upper cobound for codimension `dim`.
   }];
 
-  let arguments = (ins AnyType:$coarray, Optional<AnyInteger>:$dim);
-  let results = (outs AnyType);
-
-  let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$dim)>,
-                  OpBuilder<(ins "mlir::Value":$coarray)>];
+  let arguments = (ins AnyType:$coarray, AnyInteger:$dim);
+  let results = (outs AnyInteger);
 
   let hasVerifier = 1;
   let assemblyFormat = [{
-    `coarray` $coarray 
-    ( `dim` $dim^ )? 
+    `coarray` $coarray `dim` $dim 
     attr-dict `:` functional-type(operands, results)
   }];
 }

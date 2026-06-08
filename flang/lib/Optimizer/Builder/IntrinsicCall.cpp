@@ -256,7 +256,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"cosd", &I::genCosd},
     {"coshape",
      &I::genCoshape,
-     {{{"coarray", asAddr}, {"kind", asValue}}},
+     {{{"coarray", asBox}, {"kind", asValue}}},
      /*isElemental=*/false},
     {"cospi", &I::genCospi},
     {"count",
@@ -521,7 +521,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieor", &I::genIeor},
     {"image_index",
      &I::genImageIndex,
-     {{{"coarray", asAddr},
+     {{{"coarray", asBox},
        {"sub", asBox},
        {"team", asAddr},
        {"team_number", asValue}}},
@@ -558,7 +558,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"lcobound",
      &I::genLcobound,
-     {{{"coarray", asAddr}, {"dim", asValue}, {"kind", asValue}}},
+     {{{"coarray", asBox}, {"dim", asValue}, {"kind", asValue}}},
      /*isElemental=*/false},
     {"leadz", &I::genLeadz},
     {"len",
@@ -832,7 +832,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"this_image",
      &I::genThisImage,
-     {{{"coarray", asAddr},
+     {{{"coarray", asBox},
        {"dim", asValue},
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
@@ -861,7 +861,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"ucobound",
      &I::genUcobound,
-     {{{"coarray", asAddr}, {"dim", asValue}, {"kind", asValue}}},
+     {{{"coarray", asBox}, {"dim", asValue}, {"kind", asValue}}},
      /*isElemental=*/false},
     {"umaskl", &I::genMask<mlir::arith::ShLIOp>},
     {"umaskr", &I::genMask<mlir::arith::ShRUIOp>},
@@ -6323,6 +6323,8 @@ IntrinsicLibrary::genImageIndex(mlir::Type resultType,
   mlir::Value team;
   if (args.size() > 2) {
     team = fir::getBase(args[2]);
+    if (fir::isa_integer(fir::unwrapRefType(team.getType())))
+      team = fir::LoadOp::create(builder, loc, team);
   }
   return mif::ImageIndexOp::create(builder, loc,
                                    /*coarray*/ fir::getBase(args[0]),
@@ -8482,7 +8484,24 @@ IntrinsicLibrary::genLcobound(mlir::Type resultType,
     mlir::Value dim = fir::getBase(args[1]);
     return mif::LcoboundOp::create(builder, loc, resultType, coarray, dim);
   }
-  return mif::LcoboundOp::create(builder, loc, coarray);
+  int corank = fir::getBoxCorank(coarray.getType());
+  mlir::Type arrTy = fir::SequenceType::get(
+      {static_cast<fir::SequenceType::Extent>(corank)}, resultType);
+  mlir::Value lcobound = fir::AllocaOp::create(builder, loc, arrTy);
+
+  mlir::Type idxTy = builder.getIndexType();
+  for (int d = 1; d <= corank; ++d) {
+    mlir::Value dim = builder.createIntegerConstant(loc, resultType, d);
+    mlir::Value lcb =
+        mif::LcoboundOp::create(builder, loc, resultType, coarray, dim);
+
+    mlir::Value idx = builder.createIntegerConstant(loc, idxTy, d - 1);
+    mlir::Value gep = fir::CoordinateOp::create(
+        builder, loc, fir::ReferenceType::get(resultType), lcobound,
+        mlir::ValueRange{idx});
+    fir::StoreOp::create(builder, loc, lcb, gep);
+  }
+  return builder.createBox(loc, lcobound);
 }
 
 // UBOUND
@@ -8520,7 +8539,25 @@ IntrinsicLibrary::genUcobound(mlir::Type resultType,
     mlir::Value dim = fir::getBase(args[1]);
     return mif::UcoboundOp::create(builder, loc, resultType, coarray, dim);
   }
-  return mif::UcoboundOp::create(builder, loc, coarray);
+
+  int corank = fir::getBoxCorank(coarray.getType());
+  mlir::Type arrTy = fir::SequenceType::get(
+      {static_cast<fir::SequenceType::Extent>(corank)}, resultType);
+  mlir::Value ucobound = fir::AllocaOp::create(builder, loc, arrTy);
+
+  mlir::Type idxTy = builder.getIndexType();
+  for (int d = 1; d <= corank; ++d) {
+    mlir::Value dim = builder.createIntegerConstant(loc, resultType, d);
+    mlir::Value ucb =
+        mif::UcoboundOp::create(builder, loc, resultType, coarray, dim);
+
+    mlir::Value idx = builder.createIntegerConstant(loc, idxTy, d - 1);
+    mlir::Value gep = fir::CoordinateOp::create(
+        builder, loc, fir::ReferenceType::get(resultType), ucobound,
+        mlir::ValueRange{idx});
+    fir::StoreOp::create(builder, loc, ucb, gep);
+  }
+  return builder.createBox(loc, ucobound);
 }
 
 // SPACING

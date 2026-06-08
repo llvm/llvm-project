@@ -12,9 +12,9 @@ program test
   ! CHECK: mif.this_image team %[[TEAM:.*]] : ({{.*}}) -> i32
   i = this_image(TEAM=team)
 
-  ! CHECK: mif.this_image coarray %[[A:.*]] : ({{.*}}) -> !fir.box<!fir.array<?xi64>>
+  ! CHECK: mif.this_image coarray %[[A:.*]] : (!fir.box<i32, corank:2>) -> !fir.box<!fir.array<?xi64>>
   j = this_image(COARRAY=a)
   
-  ! CHECK: mif.this_image coarray %[[A:.*]]#0 dim %[[DIM:.*]] : ({{.*}}) -> i32
+  ! CHECK: mif.this_image coarray %[[A:.*]] dim %[[DIM:.*]] : (!fir.box<i32, corank:2>, i32) -> i64
   j = this_image(COARRAY=a, DIM=1)
 end program
