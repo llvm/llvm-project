@@ -23,7 +23,6 @@
 
 using namespace clang;
 using namespace ento;
-using namespace taint;
 
 namespace {
 // NOTE: The `ArraySubscriptExpr` and `UnaryOperator` callbacks are `PostStmt`
@@ -199,7 +198,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     // nicer to say "tainted index".
     const char *OffsetName = "offset";
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-      if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
+      if (taint::isTainted(State, ASE->getIdx(), C.getStackFrame()))
         OffsetName = "index";
 
     Messages Msgs =
@@ -237,7 +236,7 @@ void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
     // offset, then put interestingness onto symbols that could be the origin
     // of the taint. Note that this may find symbols that did not appear in
     // `Sym->symbols()` (because they're only loosely connected to `Val`).
-    for (SymbolRef Sym : getTaintedSymbols(ErrorState, Val))
+    for (SymbolRef Sym : taint::getTaintedSymbols(ErrorState, Val))
       BR.markInteresting(Sym);
   }
 }
