@@ -37,12 +37,13 @@ CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
   mlir::Location end = getLoc(s.getEndLoc());
 
   mlir::omp::ParallelOperands clauseOps;
-  OpenMPClauseProcessor cp(*this, getCIRGenModule(), builder, begin,
-                           s.clauses());
-  cp.processProcBind(clauseOps);
-  cp.processTODO<OMPAllocateClause, OMPCopyinClause, OMPDefaultClause,
-                 OMPFirstprivateClause, OMPIfClause, OMPNumThreadsClause,
-                 OMPPrivateClause, OMPReductionClause, OMPSharedClause>(
+  OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
+  ce.emitProcBind(clauseOps);
+  ce.emitNYI</*supported=*/OMPProcBindClause>(
+      /*nyi=*/OpenMPClauseList<
+          OMPAllocateClause, OMPCopyinClause, OMPDefaultClause,
+          OMPFirstprivateClause, OMPIfClause, OMPNumThreadsClause,
+          OMPPrivateClause, OMPReductionClause, OMPSharedClause>{},
       llvm::omp::Directive::OMPD_parallel);
 
   auto parallelOp = mlir::omp::ParallelOp::create(builder, begin, clauseOps);
@@ -295,14 +296,15 @@ CIRGenFunction::emitOMPTargetDirective(const OMPTargetDirective &s) {
   mlir::omp::TargetOperands clauseOps;
   llvm::SmallVector<const VarDecl *> mapSyms;
 
-  OpenMPClauseProcessor cp(*this, getCIRGenModule(), builder, begin,
-                           s.clauses());
-  cp.processMap(clauseOps, &mapSyms);
-  cp.processTODO<OMPAllocateClause, OMPDefaultClause, OMPDefaultmapClause,
-                 OMPDependClause, OMPDeviceClause, OMPFirstprivateClause,
-                 OMPHasDeviceAddrClause, OMPIfClause, OMPInReductionClause,
-                 OMPIsDevicePtrClause, OMPNowaitClause, OMPPrivateClause,
-                 OMPThreadLimitClause, OMPUsesAllocatorsClause, OMPXBareClause>(
+  OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
+  ce.emitMap(clauseOps, &mapSyms);
+  ce.emitNYI</*supported=*/OMPMapClause>(
+      /*nyi=*/OpenMPClauseList<
+          OMPAllocateClause, OMPDefaultClause, OMPDefaultmapClause,
+          OMPDependClause, OMPDeviceClause, OMPFirstprivateClause,
+          OMPHasDeviceAddrClause, OMPIfClause, OMPInReductionClause,
+          OMPIsDevicePtrClause, OMPNowaitClause, OMPPrivateClause,
+          OMPThreadLimitClause, OMPUsesAllocatorsClause, OMPXBareClause>{},
       llvm::omp::Directive::OMPD_target);
 
   emitOMPTargetImplicitCaptures(*this, s, mapSyms);

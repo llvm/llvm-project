@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// OpenMP clause processor implementation. See CIRGenOpenMPClause.h.
+// OpenMP clause emitter implementation. See CIRGenOpenMPClause.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -74,7 +74,7 @@ static mlir::Value emitMapInfoForVar(CIRGenFunction &cgf,
       /*partial_map=*/builder.getBoolAttr(false));
 }
 
-bool OpenMPClauseProcessor::processProcBind(
+bool OpenMPClauseEmitter::emitProcBind(
     mlir::omp::ProcBindClauseOps &result) const {
   for (const OMPClause *clause : clauses) {
     const auto *pbc = dyn_cast<OMPProcBindClause>(clause);
@@ -108,7 +108,7 @@ bool OpenMPClauseProcessor::processProcBind(
   return false;
 }
 
-bool OpenMPClauseProcessor::processMap(
+bool OpenMPClauseEmitter::emitMap(
     mlir::omp::MapClauseOps &result,
     llvm::SmallVectorImpl<const VarDecl *> *mapSyms) const {
   bool found = false;

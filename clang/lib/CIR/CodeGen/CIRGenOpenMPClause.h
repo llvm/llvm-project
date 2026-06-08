@@ -1,4 +1,4 @@
-//===--- CIRGenOpenMPClause.h - OpenMP clause processor ---------*- C++ -*-===//
+//===--- CIRGenOpenMPClause.h - OpenMP clause emitter -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,13 +16,20 @@
 #include "clang/AST/StmtOpenMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
+#include <type_traits>
+
 namespace clang::CIRGen {
 
 class CIRGenFunction;
 
-/// Processes OpenMP clauses for a directive, writing results into the
+/// A type-only list of OpenMP clause AST node types.
+/// Note: The clause AST classes do not have a default constructor, so a
+/// std::tuple is not practical.
+template <typename... Clauses> struct OpenMPClauseList {};
+
+/// Emits OpenMP clauses for a directive, writing results into the
 /// auto-generated ClauseOps from the OMP dialect.
-class OpenMPClauseProcessor {
+class OpenMPClauseEmitter {
   CIRGenFunction &cgf;
   CIRGenModule &cgm;
   CIRGenBuilderTy &builder;
@@ -30,45 +37,50 @@ class OpenMPClauseProcessor {
   llvm::ArrayRef<const OMPClause *> clauses;
 
 public:
-  OpenMPClauseProcessor(CIRGenFunction &cgf, CIRGenModule &cgm,
-                        CIRGenBuilderTy &builder, mlir::Location loc,
-                        llvm::ArrayRef<const OMPClause *> clauses)
+  OpenMPClauseEmitter(CIRGenFunction &cgf, CIRGenModule &cgm,
+                      CIRGenBuilderTy &builder, mlir::Location loc,
+                      llvm::ArrayRef<const OMPClause *> clauses)
       : cgf(cgf), cgm(cgm), builder(builder), loc(loc), clauses(clauses) {}
 
-  bool processProcBind(mlir::omp::ProcBindClauseOps &result) const;
+  bool emitProcBind(mlir::omp::ProcBindClauseOps &result) const;
 
-  /// Process map clauses. The optional \p mapSyms parameter collects the
+  /// Emit map clauses. The optional \p mapSyms parameter collects the
   /// VarDecls corresponding to each map operand.
-  bool
-  processMap(mlir::omp::MapClauseOps &result,
-             llvm::SmallVectorImpl<const VarDecl *> *mapSyms = nullptr) const;
+  bool emitMap(mlir::omp::MapClauseOps &result,
+               llvm::SmallVectorImpl<const VarDecl *> *mapSyms = nullptr) const;
 
-  /// Emit an errorNYI for each clause of the given types if present.
-  template <typename... ClauseTypes>
-  void processTODO(llvm::omp::Directive directive) const;
+  /// Verify the clauses of a directive to make sure all legal cases are either
+  /// implemented or give a NYI error. If the clause is neither, then
+  /// an unknown clause error will be emitted.
+  template <typename... SupportedClauses, typename... NYIClauses>
+  void emitNYI(OpenMPClauseList<NYIClauses...> nyi,
+               llvm::omp::Directive directive) const;
 
 private:
-  template <typename ClauseType>
-  void processTODOClause(llvm::omp::Directive directive) const;
+  /// True if T is the same type as any of Ts.
+  template <typename T, typename... Ts>
+  static constexpr bool isAnyOf = (std::is_same_v<T, Ts> || ...);
 };
 
-template <typename ClauseType>
-void OpenMPClauseProcessor::processTODOClause(
-    llvm::omp::Directive directive) const {
+template <typename... SupportedClauses, typename... NYIClauses>
+void OpenMPClauseEmitter::emitNYI(OpenMPClauseList<NYIClauses...>,
+                                  llvm::omp::Directive directive) const {
+  static_assert(
+      (!isAnyOf<NYIClauses, SupportedClauses...> && ...),
+      "the supported and not-yet-implemented clause lists must be disjoint");
+
   for (const OMPClause *c : clauses) {
-    if (isa<ClauseType>(c)) {
+    if ((isa<NYIClauses>(c) || ...)) {
       std::string msg =
           ("OpenMP " + llvm::omp::getOpenMPDirectiveName(directive) + " " +
            llvm::omp::getOpenMPClauseName(c->getClauseKind()) + " clause")
               .str();
       cgm.errorNYI(c->getBeginLoc(), msg);
+    } else if (!(isa<SupportedClauses>(c) || ...)) {
+      // Unknown/illegal clause encountered
+      llvm_unreachable("unexpected OpenMP clause");
     }
   }
-}
-
-template <typename... ClauseTypes>
-void OpenMPClauseProcessor::processTODO(llvm::omp::Directive directive) const {
-  (processTODOClause<ClauseTypes>(directive), ...);
 }
 
 } // namespace clang::CIRGen
