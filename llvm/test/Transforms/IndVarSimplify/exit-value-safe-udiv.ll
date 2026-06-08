@@ -2,8 +2,6 @@
 ; RUN: opt -S -passes=indvars -replexitval=always < %s | FileCheck %s
 
 ; Reduced from https://github.com/llvm/llvm-project/issues/202028.
-; FIXME: The udiv is wrongly speculated into the preheader; it should stay in the
-; loop body, guarded by the loop-invariant early exit.
 
 declare i32 @llvm.cttz.i32(i32, i1)
 
@@ -12,17 +10,16 @@ define i32 @speculated_exit_value_udiv(i32 %x, i1 %guard, i1 %backedge) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[D:%.*]] = add i32 [[CT]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 1, [[D]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[TMP0]], [[D]]
-; CHECK-NEXT:    [[REM_LCSSA:%.*]] = sub i32 1, [[TMP1]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[GUARD:%.*]], label [[EXIT_EARLY:%.*]], label [[BODY:%.*]]
 ; CHECK:       body:
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 1, [[D]]
 ; CHECK-NEXT:    br i1 [[BACKEDGE:%.*]], label [[LOOP]], label [[EXIT_LATE:%.*]]
 ; CHECK:       exit.early:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       exit.late:
+; CHECK-NEXT:    [[REM_LCSSA:%.*]] = phi i32 [ [[REM]], [[BODY]] ]
 ; CHECK-NEXT:    ret i32 [[REM_LCSSA]]
 ;
 entry:
