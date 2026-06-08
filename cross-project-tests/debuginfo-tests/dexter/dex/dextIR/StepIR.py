@@ -128,5 +128,8 @@ class StepIR:
         if self.watches:
             lines.append(f"Variables:")
             for value in sorted(self.watches.values(), key=lambda v: v.expression):
-                lines.append(f"  {value}")
+                if not value.sub_values:
+                    lines.append(f"  {value}")
+                else:
+                    value.dump_nested(lines, 1)
         return lines

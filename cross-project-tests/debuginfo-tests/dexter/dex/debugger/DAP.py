@@ -18,7 +18,7 @@ import sys
 import threading
 import time
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -551,6 +551,22 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             time.sleep(0.001)
         return self._debugger_state.get_response(seq)
 
+    # Helper method that sends the request defined by "command" + "arguments", awaits the response, and returns the
+    # response when it arrives. An optional timeout for the response may be passed.
+    # If allow_failure is passed, then the result may instead be a str containing the fail reason if the request failed.
+    def _communicate_request(
+        self, command: str, arguments=None, timeout: float = 60.0, allow_failure=False
+    ) -> Union[Dict, str]:
+        req_id = self.send_message(self.make_request(command, arguments))
+        response = self._await_response(req_id, timeout)
+        if not response["success"]:
+            if not allow_failure:
+                raise DebuggerException(
+                    f"received failure response for command {command}"
+                )
+            return response["message"]
+        return response["body"]
+
     ## End of DAP communication methods
     ############################################################################
 
@@ -1018,6 +1034,32 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def _evaluate_result_value(expression: str, result_string: str) -> ValueIR:
         """For the result of an "evaluate" message, return a ValueIR. Implementation must be debugger-specific."""
 
+    # For the given `value` and associated `variables_reference`, recursively requests "variables" information for all
+    # child variables and adds them as sub_values to `value`.
+    def _evaluate_subvariables(self, value: ValueIR, variables_reference: int):
+        if variables_reference == 0:
+            return
+        # DFS subvariables recursively, adding them as sub_values to their parent ValueIRs.
+        variables_irs = {variables_reference: value}
+        search_vars = [variables_reference]
+        while search_vars:
+            next_var = search_vars[0]
+            search_vars = search_vars[1:]
+            # The ValueIR for the variable/subvariable whose children we are examining.
+            variable_ir: ValueIR = variables_irs[next_var]
+            result_vars: Dict = self._communicate_request(
+                "variables", {"variablesReference": next_var, "filter": "named"}
+            )
+            for var in result_vars["variables"]:
+                new_ir = self._evaluate_result_value(
+                    var["name"], var["value"], var.get("type")
+                )
+                variable_ir.sub_values.append(new_ir)
+                new_ref = var.get("variablesReference", 0)
+                if new_ref != 0:
+                    variables_irs[new_ref] = new_ir
+                    search_vars.append(new_ref)
+
     def evaluate_expression(self, expression, frame_idx=0) -> ValueIR:
         # The frame_idx passed in here needs to be translated to the debug adapter's internal frame ID.
         dap_frame_id = self._debugger_state.frame_map[frame_idx]
@@ -1040,8 +1082,13 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 result = eval_response["message"]
             else:
                 result = "<unable to evaluate expression>"
+            variables_ref = 0
         else:
             result = eval_response["body"]["result"]
+            variables_ref = eval_response["body"].get("variablesReference", 0)
         type_str = eval_response["body"].get("type")
 
-        return self._evaluate_result_value(expression, result, type_str)
+        value_ir = self._evaluate_result_value(expression, result, type_str)
+        self._evaluate_subvariables(value_ir, variables_ref)
+
+        return value_ir
