@@ -179,16 +179,11 @@ public:
   struct STDIOWindowSize {
     uint16_t cols = 0;
     uint16_t rows = 0;
-    bool IsSet() const { return cols != 0 && rows != 0; }
   };
 
   void SetSTDIOWindowSize(uint16_t cols, uint16_t rows) {
     m_stdio_window_size.cols = cols;
     m_stdio_window_size.rows = rows;
-  }
-
-  const STDIOWindowSize &GetSTDIOWindowSize() const {
-    return m_stdio_window_size;
   }
 
 protected:
