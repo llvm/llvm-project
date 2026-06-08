@@ -93,7 +93,7 @@ static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
 
 /// Maximum number of instructions to check between assume and context
 /// instruction.
-static constexpr unsigned MaxInstrsToCheckForFree = 16;
+static constexpr unsigned MaxInstrsToCheckForFree = 32;
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -704,9 +704,10 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
   // Helper to check if there are any calls in the range that may free memory.
-  auto hasNoFreeInRange = [](auto Range) {
+  unsigned NumChecked = 0;
+  auto hasNoFreeInRange = [&NumChecked](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
-      if (Idx > MaxInstrsToCheckForFree)
+      if (NumChecked++ > MaxInstrsToCheckForFree)
         return false;
 
       if (auto *CB = dyn_cast<CallBase>(&I)) {
@@ -718,27 +719,32 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     return true;
   };
 
-  // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
   BasicBlock::const_iterator CtxIter = CtxI->getIterator();
-  if (CtxBB != AssumeBB) {
-    if (CtxBB->getSinglePredecessor() != AssumeBB)
-      return false;
-
-    if (!hasNoFreeInRange(make_range(CtxBB->begin(), CtxIter)))
-      return false;
-
-    CtxIter = AssumeBB->end();
-  } else {
+  if (CtxBB == AssumeBB) {
     // Same block case: check that Assume comes before CtxI.
     if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
+    return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
   }
 
-  // Check if there are any calls between Assume and CtxIter that may free
-  // memory.
-  return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
+  // Handle chain of single-predecessor blocks.
+  const BasicBlock *CurBB = CtxBB;
+  while (true) {
+    if (CurBB == AssumeBB)
+      return hasNoFreeInRange(
+          make_range(Assume->getIterator(), AssumeBB->end()));
+
+    const BasicBlock *PredBB = CurBB->getSinglePredecessor();
+    if (!PredBB)
+      return false;
+
+    if (!hasNoFreeInRange(make_range(CurBB->begin(),
+                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
+      return false;
+    CurBB = PredBB;
+  }
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
