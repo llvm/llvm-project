@@ -3543,7 +3543,7 @@ def FP4FP8DstByteSelTable : GenericTable {
 def VOPDComponentTable : GenericTable {
   let FilterClass = "VOPD_Component";
   let CppTypeName = "VOPDComponentInfo";
-  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX", "CanBeVOPD3X"];
+  let Fields = ["BaseVOP", "VOPDOp"];
   let PrimaryKey = ["BaseVOP"];
   let PrimaryKeyName = "getVOPDComponentHelper";
 }
@@ -3571,6 +3571,24 @@ def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
 
 def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
+
+// Instructions eligible to be the first (X) instruction in Dual Issue VALU
+// (VOPD) encoding. Consumed by buildVOPDXYLookup() to build a direct lookup
+// table; no helper is generated.
+def VOPDXTable : GenericTable {
+  let FilterClass = "VOPDX";
+  let CppTypeName = "VOPDXYInfo";
+  let Fields = ["VOPDOp", "Subtarget", "VOPD3"];
+}
+
+// Instructions eligible to be the second (Y) instruction in Dual Issue VALU
+// (VOPD) encoding. Consumed by buildVOPDXYLookup() to build a direct lookup
+// table; no helper is generated.
+def VOPDYTable : GenericTable {
+  let FilterClass = "VOPDY";
+  let CppTypeName = "VOPDXYInfo";
+  let Fields = ["VOPDOp", "Subtarget", "VOPD3"];
+}
 
 include "SIInstructions.td"
 

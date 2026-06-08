@@ -98,6 +98,7 @@ static_library("Utils") {
     "StripGCRelocates.cpp",
     "StripNonLineTableDebugInfo.cpp",
     "SymbolRewriter.cpp",
+    "TriggerCrashPass.cpp",
     "UnifyFunctionExitNodes.cpp",
     "UnifyLoopExits.cpp",
     "Utils.cpp",

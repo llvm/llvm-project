@@ -384,6 +384,8 @@ public:
 class VPUser {
   /// Grant access to removeOperand for VPPhiAccessors, the only supported user.
   friend class VPPhiAccessors;
+  /// Grant access to addOperand for VPWidenMemoryRecipe.
+  friend class VPWidenMemoryRecipe;
 
   SmallVector<VPValue *, 2> Operands;
 
@@ -405,6 +407,11 @@ protected:
       addOperand(Operand);
   }
 
+  void addOperand(VPValue *Operand) {
+    Operands.push_back(Operand);
+    Operand->addUser(*this);
+  }
+
 public:
   VPUser() = delete;
   VPUser(const VPUser &) = delete;
@@ -412,11 +419,6 @@ public:
   virtual ~VPUser() {
     for (VPValue *Op : operands())
       Op->removeUser(*this);
-  }
-
-  void addOperand(VPValue *Operand) {
-    Operands.push_back(Operand);
-    Operand->addUser(*this);
   }
 
   unsigned getNumOperands() const { return Operands.size(); }

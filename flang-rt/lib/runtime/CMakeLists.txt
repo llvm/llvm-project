@@ -12,6 +12,30 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
+# Module sources that are required by other modules
+set(intrinsics_sources
+  __fortran_builtins.f90
+  __cuda_builtins.f90
+)
+
+# Fortran sources for builtin .mod files
+set(module_sources
+  __fortran_ieee_exceptions.f90
+  __fortran_type_info.f90
+  flang_debug.f90
+  iso_fortran_env.f90
+  iso_fortran_env_impl.f90
+  ieee_arithmetic.f90
+  ieee_exceptions.f90
+  ieee_features.f90
+  iso_c_binding.f90
+
+  __cuda_device.f90
+  cooperative_groups.f90
+  cuda_runtime_api.f90
+  cudadevice.f90
+)
+
 # List of files that are buildable for all devices.
 set(supported_sources
   ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
@@ -190,6 +214,25 @@ file(GLOB_RECURSE private_headers
   "${FLANG_SOURCE_DIR}/lib/Common/*.h"
   )
 
+if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
+  list(APPEND intrinsics_sources
+    __ppc_types.f90
+  )
+  list(APPEND module_sources
+    __ppc_intrinsics.f90
+    mma.f90
+  )
+endif ()
+
+# Compile as CUDA-Fortran, not directly supported by CMake
+set_property(SOURCE
+    __cuda_device.f90
+    cooperative_groups.f90
+    cuda_runtime_api.f90
+    cudadevice.f90
+  APPEND PROPERTY
+    COMPILE_OPTIONS --offload-host-only -xcuda
+)
 
 # Import changes from flang_rt.quadmath
 set(f128_sources "")
@@ -220,6 +263,56 @@ if (TARGET FortranFloat128MathILib)
   endif ()
 endif ()
 
+
+# When a target depends on an object library, CMake seems to try to only build
+# the object files that the target actual needs. If we are only interested
+# in the module files, nothing get is built at all. To ensure that the module
+# files are built, insert a custom target that is opaque to CMake so it cannot
+# apply this optimization. Dependees on module files must depend on this
+# barrier instead. An actual COMMAND (that does nothing) seems to be necessary
+# on Windows to work.
+function (add_module_barrier barriername objlib)
+  add_custom_target(${barriername}
+    COMMAND ${CMAKE_COMMAND} -E true
+  )
+  add_dependencies(${barriername} ${objlib})
+endfunction ()
+
+
+# Build module files if requested.
+# The object files written by Flang for these are unused. In the future parts
+# of flang-rt may itself be implemented in Fortran in which case these Fortran
+# sources need to be added to ${sources} to be included in
+# libflang_rt.runtime{.a/.so}. If they also provide an importable .mod, add them
+# to flang_module_target(... PUBLIC).
+if (FLANG_RT_FORTRAN_MODULES)
+  # CMake ignores intrinsic USE dependencies
+  # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES
+  # to disable this behavior, unfortunately it does not work with Ninja
+  # (https://gitlab.kitware.com/cmake/cmake/-/issues/26803)
+  # As a workaround, we build those intrinsic modules first such that the main
+  # runtime can depend on it.
+  add_flangrt_library(flang_rt.mod.intrinsics OBJECT
+    ${intrinsics_sources}
+  )
+  flang_module_target(flang_rt.mod.intrinsics PUBLIC)
+  add_module_barrier(flang_rt.mod.intrinsics.barrier flang_rt.mod.intrinsics)
+
+  # The modules themselves
+  add_flangrt_library(flang_rt.mod OBJECT
+    ${module_sources}
+  )
+  add_dependencies(flang_rt.mod flang_rt.mod.intrinsics.barrier)
+  flang_module_target(flang_rt.mod PUBLIC)
+  add_module_barrier(flang-rt-mod flang_rt.mod)
+endif ()
+
+
+# Skip building libraries if not requested
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  return ()
+endif ()
+
 if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
@@ -237,7 +330,7 @@ if (NOT WIN32)
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
 
-  enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
+  enable_cuda_compilation(flang_rt.runtime "${sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
   if (TARGET flang_rt.runtime.default)
