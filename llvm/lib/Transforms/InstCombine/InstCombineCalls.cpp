@@ -1656,6 +1656,12 @@ static Value *foldBitOrderReverseAndSwap(IntrinsicInst *II,
   Value *Arg = II->getArgOperand(0);
   Type *Ty = II->getType();
 
+  if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+    auto VecEltCnt = VecTy->getElementCount();
+    if (VecEltCnt.isScalable())
+      return nullptr;
+  }
+
   if (Ty->getScalarSizeInBits() <= 8)
     return nullptr;
 
