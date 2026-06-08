@@ -3894,7 +3894,15 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     S.Stk.push<Pointer>(0, ElementDesc);
     return true;
   }
-  assert(NumElements.isPositive());
+  if (NumElements.isNegative()) {
+    if (!IsNoThrow) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
+          << NumElements.toDiagnosticString(S.getASTContext());
+      return false;
+    }
+    S.Stk.push<Pointer>(0, nullptr);
+    return true;
+  }
 
   if (!CheckArraySize(S, OpPC, static_cast<uint64_t>(NumElements)))
     return false;
