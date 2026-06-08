@@ -648,8 +648,8 @@ define <3 x float> @powi_unary_shuffle_ops_use(<3 x float> %x, i32 %power, ptr %
 }
 
 ; Negative test: Missing afn flag on call
-define float @pow_i_2_ldexp_1_no_afn_f32(i32 %i) {
-; CHECK-LABEL: @pow_i_2_ldexp_1_no_afn_f32(
+define float @pow_2_i_ldexp_1_i_no_afn_f32(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_i_no_afn_f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call float @llvm.powi.f32.i32(float 2.000000e+00, i32 [[I:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
@@ -657,8 +657,8 @@ define float @pow_i_2_ldexp_1_no_afn_f32(i32 %i) {
   ret float %1
 }
 
-define float @pow_i_2_ldexp_1_afn_f32(i32 %i) {
-; CHECK-LABEL: @pow_i_2_ldexp_1_afn_f32(
+define float @pow_2_i_ldexp_1_i_afn_f32(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_i_afn_f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call afn float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[I:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
@@ -666,8 +666,8 @@ define float @pow_i_2_ldexp_1_afn_f32(i32 %i) {
   ret float %1
 }
 
-define float @a_fmul_pow_i_2_ldexp_a_afn_f32(float %a, i32 %i) {
-; CHECK-LABEL: @a_fmul_pow_i_2_ldexp_a_afn_f32(
+define float @fmul_a_pow_2_i_ldexp_1_a_afn_f32(float %a, i32 %i) {
+; CHECK-LABEL: @fmul_a_pow_2_i_ldexp_1_a_afn_f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float [[A:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
@@ -676,8 +676,8 @@ define float @a_fmul_pow_i_2_ldexp_a_afn_f32(float %a, i32 %i) {
   ret float %2
 }
 
-define double @pow_i_2_ldexp_1_afn_f64(i32 %i) {
-; CHECK-LABEL: @pow_i_2_ldexp_1_afn_f64(
+define double @pow_2_i_ldexp_1_a_afn_f64(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_a_afn_f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call afn double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[I:%.*]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
@@ -685,8 +685,8 @@ define double @pow_i_2_ldexp_1_afn_f64(i32 %i) {
   ret double %1
 }
 
-define double @a_fmul_pow_i_2_ldexp_a_afn_f64(double %a, i32 %i) {
-; CHECK-LABEL: @a_fmul_pow_i_2_ldexp_a_afn_f64(
+define double @fmul_a_pow_2_i_ldexp_1_a_afn_f64(double %a, i32 %i) {
+; CHECK-LABEL: @fmul_a_pow_2_i_ldexp_1_a_afn_f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.ldexp.f64.i32(double [[A:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
