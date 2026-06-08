@@ -4649,6 +4649,16 @@ LLVM_C_ABI void LLVMSetInstDebugLocation(LLVMBuilderRef Builder,
                                          LLVMValueRef Inst);
 
 /**
+ * Same as LLVMSetInstDebugLocation.
+ *
+ * @deprecated Use the identical LLVMSetInstDebugLocation.
+ *
+ * @see llvm::IRBuilder::SetInstDebugLocation()
+ */
+LLVM_C_ABI void LLVMAddMetadataToInst(LLVMBuilderRef Builder,
+                                      LLVMValueRef Inst);
+
+/**
  * Get the dafult floating-point math metadata for a given builder.
  *
  * @see llvm::IRBuilder::getDefaultFPMathTag()
