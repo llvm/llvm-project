@@ -83,6 +83,9 @@ public:
     AsLongDouble,       // 'L'
     AsIntN,             // 'wN'
     AsFastIntN,         // 'wfN'
+    AsDecimal32,        // 'H'  (C23, _Decimal32)
+    AsDecimal64,        // 'D'  (C23, _Decimal64)
+    AsDecimal128,       // 'DD' (C23, _Decimal128)
     AsAllocate,         // for '%as', GNU extension to C90 scanf
     AsMAllocate,        // for '%ms', GNU extension to scanf
     AsWide,             // 'w' (MSVCRT, like l but only for c, C, s, S, or Z
@@ -102,6 +105,7 @@ public:
       return 1;
     case AsLongLong:
     case AsChar:
+    case AsDecimal128:
       return 2;
     case AsIntN:
     case AsFastIntN:
@@ -276,6 +280,7 @@ public:
   enum Kind {
     UnknownTy,
     InvalidTy,
+    UnsupportedTy,
     SpecificTy,
     ObjCPointerTy,
     CPointerTy,
@@ -334,7 +339,13 @@ public:
   ArgType(CanQualType T) : K(SpecificTy), T(T) {}
 
   static ArgType Invalid() { return ArgType(InvalidTy); }
+  static ArgType Unsupported(const char *N) {
+    ArgType A(UnsupportedTy);
+    A.Name = N;
+    return A;
+  }
   bool isValid() const { return K != InvalidTy; }
+  bool isUnsupported() const { return K == UnsupportedTy; }
 
   bool isSizeT() const { return TK == TypeKind::SizeT; }
 
