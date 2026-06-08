@@ -43,4 +43,32 @@ def CIR_OpenCLKernelArgMetadataAttr
   let canHaveIllegalCXXABIType = 0;
 }
 
+//===----------------------------------------------------------------------===//
+// OpenCLVersionAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OpenCLVersionAttr : CIR_Attr<"OpenCLVersion", "cl.version"> {
+  let summary = "OpenCL version";
+  let description = [{
+    Represents an OpenCL language version preserved as module metadata.
+
+    Example:
+    ```
+    // Module compiled from OpenCL C 1.2.
+    module attributes {cir.cl.version = #cir.cl.version<1, 2>} {}
+    // Module compiled from C++ for OpenCL 2021.
+    module attributes {cir.cl.cxx.version = #cir.cl.version<2021, 0>} {}
+    ```
+  }];
+
+  let parameters = (ins
+    "int32_t":$major,
+    "int32_t":$minor
+  );
+
+  let assemblyFormat = "`<` $major `,` $minor `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPENCLATTRS_TD
