@@ -81,7 +81,7 @@ exit:
 
 define void @replicate_zext(ptr %A, i32 %n) {
 ; CHECK-LABEL: 'replicate_zext'
-; CHECK:  Cost of 1 for VF vscale x 1: CLONE ir<%iv.ext> = zext vp<[[VP4:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF vscale x 1: EMIT-SCALAR ir<%iv.ext> = zext vp<[[VP4:%[0-9]+]]> to i64
 ;
 entry:
   br label %loop
