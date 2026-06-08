@@ -6114,8 +6114,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       BuildMI(*ComputeLoop, I, DL, TII->get(SFFOpc), FF1Reg)
           .addReg(ActiveBitsReg);
       if (is32BitOpc) {
-        Register LaneValVgpr = MRI.createVirtualRegister(SrcRegClass);
-        Register VgprResultReg = MRI.createVirtualRegister(SrcRegClass);
         Register OpDstReg = DstReg;
         bool hasSrc0Modifier = AMDGPU::getNamedOperandIdx(
                                    Opc, AMDGPU::OpName::src0_modifiers) != -1;
@@ -6134,6 +6132,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             .addReg(FF1Reg);
         if (ST.getInstrInfo()->isVALU(Opc)) {
           // Get the Lane Value in VGPR to avoid the Constant Bus Restriction
+          Register LaneValVgpr = MRI.createVirtualRegister(SrcRegClass);
+          Register VgprResultReg = MRI.createVirtualRegister(SrcRegClass);
           BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::COPY), LaneValVgpr)
               .addReg(LaneValueReg);
           OpDstReg = VgprResultReg;

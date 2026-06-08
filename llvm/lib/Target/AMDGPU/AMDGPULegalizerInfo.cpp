@@ -8133,7 +8133,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                             : B.buildZExt(LLT::scalar(32), SrcReg);
     auto NewDst = MRI.createGenericVirtualRegister(LLT::scalar(32));
     B.buildIntrinsic(IntrID, ArrayRef<Register>{NewDst},
-                     /*hasSideEffects*/ false, /*isConvergent*/ true)
+                     /*hasSideEffects=*/false, /*isConvergent=*/true)
         .addUse(Ext.getReg(0))
         .addImm(MI.getOperand(3).getImm()); // strategy
     B.buildTrunc(DstReg, NewDst);
