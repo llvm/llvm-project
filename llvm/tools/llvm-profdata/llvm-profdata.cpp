@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/HTTP/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
@@ -1594,17 +1595,88 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
   }
 }
 
+/// Make a deep copy of the given function samples, interning all FunctionIds
+/// and context frames into a shared pool using the provided Remap function.
+static sampleprof::FunctionSamples
+internFunctionSamples(const sampleprof::FunctionSamples &Samples,
+                      function_ref<sampleprof::FunctionId(sampleprof::FunctionId)> Remap,
+                      std::list<sampleprof::SampleContextFrameVector> &CtxFrameStorage) {
+  sampleprof::FunctionSamples Result;
+  Result.setFunctionHash(Samples.getFunctionHash());
+
+  if (Samples.getContext().hasContext()) {
+    sampleprof::SampleContextFrames OldFrames = Samples.getContext().getContextFrames();
+    CtxFrameStorage.emplace_back();
+    sampleprof::SampleContextFrameVector &NewFrames = CtxFrameStorage.back();
+    NewFrames.reserve(OldFrames.size());
+    for (const auto &Frame : OldFrames)
+      NewFrames.emplace_back(Remap(Frame.Func), Frame.Location);
+    sampleprof::SampleContext NewContext(Samples.getContext());
+    NewContext.setContext(sampleprof::SampleContextFrames(NewFrames));
+    Result.setContext(NewContext);
+  } else if (!Samples.getContext().getFunction().empty()) {
+    sampleprof::SampleContext NewContext(Samples.getContext());
+    NewContext.setFunction(Remap(Samples.getContext().getFunction()));
+    Result.setContext(NewContext);
+  } else {
+    Result.setContext(Samples.getContext());
+  }
+
+  Result.setTotalSamples(Samples.getTotalSamples());
+  Result.setHeadSamples(Samples.getHeadSamples());
+
+  for (const auto &BodySample : Samples.getBodySamples()) {
+    uint32_t LineOffset = BodySample.first.LineOffset;
+    uint32_t Discriminator = BodySample.first.Discriminator;
+    Result.addBodySamples(LineOffset, Discriminator,
+                          BodySample.second.getSamples());
+    for (const auto &Target : BodySample.second.getCallTargets()) {
+      Result.addCalledTargetSamples(LineOffset, Discriminator,
+                                    Remap(Target.first), Target.second);
+    }
+  }
+
+  for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
+    sampleprof::FunctionSamplesMap &TargetMap =
+        Result.functionSamplesAt(CallsiteSamples.first);
+    for (const auto &Callsite : CallsiteSamples.second) {
+      sampleprof::FunctionSamples Interned =
+          internFunctionSamples(Callsite.second, Remap, CtxFrameStorage);
+      TargetMap[Interned.getContext().getFunction()] = Interned;
+    }
+  }
+
+  for (const auto &TypeSamples : Samples.getCallsiteTypeCounts()) {
+    sampleprof::TypeCountMap &TargetMap =
+        Result.getTypeSamplesAt(TypeSamples.first);
+    for (const auto &Type : TypeSamples.second) {
+      TargetMap[Remap(Type.first)] = Type.second;
+    }
+  }
+
+  return Result;
+}
+
 static void mergeSampleProfile(const WeightedFileVector &Inputs,
                                SymbolRemapper *Remapper,
                                StringRef ProfileSymbolListFile,
                                size_t OutputSizeLimit) {
   using namespace sampleprof;
   SampleProfileMap ProfileMap;
-  SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
   LLVMContext Context;
   sampleprof::ProfileSymbolList WriterList;
   std::optional<bool> ProfileIsProbeBased;
   std::optional<bool> ProfileIsCS;
+
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+  std::list<SampleContextFrameVector> CtxFrameStorage;
+  auto InternFunctionId = [&](FunctionId Id) -> FunctionId {
+    if (!Id.isStringRef() || Id.empty())
+      return Id;
+    return FunctionId(Saver.save(Id.stringRef()));
+  };
+
   for (const auto &Input : Inputs) {
     auto FS = vfs::getRealFileSystem();
     auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context, *FS,
@@ -1614,15 +1686,9 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
       continue;
     }
 
-    // We need to keep the readers around until after all the files are
-    // read so that we do not lose the function names stored in each
-    // reader's memory. The function names are needed to write out the
-    // merged profile map.
-    Readers.push_back(std::move(ReaderOrErr.get()));
-    const auto Reader = Readers.back().get();
+    auto Reader = std::move(ReaderOrErr.get());
     if (std::error_code EC = Reader->read()) {
       warnOrExitGivenError(FailMode, EC, Input.Filename);
-      Readers.pop_back();
       continue;
     }
 
@@ -1635,13 +1701,16 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     if (ProfileIsCS && ProfileIsCS != FunctionSamples::ProfileIsCS)
       exitWithError("cannot merge CS profile with non-CS profile");
     ProfileIsCS = FunctionSamples::ProfileIsCS;
+
     for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();
          I != E; ++I) {
       sampleprof_error Result = sampleprof_error::success;
+      FunctionSamples Interned =
+          internFunctionSamples(I->second, InternFunctionId, CtxFrameStorage);
       FunctionSamples Remapped =
-          Remapper ? remapSamples(I->second, *Remapper, Result)
+          Remapper ? remapSamples(Interned, *Remapper, Result)
                    : FunctionSamples();
-      FunctionSamples &Samples = Remapper ? Remapped : I->second;
+      FunctionSamples &Samples = Remapper ? Remapped : Interned;
       SampleContext FContext = Samples.getContext();
       mergeSampleProfErrors(Result,
                             ProfileMap[FContext].merge(Samples, Input.Weight));
