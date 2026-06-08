@@ -167,6 +167,11 @@ constexpr T saturating_cast(U x) noexcept;                    // freestanding, S
 #  include <__numeric/iota.h>
 #  include <__numeric/partial_sum.h>
 
+// https://llvm.org/PR202246
+// FIXME: These headers are unconditionally included to harmonize transitive includes between configurations.
+#  include <ctime>
+#  include <ratio>
+
 #  if _LIBCPP_STD_VER >= 17
 #    include <__numeric/exclusive_scan.h>
 #    include <__numeric/gcd_lcm.h>

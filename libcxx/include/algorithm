@@ -1976,6 +1976,11 @@ template <class BidirectionalIterator, class Compare>
 #  include <__algorithm/unique_copy.h>
 #  include <__algorithm/upper_bound.h>
 
+// https://llvm.org/PR202246
+// FIXME: These headers are unconditionally included to harmonize transitive includes between configurations.
+#  include <ctime>
+#  include <ratio>
+
 #  if _LIBCPP_STD_VER >= 17
 #    include <__algorithm/clamp.h>
 #    include <__algorithm/for_each_n.h>
