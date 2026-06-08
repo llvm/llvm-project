@@ -73,7 +73,7 @@ void *EJitCompileDriver::getOrCompile(
     return nullptr;
   }
 
-  std::string bitcode = bitcodeOrErr->str();
+  StringRef bitcode = *bitcodeOrErr;
 
   // Build specialization context
   SpecializationContext ctx;
