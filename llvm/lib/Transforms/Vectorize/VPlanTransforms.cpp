@@ -367,10 +367,11 @@ static bool sinkScalarOperands(VPlan &Plan) {
               dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
         // TODO: Handle converting to uniform recipes as separate transform,
         // then cloning should be sufficient here.
-        Instruction *I = SinkCandidate->getUnderlyingInstr();
-        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
-                                      nullptr /*Mask*/, *SinkCandidateRepR,
-                                      *SinkCandidateRepR);
+        Clone = VPBuilder::createSingleScalarOp(
+            SinkCandidateRepR->getOpcode(), SinkCandidate->operands(),
+            /*Mask=*/nullptr, *SinkCandidateRepR, *SinkCandidateRepR,
+            SinkCandidate->getDebugLoc(),
+            SinkCandidate->getUnderlyingInstr());
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -529,7 +530,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   // Replace predicated replicate recipe with a replicate recipe without a
   // mask but in the replicate region.
   auto *RecipeWithoutMask = new VPReplicateRecipe(
-      PredRecipe->getUnderlyingInstr(), drop_end(PredRecipe->operands()),
+      PredRecipe->getUnderlyingInstr(), PredRecipe->operandsWithoutMask(),
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
   auto *Pred =
@@ -903,9 +904,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
-                                          Def->operands(), /*IsUniform*/ true,
-                                          /*Mask*/ nullptr, /*Flags*/ *Def);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
+          /*Mask=*/nullptr, *Def, {}, DebugLoc::getUnknown(),
+          Def->getUnderlyingInstr());
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
     }
@@ -1686,7 +1688,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
     if (match(A, m_Broadcast(m_VPValue(X))))
       return Def->replaceAllUsesWith(X);
 
-    if (vputils::isSingleScalar(A))
+    if (isa<VPInstruction, VPReplicateRecipe>(A) && vputils::isSingleScalar(A))
       return Def->replaceAllUsesWith(A);
 
     if (Plan->hasScalarVFOnly())
@@ -1965,9 +1967,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(
-          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
-          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          getOpcodeOrIntrinsicID(RepOrWidenR)->second, RepOrWidenR->operands(),
+          /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
+          RepOrWidenR->getUnderlyingInstr());
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
@@ -2409,10 +2412,6 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
-  static bool isSentinel(const VPSingleDefRecipe *Def) {
-    return Def == getEmptyKey();
-  }
-
   /// If recipe \p R will lower to a GEP with a non-i8 source element type,
   /// return that source element type.
   static Type *getGEPSourceElementType(const VPSingleDefRecipe *R) {
@@ -2465,8 +2464,6 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 
   /// Check equality of underlying data of \p L and \p R.
   static bool isEqual(const VPSingleDefRecipe *L, const VPSingleDefRecipe *R) {
-    if (isSentinel(L) || isSentinel(R))
-      return L == R;
     if (L->getVPRecipeID() != R->getVPRecipeID() ||
         getOpcodeOrIntrinsicID(L) != getOpcodeOrIntrinsicID(R) ||
         getGEPSourceElementType(L) != getGEPSourceElementType(R) ||
@@ -5470,8 +5467,11 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
     if (!Expanded)
       continue;
     ExpSCEV->replaceAllUsesWith(Expanded);
+    // TripCount should not be used after expansion to VPInstructions. Reset to
+    // poison to avoid dangling references.
     if (Plan.getTripCount() == ExpSCEV)
-      Plan.resetTripCount(Expanded);
+      Plan.resetTripCount(
+          Plan.getOrAddLiveIn(PoisonValue::get(ExpSCEV->getScalarType())));
     ExpSCEV->eraseFromParent();
   }
 }
@@ -6964,9 +6964,9 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe = new VPReplicateRecipe(
-          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
-          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
+      auto *Recipe = VPBuilder::createSingleScalarOp(
+          VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr, *VPI,
+          *VPI, VPI->getDebugLoc(), I);
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();

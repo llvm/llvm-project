@@ -847,11 +847,6 @@ ComplexExprEmitter::emitBinOps(const BinaryOperator *e, QualType promotionTy) {
 LValue ComplexExprEmitter::emitCompoundAssignLValue(
     const CompoundAssignOperator *e,
     mlir::Value (ComplexExprEmitter::*func)(const BinOpInfo &), RValue &value) {
-  if (e->getLHS()->getType()->getAs<AtomicType>()) {
-    cgf.cgm.errorNYI("emitCompoundAssignLValue AtmoicType");
-    return {};
-  }
-
   QualType lhsTy = e->getLHS()->getType().getAtomicUnqualifiedType();
   QualType rhsTy = e->getRHS()->getType();
   SourceLocation exprLoc = e->getExprLoc();

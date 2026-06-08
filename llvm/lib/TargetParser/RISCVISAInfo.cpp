@@ -621,7 +621,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     ISAInfo->Exts[std::string(1, Baseline)] = {Major, Minor};
     break;
-  case 'y':
+  case 'y': {
     // If the first character is 'y', this is equivalent to "iy".
     // TODO: arch string syntax for RVE+RVY (and y in non-first position) will
     // be included following conclusion of "long base name" syntax
@@ -636,6 +636,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     assert(IVersion && "Default 'i' extension version not found?");
     ISAInfo->Exts["i"] = {IVersion->Major, IVersion->Minor};
     break;
+  }
   case 'g':
     // g expands to extensions in RISCVGImplications.
     if (!Arch.empty() && isDigit(Arch.front()))
@@ -825,6 +826,9 @@ Error RISCVISAInfo::checkDependency() {
       // On RVY64 systems the zcd encodings are used for y load/stores.
       if (Exts.count("zcd") != 0)
         return getBaseIncompatibleError("zcd", "rv64y");
+      for (auto Ext : ZcdOverlaps)
+        if (Exts.count(Ext.str()))
+          return getBaseIncompatibleError(Ext, "rv64y");
     }
   }
 
@@ -947,8 +951,6 @@ void RISCVISAInfo::updateImplication() {
       } else if (XLen == 64) {
         ShouldAddZce = true;
       }
-    } else if (Exts.count("y") && XLen == 64) {
-      ShouldAddZce = true; // For RV64Y only Zce only includes Zca and Zcb
     }
     if (ShouldAddZce)
       Exts["zce"] = *findDefaultVersion("zce");
