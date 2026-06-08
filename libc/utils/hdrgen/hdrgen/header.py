@@ -52,6 +52,9 @@ LIBRARY_DESCRIPTIONS = {
     "linux": "Linux",
     "uefi": "UEFI",
     "svid": "SVID",
+    "stdc_ext": "Standard C Extension",
+    "llvm_libc_ext": "LLVM libc Extension",
+    "llvm_libc_stdfix_ext": "LLVM libc stdfix Extension",
 }
 
 HEADER_TEMPLATE = """\
@@ -156,11 +159,27 @@ class HeaderFile:
         )
 
     def all_standards(self):
-        # FIXME: Only functions have the "standard" field, but all the entity
-        # types should have one too.
-        return set(self.standards).union(
-            *(filter(None, (f.standards for f in self.functions)))
-        )
+        standards = set(self.standards)
+        for collection in [
+            self.macros,
+            self.types,
+            self.enumerations,
+            self.objects,
+            self.functions,
+        ]:
+            for item in collection:
+                if item.standards:
+                    standards.update(item.standards)
+        descriptions = LIBRARY_DESCRIPTIONS | self.extra_standards
+        for standard in standards:
+            if standard not in descriptions:
+                # Provide a helpful error message with acceptable values.
+                expected = ", ".join(sorted(descriptions.keys()))
+                raise ValueError(
+                    f"Standard '{standard}' is not one of the canonical "
+                    f"identifiers: {expected}"
+                )
+        return standards
 
     def includes(self):
         return (
@@ -190,6 +209,8 @@ class HeaderFile:
         return "_LLVM_LIBC_" + "_".join(words)
 
     def library_description(self):
+        # This also validates all standards.
+        standards = self.all_standards()
         descriptions = LIBRARY_DESCRIPTIONS | self.extra_standards
         # If the header itself is in standard C, just call it that.
         if "stdc" in self.standards:
@@ -198,7 +219,6 @@ class HeaderFile:
         if "posix" in self.standards:
             return descriptions["posix"]
         # Otherwise, consider the standards for each symbol as well.
-        standards = self.all_standards()
         # Otherwise, it's described by all those that apply, but ignoring
         # "stdc" and "posix" since this is not a "stdc" or "posix" header.
         return " / ".join(
@@ -339,6 +359,9 @@ class HeaderFile:
             "standards": self.standards,
             "includes": sorted(str(file) for file in {COMMON_HEADER} | self.includes()),
         }
+
+    def validate(self):
+        self.all_standards()
 
     def emit_guard(self, content, current_guard, new_guard):
         if current_guard != new_guard:

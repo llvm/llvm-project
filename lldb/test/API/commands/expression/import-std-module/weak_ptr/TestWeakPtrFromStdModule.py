@@ -12,6 +12,7 @@ class TestSharedPtr(TestBase):
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     @skipIf(macos_version=["<", "15.0"])
+    @skipIf(bugnumber="https://llvm.org/PR200154")
     def test(self):
         self.build()
 

@@ -44,7 +44,6 @@ void Lowerer::lowerResumeOrDestroy(CallBase &CB,
                                    CoroSubFnInst::ResumeKind Index) {
   Value *ResumeAddr = makeSubFnCall(CB.getArgOperand(0), Index, &CB);
   CB.setCalledOperand(ResumeAddr);
-  CB.setCallingConv(CallingConv::Fast);
 }
 
 // Coroutine promise field is always at the fixed offset from the beginning of

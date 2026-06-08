@@ -2059,15 +2059,17 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           TemplateParams = &FakedParamLists;
         }
       }
-
+      MultiTemplateParamsArg ParamLists(
+          TemplateParams ? &(*TemplateParams)[0] : nullptr,
+          TemplateParams ? TemplateParams->size() : 0);
       // Build the class template specialization.
       TagOrTempResult = Actions.ActOnClassTemplateSpecialization(
           getCurScope(), TagType, TUK, StartLoc, DS.getModulePrivateSpecLoc(),
-          SS, *TemplateId, attrs,
-          MultiTemplateParamsArg(TemplateParams ? &(*TemplateParams)[0]
-                                                : nullptr,
-                                 TemplateParams ? TemplateParams->size() : 0),
-          &SkipBody);
+          SS, *TemplateId, attrs, ParamLists, &SkipBody);
+      // Some template parameter lists may have been dropped because they were
+      // extraneous.
+      if (TemplateParams)
+        TemplateParams->resize(ParamLists.size());
     }
   } else if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation &&
              TUK == TagUseKind::Declaration) {
@@ -4702,21 +4704,15 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis) << AttrName;
   }
 
-  // If we hit an error and recovered by parsing up to a semicolon, eat the
-  // semicolon and don't issue further diagnostics about missing brackets.
-  if (Tok.is(tok::semi)) {
-    ConsumeToken();
-    return;
-  }
-
   SourceLocation CloseLoc = Tok.getLocation();
-  if (ExpectAndConsume(tok::r_square))
+  bool IsTokenNotFound = ExpectAndConsume(tok::r_square);
+  if (IsTokenNotFound)
     SkipUntil(tok::r_square);
   else if (Tok.is(tok::r_square))
     checkCompoundToken(CloseLoc, tok::r_square, CompoundToken::AttrEnd);
   if (EndLoc)
     *EndLoc = Tok.getLocation();
-  if (ExpectAndConsume(tok::r_square))
+  if (!IsTokenNotFound && ExpectAndConsume(tok::r_square))
     SkipUntil(tok::r_square);
 }
 

@@ -217,6 +217,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnUsage_.set(UsageWarning::CLoc);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
+  warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(

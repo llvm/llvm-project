@@ -31,10 +31,12 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 
 #include <array>
 #include <cinttypes>
@@ -119,22 +121,31 @@ std::string TryVersion(unsigned version) {
   return "try -fopenmp-version=" + std::to_string(version);
 }
 
-const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
+const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
   // Some symbols may be missing if the resolution failed, e.g. when an
   // undeclared name is used with implicit none.
   if (auto *name{std::get_if<parser::Name>(&object.u)}) {
-    return name->symbol ? &name->symbol->GetUltimate() : nullptr;
+    if (ultimate) {
+      return name->symbol ? &name->symbol->GetUltimate() : nullptr;
+    } else {
+      return name->symbol;
+    }
   } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
-    auto &last{GetLastName(*desg)};
-    return last.symbol ? &GetLastName(*desg).symbol->GetUltimate() : nullptr;
+    const parser::Name &last{GetLastName(*desg)};
+    if (ultimate) {
+      return last.symbol ? &last.symbol->GetUltimate() : nullptr;
+    } else {
+      return last.symbol;
+    }
   }
   return nullptr;
 }
 
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate) {
   if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
     if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-      return GetObjectSymbol(*object);
+      return GetObjectSymbol(*object, ultimate);
     }
   }
   return nullptr;
@@ -201,7 +212,8 @@ bool IsVarOrFunctionRef(const MaybeExpr &expr) {
 }
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
-  if (auto *sym{GetObjectSymbol(object)}; sym && IsAssumedSizeArray(*sym)) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)};
+      sym && IsAssumedSizeArray(*sym)) {
     return !GetArrayElementFromObj(object);
   }
   return false;
@@ -561,6 +573,37 @@ bool IsLoopTransforming(llvm::omp::Directive dir) {
   }
 }
 
+bool HasDataEnvironment(llvm::omp::Directive dir) {
+  for (auto leaf : llvm::omp::getLeafConstructsOrSelf(dir)) {
+    switch (leaf) {
+    case llvm::omp::Directive::OMPD_dispatch:
+    case llvm::omp::Directive::OMPD_distribute: // work-distribution
+    case llvm::omp::Directive::OMPD_do: // work-distribution
+    case llvm::omp::Directive::OMPD_for: // work-distribution
+    case llvm::omp::Directive::OMPD_loop: // work-distribution
+    case llvm::omp::Directive::OMPD_parallel: // team-generating
+    case llvm::omp::Directive::OMPD_scope: // work-distribution
+    case llvm::omp::Directive::OMPD_sections: // work-distribution
+    case llvm::omp::Directive::OMPD_simd:
+    case llvm::omp::Directive::OMPD_single: // work-distribution
+    case llvm::omp::Directive::OMPD_taskgraph:
+    case llvm::omp::Directive::OMPD_target: // task-generating
+    case llvm::omp::Directive::OMPD_target_data: // task-generating
+    case llvm::omp::Directive::OMPD_target_enter_data: // task-generating
+    case llvm::omp::Directive::OMPD_target_exit_data: // task-generating
+    case llvm::omp::Directive::OMPD_target_update: // task-generating
+    case llvm::omp::Directive::OMPD_task: // task-generating
+    case llvm::omp::Directive::OMPD_taskgroup:
+    case llvm::omp::Directive::OMPD_taskloop: // task-generating
+    case llvm::omp::Directive::OMPD_teams: // team-generating
+      return true;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec) {
   if (spec.DirId() == llvm::omp::Directive::OMPD_unroll) {
     return !parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_partial);
@@ -582,8 +625,8 @@ static bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
   return false;
 }
 
-LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
-  iv = x.Name().thing;
+LoopControl::LoopControl(const parser::LoopControl::Bounds &x)
+    : iv(x.Name().thing) {
   lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Lower()));
   ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(x.Upper()));
   if (auto &inc{x.Step()}) {
@@ -591,9 +634,9 @@ LoopControl::LoopControl(const parser::LoopControl::Bounds &x) {
   }
 }
 
-LoopControl::LoopControl(const parser::ConcurrentControl &x) {
-  auto &[name, lower, upper, inc]{x.t};
-  iv = name;
+LoopControl::LoopControl(const parser::ConcurrentControl &x)
+    : iv(std::get<parser::Name>(x.t)) {
+  auto &[_, lower, upper, inc]{x.t};
   lbound = fromParserExpr(parser::UnwrapRef<parser::Expr>(lower));
   ubound = fromParserExpr(parser::UnwrapRef<parser::Expr>(upper));
   if (inc) {
@@ -1808,4 +1851,137 @@ WithReason<bool> LoopSequence::isRectangular(
 
   return result;
 }
+// ---------------------------------------------------------------------------
+// Trait-matching helpers shared between metadirective lowering and
+// declare-variant semantic recording.
+// ---------------------------------------------------------------------------
+
+llvm::omp::TraitSet MapTraitSet(parser::OmpTraitSetSelectorName::Value name) {
+  switch (name) {
+  case parser::OmpTraitSetSelectorName::Value::Construct:
+    return llvm::omp::TraitSet::construct;
+  case parser::OmpTraitSetSelectorName::Value::Device:
+    return llvm::omp::TraitSet::device;
+  case parser::OmpTraitSetSelectorName::Value::Implementation:
+    return llvm::omp::TraitSet::implementation;
+  case parser::OmpTraitSetSelectorName::Value::User:
+    return llvm::omp::TraitSet::user;
+  case parser::OmpTraitSetSelectorName::Value::Target_Device:
+    return llvm::omp::TraitSet::target_device;
+  }
+  llvm_unreachable("unknown trait set");
+}
+
+llvm::omp::TraitSelector MapTraitSelector(
+    const parser::OmpTraitSelectorName &name, llvm::omp::TraitSet set) {
+  if (const auto *val =
+          std::get_if<parser::OmpTraitSelectorName::Value>(&name.u)) {
+    switch (*val) {
+    case parser::OmpTraitSelectorName::Value::Kind:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_kind;
+      return llvm::omp::TraitSelector::device_kind;
+    case parser::OmpTraitSelectorName::Value::Arch:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_arch;
+      return llvm::omp::TraitSelector::device_arch;
+    case parser::OmpTraitSelectorName::Value::Isa:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_isa;
+      return llvm::omp::TraitSelector::device_isa;
+    case parser::OmpTraitSelectorName::Value::Vendor:
+      return llvm::omp::TraitSelector::implementation_vendor;
+    case parser::OmpTraitSelectorName::Value::Extension:
+      return llvm::omp::TraitSelector::implementation_extension;
+    case parser::OmpTraitSelectorName::Value::Condition:
+      return llvm::omp::TraitSelector::user_condition;
+    case parser::OmpTraitSelectorName::Value::Atomic_Default_Mem_Order:
+    case parser::OmpTraitSelectorName::Value::Requires:
+    case parser::OmpTraitSelectorName::Value::Simd:
+    case parser::OmpTraitSelectorName::Value::Device_Num:
+    case parser::OmpTraitSelectorName::Value::Uid:
+      break;
+    }
+  }
+  // Construct traits, extension strings, and remaining selectors use
+  // string-based lookup.
+  return llvm::omp::getOpenMPContextTraitSelectorKind(name.ToString(), set);
+}
+
+std::optional<bool> EvaluateUserCondition(
+    SemanticsContext &semaCtx, const parser::ScalarExpr &scalarExpr) {
+  const auto *typedExpr = GetExpr(semaCtx, scalarExpr);
+  if (!typedExpr)
+    return std::nullopt;
+
+  auto foldedExpr =
+      evaluate::Fold(semaCtx.foldingContext(), common::Clone(*typedExpr));
+  if (auto constVal = evaluate::ToInt64(foldedExpr))
+    return *constVal != 0;
+
+  if (auto logicalVal =
+          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(foldedExpr))
+    return logicalVal->IsTrue();
+
+  return std::nullopt;
+}
+
+llvm::APInt *GetTraitScore(
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    SemanticsContext &semaCtx, std::optional<llvm::APInt> &scoreStorage) {
+  if (!props)
+    return nullptr;
+
+  const auto &optScore =
+      std::get<std::optional<parser::OmpTraitScore>>(props->t);
+  if (!optScore)
+    return nullptr;
+
+  const auto *typedExpr = GetExpr(semaCtx, optScore->v);
+  if (!typedExpr)
+    return nullptr;
+
+  auto constVal = evaluate::ToInt64(*typedExpr);
+  if (!constVal)
+    return nullptr;
+
+  scoreStorage = llvm::APInt(64, *constVal);
+  return &*scoreStorage;
+}
+
+void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
+    llvm::omp::TraitSet set, llvm::omp::TraitSelector selector,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    llvm::APInt *scorePtr) {
+  if (!props)
+    return;
+
+  for (const auto &prop :
+      std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+    const auto *name = std::get_if<parser::OmpTraitPropertyName>(&prop.u);
+    if (!name)
+      continue; // caller is responsible for diagnosing unsupported kinds
+
+    llvm::omp::TraitProperty propKind =
+        llvm::omp::getOpenMPContextTraitPropertyKind(set, selector, name->v);
+    if (propKind != llvm::omp::TraitProperty::invalid) {
+      vmi.addTrait(set, propKind, name->v, scorePtr);
+      continue;
+    }
+
+    if (selector == llvm::omp::TraitSelector::device_isa) {
+      vmi.addTrait(
+          set, llvm::omp::TraitProperty::device_isa___ANY, name->v, scorePtr);
+    } else if (selector == llvm::omp::TraitSelector::target_device_isa) {
+      vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
+          name->v, scorePtr);
+    } else {
+      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
+      // mean the variant cannot match. Add an invalid trait to ensure it is
+      // not selected.
+      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+    }
+  }
+}
+
 } // namespace Fortran::semantics::omp

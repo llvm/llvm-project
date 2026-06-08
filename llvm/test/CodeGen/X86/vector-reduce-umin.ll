@@ -1627,16 +1627,11 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 define i32 @test_v2i32(<2 x i32> %a0) nounwind {
 ; SSE2-LABEL: test_v2i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    pxor %xmm1, %xmm2
-; SSE2-NEXT:    pcmpgtd %xmm3, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    movd %xmm2, %eax
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    cmpl %eax, %ecx
+; SSE2-NEXT:    cmovbl %ecx, %eax
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
 ; SSE4-LABEL: test_v2i32:
@@ -2272,12 +2267,10 @@ define i32 @test_v32i32(<32 x i32> %a0) nounwind {
 define i16 @test_v2i16(<2 x i16> %a0) nounwind {
 ; SSE2-LABEL: test_v2i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psubusw %xmm1, %xmm2
-; SSE2-NEXT:    psubw %xmm2, %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    pextrw $1, %xmm0, %eax
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    cmpw %ax, %cx
+; SSE2-NEXT:    cmovbl %ecx, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
@@ -2308,12 +2301,10 @@ define i16 @test_v4i16(<4 x i16> %a0) nounwind {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    psubusw %xmm1, %xmm2
 ; SSE2-NEXT:    psubw %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    psubusw %xmm1, %xmm2
-; SSE2-NEXT:    psubw %xmm2, %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    pextrw $1, %xmm0, %eax
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    cmpw %ax, %cx
+; SSE2-NEXT:    cmovbl %ecx, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;

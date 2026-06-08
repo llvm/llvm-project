@@ -65,6 +65,7 @@
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -1580,6 +1581,10 @@ genCUFAllocDescriptor(mlir::Location loc,
       .getResult();
 }
 
+static bool isUsedByGPULaunchFunc(mlir::Value val);
+
+static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal);
+
 /// Get the address of the type descriptor global variable that was created by
 /// lowering for derived type \p recType.
 template <typename ModOpTy>
@@ -2092,8 +2097,11 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
            "fir.embox codegen of derived with length parameters");
       return mlir::failure();
     }
-    auto result =
-        placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), boxTy, dest);
+    bool needsDeviceAlloc =
+        isDeviceAllocation(embox.getMemref(), adaptor.getMemref()) ||
+        isUsedByGPULaunchFunc(embox);
+    auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), boxTy,
+                                               dest, needsDeviceAlloc);
     rewriter.replaceOp(embox, result);
     return mlir::success();
   }
@@ -2102,9 +2110,20 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 /// Return true if any user of \p val is a gpu.launch_func operation,
 /// indicating the descriptor must be in device-accessible memory.
 static bool isUsedByGPULaunchFunc(mlir::Value val) {
-  for (auto *user : val.getUsers())
-    if (mlir::isa<mlir::gpu::LaunchFuncOp>(user))
-      return true;
+  llvm::SmallPtrSet<mlir::Value, 4> visited;
+  llvm::SmallVector<mlir::Value, 4> worklist{val};
+  while (!worklist.empty()) {
+    mlir::Value current = worklist.pop_back_val();
+    if (!visited.insert(current).second)
+      continue;
+
+    for (auto *user : current.getUsers()) {
+      if (mlir::isa<mlir::gpu::LaunchFuncOp>(user))
+        return true;
+      if (auto convert = mlir::dyn_cast<fir::ConvertOp>(user))
+        worklist.push_back(convert.getResult());
+    }
+  }
   return false;
 }
 
@@ -2883,10 +2902,10 @@ struct XArrayCoorOpConversion
         // Use stride in bytes from the descriptor.
         mlir::Value stride =
             getStrideFromBox(loc, baseBoxTyPair, operands[0], i, rewriter);
-        auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride,
-                                            addMulFlags);
-        offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
-                                           addMulFlags);
+        auto sc =
+            mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride, nsw);
+        offset =
+            mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset, nsw);
       } else {
         // Use stride computed at last iteration.
         auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt,
@@ -2909,8 +2928,9 @@ struct XArrayCoorOpConversion
       mlir::Value base =
           getBaseAddrFromBox(loc, baseBoxTyPair, operands[0], rewriter);
       llvm::SmallVector<mlir::LLVM::GEPArg> args{offset};
-      auto addr = mlir::LLVM::GEPOp::create(rewriter, loc, llvmPtrTy, byteTy,
-                                            base, args, gepFlags);
+      auto addr =
+          mlir::LLVM::GEPOp::create(rewriter, loc, llvmPtrTy, byteTy, base,
+                                    args, mlir::LLVM::GEPNoWrapFlags::nusw);
       if (coor.getSubcomponent().empty()) {
         rewriter.replaceOp(coor, addr);
         return mlir::success();
