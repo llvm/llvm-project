@@ -30,6 +30,11 @@ EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
   EJitPassBuilder::registerCGSCCAnalyses(CGAM_);
   EJitPassBuilder::registerModuleAnalyses(MAM_);
   EJitPassBuilder::crossRegisterProxies(LAM_, FAM_, CGAM_, MAM_);
+
+  // Pre-build the L1 pipeline — always runs, so cache it.
+  L1FPM_.addPass(SCCPPass());
+  L1FPM_.addPass(ADCEPass());
+  L1FPM_.addPass(SimplifyCFGPass());
 }
 
 void EJitOptimizer::clearAnalyses() {
@@ -115,16 +120,10 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
   // L1: SCCP + ADCE + SimplifyCFG — constant propagation, dead code
   // elimination, and CFG cleanup. Captures the vast majority of EJIT
   // performance gains (may_const load → constant → branch folding).
-  {
-    FunctionPassManager FPM;
-    FPM.addPass(SCCPPass());
-    FPM.addPass(ADCEPass());
-    FPM.addPass(SimplifyCFGPass());
-
-    for (Function &F : M.functions())
-      if (!F.isDeclaration())
-        FPM.run(F, FAM_);
-  }
+  // L1FPM_ is pre-built in the constructor and reused across compilations.
+  for (Function &F : M.functions())
+    if (!F.isDeclaration())
+      L1FPM_.run(F, FAM_);
 
   // L2: Inline always_inline helpers, then clean up + re-run
   // StructFieldPass for loads exposed by inlining.

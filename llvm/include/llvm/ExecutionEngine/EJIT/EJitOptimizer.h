@@ -63,6 +63,9 @@ private:
   FunctionAnalysisManager FAM_;
   CGSCCAnalysisManager CGAM_;
   ModuleAnalysisManager MAM_;
+
+  // Cached L1 pass pipeline — SCCP+ADCE+SimplifyCFG combination created once.
+  FunctionPassManager L1FPM_;
 };
 
 } // namespace ejit
