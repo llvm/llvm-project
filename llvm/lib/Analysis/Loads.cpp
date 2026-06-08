@@ -454,27 +454,14 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
   return !LI.isUnordered() || suppressSpeculativeLoadForSanitizers(LI);
 }
 
-/// Check if executing a load of this pointer value cannot trap.
-///
-/// If DT and ScanFrom are specified this method performs context-sensitive
-/// analysis and returns true if it is safe to load immediately before ScanFrom.
-///
-/// If it is not obviously safe to load from the specified pointer, we do
-/// a quick local scan of the basic block containing \c ScanFrom, to determine
-/// if the address is already accessed.
-///
-/// This uses the pointee type to determine how many bytes need to be safe to
-/// load from the pointer.
 bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
                                        const DataLayout &DL,
                                        Instruction *ScanFrom,
                                        AssumptionCache *AC,
                                        const DominatorTree *DT,
                                        const TargetLibraryInfo *TLI) {
-  // If DT is not specified we can't make context-sensitive query
-  const Instruction* CtxI = DT ? ScanFrom : nullptr;
-  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, AC, DT,
-                                         TLI)) {
+  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, ScanFrom, AC,
+                                         DT, TLI)) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
     // load.
     if (!ScanFrom || !suppressSpeculativeLoadForSanitizers(*ScanFrom))

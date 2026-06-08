@@ -337,6 +337,8 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
     return CEB->getReturnStmt();
   if (auto FEP = P.getAs<FunctionExitPoint>())
     return FEP->getStmt();
+  if (auto LE = P.getAs<LifetimeEnd>())
+    return LE->getTriggerStmt();
 
   return nullptr;
 }

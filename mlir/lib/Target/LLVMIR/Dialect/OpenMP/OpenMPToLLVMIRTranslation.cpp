@@ -413,6 +413,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.hasThreadLimitMultiDim())
       result = todo("thread_limit with multi-dimensional values");
   };
+  auto checkMap = [&todo](auto op, LogicalResult &result) {
+    if (!op.getMapIterated().empty())
+      result = todo("map/motion clause with iterator modifier");
+  };
 
   auto checkDynGroupprivate = [&todo](auto op, LogicalResult &result) {
     if (op.getDynGroupprivateSize())
@@ -489,15 +493,23 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         if (totalBits > 128)
           result = todo("compare for complex types wider than 128 bits");
       })
-      .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>(
-          [&](auto op) { checkDepend(op, result); })
-      .Case([&](omp::TargetUpdateOp op) { checkDepend(op, result); })
+      .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>([&](auto op) {
+        checkDepend(op, result);
+        checkMap(op, result);
+      })
+      .Case([&](omp::TargetUpdateOp op) {
+        checkDepend(op, result);
+        checkMap(op, result);
+      })
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
         checkInReduction(op, result);
+        checkMap(op, result);
         checkThreadLimit(op, result);
       })
+      .Case([&](omp::TargetDataOp op) { checkMap(op, result); })
+      .Case([&](omp::DeclareMapperInfoOp op) { checkMap(op, result); })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
         // checked above.
@@ -6819,6 +6831,9 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
          "function only supported for host device codegen");
   auto declMapperOp = cast<omp::DeclareMapperOp>(op);
   auto declMapperInfoOp = declMapperOp.getDeclareMapperInfo();
+  if (failed(checkImplementationStatus(*declMapperInfoOp)))
+    return llvm::make_error<PreviouslyReportedError>();
+
   DataLayout dl = DataLayout(declMapperOp->getParentOfType<ModuleOp>());
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::Type *varType = moduleTranslation.convertType(declMapperOp.getType());

@@ -1658,6 +1658,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
+    ( `map_iterated` `(` $map_iterated^ `:` type($map_iterated) `)` )?
     custom<TargetOpRegion>(
         $region, $has_device_addr_vars, type($has_device_addr_vars),
         $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
@@ -2134,17 +2135,18 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
   let hasRegionVerifier = 1;
 }
 
-def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
-    HasParent<"DeclareMapperOp">,
-    Terminator
-  ], clauses = [
-    OpenMP_MapClause
-  ]> {
+def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info",
+                                    [AttrSizedOperandSegments,
+                                     HasParent<"DeclareMapperOp">, Terminator],
+                                    clauses = [OpenMP_MapClause]> {
   let summary = "declare mapper info";
   let description = [{
     This Op is used to capture the map information related to it's
     parent DeclareMapperOp.
   }] # clausesDescription;
+
+  let builders = [OpBuilder<(
+      ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>];
 
   let extraClassDeclaration = [{
     // Override BlockArgOpenMPOpInterface method because `map` clauses have no
@@ -2563,9 +2565,7 @@ def AffinityEntryOp : OpenMP_Op<"affinity_entry", [Pure]> {
 // Iterator Op
 //===----------------------------------------------------------------------===//
 
-def IteratorOp : OpenMP_Op<"iterator",
-                           [AttrSizedOperandSegments,
-                            SingleBlockImplicitTerminator<"YieldOp">],
+def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
                            clauses = [OpenMP_LoopRelatedClause]> {
   let summary = "OpenMP iterator modifier";
   let description = [{

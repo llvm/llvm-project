@@ -1,0 +1,22 @@
+//===- llvm/BundleAttributes.def - LLVM Bundle Attributes -------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+ATTR(Align, align)
+ATTR(Cold, cold)
+ATTR(Dereferenceable, dereferenceable)
+ATTR(DereferenceableOrNull, dereferenceable_or_null)
+ATTR(Ignore, ignore)
+ATTR(NonNull, nonnull)
+
+// FIXME: Is this actually useful?
+// It's currently exclusively emitted through tests.
+ATTR(NoUndef, noundef)
+
+ATTR(SeparateStorage, separate_storage)
+
+#undef ATTR

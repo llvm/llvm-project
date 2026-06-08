@@ -2308,7 +2308,80 @@ static ParseResult parseCaptureType(OpAsmParser &parser,
   return success();
 }
 
-static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
+static LogicalResult verifyMapInfoForMapClause(
+    Operation *op, mlir::omp::MapInfoOp mapInfoOp,
+    llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> &updateToVars,
+    llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>>
+        &updateFromVars) {
+  mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
+
+  bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
+  bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
+  bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
+
+  bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
+  bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
+  bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
+  bool attach = mapTypeToBool(mapTypeBits, ClauseMapFlags::attach);
+
+  if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
+    return emitError(op->getLoc(),
+                     "to, from, tofrom and alloc map types are permitted");
+
+  if (isa<TargetEnterDataOp>(op) && (from || del))
+    return emitError(op->getLoc(), "to and alloc map types are permitted");
+
+  if (isa<TargetExitDataOp>(op) && to)
+    return emitError(op->getLoc(),
+                     "from, release and delete map types are permitted");
+
+  if (isa<TargetUpdateOp>(op)) {
+    if (del) {
+      return emitError(op->getLoc(),
+                       "at least one of to or from map types must be "
+                       "specified, other map types are not permitted");
+    }
+
+    if (!to && !from && !attach) {
+      return emitError(op->getLoc(),
+                       "at least one of to or from or attach map types must be "
+                       "specified, other map types are not permitted");
+    }
+
+    auto updateVar = mapInfoOp.getVarPtr();
+
+    if ((to && from) || (to && updateFromVars.contains(updateVar)) ||
+        (from && updateToVars.contains(updateVar))) {
+      return emitError(
+          op->getLoc(),
+          "either to or from map types can be specified, not both");
+    }
+
+    if (always || close || implicit) {
+      return emitError(
+          op->getLoc(),
+          "present, mapper and iterator map type modifiers are permitted");
+    }
+
+    // It's possible we have an attach map, in which case if there is no to
+    // or from tied to it, we skip insertion.
+    if (to || from) {
+      to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
+    }
+  }
+
+  if ((mapInfoOp.getVarPtrPtr() && !mapInfoOp.getVarPtrPtrType()) ||
+      (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
+    return emitError(op->getLoc(),
+                     "if varPtrPtr or varPtrPtrType is specified, then both "
+                     "must be present");
+  }
+
+  return success();
+}
+
+static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
+                                     OperandRange mapIterated) {
   llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateToVars;
   llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateFromVars;
 
@@ -2317,76 +2390,34 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
       return emitError(op->getLoc(), "missing map operation");
 
     if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
-      mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
-
-      bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
-      bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
-      bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
-
-      bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
-      bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
-      bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
-      bool attach = mapTypeToBool(mapTypeBits, ClauseMapFlags::attach);
-
-      if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
-        return emitError(op->getLoc(),
-                         "to, from, tofrom and alloc map types are permitted");
-
-      if (isa<TargetEnterDataOp>(op) && (from || del))
-        return emitError(op->getLoc(), "to and alloc map types are permitted");
-
-      if (isa<TargetExitDataOp>(op) && to)
-        return emitError(op->getLoc(),
-                         "from, release and delete map types are permitted");
-
-      if (isa<TargetUpdateOp>(op)) {
-        if (del) {
-          return emitError(op->getLoc(),
-                           "at least one of to or from map types must be "
-                           "specified, other map types are not permitted");
-        }
-
-        if (!to && !from && !attach) {
-          return emitError(
-              op->getLoc(),
-              "at least one of to or from or attach map types must be "
-              "specified, other map types are not permitted");
-        }
-
-        auto updateVar = mapInfoOp.getVarPtr();
-
-        if ((to && from) || (to && updateFromVars.contains(updateVar)) ||
-            (from && updateToVars.contains(updateVar))) {
-          return emitError(
-              op->getLoc(),
-              "either to or from map types can be specified, not both");
-        }
-
-        if (always || close || implicit) {
-          return emitError(
-              op->getLoc(),
-              "present, mapper and iterator map type modifiers are permitted");
-        }
-
-        // It's possible we have an attach map, in which case if there is no to
-        // or from tied to it, we skip insertion.
-        if (to || from) {
-          to ? updateToVars.insert(updateVar)
-             : updateFromVars.insert(updateVar);
-        }
-      }
-
-      if ((mapInfoOp.getVarPtrPtr() && !mapInfoOp.getVarPtrPtrType()) ||
-          (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
-        return emitError(
-            op->getLoc(),
-            "if varPtrPtr or varPtrPtrType is specified, then both "
-            "must be present");
-      }
+      if (failed(verifyMapInfoForMapClause(op, mapInfoOp, updateToVars,
+                                           updateFromVars)))
+        return failure();
     } else if (!isa<DeclareMapperInfoOp>(op)) {
       return emitError(op->getLoc(),
                        "map argument is not a map entry operation");
     }
+  }
+
+  // Verify iterated map entries.
+  for (auto iterVal : mapIterated) {
+    auto iterOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
+    if (!iterOp)
+      return op->emitOpError() << "'map_iterated' arguments must be defined by "
+                                  "'omp.iterator' ops";
+
+    // Check that the iterator body yields a value defined by omp.map.info.
+    auto yieldOp =
+        cast<mlir::omp::YieldOp>(iterOp.getRegion().front().getTerminator());
+    auto yieldedMapInfo =
+        yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
+    if (!yieldedMapInfo)
+      return op->emitOpError() << "'map_iterated' iterator body must yield "
+                                  "a value defined by 'omp.map.info'";
+
+    if (failed(verifyMapInfoForMapClause(op, yieldedMapInfo, updateToVars,
+                                         updateFromVars)))
+      return failure();
   }
 
   return success();
@@ -2448,13 +2479,13 @@ LogicalResult MapInfoOp::verify() {
 void TargetDataOp::build(OpBuilder &builder, OperationState &state,
                          const TargetDataOperands &clauses) {
   TargetDataOp::build(builder, state, clauses.device, clauses.ifExpr,
-                      clauses.mapVars, clauses.useDeviceAddrVars,
-                      clauses.useDevicePtrVars);
+                      clauses.mapVars, clauses.mapIterated,
+                      clauses.useDeviceAddrVars, clauses.useDevicePtrVars);
 }
 
 LogicalResult TargetDataOp::verify() {
-  if (getMapVars().empty() && getUseDevicePtrVars().empty() &&
-      getUseDeviceAddrVars().empty()) {
+  if (getMapVars().empty() && getMapIterated().empty() &&
+      getUseDevicePtrVars().empty() && getUseDeviceAddrVars().empty()) {
     return ::emitError(this->getLoc(),
                        "At least one of map, use_device_ptr_vars, or "
                        "use_device_addr_vars operand must be present");
@@ -2468,7 +2499,7 @@ LogicalResult TargetDataOp::verify() {
                                       getUseDeviceAddrVars())))
     return failure();
 
-  return verifyMapClause(*this, getMapVars());
+  return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2483,15 +2514,16 @@ void TargetEnterDataOp::build(
       builder, state, makeArrayAttr(ctx, clauses.dependKinds),
       clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
       clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
-      clauses.nowait);
+      clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetEnterDataOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2505,15 +2537,16 @@ void TargetExitDataOp::build(OpBuilder &builder, OperationState &state,
       builder, state, makeArrayAttr(ctx, clauses.dependKinds),
       clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
       clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
-      clauses.nowait);
+      clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetExitDataOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2527,15 +2560,16 @@ void TargetUpdateOp::build(OpBuilder &builder, OperationState &state,
                         clauses.dependVars,
                         makeArrayAttr(ctx, clauses.dependIteratedKinds),
                         clauses.dependIterated, clauses.device, clauses.ifExpr,
-                        clauses.mapVars, clauses.nowait);
+                        clauses.mapVars, clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetUpdateOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2556,7 +2590,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
       clauses.hasDeviceAddrVars, clauses.hostEvalVars, clauses.ifExpr,
       /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
       /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
-      clauses.nowait, clauses.privateVars,
+      clauses.mapIterated, clauses.nowait, clauses.privateVars,
       makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
       clauses.threadLimitVars,
       /*private_maps=*/nullptr);
@@ -2572,7 +2606,7 @@ LogicalResult TargetOp::verify() {
                                       getHasDeviceAddrVars())))
     return failure();
 
-  if (failed(verifyMapClause(*this, getMapVars())))
+  if (failed(verifyMapClause(*this, getMapVars(), getMapIterated())))
     return failure();
 
   if (failed(verifyDynGroupprivateClause(
@@ -3432,8 +3466,14 @@ LogicalResult DistributeOp::verifyRegions() {
 // DeclareMapperOp / DeclareMapperInfoOp
 //===----------------------------------------------------------------------===//
 
+void DeclareMapperInfoOp::build(OpBuilder &builder, OperationState &state,
+                                const DeclareMapperInfoOperands &clauses) {
+  DeclareMapperInfoOp::build(builder, state, clauses.mapVars,
+                             clauses.mapIterated);
+}
+
 LogicalResult DeclareMapperInfoOp::verify() {
-  return verifyMapClause(*this, getMapVars());
+  return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 LogicalResult DeclareMapperOp::verifyRegions() {
