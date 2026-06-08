@@ -79,7 +79,9 @@ class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 
 def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
   I32EnumAttrCase<"C", 1, "c">,
-  I32EnumAttrCase<"CXX", 2, "cxx">
+  I32EnumAttrCase<"CXX", 2, "cxx">,
+  I32EnumAttrCase<"OpenCLC", 3, "opencl_c">,
+  I32EnumAttrCase<"OpenCLCXX", 4, "opencl_cxx">
 ]> {
   // The enum attr class is defined in `CIR_SourceLanguageAttr` below,
   // so that it can define extra class methods.
@@ -98,6 +100,10 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
     module attributes {cir.lang = cir.lang<c>} {}
     // Module compiled from C++.
     module attributes {cir.lang = cir.lang<cxx>} {}
+    // Module compiled from OpenCL C.
+    module attributes {cir.lang = cir.lang<opencl_c>} {}
+    // Module compiled from C++ for OpenCL.
+    module attributes {cir.lang = cir.lang<opencl_cxx>} {}
     ```
 
     Module source language attribute name is `cir.lang` is defined by
@@ -107,6 +113,8 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
   let extraClassDeclaration = [{
     bool isC() const { return getValue() == SourceLanguage::C; }
     bool isCXX() const { return getValue() == SourceLanguage::CXX; }
+    bool isOpenCLC() const { return getValue() == SourceLanguage::OpenCLC; }
+    bool isOpenCLCXX() const { return getValue() == SourceLanguage::OpenCLCXX; }
   }];
 }
 
