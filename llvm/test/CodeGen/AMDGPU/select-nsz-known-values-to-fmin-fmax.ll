@@ -843,14 +843,14 @@ define <2 x double> @v_max_pat_v2f64_oge(<2 x double> nofpclass(nan) %a, <2 x do
 ; GFX950-LABEL: v_max_pat_v2f64_oge:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_ge_f64_e32 vcc, v[0:1], v[4:5]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; GFX950-NEXT:    v_cmp_ge_f64_e32 vcc, v[2:3], v[6:7]
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, v7, v3, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
+; GFX950-NEXT:    v_cmp_ge_f64_e32 vcc, v[0:1], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_max_pat_v2f64_oge:
@@ -911,14 +911,14 @@ define <2 x double> @v_min_pat_v2f64_olt(<2 x double> nofpclass(nan) %a, <2 x do
 ; GFX950-LABEL: v_min_pat_v2f64_olt:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[4:5]
-; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; GFX950-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; GFX950-NEXT:    v_cmp_lt_f64_e32 vcc, v[2:3], v[6:7]
 ; GFX950-NEXT:    s_nop 1
-; GFX950-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, v7, v3, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
+; GFX950-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[4:5]
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX950-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_min_pat_v2f64_olt:

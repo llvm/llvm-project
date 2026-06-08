@@ -1091,10 +1091,11 @@ define amdgpu_kernel void @store_misaligned64_constant_offsets() {
 ; GFX1250-LABEL: store_misaligned64_constant_offsets:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0x7b :: v_dual_mov_b32 v1, 0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v1
-; GFX1250-NEXT:    ds_store_b128 v1, v[0:3]
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], 0x7b
+; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX1250-NEXT:    ds_store_b128 v4, v[0:3]
 ; GFX1250-NEXT:    s_endpgm
   store i64 123, ptr addrspace(3) @bar, align 4
   store i64 123, ptr addrspace(3) getelementptr inbounds ([4 x i64], ptr addrspace(3) @bar, i32 0, i32 1), align 4
