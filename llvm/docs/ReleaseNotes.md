@@ -87,6 +87,11 @@ Makes programs 10x faster by doing Special New Thing.
   and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
+* Assume bundles now only accept attributes that are actually handled.
+  Specifically, they are ``align``, ``cold``, ``dereferenceable``,
+  ``dereferenceable_or_null``, ``nonnull``, ``noundef`` and
+  ``separate_storage``.
+
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
 ### Changes to LLVM infrastructure
@@ -137,10 +142,10 @@ Makes programs 10x faster by doing Special New Thing.
 * ``ConstantFP`` now supports vector types and is the canonical form returned by
   ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
 
-* ``DenseMap`` and ``DenseSet`` ``erase`` now invalidates all iterators and
-  references into the container, not just the iterator for the erased element.
-  Use the new ``remove_if`` member to erase matching elements in a single pass
-  instead of erasing while iterating.
+* ``DenseMap``, ``DenseSet``, ``StringMap``, and ``StringSet`` ``erase`` now
+  invalidates all iterators and references into the container, not just the
+  iterator for the erased element. Use the new ``remove_if`` member to erase
+  matching elements in a single pass instead of erasing while iterating.
 
 * ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
   refactored and no longer take a type. This API is also now precomputed in

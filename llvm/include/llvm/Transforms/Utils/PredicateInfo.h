@@ -52,6 +52,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
@@ -132,9 +133,9 @@ protected:
 
 class PredicateBundleAssume : public PredicateAssume {
 public:
-  Attribute::AttrKind AttrKind;
+  BundleAttr AttrKind;
   PredicateBundleAssume(Value *Op, IntrinsicInst *AssumeInst,
-                        Attribute::AttrKind AttrKind)
+                        BundleAttr AttrKind)
       : PredicateAssume(PT_BundleAssume, Op, AssumeInst, nullptr),
         AttrKind(AttrKind) {}
 
