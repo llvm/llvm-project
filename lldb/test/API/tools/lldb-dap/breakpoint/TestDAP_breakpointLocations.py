@@ -76,14 +76,14 @@ class TestDAP_breakpointLocations(lldbdap_testcase.DAPTestCaseBase):
         self.maxDiff = None
         self.assertTrue(response["success"])
         # On some systems, there is an additional breakpoint available
-        # at line 41, column 3, i.e. at the end of the loop. To make this
-        # test more portable, only check that all expected breakpoints are
-        # presented, but also accept additional breakpoints.
+        # at loop_line + 1, column 3, i.e. at the end of the loop. To make
+        # this test more portable, only check that all expected breakpoints
+        # are presented, but also accept additional breakpoints.
         expected_breakpoints = [
-            {"column": 39, "line": 41},
-            {"column": 51, "line": 41},
-            {"column": 3, "line": 43},
-            {"column": 18, "line": 43},
+            {"column": 39, "line": loop_line},
+            {"column": 51, "line": loop_line},
+            {"column": 3, "line": loop_line + 2},
+            {"column": 18, "line": loop_line + 2},
         ]
         for bp in expected_breakpoints:
             self.assertIn(bp, response["body"]["breakpoints"])

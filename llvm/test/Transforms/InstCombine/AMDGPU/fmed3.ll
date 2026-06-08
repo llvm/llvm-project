@@ -268,6 +268,66 @@ define float @fmed3_constant_src2_1_f32(float %x, float %y) #1 {
   ret float %med3
 }
 
+; fmed3(-0, -0, +0) should match hardware median, -0 (sorted: {-0, -0, +0}, middle = -0).
+define float @fmed3_neg0_neg0_pos0_f32() #1 {
+; CHECK-LABEL: define float @fmed3_neg0_neg0_pos0_f32(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float -0.0, float -0.0, float 0.0)
+  ret float %med3
+}
+
+; fmed3(-0, +0, -0): exercises the second arm of fmed3AMDGCN (Src1 is max).
+define float @fmed3_neg0_pos0_neg0_f32() #1 {
+; CHECK-LABEL: define float @fmed3_neg0_pos0_neg0_f32(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float -0.0, float 0.0, float -0.0)
+  ret float %med3
+}
+
+; fmed3(+0, -0, -0): exercises the third arm of fmed3AMDGCN (Src2 is max).
+define float @fmed3_pos0_neg0_neg0_f32() #1 {
+; CHECK-LABEL: define float @fmed3_pos0_neg0_neg0_f32(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0.0, float -0.0, float -0.0)
+  ret float %med3
+}
+
+; fmed3(N, -0, +0) sorted: {N, -0, +0}, median = -0.
+define float @fmed3_negone_neg0_pos0_f32() #1 {
+; CHECK-LABEL: define float @fmed3_negone_neg0_pos0_f32(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float -1.0, float -0.0, float 0.0)
+  ret float %med3
+}
+
+; fmed3(-0, N, +0) sorted: {N, -0, +0}, median = -0.
+define float @fmed3_neg0_negone_pos0_f32() #1 {
+; CHECK-LABEL: define float @fmed3_neg0_negone_pos0_f32(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float -0.0, float -1.0, float 0.0)
+  ret float %med3
+}
+
+; fmed3(-0, +0, N) sorted: {N, -0, +0}, median = -0.
+define float @fmed3_neg0_pos0_negone_f32() #1 {
+; CHECK-LABEL: define float @fmed3_neg0_pos0_negone_f32(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float -0.0, float 0.0, float -1.0)
+  ret float %med3
+}
+
 define float @fmed3_x_qnan0_qnan1_f32(float %x) #1 {
 ; CHECK-LABEL: define float @fmed3_x_qnan0_qnan1_f32(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR1]] {

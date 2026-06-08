@@ -133,6 +133,10 @@ const char *dxbc::getProgramPartName(bool IsDebug) {
   return IsDebug ? "ILDB" : "DXIL";
 }
 
+bool dxbc::isProgramPart(StringRef PartName) {
+  return PartName == "DXIL" || PartName == "ILDB";
+}
+
 bool ShaderHash::isPopulated() {
   static uint8_t Zeros[16] = {0};
   return Flags > 0 || 0 != memcmp(&Digest, &Zeros, 16);

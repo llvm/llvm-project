@@ -7260,7 +7260,11 @@ table
      ============ ==============================================================
 
 The code sequences used to implement the memory model are defined in the
-following sections:
+sections listed below.
+
+**Note:** The presence of :ref:`AV metadata<amdgpu-av-metadata>` can **suppress
+cache operations** (such as write-back or invalidate) that are usually part of
+these sequences.
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`

@@ -1631,6 +1631,36 @@ bool GetField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
   if (!CheckRange(S, OpPC, Obj, CSK_Field))
     return false;
+
+  // FIXME(postswitch): The isUnknownSizeArray() check here is only needed
+  // to keep an invalid sample producing the same diagnostics as the current
+  // interpreter.
+  if (!Obj.getFieldDesc()->isRecord() && !Obj.isUnknownSizeArray())
+    return false;
+
+  const Pointer &Field = Obj.atField(I);
+  if (!CheckLoad(S, OpPC, Field))
+    return false;
+  S.Stk.push<T>(Field.deref<T>());
+  return true;
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Pushes the value of the pointer's field on the stack
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
+  const Pointer &Obj = S.Stk.pop<Pointer>();
+  if (!CheckNull(S, OpPC, Obj, CSK_Field))
+    return false;
+  if (!CheckRange(S, OpPC, Obj, CSK_Field))
+    return false;
+
+  // FIXME(postswitch): The isUnknownSizeArray() check here is only needed
+  // to keep an invalid sample producing the same diagnostics as the current
+  // interpreter.
+  if (!Obj.getFieldDesc()->isRecord() && !Obj.isUnknownSizeArray())
+    return false;
+
   const Pointer &Field = Obj.atField(I);
   if (!CheckLoad(S, OpPC, Field))
     return false;
@@ -1651,22 +1681,6 @@ bool SetField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
   Field.initialize();
   Field.deref<T>() = Value;
-  return true;
-}
-
-/// 1) Pops a pointer from the stack
-/// 2) Pushes the value of the pointer's field on the stack
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const Pointer &Obj = S.Stk.pop<Pointer>();
-  if (!CheckNull(S, OpPC, Obj, CSK_Field))
-    return false;
-  if (!CheckRange(S, OpPC, Obj, CSK_Field))
-    return false;
-  const Pointer &Field = Obj.atField(I);
-  if (!CheckLoad(S, OpPC, Field))
-    return false;
-  S.Stk.push<T>(Field.deref<T>());
   return true;
 }
 
@@ -3894,7 +3908,15 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     S.Stk.push<Pointer>(0, ElementDesc);
     return true;
   }
-  assert(NumElements.isPositive());
+  if (NumElements.isNegative()) {
+    if (!IsNoThrow) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
+          << NumElements.toDiagnosticString(S.getASTContext());
+      return false;
+    }
+    S.Stk.push<Pointer>(0, nullptr);
+    return true;
+  }
 
   if (!CheckArraySize(S, OpPC, static_cast<uint64_t>(NumElements)))
     return false;

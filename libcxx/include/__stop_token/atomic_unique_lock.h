@@ -10,9 +10,10 @@
 #ifndef _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
 #define _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
 
+#include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
 #include <__bit/has_single_bit.h>
 #include <__config>
-#include <atomic>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

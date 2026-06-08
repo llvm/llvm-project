@@ -191,3 +191,72 @@ define i1 @test_dereferenceable_non_zero_size_is_nonnull(ptr %ptr) {
   %2 = icmp eq ptr %ptr, null
   ret i1 %2
 }
+
+define i1 @test_align_with_constant_offset_0(ptr %ptr) {
+; CHECK-LABEL: @test_align_with_constant_offset_0(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 0) ]
+; CHECK-NEXT:    ret i1 true
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %ptr, i64 8, i64 0)]
+  %intptr = ptrtoint ptr %ptr to i64
+  %and = and i64 %intptr, 7
+  %is_aligned = icmp eq i64 %and, 0
+  ret i1 %is_aligned
+}
+
+define i1 @test_align_with_constant_offset_1(ptr %ptr) {
+; CHECK-LABEL: @test_align_with_constant_offset_1(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 1) ]
+; CHECK-NEXT:    [[INTPTR:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[INTPTR]], 7
+; CHECK-NEXT:    [[IS_ALIGNED:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[IS_ALIGNED]]
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %ptr, i64 8, i64 1)]
+  %intptr = ptrtoint ptr %ptr to i64
+  %and = and i64 %intptr, 7
+  %is_aligned = icmp eq i64 %and, 0
+  ret i1 %is_aligned
+}
+
+define i1 @test_align_with_constant_offset_4(ptr %ptr) {
+; CHECK-LABEL: @test_align_with_constant_offset_4(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 4) ]
+; CHECK-NEXT:    [[INTPTR:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[INTPTR]], 4
+; CHECK-NEXT:    [[IS_ALIGNED:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[IS_ALIGNED]]
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %ptr, i64 8, i64 4)]
+  %intptr = ptrtoint ptr %ptr to i64
+  %and = and i64 %intptr, 7
+  %is_aligned = icmp eq i64 %and, 0
+  ret i1 %is_aligned
+}
+
+define i1 @test_align_with_constant_offset_8(ptr %ptr) {
+; CHECK-LABEL: @test_align_with_constant_offset_8(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 8) ]
+; CHECK-NEXT:    ret i1 true
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %ptr, i64 8, i64 8)]
+  %intptr = ptrtoint ptr %ptr to i64
+  %and = and i64 %intptr, 7
+  %is_aligned = icmp eq i64 %and, 0
+  ret i1 %is_aligned
+}
+
+define i1 @test_align_with_variable_offset(ptr %ptr, i64 %offset) {
+; CHECK-LABEL: @test_align_with_variable_offset(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 [[OFFSET:%.*]]) ]
+; CHECK-NEXT:    [[INTPTR:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[INTPTR]], 7
+; CHECK-NEXT:    [[IS_ALIGNED:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[IS_ALIGNED]]
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %ptr, i64 8, i64 %offset)]
+  %intptr = ptrtoint ptr %ptr to i64
+  %and = and i64 %intptr, 7
+  %is_aligned = icmp eq i64 %and, 0
+  ret i1 %is_aligned
+}

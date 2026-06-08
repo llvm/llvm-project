@@ -22,10 +22,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-LLVM_ABI extern cl::opt<bool> ShouldPreserveAllAttributes;
-} // namespace llvm
-
 static void RunTest(
     StringRef Head, StringRef Tail,
     std::vector<std::pair<StringRef, llvm::function_ref<void(Instruction *)>>>
@@ -125,16 +121,6 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
                                      Attribute::AttrKind::Alignment, 64));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(1),
                                      Attribute::AttrKind::Alignment, 64));
-      }));
-  Tests.push_back(std::make_pair(
-      "call void @func_many(ptr align 8 noundef %P1) cold\n", [](Instruction *I) {
-        ShouldPreserveAllAttributes.setValue(true);
-        auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I->getIterator());
-        ASSERT_TRUE(hasMatchesExactlyAttributes(
-            Assume, nullptr,
-            "(align|nounwind|norecurse|noundef|willreturn|cold)"));
-        ShouldPreserveAllAttributes.setValue(false);
       }));
   Tests.push_back(
       std::make_pair("call void @llvm.assume(i1 true)\n", [](Instruction *I) {
@@ -308,19 +294,6 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
             {48, 48}));
         ASSERT_TRUE(MapHasRightValue(
             Map, Assume, {I->getOperand(0), Attribute::Alignment}, {64, 64}));
-      }));
-  Tests.push_back(std::make_pair(
-      "call void @func_many(ptr align 8 %P1) cold\n", [](Instruction *I) {
-        ShouldPreserveAllAttributes.setValue(true);
-        auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I->getIterator());
-
-        RetainedKnowledgeMap Map;
-        fillMapFromAssume(*Assume, Map);
-
-        ASSERT_TRUE(FindExactlyAttributes(
-            Map, nullptr, "(nounwind|norecurse|willreturn|cold)"));
-        ShouldPreserveAllAttributes.setValue(false);
       }));
   Tests.push_back(
       std::make_pair("call void @llvm.assume(i1 true)\n", [](Instruction *I) {

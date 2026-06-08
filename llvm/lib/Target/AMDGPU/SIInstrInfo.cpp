@@ -11014,6 +11014,19 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
       opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
     return ValueUniformity::AlwaysUniform;
 
+  // If any of defs is divergent, report as NeverUniform. isUniformReg will
+  // calculate in more detail for each def from its reg class, if available.
+  if (MI.isInlineAsm()) {
+    for (const MachineOperand &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.isDef())
+        continue;
+      const TargetRegisterClass *RC =
+          MI.getRegClassConstraint(MO.getOperandNo(), this, &RI);
+      if (!RC || !RI.isSGPRClass(RC))
+        return ValueUniformity::NeverUniform;
+    }
+  }
+
   if (isCopyInstr(MI)) {
     const MachineOperand &srcOp = MI.getOperand(1);
     if (srcOp.isReg() && srcOp.getReg().isPhysical()) {

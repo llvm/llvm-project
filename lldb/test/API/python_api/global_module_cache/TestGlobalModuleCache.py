@@ -9,7 +9,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import os
 import shutil
-from pathlib import Path
 import time
 
 
@@ -17,28 +16,29 @@ class GlobalModuleCacheTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     # NO_DEBUG_INFO_TESTCASE = True
 
-    def check_counter_var(self, thread, value):
-        frame = thread.frames[0]
-        var = frame.FindVariable("counter")
-        self.assertTrue(var.GetError().Success(), "Got counter variable")
-        self.assertEqual(var.GetValueAsUnsigned(), value, "This was one-print")
+    def check_counter_var(self, value):
+        self.expect_expr("counter", result_value=value)
 
     def copy_to_main(self, src, dst):
-        # We are relying on the source file being newer than the .o file from
-        # a previous build, so sleep a bit here to ensure that the touch is later.
-        time.sleep(2)
         try:
-            # Make sure dst is writeable before trying to write to it.
-            subprocess.run(
-                ["chmod", "777", dst],
-                stdin=None,
-                capture_output=False,
-                encoding="utf-8",
-            )
+            if os.path.exists(dst):
+                os.chmod(dst, 0o777)
             shutil.copy(src, dst)
         except:
             self.fail(f"Could not copy {src} to {dst}")
-        Path(dst).touch()
+        # Age all existing build artifacts in the build directory to 10 seconds
+        # in the past so that the just-copied dst and the objects produced from
+        # recompiling it are both seen as newer. This ensures a full recompile
+        # and relink of the project.
+        old_mtime = time.time() - 10
+        build_dir = self.getBuildDir()
+        for fname in os.listdir(build_dir):
+            fpath = os.path.join(build_dir, fname)
+            if fpath != dst:
+                try:
+                    os.utime(fpath, (old_mtime, old_mtime))
+                except OSError:
+                    pass
 
     # The rerun tests indicate rerunning on Windows doesn't really work, so
     # this one won't either.
@@ -87,11 +87,11 @@ class GlobalModuleCacheTestCase(TestBase):
         self.build(dictionary={"C_SOURCES": main_c_path, "EXE": "a.out"})
 
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "return counter;", main_filespec
+            self, "// break here", main_filespec
         )
 
         # Make sure we ran the version we intended here:
-        self.check_counter_var(thread, 1)
+        self.check_counter_var("1")
         process.Kill()
 
         # Now copy two-print.c over main.c, rebuild, and rerun:
@@ -102,13 +102,9 @@ class GlobalModuleCacheTestCase(TestBase):
         error = lldb.SBError()
         if one_debugger:
             if one_target:
-                (_, process, thread, _) = lldbutil.run_to_breakpoint_do_run(
-                    self, target, bkpt
-                )
+                lldbutil.run_to_breakpoint_do_run(self, target, bkpt)
             else:
-                (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-                    self, "return counter;", main_filespec
-                )
+                lldbutil.run_to_source_breakpoint(self, "// break here", main_filespec)
         else:
             if one_target:
                 new_debugger = lldb.SBDebugger().Create()
@@ -123,12 +119,10 @@ class GlobalModuleCacheTestCase(TestBase):
                     self.old_debugger = None
 
                 self.addTearDownHook(cleanupDebugger)
-                (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-                    self, "return counter;", main_filespec
-                )
+                lldbutil.run_to_source_breakpoint(self, "// break here", main_filespec)
 
         # In two-print.c counter will be 2:
-        self.check_counter_var(thread, 2)
+        self.check_counter_var("2")
 
         # If we made two targets, destroy the first one, that should free up the
         # unreachable Modules:

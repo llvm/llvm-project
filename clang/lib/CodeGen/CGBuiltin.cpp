@@ -4230,6 +4230,41 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Phi);
   }
 
+  // stdc_memreverse8u8 is a no-op (single byte, nothing to swap).
+  case Builtin::BIstdc_memreverse8u8:
+    return RValue::get(EmitScalarExpr(E->getArg(0)));
+
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
+
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BI__builtin_stdc_memreverse8: {
+    Expr::EvalResult R;
+    if (E->getArg(0)->EvaluateAsInt(R, getContext())) {
+      uint64_t Size = R.Val.getInt().getZExtValue();
+      if (Size <= 1) {
+        EmitIgnoredExpr(E->getArg(1));
+        return RValue::get(nullptr);
+      }
+      if (Size == 2 || Size == 4 || Size == 8) {
+        llvm::Type *IntTy = Builder.getIntNTy(Size * 8);
+        Address PtrAddr = EmitPointerWithAlignment(E->getArg(1));
+        Address Addr = PtrAddr.withElementType(IntTy);
+        Value *Val = Builder.CreateLoad(Addr);
+        Function *F = CGM.getIntrinsic(Intrinsic::bswap, IntTy);
+        Value *Swapped = Builder.CreateCall(F, Val);
+        Builder.CreateStore(Swapped, Addr);
+        return RValue::get(nullptr);
+      }
+    }
+
+    // General case: fall back to the library function stdc_memreverse8.
+    break;
+  }
+
   case Builtin::BI__builtin_constant_p: {
     llvm::Type *ResultType = ConvertType(E->getType());
 

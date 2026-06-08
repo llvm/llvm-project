@@ -6,17 +6,53 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBLLDB_PLUGINS_PROCESS_WINDOWS_COMMON_IO_HANDLER_PROCESS_STDIO_WINDOWS_H_
-#define LIBLLDB_PLUGINS_PROCESS_WINDOWS_COMMON_IO_HANDLER_PROCESS_STDIO_WINDOWS_H_
+#ifndef LLDB_TARGET_PROCESSIOHANDLER_H
+#define LLDB_TARGET_PROCESSIOHANDLER_H
 
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/Pipe.h"
 #include "lldb/Target/Process.h"
+
+namespace lldb_private {
+
+/// Forwards lldb's STDIN to the inferior's pty (or anything writable) and
+/// supports asynchronous interrupt via an internal pipe. Used on POSIX hosts
+/// and as a no-op stub on Windows.
+class IOHandlerProcessSTDIO : public IOHandler {
+public:
+  IOHandlerProcessSTDIO(Process *process, int write_fd);
+
+  ~IOHandlerProcessSTDIO() override = default;
+
+  void SetIsRunning(bool running);
+
+  void Run() override;
+
+  void Cancel() override;
+
+  bool Interrupt() override;
+
+  void GotEOF() override {}
+
+protected:
+  Process *m_process;
+  /// Read from this file (usually actual STDIN for LLDB)
+  NativeFile m_read_file;
+  /// Write to this file (usually the primary pty for getting io to debuggee)
+  NativeFile m_write_file;
+  Pipe m_pipe;
+  std::mutex m_mutex;
+  bool m_is_running = false;
+};
+
+#ifdef _WIN32
 
 using HANDLE = void *;
 
-using namespace lldb_private;
-
+/// Forwards lldb's STDIN to the inferior on Windows hosts. Reads from the
+/// console (handling the line-buffering quirks of the Windows console) and
+/// writes the bytes into the process via Process::PutSTDIN.
 class IOHandlerProcessSTDIOWindows : public IOHandler {
 public:
   IOHandlerProcessSTDIOWindows(Process *process);
@@ -25,8 +61,8 @@ public:
 
   void SetIsRunning(bool running);
 
-  /// Peek the console for input. If it has any, drain the pipe until text input
-  /// is found or the pipe is empty.
+  /// Peek the console for input. If it has any, drain the pipe until text
+  /// input is found or the pipe is empty.
   ///
   /// \param hStdin
   ///     The handle to the standard input's pipe.
@@ -60,4 +96,8 @@ private:
   bool m_is_running = false;
 };
 
-#endif // LIBLLDB_PLUGINS_PROCESS_WINDOWS_COMMON_IO_HANDLER_PROCESS_STDIO_WINDOWS_H_
+#endif // _WIN32
+
+} // namespace lldb_private
+
+#endif // LLDB_TARGET_PROCESSIOHANDLER_H

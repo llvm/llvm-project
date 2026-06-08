@@ -75,6 +75,13 @@ scf::ExecuteRegionOp
 convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
                                              RewriterBase &rewriter);
 
+/// Record on a collapsed loop how many original loops were folded into it.
+void setCollapseCountAttr(Operation *op, uint64_t count);
+
+/// Number of original loops collapsed into op, or 1 when op carries no
+/// collapse_count attribute.
+uint64_t getCollapseCount(Operation *op);
+
 } // namespace acc
 } // namespace mlir
 

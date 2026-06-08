@@ -52,6 +52,10 @@ namespace std {
 
 #  endif // _LIBCPP_HAS_THREADS
 
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
+#    include <atomic>
+#  endif
+
 #  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <cstddef>
 #    include <iosfwd>

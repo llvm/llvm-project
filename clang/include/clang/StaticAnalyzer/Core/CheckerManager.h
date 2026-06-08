@@ -330,6 +330,11 @@ public:
                                const CallEvent &Call, ExprEngine &Eng,
                                bool wasInlined = false);
 
+  /// Run checkers for the end of a variable's lifetime.
+  void runCheckersForLifetimeEnd(ExplodedNodeSet &Dst,
+                                 const ExplodedNodeSet &Src,
+                                 const VarDecl *Decl, ExprEngine &Eng);
+
   /// Run checkers for load/store of a location.
   void runCheckersForLocation(ExplodedNodeSet &Dst,
                               const ExplodedNodeSet &Src,
@@ -493,6 +498,9 @@ public:
   using CheckCallFunc =
       CheckerFn<void (const CallEvent &, CheckerContext &)>;
 
+  using CheckLifetimeEndFunc =
+      CheckerFn<void(const VarDecl *, CheckerContext &)>;
+
   using CheckLocationFunc = CheckerFn<void(SVal location, bool isLoad,
                                            const Stmt *S, CheckerContext &)>;
 
@@ -556,6 +564,8 @@ public:
 
   void _registerForPreCall(CheckCallFunc checkfn);
   void _registerForPostCall(CheckCallFunc checkfn);
+
+  void _registerForLifetimeEnd(CheckLifetimeEndFunc checkfn);
 
   void _registerForLocation(CheckLocationFunc checkfn);
 
@@ -664,6 +674,8 @@ private:
 
   std::vector<CheckCallFunc> PreCallCheckers;
   std::vector<CheckCallFunc> PostCallCheckers;
+
+  std::vector<CheckLifetimeEndFunc> LifetimeEndCheckers;
 
   std::vector<CheckLocationFunc> LocationCheckers;
 

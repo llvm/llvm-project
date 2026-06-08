@@ -93,12 +93,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-              doxygen \
               graphviz \
               python3-github \
               ninja-build \
               texlive-font-utils
           pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
+
+      - name: Install Doxygen
+        run: |
+          curl -L https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz -o doxygen.tar.gz
+          tar -xf doxygen.tar.gz
+          sudo install -m 755 doxygen-1.17.0/bin/doxygen /usr/local/bin/doxygen
 
       - name: Build Doxygen
         env:

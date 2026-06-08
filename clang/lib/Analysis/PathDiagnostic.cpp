@@ -720,6 +720,9 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
   } else if (std::optional<FunctionExitPoint> FE =
                  P.getAs<FunctionExitPoint>()) {
     return PathDiagnosticLocation(FE->getStmt(), SMng, FE->getStackFrame());
+  } else if (std::optional<LifetimeEnd> LE = P.getAs<LifetimeEnd>()) {
+    return PathDiagnosticLocation::createEnd(LE->getTriggerStmt(), SMng,
+                                             LE->getStackFrame());
   } else {
     llvm_unreachable("Unexpected ProgramPoint");
   }

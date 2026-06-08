@@ -74,3 +74,7 @@ the macro is defined as follows::
 
 The LLVM_LIBC_FUNCTION_ATTR macro is normally defined to nothing, but can be
 defined by vendors who want to set their own attributes.
+
+When defining a variable, use the ``LLVM_LIBC_VARIABLE`` macro::
+
+    LLVM_LIBC_VARIABLE(char **, environ) = nullptr;

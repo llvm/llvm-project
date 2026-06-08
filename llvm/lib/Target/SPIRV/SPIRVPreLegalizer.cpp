@@ -514,30 +514,44 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register DstReg = MI.getOperand(0).getReg();
         Register SrcReg = MI.getOperand(1).getReg();
 
-        // TODO: handle vector types.
-        if (!MRI.getType(DstReg).isScalar()) {
-          assert(!MRI.getType(SrcReg).isScalar());
-          continue;
-        }
+        LLT DstTy = MRI.getType(DstReg);
+        LLT SrcTy = MRI.getType(SrcReg);
+        assert((DstTy.isScalar() || DstTy.isVector()) &&
+               (SrcTy.isScalar() || SrcTy.isVector()) &&
+               "Expected scalar or vector G_TRUNC types");
+        assert(DstTy.isVector() == SrcTy.isVector() &&
+               "Expected matching scalar/vector G_TRUNC types");
+        assert((!DstTy.isVector() ||
+                DstTy.getElementCount() == SrcTy.getElementCount()) &&
+               "Expected equal vector element counts");
 
-        unsigned OriginalDstWidth = MRI.getType(DstReg).getScalarSizeInBits();
-        unsigned OriginalSrcWidth = MRI.getType(SrcReg).getScalarSizeInBits();
+        unsigned OriginalDstWidth = DstTy.getScalarSizeInBits();
+        unsigned OriginalSrcWidth = SrcTy.getScalarSizeInBits();
 
         unsigned NewDstWidth = widenBitWidthToNextPow2(OriginalDstWidth);
         unsigned NewSrcWidth = widenBitWidthToNextPow2(OriginalSrcWidth);
+        LLT NewDstTy = DstTy.changeElementSize(NewDstWidth);
+        LLT NewSrcTy = SrcTy.changeElementSize(NewSrcWidth);
 
-        // No Dst width change means no truncation semantics change.
-        if (OriginalDstWidth == NewDstWidth)
+        // No Dst width change means no truncation semantics change, but the
+        // source still needs a legal type.
+        if (OriginalDstWidth == NewDstWidth) {
+          MRI.setType(SrcReg, NewSrcTy);
           continue;
+        }
 
-        MRI.setType(SrcReg, LLT::scalar(NewSrcWidth));
-        MRI.setType(DstReg, LLT::scalar(NewDstWidth));
+        MRI.setType(SrcReg, NewSrcTy);
+        MRI.setType(DstReg, NewDstTy);
 
         MIB.setInsertPt(MBB, MI.getIterator());
         APInt Mask = APInt::getLowBitsSet(NewSrcWidth, OriginalDstWidth);
-        auto MaskReg = MIB.buildConstant(LLT::scalar(NewSrcWidth), Mask);
-        Register MaskedReg =
-            MRI.createGenericVirtualRegister(LLT::scalar(NewSrcWidth));
+        MachineInstrBuilder MaskReg =
+            DstTy.isVector()
+                ? MIB.buildBuildVectorConstant(
+                      NewSrcTy,
+                      SmallVector<APInt, 4>(DstTy.getNumElements(), Mask))
+                : MIB.buildConstant(NewSrcTy, Mask);
+        Register MaskedReg = MRI.createGenericVirtualRegister(NewSrcTy);
         MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
 
         if (NewSrcWidth == NewDstWidth) {
@@ -579,6 +593,13 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
             ElementTy, MI,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        // The intrinsic also carries vector-of-pointer values produced by
+        // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
+        // the vreg's LLT.
+        LLT RegTy = MRI.getType(Reg);
+        if (RegTy.isValid() && RegTy.isVector())
+          AssignedPtrType = GR->getOrCreateSPIRVVectorType(
+              AssignedPtrType, RegTy.getNumElements(), MIB, true);
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.

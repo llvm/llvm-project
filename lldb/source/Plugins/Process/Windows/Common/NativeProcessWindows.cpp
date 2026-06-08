@@ -749,4 +749,19 @@ void NativeProcessWindows::STDIOReadThreadBytesReceived(void *baton,
   self->m_delegate.NewProcessOutput(
       self, llvm::StringRef(static_cast<const char *>(src), src_len));
 }
+
+size_t NativeProcessWindows::WriteStdin(const void *buf, size_t len,
+                                        Status &error) {
+  if (!m_stdio_communication.HasConnection()) {
+    error = Status::FromErrorString(
+        "no ConPTY connection on this NativeProcessWindows");
+    return 0;
+  }
+  ConnectionStatus status;
+  size_t written = m_stdio_communication.Write(buf, len, status, &error);
+  if (status != eConnectionStatusSuccess && error.Success())
+    error = Status::FromErrorStringWithFormatv(
+        "ConPTY stdin write returned status {0}", static_cast<int>(status));
+  return written;
+}
 } // namespace lldb_private

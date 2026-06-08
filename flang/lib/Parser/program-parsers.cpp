@@ -183,12 +183,14 @@ constexpr auto limitedSpecificationPart{inContext("specification part"_en_US,
         implicitPart, many(limitedDeclarationConstruct)))};
 
 // R508 specification-construct ->
-//        derived-type-def | enum-def | generic-stmt | interface-block |
-//        parameter-stmt | procedure-declaration-stmt |
+//        derived-type-def | enum-def |  enumeration-type-def | generic-stmt |
+//        interface-block | parameter-stmt | procedure-declaration-stmt |
 //        other-specification-stmt | type-declaration-stmt
 TYPE_CONTEXT_PARSER("specification construct"_en_US,
     first(construct<SpecificationConstruct>(indirect(Parser<DerivedTypeDef>{})),
         construct<SpecificationConstruct>(indirect(Parser<EnumDef>{})),
+        construct<SpecificationConstruct>(
+            indirect(Parser<EnumerationTypeDef>{})),
         construct<SpecificationConstruct>(
             statement(indirect(Parser<GenericStmt>{}))),
         construct<SpecificationConstruct>(indirect(interfaceBlock)),

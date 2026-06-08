@@ -372,6 +372,12 @@ inline bool isPointerTy(const Type *T) {
   return isUntypedPointerTy(T) || isTypedPointerTy(T);
 }
 
+// True if this is a vector whose element type is an (untyped) PointerType.
+inline bool isUntypedPointerVectorTy(const Type *T) {
+  return isa_and_nonnull<VectorType>(T) &&
+         isUntypedPointerTy(T->getScalarType());
+}
+
 // Get the address space of this pointer or pointer vector type for instances of
 // PointerType or TypedPointerType.
 inline unsigned getPointerAddressSpace(const Type *T) {

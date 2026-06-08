@@ -263,6 +263,7 @@ LLVM_ABI PartType parsePartType(StringRef S);
 bool isDebugProgramPart(PartType PT);
 
 const char *getProgramPartName(bool IsDebug);
+bool isProgramPart(StringRef PartName);
 
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
