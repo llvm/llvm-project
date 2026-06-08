@@ -57154,19 +57154,20 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Strip TRUNCATE/ZERO_EXTEND/ANY_EXTEND wrappers and `and x, C` where C
-// preserves the low log2(BW) bits; these are transparent to BT/BTR/BTS/BTC,
-// which implicitly mask the bit index to log2(BW) bits.
+// Strip ext/trunc/mask wrappers that do not change a bit index interpreted
+// modulo BW. Don't peek below log2(BW) bits (e.g. through a zext from i1):
+// a narrower value no longer determines the bit index on its own.
 static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
+  assert(V.getScalarValueSizeInBits() >= Log2_32(BW) &&
+         "bit position type must cover the whole index range");
   APInt LowBits =
       APInt::getLowBitsSet(V.getScalarValueSizeInBits(), Log2_32(BW));
   for (;;) {
     unsigned Op = V.getOpcode();
-    if (Op == ISD::TRUNCATE || Op == ISD::ZERO_EXTEND ||
-        Op == ISD::ANY_EXTEND) {
+    if ((Op == ISD::TRUNCATE || Op == ISD::ZERO_EXTEND ||
+         Op == ISD::ANY_EXTEND) &&
+        V.getOperand(0).getScalarValueSizeInBits() >= Log2_32(BW)) {
       V = V.getOperand(0);
-      assert(V.getScalarValueSizeInBits() >= Log2_32(BW) &&
-             "low bits constraint must survive width adjustment");
       LowBits = LowBits.zextOrTrunc(V.getScalarValueSizeInBits());
       continue;
     }

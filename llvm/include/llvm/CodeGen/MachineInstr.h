@@ -2125,17 +2125,11 @@ private:
 /// instruction rather than by pointer value.
 /// The hashing and equality testing functions ignore definitions so this is
 /// useful for CSE, etc.
-struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
-  static inline MachineInstr *getEmptyKey() {
-    return nullptr;
-  }
-
+struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr *> {
   LLVM_ABI static unsigned getHashValue(const MachineInstr *const &MI);
 
-  static bool isEqual(const MachineInstr* const &LHS,
-                      const MachineInstr* const &RHS) {
-    if (RHS == getEmptyKey() || LHS == getEmptyKey())
-      return LHS == RHS;
+  static bool isEqual(const MachineInstr *const &LHS,
+                      const MachineInstr *const &RHS) {
     return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs);
   }
 };

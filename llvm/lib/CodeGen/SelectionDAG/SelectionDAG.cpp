@@ -5665,7 +5665,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
     unsigned DstEltBits = DstVT.getScalarSizeInBits();
     ElementCount NumSrcElts = SrcVT.getVectorElementCount();
-    ElementCount NumDstElts = DstVT.getVectorElementCount();
+    [[maybe_unused]] ElementCount NumDstElts = DstVT.getVectorElementCount();
 
     if (SrcEltBits == DstEltBits)
       return isGuaranteedNotToBeUndefOrPoison(Src, DemandedElts, Kind,
