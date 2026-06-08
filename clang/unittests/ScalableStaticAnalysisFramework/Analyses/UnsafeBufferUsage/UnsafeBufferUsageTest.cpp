@@ -575,31 +575,23 @@ TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
 //////////////////////////////////////////////////////////////
 
 TEST_F(UnsafeBufferUsageTest, FunctionTemplate) {
-  ASSERT_EQ(setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     template <typename T>
     T* f(T *p) {
       return &p[5];
     }
-  )cpp"),
-            true);
-
-  auto *Sum = getEntitySummary<FunctionDecl>("f");
-
-  ASSERT_EQ(Sum, nullptr);
+  )cpp"));
+  ASSERT_FALSE(getEntitySummary<FunctionDecl>("f"));
 }
 
 TEST_F(UnsafeBufferUsageTest, MethodInClassTemplate) {
-  ASSERT_EQ(setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     template <typename T>
     struct Wrapper {
       T *ptr;
       void set(T *p) { ptr = p[5]; }
     };
-  )cpp"),
-            true);
-
-  auto *Sum = getEntitySummary<FunctionDecl>("set");
-
-  ASSERT_EQ(Sum, nullptr);
+  )cpp"));
+  ASSERT_FALSE(getEntitySummary<FunctionDecl>("set"));
 }
 } // namespace

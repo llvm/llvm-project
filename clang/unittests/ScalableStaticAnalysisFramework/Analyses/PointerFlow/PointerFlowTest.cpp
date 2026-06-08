@@ -13,9 +13,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
@@ -1131,32 +1129,24 @@ TEST_F(PointerFlowTest, NestedLambdaAssign) {
 //          Template is ignored.                            //
 //////////////////////////////////////////////////////////////
 TEST_F(PointerFlowTest, FunctionTemplate) {
-  ASSERT_EQ(setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     template <typename T>
     T* f(T *p) {
       int *q = p
       return q;
     }
-  )cpp"),
-            true);
-
-  auto *Sum = getEntitySummary<FunctionDecl>("f");
-
-  ASSERT_EQ(Sum, nullptr);
+  )cpp"));
+  ASSERT_FALSE(getEntitySummary<FunctionDecl>("f"));
 }
 
 TEST_F(PointerFlowTest, MethodInClassTemplate) {
-  ASSERT_EQ(setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     template <typename T>
     struct Wrapper {
       T *ptr;
       void set(T *p) { ptr = p; }
     };
-  )cpp"),
-            true);
-
-  auto *Sum = getEntitySummary<FunctionDecl>("set");
-
-  ASSERT_EQ(Sum, nullptr);
+  )cpp"));
+  ASSERT_FALSE(getEntitySummary<FunctionDecl>("set"));
 }
 } // namespace
