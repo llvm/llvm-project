@@ -888,7 +888,7 @@ bool ejit_is_active(const char* periodName, int cellIdx);
 // 包含维度名称和索引值，用于 JIT 特化
 typedef struct {
     const char* name;    /* 维度名称，如 "cell", "trp" */
-    int index;           /* 参数值 */
+    uint8_t index;       /* 参数值 */
 } ejit_dim_t;
 
 // 内部使用: Wrapper 入口和编译函数

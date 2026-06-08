@@ -198,10 +198,10 @@ WrapperResult insertWrapperPrologue(Function* F, const DimInfo& dims,
     unsigned dimCount = dims.params.size();
     Value* dimsArray = nullptr;
     if (dimCount > 0) {
-        // ejit_dim_t 的 LLVM 类型: { ptr, i32 }
+        // ejit_dim_t 的 LLVM 类型: { ptr, i8 }
         StructType* dimTy = StructType::get(Ctx, {
             PointerType::getUnqual(Ctx),  // name: const char*
-            Type::getInt32Ty(Ctx)         // index: int
+            Type::getInt8Ty(Ctx)          // index: uint8_t
         });
         ArrayType* dimsArrTy = ArrayType::get(dimTy, dimCount);
         dimsArray = Builder.CreateAlloca(dimsArrTy);
@@ -323,13 +323,13 @@ define void @process_task(i32 %cellIdx) {
 ; 输出:
 define void @process_task(i32 %cellIdx) {
 jit_entry:
-  %dims = alloca [1 x { ptr, i32 }], align 8
-  %dim0_name = getelementptr ... { ptr, i32 }* %dims, i32 0, i32 0
+  %dims = alloca [1 x { ptr, i8 }], align 8
+  %dim0_name = getelementptr ... { ptr, i8 }* %dims, i32 0, i32 0
   store ptr @".str.cell", ptr* %dim0_name
-  %dim0_idx = getelementptr ... { ptr, i32 }* %dims, i32 0, i32 1
-  store i32 %cellIdx, ptr* %dim0_idx
+  %dim0_idx = getelementptr ... { ptr, i8 }* %dims, i32 0, i32 1
+  store i8 %cellIdx, ptr* %dim0_idx
   %str = getelementptr ... @".str.process_task"
-  %dims_ptr = bitcast [1 x { ptr, i32 }]* %dims to ptr
+  %dims_ptr = bitcast [1 x { ptr, i8 }]* %dims to ptr
   %jit_result = call ptr @ejit_compile_or_get(ptr %str, ptr %dims_ptr, i32 1, ptr null)
   %jit_is_null = icmp eq ptr %jit_result, null
   br i1 %jit_is_null, label %jit_fallback, label %jit_dispatch
@@ -355,22 +355,22 @@ define void @process_multi(i32 %cellIdx, i32 %trpIdx, i32 %iter) {
 ; 输出:
 define void @process_multi(i32 %cellIdx, i32 %trpIdx, i32 %iter) {
 jit_entry:
-  %dims = alloca [2 x { ptr, i32 }], align 8
+  %dims = alloca [2 x { ptr, i8 }], align 8
   ; dims[0] = {"cell", cellIdx}
-  %dim0 = getelementptr ... [2 x { ptr, i32 }]* %dims, i32 0, i32 0
-  %dim0_name = getelementptr ... { ptr, i32 }* %dim0, i32 0, i32 0
+  %dim0 = getelementptr ... [2 x { ptr, i8 }]* %dims, i32 0, i32 0
+  %dim0_name = getelementptr ... { ptr, i8 }* %dim0, i32 0, i32 0
   store ptr @".str.cell", ptr* %dim0_name
-  %dim0_idx = getelementptr ... { ptr, i32 }* %dim0, i32 0, i32 1
-  store i32 %cellIdx, ptr* %dim0_idx
+  %dim0_idx = getelementptr ... { ptr, i8 }* %dim0, i32 0, i32 1
+  store i8 %cellIdx, ptr* %dim0_idx
   ; dims[1] = {"trp", trpIdx}
-  %dim1 = getelementptr ... [2 x { ptr, i32 }]* %dims, i32 0, i32 1
-  %dim1_name = getelementptr ... { ptr, i32 }* %dim1, i32 0, i32 0
+  %dim1 = getelementptr ... [2 x { ptr, i8 }]* %dims, i32 0, i32 1
+  %dim1_name = getelementptr ... { ptr, i8 }* %dim1, i32 0, i32 0
   store ptr @".str.trp", ptr* %dim1_name
-  %dim1_idx = getelementptr ... { ptr, i32 }* %dim1, i32 0, i32 1
-  store i32 %trpIdx, ptr* %dim1_idx
+  %dim1_idx = getelementptr ... { ptr, i8 }* %dim1, i32 0, i32 1
+  store i8 %trpIdx, ptr* %dim1_idx
 
   %str = getelementptr ... @".str.process_multi"
-  %dims_ptr = bitcast [2 x { ptr, i32 }]* %dims to ptr
+  %dims_ptr = bitcast [2 x { ptr, i8 }]* %dims to ptr
   %jit_result = call ptr @ejit_compile_or_get(ptr %str, ptr %dims_ptr, i32 2, ptr null)
   %jit_is_null = icmp eq ptr %jit_result, null
   br i1 %jit_is_null, label %jit_fallback, label %jit_dispatch
@@ -405,8 +405,8 @@ struct DimInfo {
 };
 
 // ejit_dim_t 的 LLVM IR 对应类型
-// C 定义: typedef struct { const char* name; int index; } ejit_dim_t;
-// IR 类型: { i8*, i32 }
+// C 定义: typedef struct { const char* name; uint8_t index; } ejit_dim_t;
+// IR 类型: { i8*, i8 }
 ```
 
 ---
@@ -456,11 +456,11 @@ EJitPeriodHandlerPass    →  处理生命周期函数
 ;   CHECK: call ptr @ejit_compile_or_get(ptr %str, ptr null, i32 0, ptr null)
 ;
 ; TEST 2: 单维度参数 — dims[1] 构建
-;   CHECK: alloca [1 x { ptr, i32 }]
+;   CHECK: alloca [1 x { ptr, i8 }]
 ;   CHECK: call ptr @ejit_compile_or_get(ptr %str, ptr %dims_ptr, i32 1, ptr null)
 ;
 ; TEST 3: 多维度参数 — dims[2] 构建
-;   CHECK: alloca [2 x { ptr, i32 }]
+;   CHECK: alloca [2 x { ptr, i8 }]
 ;   CHECK: call ptr @ejit_compile_or_get(ptr %str, ptr %dims_ptr, i32 2, ptr null)
 ;
 ; TEST 4: JIT 成功路径 — 调用 pfn
@@ -496,7 +496,7 @@ EJitPeriodHandlerPass    →  处理生命周期函数
 
 2. **alloca 位置**: dims 数组的 alloca 指令必须插入到 jit_entry 块的开头，在第一条非 alloca 指令之前。这样可以保证 alloca 在整个函数作用域内有效。
 
-3. **类型转换 (ZExt/Trunc)**: period_arr_ind 参数可能声明为 `uint8_t` / `int16_t` 等类型，存储到 `ejit_dim_t.index`（i32）时需要正确处理符号扩展。使用 `ZExtOrTrunc` 处理无符号/有符号参数。
+3. **类型转换 (ZExt/Trunc)**: period_arr_ind 参数可能声明为 `uint8_t` / `int16_t` 等类型，存储到 `ejit_dim_t.index`（uint8_t）时需要正确截断。使用 `ZExtOrTrunc` 处理无符号/有符号参数。
 
 4. **jit_entry 块拆分**: jit_entry 块中的 wrapper 逻辑是指令序列，正确建立 Control Flow: `jit_entry → (pfn != null ? jit_dispatch : jit_fallback)`。
 
