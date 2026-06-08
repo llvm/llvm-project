@@ -372,10 +372,34 @@ define <4 x double> @fsub(<4 x double> %v) {
 
 define <4 x float> @fmul(<4 x float> nofpclass(nan) %v) {
 ; CHECK-LABEL: @fmul(
+; CHECK-NEXT:    [[S:%.*]] = fmul nnan <4 x float> [[V:%.*]], <float 4.100000e+01, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %b = fmul nnan ninf <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
+  %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %s
+}
+
+; 'ninf' is safe to keep here: %v can be neither nan nor inf, so routing a
+; passthrough lane through 'fmul ninf %v, 1.0' cannot introduce poison.
+define <4 x float> @fmul_ninf_never_inf(<4 x float> nofpclass(nan inf) %v) {
+; CHECK-LABEL: @fmul_ninf_never_inf(
 ; CHECK-NEXT:    [[S:%.*]] = fmul nnan ninf <4 x float> [[V:%.*]], <float 4.100000e+01, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[S]]
 ;
   %b = fmul nnan ninf <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
+  %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %s
+}
+
+; No 'ninf', so an infinity passthrough lane is preserved (fmul inf, 1.0 = inf);
+; folding is safe even though %v may be infinity.
+define <4 x float> @fmul_no_ninf_maybe_inf(<4 x float> nofpclass(nan) %v) {
+; CHECK-LABEL: @fmul_no_ninf_maybe_inf(
+; CHECK-NEXT:    [[S:%.*]] = fmul nnan <4 x float> [[V:%.*]], <float 4.100000e+01, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %b = fmul nnan <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
   %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %s
 }

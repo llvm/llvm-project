@@ -2313,6 +2313,14 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   Instruction *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
   NewBO->copyIRFlags(BO);
 
+  // A passthrough lane returns X unchanged, but the new binop now applies its
+  // flags to it. With 'ninf', an infinity in such a lane would become poison
+  // (e.g. `fmul ninf inf, 1.0 -> poison`), which the original passthrough did
+  // not. Drop ninf when X may be infinity.
+  if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
+      NewBO->hasNoInfs() && !isKnownNeverInfinity(X, SQ))
+    NewBO->setHasNoInfs(false);
+
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
   // If we already made a safe constant, then there's no danger.
