@@ -72,18 +72,29 @@ public:
 
   int64_t asCharUnits() const { return AsCharUnits; }
 
-  std::string asExtentDesc(bool ForceBytes) const {
-    if (ForceBytes || isBytes())
+  std::string asExtentDesc() const {
+    if (isBytes())
       return "the extent of";
     return llvm::formatv("the number of '{0}' elements in",
                          AsType.getAsString());
   }
 
-  std::string asElementName(bool ForceBytes) const {
-    if (ForceBytes || isBytes())
+  std::string asElementName() const {
+    if (isBytes())
       return "byte";
     return llvm::formatv("'{0}' element", AsType.getAsString());
   }
+
+  std::string getOffsetName() const {
+    return isBytes() ? "byte offset" : "index";
+  }
+
+  /// Try to divide `Val1` and `Val2` (in place) by `this->asCharUnits()` and
+  /// return true if it can be performed without remainder. The values `Val1`
+  /// and `Val2` may be nullopt and in that case the corresponding division is
+  /// considered to be successful.
+  bool tryConvertValuesFromBytes(std::optional<int64_t> &Val1,
+                                 std::optional<int64_t> &Val2) const;
 };
 
 struct Messages {

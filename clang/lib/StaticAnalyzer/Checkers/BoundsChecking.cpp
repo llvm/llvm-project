@@ -200,18 +200,18 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
 /// it can be performed (`Divisor` is nonzero and there is no remainder). The
 /// values `Val1` and `Val2` may be nullopt and in that case the corresponding
 /// division is considered to be successful.
-static bool tryDividePair(std::optional<int64_t> &Val1,
-                          std::optional<int64_t> &Val2, int64_t Divisor) {
-  if (!Divisor)
+bool SizeUnit::tryConvertValuesFromBytes(std::optional<int64_t> &Val1,
+                                         std::optional<int64_t> &Val2) const {
+  if (!AsCharUnits)
     return false;
-  const bool Val1HasRemainder = Val1 && *Val1 % Divisor;
-  const bool Val2HasRemainder = Val2 && *Val2 % Divisor;
+  const bool Val1HasRemainder = Val1 && *Val1 % AsCharUnits;
+  const bool Val2HasRemainder = Val2 && *Val2 % AsCharUnits;
   if (Val1HasRemainder || Val2HasRemainder)
     return false;
   if (Val1)
-    *Val1 /= Divisor;
+    *Val1 /= AsCharUnits;
   if (Val2)
-    *Val2 /= Divisor;
+    *Val2 /= AsCharUnits;
   return true;
 }
 
@@ -224,27 +224,27 @@ Messages getNonTaintMsgs(std::string RegName, SizeUnit SU, NonLoc Offset,
   if (Problem == BadOffsetKind::Negative)
     ExtentN = std::nullopt;
 
-  bool UseByteOffsets = !tryDividePair(OffsetN, ExtentN, SU.asCharUnits());
-  const char *OffsetOrIndex = UseByteOffsets ? "byte offset" : "index";
+  if (!SU.tryConvertValuesFromBytes(OffsetN, ExtentN))
+    SU = SizeUnit::bytes();
 
   SmallString<256> Buf;
   llvm::raw_svector_ostream Out(Buf);
   Out << "Access of ";
-  if (OffsetN && !ExtentN && !UseByteOffsets) {
+  if (OffsetN && !ExtentN && !SU.isBytes()) {
     // If the offset is reported as an index, then the report must mention the
     // element type (because it is not always clear from the code). It's more
     // natural to mention the element type later where the extent is described,
     // but if the extent is unknown/irrelevant, then the element type can be
     // inserted into the message at this point.
-    Out << SU.asElementName(/*ForceBytes=*/false) << " in ";
+    Out << SU.asElementName() << " in ";
   }
   Out << RegName << " at ";
   if (OffsetN) {
     if (Problem == BadOffsetKind::Negative)
       Out << "negative ";
-    Out << OffsetOrIndex << " " << *OffsetN;
+    Out << SU.getOffsetName() << " " << *OffsetN;
   } else {
-    Out << asAdjective(Problem) << " " << OffsetOrIndex;
+    Out << asAdjective(Problem) << " " << SU.getOffsetName();
   }
   if (ExtentN) {
     Out << ", while it holds only ";
@@ -253,7 +253,7 @@ Messages getNonTaintMsgs(std::string RegName, SizeUnit SU, NonLoc Offset,
     else
       Out << "a single";
 
-    Out << ' ' << SU.asElementName(/*ForceBytes=*/UseByteOffsets);
+    Out << ' ' << SU.asElementName();
 
     if (*ExtentN > 1)
       Out << "s";
@@ -292,13 +292,13 @@ std::string BoundsCheckResult::getMessage(PathSensitiveBugReport &BR,
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
   std::optional<int64_t> ExtentN = getConcreteValue(Extent);
 
-  const bool UseIndex =
-      !SU.isBytes() && tryDividePair(OffsetN, ExtentN, SU.asCharUnits());
+  if (!SU.tryConvertValuesFromBytes(OffsetN, ExtentN))
+    SU = SizeUnit::bytes();
 
   SmallString<256> Buf;
   llvm::raw_svector_ostream Out(Buf);
   Out << "Assuming ";
-  if (UseIndex) {
+  if (!SU.isBytes()) {
     Out << "index ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
@@ -320,7 +320,7 @@ std::string BoundsCheckResult::getMessage(PathSensitiveBugReport &BR,
     Out << " less than ";
     if (ExtentN)
       Out << *ExtentN << ", ";
-    Out << SU.asExtentDesc(/*ForceBytes=*/!UseIndex) << ' ' << RegName;
+    Out << SU.asExtentDesc() << ' ' << RegName;
   }
   return std::string(Out.str());
 }
