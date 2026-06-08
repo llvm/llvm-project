@@ -343,6 +343,85 @@ define void @test14(ptr nocapture %0, ptr nocapture %1) {
 
 ; UTC_ARGS: --enable
 
+define void @nonnull_assume_pos(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; ATTRIBUTOR-SAME: (ptr nofree [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr nofree [[ARG3:%.*]], ptr [[ARG4:%.*]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) #11 [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
+; ATTRIBUTOR-NEXT:    call void @unknown(ptr nofree [[ARG1]], ptr [[ARG2]], ptr nofree [[ARG3]], ptr [[ARG4]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; CHECK-SAME: (ptr nofree [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr nofree [[ARG3:%.*]], ptr [[ARG4:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR15:[0-9]+]] [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
+; CHECK-NEXT:    call void @unknown(ptr nofree [[ARG1]], ptr [[ARG2]], ptr nofree [[ARG3]], ptr [[ARG4]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["nofree"(ptr %arg1), "nofree"(ptr %arg3)]
+  call void @unknown(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4)
+  ret void
+}
+define void @nonnull_assume_neg(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_neg
+; ATTRIBUTOR-SAME: (ptr [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr [[ARG3:%.*]], ptr [[ARG4:%.*]])
+; ATTRIBUTOR-NEXT:    call void @unknown(ptr [[ARG1]], ptr [[ARG2]], ptr [[ARG3]], ptr [[ARG4]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
+; ATTRIBUTOR-NEXT:    ret void
+;
+; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_neg
+; CHECK-SAME: (ptr [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr [[ARG3:%.*]], ptr [[ARG4:%.*]]) {
+; CHECK-NEXT:    call void @unknown(ptr [[ARG1]], ptr [[ARG2]], ptr [[ARG3]], ptr [[ARG4]])
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @unknown(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4)
+  call void @llvm.assume(i1 true) ["nofree"(ptr %arg1), "nofree"(ptr %arg3)]
+  ret void
+}
+define void @nonnull_assume_call(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_call
+; ATTRIBUTOR-SAME: (ptr [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr [[ARG3:%.*]], ptr [[ARG4:%.*]])
+; ATTRIBUTOR-NEXT:    call void @unknown(ptr [[ARG1]], ptr [[ARG2]], ptr [[ARG3]], ptr [[ARG4]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(ptr noalias readnone [[ARG1]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(ptr noalias readnone [[ARG2]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone [[ARG3]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(ptr noalias readnone [[ARG4]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone [[ARG1]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(ptr noalias readnone [[ARG2]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG4]]) ]
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone [[ARG3]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone [[ARG4]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_call
+; CHECK-SAME: (ptr [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr [[ARG3:%.*]], ptr [[ARG4:%.*]]) {
+; CHECK-NEXT:    call void @unknown(ptr [[ARG1]], ptr [[ARG2]], ptr [[ARG3]], ptr [[ARG4]])
+; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG1]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
+; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG3]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG4]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone captures(none) [[ARG1]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone captures(none) [[ARG2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG4]]) ]
+; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone captures(none) [[ARG3]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone captures(none) [[ARG4]]) #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+  call void @unknown(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4)
+  call void @use_i8_ptr(ptr %arg1)
+  call void @use_i8_ptr(ptr %arg2)
+  call void @llvm.assume(i1 true) ["nofree"(ptr %arg1), "nofree"(ptr %arg3)]
+  call void @use_i8_ptr(ptr %arg3)
+  call void @use_i8_ptr(ptr %arg4)
+  call void @use_i8_ptr_ret(ptr %arg1)
+  call void @use_i8_ptr_ret(ptr %arg2)
+  call void @llvm.assume(i1 true) ["nofree"(ptr %arg1), "nofree"(ptr %arg4)]
+  call void @use_i8_ptr_ret(ptr %arg3)
+  call void @use_i8_ptr_ret(ptr %arg4)
+  ret void
+}
+
 ; FIXME: function is nofree
 define weak void @implied_nofree1() readnone {
 ; CHECK: Function Attrs: nosync memory(none)
@@ -419,6 +498,7 @@ attributes #2 = { nobuiltin nounwind }
 ; TUNIT: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; TUNIT: attributes #[[ATTR13:[0-9]+]] = { nounwind willreturn }
 ; TUNIT: attributes #[[ATTR14]] = { nofree nosync willreturn }
+; TUNIT: attributes #[[ATTR15]] = { nofree willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nounwind }
 ; CGSCC: attributes #[[ATTR1]] = { noinline nounwind uwtable }
@@ -435,4 +515,5 @@ attributes #2 = { nobuiltin nounwind }
 ; CGSCC: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CGSCC: attributes #[[ATTR13:[0-9]+]] = { nounwind willreturn }
 ; CGSCC: attributes #[[ATTR14]] = { nofree nosync willreturn }
+; CGSCC: attributes #[[ATTR15]] = { nofree willreturn memory(write) }
 ;.
