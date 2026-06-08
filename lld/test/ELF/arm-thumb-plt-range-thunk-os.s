@@ -1,13 +1,20 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t --shared --icf=all -o %t.so
-// The output file is large, most of it zeroes. We dissassemble only the
-// parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x2000000 --stop-address=0x2000018 | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x2800004 --stop-address=0x2800034 | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x4000000 --stop-address=0x4000010 | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x4000010 --stop-address=0x4000100 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
-// RUN: rm %t.so
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi a.s -o a.o
+// RUN: ld.lld a.o --shared --icf=all -o a.so --script=a.lds --print-map --print-icf-sections
+// RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex -d a.so | FileCheck %s
+// RUN: rm a.so
+
+//--- a.lds
+SECTIONS {
+  .dynsym 0x1ff0000 : AT(0x1ff0000) { *(.dynsym) }
+  .text.1 0x2000000 : AT(0x2000000) { *(.text) *(.text.1) }
+  .text.2 0x4000000 : AT(0x4000000) { *(.text.2) *(.text.expect.icf) }
+  .plt : { *(.plt) }
+}
+
+//--- a.s
+
  .syntax unified
  .thumb
 
@@ -34,83 +41,60 @@ preemptible:
  bl far_preemptible
  bl far_nonpreemptible
  bl far_nonpreemptible_alias
- bx lr
-// CHECK1: Disassembly of section .text:
-// CHECK1-EMPTY:
-// CHECK1-NEXT: <sym1>:
-// CHECK1-NEXT:  2000000:       f000 d800       bl      0x2800004 <__ThumbV7PILongThunk_elsewhere>
-// CHECK1-NEXT:  2000004:       f000 d804       bl      0x2800010 <__ThumbV7PILongThunk_preemptible>
-// CHECK1-NEXT:  2000008:       4770    bx      lr
-// CHECK1: <preemptible>:
-// CHECK1-NEXT:  200000a:       f000 d807       bl      0x280001c <__ThumbV7PILongThunk_far_preemptible>
-// CHECK1-NEXT:  200000e:       f000 d80b       bl      0x2800028 <__ThumbV7PILongThunk_far_nonpreemptible>
-// CHECK1-NEXT:  2000012:       f000 d809       bl      0x2800028 <__ThumbV7PILongThunk_far_nonpreemptible>
-// CHECK1-NEXT:  2000016:       4770    bx      lr
+bx lr
+
+// CHECK-LABEL: <sym1>:
+// CHECK-NEXT: 2000000: bl 0x2000018 <__ThumbV7PILongThunk_elsewhere>
+// CHECK-NEXT:          bl 0x2000024 <__ThumbV7PILongThunk_preemptible>
+// CHECK-NEXT:          bx lr
+
+// CHECK-LABEL: <preemptible>:
+// CHECK-NEXT: 200000a: bl 0x2000030 <__ThumbV7PILongThunk_far_preemptible>
+// CHECK-NEXT:          bl 0x200003c <__ThumbV7PILongThunk_far_nonpreemptible>
+// CHECK-NEXT:          bl 0x200003c <__ThumbV7PILongThunk_far_nonpreemptible>
+// CHECK-NEXT:          bx lr
+
+// CHECK-LABEL: <__ThumbV7PILongThunk_elsewhere>:
+// CHECK-NEXT: 2000018: movw    r12, #12
+// CHECK-NEXT:          movt    r12, #512
+// CHECK-NEXT:          add     r12, pc
+// CHECK-NEXT:          bx      r12
+
+// CHECK-LABEL: <__ThumbV7PILongThunk_preemptible>:
+// CHECK-NEXT: 2000024: movw    r12, #16
+// CHECK-NEXT:          movt    r12, #512
+// CHECK-NEXT:          add     r12, pc
+// CHECK-NEXT:          bx      r12
+
+// CHECK-LABEL: <__ThumbV7PILongThunk_far_preemptible>:
+// CHECK-NEXT: 2000030: movw    r12, #20
+// CHECK-NEXT:          movt    r12, #512
+// CHECK-NEXT:          add     r12, pc
+// CHECK-NEXT:          bx      r12
+
+// CHECK-LABEL: <__ThumbV7PILongThunk_far_nonpreemptible>:
+// CHECK-NEXT: 200003c: movw    r12, #65465
+// CHECK-NEXT:          movt    r12, #511
+// CHECK-NEXT:          add     r12, pc
+// CHECK-NEXT:          bx      r12
 
  .section .text.2, "ax", %progbits
- .balign 0x0800000
- bx lr
-// CHECK2: <__ThumbV7PILongThunk_elsewhere>:
-// CHECK2-NEXT:  2800004:       f240 0c20       movw    r12, #32
-// CHECK2-NEXT:  2800008:       f2c0 1c80       movt    r12, #384
-// CHECK2-NEXT:  280000c:       44fc    add     r12, pc
-// CHECK2-NEXT:  280000e:       4760    bx      r12
-// CHECK2: <__ThumbV7PILongThunk_preemptible>:
-// CHECK2-NEXT:  2800010:       f240 0c24       movw    r12, #36
-// CHECK2-NEXT:  2800014:       f2c0 1c80       movt    r12, #384
-// CHECK2-NEXT:  2800018:       44fc    add     r12, pc
-// CHECK2-NEXT:  280001a:       4760    bx      r12
-// CHECK2: <__ThumbV7PILongThunk_far_preemptible>:
-// CHECK2-NEXT:  280001c:       f240 0c28       movw    r12, #40
-// CHECK2-NEXT:  2800020:       f2c0 1c80       movt    r12, #384
-// CHECK2-NEXT:  2800024:       44fc    add     r12, pc
-// CHECK2-NEXT:  2800026:       4760    bx      r12
-// CHECK2: <__ThumbV7PILongThunk_far_nonpreemptible>:
-// CHECK2-NEXT:  2800028:       f64f 7ccd       movw    r12, #65485
-// CHECK2-NEXT:  280002c:       f2c0 1c7f       movt    r12, #383
-// CHECK2-NEXT:  2800030:       44fc    add     r12, pc
-// CHECK2-NEXT:  2800032:       4760    bx      r12
-
- .section .text.3, "ax", %progbits
-.balign 0x2000000
 far_preemptible:
 far_nonpreemptible:
  bl elsewhere
 
- .section .text.4, "ax", %progbits
-.balign 0x2000000
+ .section .text.expect.icf, "ax", %progbits
 far_nonpreemptible_alias:
  bl elsewhere
 
-// CHECK3: <far_preemptible>:
-// CHECK3:  4000000:       f000 e816       blx     0x4000030
+// CHECK-LABEL: <far_preemptible>:
+// CHECK-NEXT:  4000000:         blx     0x4000030 <elsewhere@plt>
 
-// CHECK4: Disassembly of section .plt:
-// CHECK4-EMPTY:
-// CHECK4-NEXT: <.plt>:
-// CHECK4-NEXT:  4000010:	e52de004    	str	lr, [sp, #-4]!
-// CHECK4-NEXT:  4000014:	e28fe600    	add	lr, pc, #0, #12
-// CHECK4-NEXT:  4000018:	e28eea20    	add	lr, lr, #32
-// CHECK4-NEXT:  400001c:	e5bef0a4    	ldr	pc, [lr, #164]!
-// CHECK4-NEXT:  4000020:	d4 d4 d4 d4 	.word	0xd4d4d4d4
-// CHECK4-NEXT:  4000024:	d4 d4 d4 d4 	.word	0xd4d4d4d4
-// CHECK4-NEXT:  4000028:	d4 d4 d4 d4 	.word	0xd4d4d4d4
-// CHECK4-NEXT:  400002c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
-// CHECK4-EMPTY:
-// CHECK4-NEXT: <elsewhere@plt>:
-// CHECK4-NEXT:  4000030:	e28fc600    	add	r12, pc, #0, #12
-// CHECK4-NEXT:  4000034:	e28cca20    	add	r12, r12, #32
-// CHECK4-NEXT:  4000038:	e5bcf08c    	ldr	pc, [r12, #140]!
-// CHECK4-NEXT:  400003c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
-// CHECK4-EMPTY:
-// CHECK4-NEXT: <preemptible@plt>:
-// CHECK4-NEXT:  4000040:	e28fc600    	add	r12, pc, #0, #12
-// CHECK4-NEXT:  4000044:	e28cca20    	add	r12, r12, #32
-// CHECK4-NEXT:  4000048:	e5bcf080    	ldr	pc, [r12, #128]!
-// CHECK4-NEXT:  400004c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
-// CHECK4-EMPTY:
-// CHECK4-NEXT: <far_preemptible@plt>:
-// CHECK4-NEXT:  4000050:	e28fc600    	add	r12, pc, #0, #12
-// CHECK4-NEXT:  4000054:	e28cca20    	add	r12, r12, #32
-// CHECK4-NEXT:  4000058:	e5bcf074    	ldr	pc, [r12, #116]!
-// CHECK4-NEXT:  400005c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
+// CHECK-LABEL: <elsewhere@plt>:
+// CHECK-NEXT:  4000030:          add     r12, pc, #0, #12
+
+// CHECK-LABEL: <preemptible@plt>:
+// CHECK-NEXT:  4000040:          add     r12, pc, #0, #12
+
+// CHECK-LABEL: <far_preemptible@plt>:
+// CHECK-NEXT:  4000050:          add     r12, pc, #0, #12
