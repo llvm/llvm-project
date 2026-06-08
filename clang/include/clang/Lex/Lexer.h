@@ -153,6 +153,12 @@ class Lexer : public PreprocessorLexer {
   /// Non-empty if this \p Lexer is \p isDependencyDirectivesLexer().
   ArrayRef<dependency_directives_scan::Directive> DepDirectives;
 
+  /// Non-empty if this Lexer yields embedder-supplied pre-lexed tokens instead
+  /// of lexing the buffer. Non-owning; storage outlives the Lexer. Token
+  /// locations are supplied by the embedder and may point into any FileID.
+  ArrayRef<Token> PrebuiltTokens;
+  unsigned NextPrebuiltTokenIndex = 0;
+
   /// If this \p Lexer is \p isDependencyDirectivesLexer(), it represents the
   /// next token to use from the current dependency directive.
   unsigned NextDepDirectiveTokenIndex = 0;
@@ -206,6 +212,10 @@ private:
   /// Called when the preprocessor is in 'dependency scanning lexing mode'.
   bool LexDependencyDirectiveToken(Token &Result);
 
+  /// Called to retrieve the next token when this Lexer is supplying
+  /// embedder-provided pre-lexed tokens (see \p isPrebuiltTokenLexer).
+  bool LexPrebuiltToken(Token &Result);
+
   /// Called when the preprocessor is in 'dependency scanning lexing mode' and
   /// is skipping a conditional block.
   bool LexDependencyDirectiveTokenWhileSkipping(Token &Result);
@@ -213,6 +223,11 @@ private:
   /// True when the preprocessor is in 'dependency scanning lexing mode' and
   /// created this \p Lexer for lexing a set of dependency directive tokens.
   bool isDependencyDirectivesLexer() const { return !DepDirectives.empty(); }
+
+  /// True when this Lexer yields embedder-supplied pre-lexed tokens instead of
+  /// lexing the buffer, as set up via Preprocessor::setFileTokenizer. The
+  /// tokens carry embedder-provided locations.
+  bool isPrebuiltTokenLexer() const { return !PrebuiltTokens.empty(); }
 
   /// Initializes \p Result with data from \p DDTok and advances \p BufferPtr to
   /// the position just after the token.

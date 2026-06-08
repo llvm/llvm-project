@@ -92,6 +92,9 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
   }
 
   Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
+  if (FileTokenizerHook && FID != PredefinesFileID)
+    if (auto T = FileTokenizerHook(FID))
+      TheLexer->PrebuiltTokens = *T;
   if (GetDependencyDirectives && FID != PredefinesFileID)
     if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID))
       if (auto MaybeDepDirectives = (*GetDependencyDirectives)(*File))
@@ -116,9 +119,11 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   CurDirLookup = CurDir;
   CurLexerSubmodule = nullptr;
   if (CurLexerCallback != CLK_LexAfterModuleImport)
-    CurLexerCallback = TheLexer->isDependencyDirectivesLexer()
-                           ? CLK_DependencyDirectivesLexer
-                           : CLK_Lexer;
+    CurLexerCallback = TheLexer->isPrebuiltTokenLexer()
+                           ? CLK_PrebuiltTokenLexer
+                           : TheLexer->isDependencyDirectivesLexer()
+                                 ? CLK_DependencyDirectivesLexer
+                                 : CLK_Lexer;
 
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks && !CurLexer->Is_PragmaLexer) {

@@ -4612,6 +4612,17 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
   return true;
 }
 
+bool Lexer::LexPrebuiltToken(Token &Result) {
+  if (NextPrebuiltTokenIndex < PrebuiltTokens.size()) {
+    Result = PrebuiltTokens[NextPrebuiltTokenIndex++];
+    return true;  // produced a token -> PP loop stops, hands it up
+  }
+  // Exhausted: route through the same EOF machinery the buffer lexer uses, so
+  // the include stack pops and control returns to the includer normally.
+  BufferPtr = BufferEnd;
+  return PP->HandleEndOfFile(Result, isPragmaLexer());
+}
+
 bool Lexer::LexDependencyDirectiveTokenWhileSkipping(Token &Result) {
   assert(isDependencyDirectivesLexer());
 

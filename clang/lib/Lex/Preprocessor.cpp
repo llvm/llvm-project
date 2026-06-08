@@ -384,9 +384,11 @@ StringRef Preprocessor::getLastMacroWithSpelling(
 
 void Preprocessor::recomputeCurLexerKind() {
   if (CurLexer)
-    CurLexerCallback = CurLexer->isDependencyDirectivesLexer()
-                           ? CLK_DependencyDirectivesLexer
-                           : CLK_Lexer;
+    CurLexerCallback = CurLexer->isPrebuiltTokenLexer()
+                           ? CLK_PrebuiltTokenLexer
+                           : CurLexer->isDependencyDirectivesLexer()
+                                 ? CLK_DependencyDirectivesLexer
+                                 : CLK_Lexer;
   else if (CurTokenLexer)
     CurLexerCallback = CLK_TokenLexer;
   else

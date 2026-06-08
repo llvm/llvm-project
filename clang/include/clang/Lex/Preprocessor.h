@@ -146,6 +146,13 @@ class Preprocessor {
   friend class VAOptDefinitionContext;
   friend class VariadicMacroScopeGuard;
 
+public:
+  /// Hook allowing an embedder to supply pre-lexed tokens for a file instead
+  /// of having the preprocessor lex its buffer. Returns nullopt to fall back
+  /// to normal buffer lexing. Generalizes the dependency-directives mechanism.
+  using FileTokenizer = llvm::unique_function<std::optional<ArrayRef<Token>>(FileID)>;
+
+private:
   llvm::unique_function<void(const clang::Token &)> OnToken;
   /// Functor for getting the dependency preprocessor directives of a file.
   ///
@@ -163,6 +170,7 @@ class Preprocessor {
   std::unique_ptr<ScratchBuffer> ScratchBuf;
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
+  FileTokenizer     FileTokenizerHook;
 
   /// External source of macros.
   ExternalPreprocessorSource *ExternalSource;
@@ -307,6 +315,11 @@ class Preprocessor {
 public:
   /// The kind of translation unit we are processing.
   const TranslationUnitKind TUKind;
+
+  /// Hook allowing an embedder to supply pre-lexed tokens for a file instead
+  /// of having the preprocessor lex its buffer. Returns nullopt to fall back
+  /// to normal buffer lexing. Generalizes the dependency-directives mechanism
+  void setFileTokenizer(FileTokenizer G) { FileTokenizerHook = std::move(G); }
 
   /// Returns a pointer into the given file's buffer that's guaranteed
   /// to be between tokens. The returned pointer is always before \p Start.
@@ -3130,6 +3143,9 @@ private:
   }
   static bool CLK_DependencyDirectivesLexer(Preprocessor &P, Token &Result) {
     return P.CurLexer->LexDependencyDirectiveToken(Result);
+  }
+  static bool CLK_PrebuiltTokenLexer(Preprocessor &P, Token &Result) {
+    return P.CurLexer->LexPrebuiltToken(Result);
   }
   static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
     return P.LexAfterModuleImport(Result);
