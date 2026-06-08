@@ -9,29 +9,25 @@ define <2 x float> @f32_v2_one_insert_extra_use(ptr %p, float %x) {
 ; X64-LABEL: define <2 x float> @f32_v2_one_insert_extra_use(
 ; X64-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; X64-NEXT:    [[V:%.*]] = load <2 x float>, ptr [[P]], align 8
-; X64-NEXT:    [[I0:%.*]] = insertelement <2 x float> [[V]], float [[X]], i32 0
-; X64-NEXT:    store <2 x float> [[I0]], ptr [[P]], align 8
+; X64-NEXT:    store float [[X]], ptr [[P]], align 8
 ; X64-NEXT:    ret <2 x float> [[V]]
 ;
 ; X64V2-LABEL: define <2 x float> @f32_v2_one_insert_extra_use(
 ; X64V2-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; X64V2-NEXT:    [[V:%.*]] = load <2 x float>, ptr [[P]], align 8
-; X64V2-NEXT:    [[I0:%.*]] = insertelement <2 x float> [[V]], float [[X]], i32 0
-; X64V2-NEXT:    store <2 x float> [[I0]], ptr [[P]], align 8
+; X64V2-NEXT:    store float [[X]], ptr [[P]], align 8
 ; X64V2-NEXT:    ret <2 x float> [[V]]
 ;
 ; X64V3-LABEL: define <2 x float> @f32_v2_one_insert_extra_use(
 ; X64V3-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; X64V3-NEXT:    [[V:%.*]] = load <2 x float>, ptr [[P]], align 8
-; X64V3-NEXT:    [[I0:%.*]] = insertelement <2 x float> [[V]], float [[X]], i32 0
-; X64V3-NEXT:    store <2 x float> [[I0]], ptr [[P]], align 8
+; X64V3-NEXT:    store float [[X]], ptr [[P]], align 8
 ; X64V3-NEXT:    ret <2 x float> [[V]]
 ;
 ; X64V4-LABEL: define <2 x float> @f32_v2_one_insert_extra_use(
 ; X64V4-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; X64V4-NEXT:    [[V:%.*]] = load <2 x float>, ptr [[P]], align 8
-; X64V4-NEXT:    [[I0:%.*]] = insertelement <2 x float> [[V]], float [[X]], i32 0
-; X64V4-NEXT:    store <2 x float> [[I0]], ptr [[P]], align 8
+; X64V4-NEXT:    store float [[X]], ptr [[P]], align 8
 ; X64V4-NEXT:    ret <2 x float> [[V]]
 ;
   %v = load <2 x float>, ptr %p
@@ -52,25 +48,25 @@ define <4 x float> @f32_v4_two_inserts_extra_use(ptr %p, float %x) {
 ; X64V2-LABEL: define <4 x float> @f32_v4_two_inserts_extra_use(
 ; X64V2-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0]] {
 ; X64V2-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[P]], align 16
-; X64V2-NEXT:    [[I0:%.*]] = insertelement <4 x float> [[V]], float [[X]], i32 0
-; X64V2-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[X]], i32 1
-; X64V2-NEXT:    store <4 x float> [[I1]], ptr [[P]], align 16
+; X64V2-NEXT:    store float [[X]], ptr [[P]], align 16
+; X64V2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x float>, ptr [[P]], i32 0, i32 1
+; X64V2-NEXT:    store float [[X]], ptr [[TMP1]], align 4
 ; X64V2-NEXT:    ret <4 x float> [[V]]
 ;
 ; X64V3-LABEL: define <4 x float> @f32_v4_two_inserts_extra_use(
 ; X64V3-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0]] {
 ; X64V3-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[P]], align 16
-; X64V3-NEXT:    [[I0:%.*]] = insertelement <4 x float> [[V]], float [[X]], i32 0
-; X64V3-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[X]], i32 1
-; X64V3-NEXT:    store <4 x float> [[I1]], ptr [[P]], align 16
+; X64V3-NEXT:    store float [[X]], ptr [[P]], align 16
+; X64V3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x float>, ptr [[P]], i32 0, i32 1
+; X64V3-NEXT:    store float [[X]], ptr [[TMP1]], align 4
 ; X64V3-NEXT:    ret <4 x float> [[V]]
 ;
 ; X64V4-LABEL: define <4 x float> @f32_v4_two_inserts_extra_use(
 ; X64V4-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0]] {
 ; X64V4-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[P]], align 16
-; X64V4-NEXT:    [[I0:%.*]] = insertelement <4 x float> [[V]], float [[X]], i32 0
-; X64V4-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[X]], i32 1
-; X64V4-NEXT:    store <4 x float> [[I1]], ptr [[P]], align 16
+; X64V4-NEXT:    store float [[X]], ptr [[P]], align 16
+; X64V4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x float>, ptr [[P]], i32 0, i32 1
+; X64V4-NEXT:    store float [[X]], ptr [[TMP1]], align 4
 ; X64V4-NEXT:    ret <4 x float> [[V]]
 ;
   %v = load <4 x float>, ptr %p
@@ -96,15 +92,13 @@ define <8 x float> @f32_v8_one_insert_extra_use(ptr %p, float %x) {
 ; X64V3-LABEL: define <8 x float> @f32_v8_one_insert_extra_use(
 ; X64V3-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0]] {
 ; X64V3-NEXT:    [[V:%.*]] = load <8 x float>, ptr [[P]], align 32
-; X64V3-NEXT:    [[I0:%.*]] = insertelement <8 x float> [[V]], float [[X]], i32 0
-; X64V3-NEXT:    store <8 x float> [[I0]], ptr [[P]], align 32
+; X64V3-NEXT:    store float [[X]], ptr [[P]], align 32
 ; X64V3-NEXT:    ret <8 x float> [[V]]
 ;
 ; X64V4-LABEL: define <8 x float> @f32_v8_one_insert_extra_use(
 ; X64V4-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0]] {
 ; X64V4-NEXT:    [[V:%.*]] = load <8 x float>, ptr [[P]], align 32
-; X64V4-NEXT:    [[I0:%.*]] = insertelement <8 x float> [[V]], float [[X]], i32 0
-; X64V4-NEXT:    store <8 x float> [[I0]], ptr [[P]], align 32
+; X64V4-NEXT:    store float [[X]], ptr [[P]], align 32
 ; X64V4-NEXT:    ret <8 x float> [[V]]
 ;
   %v = load <8 x float>, ptr %p
@@ -135,8 +129,7 @@ define <16 x float> @f32_v16_one_insert_extra_use(ptr %p, float %x) {
 ; X64V4-LABEL: define <16 x float> @f32_v16_one_insert_extra_use(
 ; X64V4-SAME: ptr [[P:%.*]], float [[X:%.*]]) #[[ATTR0]] {
 ; X64V4-NEXT:    [[V:%.*]] = load <16 x float>, ptr [[P]], align 64
-; X64V4-NEXT:    [[I0:%.*]] = insertelement <16 x float> [[V]], float [[X]], i32 0
-; X64V4-NEXT:    store <16 x float> [[I0]], ptr [[P]], align 64
+; X64V4-NEXT:    store float [[X]], ptr [[P]], align 64
 ; X64V4-NEXT:    ret <16 x float> [[V]]
 ;
   %v = load <16 x float>, ptr %p

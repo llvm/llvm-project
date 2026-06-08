@@ -1959,14 +1959,12 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
 
   Value *Source = SI->getValueOperand();
   // Track back multiple inserts.
-  SmallVector<std::pair<Value *, Value *>, 4> InsertElements;
+  SmallVector<InsertElementInst *, 4> InsertElements;
   Value *Base = Source;
   while (auto *Insert = dyn_cast<InsertElementInst>(Base)) {
     if (!Insert->hasOneUse())
       break;
-    Value *InsertVal = Insert->getOperand(1);
-    Value *Idx = Insert->getOperand(2);
-    InsertElements.push_back({InsertVal, Idx});
+    InsertElements.push_back(Insert);
     Base = Insert->getOperand(0);
   }
 
@@ -1983,9 +1981,10 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
   auto VecTy = cast<VectorType>(SI->getValueOperand()->getType());
   if (auto *FVT = dyn_cast<FixedVectorType>(VecTy)) {
     if (InsertElements.size() == FVT->getNumElements()) {
-      Value *FirstVal = InsertElements.front().first;
-      if (all_of(InsertElements,
-                 [FirstVal](const auto &Elt) { return Elt.first == FirstVal; }))
+      Value *FirstVal = InsertElements.front()->getOperand(1);
+      if (all_of(InsertElements, [FirstVal](InsertElementInst *Insert) {
+            return Insert->getOperand(1) == FirstVal;
+          }))
         return false;
     }
   }
@@ -2000,7 +1999,8 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
                            MemoryLocation::get(SI), AA))
     return false;
 
-  for (auto [InsertVal, Idx] : InsertElements) {
+  for (InsertElementInst *Insert : InsertElements) {
+    Value *Idx = Insert->getOperand(2);
     auto ScalarizableIdx =
         canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
     if (ScalarizableIdx.isUnsafe())
@@ -2019,17 +2019,20 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
                                    Load->getAlign(),
                                    Load->getPointerAddressSpace(), CostKind);
 
-  for (auto [InsertVal, Idx] : InsertElements) {
+  for (InsertElementInst *Insert : InsertElements) {
+    Value *Idx = Insert->getOperand(2);
     int Index = -1;
     if (auto *CIdx = dyn_cast<ConstantInt>(Idx))
       Index = CIdx->getZExtValue();
 
-    OldCost += TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
-                                      CostKind, Index);
+    OldCost += TTI.getVectorInstrCost(*Insert, VecTy, CostKind, Index,
+                                      TTI::getVectorInstrContextHint(Insert));
   }
 
   InstructionCost NewCost = 0;
-  for (auto [InsertVal, Idx] : InsertElements) {
+  for (InsertElementInst *Insert : InsertElements) {
+    Value *InsertVal = Insert->getOperand(1);
+    Value *Idx = Insert->getOperand(2);
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
         std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
         *DL);
@@ -2050,7 +2053,8 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
     return false;
 
   // Now we know the transform is profitable. It is safe to mutate IR.
-  for (auto [InsertVal, Idx] : InsertElements) {
+  for (InsertElementInst *Insert : InsertElements) {
+    Value *Idx = Insert->getOperand(2);
     auto ScalarizableIdx =
         canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
     assert(!ScalarizableIdx.isUnsafe() && "already checked above");
@@ -2063,7 +2067,9 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
   // erased in the correct order.
   Worklist.push(Load);
   StoreInst *LastStore = nullptr;
-  for (auto [InsertVal, Idx] : InsertElements) {
+  for (InsertElementInst *Insert : InsertElements) {
+    Value *InsertVal = Insert->getOperand(1);
+    Value *Idx = Insert->getOperand(2);
     Value *GEP = Builder.CreateInBoundsGEP(
         SI->getValueOperand()->getType(), SI->getPointerOperand(),
         {ConstantInt::get(Idx->getType(), 0), Idx});
