@@ -54,18 +54,24 @@ PeriodArrayRegistry::getArrayByBaseAddr(void *addr) const {
 
 void EJitRuntimeState::activate(const std::string &periodName,
                                 uint8_t cellIdx) {
+#ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
+#endif
   states_[periodName][cellIdx] = PeriodState::Active;
 }
 
 void EJitRuntimeState::deactivate(const std::string &periodName,
                                   uint8_t cellIdx) {
+#ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
+#endif
   states_[periodName][cellIdx] = PeriodState::Inactive;
 }
 
 void EJitRuntimeState::activateAll(const std::string &periodName) {
+#ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
+#endif
   // Activate all cells of all arrays registered under this period name.
   const auto *arrs = registry_.getArrays(periodName);
   if (arrs) {
@@ -78,7 +84,9 @@ void EJitRuntimeState::activateAll(const std::string &periodName) {
 }
 
 void EJitRuntimeState::deactivateAll(const std::string &periodName) {
+#ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
+#endif
   const auto *arrs = registry_.getArrays(periodName);
   if (arrs) {
     for (const auto &info : *arrs) {
@@ -91,7 +99,9 @@ void EJitRuntimeState::deactivateAll(const std::string &periodName) {
 
 bool EJitRuntimeState::isActive(const std::string &periodName,
                                 uint8_t cellIdx) const {
+#ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
+#endif
   auto pit = states_.find(periodName);
   if (pit == states_.end())
     return false;
