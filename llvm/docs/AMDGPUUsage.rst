@@ -2626,6 +2626,9 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
      ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
                                            value of all its arguments.
 
+     ``min(arg, ...)``   1 or more         Variadic signed operation that returns the minimum
+                                           value of all its arguments
+
      ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
                                            result of all its arguments.
 
@@ -7257,7 +7260,11 @@ table
      ============ ==============================================================
 
 The code sequences used to implement the memory model are defined in the
-following sections:
+sections listed below.
+
+**Note:** The presence of :ref:`AV metadata<amdgpu-av-metadata>` can **suppress
+cache operations** (such as write-back or invalidate) that are usually part of
+these sequences.
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`

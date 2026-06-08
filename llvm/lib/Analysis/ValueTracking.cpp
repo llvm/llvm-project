@@ -704,21 +704,19 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
   // Helper to check if there are any calls in the range that may free memory.
-  auto hasNoFreeCalls = [](auto Range) {
+  auto hasNoFreeInRange = [](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
+
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (!CB->hasFnAttr(Attribute::NoFree))
           return false;
+      } else if (I.maySynchronize())
+        return false;
     }
     return true;
   };
-
-  // Make sure the current function cannot arrange for another thread to free on
-  // its behalf.
-  if (!CtxI->getFunction()->hasNoSync())
-    return false;
 
   // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
@@ -728,19 +726,19 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
 
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
+    if (!hasNoFreeInRange(make_range(CtxBB->begin(), CtxIter)))
       return false;
 
     CtxIter = AssumeBB->end();
   } else {
     // Same block case: check that Assume comes before CtxI.
-    if (!Assume->comesBefore(CtxI))
+    if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
   }
 
   // Check if there are any calls between Assume and CtxIter that may free
   // memory.
-  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
+  return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but

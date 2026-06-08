@@ -1287,6 +1287,21 @@ void use_trivial_temporary_after_destruction() {
   use(a); // expected-note {{later used here}}
 }
 
+namespace FullExprCleanupLoc {
+void var_initializer() {
+  View v = non_trivially_destructed_temporary() // expected-warning {{local temporary object does not live long enough}}
+               .getView(); // expected-note {{destroyed here}}
+  v.use(); // expected-note {{later used here}}
+}
+
+void expr_statement() {
+  View v;
+  v = non_trivially_destructed_temporary() // expected-warning {{local temporary object does not live long enough}}
+          .getView(); // expected-note {{destroyed here}}
+  v.use(); // expected-note {{later used here}}
+}
+} // namespace FullExprCleanupLoc
+
 namespace GH162834 {
 // https://github.com/llvm/llvm-project/issues/162834
 template <class T>
@@ -2299,8 +2314,8 @@ struct S {
 void indexing_with_static_operator() {
   S()(1, 2);
   S& x = S()("1",
-             2,  // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}}
-             3); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}}
+             2,  // expected-warning {{local temporary object does not live long enough}}
+             3); // expected-warning {{local temporary object does not live long enough}} expected-note 2 {{destroyed here}}
 
   (void)x; // expected-note 2 {{later used here}}
 

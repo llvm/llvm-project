@@ -143,7 +143,7 @@ float load3() {
 // HOST:  %3 = ptrtoint ptr %2 to i64
 // HOST:  %4 = sub i64 %3, %1
 // HOST:  %sub.ptr.div = sdiv exact i64 %4, 4
-// HOST:  %conv = sitofp i64 %sub.ptr.div to float
+// HOST:  %conv = sitofp contract i64 %sub.ptr.div to float
 // HOST:  ret float %conv
 float addr_taken2() {
   return (float)reinterpret_cast<long>(&(v2[1].y)-&(v[1].x));
