@@ -7994,14 +7994,14 @@ void CheckFormatHandler::HandleIncompleteSpecifier(const char *startSpecifier,
 
 bool CheckFormatHandler::CheckUnsupportedType(
     const analyze_format_string::ArgType &AT, const Expr *E,
-    const char *startSpecifier, unsigned specifierLen) {
+    const char *StartSpecifier, unsigned SpecifierLen) {
   if (!AT.isUnsupported())
     return false;
 
   EmitFormatDiagnostic(S.PDiag(diag::warn_format_unsupported_type)
                            << AT.getRepresentativeTypeName(S.Context),
                        E->getExprLoc(), /*IsStringLocation=*/false,
-                       getSpecifierRange(startSpecifier, specifierLen));
+                       getSpecifierRange(StartSpecifier, SpecifierLen));
   return true;
 }
 
