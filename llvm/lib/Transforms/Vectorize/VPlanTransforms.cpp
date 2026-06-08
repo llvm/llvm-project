@@ -5450,15 +5450,14 @@ void VPlanTransforms::materializeAliasMaskCheckBlock(
 }
 
 void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
-                                                  ScalarEvolution &SE,
-                                                  DominatorTree *DT) {
+                                                  ScalarEvolution &SE) {
   auto *Entry = Plan.getEntry();
   VPBuilder Builder(Entry, Entry->begin());
   DebugLoc DL = cast<VPIRBasicBlock>(Entry)
                     ->getIRBasicBlock()
                     ->getTerminator()
                     ->getDebugLoc();
-  VPSCEVExpander Expander(Builder, SE, DL, DT);
+  VPSCEVExpander Expander(Builder, SE, DL);
 
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander. During
   // the transition, unsupported VPExpandSCEVRecipes are skipped and left for

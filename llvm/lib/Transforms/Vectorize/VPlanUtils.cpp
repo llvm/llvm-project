@@ -916,7 +916,7 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       return Plan.getOrAddLiveIn(V);
-    if (DT ? !DT->dominates(I->getParent(), PH) : I->getParent() != PH)
+    if (!SE.DT.dominates(I->getParent(), PH))
       continue;
     SmallVector<Instruction *> DropPoisonGeneratingInsts;
     if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
@@ -945,7 +945,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       return nullptr;
     auto *NAry = cast<SCEVNAryExpr>(S);
     unsigned Opcode =
-        isa<SCEVAddExpr>(NAry) ? Instruction::Add : Instruction::Mul;
+        S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
     SmallVector<VPValue *, 2> Ops;
     for (const SCEVUse &Op : reverse(NAry->operands())) {
       VPValue *OpV = tryToExpand(Op);
