@@ -81,28 +81,13 @@ bool OpenMPClauseEmitter::emitProcBind(
     if (!pbc)
       continue;
 
-    switch (pbc->getProcBindKind()) {
-    case llvm::omp::ProcBindKind::OMP_PROC_BIND_master:
+    llvm::omp::ProcBindKind kind = pbc->getProcBindKind();
+    assert(kind != llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown &&
+           "unknown proc-bind kind");
+    // The 'default' kind has no dialect counterpart; leave the attribute unset.
+    if (kind != llvm::omp::ProcBindKind::OMP_PROC_BIND_default)
       result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
-          builder.getContext(), mlir::omp::ClauseProcBindKind::Master);
-      break;
-    case llvm::omp::ProcBindKind::OMP_PROC_BIND_close:
-      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
-          builder.getContext(), mlir::omp::ClauseProcBindKind::Close);
-      break;
-    case llvm::omp::ProcBindKind::OMP_PROC_BIND_spread:
-      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
-          builder.getContext(), mlir::omp::ClauseProcBindKind::Spread);
-      break;
-    case llvm::omp::ProcBindKind::OMP_PROC_BIND_primary:
-      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
-          builder.getContext(), mlir::omp::ClauseProcBindKind::Primary);
-      break;
-    case llvm::omp::ProcBindKind::OMP_PROC_BIND_default:
-      break;
-    case llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown:
-      llvm_unreachable("unknown proc-bind kind");
-    }
+          builder.getContext(), mlir::omp::convertProcBindKind(kind));
     return true;
   }
   return false;
