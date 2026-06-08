@@ -2033,6 +2033,11 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
   for (InsertElementInst *Insert : InsertElements) {
     Value *InsertVal = Insert->getOperand(1);
     Value *Idx = Insert->getOperand(2);
+    NewCost += TTI.getGEPCost(SI->getValueOperand()->getType(),
+                              SI->getPointerOperand(),
+                              {ConstantInt::get(Idx->getType(), 0), Idx},
+                              InsertVal->getType(), CostKind);
+
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
         std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
         *DL);
