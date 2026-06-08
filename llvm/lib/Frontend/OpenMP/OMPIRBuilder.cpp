@@ -2032,34 +2032,42 @@ void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
 }
 
 void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc,
-                                     ArrayRef<DependData> Dependencies) {
+                                     DependenciesInfo Dependencies) {
   if (!updateToLocation(Loc))
     return;
 
-  if (Dependencies.size()) {
+  Value *DepArray = nullptr;
+  Type *DepArrayTy = nullptr;
+  Value *NumDeps = nullptr;
+  if (Dependencies.DepArray) {
+    DepArray = Dependencies.DepArray;
+    NumDeps = Dependencies.NumDeps;
+  } else if (!Dependencies.Deps.empty()) {
     InsertPointTy OldIP = Builder.saveIP();
     BasicBlock &entryBB =
         Builder.GetInsertBlock()->getParent()->getEntryBlock();
     Builder.SetInsertPoint(&entryBB, entryBB.getFirstInsertionPt());
 
-    Value *DepArray = nullptr;
-    Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
+    DepArrayTy = ArrayType::get(DependInfo, Dependencies.Deps.size());
     DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+    NumDeps = Builder.getInt32(Dependencies.Deps.size());
 
     Builder.restoreIP(OldIP);
-
-    for (const auto &[DepIdx, Dep] : enumerate(Dependencies)) {
+    for (const auto &[DepIdx, Dep] : enumerate(Dependencies.Deps)) {
       Value *Base =
           Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, DepIdx);
       this->emitTaskDependency(Builder, Base, Dep);
     }
+  }
+
+  if (DepArray) {
     uint32_t SrcLocStrSize;
     Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
     Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
     Value *Args[] = {
         Ident,
         getOrCreateThreadID(Ident),
-        Builder.getInt32(Dependencies.size()),
+        NumDeps,
         DepArray,
         ConstantInt::get(Builder.getInt32Ty(), 0),
         ConstantPointerNull::get(PointerType::getUnqual(M.getContext())),
