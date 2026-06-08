@@ -1141,15 +1141,12 @@ hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
   if (Inner == Ins)
     return false;
 
-  Value *IOp1 = Ins->getOperand(1);
-  Value *IOp2 = Ins->getOperand(2);
-  Ins->setOperand(1, Inner->getOperand(1));
-  Ins->setOperand(2, Inner->getOperand(2));
-  Inner->setOperand(1, IOp1);
-  Inner->setOperand(2, IOp2);
-
-  hoist(*Inner, DT, CurLoop, HoistDest, SafetyInfo, MSSAU, SE, ORE);
-  HoistedInstructions.push_back(Inner);
+  Ins->replaceAllUsesWith(Ins->getOperand(0));
+  Ins->moveBefore(Inner->getIterator());
+  Ins->setOperand(0, Inner->getOperand(0));
+  Inner->setOperand(0, Ins);
+  hoist(*Ins, DT, CurLoop, HoistDest, SafetyInfo, MSSAU, SE, ORE);
+  HoistedInstructions.push_back(Ins);
   return true;
 }
 

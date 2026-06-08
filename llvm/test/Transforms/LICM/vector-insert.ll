@@ -177,8 +177,8 @@ define <4 x i32> @hoist_multiple_variants(ptr %base, i32 %inv, i32 %n) {
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDX_LE:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV_LCSSA]]
 ; CHECK-NEXT:    [[VARIANT_LE:%.*]] = load i32, ptr [[IDX_LE]], align 4
-; CHECK-NEXT:    [[INNER2_LE:%.*]] = insertelement <4 x i32> [[INNER_LE]], i32 [[VARIANT_LE]], i32 1
-; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER2_LE]], i32 [[VARIANT_LE]], i32 0
+; CHECK-NEXT:    [[INNER:%.*]] = insertelement <4 x i32> [[INNER_LE]], i32 [[VARIANT_LE]], i32 0
+; CHECK-NEXT:    [[OUTER_LE:%.*]] = insertelement <4 x i32> [[INNER]], i32 [[VARIANT_LE]], i32 1
 ; CHECK-NEXT:    store <4 x i32> [[OUTER_LE]], ptr [[IDX_LE]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV_LCSSA]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_LCSSA]], [[N]]
