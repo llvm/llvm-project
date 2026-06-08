@@ -18978,7 +18978,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPInitClause(
     } else if (!E->isValueDependent() && !E->isTypeDependent() &&
                !E->isInstantiationDependent() &&
                !E->containsUnexpandedParameterPack()) {
-      if (!E->isIntegerConstantExpr(getASTContext()) && !isa<StringLiteral>(E)) {
+      if (!E->isIntegerConstantExpr(getASTContext()) &&
+          !isa<StringLiteral>(E)) {
         Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
         return nullptr;
       }
