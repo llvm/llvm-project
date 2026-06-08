@@ -34,7 +34,6 @@ add_public_tablegen_target(AArch64CommonTableGen)
 
 set(AARCH64_CODEGEN_SOURCES
   AArch64A57FPLoadBalancing.cpp
-  AArch64AdvSIMDScalarPass.cpp
   AArch64AsmPrinter.cpp
   AArch64BranchTargets.cpp
   AArch64CallingConvention.cpp
@@ -77,7 +76,6 @@ set(AARCH64_CODEGEN_SOURCES
   AArch64TargetMachine.cpp
   AArch64TargetObjectFile.cpp
   AArch64TargetTransformInfo.cpp
-  AArch64SIMDInstrOpt.cpp
   )
 
 if(NOT EJIT_BARE_METAL AND NOT EJIT_TRIM_LLVM_BACKEND)
@@ -85,6 +83,8 @@ if(NOT EJIT_BARE_METAL AND NOT EJIT_TRIM_LLVM_BACKEND)
     SMEABIPass.cpp
     SMEPeepholeOpt.cpp
     SVEIntrinsicOpts.cpp
+    AArch64AdvSIMDScalarPass.cpp
+    AArch64SIMDInstrOpt.cpp
     )
 
   list(APPEND AARCH64_CODEGEN_SOURCES

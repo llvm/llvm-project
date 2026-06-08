@@ -261,7 +261,9 @@ LLVMInitializeAArch64Target() {
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64StackTaggingPass(PR);
   initializeAArch64StackTaggingPreRAPass(PR);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeAArch64AdvSIMDScalarPass(PR);
+#endif
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
   initializeAArch64CollectLOHPass(PR);
@@ -272,7 +274,9 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoPass(PR);
   initializeAArch64LoadStoreOptPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeAArch64SIMDInstrOptPass(PR);
+#endif
 #ifndef EJIT_BARE_METAL
   initializeAArch64O0PreLegalizerCombinerPass(PR);
   initializeAArch64PreLegalizerCombinerPass(PR);
@@ -865,7 +869,9 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(&EarlyIfConverterLegacyID);
   if (EnableStPairSuppress)
     addPass(createAArch64StorePairSuppressPass());
+#ifndef EJIT_TRIM_LLVM_BACKEND
   addPass(createAArch64SIMDInstrOptPass());
+#endif
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createAArch64StackTaggingPreRAPass());
   return true;
@@ -879,7 +885,9 @@ void AArch64PassConfig::addPreRegAlloc() {
 
   // Use AdvSIMD scalar instructions whenever profitable.
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAdvSIMDScalar) {
+#ifndef EJIT_TRIM_LLVM_BACKEND
     addPass(createAArch64AdvSIMDScalar());
+#endif
     // The AdvSIMD pass may produce copies that can be rewritten to
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerLegacyID);
