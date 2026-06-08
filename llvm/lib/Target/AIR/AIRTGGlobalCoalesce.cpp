@@ -40,9 +40,37 @@ static bool moduleHasMMA(Module &M) {
   return false;
 }
 
+// Erase threadgroup-address-space globals that have no remaining uses. The
+// upstream Triton allocate-shared-memory pass sizes a `global_smem` swizzle
+// scratch for every layout conversion (e.g. the #mma->#blocked C-output
+// convert), but the Apple backend lowers those conversions in-tree through its
+// own __tg_cvt_/__tg_dot_ab buffers, leaving `global_smem` declared but never
+// loaded or stored. A dead threadgroup global still consumes the per-
+// threadgroup memory budget at AIR layout assignment (the 32KB Metal cap), so
+// for a wide f32 C tile the dead 32KB global_smem alone exhausts the budget and
+// the kernel will not launch. Removing zero-use threadgroup globals reclaims
+// that space; it is always safe (no use can observe the removal) and shrinks
+// the footprint of every GEMM whose conversions are handled in-tree.
+static bool eraseDeadThreadgroupGlobals(Module &M) {
+  SmallVector<GlobalVariable *, 4> Dead;
+  for (GlobalVariable &GV : M.globals()) {
+    if (GV.getAddressSpace() != metal::AS::Threadgroup)
+      continue;
+    if (GV.use_empty())
+      Dead.push_back(&GV);
+  }
+  for (GlobalVariable *GV : Dead)
+    GV->eraseFromParent();
+  return !Dead.empty();
+}
+
 static bool tgGlobalCoalesce(Module &M) {
   if (!moduleHasMMA(M))
     return false;
+
+  // Reclaim dead threadgroup globals (e.g. the unused upstream global_smem
+  // swizzle scratch) before/independently of the cvt/dot merge below.
+  bool Changed = eraseDeadThreadgroupGlobals(M);
 
   SmallVector<GlobalVariable *, 4> CvtGlobals;
   SmallVector<GlobalVariable *, 4> DotAbGlobals;
@@ -60,9 +88,8 @@ static bool tgGlobalCoalesce(Module &M) {
   }
 
   if (CvtGlobals.empty() || DotAbGlobals.empty())
-    return false;
+    return Changed;
 
-  bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
   for (GlobalVariable *Cvt : CvtGlobals) {
