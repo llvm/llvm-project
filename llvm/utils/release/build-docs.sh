@@ -36,7 +36,7 @@ usage() {
   echo "                (optional) default: $srcdir"
   echo " -no-doxygen    Don't build Doxygen docs"
   echo " -no-sphinx     Don't build Spinx docs"
-  echo " -no-man-pages   Don't build man pages"
+  echo " -no-man-pages  Don't build man pages"
 }
 
 package_doxygen() {
