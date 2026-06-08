@@ -116,7 +116,8 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       templateArgumentLoc(hasTypeLoc(
-          typeLoc(hasType(arrayType())).bind("template_arg_array_typeloc"))),
+          typeLoc(hasValidBeginLoc(), hasType(arrayType()))
+              .bind("template_arg_array_typeloc"))),
       this);
 }
 

@@ -581,6 +581,11 @@ Changes in existing checks
   positives on project headers that use the same name as a standard library
   header.
 
+- Fixed :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check to avoid emitting a
+  locationless diagnostic on ``= default`` special members of classes inheriting
+  from template types with array parameters (e.g. ``unique_ptr<T[]>``).
+
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
