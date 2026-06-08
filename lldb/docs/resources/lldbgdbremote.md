@@ -1184,26 +1184,32 @@ an inferior process.
 ## QSetSTDIOWindowSize:cols=\<N\>;rows=\<N\>
 
 Set the terminal window size for the inferior's stdio pseudo-terminal prior to
-sending an "A" packet.
+sending a launch args (`A`) packet.
 
-When launching a program that uses a pseudo-terminal (PTY) for stdio, this
-packet specifies the initial terminal dimensions:
+When launching a program whose stdio is connected to a pseudo-terminal (PTY),
+this packet specifies the initial terminal dimensions:
 ```
 QSetSTDIOWindowSize:cols=<N>;rows=<N>
 ```
-Both `cols` and `rows` must be non-zero unsigned 16-bit integers. The packet
-must be sent _prior_ to sending an "A" packet. On the server side, the
-dimensions are applied to the PTY via `TIOCSWINSZ` (POSIX) or the equivalent
-platform mechanism (e.g. `ConPTY` resize on Windows).
+Both `cols` and `rows` must be non-zero unsigned 16-bit integers. If sent,
+this packet must be sent _prior_ to the launch args (`A`) packet; sending it
+after the inferior has been launched has no effect. On the server side, the
+dimensions are stored and later applied to the PTY when the inferior is
+launched, via `TIOCSWINSZ` (POSIX) or the equivalent platform mechanism (e.g.
+`ConPTY` resize on Windows).
 
 The response is either:
-* `OK`: dimensions accepted.
-* `ENN`: malformed packet or zero value for `cols`/`rows`.
+* `OK`: dimensions accepted; they will be applied to the PTY when the
+  inferior is launched.
+* `ENN`: malformed packet.
 * Empty/`+`: packet not supported; the client silently ignores this.
 
-**Priority To Implement:** Low. Only needed when the remote target launches a
-process with a PTY and the client wants the inferior's terminal to reflect the
-correct window size (e.g. for proper line-wrapping or full-screen TUI apps).
+**Priority To Implement:** Low. Only needed when the inferior's stdio is
+connected to a PTY distinct from the terminal hosting lldb (for example, with
+`lldb-dap`, or when the debuggee is launched in its own terminal) and the
+client wants that PTY to reflect the correct window size  (e.g. for proper
+line-wrapping or full-screen TUI apps). This setting does not affect the terminal
+hosting the lldb CLI itself.
 
 ## QSetWorkingDir:\<ascii-hex-path\>
 
