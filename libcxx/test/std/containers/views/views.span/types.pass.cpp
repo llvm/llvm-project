@@ -14,18 +14,16 @@
 // class span {
 // public:
 //   // constants and types
-//   using element_type = ElementType;
-//   using value_type = remove_cv_t<ElementType>;
-//   using size_type = size_t;
-//   using difference_type = ptrdiff_t;
-//   using pointer = element_type*;
-//   using const_pointer = const element_type*;
-//   using reference = element_type&;
-//   using const_reference = const element_type&;
-//   using iterator = implementation-defined;
-//   using const_iterator = implementation-defined;
-//   using reverse_iterator = std::reverse_iterator<iterator>;
-//   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+//   using element_type                = ElementType;
+//   using value_type                  = remove_cv_t<ElementType>;
+//   using size_type                   = size_t;
+//   using difference_type             = ptrdiff_t;
+//   using pointer                     = element_type*;
+//   using const_pointer               = const element_type*;
+//   using reference                   = element_type&;
+//   using const_reference             = const element_type&;
+//   using iterator                    = implementation-defined;
+//   using reverse_iterator            = std::reverse_iterator<iterator>;
 //   static constexpr size_type extent = Extent;
 
 #include <span>
