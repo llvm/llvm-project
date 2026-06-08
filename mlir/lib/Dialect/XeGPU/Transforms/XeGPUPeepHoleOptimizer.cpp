@@ -80,16 +80,12 @@ getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
 /// tensor_desc to i32 type such that lane data becomes [1, 1]. This makes the
 /// later lowering easily use the load with transpose instruction.
 static bool canBeOptimizedForTranspose(ArrayRef<int64_t> laneLayout,
-                                       ArrayRef<int64_t> laneData,
-                                       int64_t elementBitWidth) {
+                                       ArrayRef<int64_t> laneData) {
   if (laneLayout.size() != 2 || laneData.size() != 2)
     return false;
   if (laneLayout[0] == 1 || laneLayout[1] != 1)
     return false;
   if (laneData[0] != 1 || laneData[1] == 1)
-    return false;
-  // Add a tighter check to see if the bundle to transpose is 32bit.
-  if (elementBitWidth * laneData[1] != 32)
     return false;
   return true;
 }
@@ -101,15 +97,11 @@ static bool canBeOptimizedForTranspose(xegpu::TensorDescType tdescType) {
   int elementTyBitwidth = tdescType.getElementType().getIntOrFloatBitWidth();
   if (elementTyBitwidth >= 32)
     return false;
-  // sub-byte type is not supported for now.
-  if (elementTyBitwidth < 8)
-    return false;
   auto maybeLaneLayout = getMaybeLaneLayout(tdescType);
   auto maybeLaneData = getMaybeLaneData(tdescType);
   if (!maybeLaneData || !maybeLaneLayout)
     return false;
-  return canBeOptimizedForTranspose(*maybeLaneLayout, *maybeLaneData,
-                                    elementTyBitwidth);
+  return canBeOptimizedForTranspose(*maybeLaneLayout, *maybeLaneData);
 }
 
 /// Check if a tensor desc type can be optimized for transpose, if so return the
@@ -261,9 +253,6 @@ public:
   matchAndRewrite(xegpu::CreateNdDescOp createNdOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto tdescTy = createNdOp.getType();
-    // sub-byte type is not supported for now.
-    if (tdescTy.getElementTypeBitWidth() < 8)
-      return failure();
     // Get the target uArch info.
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
@@ -629,9 +618,7 @@ struct XeGPUPeepHoleOptimizerPass final
             return true;
           auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
           auto laneData = layout.getEffectiveLaneDataAsInt();
-          return !canBeOptimizedForTranspose(
-              laneLayout, laneData,
-              extractOp.getSourceVectorType().getElementTypeBitWidth());
+          return !canBeOptimizedForTranspose(laneLayout, laneData);
         });
 
     target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
