@@ -25,10 +25,7 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_trivially_lexicographically_comparable.h>
 #include <__type_traits/is_volatile.h>
-
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <cwchar>
-#endif
+#include <cwchar>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

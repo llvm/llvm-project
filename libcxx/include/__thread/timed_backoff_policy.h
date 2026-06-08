@@ -10,13 +10,12 @@
 #ifndef _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H
 #define _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H
 
+#include <__chrono/duration.h>
 #include <__config>
 #include <__thread/poll_with_backoff.h>
+#include <__thread/support.h>
 
 #if _LIBCPP_HAS_THREADS
-
-#  include <__chrono/duration.h>
-#  include <__thread/support.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

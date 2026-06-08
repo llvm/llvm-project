@@ -316,19 +316,18 @@ typedef basic_stringstream<wchar_t> wstringstream;
 #  include <__cxx03/sstream>
 #else
 #  include <__config>
+#  include <__fwd/sstream.h>
+#  include <__ostream/basic_ostream.h>
+#  include <__type_traits/is_convertible.h>
+#  include <__utility/swap.h>
+#  include <ios>
+#  include <istream>
+#  include <streambuf>
+#  include <string>
+#  include <string_view>
+#  include <version>
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
-#    include <__fwd/sstream.h>
-#    include <__ostream/basic_ostream.h>
-#    include <__type_traits/is_convertible.h>
-#    include <__utility/swap.h>
-#    include <ios>
-#    include <istream>
-#    include <streambuf>
-#    include <string>
-#    include <string_view>
-#    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header

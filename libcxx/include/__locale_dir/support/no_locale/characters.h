@@ -15,10 +15,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <cwchar>
-#  include <cwctype>
-#endif
+#include <cwchar>
+#include <cwctype>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

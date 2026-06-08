@@ -25,12 +25,9 @@
 #include <__type_traits/remove_pointer.h>
 #include <__type_traits/void_t.h>
 #include <__utility/move.h>
+#include <iomanip> // for quoted
 #include <string>
 #include <string_view>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <iomanip> // for quoted
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

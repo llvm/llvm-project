@@ -163,24 +163,23 @@ template <class Stream, class T>
 #  include <__cxx03/istream>
 #else
 #  include <__config>
+#  include <__fwd/istream.h>
+#  include <__iterator/istreambuf_iterator.h>
+#  include <__locale_dir/num.h>
+#  include <__ostream/basic_ostream.h>
+#  include <__type_traits/conjunction.h>
+#  include <__type_traits/enable_if.h>
+#  include <__type_traits/is_base_of.h>
+#  include <__type_traits/is_same.h>
+#  include <__type_traits/make_unsigned.h>
+#  include <__utility/declval.h>
+#  include <__utility/forward.h>
+#  include <bitset>
+#  include <ios>
+#  include <streambuf>
+#  include <version>
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
-#    include <__fwd/istream.h>
-#    include <__iterator/istreambuf_iterator.h>
-#    include <__locale_dir/num.h>
-#    include <__ostream/basic_ostream.h>
-#    include <__type_traits/conjunction.h>
-#    include <__type_traits/enable_if.h>
-#    include <__type_traits/is_base_of.h>
-#    include <__type_traits/is_same.h>
-#    include <__type_traits/make_unsigned.h>
-#    include <__utility/declval.h>
-#    include <__utility/forward.h>
-#    include <bitset>
-#    include <ios>
-#    include <streambuf>
-#    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header

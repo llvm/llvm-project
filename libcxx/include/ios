@@ -215,6 +215,17 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #  include <__cxx03/ios>
 #else
 #  include <__config>
+#  include <__fwd/ios.h>
+#  include <__ios/fpos.h>
+#  include <__locale>
+#  include <__memory/addressof.h>
+#  include <__system_error/error_category.h>
+#  include <__system_error/error_code.h>
+#  include <__system_error/error_condition.h>
+#  include <__system_error/system_error.h>
+#  include <__utility/swap.h>
+#  include <__verbose_abort>
+#  include <version>
 
 // standard-mandated includes
 
@@ -222,18 +233,6 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #  include <iosfwd>
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
-#    include <__fwd/ios.h>
-#    include <__ios/fpos.h>
-#    include <__locale>
-#    include <__memory/addressof.h>
-#    include <__system_error/error_category.h>
-#    include <__system_error/error_code.h>
-#    include <__system_error/error_condition.h>
-#    include <__system_error/system_error.h>
-#    include <__utility/swap.h>
-#    include <__verbose_abort>
-#    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header

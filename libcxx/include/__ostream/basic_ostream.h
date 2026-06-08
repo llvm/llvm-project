@@ -10,28 +10,27 @@
 #define _LIBCPP___OSTREAM_BASIC_OSTREAM_H
 
 #include <__config>
+#include <__exception/operations.h>
+#include <__fwd/memory.h>
+#include <__iterator/ostreambuf_iterator.h>
+#include <__locale_dir/num.h>
+#include <__locale_dir/pad_and_output.h>
+#include <__memory/addressof.h>
+#include <__memory/unique_ptr.h>
+#include <__new/exceptions.h>
+#include <__ostream/put_character_sequence.h>
+#include <__system_error/error_code.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_base_of.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
+#include <bitset>
+#include <ios>
+#include <streambuf>
+#include <string_view>
 
 #if _LIBCPP_HAS_LOCALIZATION
-
-#  include <__exception/operations.h>
-#  include <__fwd/memory.h>
-#  include <__iterator/ostreambuf_iterator.h>
-#  include <__locale_dir/num.h>
-#  include <__locale_dir/pad_and_output.h>
-#  include <__memory/addressof.h>
-#  include <__memory/unique_ptr.h>
-#  include <__new/exceptions.h>
-#  include <__ostream/put_character_sequence.h>
-#  include <__system_error/error_code.h>
-#  include <__type_traits/conjunction.h>
-#  include <__type_traits/enable_if.h>
-#  include <__type_traits/is_base_of.h>
-#  include <__type_traits/void_t.h>
-#  include <__utility/declval.h>
-#  include <bitset>
-#  include <ios>
-#  include <streambuf>
-#  include <string_view>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

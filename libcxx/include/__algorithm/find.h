@@ -30,11 +30,8 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
 #include <__utility/move.h>
+#include <cwchar>
 #include <limits>
-
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <cwchar>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

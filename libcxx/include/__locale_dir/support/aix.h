@@ -17,10 +17,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
+#include <cwchar>
 #include <string.h>
 #include <time.h>
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <cwchar>
 #  include <wctype.h>
 #endif
 
