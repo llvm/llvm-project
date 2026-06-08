@@ -93,6 +93,25 @@ bool OpenMPClauseEmitter::emitProcBind(
   return false;
 }
 
+bool OpenMPClauseEmitter::emitNumThreads(
+    mlir::omp::NumThreadsClauseOps &result) const {
+  for (const OMPClause *clause : clauses) {
+    const auto *ntc = dyn_cast<OMPNumThreadsClause>(clause);
+    if (!ntc)
+      continue;
+
+    const Expr *numThreadsExpr = ntc->getNumThreads();
+    mlir::Value numThreadsValue = cgf.emitScalarExpr(numThreadsExpr);
+    auto intType = builder.getIntegerType(32); // Assuming 32-bit integer type.
+    numThreadsValue = builder.createBuiltinIntCast(numThreadsValue, intType);
+
+    result.numThreadsVars.assign({numThreadsValue});
+
+    return true;
+  }
+  return false;
+}
+
 bool OpenMPClauseEmitter::emitMap(
     mlir::omp::MapClauseOps &result,
     llvm::SmallVectorImpl<const VarDecl *> *mapSyms) const {

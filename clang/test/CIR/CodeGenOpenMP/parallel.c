@@ -84,3 +84,18 @@ void proc_bind_parallel() {
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }
+
+void num_threads_parallel() {
+  // CHECK: omp.parallel num_threads(%{{.*}}: i32) {
+  #pragma omp parallel num_threads(16)
+  {}
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+int numThreads = 4;
+  // CHECK: omp.parallel num_threads(%{{.*}}: i32) {
+#pragma omp parallel num_threads(numThreads) 
+  {}
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+}
