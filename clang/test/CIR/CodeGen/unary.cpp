@@ -250,7 +250,7 @@ float fpMinus() {
 // CHECK: cir.func{{.*}} @_Z7fpMinusv() -> (!cir.float{{.*}})
 // CHECK:   %[[A:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a", init]
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
-// CHECK:   %[[OUTPUT:.*]] = cir.minus %[[INPUT]]
+// CHECK:   %[[OUTPUT:.*]] = cir.fneg %[[INPUT]]
 
 // LLVM: define{{.*}} float @_Z7fpMinusv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
@@ -275,14 +275,15 @@ float fpPreInc() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CHECK:   cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
-// CHECK:   %[[INCREMENTED:.*]] = cir.inc %[[INPUT]]
+// CHECK:   %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CHECK:   %[[INCREMENTED:.*]] = cir.fadd %[[INPUT]], %[[ONE]]
 
 // LLVM: define{{.*}} float @_Z8fpPreIncv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
-// LLVM:   %[[RESULT:.*]] = fadd float 1.000000e+00, %[[A_LOAD]]
+// LLVM:   %[[RESULT:.*]] = fadd float %[[A_LOAD]], 1.000000e+00
 
 // OGCG: define{{.*}} float @_Z8fpPreIncv()
 // OGCG:   %[[A:.*]] = alloca float, align 4
@@ -300,14 +301,15 @@ float fpPreDec() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CHECK:   cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
-// CHECK:   %[[DECREMENTED:.*]] = cir.dec %[[INPUT]]
+// CHECK:   %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CHECK:   %[[DECREMENTED:.*]] = cir.fsub %[[INPUT]], %[[ONE]]
 
 // LLVM: define{{.*}} float @_Z8fpPreDecv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
-// LLVM:   %[[RESULT:.*]] = fadd float -1.000000e+00, %[[A_LOAD]]
+// LLVM:   %[[RESULT:.*]] = fsub float %[[A_LOAD]], 1.000000e+00
 
 // OGCG: define{{.*}} float @_Z8fpPreDecv()
 // OGCG:   %[[A:.*]] = alloca float, align 4
@@ -325,14 +327,15 @@ float fpPostInc() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CHECK:   cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
-// CHECK:   %[[INCREMENTED:.*]] = cir.inc %[[INPUT]]
+// CHECK:   %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CHECK:   %[[INCREMENTED:.*]] = cir.fadd %[[INPUT]], %[[ONE]]
 
 // LLVM: define{{.*}} float @_Z9fpPostIncv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
-// LLVM:   %[[RESULT:.*]] = fadd float 1.000000e+00, %[[A_LOAD]]
+// LLVM:   %[[RESULT:.*]] = fadd float %[[A_LOAD]], 1.000000e+00
 
 // OGCG: define{{.*}} float @_Z9fpPostIncv()
 // OGCG:   %[[A:.*]] = alloca float, align 4
@@ -350,14 +353,15 @@ float fpPostDec() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CHECK:   cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
-// CHECK:   %[[DECREMENTED:.*]] = cir.dec %[[INPUT]]
+// CHECK:   %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CHECK:   %[[DECREMENTED:.*]] = cir.fsub %[[INPUT]], %[[ONE]]
 
 // LLVM: define{{.*}} float @_Z9fpPostDecv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
-// LLVM:   %[[RESULT:.*]] = fadd float -1.000000e+00, %[[A_LOAD]]
+// LLVM:   %[[RESULT:.*]] = fsub float %[[A_LOAD]], 1.000000e+00
 
 // OGCG: define{{.*}} float @_Z9fpPostDecv()
 // OGCG:   %[[A:.*]] = alloca float, align 4
@@ -378,7 +382,8 @@ float fpPostInc2() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CHECK:   cir.store{{.*}} %[[ATMP]], %[[A]] : !cir.float
 // CHECK:   %[[ATOB:.*]] = cir.load{{.*}} %[[A]]
-// CHECK:   %[[INCREMENTED:.*]] = cir.inc %[[ATOB]]
+// CHECK:   %[[ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CHECK:   %[[INCREMENTED:.*]] = cir.fadd %[[ATOB]], %[[ONE]]
 // CHECK:   cir.store{{.*}} %[[INCREMENTED]], %[[A]]
 // CHECK:   cir.store{{.*}} %[[ATOB]], %[[B]]
 // CHECK:   %[[B_TO_OUTPUT:.*]] = cir.load{{.*}} %[[B]]
@@ -389,7 +394,7 @@ float fpPostInc2() {
 // LLVM:   %[[B:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
-// LLVM:   %[[A_INC:.*]] = fadd float 1.000000e+00, %[[A_LOAD]]
+// LLVM:   %[[A_INC:.*]] = fadd float %[[A_LOAD]], 1.000000e+00
 // LLVM:   store float %[[A_INC]], ptr %[[A]], align 4
 // LLVM:   store float %[[A_LOAD]], ptr %[[B]], align 4
 // LLVM:   %[[B_TO_OUTPUT:.*]] = load float, ptr %[[B]], align 4
@@ -448,7 +453,7 @@ _Float16 fp16UMinus(_Float16 f) {
 // CHECK: cir.func{{.*}} @_Z10fp16UMinusDF16_({{.*}}) -> (!cir.f16{{.*}})
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[F:.*]]
 // CHECK:   %[[PROMOTED:.*]] = cir.cast floating %[[INPUT]] : !cir.f16 -> !cir.float
-// CHECK:   %[[RESULT:.*]] = cir.minus %[[PROMOTED]]
+// CHECK:   %[[RESULT:.*]] = cir.fneg %[[PROMOTED]]
 // CHECK:   %[[UNPROMOTED:.*]] = cir.cast floating %[[RESULT]] : !cir.float -> !cir.f16
 
 // LLVM: define{{.*}} half @_Z10fp16UMinusDF16_({{.*}})
@@ -592,8 +597,8 @@ void f16NestedUMinus() {
 // CHECK:  %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
 // CHECK:  %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.f16>, !cir.f16
 // CHECK:  %[[A_F32:.*]] = cir.cast floating %[[TMP_A]] : !cir.f16 -> !cir.float
-// CHECK:  %[[A_MINUS:.*]] = cir.minus %[[A_F32]] : !cir.float
-// CHECK:  %[[RESULT_F32:.*]] = cir.minus %[[A_MINUS]] : !cir.float
+// CHECK:  %[[A_MINUS:.*]] = cir.fneg %[[A_F32]] : !cir.float
+// CHECK:  %[[RESULT_F32:.*]] = cir.fneg %[[A_MINUS]] : !cir.float
 // CHECK:  %[[RESULT:.*]] = cir.cast floating %[[RESULT_F32]] : !cir.float -> !cir.f16
 // CHECK:  cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.f16, !cir.ptr<!cir.f16>
 

@@ -387,11 +387,11 @@ int main() {
 // CHECK-AMDGCN-NEXT: define dso_local amdgpu_kernel void @_ZTS26single_purpose_kernel_name
 // CHECK-AMDGCN-SAME:   (ptr addrspace(4) noundef byref(%struct.single_purpose_kernel) align 1 %0) #[[AMDGCN_ATTR0:[0-9]+]] {
 // CHECK-AMDGCN-NEXT: entry:
-// CHECK-AMDGCN-NEXT:   %coerce = alloca %struct.single_purpose_kernel, align 1, addrspace(5)
-// CHECK-AMDGCN-NEXT:   %kernelFunc = addrspacecast ptr addrspace(5) %coerce to ptr
-// CHECK-AMDGCN-NEXT:   call void @llvm.memcpy.p0.p4.i64(ptr align 1 %kernelFunc, ptr addrspace(4) align 1 %0, i64 1, i1 false)
+// CHECK-AMDGCN-NEXT:   %kernelFunc = alloca %struct.single_purpose_kernel, align 1, addrspace(5)
+// CHECK-AMDGCN-NEXT:   call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 1 %kernelFunc, ptr addrspace(4) align 1 %0, i64 1, i1 false)
+// CHECK-AMDGCN-NEXT:   %kernelFunc.ascast = addrspacecast ptr addrspace(5) %kernelFunc to ptr
 // CHECK-AMDGCN-NEXT:   call void @_ZNK21single_purpose_kernelclEv
-// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 1 dereferenceable(1) %kernelFunc) #[[AMDGCN_ATTR1:[0-9]+]]
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 1 dereferenceable(1) %kernelFunc.ascast) #[[AMDGCN_ATTR1:[0-9]+]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 // CHECK-AMDGCN:      define linkonce_odr void @_ZNK21single_purpose_kernelclEv
@@ -425,11 +425,11 @@ int main() {
 // CHECK-AMDGCN-SAME:   (i32 %kernelFunc.coerce) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
 // CHECK-AMDGCN-NEXT:   %kernelFunc = alloca %class.anon, align 4, addrspace(5)
-// CHECK-AMDGCN-NEXT:   %kernelFunc1 = addrspacecast ptr addrspace(5) %kernelFunc to ptr
-// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc1, i32 0, i32 0
-// CHECK-AMDGCN-NEXT:   store i32 %kernelFunc.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr addrspace(5) %kernelFunc, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %kernelFunc.coerce, ptr addrspace(5) %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %kernelFunc.ascast = addrspacecast ptr addrspace(5) %kernelFunc to ptr
 // CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E_clIiEEDaS_
-// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %kernelFunc1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %kernelFunc.ascast, i32 noundef 42) #[[AMDGCN_ATTR1]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 // CHECK-AMDGCN:      define internal void @_ZZ4mainENKUlT_E_clIiEEDaS_
@@ -462,11 +462,11 @@ int main() {
 // CHECK-AMDGCN-NEXT: define dso_local amdgpu_kernel void @"_ZTS6\CE\B4\CF\84\CF\87"
 // CHECK-AMDGCN-SAME:   (ptr addrspace(4) noundef byref(%class.anon.0) align 1 %0) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
-// CHECK-AMDGCN-NEXT:   %coerce = alloca %class.anon.0, align 1, addrspace(5)
-// CHECK-AMDGCN-NEXT:   %kernelFunc = addrspacecast ptr addrspace(5) %coerce to ptr
-// CHECK-AMDGCN-NEXT:   call void @llvm.memcpy.p0.p4.i64(ptr align 1 %kernelFunc, ptr addrspace(4) align 1 %0, i64 1, i1 false)
+// CHECK-AMDGCN-NEXT:   %kernelFunc = alloca %class.anon.0, align 1, addrspace(5)
+// CHECK-AMDGCN-NEXT:   call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 1 %kernelFunc, ptr addrspace(4) align 1 %0, i64 1, i1 false)
+// CHECK-AMDGCN-NEXT:   %kernelFunc.ascast = addrspacecast ptr addrspace(5) %kernelFunc to ptr
 // CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUliE_clEi
-// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 1 dereferenceable(1) %kernelFunc, i32 noundef 42) #[[AMDGCN_ATTR1:[0-9]+]]
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 1 dereferenceable(1) %kernelFunc.ascast, i32 noundef 42) #[[AMDGCN_ATTR1:[0-9]+]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 // CHECK-AMDGCN:      define internal void @_ZZ4mainENKUliE_clEi
@@ -502,18 +502,18 @@ int main() {
 // CHECK-AMDGCN-NEXT:   %k = alloca %class.anon.1, align 4, addrspace(5)
 // CHECK-AMDGCN-NEXT:   %a.addr = alloca i32, align 4, addrspace(5)
 // CHECK-AMDGCN-NEXT:   %b.addr = alloca i32, align 4, addrspace(5)
-// CHECK-AMDGCN-NEXT:   %k2 = addrspacecast ptr addrspace(5) %k to ptr
 // CHECK-AMDGCN-NEXT:   %a.addr.ascast = addrspacecast ptr addrspace(5) %a.addr to ptr
 // CHECK-AMDGCN-NEXT:   %b.addr.ascast = addrspacecast ptr addrspace(5) %b.addr to ptr
-// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.1, ptr %k2, i32 0, i32 0
-// CHECK-AMDGCN-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %struct.copyable, ptr %coerce.dive, i32 0, i32 0
-// CHECK-AMDGCN-NEXT:   store i32 %k.coerce, ptr %coerce.dive1, align 4
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.1, ptr addrspace(5) %k, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %struct.copyable, ptr addrspace(5)  %coerce.dive, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %k.coerce, ptr addrspace(5) %coerce.dive1, align 4
+// CHECK-AMDGCN-NEXT:   %k.ascast = addrspacecast ptr addrspace(5) %k to ptr
 // CHECK-AMDGCN-NEXT:   store i32 %a, ptr %a.addr.ascast, align 4
 // CHECK-AMDGCN-NEXT:   store i32 %b, ptr %b.addr.ascast, align 4
 // CHECK-AMDGCN-NEXT:   %0 = load i32, ptr %a.addr.ascast, align 4
 // CHECK-AMDGCN-NEXT:   %1 = load i32, ptr %b.addr.ascast, align 4
 // CHECK-AMDGCN-NEXT:   %call = call noundef i32 @_ZZ4mainENKUliiE_clEii
-// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %k2, i32 noundef %0, i32 noundef %1) #[[AMDGCN_ATTR1:[0-9]+]]
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %k.ascast, i32 noundef %0, i32 noundef %1) #[[AMDGCN_ATTR1:[0-9]+]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 //
@@ -539,10 +539,9 @@ int main() {
 // CHECK-SPIRNV-NEXT:   %k.indirect_addr = alloca ptr addrspace(4), align {{[48]}}
 // CHECK-SPIRNV-NEXT:   %a.addr = alloca i32, align 4
 // CHECK-SPIRNV-NEXT:   %b.addr = alloca i32, align 4
-// CHECK-SPIRNV-NEXT:   %k.indirect_addr.ascast = addrspacecast ptr %k.indirect_addr to ptr addrspace(4)
 // CHECK-SPIRNV-NEXT:   %a.addr.ascast = addrspacecast ptr %a.addr to ptr addrspace(4)
 // CHECK-SPIRNV-NEXT:   %b.addr.ascast = addrspacecast ptr %b.addr to ptr addrspace(4)
-// CHECK-SPIRNV-NEXT:   store ptr %k, ptr addrspace(4) %k.indirect_addr.ascast, align {{[48]}}
+// CHECK-SPIRNV-NEXT:   store ptr %k, ptr %k.indirect_addr, align {{[48]}}
 // CHECK-SPIRNV-NEXT:   %k.ascast = addrspacecast ptr %k to ptr addrspace(4)
 // CHECK-SPIRNV-NEXT:   store i32 %a, ptr addrspace(4) %a.addr.ascast, align 4
 // CHECK-SPIRNV-NEXT:   store i32 %b, ptr addrspace(4) %b.addr.ascast, align 4
@@ -579,11 +578,11 @@ int main() {
 // CHECK-AMDGCN-SAME:   (i32 %ref.coerce) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
 // CHECK-AMDGCN-NEXT:   %ref = alloca %class.anon, align 4, addrspace(5)
-// CHECK-AMDGCN-NEXT:   %ref1 = addrspacecast ptr addrspace(5) %ref to ptr
-// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %ref1, i32 0, i32 0
-// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr addrspace(5) %ref, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr addrspace(5) %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %ref.ascast = addrspacecast ptr addrspace(5) %ref to ptr
 // CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E_clIiEEDaS_
-// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref.ascast, i32 noundef 42) #[[AMDGCN_ATTR1]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 //
@@ -612,11 +611,11 @@ int main() {
 // CHECK-AMDGCN-SAME:   (i32 %ref.coerce) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
 // CHECK-AMDGCN-NEXT:   %ref = alloca %class.anon, align 4, addrspace(5)
-// CHECK-AMDGCN-NEXT:   %ref1 = addrspacecast ptr addrspace(5) %ref to ptr
-// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %ref1, i32 0, i32 0
-// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr addrspace(5) %ref, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr addrspace(5) %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %ref.ascast = addrspacecast ptr addrspace(5) %ref to ptr
 // CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E_clIiEEDaS_
-// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref.ascast, i32 noundef 42) #[[AMDGCN_ATTR1]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 //
@@ -645,11 +644,11 @@ int main() {
 // CHECK-AMDGCN-SAME:   (i32 %ref.coerce) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
 // CHECK-AMDGCN-NEXT:   %ref = alloca %class.anon, align 4, addrspace(5)
-// CHECK-AMDGCN-NEXT:   %ref1 = addrspacecast ptr addrspace(5) %ref to ptr
-// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %ref1, i32 0, i32 0
-// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr addrspace(5) %ref, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr addrspace(5) %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %ref.ascast = addrspacecast ptr addrspace(5) %ref to ptr
 // CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E_clIiEEDaS_
-// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref.ascast, i32 noundef 42) #[[AMDGCN_ATTR1]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 //
@@ -678,11 +677,11 @@ int main() {
 // CHECK-AMDGCN-SAME:   (i32 %ref.coerce) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
 // CHECK-AMDGCN-NEXT:   %ref = alloca %class.anon.2, align 4, addrspace(5)
-// CHECK-AMDGCN-NEXT:   %ref1 = addrspacecast ptr addrspace(5) %ref to ptr
-// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr %ref1, i32 0, i32 0
-// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr addrspace(5) %ref, i32 0, i32 0
+// CHECK-AMDGCN-NEXT:   store i32 %ref.coerce, ptr addrspace(5) %coerce.dive, align 4
+// CHECK-AMDGCN-NEXT:   %ref.ascast = addrspacecast ptr addrspace(5) %ref to ptr
 // CHECK-AMDGCN-NEXT:   call void @_ZZ4mainENKUlT_E0_clIiEEDaS_
-// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref1, i32 noundef 42) #[[AMDGCN_ATTR1]]
+// CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 4 dereferenceable(4) %ref.ascast, i32 noundef 42) #[[AMDGCN_ATTR1]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 //

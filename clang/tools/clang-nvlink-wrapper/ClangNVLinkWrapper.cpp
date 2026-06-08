@@ -20,6 +20,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/Frontend/Offloading/ArchiveLinker.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
@@ -206,47 +207,6 @@ Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
   return *Path;
 }
 
-std::optional<std::string> findFile(StringRef Dir, StringRef Root,
-                                    const Twine &Name) {
-  SmallString<128> Path;
-  if (Dir.starts_with("="))
-    sys::path::append(Path, Root, Dir.substr(1), Name);
-  else
-    sys::path::append(Path, Dir, Name);
-
-  if (sys::fs::exists(Path))
-    return static_cast<std::string>(Path);
-  return std::nullopt;
-}
-
-std::optional<std::string>
-findFromSearchPaths(StringRef Name, StringRef Root,
-                    ArrayRef<StringRef> SearchPaths) {
-  for (StringRef Dir : SearchPaths)
-    if (std::optional<std::string> File = findFile(Dir, Root, Name))
-      return File;
-  return std::nullopt;
-}
-
-std::optional<std::string>
-searchLibraryBaseName(StringRef Name, StringRef Root,
-                      ArrayRef<StringRef> SearchPaths) {
-  for (StringRef Dir : SearchPaths)
-    if (std::optional<std::string> File =
-            findFile(Dir, Root, "lib" + Name + ".a"))
-      return File;
-  return std::nullopt;
-}
-
-/// Search for static libraries in the linker's library path given input like
-/// `-lfoo` or `-l:libfoo.a`.
-std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
-                                         ArrayRef<StringRef> SearchPaths) {
-  if (Input.starts_with(":"))
-    return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
-  return searchLibraryBaseName(Input, Root, SearchPaths);
-}
-
 void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
     return;
@@ -254,49 +214,6 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   errs() << " \"" << CmdArgs.front() << "\" ";
   errs() << join(std::next(CmdArgs.begin()), CmdArgs.end(), " ") << "\n";
 }
-
-/// A minimum symbol interface that provides the necessary information to
-/// extract archive members and resolve LTO symbols.
-struct Symbol {
-  enum Flags {
-    None = 0,
-    Undefined = 1 << 0,
-    Weak = 1 << 1,
-  };
-
-  Symbol() : File(), Flags(None), UsedInRegularObj(false) {}
-  Symbol(Symbol::Flags Flags) : File(), Flags(Flags), UsedInRegularObj(true) {}
-
-  Symbol(MemoryBufferRef File, const irsymtab::Reader::SymbolRef Sym)
-      : File(File), Flags(0), UsedInRegularObj(false) {
-    if (Sym.isUndefined())
-      Flags |= Undefined;
-    if (Sym.isWeak())
-      Flags |= Weak;
-  }
-
-  Symbol(MemoryBufferRef File, const SymbolRef Sym)
-      : File(File), Flags(0), UsedInRegularObj(false) {
-    auto FlagsOrErr = Sym.getFlags();
-    if (!FlagsOrErr)
-      reportError(FlagsOrErr.takeError());
-    if (*FlagsOrErr & SymbolRef::SF_Undefined)
-      Flags |= Undefined;
-    if (*FlagsOrErr & SymbolRef::SF_Weak)
-      Flags |= Weak;
-
-    auto NameOrErr = Sym.getName();
-    if (!NameOrErr)
-      reportError(NameOrErr.takeError());
-  }
-
-  bool isWeak() const { return Flags & Weak; }
-  bool isUndefined() const { return Flags & Undefined; }
-
-  MemoryBufferRef File;
-  uint32_t Flags;
-  bool UsedInRegularObj;
-};
 
 Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   SmallVector<StringRef, 1> SearchPaths;
@@ -413,97 +330,10 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   return std::make_unique<lto::LTO>(std::move(Conf), Backend, Partitions, Kind);
 }
 
-Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer,
-                                     StringMap<Symbol> &SymTab, bool IsLazy) {
-  Expected<IRSymtabFile> IRSymtabOrErr = readIRSymtab(Buffer);
-  if (!IRSymtabOrErr)
-    return IRSymtabOrErr.takeError();
-  bool Extracted = !IsLazy;
-  StringMap<Symbol> PendingSymbols;
-  for (unsigned I = 0; I != IRSymtabOrErr->Mods.size(); ++I) {
-    for (const auto &IRSym : IRSymtabOrErr->TheReader.module_symbols(I)) {
-      if (IRSym.isFormatSpecific() || !IRSym.isGlobal())
-        continue;
-
-      Symbol &OldSym = !SymTab.count(IRSym.getName()) && IsLazy
-                           ? PendingSymbols[IRSym.getName()]
-                           : SymTab[IRSym.getName()];
-      Symbol Sym = Symbol(Buffer, IRSym);
-      if (OldSym.File.getBuffer().empty())
-        OldSym = Sym;
-
-      bool ResolvesReference =
-          !Sym.isUndefined() &&
-          (OldSym.isUndefined() || (OldSym.isWeak() && !Sym.isWeak())) &&
-          !(OldSym.isWeak() && OldSym.isUndefined() && IsLazy);
-      Extracted |= ResolvesReference;
-
-      Sym.UsedInRegularObj = OldSym.UsedInRegularObj;
-      if (ResolvesReference)
-        OldSym = Sym;
-    }
-  }
-  if (Extracted)
-    for (const auto &[Name, Symbol] : PendingSymbols)
-      SymTab[Name] = Symbol;
-  return Extracted;
-}
-
-Expected<bool> getSymbolsFromObject(ObjectFile &ObjFile,
-                                    StringMap<Symbol> &SymTab, bool IsLazy) {
-  bool Extracted = !IsLazy;
-  StringMap<Symbol> PendingSymbols;
-  for (SymbolRef ObjSym : ObjFile.symbols()) {
-    auto NameOrErr = ObjSym.getName();
-    if (!NameOrErr)
-      return NameOrErr.takeError();
-
-    Symbol &OldSym = !SymTab.count(*NameOrErr) && IsLazy
-                         ? PendingSymbols[*NameOrErr]
-                         : SymTab[*NameOrErr];
-    Symbol Sym = Symbol(ObjFile.getMemoryBufferRef(), ObjSym);
-    if (OldSym.File.getBuffer().empty())
-      OldSym = Sym;
-
-    bool ResolvesReference = OldSym.isUndefined() && !Sym.isUndefined() &&
-                             (!OldSym.isWeak() || !IsLazy);
-    Extracted |= ResolvesReference;
-
-    if (ResolvesReference)
-      OldSym = Sym;
-    OldSym.UsedInRegularObj = true;
-  }
-  if (Extracted)
-    for (const auto &[Name, Symbol] : PendingSymbols)
-      SymTab[Name] = Symbol;
-  return Extracted;
-}
-
-Expected<bool> getSymbols(MemoryBufferRef Buffer, StringMap<Symbol> &SymTab,
-                          bool IsLazy) {
-  switch (identify_magic(Buffer.getBuffer())) {
-  case file_magic::bitcode: {
-    return getSymbolsFromBitcode(Buffer, SymTab, IsLazy);
-  }
-  case file_magic::elf_relocatable: {
-    Expected<std::unique_ptr<ObjectFile>> ObjFile =
-        ObjectFile::createObjectFile(Buffer);
-    if (!ObjFile)
-      return ObjFile.takeError();
-    return getSymbolsFromObject(**ObjFile, SymTab, IsLazy);
-  }
-  default:
-    return createStringError("Unsupported file type");
-  }
-}
-
 Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
-  SmallVector<StringRef> LibraryPaths;
-  for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
-    LibraryPaths.push_back(Arg->getValue());
-
+  // Build input descriptors for the archive resolver
+  SmallVector<offloading::InputDesc> InputDescs;
   bool WholeArchive = false;
-  SmallVector<std::pair<std::unique_ptr<MemoryBuffer>, bool>> InputFiles;
   for (const opt::Arg *Arg : Args.filtered(
            OPT_INPUT, OPT_library, OPT_whole_archive, OPT_no_whole_archive)) {
     if (Arg->getOption().matches(OPT_whole_archive) ||
@@ -512,84 +342,43 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       continue;
     }
 
-    std::optional<std::string> Filename =
-        Arg->getOption().matches(OPT_library)
-            ? searchLibrary(Arg->getValue(), /*Root=*/"", LibraryPaths)
-            : std::string(Arg->getValue());
-
-    if (!Filename && Arg->getOption().matches(OPT_library))
-      return createStringError("unable to find library -l%s", Arg->getValue());
-
-    if (!Filename || !sys::fs::exists(*Filename) ||
-        sys::fs::is_directory(*Filename))
-      continue;
-
-    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-        MemoryBuffer::getFileOrSTDIN(*Filename);
-    if (std::error_code EC = BufferOrErr.getError())
-      return createFileError(*Filename, EC);
-
-    MemoryBufferRef Buffer = **BufferOrErr;
-    switch (identify_magic(Buffer.getBuffer())) {
-    case file_magic::bitcode:
-    case file_magic::elf_relocatable:
-      InputFiles.emplace_back(std::move(*BufferOrErr), /*IsLazy=*/false);
-      break;
-    case file_magic::archive: {
-      Expected<std::unique_ptr<object::Archive>> LibFile =
-          object::Archive::create(Buffer);
-      if (!LibFile)
-        return LibFile.takeError();
-      Error Err = Error::success();
-      for (auto Child : (*LibFile)->children(Err)) {
-        auto ChildBufferOrErr = Child.getMemoryBufferRef();
-        if (!ChildBufferOrErr)
-          return ChildBufferOrErr.takeError();
-        std::unique_ptr<MemoryBuffer> ChildBuffer =
-            MemoryBuffer::getMemBufferCopy(
-                ChildBufferOrErr->getBuffer(),
-                ChildBufferOrErr->getBufferIdentifier());
-        InputFiles.emplace_back(std::move(ChildBuffer), !WholeArchive);
-      }
-      if (Err)
-        return Err;
-      break;
-    }
-    default:
-      return createStringError("Unsupported file type");
-    }
+    offloading::InputDesc Desc;
+    Desc.Value = Arg->getValue();
+    Desc.InputKind = Arg->getOption().matches(OPT_library)
+                         ? offloading::InputDesc::Kind::Library
+                         : offloading::InputDesc::Kind::File;
+    Desc.WholeArchive = WholeArchive;
+    InputDescs.push_back(Desc);
   }
 
-  bool Extracted = true;
-  StringMap<Symbol> SymTab;
-  for (auto &Sym : Args.getAllArgValues(OPT_u))
-    SymTab[Sym] = Symbol(Symbol::Undefined);
-  SmallVector<std::unique_ptr<MemoryBuffer>> LinkerInput;
-  while (Extracted) {
-    Extracted = false;
-    for (auto &[Input, IsLazy] : InputFiles) {
-      if (!Input)
-        continue;
+  // Gather search paths and forced undefined symbols
+  SmallVector<StringRef> LibraryPaths;
+  for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
+    LibraryPaths.push_back(Arg->getValue());
 
-      if (hasFatBinary(Args, *Input)) {
-        LinkerInput.emplace_back(std::move(Input));
-        continue;
-      }
+  std::vector<std::string> ForcedUndefStorage = Args.getAllArgValues(OPT_u);
+  SmallVector<StringRef> ForcedUndefs(ForcedUndefStorage.begin(),
+                                      ForcedUndefStorage.end());
 
-      // Archive members only extract if they define needed symbols. We will
-      // re-scan all the inputs if any files were extracted for the link job.
-      Expected<bool> ExtractOrErr = getSymbols(*Input, SymTab, IsLazy);
-      if (!ExtractOrErr)
-        return ExtractOrErr.takeError();
+  // The device code we are linking targets NVPTX. Any other ELF object is a
+  // host "fat binary" that should be forwarded without symbol scanning. The
+  // --assume-device-object flag (under --dry-run) overrides this and treats
+  // every input as device code, so disable detection by passing no archs.
+  SmallVector<Triple::ArchType> DeviceArchs;
+  if (!(Args.hasArg(OPT_dry_run) && Args.hasArg(OPT_assume_device_object)))
+    DeviceArchs = {Triple::nvptx, Triple::nvptx64};
 
-      Extracted |= *ExtractOrErr;
-      if (!*ExtractOrErr)
-        continue;
+  // Resolve archive members.
+  Expected<offloading::ResolvedInputs> ResolvedOrErr =
+      offloading::resolveArchiveMembers(InputDescs, LibraryPaths, ForcedUndefs,
+                                        "", DeviceArchs);
+  if (!ResolvedOrErr)
+    return ResolvedOrErr.takeError();
 
-      LinkerInput.emplace_back(std::move(Input));
-    }
-  }
-  InputFiles.clear();
+  offloading::ResolvedInputs &Resolved = *ResolvedOrErr;
+  SmallVector<std::unique_ptr<MemoryBuffer>> LinkerInput =
+      std::move(Resolved.Buffers);
+  StringMap<offloading::Symbol> &SymTab = Resolved.SymTab;
 
   // Extract any bitcode files to be passed to the LTO pipeline.
   SmallVector<std::unique_ptr<MemoryBuffer>> BitcodeFiles;
@@ -616,7 +405,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       size_t Idx = 0;
       for (auto &Sym : Symbols) {
         lto::SymbolResolution &Res = Resolutions[Idx++];
-        Symbol ObjSym = SymTab[Sym.getName()];
+        offloading::Symbol ObjSym = SymTab[Sym.getName()];
         // We will use this as the prevailing symbol in LTO if it is not
         // undefined and it is from the file that contained the canonical
         // definition.

@@ -120,7 +120,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::EH_DWARF_CFA, GRLenVT, Custom);
 
-  setOperationAction(ISD::DYNAMIC_STACKALLOC, GRLenVT, Expand);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, GRLenVT, Custom);
   setOperationAction({ISD::STACKSAVE, ISD::STACKRESTORE}, MVT::Other, Expand);
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
@@ -659,6 +659,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFP_EXTEND(Op, DAG);
   case ISD::SIGN_EXTEND_VECTOR_INREG:
     return lowerSIGN_EXTEND_VECTOR_INREG(Op, DAG);
+  case ISD::DYNAMIC_STACKALLOC:
+    return lowerDYNAMIC_STACKALLOC(Op, DAG);
   }
   return SDValue();
 }
@@ -5858,6 +5860,11 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Blocks));
     break;
   }
+  case ISD::FP_EXTEND:
+    // FP_EXTEND may reach here due to the Custom action for v2f32 results, but
+    // no target-specific lowering is required. Leave it unchanged and rely on
+    // the default type legalization.
+    break;
   }
 }
 
@@ -8795,6 +8802,8 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     if (!Subtarget.is64Bit())
       report_fatal_error("STATEPOINT is only supported on 64-bit targets");
     return emitPatchPoint(MI, BB);
+  case LoongArch::PROBED_STACKALLOC_DYN:
+    return emitDynamicProbedAlloc(MI, BB);
   }
 }
 
@@ -11152,4 +11161,122 @@ bool LoongArchTargetLowering::isExtractVecEltCheap(EVT VT,
 
   // Extract a scalar FP value from index 0 of a vector is free.
   return (EltVT == MVT::f32 || EltVT == MVT::f64) && Index == 0;
+}
+
+bool LoongArchTargetLowering::hasInlineStackProbe(
+    const MachineFunction &MF) const {
+
+  // If the function specifically requests inline stack probes, emit them.
+  if (MF.getFunction().hasFnAttribute("probe-stack"))
+    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
+           "inline-asm";
+
+  return false;
+}
+
+unsigned LoongArchTargetLowering::getStackProbeSize(const MachineFunction &MF,
+                                                    Align StackAlign) const {
+  // The default stack probe size is 4096 if the function has no
+  // stack-probe-size attribute.
+  const Function &Fn = MF.getFunction();
+  unsigned StackProbeSize =
+      Fn.getFnAttributeAsParsedInteger("stack-probe-size", 4096);
+  // Round down to the stack alignment.
+  StackProbeSize = alignDown(StackProbeSize, StackAlign.value());
+  return StackProbeSize ? StackProbeSize : StackAlign.value();
+}
+
+SDValue
+LoongArchTargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  if (!hasInlineStackProbe(MF))
+    return SDValue();
+
+  const MVT GRLenVT = Subtarget.getGRLenVT();
+  // Get the inputs.
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+
+  const MaybeAlign Align =
+      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
+  const SDLoc dl(Op);
+  const EVT VT = Op.getValueType();
+
+  // Construct the new SP value in a GPR.
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, LoongArch::R3, GRLenVT);
+  Chain = SP.getValue(1);
+  SP = DAG.getNode(ISD::SUB, dl, GRLenVT, SP, Size);
+  if (Align)
+    SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
+                     DAG.getSignedConstant(-Align->value(), dl, VT));
+
+  // Set the real SP to the new value with a probing loop.
+  Chain = DAG.getNode(LoongArchISD::PROBED_ALLOCA, dl, MVT::Other, Chain, SP);
+  return DAG.getMergeValues({SP, Chain}, dl);
+}
+
+MachineBasicBlock *
+LoongArchTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
+                                                MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  MachineBasicBlock::iterator MBBI = MI.getIterator();
+  DebugLoc DL = MBB->findDebugLoc(MBBI);
+  const Register TargetReg = MI.getOperand(0).getReg();
+
+  const LoongArchInstrInfo *TII = Subtarget.getInstrInfo();
+  const bool IsLA64 = Subtarget.is64Bit();
+  const Align StackAlign = Subtarget.getFrameLowering()->getStackAlign();
+  const LoongArchTargetLowering *TLI = Subtarget.getTargetLowering();
+  const uint64_t ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+
+  MachineFunction::iterator MBBInsertPoint = std::next(MBB->getIterator());
+  MachineBasicBlock *const LoopTestMBB =
+      MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+  MF.insert(MBBInsertPoint, LoopTestMBB);
+  MachineBasicBlock *const ExitMBB =
+      MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+  MF.insert(MBBInsertPoint, ExitMBB);
+  const Register SPReg = LoongArch::R3;
+  const Register ScratchReg =
+      MF.getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+
+  // ScratchReg = ProbeSize
+  TII->movImm(*MBB, MBBI, DL, ScratchReg, ProbeSize, MachineInstr::NoFlags);
+
+  // LoopTest:
+  //   sub.{w/d} $sp, $sp, ScratchReg
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+          TII->get(IsLA64 ? LoongArch::SUB_D : LoongArch::SUB_W), SPReg)
+      .addReg(SPReg)
+      .addReg(ScratchReg);
+
+  //   st.{w/d} $zero, $sp, 0
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+          TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+      .addReg(LoongArch::R0)
+      .addReg(SPReg)
+      .addImm(0);
+
+  //   bltu TargetReg, $sp, LoopTest
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(LoongArch::BLTU))
+      .addReg(TargetReg)
+      .addReg(SPReg)
+      .addMBB(LoopTestMBB);
+
+  // move $sp, TargetReg
+  BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(LoongArch::OR), SPReg)
+      .addReg(TargetReg)
+      .addReg(LoongArch::R0);
+
+  ExitMBB->splice(ExitMBB->end(), MBB, std::next(MBBI), MBB->end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  LoopTestMBB->addSuccessor(ExitMBB);
+  LoopTestMBB->addSuccessor(LoopTestMBB);
+  MBB->addSuccessor(LoopTestMBB);
+
+  MI.eraseFromParent();
+  MF.getInfo<LoongArchMachineFunctionInfo>()->setDynamicAllocation();
+  return ExitMBB->begin()->getParent();
 }

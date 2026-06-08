@@ -439,6 +439,13 @@ ExprResult Sema::ActOnBuiltinBitCastExpr(SourceLocation KWLoc, Declarator &D,
 ExprResult Sema::BuildBuiltinBitCastExpr(SourceLocation KWLoc,
                                          TypeSourceInfo *TSI, Expr *Operand,
                                          SourceLocation RParenLoc) {
+  if (Operand->hasPlaceholderType()) {
+    ExprResult PR = CheckPlaceholderExpr(Operand);
+    if (PR.isInvalid())
+      return ExprError();
+    Operand = PR.get();
+  }
+
   CastOperation Op(*this, TSI->getType(), Operand);
   Op.OpRange = CastOperation::OpRangeType(KWLoc, KWLoc, RParenLoc);
   TypeLoc TL = TSI->getTypeLoc();

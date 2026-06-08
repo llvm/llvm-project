@@ -1,4 +1,5 @@
 add_lldb_unittest(UtilityTests
+  AcceleratorGDBRemotePacketsTest.cpp
   AnsiTerminalTest.cpp
   ArgsTest.cpp
   OptionsWithRawTest.cpp
