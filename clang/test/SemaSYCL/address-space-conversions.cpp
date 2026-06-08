@@ -66,16 +66,16 @@ void usages() {
   (void)i;
   (void)v;
 
-  __attribute__((sycl_global_host)) int *GLOB_HOST;
+  __attribute__((opencl_global_host)) int *GLOB_HOST;
   bar(*GLOB_HOST);
   bar2(*GLOB_HOST);
   GLOB = GLOB_HOST;
   GLOB_HOST = GLOB; // expected-error {{assigning 'sycl_global int *' to '__global_host int *' changes address space of pointer}}
-  GLOB_HOST = static_cast<__attribute__((sycl_global_host)) int *>(GLOB); // expected-error {{static_cast from 'sycl_global int *' to '__global_host int *' is not allowed}}
-  __attribute__((sycl_global_device)) int *GLOB_DEVICE;
+  GLOB_HOST = static_cast<__attribute__((opencl_global_host)) int *>(GLOB); // expected-error {{static_cast from 'sycl_global int *' to '__global_host int *' is not allowed}}
+  __attribute__((opencl_global_device)) int *GLOB_DEVICE;
   bar(*GLOB_DEVICE);
   bar2(*GLOB_DEVICE);
   GLOB = GLOB_DEVICE;
   GLOB_DEVICE = GLOB; // expected-error {{assigning 'sycl_global int *' to '__global_device int *' changes address space of pointer}}
-  GLOB_DEVICE = static_cast<__attribute__((sycl_global_device)) int *>(GLOB); // expected-error {{static_cast from 'sycl_global int *' to '__global_device int *' is not allowed}}
+  GLOB_DEVICE = static_cast<__attribute__((opencl_global_device)) int *>(GLOB); // expected-error {{static_cast from 'sycl_global int *' to '__global_device int *' is not allowed}}
 }

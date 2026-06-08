@@ -12,7 +12,6 @@
 
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Attr.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
@@ -312,27 +311,4 @@ void clang::takeAndConcatenateAttrs(ParsedAttributes &First,
 
   if (Second.Range.getEnd().isValid())
     First.Range.setEnd(Second.Range.getEnd());
-}
-
-LangAS ParsedAttr::asLangAS() const {
-  switch (getParsedKind()) {
-  case ParsedAttr::AT_OffloadGlobalAddressSpace:
-    return OffloadGlobalAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
-    return OpenCLGlobalDeviceAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
-    return OpenCLGlobalHostAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_OffloadLocalAddressSpace:
-    return OffloadLocalAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_OffloadPrivateAddressSpace:
-    return OffloadPrivateAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_OffloadConstantAddressSpace:
-    return OffloadConstantAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_OffloadGenericAddressSpace:
-    return OffloadGenericAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
-    return LangAS::hlsl_groupshared;
-  default:
-    return LangAS::Default;
-  }
 }

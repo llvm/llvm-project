@@ -5407,7 +5407,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           // them later while creating QualType.
           if (FTI.MethodQualifiers)
             for (ParsedAttr &attr : FTI.MethodQualifiers->getAttributes()) {
-              LangAS ASIdxNew = attr.asLangAS();
+              LangAS ASIdxNew = attr.asOpenCLLangAS();
               if (DiagnoseMultipleAddrSpaceAttributes(S, ASIdx, ASIdxNew,
                                                       attr.getLoc()))
                 D.setInvalidType(true);
@@ -6678,12 +6678,15 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
     else
       Attr.setInvalid();
   } else {
-    // Type attributes imply which address space to use.
-    ASIdx = Attr.asLangAS();
+    // The keyword-based type attributes imply which address space to use.
+    ASIdx = S.getLangOpts().SYCLIsDevice ? Attr.asSYCLLangAS()
+                                         : Attr.asOpenCLLangAS();
+    if (S.getLangOpts().HLSL)
+      ASIdx = Attr.asHLSLLangAS();
 
-    if (ASIdx == LangAS::Default &&
-        Attr.getKind() == ParsedAttr::AT_OffloadConstantAddressSpace) {
-      if (OffloadConstantAddressSpaceAttr::isSYCLSpelling(Attr))
+    if (ASIdx == LangAS::Default) {
+      if (S.getLangOpts().SYCLIsDevice &&
+          Attr.getKind() == ParsedAttr::AT_OffloadConstantAddressSpace)
         S.Diag(Attr.getLoc(), diag::warn_deprecated_sycl_constant);
       else
         llvm_unreachable("Invalid address space");

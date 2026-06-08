@@ -7227,7 +7227,7 @@ void Parser::InitCXXThisScopeForDeclaratorIfRelevant(
   // prototype for the method.
   if (getLangOpts().OpenCLCPlusPlus) {
     for (ParsedAttr &attr : DS.getAttributes()) {
-      LangAS ASIdx = attr.asLangAS();
+      LangAS ASIdx = attr.asOpenCLLangAS();
       if (ASIdx != LangAS::Default) {
         Q.addAddressSpace(ASIdx);
         break;
