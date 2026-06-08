@@ -31,7 +31,10 @@
 // PADDING: {{[0-9a-f]+}} 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
 //--- script.ld
-SECTIONS { .rodata : { *(.rodata) *(.rodata.*) } } INSERT AFTER .text;
+SECTIONS {
+  .rodata : { *(.rodata) *(.rodata.*) }
+}
+INSERT AFTER .text;
 
 //--- test.c
 __attribute__((used))
