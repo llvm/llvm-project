@@ -9,13 +9,13 @@
 ; RUN:    -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s --check-prefix=P8BE
 
 ; RUN: llc -mcpu=pwr9 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
-; RUN:    -mtriple=powerpc64-ibm-aix-xcoff< %s | FileCheck %s \
+; RUN:    -mtriple=powerpc64-ibm-aix-xcoff --code-model=small < %s | FileCheck %s \
 ; RUN:    --check-prefixes=AIX,P9-AIX,P9-AIX-64
 ; RUN: llc -mcpu=pwr9 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s \
 ; RUN:    --check-prefixes=AIX,P9-AIX,P9-AIX-32
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
-; RUN:    -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck %s \
+; RUN:    -mtriple=powerpc64-ibm-aix-xcoff --code-model=small < %s | FileCheck %s \
 ; RUN:    --check-prefixes=AIX,P8-AIX-64
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s \

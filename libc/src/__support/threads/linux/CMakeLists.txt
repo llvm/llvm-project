@@ -42,6 +42,9 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mprotect
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
