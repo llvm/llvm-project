@@ -153,7 +153,7 @@ def OpenACC_ReductionAccumulateOp
       }
     } {acc.par_dims = #acc<par_dims[thread_x]>}
     acc.reduction_accumulate %partial to %private <add>
-        : f32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
+        : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
     acc.reduction_combine %private into %shared <add> : memref<i32>
         {acc.par_dims = #acc<par_dims[thread_x]>}
     ```
