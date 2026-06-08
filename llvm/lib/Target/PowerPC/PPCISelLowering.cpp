@@ -595,9 +595,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // We cannot sextinreg(i1).  Expand to shifts.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
-  // Custom handling for PowerPC ucmp instruction
+  // Custom handling for PowerPC ucmp and scmp instructions
   setOperationAction(ISD::UCMP, MVT::i32, Custom);
   setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
+  setOperationAction(ISD::SCMP, MVT::i32, Custom);
+  setOperationAction(ISD::SCMP, MVT::i64, isPPC64 ? Custom : Expand);
 
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
@@ -12781,6 +12783,87 @@ SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getSExtOrTrunc(ResPair.getValue(0), DL, ResVT);
 }
 
+// Lower signed 3-way compare producing -1/0/1.
+// For PowerPC with SETB (P9+), use the default expansion.
+// For pre-P9, we generate a custom sequence using comparison and bit
+// extraction.
+//   cmpw       cr7, LHS, RHS
+//   mfocrf     r, CR7
+//   rlwinm     LT, r, 29, 31, 31  (extract LT bit from CR7)
+//   rlwinm     GT, r, 30, 31, 31  (extract GT bit from CR7)
+//   subf       result, LT, GT     (GT - LT = -1/0/1)
+SDValue PPCTargetLowering::LowerSCMP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT VT = LHS.getValueType();
+  EVT ResVT = Op.getValueType();
+
+  // For P9+, use the default expansion which will use SETB instruction
+  if (Subtarget.isISA3_0())
+    return SDValue();
+
+  // For pre-P9, generate custom sequence without SETB
+  bool Is64BitCmp = (VT == MVT::i64);
+
+  // On PPC64, always use 64-bit operations to avoid extra sign-extension
+  // Even if result type is i32, it will likely be extended to i64 by calling
+  // convention
+  bool Use64BitOps = Subtarget.isPPC64();
+
+  // Perform comparison
+  unsigned CmpOpc = Is64BitCmp ? PPC::CMPD : PPC::CMPW;
+  SDValue Cmp = SDValue(DAG.getMachineNode(CmpOpc, DL, MVT::i32, LHS, RHS), 0);
+
+  // Move comparison result to CR7 to have known bit positions
+  SDValue CR7Reg = DAG.getRegister(PPC::CR7, MVT::i32);
+  SDValue InGlue; // Null incoming glue
+  SDValue CopyToReg =
+      DAG.getCopyToReg(DAG.getEntryNode(), DL, CR7Reg, Cmp, InGlue);
+  SDValue Glue = CopyToReg.getValue(1);
+
+  // Use MFOCRF to read CR7
+  unsigned MFOCRFOpc = Use64BitOps ? PPC::MFOCRF8 : PPC::MFOCRF;
+  EVT MFVT = Use64BitOps ? MVT::i64 : MVT::i32;
+  SDValue MFOCRF =
+      SDValue(DAG.getMachineNode(MFOCRFOpc, DL, MFVT, CR7Reg, Glue), 0);
+
+  // CR7 bits in the result (after MFOCRF):
+  // Bit 28: LT
+  // Bit 29: GT
+  // Bit 30: EQ
+  // Bit 31: SO
+
+  // Extract LT and GT bits using RLWINM
+  unsigned RLWinmOpc = Use64BitOps ? PPC::RLWINM8 : PPC::RLWINM;
+
+  // Extract LT bit (Bit 28 -> Rotate Left 29 to move to bit 31, then mask)
+  SDValue LTOps[] = {MFOCRF, DAG.getTargetConstant(29, DL, MVT::i32),
+                     DAG.getTargetConstant(31, DL, MVT::i32),
+                     DAG.getTargetConstant(31, DL, MVT::i32)};
+  SDValue LTBit = SDValue(DAG.getMachineNode(RLWinmOpc, DL, MFVT, LTOps), 0);
+
+  // Extract GT bit (Bit 29 -> Rotate Left 30 to move to bit 31, then mask)
+  SDValue GTOps[] = {MFOCRF, DAG.getTargetConstant(30, DL, MVT::i32),
+                     DAG.getTargetConstant(31, DL, MVT::i32),
+                     DAG.getTargetConstant(31, DL, MVT::i32)};
+  SDValue GTBit = SDValue(DAG.getMachineNode(RLWinmOpc, DL, MFVT, GTOps), 0);
+
+  // Compute result: GT - LT
+  // If LT: 0 - 1 = -1
+  // If GT: 1 - 0 = 1
+  // If EQ: 0 - 0 = 0
+  unsigned SubOpc = Use64BitOps ? PPC::SUBF8 : PPC::SUBF;
+  SDValue Result =
+      SDValue(DAG.getMachineNode(SubOpc, DL, MFVT, LTBit, GTBit), 0);
+
+  if (ResVT == MFVT)
+    return Result;
+
+  // Adjust result to match expected type (sign-extend or truncate as needed)
+  return DAG.getSExtOrTrunc(Result, DL, ResVT);
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -12890,6 +12973,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerADDSUBO_CARRY(Op, DAG);
   case ISD::UCMP:
     return LowerUCMP(Op, DAG);
+  case ISD::SCMP:
+    return LowerSCMP(Op, DAG);
   case ISD::STRICT_LRINT:
   case ISD::STRICT_LLRINT:
   case ISD::STRICT_LROUND:
@@ -17771,10 +17856,26 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         return N->getOperand(0);
     }
     break;
-  case ISD::SIGN_EXTEND:
+  case ISD::SIGN_EXTEND: {
+    // Optimize: sign_extend(scmp) -> scmp with i64 result (on PPC64)
+    // This eliminates the sign_extend when scmp result is being extended to i64
+    // Pattern: t6: i64 = sign_extend t5:i32
+    //          t5: i32 = scmp t2, t4
+    // Result:  t5: i64 = scmp t2, t4
+    SDValue N0 = N->getOperand(0);
+    if (Subtarget.isPPC64() && N0.getOpcode() == ISD::SCMP &&
+        N->getValueType(0) == MVT::i64 && N0.getValueType() == MVT::i32 &&
+        N0.hasOneUse()) {
+      // Recreate the SCMP with i64 result type directly
+      SDValue LHS = N0.getOperand(0);
+      SDValue RHS = N0.getOperand(1);
+      return DAG.getNode(ISD::SCMP, dl, MVT::i64, LHS, RHS);
+    }
+
     if (SDValue SECC = combineSignExtendSetCC(N, DCI))
       return SECC;
     [[fallthrough]];
+  }
   case ISD::ZERO_EXTEND:
     if (SDValue RetV = combineZextSetccWithZero(N, DCI.DAG))
       return RetV;
