@@ -666,8 +666,7 @@ bool M68kInstrInfo::isPCRelRegisterOperandLegal(
   // Refer to TargetInstrInfo.h for more information about this function.
 
   const MachineInstr *MI = MO.getParent();
-  const unsigned NameIndices = M68kInstrNameIndices[MI->getOpcode()];
-  StringRef InstrName(&M68kInstrNameData[NameIndices]);
+  StringRef InstrName = getName(MI->getOpcode());
   const unsigned OperandNo = MO.getOperandNo();
 
   // If this machine operand is the 2nd operand, then check
