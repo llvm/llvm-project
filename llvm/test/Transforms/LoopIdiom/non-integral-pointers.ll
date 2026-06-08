@@ -72,11 +72,11 @@ for.end:
 define void @f_2(ptr %ptr) {
 ; CHECK-LABEL: @f_2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[PTR:%.*]], i8 0, i64 80000, i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr ptr addrspace(4), ptr [[PTR:%.*]], i64 [[INDVAR]]
-; CHECK-NEXT:    store <2 x ptr addrspace(4)> zeroinitializer, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr ptr addrspace(4), ptr [[PTR]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 2
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]

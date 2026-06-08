@@ -275,6 +275,9 @@ public:
   constexpr bool isPointerOrPointerVector() const {
     return isPointer() || isPointerVector();
   }
+  constexpr bool isFloatOrFloatVector() const {
+    return isFloat() || isFloatVector();
+  }
 
   constexpr bool isScalar() const {
     return Info == Kind::ANY_SCALAR || Info == Kind::INTEGER ||
@@ -305,11 +308,40 @@ public:
            isFloat(APFloatBase::S_IEEEdouble) ||
            isFloat(APFloatBase::S_IEEEquad);
   }
-  constexpr bool isBFloat16() const { return isFloat(FpSemantics::S_BFloat); }
-  constexpr bool isX86FP80() const {
+
+  bool isFloat16() const {
+    if (!getUseExtended())
+      return isAnyScalar() && getSizeInBits() == 16;
+    return isFloat(APFloatBase::S_IEEEhalf);
+  }
+  bool isFloat32() const {
+    if (!getUseExtended())
+      return isAnyScalar() && getSizeInBits() == 32;
+    return isFloat(APFloatBase::S_IEEEsingle);
+  }
+  bool isFloat64() const {
+    if (!getUseExtended())
+      return isAnyScalar() && getSizeInBits() == 64;
+    return isFloat(APFloatBase::S_IEEEdouble);
+  }
+  bool isFloat128() const {
+    if (!getUseExtended())
+      return isAnyScalar() && getSizeInBits() == 128;
+    return isFloat(APFloatBase::S_IEEEquad);
+  }
+  bool isBFloat16() const {
+    if (!getUseExtended())
+      return false;
+    return isFloat(FpSemantics::S_BFloat);
+  }
+  bool isX86FP80() const {
+    if (!getUseExtended())
+      return false;
     return isFloat(FpSemantics::S_x87DoubleExtended);
   }
-  constexpr bool isPPCF128() const {
+  bool isPPCF128() const {
+    if (!getUseExtended())
+      return false;
     return isFloat(FpSemantics::S_PPCDoubleDouble);
   }
 
@@ -685,16 +717,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
 }
 
 template <> struct DenseMapInfo<LLT> {
-  static inline LLT getEmptyKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::POINTER;
-    return Invalid;
-  }
-  static inline LLT getTombstoneKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::VECTOR_ANY;
-    return Invalid;
-  }
   static inline unsigned getHashValue(const LLT &Ty) {
     uint64_t Val = Ty.getUniqueRAWLLTData();
     return DenseMapInfo<uint64_t>::getHashValue(Val);

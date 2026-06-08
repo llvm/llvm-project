@@ -95,6 +95,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -773,10 +774,31 @@ AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
 
 /// Matches an entity that has been implicitly added by the compiler (e.g.
 /// implicit default/copy constructors).
+///
+/// For example, given:
+/// \code
+///   int i, j;
+///   auto l = [&, j]() { return i; };
+/// \endcode
+/// lambdaCapture(isImplicit())
+///   matches the capture of i but not of j.
+/// Given:
+/// \code
+///   struct Outer {
+///     struct Inner {} inner;
+///   } outer = {};
+/// \endcode
+/// initListExpr(isImplicit())
+///   matches the implicitly added Inner initializer inside InitListExpr node
+///   for the explicit initializer of Outer.
 AST_POLYMORPHIC_MATCHER(isImplicit,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr,
-                                                        LambdaCapture)) {
-  return Node.isImplicit();
+                                                        LambdaCapture,
+                                                        InitListExpr)) {
+  if constexpr (std::is_same_v<NodeType, InitListExpr>)
+    return !Node.isExplicit();
+  else
+    return Node.isImplicit();
 }
 
 /// Matches templateSpecializationTypes, class template specializations,
@@ -5729,6 +5751,11 @@ AST_MATCHER_P(IfStmt, hasThen, internal::Matcher<Stmt>, InnerMatcher) {
 AST_MATCHER_P(IfStmt, hasElse, internal::Matcher<Stmt>, InnerMatcher) {
   const Stmt *const Else = Node.getElse();
   return (Else != nullptr && InnerMatcher.matches(*Else, Finder, Builder));
+}
+
+/// Matches a declaration if it declares the same entity as the node.
+AST_MATCHER_P(Decl, declaresSameEntityAsNode, const Decl *, Other) {
+  return clang::declaresSameEntity(&Node, Other);
 }
 
 /// Matches if a node equals a previously bound node.

@@ -64,38 +64,38 @@ define dso_local i32 @entry() !dbg !14 {
 
 
 ; Check the generation of .pseudo_probe_desc section
-; CHECK-ASM-ELF: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2,comdat
+; CHECK-ASM-ELF: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2.{{[0-9a-f]+}},comdat
 ; CHECK-ASM-ELF-NEXT: .quad [[#GUID1]]
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH1:]]
 ; CHECK-ASM-ELF-NEXT: .byte	4
 ; CHECK-ASM-ELF-NEXT: .ascii "foo2"
-; CHECK-ASM-ELF-NEXT: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat
+; CHECK-ASM-ELF-NEXT: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo.{{[0-9a-f]+}},comdat
 ; CHECK-ASM-ELF-NEXT: .quad [[#GUID2]]
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH2:]]
 ; CHECK-ASM-ELF-NEXT: .byte	3
 ; CHECK-ASM-ELF-NEXT: .ascii "foo"
-; CHECK-ASM-ELF-NEXT: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_entry,comdat
+; CHECK-ASM-ELF-NEXT: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_entry.{{[0-9a-f]+}},comdat
 ; CHECK-ASM-ELF-NEXT: .quad [[#GUID3]]
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH3:]]
 ; CHECK-ASM-ELF-NEXT: .byte	5
 ; CHECK-ASM-ELF-NEXT: .ascii "entry"
-; CHECK-ASM-COFF:      .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2:
+; CHECK-ASM-COFF:      .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo2.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2.{{[0-9a-f]+}}:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID1]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH1:]]
 ; CHECK-ASM-COFF-NEXT: .byte	4
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo2"
-; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo:
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo.{{[0-9a-f]+}}:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID2]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH2:]]
 ; CHECK-ASM-COFF-NEXT: .byte	3
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo"
-; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_entry
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_entry
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_entry:
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_entry.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_entry.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_entry.{{[0-9a-f]+}}:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID3]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH3:]]
 ; CHECK-ASM-COFF-NEXT: .byte	5

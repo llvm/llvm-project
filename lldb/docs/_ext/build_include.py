@@ -21,7 +21,7 @@ class BuildInclude(Directive):
     def run(self):
         path = directives.path(self.arguments[0])
         path = utils.relative_path(None, Path(os.environ["LLDB_BUILD_DIR"]) / path)
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             rawtext = f.read()
         include_lines = statemachine.string2lines(
             rawtext, self.state.document.settings.tab_width, convert_whitespace=True

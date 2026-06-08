@@ -6,8 +6,8 @@
 
 // CHECK-FLOAT: @global ={{.*}} global { [[T:float]], [[T]] } { [[T]] 1.0{{.*}}, [[T]] 2.0{{.*}} }
 // CHECK-DOUBLE: @global ={{.*}} global { [[T:double]], [[T]] } { [[T]] 1.0{{.*}}, [[T]] 2.0{{.*}} }
-// CHECK-FP80: @global ={{.*}} global { [[T:x86_fp80]], [[T]] } { [[T]] 0xK3FFF8000000000000000, [[T]] 0xK40008000000000000000 }
-// CHECK-FP128: @global ={{.*}} global { [[T:fp128]], [[T]] } { [[T]] 0xL00000000000000003FFF000000000000, [[T]] 0xL00000000000000004000000000000000 }
+// CHECK-FP80: @global ={{.*}} global { [[T:x86_fp80]], [[T]] } { [[T]] 1.0{{.*}}, [[T]] 2.0{{.*}} }
+// CHECK-FP128: @global ={{.*}} global { [[T:fp128]], [[T]] } { [[T]] 1.0{{.*}}, [[T]] 2.0{{.*}} }
 _Complex T global = __builtin_complex(1.0, 2.0);
 
 // CHECK-LABEL: @test

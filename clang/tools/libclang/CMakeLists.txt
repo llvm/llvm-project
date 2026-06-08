@@ -180,6 +180,10 @@ if(ENABLE_SHARED)
       endif()
     endif()
     llvm_set_macho_current_version(libclang ${LLVM_VERSION_MAJOR})
+    # Ensure libclang.dylib is relinked when the exports file changes.
+    if (LLVM_EXPORTED_SYMBOL_FILE)
+      set_target_properties(libclang PROPERTIES LINK_DEPENDS ${LLVM_EXPORTED_SYMBOL_FILE})
+    endif()
   else()
     set_target_properties(libclang
       PROPERTIES

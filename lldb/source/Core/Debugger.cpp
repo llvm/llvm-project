@@ -213,7 +213,7 @@ enum {
 };
 #endif
 
-static const FileSpecList &GetDefaultSafeAutoLoadPaths() {
+const FileSpecList &Debugger::GetDefaultSafeAutoLoadPaths() {
   static const FileSpecList sSafePaths = [] {
     // FIXME: in c++20 this could be a std::array (with CTAD deduced size)
     // and we could statically assert that all members are non-empty.
@@ -328,7 +328,8 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       std::lock_guard<std::mutex> guard(m_statusline_mutex);
       if (StatuslineSupported()) {
         m_statusline.emplace(*this);
-        m_statusline->Enable(GetSelectedExecutionContextRef());
+        m_statusline->Enable(
+            GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
       } else {
         m_statusline.reset();
       }
@@ -462,19 +463,7 @@ uint64_t Debugger::GetTerminalWidth() const {
 }
 
 bool Debugger::SetTerminalWidth(uint64_t term_width) {
-  const uint32_t idx = ePropertyTerminalWidth;
-  const bool success = SetPropertyAtIndex(idx, term_width);
-
-  if (auto handler_sp = m_io_handler_stack.Top())
-    handler_sp->TerminalSizeChanged();
-
-  {
-    std::lock_guard<std::mutex> guard(m_statusline_mutex);
-    if (m_statusline)
-      m_statusline->TerminalSizeChanged();
-  }
-
-  return success;
+  return SetTerminalDimensions(term_width, GetTerminalHeight());
 }
 
 uint64_t Debugger::GetTerminalHeight() const {
@@ -484,8 +473,17 @@ uint64_t Debugger::GetTerminalHeight() const {
 }
 
 bool Debugger::SetTerminalHeight(uint64_t term_height) {
-  const uint32_t idx = ePropertyTerminalHeight;
-  const bool success = SetPropertyAtIndex(idx, term_height);
+  return SetTerminalDimensions(GetTerminalWidth(), term_height);
+}
+
+bool Debugger::SetTerminalDimensions(uint64_t term_width,
+                                     uint64_t term_height) {
+  // Set both properties before notifying, so observers never recompute from a
+  // mix of fresh and stale dimensions.
+  const bool width_success =
+      SetPropertyAtIndex(ePropertyTerminalWidth, term_width);
+  const bool height_success =
+      SetPropertyAtIndex(ePropertyTerminalHeight, term_height);
 
   if (auto handler_sp = m_io_handler_stack.Top())
     handler_sp->TerminalSizeChanged();
@@ -496,7 +494,7 @@ bool Debugger::SetTerminalHeight(uint64_t term_height) {
       m_statusline->TerminalSizeChanged();
   }
 
-  return success;
+  return width_success && height_success;
 }
 
 bool Debugger::GetUseExternalEditor() const {
@@ -1270,7 +1268,8 @@ void Debugger::RestoreInputTerminalState() {
   {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (m_statusline)
-      m_statusline->Enable(GetSelectedExecutionContext());
+      m_statusline->Enable(
+          GetSelectedExecutionContext(/*adopt_dummy_target=*/true));
   }
 }
 
@@ -1284,17 +1283,31 @@ void Debugger::RedrawStatusline(
   m_statusline->Redraw(exe_ctx_ref);
 }
 
-ExecutionContext Debugger::GetSelectedExecutionContext() {
-  bool adopt_selected = true;
-  ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
-  return ExecutionContext(exe_ctx_ref);
+void Debugger::FlushStatusLine() {
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
+
+  if (!m_statusline)
+    return;
+
+  m_statusline->ClearExecutionContext();
 }
 
-ExecutionContextRef Debugger::GetSelectedExecutionContextRef() {
-  if (TargetSP selected_target_sp = GetSelectedTarget())
+ExecutionContext
+Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {
+  return ExecutionContext(GetSelectedExecutionContextRef(adopt_dummy_target));
+}
+
+ExecutionContextRef
+Debugger::GetSelectedExecutionContextRef(bool adopt_dummy_target) {
+  if (TargetSP selected_target_sp = m_target_list.GetSelectedTarget())
     return ExecutionContextRef(selected_target_sp.get(),
                                /*adopt_selected=*/true);
-  return ExecutionContextRef(m_dummy_target_sp.get(), /*adopt_selected=*/false);
+
+  if (adopt_dummy_target)
+    return ExecutionContextRef(m_dummy_target_sp.get(),
+                               /*adopt_selected=*/false);
+
+  return ExecutionContextRef();
 }
 
 void Debugger::DispatchInputInterrupt() {
@@ -2231,7 +2244,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (!m_statusline) {
       m_statusline.emplace(*this);
-      m_statusline->Enable(GetSelectedExecutionContextRef());
+      m_statusline->Enable(
+          GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
     }
   }
 
@@ -2246,10 +2260,19 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           uint32_t event_type = event_sp->GetType();
           llvm::StringRef broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
-            if (ProcessSP process_sp = HandleProcessEvent(event_sp))
+            if (ProcessSP process_sp = HandleProcessEvent(event_sp)) {
+              // Don't pass adopt_selected = true if this is a stop for an
+              // auto-continue event (e.g. an auto-continue breakpoint).  We
+              // would be fetching stale state, since the process resumed since
+              // this event, and we'd needlessly interrupt the target to do so.
+              const bool adopt_selected =
+                  process_sp->GetPrivateState() == eStateStopped &&
+                  !Process::ProcessEventData::GetRestartedFromEvent(
+                      event_sp.get());
               if (!RequiresFollowChildWorkaround(*process_sp))
-                exe_ctx_ref = ExecutionContextRef(process_sp.get(),
-                                                  /*adopt_selected=*/true);
+                exe_ctx_ref =
+                    ExecutionContextRef(process_sp.get(), adopt_selected);
+            }
           } else if (broadcaster_class == broadcaster_class_target) {
             if (Breakpoint::BreakpointEventData::GetEventDataFromEvent(
                     event_sp.get())) {
@@ -2591,16 +2614,4 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       "A boolean value that indicates if lua support is enabled in LLDB");
   AddLLVMTargets(*config_up);
   return config_up;
-}
-
-FileSpecList Debugger::GetSafeAutoLoadPaths() {
-  FileSpecList fspecs = GetDefaultSafeAutoLoadPaths();
-
-#ifndef NDEBUG
-  for (const auto &fspec :
-       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
-    fspecs.Append(fspec);
-#endif
-
-  return fspecs;
 }

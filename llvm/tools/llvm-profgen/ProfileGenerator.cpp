@@ -13,6 +13,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <float.h>
 #include <unordered_set>
@@ -501,6 +502,8 @@ ProfileGenerator::getTopLevelFunctionProfile(FunctionId FuncName) {
 }
 
 void ProfileGenerator::generateProfile() {
+  NamedRegionTimer T("generate", "Generate profile", "profgen", "llvm-profgen",
+                     TimeProfGen);
   collectProfiledFunctions();
 
   if (Binary->usePseudoProbes()) {
@@ -921,6 +924,8 @@ CSProfileGenerator::getOrCreateContextNode(const SampleContextFrames Context,
 }
 
 void CSProfileGenerator::generateProfile() {
+  NamedRegionTimer T("generate", "Generate CS profile", "profgen",
+                     "llvm-profgen", TimeProfGen);
   FunctionSamples::ProfileIsCS = true;
 
   collectProfiledFunctions();

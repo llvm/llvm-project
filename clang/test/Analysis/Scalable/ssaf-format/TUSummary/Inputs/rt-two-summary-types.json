@@ -136,12 +136,6 @@
     {
       "id": 1,
       "name": {
-        "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
-        ],
         "suffix": "",
         "usr": "c:@F@bar"
       }
@@ -149,12 +143,6 @@
     {
       "id": 2,
       "name": {
-        "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
-        ],
         "suffix": "",
         "usr": "c:@F@baz"
       }
@@ -162,12 +150,6 @@
     {
       "id": 0,
       "name": {
-        "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
-        ],
         "suffix": "",
         "usr": "c:@F@foo"
       }
@@ -175,12 +157,6 @@
     {
       "id": 4,
       "name": {
-        "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
-        ],
         "suffix": "",
         "usr": "c:@F@quux"
       }
@@ -188,12 +164,6 @@
     {
       "id": 3,
       "name": {
-        "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
-        ],
         "suffix": "",
         "usr": "c:@F@qux"
       }

@@ -170,58 +170,6 @@
 // MISSING-NAME-NEXT: failed to read BuildNamespaceName from field 'name': expected JSON string
 
 // ============================================================================
-// nestedBuildNamespaceFromJSON() errors
-// ============================================================================
-
-// RUN: not clang-ssaf-format --type tu %S/Inputs/namespace-element-not-object.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-NOT-OBJECT
-// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/namespace-element-not-object.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-NOT-OBJECT
-// NAMESPACE-ELEMENT-NOT-OBJECT:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}namespace-element-not-object.json'
-// NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: reading IdTable from field 'id_table'
-// NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: reading EntityIdTable entry from index '0'
-// NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: reading EntityName from field 'name'
-// NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: reading NestedBuildNamespace from field 'namespace'
-// NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: failed to read BuildNamespace from index '0': expected JSON object
-
-// RUN: not clang-ssaf-format --type tu %S/Inputs/namespace-element-missing-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-MISSING-KIND
-// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/namespace-element-missing-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-MISSING-KIND
-// NAMESPACE-ELEMENT-MISSING-KIND:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}namespace-element-missing-kind.json'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading IdTable from field 'id_table'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading EntityIdTable entry from index '0'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading EntityName from field 'name'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading NestedBuildNamespace from field 'namespace'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading BuildNamespace from index '0'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: failed to read BuildNamespaceKind from field 'kind': expected JSON string
-
-// RUN: not clang-ssaf-format --type tu %S/Inputs/namespace-element-invalid-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-INVALID-KIND
-// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/namespace-element-invalid-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-INVALID-KIND
-// NAMESPACE-ELEMENT-INVALID-KIND:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}namespace-element-invalid-kind.json'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading IdTable from field 'id_table'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading EntityIdTable entry from index '0'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading EntityName from field 'name'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading NestedBuildNamespace from field 'namespace'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading BuildNamespace from index '0'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading BuildNamespaceKind from field 'kind'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'
-
-// RUN: not clang-ssaf-format --type tu %S/Inputs/namespace-element-missing-name.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-MISSING-NAME
-// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/namespace-element-missing-name.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-MISSING-NAME
-// NAMESPACE-ELEMENT-MISSING-NAME:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}namespace-element-missing-name.json'
-// NAMESPACE-ELEMENT-MISSING-NAME-NEXT: reading IdTable from field 'id_table'
-// NAMESPACE-ELEMENT-MISSING-NAME-NEXT: reading EntityIdTable entry from index '0'
-// NAMESPACE-ELEMENT-MISSING-NAME-NEXT: reading EntityName from field 'name'
-// NAMESPACE-ELEMENT-MISSING-NAME-NEXT: reading NestedBuildNamespace from field 'namespace'
-// NAMESPACE-ELEMENT-MISSING-NAME-NEXT: reading BuildNamespace from index '0'
-// NAMESPACE-ELEMENT-MISSING-NAME-NEXT: failed to read BuildNamespaceName from field 'name': expected JSON string
-
-// ============================================================================
 // entityNameFromJSON() errors
 // ============================================================================
 
@@ -244,16 +192,6 @@
 // ENTITY-NAME-MISSING-SUFFIX-NEXT: reading EntityIdTable entry from index '0'
 // ENTITY-NAME-MISSING-SUFFIX-NEXT: reading EntityName from field 'name'
 // ENTITY-NAME-MISSING-SUFFIX-NEXT: failed to read Suffix from field 'suffix': expected JSON string
-
-// RUN: not clang-ssaf-format --type tu %S/Inputs/entity-name-missing-namespace.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-NAME-MISSING-NAMESPACE
-// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/entity-name-missing-namespace.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-NAME-MISSING-NAMESPACE
-// ENTITY-NAME-MISSING-NAMESPACE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}entity-name-missing-namespace.json'
-// ENTITY-NAME-MISSING-NAMESPACE-NEXT: reading IdTable from field 'id_table'
-// ENTITY-NAME-MISSING-NAMESPACE-NEXT: reading EntityIdTable entry from index '0'
-// ENTITY-NAME-MISSING-NAMESPACE-NEXT: reading EntityName from field 'name'
-// ENTITY-NAME-MISSING-NAMESPACE-NEXT: failed to read NestedBuildNamespace from field 'namespace': expected JSON array
 
 // ============================================================================
 // entityIdTableEntryFromJSON() errors

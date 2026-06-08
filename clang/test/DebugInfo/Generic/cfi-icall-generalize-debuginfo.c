@@ -13,41 +13,41 @@
 // generalized to ptr
 
 // CHECK-LABEL: define dso_local noalias noundef ptr @f(
-// CHECK-SAME: ptr noundef readnone captures(none) [[A:%.*]], ptr noundef readnone captures(none) [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG10:![0-9]+]] !type [[META21:![0-9]+]] !type [[META22:![0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[A:%.*]], ptr nofree noundef readnone captures(none) [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG13:![0-9]+]] !type [[META24:![0-9]+]] !type [[META25:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:      #dbg_value(ptr [[A]], [[META19:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
-// CHECK-NEXT:      #dbg_value(ptr [[B]], [[META20:![0-9]+]], !DIExpression(), [[META23]])
-// CHECK-NEXT:    ret ptr null, !dbg [[DBG24:![0-9]+]]
+// CHECK-NEXT:      #dbg_value(ptr [[A]], [[META22:![0-9]+]], !DIExpression(), [[META26:![0-9]+]])
+// CHECK-NEXT:      #dbg_value(ptr [[B]], [[META23:![0-9]+]], !DIExpression(), [[META26]])
+// CHECK-NEXT:    ret ptr null, !dbg [[DBG27:![0-9]+]]
 //
 int** f(const char *a, const char **b) {
   return (int**)0;
 }
 
 // UNGENERALIZED-LABEL: define dso_local void @g(
-// UNGENERALIZED-SAME: ptr noundef [[FP:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !dbg [[DBG25:![0-9]+]] !type [[META31:![0-9]+]] !type [[META32:![0-9]+]] {
+// UNGENERALIZED-SAME: ptr noundef [[FP:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !dbg [[DBG28:![0-9]+]] !type [[META34:![0-9]+]] !type [[META35:![0-9]+]] {
 // UNGENERALIZED-NEXT:  [[ENTRY:.*:]]
-// UNGENERALIZED-NEXT:      #dbg_value(ptr [[FP]], [[META30:![0-9]+]], !DIExpression(), [[META33:![0-9]+]])
-// UNGENERALIZED-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FP]], metadata !"_ZTSFPPiPKcPS2_E"), !dbg [[DBG34:![0-9]+]], !nosanitize [[META38:![0-9]+]]
-// UNGENERALIZED-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG34]], !prof [[PROF39:![0-9]+]], !nosanitize [[META38]]
+// UNGENERALIZED-NEXT:      #dbg_value(ptr [[FP]], [[META33:![0-9]+]], !DIExpression(), [[META36:![0-9]+]])
+// UNGENERALIZED-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FP]], metadata !"_ZTSFPPiPKcPS2_E"), !dbg [[DBG37:![0-9]+]], !nosanitize [[META42:![0-9]+]]
+// UNGENERALIZED-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG37]], !prof [[PROF43:![0-9]+]], !nosanitize [[META42]]
 // UNGENERALIZED:       [[TRAP]]:
-// UNGENERALIZED-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !dbg [[DBGTRAP:![0-9]+]], !nosanitize [[META38]]
-// UNGENERALIZED-NEXT:    unreachable, !dbg [[DBGTRAP]], !nosanitize [[META38]]
+// UNGENERALIZED-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !dbg [[DBG44:![0-9]+]], !nosanitize [[META42]]
+// UNGENERALIZED-NEXT:    unreachable, !dbg [[DBG44]], !nosanitize [[META42]]
 // UNGENERALIZED:       [[CONT]]:
-// UNGENERALIZED-NEXT:    [[CALL:%.*]] = tail call ptr [[FP]](ptr noundef null, ptr noundef null) #[[ATTR5:[0-9]+]], !dbg [[DBG37:![0-9]+]]
-// UNGENERALIZED-NEXT:    ret void, !dbg [[DBG42:![0-9]+]]
+// UNGENERALIZED-NEXT:    [[CALL:%.*]] = tail call ptr [[FP]](ptr noundef null, ptr noundef null) #[[ATTR5:[0-9]+]], !dbg [[DBG41:![0-9]+]]
+// UNGENERALIZED-NEXT:    ret void, !dbg [[DBG46:![0-9]+]]
 //
 // GENERALIZED-LABEL: define dso_local void @g(
-// GENERALIZED-SAME: ptr noundef [[FP:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !dbg [[DBG25:![0-9]+]] !type [[META31:![0-9]+]] !type [[META32:![0-9]+]] {
+// GENERALIZED-SAME: ptr noundef [[FP:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !dbg [[DBG28:![0-9]+]] !type [[META34:![0-9]+]] !type [[META35:![0-9]+]] {
 // GENERALIZED-NEXT:  [[ENTRY:.*:]]
-// GENERALIZED-NEXT:      #dbg_value(ptr [[FP]], [[META30:![0-9]+]], !DIExpression(), [[META33:![0-9]+]])
-// GENERALIZED-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FP]], metadata !"_ZTSFPvPKvS_E.generalized"), !dbg [[DBG34:![0-9]+]], !nosanitize [[META38:![0-9]+]]
-// GENERALIZED-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG34]], !prof [[PROF39:![0-9]+]], !nosanitize [[META38]]
+// GENERALIZED-NEXT:      #dbg_value(ptr [[FP]], [[META33:![0-9]+]], !DIExpression(), [[META36:![0-9]+]])
+// GENERALIZED-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FP]], metadata !"_ZTSFPvPKvS_E.generalized"), !dbg [[DBG37:![0-9]+]], !nosanitize [[META42:![0-9]+]]
+// GENERALIZED-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG37]], !prof [[PROF43:![0-9]+]], !nosanitize [[META42]]
 // GENERALIZED:       [[TRAP]]:
-// GENERALIZED-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !dbg [[DBGTRAP:![0-9]+]], !nosanitize [[META38]]
-// GENERALIZED-NEXT:    unreachable, !dbg [[DBGTRAP]], !nosanitize [[META38]]
+// GENERALIZED-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !dbg [[DBG44:![0-9]+]], !nosanitize [[META42]]
+// GENERALIZED-NEXT:    unreachable, !dbg [[DBG44]], !nosanitize [[META42]]
 // GENERALIZED:       [[CONT]]:
-// GENERALIZED-NEXT:    [[CALL:%.*]] = tail call ptr [[FP]](ptr noundef null, ptr noundef null) #[[ATTR5:[0-9]+]], !dbg [[DBG37:![0-9]+]]
-// GENERALIZED-NEXT:    ret void, !dbg [[DBG42:![0-9]+]]
+// GENERALIZED-NEXT:    [[CALL:%.*]] = tail call ptr [[FP]](ptr noundef null, ptr noundef null) #[[ATTR5:[0-9]+]], !dbg [[DBG41:![0-9]+]]
+// GENERALIZED-NEXT:    ret void, !dbg [[DBG46:![0-9]+]]
 //
 void g(int** (*fp)(const char *, const char **)) {
   fp(0, 0);
@@ -60,39 +60,40 @@ void g(int** (*fp)(const char *, const char **)) {
 // UNGENERALIZED: [[META3]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META4:![0-9]+]], size: 64)
 // UNGENERALIZED: [[META4]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META5:![0-9]+]], size: 64)
 // UNGENERALIZED: [[META5]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-// UNGENERALIZED: [[DBG10]] = distinct !DISubprogram(name: "f", scope: [[META11:![0-9]+]], file: [[META11]], line: 22, type: [[META12:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META18:![0-9]+]])
-// UNGENERALIZED: [[META11]] = !DIFile(filename: "{{.*}}cfi-icall-generalize-debuginfo.c", directory: {{.*}})
-// UNGENERALIZED: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
-// UNGENERALIZED: [[META13]] = !{[[META3]], [[META14:![0-9]+]], [[META17:![0-9]+]]}
-// UNGENERALIZED: [[META14]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META15:![0-9]+]], size: 64)
-// UNGENERALIZED: [[META15]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META16:![0-9]+]])
-// UNGENERALIZED: [[META16]] = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
-// UNGENERALIZED: [[META17]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META14]], size: 64)
-// UNGENERALIZED: [[META18]] = !{[[META19]], [[META20]]}
-// UNGENERALIZED: [[META19]] = !DILocalVariable(name: "a", arg: 1, scope: [[DBG10]], file: [[META11]], line: 22, type: [[META14]])
-// UNGENERALIZED: [[META20]] = !DILocalVariable(name: "b", arg: 2, scope: [[DBG10]], file: [[META11]], line: 22, type: [[META17]])
-// UNGENERALIZED: [[META21]] = !{i64 0, !"_ZTSFPPiPKcPS2_E"}
-// UNGENERALIZED: [[META22]] = !{i64 0, !"_ZTSFPvPKvS_E.generalized"}
-// UNGENERALIZED: [[META23]] = !DILocation(line: 0, scope: [[DBG10]])
-// UNGENERALIZED: [[DBG24]] = !DILocation(line: 23, column: 3, scope: [[DBG10]])
-// UNGENERALIZED: [[DBG25]] = distinct !DISubprogram(name: "g", scope: [[META11]], file: [[META11]], line: 52, type: [[META26:![0-9]+]], scopeLine: 52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META29:![0-9]+]])
-// UNGENERALIZED: [[META26]] = !DISubroutineType(types: [[META27:![0-9]+]])
-// UNGENERALIZED: [[META27]] = !{null, [[META28:![0-9]+]]}
-// UNGENERALIZED: [[META28]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META12]], size: 64)
-// UNGENERALIZED: [[META29]] = !{[[META30]]}
-// UNGENERALIZED: [[META30]] = !DILocalVariable(name: "fp", arg: 1, scope: [[DBG25]], file: [[META11]], line: 52, type: [[META28]])
-// UNGENERALIZED: [[META31]] = !{i64 0, !"_ZTSFvPFPPiPKcPS2_EE"}
-// UNGENERALIZED: [[META32]] = !{i64 0, !"_ZTSFvPvE.generalized"}
-// UNGENERALIZED: [[META33]] = !DILocation(line: 0, scope: [[DBG25]])
-// UNGENERALIZED: [[DBG34]] = !DILocation(line: 0, scope: [[META35:![0-9]+]], inlinedAt: [[DBG37]])
-// UNGENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// UNGENERALIZED: [[META36]] = !DISubroutineType(types: null)
-// UNGENERALIZED: [[DBG37]] = !DILocation(line: 53, column: 3, scope: [[DBG25]])
-// UNGENERALIZED: [[META38]] = !{}
-// UNGENERALIZED: [[PROF39]] = !{!"branch_weights", i32 1048575, i32 1}
-// UNGENERALIZED: [[DBGTRAP]] = !DILocation(line: 0, scope: [[TRAPMSG:![0-9]+]], inlinedAt: [[DBG34]])
-// UNGENERALIZED: [[TRAPMSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Control flow integrity check failed", scope: [[META11]], file: [[META11]], type: [[META36]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// UNGENERALIZED: [[DBG42]] = !DILocation(line: 54, column: 1, scope: [[DBG25]])
+// UNGENERALIZED: [[DBG13]] = distinct !DISubprogram(name: "f", scope: [[META14:![0-9]+]], file: [[META14]], line: 22, type: [[META15:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META21:![0-9]+]])
+// UNGENERALIZED: [[META14]] = !DIFile(filename: "{{.*}}cfi-icall-generalize-debuginfo.c", directory: {{.*}})
+// UNGENERALIZED: [[META15]] = !DISubroutineType(types: [[META16:![0-9]+]])
+// UNGENERALIZED: [[META16]] = !{[[META3]], [[META17:![0-9]+]], [[META20:![0-9]+]]}
+// UNGENERALIZED: [[META17]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META18:![0-9]+]], size: 64)
+// UNGENERALIZED: [[META18]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META19:![0-9]+]])
+// UNGENERALIZED: [[META19]] = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+// UNGENERALIZED: [[META20]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META17]], size: 64)
+// UNGENERALIZED: [[META21]] = !{[[META22]], [[META23]]}
+// UNGENERALIZED: [[META22]] = !DILocalVariable(name: "a", arg: 1, scope: [[DBG13]], file: [[META14]], line: 22, type: [[META17]])
+// UNGENERALIZED: [[META23]] = !DILocalVariable(name: "b", arg: 2, scope: [[DBG13]], file: [[META14]], line: 22, type: [[META20]])
+// UNGENERALIZED: [[META24]] = !{i64 0, !"_ZTSFPPiPKcPS2_E"}
+// UNGENERALIZED: [[META25]] = !{i64 0, !"_ZTSFPvPKvS_E.generalized"}
+// UNGENERALIZED: [[META26]] = !DILocation(line: 0, scope: [[DBG13]])
+// UNGENERALIZED: [[DBG27]] = !DILocation(line: 23, column: 3, scope: [[DBG13]])
+// UNGENERALIZED: [[DBG28]] = distinct !DISubprogram(name: "g", scope: [[META14]], file: [[META14]], line: 52, type: [[META29:![0-9]+]], scopeLine: 52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META32:![0-9]+]])
+// UNGENERALIZED: [[META29]] = !DISubroutineType(types: [[META30:![0-9]+]])
+// UNGENERALIZED: [[META30]] = !{null, [[META31:![0-9]+]]}
+// UNGENERALIZED: [[META31]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META15]], size: 64)
+// UNGENERALIZED: [[META32]] = !{[[META33]]}
+// UNGENERALIZED: [[META33]] = !DILocalVariable(name: "fp", arg: 1, scope: [[DBG28]], file: [[META14]], line: 52, type: [[META31]])
+// UNGENERALIZED: [[META34]] = !{i64 0, !"_ZTSFvPFPPiPKcPS2_EE"}
+// UNGENERALIZED: [[META35]] = !{i64 0, !"_ZTSFvPvE.generalized"}
+// UNGENERALIZED: [[META36]] = !DILocation(line: 0, scope: [[DBG28]])
+// UNGENERALIZED: [[DBG37]] = !DILocation(line: 0, scope: [[META38:![0-9]+]], inlinedAt: [[DBG41]])
+// UNGENERALIZED: [[META38]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META39:![0-9]+]], file: [[META39]], type: [[META40:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// UNGENERALIZED: [[META39]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+// UNGENERALIZED: [[META40]] = !DISubroutineType(types: null)
+// UNGENERALIZED: [[DBG41]] = !DILocation(line: 53, column: 3, scope: [[DBG28]])
+// UNGENERALIZED: [[META42]] = !{}
+// UNGENERALIZED: [[PROF43]] = !{!"branch_weights", i32 1048575, i32 1}
+// UNGENERALIZED: [[DBG44]] = !DILocation(line: 0, scope: [[META45:![0-9]+]], inlinedAt: [[DBG37]])
+// UNGENERALIZED: [[META45]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Control flow integrity check failed", scope: [[META39]], file: [[META39]], type: [[META40]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// UNGENERALIZED: [[DBG46]] = !DILocation(line: 54, column: 1, scope: [[DBG28]])
 //.
 // GENERALIZED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
 // GENERALIZED: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
@@ -100,37 +101,38 @@ void g(int** (*fp)(const char *, const char **)) {
 // GENERALIZED: [[META3]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META4:![0-9]+]], size: 64)
 // GENERALIZED: [[META4]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META5:![0-9]+]], size: 64)
 // GENERALIZED: [[META5]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-// GENERALIZED: [[DBG10]] = distinct !DISubprogram(name: "f", scope: [[META11:![0-9]+]], file: [[META11]], line: 22, type: [[META12:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META18:![0-9]+]])
-// GENERALIZED: [[META11]] = !DIFile(filename: "{{.*}}cfi-icall-generalize-debuginfo.c", directory: {{.*}})
-// GENERALIZED: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
-// GENERALIZED: [[META13]] = !{[[META3]], [[META14:![0-9]+]], [[META17:![0-9]+]]}
-// GENERALIZED: [[META14]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META15:![0-9]+]], size: 64)
-// GENERALIZED: [[META15]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META16:![0-9]+]])
-// GENERALIZED: [[META16]] = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
-// GENERALIZED: [[META17]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META14]], size: 64)
-// GENERALIZED: [[META18]] = !{[[META19]], [[META20]]}
-// GENERALIZED: [[META19]] = !DILocalVariable(name: "a", arg: 1, scope: [[DBG10]], file: [[META11]], line: 22, type: [[META14]])
-// GENERALIZED: [[META20]] = !DILocalVariable(name: "b", arg: 2, scope: [[DBG10]], file: [[META11]], line: 22, type: [[META17]])
-// GENERALIZED: [[META21]] = !{i64 0, !"_ZTSFPPiPKcPS2_E"}
-// GENERALIZED: [[META22]] = !{i64 0, !"_ZTSFPvPKvS_E.generalized"}
-// GENERALIZED: [[META23]] = !DILocation(line: 0, scope: [[DBG10]])
-// GENERALIZED: [[DBG24]] = !DILocation(line: 23, column: 3, scope: [[DBG10]])
-// GENERALIZED: [[DBG25]] = distinct !DISubprogram(name: "g", scope: [[META11]], file: [[META11]], line: 52, type: [[META26:![0-9]+]], scopeLine: 52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META29:![0-9]+]])
-// GENERALIZED: [[META26]] = !DISubroutineType(types: [[META27:![0-9]+]])
-// GENERALIZED: [[META27]] = !{null, [[META28:![0-9]+]]}
-// GENERALIZED: [[META28]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META12]], size: 64)
-// GENERALIZED: [[META29]] = !{[[META30]]}
-// GENERALIZED: [[META30]] = !DILocalVariable(name: "fp", arg: 1, scope: [[DBG25]], file: [[META11]], line: 52, type: [[META28]])
-// GENERALIZED: [[META31]] = !{i64 0, !"_ZTSFvPFPPiPKcPS2_EE"}
-// GENERALIZED: [[META32]] = !{i64 0, !"_ZTSFvPvE.generalized"}
-// GENERALIZED: [[META33]] = !DILocation(line: 0, scope: [[DBG25]])
-// GENERALIZED: [[DBG34]] = !DILocation(line: 0, scope: [[META35:![0-9]+]], inlinedAt: [[DBG37]])
-// GENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// GENERALIZED: [[META36]] = !DISubroutineType(types: null)
-// GENERALIZED: [[DBG37]] = !DILocation(line: 53, column: 3, scope: [[DBG25]])
-// GENERALIZED: [[META38]] = !{}
-// GENERALIZED: [[PROF39]] = !{!"branch_weights", i32 1048575, i32 1}
-// GENERALIZED: [[DBGTRAP]] = !DILocation(line: 0, scope: [[TRAPMSG:![0-9]+]], inlinedAt: [[DBG34]])
-// GENERALIZED: [[TRAPMSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Control flow integrity check failed", scope: [[META11]], file: [[META11]], type: [[META36]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// GENERALIZED: [[DBG42]] = !DILocation(line: 54, column: 1, scope: [[DBG25]])
+// GENERALIZED: [[DBG13]] = distinct !DISubprogram(name: "f", scope: [[META14:![0-9]+]], file: [[META14]], line: 22, type: [[META15:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META21:![0-9]+]])
+// GENERALIZED: [[META14]] = !DIFile(filename: "{{.*}}cfi-icall-generalize-debuginfo.c", directory: {{.*}})
+// GENERALIZED: [[META15]] = !DISubroutineType(types: [[META16:![0-9]+]])
+// GENERALIZED: [[META16]] = !{[[META3]], [[META17:![0-9]+]], [[META20:![0-9]+]]}
+// GENERALIZED: [[META17]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META18:![0-9]+]], size: 64)
+// GENERALIZED: [[META18]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META19:![0-9]+]])
+// GENERALIZED: [[META19]] = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+// GENERALIZED: [[META20]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META17]], size: 64)
+// GENERALIZED: [[META21]] = !{[[META22]], [[META23]]}
+// GENERALIZED: [[META22]] = !DILocalVariable(name: "a", arg: 1, scope: [[DBG13]], file: [[META14]], line: 22, type: [[META17]])
+// GENERALIZED: [[META23]] = !DILocalVariable(name: "b", arg: 2, scope: [[DBG13]], file: [[META14]], line: 22, type: [[META20]])
+// GENERALIZED: [[META24]] = !{i64 0, !"_ZTSFPPiPKcPS2_E"}
+// GENERALIZED: [[META25]] = !{i64 0, !"_ZTSFPvPKvS_E.generalized"}
+// GENERALIZED: [[META26]] = !DILocation(line: 0, scope: [[DBG13]])
+// GENERALIZED: [[DBG27]] = !DILocation(line: 23, column: 3, scope: [[DBG13]])
+// GENERALIZED: [[DBG28]] = distinct !DISubprogram(name: "g", scope: [[META14]], file: [[META14]], line: 52, type: [[META29:![0-9]+]], scopeLine: 52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META32:![0-9]+]])
+// GENERALIZED: [[META29]] = !DISubroutineType(types: [[META30:![0-9]+]])
+// GENERALIZED: [[META30]] = !{null, [[META31:![0-9]+]]}
+// GENERALIZED: [[META31]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META15]], size: 64)
+// GENERALIZED: [[META32]] = !{[[META33]]}
+// GENERALIZED: [[META33]] = !DILocalVariable(name: "fp", arg: 1, scope: [[DBG28]], file: [[META14]], line: 52, type: [[META31]])
+// GENERALIZED: [[META34]] = !{i64 0, !"_ZTSFvPFPPiPKcPS2_EE"}
+// GENERALIZED: [[META35]] = !{i64 0, !"_ZTSFvPvE.generalized"}
+// GENERALIZED: [[META36]] = !DILocation(line: 0, scope: [[DBG28]])
+// GENERALIZED: [[DBG37]] = !DILocation(line: 0, scope: [[META38:![0-9]+]], inlinedAt: [[DBG41]])
+// GENERALIZED: [[META38]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META39:![0-9]+]], file: [[META39]], type: [[META40:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// GENERALIZED: [[META39]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+// GENERALIZED: [[META40]] = !DISubroutineType(types: null)
+// GENERALIZED: [[DBG41]] = !DILocation(line: 53, column: 3, scope: [[DBG28]])
+// GENERALIZED: [[META42]] = !{}
+// GENERALIZED: [[PROF43]] = !{!"branch_weights", i32 1048575, i32 1}
+// GENERALIZED: [[DBG44]] = !DILocation(line: 0, scope: [[META45:![0-9]+]], inlinedAt: [[DBG37]])
+// GENERALIZED: [[META45]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Control flow integrity check failed", scope: [[META39]], file: [[META39]], type: [[META40]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// GENERALIZED: [[DBG46]] = !DILocation(line: 54, column: 1, scope: [[DBG28]])
 //.

@@ -1811,3 +1811,16 @@ bool hlfir::isSimplyContiguous(mlir::Value base, bool checkWhole) {
           [&](fir::ConvertOp op) { return isSimplyContiguous(op.getValue()); })
       .Default([](auto &&) { return false; });
 }
+
+bool hlfir::isInsideHlfirWhereMaskedExpression(mlir::Region &region) {
+  hlfir::WhereOp whereOp = region.getParentOfType<hlfir::WhereOp>();
+  if (!whereOp)
+    return false;
+  // If the where is nested inside another where, even its mask region must
+  // be evaluated masked.
+  if (whereOp->getParentOfType<hlfir::WhereOp>())
+    return true;
+  // The top-level where mask is not itself controlled by any other where mask,
+  // all other expressions nested under the where must be evaluated masked.
+  return !whereOp.getMaskRegion().isAncestor(&region);
+}

@@ -235,12 +235,12 @@ private:
     // DWARF v5 reorders the address size and adds a unit type.
     if (Version >= 5) {
       Asm.emitInt8(UT);
-      Asm.emitInt8(Asm.MAI->getCodePointerSize());
+      Asm.emitInt8(Asm.MAI.getCodePointerSize());
     }
 
     Asm.emitInt32(0);
     if (Version <= 4) {
-      Asm.emitInt8(Asm.MAI->getCodePointerSize());
+      Asm.emitInt8(Asm.MAI.getCodePointerSize());
     }
   }
 
@@ -496,12 +496,8 @@ static void emitDWOBuilder(const std::string &DWOName,
       createDIEStreamer(*TheTriple, *ObjOS, "DwoStreamerInitAug2",
                         DWODIEBuilder, GDBIndexSection);
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
-    for (std::unique_ptr<llvm::DWARFUnit> &CU :
-         SplitCU.getContext().dwo_info_section_units()) {
-      if (!CU->isTypeUnit())
-        continue;
+    for (DWARFUnit *CU : DWODIEBuilder.getDWARF5TUVector())
       emitUnit(DWODIEBuilder, *Streamer, *CU);
-    }
     emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
     emitUnit(DWODIEBuilder, *Streamer, SplitCU);
@@ -579,6 +575,41 @@ static CUPartitionVector partitionCUs(DWARFContext &DwCtx) {
   return Vec;
 }
 
+static std::unordered_map<uint64_t, std::string>
+getDWONameMap(DWARFContext &DwCtx) {
+  const size_t Size =
+      std::distance(DwCtx.compile_units().begin(), DwCtx.compile_units().end());
+  std::unordered_map<uint64_t, std::string> DWOIDToNameMap(Size);
+  std::unordered_map<std::string, uint32_t> NameToIndexMap(Size);
+  for (const std::unique_ptr<DWARFUnit> &CU : DwCtx.compile_units()) {
+    std::optional<uint64_t> DWOID = CU->getDWOId();
+    if (!DWOID)
+      continue;
+
+    const DWARFDie UnitDIE = CU->getUnitDIE();
+    auto DWONameAttr =
+        UnitDIE.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name});
+
+    // Skip invalid (broken) skeleton units that have a DWOId but lack
+    // DW_AT_dwo_name / DW_AT_GNU_dwo_name.
+    if (!CU->isDWOUnit() && !DWONameAttr)
+      continue;
+
+    std::string DWOName = dwarf::toString(DWONameAttr, "");
+    if (DWOName.empty())
+      continue;
+
+    if (!opts::DwarfOutputPath.empty()) {
+      DWOName = std::string(sys::path::filename(DWOName));
+      uint32_t &Index = NameToIndexMap[DWOName];
+      DWOName.append(std::to_string(Index));
+      ++Index;
+    }
+    DWOName.append(".dwo");
+    DWOIDToNameMap.emplace(*DWOID, std::move(DWOName));
+  }
+  return DWOIDToNameMap;
+}
 void DWARFRewriter::updateDebugInfo() {
   ErrorOr<BinarySection &> DebugInfo = BC.getUniqueSectionByName(".debug_info");
   if (!DebugInfo)
@@ -648,25 +679,42 @@ void DWARFRewriter::updateDebugInfo() {
 
   DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
                                          *StrWriter);
+  if (DebugNamesTable.isCreated())
+    DebugNamesTable.preAllocateUnits(*BC.DwCtx);
+  std::unordered_map<uint64_t, std::string> DWOToNameMap =
+      getDWONameMap(*BC.DwCtx);
   GDBIndex GDBIndexSection(BC);
+  if (!opts::DwarfOutputPath.empty()) {
+    if (std::error_code EC =
+            sys::fs::create_directories(opts::DwarfOutputPath)) {
+      BC.errs() << "BOLT-ERROR: could not create directory '"
+                << opts::DwarfOutputPath << "': " << EC.message() << '\n';
+      return;
+    }
+  }
   auto processSplitCU = [&](DWARFUnit &Unit, DWARFUnit &SplitCU,
                             DebugRangesSectionWriter &TempRangesSectionWriter,
                             DebugAddrWriter &AddressWriter,
-                            const std::string &DWOName,
-                            const std::optional<std::string> &DwarfOutputPath,
+                            const std::string DWOName,
                             DIEBuilder &DWODIEBuilder) {
     DWODIEBuilder.buildDWOUnit(SplitCU);
     DebugStrOffsetsWriter DWOStrOffstsWriter(BC);
     DebugStrWriter DWOStrWriter((SplitCU).getContext(), true);
-    DWODIEBuilder.updateDWONameCompDirForTypes(
-        DWOStrOffstsWriter, DWOStrWriter, SplitCU, DwarfOutputPath, DWOName);
+    DWODIEBuilder.updateDWONameCompDirForTypes(DWOStrOffstsWriter, DWOStrWriter,
+                                               SplitCU, opts::DwarfOutputPath,
+                                               DWOName);
     DebugLoclistWriter DebugLocDWoWriter(Unit, Unit.getVersion(), true,
                                          AddressWriter);
 
     updateUnitDebugInfo(SplitCU, DWODIEBuilder, DebugLocDWoWriter,
                         TempRangesSectionWriter, AddressWriter);
-    DebugLocDWoWriter.finalize(DWODIEBuilder,
-                               *DWODIEBuilder.getUnitDIEbyUnit(SplitCU));
+    DIE *UnitDIE = DWODIEBuilder.getUnitDIEbyUnit(SplitCU);
+    if (!UnitDIE) {
+      errs() << "BOLT-WARNING: failed to construct DIE for split CU "
+             << Twine::utohexstr(*Unit.getDWOId()) << "\n";
+      return;
+    }
+    DebugLocDWoWriter.finalize(DWODIEBuilder, *UnitDIE);
     if (Unit.getVersion() >= 5)
       TempRangesSectionWriter.finalizeSection();
 
@@ -739,12 +787,16 @@ void DWARFRewriter::updateDebugInfo() {
       DebugRangesSectionWriter &TempRangesSectionWriter =
           CU->getVersion() >= 5 ? *RangeListsWritersByCU[*DWOId].get()
                                 : *LegacyRangesWritersByCU[*DWOId].get();
-      std::optional<std::string> DwarfOutputPath =
-          opts::DwarfOutputPath.empty()
-              ? std::nullopt
-              : std::optional<std::string>(opts::DwarfOutputPath.c_str());
-      std::string DWOName = DIEBlder.updateDWONameCompDir(
-          *StrOffstsWriter, *StrWriter, *CU, DwarfOutputPath, std::nullopt);
+      auto NameIt = DWOToNameMap.find(*DWOId);
+      if (NameIt == DWOToNameMap.end()) {
+        BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
+                     "DWO name for DWO ID "
+                  << Twine::utohexstr(*DWOId) << ".\n";
+        continue;
+      }
+      auto DWOName = NameIt->second;
+      DIEBlder.updateDWONameCompDir(*StrOffstsWriter, *StrWriter, *CU,
+                                    opts::DwarfOutputPath, DWOName);
       auto DWODIEBuilderPtr = std::make_unique<DIEBuilder>(
           BC, &(**SplitCU).getContext(), DebugNamesTable, CU);
       DIEBuilder &DWODIEBuilder =
@@ -756,9 +808,9 @@ void DWARFRewriter::updateDebugInfo() {
       // loop, dereferencing CU/SplitCU in the call to processSplitCU means it
       // will dereference a different variable than the one intended, causing a
       // seg fault.
-      ThreadPool.async([&, DwarfOutputPath, DWOName, CU, SplitCU] {
+      ThreadPool.async([&, DWOName, CU, SplitCU] {
         processSplitCU(*CU, **SplitCU, TempRangesSectionWriter, AddressWriter,
-                       DWOName, DwarfOutputPath, DWODIEBuilder);
+                       DWOName, DWODIEBuilder);
       });
     }
     ThreadPool.wait();
@@ -1808,6 +1860,8 @@ std::optional<StringRef> updateDebugData(
                           uint64_t &DWPOffset) -> StringRef {
     if (DWOEntry) {
       DWOSectionContribution *DWOContrubution = DWOEntry->getContribution(Sec);
+      if (!DWOContrubution)
+        return OutData;
       DWPOffset = DWOContrubution->getOffset();
       OutData = OutData.substr(DWPOffset, DWOContrubution->getLength());
     }

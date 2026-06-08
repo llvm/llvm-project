@@ -4,12 +4,6 @@
     {
       "id": 0,
       "name": {
-        "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
-        ],
         "suffix": "",
         "usr": "c:@F@baz"
       }

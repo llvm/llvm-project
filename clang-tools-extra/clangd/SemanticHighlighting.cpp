@@ -583,37 +583,35 @@ public:
   }
 
   bool VisitTagDecl(TagDecl *D) {
-    for (unsigned i = 0; i < D->getNumTemplateParameterLists(); ++i) {
-      if (auto *TPL = D->getTemplateParameterList(i))
-        H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    }
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     return true;
   }
 
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsAsWritten())
-      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
-    return true;
-  }
-
-  bool VisitClassTemplatePartialSpecializationDecl(
-      ClassTemplatePartialSpecializationDecl *D) {
-    if (auto *TPL = D->getTemplateParameters())
-      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    if (const auto *Info = D->getExplicitInstantiationInfo()) {
+      H.addAngleBracketTokens(Info->TemplateArgsAsWritten->getLAngleLoc(),
+                              Info->TemplateArgsAsWritten->getRAngleLoc());
+    } else if (const auto *Info = D->getExplicitSpecializationInfo()) {
+      H.addAngleBracketTokens(Info->TemplateParams->getLAngleLoc(),
+                              Info->TemplateParams->getRAngleLoc());
+      H.addAngleBracketTokens(Info->TemplateArgsAsWritten->getLAngleLoc(),
+                              Info->TemplateArgsAsWritten->getRAngleLoc());
+    }
     return true;
   }
 
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsAsWritten())
-      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
-    return true;
-  }
-
-  bool VisitVarTemplatePartialSpecializationDecl(
-      VarTemplatePartialSpecializationDecl *D) {
-    if (auto *TPL = D->getTemplateParameters())
-      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    if (const auto *Info = D->getExplicitInstantiationInfo()) {
+      H.addAngleBracketTokens(Info->TemplateArgsAsWritten->getLAngleLoc(),
+                              Info->TemplateArgsAsWritten->getRAngleLoc());
+    } else if (const auto *Info = D->getExplicitSpecializationInfo()) {
+      H.addAngleBracketTokens(Info->TemplateParams->getLAngleLoc(),
+                              Info->TemplateParams->getRAngleLoc());
+      H.addAngleBracketTokens(Info->TemplateArgsAsWritten->getLAngleLoc(),
+                              Info->TemplateArgsAsWritten->getRAngleLoc());
+    }
     return true;
   }
 
@@ -627,6 +625,9 @@ public:
   }
 
   bool VisitFunctionDecl(FunctionDecl *D) {
+    if (const TemplateParameterList *TPL =
+            D->getTemplateSpecializationParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     if (D->isOverloadedOperator()) {
       const auto AddOpDeclToken = [&](SourceLocation Loc) {
         auto &Token = H.addToken(Loc, HighlightingKind::Operator)
@@ -791,13 +792,12 @@ public:
   }
 
   bool VisitCXXDestructorDecl(CXXDestructorDecl *D) {
-    if (auto *TI = D->getNameInfo().getNamedTypeInfo()) {
-      SourceLocation Loc = TI->getTypeLoc().getBeginLoc();
-      H.addExtraModifier(Loc, HighlightingModifier::ConstructorOrDestructor);
-      H.addExtraModifier(Loc, HighlightingModifier::Declaration);
-      if (D->isThisDeclarationADefinition())
-        H.addExtraModifier(Loc, HighlightingModifier::Definition);
-    }
+    SourceLocation Loc =
+        D->getNameInfo().getNamedTypeInfo()->getTypeLoc().getBeginLoc();
+    H.addExtraModifier(Loc, HighlightingModifier::ConstructorOrDestructor);
+    H.addExtraModifier(Loc, HighlightingModifier::Declaration);
+    if (D->isThisDeclarationADefinition())
+      H.addExtraModifier(Loc, HighlightingModifier::Definition);
     return true;
   }
 
@@ -806,12 +806,12 @@ public:
     // `(foo.*pointer_to_member_fun)(arg);`
     if (auto *D = CE->getMethodDecl()) {
       if (isa<CXXDestructorDecl>(D)) {
-        if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee())) {
-          if (auto *TI = ME->getMemberNameInfo().getNamedTypeInfo()) {
-            H.addExtraModifier(TI->getTypeLoc().getBeginLoc(),
-                               HighlightingModifier::ConstructorOrDestructor);
-          }
-        }
+        if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee()))
+          H.addExtraModifier(ME->getMemberNameInfo()
+                                 .getNamedTypeInfo()
+                                 ->getTypeLoc()
+                                 .getBeginLoc(),
+                             HighlightingModifier::ConstructorOrDestructor);
       } else if (D->isOverloadedOperator()) {
         if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee()))
           H.addToken(
@@ -824,10 +824,8 @@ public:
   }
 
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
-    for (unsigned i = 0; i < D->getNumTemplateParameterLists(); ++i) {
-      if (auto *TPL = D->getTemplateParameterList(i))
-        H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    }
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     auto *AT = D->getType()->getContainedAutoType();
     if (!AT)
       return true;

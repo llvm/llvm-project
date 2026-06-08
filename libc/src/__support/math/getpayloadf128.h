@@ -20,7 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float128 getpayloadf128(const float128 *x) {
+LIBC_INLINE constexpr float128 getpayloadf128(const float128 *x) {
   return fputil::getpayload(*x);
 }
 

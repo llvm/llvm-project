@@ -330,7 +330,7 @@ enum ErrorType {
   eErrorTypeWin32       ///< Standard Win32 error codes.
 };
 
-enum ValueType {
+enum ValueType : uint32_t {
   eValueTypeInvalid = 0,
   eValueTypeVariableGlobal = 1,   ///< globals variable
   eValueTypeVariableStatic = 2,   ///< static variable
@@ -343,6 +343,12 @@ enum ValueType {
   eValueTypeVTable = 9,              ///< virtual function table
   eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
 };
+
+/// A mask that we can use to check if the value type is synthetic or not.
+// NOTE: This limits the number of value types to 31, but that's 3x more than
+// what we currently have now. See lldb/Utility/ValueType.h for helpers for
+// working with synthetic value types.
+static constexpr unsigned ValueTypeSyntheticMask = 0x20;
 
 /// Token size/granularities for Input Readers.
 
@@ -550,6 +556,12 @@ enum InstrumentationRuntimeType {
   eNumInstrumentationRuntimeTypes
 };
 
+enum PluginDomainKind {
+  ePluginDomainKindGlobal = 0x1,
+  ePluginDomainKindDebugger = 0x2,
+  ePluginDomainKindTarget = 0x4,
+};
+
 enum DynamicValueType {
   eNoDynamicValues = 0,
   eDynamicCanRunTarget = 1,
@@ -678,6 +690,7 @@ enum CommandArgumentType {
   eArgTypeProtocol,
   eArgTypeExceptionStage,
   eArgTypeNameMatchStyle,
+  eArgTypePluginDomain,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1222,7 +1235,14 @@ FLAGS_ENUM(CommandFlags){
     ///
     /// Verifies that the process is being traced by a Trace plug-in, if it
     /// isn't the command will fail with an appropriate error message.
-    eCommandProcessMustBeTraced = (1u << 8)};
+    eCommandProcessMustBeTraced = (1u << 8),
+    /// eCommandAllowsDummyTarget
+    ///
+    /// Indicates that the command can legitimately operate on the dummy target
+    /// (e.g. `breakpoint set` priming future targets). Without this flag,
+    /// CommandObject::GetTarget filters the dummy target out and returns null
+    /// when no real target is selected.
+    eCommandAllowsDummyTarget = (1u << 9)};
 
 /// Whether a summary should cap how much data it returns to users or not.
 enum TypeSummaryCapping {

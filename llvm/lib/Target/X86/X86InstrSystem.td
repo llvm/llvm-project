@@ -607,6 +607,13 @@ let SchedRW = [WriteSystem] in {
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
+// Indirect Branch History Fence
+let SchedRW = [WriteFence] in {
+  def IBHF : RI<0x1E, MRM_F8, (outs), (ins), "ibhf", []>, TB, XS,
+                Requires<[In64BitMode]>;
+}
+
+//===----------------------------------------------------------------------===//
 // XSAVE instructions
 let SchedRW = [WriteSystem] in {
 // NOTE: No HasXSAVE predicate so that these can be used with _xgetbv/_xsetbv

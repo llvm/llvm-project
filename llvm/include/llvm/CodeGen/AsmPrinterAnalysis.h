@@ -22,7 +22,7 @@ namespace llvm {
 
 class AsmPrinterAnalysis : public AnalysisInfoMixin<AsmPrinterAnalysis> {
 public:
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
   std::unique_ptr<AsmPrinter> HeldPrinter;
 
   class Result {
@@ -33,7 +33,7 @@ public:
   public:
     AsmPrinter &getPrinter() { return Printer; }
 
-    bool invalidate(Module &, const PreservedAnalyses,
+    bool invalidate(Module &, const PreservedAnalyses &,
                     ModuleAnalysisManager::Invalidator &) {
       return false;
     }

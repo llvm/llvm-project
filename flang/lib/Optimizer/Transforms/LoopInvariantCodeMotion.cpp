@@ -13,10 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -104,9 +106,10 @@ static bool isNonOptionalScalar(Value location) {
       return false;
     }
 
-    // Scalars "defined" by fir.alloca and fir.address_of
-    // are present.
-    if (isa<fir::AllocaOp, fir::AddrOfOp>(defOp)) {
+    // Scalars "defined" by fir.address_of or that are new
+    // allocations (e.g. fir.alloca, cuf.alloc, etc.) are present.
+    if (isa<fir::AddrOfOp>(defOp) ||
+        fir::isNewAllocationResult(cast<OpResult>(location)).value_or(false)) {
       LDBG() << "Success: is non optional scalar";
       return true;
     }
@@ -141,13 +144,13 @@ static bool isNonOptionalScalar(Value location) {
 
       // TODO: we can probably use FIR AliasAnalysis' getSource()
       // method to identify the storage in more cases.
-      Value memref = llvm::TypeSwitch<Operation *, Value>(defOp)
-                         .Case<fir::DeclareOp, hlfir::DeclareOp>(
-                             [](auto op) { return op.getMemref(); })
-                         .Default([](auto) { return nullptr; });
+      location = llvm::TypeSwitch<Operation *, Value>(defOp)
+                     .Case<fir::DeclareOp, hlfir::DeclareOp>(
+                         [](auto op) { return op.getMemref(); })
+                     .Default([](auto) { return nullptr; });
 
-      if (memref)
-        return isNonOptionalScalar(memref);
+      if (location)
+        continue;
 
       LDBG() << "Failure: cannot reason about variable storage";
       return false;

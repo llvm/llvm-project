@@ -7,7 +7,7 @@
 
 // CHECK-LABEL: test_faceforward_half
 // CHECK: %hlsl.dot.i = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
-// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0xH0000
+// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0.000000e+00
 // CHECK: %fneg.i = fneg reassoc nnan ninf nsz arcp afn half %{{.*}}
 // CHECK: %hlsl.select.i = select reassoc nnan ninf nsz arcp afn i1 %cmp.i, half %{{.*}}, half %fneg.i
 // CHECK: ret half %hlsl.select.i
@@ -16,7 +16,7 @@ half test_faceforward_half(half N, half I, half Ng) { return faceforward(N, I, N
 // CHECK-LABEL: test_faceforward_half2
 // DXCHECK: %hlsl.dot.i = call reassoc nnan ninf nsz arcp afn half @llvm.[[ICF:dx]].fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
 // SPVCHECK: %hlsl.dot.i = call reassoc nnan ninf nsz arcp afn half @llvm.[[ICF:spv]].fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
-// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0xH0000
+// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0.000000e+00
 // CHECK: %fneg.i = fneg reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}
 // CHECK: %hlsl.select.i = select reassoc nnan ninf nsz arcp afn i1 %cmp.i, <2 x half> %{{.*}}, <2 x half> %fneg.i
 // CHECK: ret <2 x half> %hlsl.select.i
@@ -24,7 +24,7 @@ half2 test_faceforward_half2(half2 N, half2 I, half2 Ng) { return faceforward(N,
 
 // CHECK-LABEL: test_faceforward_half3
 // CHECK: %hlsl.dot.i = call reassoc nnan ninf nsz arcp afn half @llvm.[[ICF]].fdot.v3f16(<3 x half> %{{.*}}, <3 x half> %{{.*}})
-// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0xH0000
+// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0.000000e+00
 // CHECK: %fneg.i = fneg reassoc nnan ninf nsz arcp afn <3 x half> %{{.*}}
 // CHECK: %hlsl.select.i = select reassoc nnan ninf nsz arcp afn i1 %cmp.i, <3 x half> %{{.*}}, <3 x half> %fneg.i
 // CHECK: ret <3 x half> %hlsl.select.i
@@ -32,7 +32,7 @@ half3 test_faceforward_half3(half3 N, half3 I, half3 Ng) { return faceforward(N,
 
 // CHECK-LABEL: test_faceforward_half4
 // CHECK: %hlsl.dot.i = call reassoc nnan ninf nsz arcp afn half @llvm.[[ICF]].fdot.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
-// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0xH0000
+// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0.000000e+00
 // CHECK: %fneg.i = fneg reassoc nnan ninf nsz arcp afn <4 x half> %{{.*}}
 // CHECK: %hlsl.select.i = select reassoc nnan ninf nsz arcp afn i1 %cmp.i, <4 x half> %{{.*}}, <4 x half> %fneg.i
 // CHECK: ret <4 x half> %hlsl.select.i

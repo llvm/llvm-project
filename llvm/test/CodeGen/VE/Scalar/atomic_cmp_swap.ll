@@ -85,7 +85,7 @@ define zeroext i1 @_Z26atomic_cmp_swap_relaxed_i1RNSt3__16atomicIbEERbb(ptr noca
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -130,7 +130,7 @@ define signext i8 @_Z26atomic_cmp_swap_relaxed_i8RNSt3__16atomicIcEERcc(ptr noca
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    ldl.zx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -174,7 +174,7 @@ define zeroext i8 @_Z26atomic_cmp_swap_relaxed_u8RNSt3__16atomicIhEERhh(ptr noca
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -219,7 +219,7 @@ define signext i16 @_Z27atomic_cmp_swap_relaxed_i16RNSt3__16atomicIsEERss(ptr no
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    ldl.zx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -263,7 +263,7 @@ define zeroext i16 @_Z27atomic_cmp_swap_relaxed_u16RNSt3__16atomicItEERtt(ptr no
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -525,7 +525,7 @@ define zeroext i1 @_Z26atomic_cmp_swap_acquire_i1RNSt3__16atomicIbEERbb(ptr noca
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -571,7 +571,7 @@ define signext i8 @_Z26atomic_cmp_swap_acquire_i8RNSt3__16atomicIcEERcc(ptr noca
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    ldl.zx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -616,7 +616,7 @@ define zeroext i8 @_Z26atomic_cmp_swap_acquire_u8RNSt3__16atomicIhEERhh(ptr noca
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -662,7 +662,7 @@ define signext i16 @_Z27atomic_cmp_swap_acquire_i16RNSt3__16atomicIsEERss(ptr no
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    ldl.zx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -707,7 +707,7 @@ define zeroext i16 @_Z27atomic_cmp_swap_acquire_u16RNSt3__16atomicItEERtt(ptr no
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -975,7 +975,7 @@ define zeroext i1 @_Z26atomic_cmp_swap_seq_cst_i1RNSt3__16atomicIbEERbb(ptr noca
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -1022,7 +1022,7 @@ define signext i8 @_Z26atomic_cmp_swap_seq_cst_i8RNSt3__16atomicIcEERcc(ptr noca
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    ldl.zx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -1068,7 +1068,7 @@ define zeroext i8 @_Z26atomic_cmp_swap_seq_cst_u8RNSt3__16atomicIhEERhh(ptr noca
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -1115,7 +1115,7 @@ define signext i16 @_Z27atomic_cmp_swap_seq_cst_i16RNSt3__16atomicIsEERss(ptr no
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    ldl.zx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -1161,7 +1161,7 @@ define zeroext i16 @_Z27atomic_cmp_swap_seq_cst_u16RNSt3__16atomicItEERtt(ptr no
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s3)
+; CHECK-NEXT:    ldl.zx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
@@ -2004,28 +2004,28 @@ bb:
 define zeroext i1 @_Z29atomic_cmp_swap_relaxed_gv_i1Rbb(ptr nocapture nonnull align 1 dereferenceable(1) %arg, i1 zeroext %arg1) {
 ; CHECK-LABEL: _Z29atomic_cmp_swap_relaxed_gv_i1Rbb:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    and %s2, %s1, (32)0
-; CHECK-NEXT:    lea %s1, gv_i1@lo
+; CHECK-NEXT:    ld1b.zx %s2, (, %s0)
+; CHECK-NEXT:    lea %s3, gv_i1@lo
+; CHECK-NEXT:    and %s3, %s3, (32)0
+; CHECK-NEXT:    lea.sl %s3, gv_i1@hi(, %s3)
+; CHECK-NEXT:    and %s3, -4, %s3
+; CHECK-NEXT:    ldl.zx %s4, (, %s3)
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s1, gv_i1@hi(, %s1)
-; CHECK-NEXT:    and %s1, -4, %s1
-; CHECK-NEXT:    ldl.zx %s4, (, %s1)
-; CHECK-NEXT:    ld1b.zx %s3, (, %s0)
 ; CHECK-NEXT:    lea %s5, -256
 ; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
+; CHECK-NEXT:    or %s1, %s4, %s1
 ; CHECK-NEXT:    or %s2, %s4, %s2
-; CHECK-NEXT:    or %s3, %s4, %s3
-; CHECK-NEXT:    cas.w %s2, (%s1), %s3
-; CHECK-NEXT:    cmps.w.sx %s3, %s2, %s3
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s1, (63)0, %s3
-; CHECK-NEXT:    brne.w 0, %s1, .LBB44_2
+; CHECK-NEXT:    cas.w %s1, (%s3), %s2
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s2
+; CHECK-NEXT:    or %s2, 0, (0)1
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB44_2
 ; CHECK-NEXT:  # %bb.1: # %bb5
-; CHECK-NEXT:    st1b %s2, (, %s0)
+; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB44_2: # %bb7
-; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
+; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = zext i1 %arg1 to i8
@@ -2091,28 +2091,28 @@ bb6:                                              ; preds = %bb4, %bb
 define zeroext i8 @_Z29atomic_cmp_swap_relaxed_gv_u8Rhh(ptr nocapture nonnull align 1 dereferenceable(1) %arg, i8 zeroext %arg1) {
 ; CHECK-LABEL: _Z29atomic_cmp_swap_relaxed_gv_u8Rhh:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    and %s2, %s1, (32)0
-; CHECK-NEXT:    lea %s1, gv_u8@lo
+; CHECK-NEXT:    ld1b.zx %s2, (, %s0)
+; CHECK-NEXT:    lea %s3, gv_u8@lo
+; CHECK-NEXT:    and %s3, %s3, (32)0
+; CHECK-NEXT:    lea.sl %s3, gv_u8@hi(, %s3)
+; CHECK-NEXT:    and %s3, -4, %s3
+; CHECK-NEXT:    ldl.zx %s4, (, %s3)
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s1, gv_u8@hi(, %s1)
-; CHECK-NEXT:    and %s1, -4, %s1
-; CHECK-NEXT:    ldl.zx %s4, (, %s1)
-; CHECK-NEXT:    ld1b.zx %s3, (, %s0)
 ; CHECK-NEXT:    lea %s5, -256
 ; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
+; CHECK-NEXT:    or %s1, %s4, %s1
 ; CHECK-NEXT:    or %s2, %s4, %s2
-; CHECK-NEXT:    or %s3, %s4, %s3
-; CHECK-NEXT:    cas.w %s2, (%s1), %s3
-; CHECK-NEXT:    cmps.w.sx %s3, %s2, %s3
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s1, (63)0, %s3
-; CHECK-NEXT:    brne.w 0, %s1, .LBB46_2
+; CHECK-NEXT:    cas.w %s1, (%s3), %s2
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s2
+; CHECK-NEXT:    or %s2, 0, (0)1
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB46_2
 ; CHECK-NEXT:  # %bb.1: # %bb4
-; CHECK-NEXT:    st1b %s2, (, %s0)
+; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB46_2: # %bb6
-; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
+; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = load i8, ptr %arg, align 1
@@ -2134,19 +2134,22 @@ bb6:                                              ; preds = %bb4, %bb
 define signext i16 @_Z30atomic_cmp_swap_relaxed_gv_i16Rss(ptr nocapture nonnull align 2 dereferenceable(2) %arg, i16 signext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_gv_i16Rss:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    lea %s2, gv_i16@lo
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    lea.sl %s2, gv_i16@hi(, %s2)
-; CHECK-NEXT:    and %s2, -4, %s2
-; CHECK-NEXT:    ld2b.zx %s4, 2(, %s2)
-; CHECK-NEXT:    ld2b.zx %s3, (, %s0)
+; CHECK-NEXT:    ld2b.zx %s2, (, %s0)
+; CHECK-NEXT:    lea %s3, gv_i16@lo
+; CHECK-NEXT:    and %s3, %s3, (32)0
+; CHECK-NEXT:    lea.sl %s3, gv_i16@hi(, %s3)
+; CHECK-NEXT:    and %s3, -4, %s3
 ; CHECK-NEXT:    and %s1, %s1, (48)0
+; CHECK-NEXT:    ldl.zx %s4, (, %s3)
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    sla.w.sx %s4, %s4, 16
+; CHECK-NEXT:    lea %s5, -65536
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
+; CHECK-NEXT:    and %s4, %s4, (32)0
 ; CHECK-NEXT:    or %s1, %s4, %s1
-; CHECK-NEXT:    or %s3, %s4, %s3
-; CHECK-NEXT:    cas.w %s1, (%s2), %s3
-; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
+; CHECK-NEXT:    or %s2, %s4, %s2
+; CHECK-NEXT:    cas.w %s1, (%s3), %s2
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s2
 ; CHECK-NEXT:    or %s2, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
 ; CHECK-NEXT:    brne.w 0, %s2, .LBB47_2
@@ -2175,18 +2178,21 @@ bb6:                                              ; preds = %bb4, %bb
 define zeroext i16 @_Z30atomic_cmp_swap_relaxed_gv_u16Rtt(ptr nocapture nonnull align 2 dereferenceable(2) %arg, i16 zeroext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_gv_u16Rtt:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    lea %s2, gv_u16@lo
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    lea.sl %s2, gv_u16@hi(, %s2)
-; CHECK-NEXT:    and %s2, -4, %s2
-; CHECK-NEXT:    ld2b.zx %s4, 2(, %s2)
-; CHECK-NEXT:    ld2b.zx %s3, (, %s0)
+; CHECK-NEXT:    ld2b.zx %s2, (, %s0)
+; CHECK-NEXT:    lea %s3, gv_u16@lo
+; CHECK-NEXT:    and %s3, %s3, (32)0
+; CHECK-NEXT:    lea.sl %s3, gv_u16@hi(, %s3)
+; CHECK-NEXT:    and %s3, -4, %s3
+; CHECK-NEXT:    ldl.zx %s4, (, %s3)
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    sla.w.sx %s4, %s4, 16
+; CHECK-NEXT:    lea %s5, -65536
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
+; CHECK-NEXT:    and %s4, %s4, (32)0
 ; CHECK-NEXT:    or %s1, %s4, %s1
-; CHECK-NEXT:    or %s3, %s4, %s3
-; CHECK-NEXT:    cas.w %s1, (%s2), %s3
-; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
+; CHECK-NEXT:    or %s2, %s4, %s2
+; CHECK-NEXT:    cas.w %s1, (%s3), %s2
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s2
 ; CHECK-NEXT:    or %s2, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
 ; CHECK-NEXT:    brne.w 0, %s2, .LBB48_2

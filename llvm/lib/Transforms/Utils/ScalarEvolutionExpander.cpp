@@ -152,19 +152,13 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
 BasicBlock::iterator
 SCEVExpander::findInsertPointAfter(Instruction *I,
                                    Instruction *MustDominate) const {
-  BasicBlock::iterator IP = ++I->getIterator();
-  if (auto *II = dyn_cast<InvokeInst>(I))
-    IP = II->getNormalDest()->begin();
-
-  while (isa<PHINode>(IP))
-    ++IP;
-
-  if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
-    ++IP;
-  } else if (isa<CatchSwitchInst>(IP)) {
-    IP = MustDominate->getParent()->getFirstInsertionPt();
+  BasicBlock::iterator IP;
+  if (auto MaybeIP = I->getInsertionPointAfterDef()) {
+    IP = *MaybeIP;
   } else {
-    assert(!IP->isEHPad() && "unexpected eh pad!");
+    assert(SE.DT.dominates(I, MustDominate) &&
+           "instruction must dominate the insertion point");
+    IP = MustDominate->getIterator();
   }
 
   // Adjust insert point to be after instructions inserted by the expander, so
@@ -337,16 +331,23 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   }
 
   // If we haven't found this binop, insert it.
-  // TODO: Use the Builder, which will make CreateBinOp below fold with
-  // InstSimplifyFolder.
-  Instruction *BO = Builder.Insert(BinaryOperator::Create(Opcode, LHS, RHS));
-  BO->setDebugLoc(Loc);
-  if (any(Flags & SCEV::FlagNUW))
-    BO->setHasNoUnsignedWrap();
-  if (any(Flags & SCEV::FlagNSW))
-    BO->setHasNoSignedWrap();
-
-  return BO;
+  Builder.SetCurrentDebugLocation(Loc);
+  bool IsNUW = any(Flags & SCEV::FlagNUW);
+  bool IsNSW = any(Flags & SCEV::FlagNSW);
+  // Don't use folder when expanding post-inc rewrites in LSRMode to preserve
+  // the rewrites.
+  if (LSRMode && !PostIncLoops.empty() &&
+      all_of(PostIncLoops, [&](const Loop *L) {
+        return !L->contains(Builder.GetInsertBlock());
+      })) {
+    auto *BO = BinaryOperator::Create(Opcode, LHS, RHS);
+    if (IsNUW)
+      BO->setHasNoUnsignedWrap();
+    if (IsNSW)
+      BO->setHasNoSignedWrap();
+    return Builder.Insert(BO);
+  }
+  return Builder.CreateNoWrapBinOp(Opcode, LHS, RHS, IsNUW, IsNSW);
 }
 
 /// expandAddToGEP - Expand an addition expression with a pointer type into
@@ -1344,7 +1345,9 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
     Value *V = expand(
         SE.getAddRecExpr(NewOps, S->getLoop(), S.getNoWrapFlags(SCEV::FlagNW)));
     BasicBlock::iterator NewInsertPt =
-        findInsertPointAfter(cast<Instruction>(V), &*Builder.GetInsertPoint());
+        isa<Instruction>(V) ? findInsertPointAfter(cast<Instruction>(V),
+                                                   &*Builder.GetInsertPoint())
+                            : Builder.GetInsertPoint();
     V = expand(SE.getTruncateExpr(SE.getUnknown(V), Ty), NewInsertPt);
     return V;
   }
@@ -1675,24 +1678,7 @@ Value *SCEVExpander::expand(SCEVUse S) {
   } else {
     for (Instruction *I : DropPoisonGeneratingInsts) {
       rememberFlags(I);
-      I->dropPoisonGeneratingAnnotations();
-      // See if we can re-infer from first principles any of the flags we just
-      // dropped.
-      if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
-        if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
-          auto *BO = cast<BinaryOperator>(I);
-          BO->setHasNoUnsignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-          BO->setHasNoSignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
-        }
-      if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
-        auto *Src = NNI->getOperand(0);
-        if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
-                                    Constant::getNullValue(Src->getType()), I,
-                                    DL).value_or(false))
-          NNI->setNonNeg(true);
-      }
+      dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
     }
   }
   // Remember the expanded value for this SCEV at this location.
@@ -1718,6 +1704,29 @@ void SCEVExpander::rememberInstruction(Value *I) {
 void SCEVExpander::rememberFlags(Instruction *I) {
   // If we already have flags for the instruction, keep the existing ones.
   OrigFlags.try_emplace(I, PoisonFlags(I));
+}
+
+void SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(
+    ScalarEvolution &SE, Instruction *I) {
+  I->dropPoisonGeneratingAnnotations();
+  // See if we can re-infer from first principles any of the flags we just
+  // dropped.
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
+    if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+      auto *BO = cast<BinaryOperator>(I);
+      BO->setHasNoUnsignedWrap(
+          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+      BO->setHasNoSignedWrap(
+          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+    }
+  if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
+    auto *Src = NNI->getOperand(0);
+    if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
+                                Constant::getNullValue(Src->getType()), I,
+                                SE.getDataLayout())
+            .value_or(false))
+      NNI->setNonNeg(true);
+  }
 }
 
 void SCEVExpander::replaceCongruentIVInc(

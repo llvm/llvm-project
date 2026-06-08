@@ -17,15 +17,12 @@ target triple = "x86_64-unknown-linux-gnu"
 define i8 @PR31243_zext(i8 %v0, i8 %v1, i8 %v2, i8 %v3, ptr %ptr) {
 ; SSE-LABEL: @PR31243_zext(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i32 0
-; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i32 1
-; SSE-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], splat (i8 1)
-; SSE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i32 0
-; SSE-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
-; SSE-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i32 [[TMP4]]
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i32 1
-; SSE-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
-; SSE-NEXT:    [[T5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 [[TMP6]]
+; SSE-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3:%.*]] to i32
+; SSE-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5:%.*]] to i32
+; SSE-NEXT:    [[T2:%.*]] = or i32 [[TMP4]], 1
+; SSE-NEXT:    [[T3:%.*]] = or i32 [[TMP6]], 1
+; SSE-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i32 [[T2]]
+; SSE-NEXT:    [[T5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 [[T3]]
 ; SSE-NEXT:    [[T6:%.*]] = load i8, ptr [[T4]], align 1
 ; SSE-NEXT:    [[T7:%.*]] = load i8, ptr [[T5]], align 1
 ; SSE-NEXT:    [[T8:%.*]] = add i8 [[T6]], [[T7]]
@@ -76,15 +73,12 @@ entry:
 define i8 @PR31243_sext(i8 %v0, i8 %v1, i8 %v2, i8 %v3, ptr %ptr) {
 ; SSE-LABEL: @PR31243_sext(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i32 0
-; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i32 1
-; SSE-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], splat (i8 1)
-; SSE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i32 0
-; SSE-NEXT:    [[TMP4:%.*]] = sext i8 [[TMP3]] to i32
-; SSE-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i32 [[TMP4]]
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i32 1
-; SSE-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP5]] to i32
-; SSE-NEXT:    [[T5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 [[TMP6]]
+; SSE-NEXT:    [[TMP4:%.*]] = sext i8 [[TMP3:%.*]] to i32
+; SSE-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP5:%.*]] to i32
+; SSE-NEXT:    [[T2:%.*]] = or i32 [[TMP4]], 1
+; SSE-NEXT:    [[T3:%.*]] = or i32 [[TMP6]], 1
+; SSE-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i32 [[T2]]
+; SSE-NEXT:    [[T5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 [[T3]]
 ; SSE-NEXT:    [[T6:%.*]] = load i8, ptr [[T4]], align 1
 ; SSE-NEXT:    [[T7:%.*]] = load i8, ptr [[T5]], align 1
 ; SSE-NEXT:    [[T8:%.*]] = add i8 [[T6]], [[T7]]

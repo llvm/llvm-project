@@ -57,13 +57,23 @@ define double @v_fdiv_f64_afn(double %x, double %y) #0 {
 ; GCN: v_rcp_f64_e32 v[2:3], v[0:1]
 ; GCN: v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; GCN: v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; GCN: v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
-; GCN: v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; GCN: v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
 ; GCN: v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; GCN: s_setpc_b64
 define double @v_rcp_f64_afn(double %x) #0 {
   %result = fdiv afn double 1.0, %x
+  ret double %result
+}
+
+; GCN-LABEL: {{^}}v_neg_rcp_f64_afn:
+; GCN: v_rcp_f64_e32 v[2:3], v[0:1]
+; GCN: v_fma_f64 v[4:5], v[0:1], -v[2:3], 1.0
+; GCN: v_fma_f64 v[2:3], v[4:5], -v[2:3], -v[2:3]
+; GCN: v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; GCN: v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
+; GCN: s_setpc_b64
+define double @v_neg_rcp_f64_afn(double %x) #0 {
+  %result = fdiv afn double -1.0, %x
   ret double %result
 }
 

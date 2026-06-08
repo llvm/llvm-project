@@ -55,7 +55,7 @@ ArrayDtor arrDtor[16];
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[ARR_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
 
-// LLVM: define internal void @__cxx_global_array_dtor(ptr %[[ARR_ARG:.*]]) {
+// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) {
 // LLVM:   %[[BEGIN:.*]] = getelementptr %struct.ArrayDtor, ptr %[[ARR_ARG]], i32 0
 // LLVM:   %[[END:.*]] = getelementptr %struct.ArrayDtor, ptr %[[BEGIN]], i64 16
 // LLVM:   %[[CUR_ADDR:.*]] = alloca ptr
@@ -102,10 +102,10 @@ ArrayDtor arrDtor[16];
 
 // Common init function for all globals with default priority
 
-// CIR: cir.func private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
+// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 
-// LLVM: define void @_GLOBAL__sub_I_[[FILENAME:.*]]()
+// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]()
 // LLVM:   call void @__cxx_global_var_init()
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]() {{.*}} section ".text.startup" {

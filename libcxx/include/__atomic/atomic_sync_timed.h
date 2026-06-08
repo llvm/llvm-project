@@ -30,6 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 #  if _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_AVAILABILITY_NEW_SYNC
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __atomic_monitor_global(void const* __address) _NOEXCEPT;
 
@@ -41,6 +42,7 @@ _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_globa
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
 __atomic_wait_native_with_timeout(void const* __address, void const* __old_value, uint64_t __timeout_ns) _NOEXCEPT;
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _AtomicWaitable, class _Poll, class _Rep, class _Period>
 struct __atomic_wait_timed_backoff_impl {

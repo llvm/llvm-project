@@ -86,16 +86,39 @@ public:
 #else
   _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd = default_seed) { seed(__sd); }
 #endif
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, subtract_with_carry_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(_Sseq& __q) {
     seed(__q);
   }
+
   _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = default_seed) {
-    seed(__sd, integral_constant<unsigned, 1 + (__w - 1) / 32>());
+    linear_congruential_engine<result_type, 40014u, 0u, 2147483563u> __e(__sd == 0u ? default_seed : __sd);
+    for (size_t __i = 0; __i < __r; ++__i) {
+      if _LIBCPP_CONSTEXPR ((1 + (__w - 1) / 32) == 1) {
+        __x_[__i] = static_cast<result_type>(__e() & _Max);
+      } else {
+        result_type __e0 = __e();
+        __x_[__i]        = static_cast<result_type>((__e0 + ((uint64_t)__e() << 32)) & _Max);
+      }
+    }
+    __c_ = __x_[__r - 1] == 0;
+    __i_ = 0;
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
+
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, subtract_with_carry_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
-    __seed(__q, integral_constant<unsigned, 1 + (__w - 1) / 32>());
+    const unsigned __k = 1 + (__w - 1) / 32;
+    static_assert(__k <= 2);
+    uint32_t __ar[__r * __k];
+    __q.generate(__ar, __ar + __r * __k);
+    for (size_t __i = 0; __i < __r; ++__i) {
+      if _LIBCPP_CONSTEXPR (__k == 1)
+        __x_[__i] = static_cast<result_type>(__ar[__i] & _Max);
+      else
+        __x_[__i] = static_cast<result_type>((__ar[2 * __i] + ((uint64_t)__ar[2 * __i + 1] << 32)) & _Max);
+    }
+    __c_ = __x_[__r - 1] == 0;
+    __i_ = 0;
   }
 
   // generating functions
@@ -120,59 +143,7 @@ public:
   template <class _CharT, class _Traits, class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
   friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x);
-
-private:
-  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd, integral_constant<unsigned, 1>);
-  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd, integral_constant<unsigned, 2>);
-  template <class _Sseq>
-  _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 1>);
-  template <class _Sseq>
-  _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 2>);
 };
-
-template <class _UIntType, size_t __w, size_t __s, size_t __r>
-void subtract_with_carry_engine<_UIntType, __w, __s, __r>::seed(result_type __sd, integral_constant<unsigned, 1>) {
-  linear_congruential_engine<result_type, 40014u, 0u, 2147483563u> __e(__sd == 0u ? default_seed : __sd);
-  for (size_t __i = 0; __i < __r; ++__i)
-    __x_[__i] = static_cast<result_type>(__e() & _Max);
-  __c_ = __x_[__r - 1] == 0;
-  __i_ = 0;
-}
-
-template <class _UIntType, size_t __w, size_t __s, size_t __r>
-void subtract_with_carry_engine<_UIntType, __w, __s, __r>::seed(result_type __sd, integral_constant<unsigned, 2>) {
-  linear_congruential_engine<result_type, 40014u, 0u, 2147483563u> __e(__sd == 0u ? default_seed : __sd);
-  for (size_t __i = 0; __i < __r; ++__i) {
-    result_type __e0 = __e();
-    __x_[__i]        = static_cast<result_type>((__e0 + ((uint64_t)__e() << 32)) & _Max);
-  }
-  __c_ = __x_[__r - 1] == 0;
-  __i_ = 0;
-}
-
-template <class _UIntType, size_t __w, size_t __s, size_t __r>
-template <class _Sseq>
-void subtract_with_carry_engine<_UIntType, __w, __s, __r>::__seed(_Sseq& __q, integral_constant<unsigned, 1>) {
-  const unsigned __k = 1;
-  uint32_t __ar[__r * __k];
-  __q.generate(__ar, __ar + __r * __k);
-  for (size_t __i = 0; __i < __r; ++__i)
-    __x_[__i] = static_cast<result_type>(__ar[__i] & _Max);
-  __c_ = __x_[__r - 1] == 0;
-  __i_ = 0;
-}
-
-template <class _UIntType, size_t __w, size_t __s, size_t __r>
-template <class _Sseq>
-void subtract_with_carry_engine<_UIntType, __w, __s, __r>::__seed(_Sseq& __q, integral_constant<unsigned, 2>) {
-  const unsigned __k = 2;
-  uint32_t __ar[__r * __k];
-  __q.generate(__ar, __ar + __r * __k);
-  for (size_t __i = 0; __i < __r; ++__i)
-    __x_[__i] = static_cast<result_type>((__ar[2 * __i] + ((uint64_t)__ar[2 * __i + 1] << 32)) & _Max);
-  __c_ = __x_[__r - 1] == 0;
-  __i_ = 0;
-}
 
 template <class _UIntType, size_t __w, size_t __s, size_t __r>
 _UIntType subtract_with_carry_engine<_UIntType, __w, __s, __r>::operator()() {

@@ -7,8 +7,7 @@
     {
       "id": 0,
       "name": {
-        "usr": "c:@F@foo",
-        "namespace": []
+        "usr": "c:@F@foo"
       }
     }
   ],
