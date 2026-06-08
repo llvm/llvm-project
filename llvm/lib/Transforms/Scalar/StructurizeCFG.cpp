@@ -701,14 +701,6 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
           LPred[P] = buildCondition(CondBr, Idx, true);
         }
       }
-      // } else if (isIsland(*P)) {
-      //   // Island edges have no SSA condition, so we treat them as an
-      //   // unconditional branch.
-      //   if (Visited.count(P))
-      //     Pred[P] = {BoolTrue, std::nullopt};
-      //   else
-      //     LPred[P] = {BoolFalse, std::nullopt};
-      // }
     } else {
       // It's an exit from a sub region
       while (R->getParent() != ParentRegion)
@@ -1279,13 +1271,13 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     return;
   }
 
-  // A callbr forwarder, a simple single-branch block reached straight from the
-  // callbr (created by handleIsland's edge split, or a reused trivial target),
-  // has already been converged into the dispatch ladder. Close the tail and
-  // leave it, so the normal machinery does not redirect it out of the ladder.
+  // Leave an island's own targets alone: a forwarder already converged into the
+  // dispatch ladder, or an unreachable target kept as a direct dead lane. Close
+  // the tail so the normal machinery does not redirect or structurize either.
   bool HasIslandPred = llvm::any_of(
       predecessors(Entry), [](BasicBlock *Pred) { return isIsland(*Pred); });
-  if (HasIslandPred && isIntermediateTarget(*Entry)) {
+  if (HasIslandPred &&
+      (isIntermediateTarget(*Entry) || isUnreachableTarget(*Entry))) {
     Tail.close(Node);
     return;
   }
@@ -1406,11 +1398,15 @@ void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
   // dominates the whole ladder, so the sel phis are usable at every level. If
   // the island has a self-loop, it is dispatched by the ladder as well.
   //
-  // Edge edits are recorded in DTUpdates and applied via the same
-  // DomTreeUpdater, keeping the DominatorTree incrementally correct. The island
-  // Flow blocks are created without DT->addNewBlock and get their idoms from
-  // the inserted edges, so we must not mix in a direct getNextFlow here.
+  // Unlike getNextFlow, MakeFlow does not register its block in the
+  // DominatorTree (no DT->addNewBlock). Instead the edits below are collected
+  // in DTUpdates and applied in one pass, and the DomTreeUpdater derives each
+  // new Flow's idom from the inserted edges. So every MakeFlow block must be
+  // the target of at least one Insert before applyUpdates, which holds by
+  // construction below.
   unsigned N = Targets.size();
+  if (!N)
+    return; // All callbr targets are unreachable; nothing to dispatch.
   SmallVector<DominatorTree::UpdateType, 16> DTUpdates;
   auto MakeFlow = [&]() {
     BasicBlock *Flow = BasicBlock::Create(Func->getContext(), FlowBlockName,
