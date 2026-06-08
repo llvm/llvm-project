@@ -56,7 +56,7 @@ tls2:
 # CHECK:      - Type:            MEMORY
 # CHECK-NEXT:   Memories:
 # CHECK-NEXT:     - Minimum:         0x2
-# CHECK-NOT:       Shared:          false
+# CHECK-NOT:       Shared
 
 # Globals should use the libcall ABI naming, not the global ABI.
 # CHECK:      GlobalNames:
