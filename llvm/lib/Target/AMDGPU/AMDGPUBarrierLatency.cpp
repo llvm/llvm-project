@@ -128,7 +128,7 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
     } else if (TII->isLDSDMA(*MI)) {
       if (MI->getDesc().TSFlags & SIInstrFlags::TENSOR_CNT)
         RegionTDM.push_back(&SU);
-      if (MI->getDesc().TSFlags & SIInstrFlags::ASYNC_CNT)
+      else if (MI->getDesc().TSFlags & SIInstrFlags::ASYNC_CNT)
         RegionAsync.push_back(&SU);
     } else if (Op == AMDGPU::S_WAIT_TENSORCNT ||
                Op == AMDGPU::S_WAIT_ASYNCCNT) {
