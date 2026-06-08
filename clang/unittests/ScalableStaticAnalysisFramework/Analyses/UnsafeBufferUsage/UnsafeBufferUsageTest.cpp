@@ -20,8 +20,8 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
@@ -575,8 +575,7 @@ TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
 // Robustness test: unsupported constructs will not cause crash
 TEST_F(UnsafeBufferUsageTest, DirectNewExpressionArrayAccess) {
   // 'new' not yet supported, but should not crash and should log warning
-  llvm::DebugFlag = true;
-  auto DebugFlagReset = llvm::scope_exit([]() { llvm::DebugFlag = false; });
+  llvm::SaveAndRestore<bool> DebugFlag(llvm::DebugFlag, true);
 
   llvm::setCurrentDebugType("ssaf-analyses");
   testing::internal::CaptureStderr();

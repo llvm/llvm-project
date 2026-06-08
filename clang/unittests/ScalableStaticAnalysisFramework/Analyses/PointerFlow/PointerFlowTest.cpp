@@ -13,14 +13,12 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "gmock/gmock.h"
@@ -1144,8 +1142,7 @@ TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
   )cpp";
 
   // BindingDecl may not be fully supported, but should not crash
-  llvm::DebugFlag = true;
-  auto DebugFlagReset = llvm::scope_exit([]() { llvm::DebugFlag = false; });
+  llvm::SaveAndRestore<bool> DebugFlag(llvm::DebugFlag, true);
   llvm::setCurrentDebugType("ssaf-analyses");
   testing::internal::CaptureStderr();
 
