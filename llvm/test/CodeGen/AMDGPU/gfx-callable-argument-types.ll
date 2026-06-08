@@ -9468,10 +9468,10 @@ define amdgpu_gfx void @test_call_external_void_func_v16i8() #0 {
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v13, 8, v3
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v14, 16, v3
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v15, 24, v3
-; GFX11-NEXT:    v_mov_b32_e32 v4, v1
+; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v1, v16
 ; GFX11-NEXT:    v_mov_b32_e32 v8, v2
-; GFX11-NEXT:    v_dual_mov_b32 v12, v3 :: v_dual_mov_b32 v1, v16
-; GFX11-NEXT:    v_dual_mov_b32 v2, v17 :: v_dual_mov_b32 v3, v18
+; GFX11-NEXT:    v_dual_mov_b32 v12, v3 :: v_dual_mov_b32 v3, v18
+; GFX11-NEXT:    v_mov_b32_e32 v2, v17
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1

@@ -1551,8 +1551,7 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned_multiuse(ptr addrspace(1
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    v_mov_b32_e32 v6, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x3
@@ -1565,10 +1564,10 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned_multiuse(ptr addrspace(1
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshl_or_b32 v5, v2, 8, v0
+; GFX11-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v2, v0
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v0, v3
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-NEXT:    v_perm_b32 v4, v4, v5, 0x4000405
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v6, v[0:3], s[0:1]

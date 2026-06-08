@@ -264,21 +264,50 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
       .has_value();
 }
 
-/// Check whether \p SU has a load dependency whose node number comes after that
-/// of \p Base in the node vector.
-static bool hasIntermediateLoadDependency(const SUnit &SU, const SUnit &Base) {
-  for (const SDep &Dep : SU.Preds) {
-    if (Dep.getKind() != SDep::Data)
+/// Collect all load (dependents if \p Forward else dependencies) that connect
+/// to \p SU.
+static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Seen,
+                         const SUnit &SU, bool Forward) {
+  if (SU.isBoundaryNode() || Seen.test(SU.NodeNum))
+    return;
+
+  const SmallVector<SDep, 4> &Deps = Forward ? SU.Succs : SU.Preds;
+  for (const SDep &Edge : Deps) {
+    if (Edge.getKind() != SDep::Data)
       continue;
-    const SUnit *Pred = Dep.getSUnit();
-    if (Pred->NodeNum < Base.NodeNum)
+    SUnit *Dep = Edge.getSUnit();
+    if (Dep->isBoundaryNode())
       continue;
-    if (!Pred->isInstr())
-      continue;
-    const MachineInstr *MI = Pred->getInstr();
-    if (MI->mayLoad())
-      return true;
+
+    if (Dep->isInstr() && Dep->getInstr()->mayLoad()) {
+      Loads.push_back(Dep);
+    } else {
+      collectLoads(Loads, Seen, *Dep, Forward);
+    }
+
+    Seen.set(Dep->NodeNum);
   }
+}
+
+/// Check whether chaining \p First and \p Second together would force a load
+/// dependency of \p Second to complete before dispatching a load which depends
+/// on \p First when the loads would otherwise be overlapped.
+static bool fusionMaySerializeOverlappingLoads(ScheduleDAGInstrs *DAG,
+                                               const SUnit &First,
+                                               const SUnit &Second) {
+  assert((First.isBoundaryNode() || First.NodeNum < Second.NodeNum) &&
+         "SUnit operands must be in topological order!");
+
+  BitVector Seen(DAG->SUnits.size());
+  SmallVector<SUnit *> FirstLoadSuccs, SecondLoadPreds;
+  collectLoads(FirstLoadSuccs, Seen, First, /*Forward=*/true);
+  collectLoads(SecondLoadPreds, Seen, Second, /*Forward=*/false);
+
+  for (SUnit *Succ : FirstLoadSuccs)
+    for (SUnit *Pred : SecondLoadPreds)
+      if (!DAG->IsReachable(Succ, Pred))
+        return true;
+
   return false;
 }
 
@@ -323,7 +352,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       for (auto JSUI = ISUI + 1; JSUI != E; ++JSUI, ++JIdx) {
         if (!VOPDCapable[JIdx] || JSUI->isBoundaryNode())
           continue;
-        if (hasIntermediateLoadDependency(*JSUI, *ISUI))
+        if (fusionMaySerializeOverlappingLoads(DAG, *ISUI, *JSUI))
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
