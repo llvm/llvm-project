@@ -776,6 +776,19 @@ bool DynamicType::HasDeferredTypeParameter() const {
   return charLengthParamValue_ && charLengthParamValue_->isDeferred();
 }
 
+bool DynamicType::HasDeferredOrAssumedTypeParameter() const {
+  if (derived_) {
+    for (const auto &pair : derived_->parameters()) {
+      if (pair.second.isDeferred() || pair.second.isAssumed()) {
+        return true;
+      }
+    }
+  }
+  return charLengthParamValue_ &&
+      (charLengthParamValue_->isDeferred() ||
+          charLengthParamValue_->isAssumed());
+}
+
 bool SomeKind<TypeCategory::Derived>::operator==(
     const SomeKind<TypeCategory::Derived> &that) const {
   return PointeeComparison(derivedTypeSpec_, that.derivedTypeSpec_);
@@ -865,7 +878,10 @@ std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &type,
     return true;
   case TypeCategory::Real:
   case TypeCategory::Complex:
-    return type.kind() >= 4 /* not a short or half float */ || !features ||
+    // KIND=2 is IEEE-754 binary16, interoperable with C _Float16.
+    // KIND=3 (bfloat16) has no standard interoperable C type, so it is
+    // accepted only under CUDA (or when reading a module file).
+    return type.kind() == 2 || type.kind() >= 4 || !features ||
         features->IsEnabled(common::LanguageFeature::CUDA);
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL

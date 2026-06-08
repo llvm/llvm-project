@@ -17,6 +17,8 @@
 #define OPENACC_CG_OPS
 
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
+include "mlir/IR/CommonAttrConstraints.td"
 
 // This file is intended to be included from OpenACCOps.td, which provides
 // the necessary includes and definitions. The operations defined here use
@@ -129,6 +131,46 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
 }
 
 //===----------------------------------------------------------------------===//
+// acc.reduction_accumulate
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ReductionAccumulateOp
+    : OpenACC_Op<"reduction_accumulate", []> {
+  let summary = "Accumulate an SSA value into a reduction variable";
+  let description = [{
+    Accumulates a scalar SSA value into a pointer-like reduction variable.
+
+    Example:
+    ```mlir
+    %private = memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>} : memref<i32>
+    memref.store %c0, %private[] : memref<i32>
+    %partial = scf.parallel (%iv) = (%c0) to (%cN) step (%c1) init (%c0) -> i32 {
+      %v = memref.load %data[%iv] : memref<Nxi32>
+      scf.reduce(%v : i32) {
+      ^bb0(%lhs: i32, %rhs: i32):
+        %sum = arith.addi %lhs, %rhs : i32
+        scf.reduce.return %sum : i32
+      }
+    } {acc.par_dims = #acc<par_dims[thread_x]>}
+    acc.reduction_accumulate (%partial) to (%private) <add>
+        : (i32) -> (memref<i32>) {par_dims = #acc<par_dims[thread_x]>}
+    acc.reduction_combine %private into %shared <add> : memref<i32>
+        {acc.par_dims = #acc<par_dims[thread_x]>}
+    ```
+  }];
+  let arguments = (ins AnyTypeOf<[AnyInteger, AnyFloat, AnyComplex]>:$value,
+                       Arg<OpenACC_PointerLikeType,
+                           "Reduction variable to update",
+                           [MemRead, MemWrite]>:$memref,
+                       OpenACC_ReductionOperatorAttr:$reductionOperator,
+                       OpenACC_GPUParallelDimsAttr:$par_dims);
+  let assemblyFormat = [{
+    `(` $value `)` `to` `(` $memref `)` $reductionOperator `:` `(` type($value) `)` `->` `(` type($memref) `)` attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // acc.kernel_environment
 //===----------------------------------------------------------------------===//
 
@@ -157,40 +199,39 @@ def OpenACC_KernelEnvironmentOp
 
   let arguments = (ins
     Variadic<AnyType>:$dataClauseOperands,
-    Variadic<IntOrIndex>:$asyncOperands,
-    OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
-    OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
+    Optional<IntOrIndex>:$asyncOperand,
+    UnitAttr:$asyncOnly,
+    Optional<IntOrIndex>:$waitDevnum,
     Variadic<IntOrIndex>:$waitOperands,
-    OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
-    OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
-    OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
-    OptionalAttr<DeviceTypeArrayAttr>:$waitOnly);
+    UnitAttr:$waitOnly);
 
   let regions = (region SizedRegion<1>:$region);
 
   let assemblyFormat = [{
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
-      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
-          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
-          $waitOnly)
+      | `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $asyncOnly)
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
+            type($waitOperands), $waitOnly)
     )
     $region attr-dict
   }];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    /// Create a `KernelEnvironmentOp` populated with data mapping, async, and
-    /// wait clauses extracted from the given ACC compute construct. Emplaces
-    /// a block in the region and sets the rewriter's insertion point to the
-    /// start of that block so callers can create operations inside it
-    /// (e.g., `acc.compute_region`).
+    /// Create a `KernelEnvironmentOp` populated with data mapping and the
+    /// async/wait clauses for `deviceType` extracted from the given ACC compute
+    /// construct. Emplaces a block in the region and sets the rewriter's
+    /// insertion point to the start of that block so callers can create
+    /// operations inside it (e.g., `acc.compute_region`).
     template <typename ComputeConstructT>
     static KernelEnvironmentOp createAndPopulate(
-        ComputeConstructT computeConstruct, ::mlir::OpBuilder &builder);
+        ComputeConstructT computeConstruct, ::mlir::acc::DeviceType deviceType,
+        ::mlir::OpBuilder &builder);
   }];
 }
 
@@ -252,6 +293,28 @@ def OpenACC_PrivatizeOp : OpenACC_Op<"privatize", []> {
       $_state.addOperands(dynamicSizes);
     }]>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// acc.unwrap_private
+//===----------------------------------------------------------------------===//
+
+def OpenACC_UnwrapPrivateOp
+    : OpenACC_Op<"unwrap_private",
+                 [NoMemoryEffect, AlwaysSpeculatable, ViewLikeOpInterface]> {
+  let summary = "Unwrap acc.private_type handle to pointer-like storage";
+  let description = [{
+    Converts a privatization handle (`acc.private_type<T>`) to a pointer-like
+    view of the underlying private storage.
+  }];
+  let arguments = (ins OpenACC_PrivateType:$handle);
+  let results = (outs OpenACC_PointerLikeType:$result);
+  let assemblyFormat = [{
+    $handle attr-dict `:` qualified(type($handle)) `to` type($result)
+  }];
+  let extraClassDeclaration = [{
+    ::mlir::Value getViewSource() { return getHandle(); }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

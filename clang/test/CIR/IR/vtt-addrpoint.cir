@@ -5,10 +5,10 @@
 
 !u8i = !cir.int<u, 8>
 !void = !cir.void
-!rec_A = !cir.record<struct "A" {!u8i}>
-!rec_B = !cir.record<struct "B" {!cir.vptr}>
-!rec_C = !cir.record<struct "C" {!rec_B}>
-!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 3>}>
+!rec_A = !cir.struct<"A" {!u8i}>
+!rec_B = !cir.struct<"B" {!cir.vptr}>
+!rec_C = !cir.struct<"C" {!rec_B}>
+!rec_anon_struct = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
 module {
   cir.func private @_ZN1AC2Ev(!cir.ptr<!rec_A>)
   cir.func private @_ZN1BC2Ev(!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>)

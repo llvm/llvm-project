@@ -405,12 +405,13 @@ public:
 
   /// Returns true if value V is uniform across \p VF lanes, when \p VF is
   /// provided, and otherwise if \p V is invariant across all loop iterations.
-  LLVM_ABI bool isUniform(Value *V, ElementCount VF) const;
+  LLVM_ABI bool isUniform(Value *V, std::optional<ElementCount> VF) const;
 
   /// A uniform memory op is a load or store which accesses the same memory
   /// location on all \p VF lanes, if \p VF is provided and otherwise if the
   /// memory location is invariant.
-  LLVM_ABI bool isUniformMemOp(Instruction &I, ElementCount VF) const;
+  LLVM_ABI bool isUniformMemOp(Instruction &I,
+                               std::optional<ElementCount> VF) const;
 
   /// Returns the information that we collected about runtime memory check.
   const RuntimePointerChecking *getRuntimePointerChecking() const {
@@ -658,8 +659,7 @@ private:
   /// Updates the vectorization state by adding \p Phi to the inductions list.
   /// This can set \p Phi as the main induction of the loop if \p Phi is a
   /// better choice for the main induction than the existing one.
-  void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID,
-                       SmallPtrSetImpl<Value *> &AllowedExit);
+  void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID);
 
   /// The loop that we evaluate.
   Loop *TheLoop;
@@ -716,10 +716,6 @@ private:
 
   /// Holds the widest induction type encountered.
   IntegerType *WidestIndTy = nullptr;
-
-  /// Allowed outside users. This holds the variables that can be accessed from
-  /// outside the loop.
-  SmallPtrSet<Value *, 4> AllowedExit;
 
   /// Vectorization requirements that will go through late-evaluation.
   LoopVectorizationRequirements *Requirements;

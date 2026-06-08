@@ -284,17 +284,42 @@ public:
     }
   }
 
-  // Rewrite all uses of the original variable in `BBName`
-  //  with the linear variable in-place
-  void rewriteInPlace(llvm::IRBuilderBase &builder, const std::string &BBName,
+  // Rewrite all uses of the original variable, in the basic blocks whose names
+  // start with `prefix`, with the linear variable in-place.
+  void rewriteInPlace(llvm::IRBuilderBase &builder, llvm::BasicBlock *startBB,
+                      llvm::BasicBlock *endBB, llvm::StringRef prefix,
                       size_t varIndex) {
-    llvm::SmallVector<llvm::User *> users;
-    for (llvm::User *user : linearOrigVal[varIndex]->users())
-      users.push_back(user);
+    llvm::SmallVector<llvm::BasicBlock *, 32> worklist;
+    llvm::SmallPtrSet<llvm::BasicBlock *, 32> visited;
+    llvm::SmallPtrSet<llvm::BasicBlock *, 32> matchingBBs;
+
+    assert(startBB && endBB && "Invalid startBB/endBB");
+
+    // Traverse basic blocks from startBB to endBB and save those
+    // whose names start with the specified prefix.
+    worklist.push_back(startBB);
+    visited.insert(startBB);
+
+    while (!worklist.empty()) {
+      llvm::BasicBlock *bb = worklist.pop_back_val();
+
+      if (bb->hasName() && bb->getName().starts_with(prefix))
+        matchingBBs.insert(bb);
+
+      if (bb == endBB)
+        continue;
+
+      for (llvm::BasicBlock *succ : llvm::successors(bb)) {
+        if (visited.insert(succ).second)
+          worklist.push_back(succ);
+      }
+    }
+
+    // Rewrite all uses in the matching BBs.
+    llvm::SmallVector<llvm::User *> users(linearOrigVal[varIndex]->users());
     for (auto *user : users) {
       if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
-        if (userInst->getParent()->getName().str().find(BBName) !=
-            std::string::npos)
+        if (matchingBBs.contains(userInst->getParent()))
           user->replaceUsesOfWith(linearOrigVal[varIndex],
                                   linearLoopBodyTemps[varIndex]);
       }
@@ -3808,6 +3833,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
 
+  llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
       wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
 
@@ -3870,8 +3896,10 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
     for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
-      linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
-                                           index);
+      linearClauseProcessor.rewriteInPlace(
+          builder, sourceBlock->getSingleSuccessor(), *regionBlock,
+          "omp.loop_nest.region", index);
+
     builder.restoreIP(oldIP);
   }
 
@@ -4243,15 +4271,18 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   });
 
   for (size_t index = 0; index < simdOp.getLinearVars().size(); index++) {
-    linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
-                                         index);
+    llvm::BasicBlock *startBB = sourceBlock->getSingleSuccessor();
+    llvm::BasicBlock *endBB = *regionBlock;
+    linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
+                                         "omp.loop_nest.region", index);
+
     if (hasOrderedRegions) {
       // Also rewrite uses in ordered regions so they read the current value
-      linearClauseProcessor.rewriteInPlace(builder, "omp.ordered.region",
-                                           index);
+      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
+                                           "omp.ordered.region", index);
       // Also rewrite uses in finalize blocks (code after ordered regions)
-      linearClauseProcessor.rewriteInPlace(builder, "omp_region.finalize",
-                                           index);
+      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
+                                           "omp_region.finalize", index);
     }
   }
 
@@ -5110,8 +5141,9 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
 
     llvm::AtomicOrdering failOrdering =
         llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
-    builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign, atomicOrdering,
-                                failOrdering);
+    auto *cmpXchg = builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign,
+                                                atomicOrdering, failOrdering);
+    cmpXchg->setWeak(atomicCompareOp.getWeak());
 
     // Emit flush after atomic compare if needed (for release, acq_rel,
     // seq_cst orderings).
@@ -5193,11 +5225,13 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
                                                  false};
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
+  bool isWeak = atomicCompareOp.getWeak();
+
   bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal,
                                       dVal, atomicOrdering, compareOp,
-                                      isXBinopExpr, false, false);
+                                      isXBinopExpr, false, false, isWeak);
   ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
   if (failed(handleError(afterIP, *atomicCompareOp)))
@@ -5426,25 +5460,20 @@ getRefPtrIfDeclareTarget(Value value,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   if (auto gOp =
           dyn_cast_or_null<LLVM::GlobalOp>(getGlobalOpFromValue(value))) {
-    if (auto declareTargetGlobal =
-            dyn_cast<omp::DeclareTargetInterface>(gOp.getOperation())) {
-      // In this case, we must utilise the reference pointer generated by
-      // the declare target operation, similar to Clang
-      if ((declareTargetGlobal.getDeclareTargetCaptureClause() ==
-           omp::DeclareTargetCaptureClause::link) ||
-          (declareTargetGlobal.getDeclareTargetCaptureClause() ==
-               omp::DeclareTargetCaptureClause::to &&
-           ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
-        llvm::SmallString<64> suffix = getDeclareTargetRefPtrSuffix(
-            gOp, *ompBuilder, moduleTranslation.getFileSystem());
+    // In this case, we must utilise the reference pointer generated by
+    // the declare target operation, similar to Clang
+    if (isDeclareTargetLink(value) ||
+        (isDeclareTargetTo(value) &&
+         ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
+      llvm::SmallString<64> suffix = getDeclareTargetRefPtrSuffix(
+          gOp, *ompBuilder, moduleTranslation.getFileSystem());
 
-        if (gOp.getSymName().contains(suffix))
-          return moduleTranslation.getLLVMModule()->getNamedValue(
-              gOp.getSymName());
-
+      if (gOp.getSymName().contains(suffix))
         return moduleTranslation.getLLVMModule()->getNamedValue(
-            (gOp.getSymName().str() + suffix.str()).str());
-      }
+            gOp.getSymName());
+
+      return moduleTranslation.getLLVMModule()->getNamedValue(
+          (gOp.getSymName().str() + suffix.str()).str());
     }
   }
   return nullptr;
@@ -8171,15 +8200,21 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
           /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr,
           gVal->getType(), gVal);
 
+      bool requiresUSM = ompBuilder->Config.hasRequiresUnifiedSharedMemory();
       if (ompBuilder->Config.isTargetDevice() &&
-          (attribute.getCaptureClause().getValue() !=
-               mlir::omp::DeclareTargetCaptureClause::to ||
-           ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
+          (attribute.getCaptureClause().getValue() ==
+               mlir::omp::DeclareTargetCaptureClause::link ||
+           requiresUSM)) {
+        llvm::Type *ptrTy = gVal->getType();
+        // For USM the global type becomes a pointer handle, as opposed to the
+        // globals original type.
+        if (requiresUSM)
+          ptrTy = llvm::PointerType::get(llvmModule->getContext(), 0);
         ompBuilder->getAddrOfDeclareTargetVar(
             captureClause, deviceClause, isDeclaration, isExternallyVisible,
             ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, vfs),
             mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
-            gVal->getType(), /*GlobalInitializer*/ nullptr,
+            ptrTy, /*GlobalInitializer*/ nullptr,
             /*VariableLinkage*/ nullptr);
       }
     }

@@ -370,6 +370,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
+  if (StrPtr.isConstexprUnknown())
+    return false;
+
   if (!CheckArray(S, OpPC, StrPtr))
     return false;
 
@@ -4954,6 +4957,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
 
   case Builtin::BI__atomic_always_lock_free:
@@ -5097,33 +5104,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_pdep_si:
   case clang::X86::BI__builtin_ia32_pdep_di:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
-          unsigned BitWidth = Val.getBitWidth();
-          APInt Result = APInt::getZero(BitWidth);
-
-          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-            if (Mask[I])
-              Result.setBitVal(I, Val[P++]);
-          }
-
-          return Result;
-        });
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::expandBits);
 
   case clang::X86::BI__builtin_ia32_pext_si:
   case clang::X86::BI__builtin_ia32_pext_di:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
-          unsigned BitWidth = Val.getBitWidth();
-          APInt Result = APInt::getZero(BitWidth);
-
-          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-            if (Mask[I])
-              Result.setBitVal(P++, Val[I]);
-          }
-
-          return Result;
-        });
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::compressBits);
 
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
@@ -6708,6 +6695,8 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   assert(!DestDesc->isPrimitive() && !SrcDesc->isPrimitive());
 
   if (DestDesc->isPrimitiveArray()) {
+    if (!SrcDesc->isPrimitiveArray())
+      return false;
     assert(SrcDesc->isPrimitiveArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
     PrimType ET = DestDesc->getPrimType();
@@ -6722,6 +6711,8 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   }
 
   if (DestDesc->isCompositeArray()) {
+    if (!SrcDesc->isCompositeArray())
+      return false;
     assert(SrcDesc->isCompositeArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
@@ -6733,8 +6724,11 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
     return true;
   }
 
-  if (DestDesc->isRecord())
+  if (DestDesc->isRecord()) {
+    if (!SrcDesc->isRecord())
+      return false;
     return copyRecord(S, OpPC, Src, Dest, Activate);
+  }
   return Invalid(S, OpPC);
 }
 

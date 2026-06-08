@@ -34,7 +34,7 @@ subroutine atomic_compare_seq_cst(x, e, d)
   if (x == e) x = d
 end
 
-! acquire ordering → cmpxchg acquire
+! acquire ordering on compare (update) is valid in OpenMP 5.1
 !CHECK-LABEL: define void @atomic_compare_acquire_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
@@ -94,7 +94,7 @@ subroutine atomic_compare_lt_seq_cst(x, e)
   if (x < e) x = e
 end
 
-! Less-than with acquire → atomicrmw max acquire (signed)
+! Less-than with acquire on compare (update) is valid in OpenMP 5.1
 !CHECK-LABEL: define void @atomic_compare_lt_acquire_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
@@ -248,3 +248,15 @@ subroutine omp_atomic_compare_ptr(x, e, d)
   !$omp end atomic
 
 end subroutine
+
+! Complex(4) equality with seq_cst → type-punned i64 cmpxchg seq_cst + flush
+!CHECK-LABEL: define void @atomic_compare_weak_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
+!CHECK: cmpxchg weak ptr %[[X]], i32 %{{.*}}, i32 %{{.*}} seq_cst seq_cst
+!CHECK: call void @__kmpc_flush(
+subroutine atomic_compare_weak(x, e, d)
+  integer :: x, e, d
+  !$omp atomic compare weak seq_cst
+  if (x == e) x = d
+end 
+

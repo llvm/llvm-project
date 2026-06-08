@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
@@ -367,9 +368,61 @@ struct ConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
   }
 };
 
+struct ConsecutiveConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
+  using OpRewritePattern<tosa::ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ConcatOp op,
+                                PatternRewriter &rewriter) const override {
+    // Rewrite consecutive concats on the same axis into a single op.
+    // Keep track of the operands so we are able to construct a new concat
+    // later. Conservatively assume that we double the number of operands when
+    // canonicalizing
+    SmallVector<Value, 8> concatOperands;
+    concatOperands.reserve(2 * op.getNumOperands());
+
+    int32_t maxNumOperands = 0;
+    if (auto targetEnvAttr = tosa::lookupTargetEnv(op))
+      maxNumOperands =
+          getTosaLevelFromEnum(targetEnvAttr.getLevel()).MAX_TENSOR_LIST_SIZE;
+
+    // Find all operands that are foldable concats
+    bool foundRewritableConcat = false;
+    for (Value operand : op.getOperands()) {
+      concatOperands.emplace_back(operand);
+
+      auto producer = operand.getDefiningOp<tosa::ConcatOp>();
+      if (!producer)
+        continue;
+
+      // Not rewritable if axes are not the same
+      if (op.getAxis() != producer.getAxis())
+        continue;
+
+      // Replace the original operand with all incoming operands
+      foundRewritableConcat = true;
+      concatOperands.pop_back();
+      llvm::append_range(concatOperands, producer->getOperands());
+    }
+
+    if (!foundRewritableConcat)
+      return rewriter.notifyMatchFailure(op,
+                                         "No rewritable concat operand found.");
+
+    if (maxNumOperands > 0 &&
+        concatOperands.size() > static_cast<size_t>(maxNumOperands))
+      return rewriter.notifyMatchFailure(
+          op, "Rewriting would exceed the maximum number of operands for the "
+              "target environment level.");
+
+    rewriter.replaceOpWithNewOp<tosa::ConcatOp>(
+        op, op.getType(), concatOperands, op.getAxisAttr());
+    return success();
+  }
+};
+
 void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<ConcatOptimization>(context);
+  results.add<ConcatOptimization, ConsecutiveConcatOptimization>(context);
 }
 
 LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
@@ -1462,6 +1515,24 @@ struct Exp2FoldAdaptor {
   }
 };
 
+// The specification requires shape div operations to have non-negative lhs and
+// strictly positive rhs so we can only fold when these conditions are met.
+template <bool Ceil>
+struct ShapeDivFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    assert(!isUnsigned &&
+           "unsigned values are not supported for shape div folders");
+    if (lhs.isNegative() || !rhs.isStrictlyPositive())
+      return failure();
+    return DivFoldAdaptor<Ceil>::fold(lhs, rhs, isUnsigned);
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return failure();
+  }
+};
+
 struct Log2CeilFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &value, bool isUnsigned) {
     if (!value.isStrictlyPositive())
@@ -1595,10 +1666,12 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1());
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
-  if (lhsAttr && lhsAttr.isSplat()) {
+  if (lhsAttr && lhsAttr.isSplat() && rhsAttr && rhsAttr.isSplat()) {
     if (llvm::isa<IntegerType>(resultETy) && resultTy.hasStaticShape() &&
-        lhsAttr.getSplatValue<APInt>().isZero())
+        lhsAttr.getSplatValue<APInt>().isZero() &&
+        !rhsAttr.getSplatValue<APInt>().isZero()) {
       return lhsAttr.resizeSplat(resultTy);
+    }
   }
 
   if (rhsAttr && rhsAttr.isSplat()) {
@@ -2223,40 +2296,6 @@ OpFoldResult tosa::AbsOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
-  // Fold consecutive concats on the same axis into a single op.
-  // Keep track of the operands so we are able to construct a new concat
-  // later. Conservatively assume that we double the number of operands when
-  // folding
-  SmallVector<Value, 8> concatOperands;
-  concatOperands.reserve(2 * getNumOperands());
-
-  // Find all operands that are foldable concats
-  bool foundFoldableConcat = false;
-  for (Value operand : getOperands()) {
-    concatOperands.emplace_back(operand);
-
-    auto producer = operand.getDefiningOp<ConcatOp>();
-    if (!producer)
-      continue;
-
-    // Not foldable if axes are not the same
-    if (getAxis() != producer.getAxis())
-      continue;
-
-    // Replace the original operand with all incoming operands
-    foundFoldableConcat = true;
-    concatOperands.pop_back();
-    llvm::append_range(concatOperands, producer->getOperands());
-  }
-
-  if (!foundFoldableConcat)
-    return {};
-
-  getOperation()->setOperands(concatOperands);
-  return getResult();
-}
-
 OpFoldResult tosa::ReciprocalOp::fold(FoldAdaptor adaptor) {
   auto input = adaptor.getInput1();
 
@@ -2411,11 +2450,11 @@ OpFoldResult tosa::MulShapeOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::DivCeilShapeOp::fold(FoldAdaptor adaptor) {
-  return binaryFold<DivCeilShapeOp, DivFoldAdaptor</*Ceil*/ true>>(this);
+  return binaryFold<DivCeilShapeOp, ShapeDivFoldAdaptor</*Ceil*/ true>>(this);
 }
 
 OpFoldResult tosa::DivFloorShapeOp::fold(FoldAdaptor adaptor) {
-  return binaryFold<DivFloorShapeOp, DivFoldAdaptor</*Ceil*/ false>>(this);
+  return binaryFold<DivFloorShapeOp, ShapeDivFoldAdaptor</*Ceil*/ false>>(this);
 }
 
 OpFoldResult tosa::ModShapeOp::fold(FoldAdaptor adaptor) {

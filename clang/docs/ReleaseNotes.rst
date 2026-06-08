@@ -107,6 +107,12 @@ ABI Changes in This Version
 - Clang now uses MSVC-compatible manglings for supported AArch64 SVE builtin
   types when targeting the Microsoft ABI. This changes symbol names for
   affected declarations compared to previous Clang releases. (#GH196170)
+- The resume and destroy functions of C++20 coroutines now use the platform C
+  calling convention instead of LLVM's internal ``fastcc``. This makes the
+  coroutine ABI stable across LLVM versions and interoperable with other
+  compilers. On most targets this is not a breaking change because ``fastcc``
+  and the platform C calling convention agree for ``void(ptr)``. It is an ABI
+  break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -226,9 +232,17 @@ C2y Feature Support
   ``stdc_rotate_left_{uc,us,ui,ul,ull}`` and
   ``stdc_rotate_right_{uc,us,ui,ul,ull}``.
 
+- Implemented C2y ``<stdbit.h>`` memory reversal functions:
+  ``__builtin_stdc_memreverse8`` / ``stdc_memreverse8`` (in-place byte
+  reversal of a byte array) and ``stdc_memreverse8u{8,16,32,64}`` (byte-swap
+  of an exact-width unsigned integer value, usable in constant expressions).
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
+- Fixed a failing assertion when validating an invalid structure redefinition
+  with a member which uses an incomplete enumeration type. (#GH190227)
+- Clang now supports the C23 ``wN`` and ``wfN`` length modifiers. (#GH116962)
 
 Objective-C Language Changes
 -----------------------------
@@ -348,6 +362,14 @@ New Compiler Flags
   that ``bool`` values loaded from memory cannot have a bit pattern other
   than 0 or 1.
 
+- New option ``-fcrash-diagnostics-tar`` added to create an archive of crash
+  reproducer files for easier bug filing.
+
+- There are a new pair of flags for riscv32 called ``-mzilsd-word-align`` and
+  ``-mzilsd-strict-align`` which control whether Zilsd accesses are allowed to
+  be aligned to 4-byte alignment rather than fully unaligned or fully (8-byte)
+  aligned.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -356,6 +378,11 @@ Modified Compiler Flags
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
+
+- Slightly changed hash id generation to get the unique linkage symbols names 
+  by ``-unique-internal-linkage-names`` option. Now it uses a path that
+  normalized in favor of the target system (same as the preprocessor does
+  for the file macros) and allows the reproducable IDs on any build system.
 
 Removed Compiler Flags
 ----------------------
@@ -447,6 +474,9 @@ Improvements to Clang's diagnostics
 -----------------------------------
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
   function template instantiations (#64087).
+
+- Fixed concept template parameters not being recognized in ``-Wdocumentation``
+  when mentioned in tparam comments. (#GH64087)
 
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
   internal linkage (``static`` storage class) that are assigned but never used.
@@ -581,6 +611,12 @@ Improvements to Clang's diagnostics
 
 - Clang now emits error when attribute is missing closing ``]]`` followed by ``;;``. (#GH187223)
 
+- Clang now rejects inline asm constraints and clobbers that contain an
+  embedded null character, instead of silently truncating them. (#GH173900)
+
+- Diagnostics for the C++11 range-based for statement now report the correct
+  iterator type in notes for invalid iterator types.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -609,6 +645,8 @@ Bug Fixes in This Version
 - Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 - Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
+- Fixed a bug in how Clang re-transforms expressions produced from substititions
+  from type aliases and concept specializations. (#GH191738) (#GH196375)
 - Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
 - Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
 - Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
@@ -624,7 +662,6 @@ Bug Fixes in This Version
 - Fixed the behavior in C23 of ``auto``, by emitting an error when an array type is specified for a ``char *``. (#GH162694)
 - Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with ``--triple spirv``. (#GH189964)
 - Fixed incorrect rejection of ``auto`` with reordered declaration specifiers in C23. (#GH164121)
-- Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a bug where Clang fails to find instantiation of Decls in constraint checking. (#GH173086)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Fixed a crash caused by declaring multiple ``ownership_returns`` attributes with mismatched or missing arguments. (#GH188733)
@@ -635,6 +672,8 @@ Bug Fixes in This Version
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
+- Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -642,11 +681,16 @@ Bug Fixes to Compiler Builtins
 - Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
 - ``__annotation`` is now diagnosed as unsupported on non-Windows/UEFI targets, fixing a
   crash when using it with ``-fms-extensions`` on other platforms. (#GH184318)
+- Fixed a compiler crash due to an unresolved overloaded function type when
+  calling ``__builtin_bit_cast``. (#GH200112)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 - Fixed ``init_priority`` attribute by delaying type checks until after the type is deduced.
+- Fixed a crash when a ``section`` attribute or ``#pragma clang section`` caused a
+  section type conflict with a declaration whose name is not a simple identifier,
+  such as a lambda's call operator. (#GH192264)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -665,8 +709,10 @@ Bug Fixes to C++ Support
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
+- Fixed crash instantiating class member specializations.
 - Fix a problem where a substitution failure when evaluating a type requirement
   could directly make the program ill-formed.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
@@ -694,6 +740,7 @@ Bug Fixes to C++ Support
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
+- Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -798,6 +845,10 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+
+- Fixed a bug where host-device ambiguities in CUDA/HIP when retrieving the
+  address of specializations of templated functions that have overloads for both
+  host and device. (#GH199299)
 
 AIX Support
 ^^^^^^^^^^^
@@ -927,6 +978,32 @@ OpenMP Support
   ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 - Added support for ``local`` clause with declare_target directive when
   OpenMP >= 60.
+
+SYCL Support
+------------
+- SYCL compilations now default to ``-std=c++17`` when no explicit language
+  standard is specified. Standards below C++17 are rejected with a diagnostic.
+
+- Clang now assumes default target for SYCL device compilation is 64-bit SPIR-V
+  and it now diagnoses if a non-supporting target is specified via command line.
+  (#GH167358)
+
+- The SYCL runtime shared library has been renamed from ``libsycl.so`` to
+  ``libLLVMSYCL.so`` to align with LLVM naming conventions.
+
+- SYCL header include paths are now added automatically for both host and
+  device compilations.
+
+- SYCL runtime library linking is now supported on Windows. When ``-fsycl`` is
+  specified, Clang automatically adds ``/MD`` if no explicit CRT flag is
+  present, links the appropriate debug (``LLVMSYCLd.lib``) or release
+  (``LLVMSYCL.lib``) library, and rejects static CRT flags (``/MT``,
+  ``/MTd``) with a diagnostic. Use ``-nolibsycl`` to suppress automatic
+  library linking.
+
+- Fixed ``-nolibsycl`` being silently ignored on Linux: the SYCL runtime
+  library was unconditionally added to the link line even when the flag was
+  passed.
 
 Improvements
 ^^^^^^^^^^^^

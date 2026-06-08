@@ -747,4 +747,24 @@ TEST(StringMapCustomTest, ConstIterator) {
                                          StringMap<int>::const_iterator>);
 }
 
+TEST(StringMapCustomTest, RemoveIf) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  Map["b"] = 2;
+  Map["c"] = 3;
+  Map["d"] = 4;
+
+  EXPECT_TRUE(Map.remove_if(
+      [](const StringMapEntry<int> &E) { return E.getValue() % 2 == 0; }));
+  EXPECT_EQ(2u, Map.size());
+  EXPECT_TRUE(Map.contains("a"));
+  EXPECT_FALSE(Map.contains("b"));
+  EXPECT_TRUE(Map.contains("c"));
+  EXPECT_FALSE(Map.contains("d"));
+
+  EXPECT_FALSE(Map.remove_if(
+      [](const StringMapEntry<int> &E) { return E.getValue() > 100; }));
+  EXPECT_EQ(2u, Map.size());
+}
+
 } // end anonymous namespace

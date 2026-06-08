@@ -2729,12 +2729,18 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
       vmas.push_back({sec, sec->addr});
   checkOverlap(ctx, "virtual address", vmas, true);
 
-  // Finally, check that the load addresses don't overlap. This will usually be
-  // the same as the virtual addresses but can be different when using a linker
-  // script with AT().
+  // Finally, check that the load addresses don't overlap. This will
+  // usually be the same as the virtual addresses but can be different
+  // when using a linker script with AT(). SHT_NOBITS sections consume
+  // no space in the file so their load address is normally unimportant.
+  // Following GNU ld we permit the load address of a SHT_PROGBITS section
+  // to overlap the load address of a SHT_NOBITS section. This is used
+  // by embedded systems that copy the SHT_PROGBITS sections to a
+  // non-overlapping VMA before the SHT_NOBITS section is zero-initialized.
   std::vector<SectionOffset> lmas;
   for (OutputSection *sec : ctx.outputSections)
-    if (sec->size > 0 && (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
+    if (sec->size > 0 && (sec->type != SHT_NOBITS) &&
+        (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
       lmas.push_back({sec, sec->getLMA()});
   checkOverlap(ctx, "load address", lmas, false);
 }

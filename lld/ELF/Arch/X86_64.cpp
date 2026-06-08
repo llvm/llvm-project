@@ -511,7 +511,7 @@ bool X86_64::relaxOnce(int pass) const {
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
-  // If the max VA is under 2^31, GOTPCRELX relocations cannot overfow. In
+  // If the max VA is under 2^31, GOTPCRELX relocations cannot overflow. In
   // -pie/-shared, the condition can be relaxed to test the max VA difference as
   // there is no R_RELAX_GOT_PC_NOPIC.
   if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && ctx.arg.isPic))

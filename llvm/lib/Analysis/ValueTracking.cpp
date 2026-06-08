@@ -704,21 +704,19 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
   // Helper to check if there are any calls in the range that may free memory.
-  auto hasNoFreeCalls = [](auto Range) {
+  auto hasNoFreeInRange = [](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
+
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (!CB->hasFnAttr(Attribute::NoFree))
           return false;
+      } else if (I.maySynchronize())
+        return false;
     }
     return true;
   };
-
-  // Make sure the current function cannot arrange for another thread to free on
-  // its behalf.
-  if (!CtxI->getFunction()->hasNoSync())
-    return false;
 
   // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
@@ -728,19 +726,19 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
 
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
+    if (!hasNoFreeInRange(make_range(CtxBB->begin(), CtxIter)))
       return false;
 
     CtxIter = AssumeBB->end();
   } else {
     // Same block case: check that Assume comes before CtxI.
-    if (!Assume->comesBefore(CtxI))
+    if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
   }
 
   // Check if there are any calls between Assume and CtxIter that may free
   // memory.
-  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
+  return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -1633,6 +1631,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
       Known.Zero.setLowBits(C->countr_zero());
+
+    // shl X, sub(Y, xor(ctlz(X, true), BitWidth-1)) shifts X so that its MSB
+    // lands at bit Y, when BitWidth is a power of 2.
+    const APInt *YC;
+    Value *X = I->getOperand(0);
+    if (isPowerOf2_32(BitWidth) &&
+        match(I->getOperand(1),
+              m_Sub(m_APInt(YC), m_Xor(m_Ctlz(m_Specific(X), m_One()),
+                                       m_SpecificInt(BitWidth - 1)))) &&
+        YC->ult(BitWidth - 1)) {
+      unsigned Y = YC->getZExtValue();
+      Known.One.setBit(Y);
+      Known.Zero.setBitsFrom(Y + 1);
+    }
     break;
   }
   case Instruction::LShr: {
@@ -9190,10 +9202,9 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(
-      CmpI, TrueVal, FalseVal, LHS, RHS,
-      isa<FPMathOperator>(SI) ? SI->getFastMathFlags() : FastMathFlags(),
-      CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
+                                            SI->getFastMathFlagsOrNone(),
+                                            CastOp, Depth);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(
