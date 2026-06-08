@@ -32,7 +32,7 @@ class raw_ostream;
 namespace Fortran::parser {
 struct Expr;
 struct OpenMPDeclarativeConstruct;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -881,6 +881,8 @@ public:
       AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
+      // OpenACC declare on allocatable/pointer needs cross-TU action recipes
+      AccDeclareAction,
       // OpenACC data-movement attribute
       AccDevice, AccHost, AccSelf,
       // OpenACC miscellaneous flags
