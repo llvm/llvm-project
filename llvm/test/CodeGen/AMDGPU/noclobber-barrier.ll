@@ -401,14 +401,15 @@ define amdgpu_kernel void @clobbering_loop(ptr addrspace(1) %arg, ptr addrspace(
 ; GCN-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
+; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GCN-NEXT:  .LBB6_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    global_load_dword v1, v0, s[8:9] offset:4
-; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_add_u32_e32 v1, s2, v1
 ; GCN-NEXT:    global_store_dword v0, v1, s[10:11] offset:4
 ; GCN-NEXT:    ; wave barrier
+; GCN-NEXT:    s_mov_b64 vcc, vcc
 ; GCN-NEXT:    s_cbranch_vccnz .LBB6_1
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_endpgm

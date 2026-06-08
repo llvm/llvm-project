@@ -8,9 +8,9 @@
 define void @pr32422(double %a0) {
 ; CHECK-LABEL: pr32422:
 ; CHECK:       # %bb.0: # %BB
+; CHECK-NEXT:    cdbr %f0, %f0
 ; CHECK-NEXT:  .LBB0_1: # %CF
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cdbr %f0, %f0
 ; CHECK-NEXT:    jo .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %CF353
 ; CHECK-NEXT:    br %r14
