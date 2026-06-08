@@ -157,6 +157,7 @@ private:
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
   bool foldBitcastOfVPLoad(Instruction &I);
+  bool foldBitOrderReverseAndSwap(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -5907,6 +5908,81 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   return true;
 }
 
+/// Fold the following cases into a single byte-level bit-reverse operation
+/// and accepts bswap and bitreverse intrinsics:
+///   bswap(bitreverse(x)) --> bitcast(bitreverse(bitcast(x)))
+///   bitreverse(bswap(x)) --> bitcast(bitreverse(bitcast(x)))
+bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+
+  Intrinsic::ID IntrID = II->getIntrinsicID();
+  if (IntrID != Intrinsic::bitreverse && IntrID != Intrinsic::bswap)
+    return false;
+
+  // No fold on scalable vectors
+  Type *Ty = II->getType();
+  if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+    if (VecTy->getElementCount().isScalable())
+      return false;
+  }
+
+  if (Ty->getScalarSizeInBits() <= 8)
+    return false;
+
+  Intrinsic::ID ComplementID = (IntrID == Intrinsic::bitreverse)
+                                   ? Intrinsic::bswap
+                                   : Intrinsic::bitreverse;
+
+  Value *Arg = II->getArgOperand(0);
+  Value *X;
+  if (ComplementID == Intrinsic::bswap) {
+    if (!match(Arg, m_OneUse(m_Intrinsic<Intrinsic::bswap>(m_Value(X)))))
+      return false;
+  } else {
+    if (!match(Arg, m_OneUse(m_Intrinsic<Intrinsic::bitreverse>(m_Value(X)))))
+      return false;
+  }
+
+  unsigned TotalBits = Ty->getPrimitiveSizeInBits();
+  Type *I8Ty = Builder.getInt8Ty();
+  Type *NewVecTy = VectorType::get(I8Ty, ElementCount::getFixed(TotalBits / 8));
+
+  // OldCost = cost of bitreverse/bswap + cost of bswap/bitreverse
+  IntrinsicCostAttributes ICAOld1(ComplementID, Ty, {Ty});
+  IntrinsicCostAttributes ICAOld2(IntrID, Ty, {Ty});
+  InstructionCost OldCost = TTI.getIntrinsicInstrCost(ICAOld1, CostKind) +
+                            TTI.getIntrinsicInstrCost(ICAOld2, CostKind);
+
+  // NewCost = cost of bitcast to byte vector +
+  //           cost of bitreverse/bswap on byte vector +
+  //           cost of bitcast back to original type
+  InstructionCost CastToVecCost = TTI.getCastInstrCost(
+      Instruction::BitCast, NewVecTy, Ty, TTI::CastContextHint::None, CostKind);
+  InstructionCost CastToOrigCost = TTI.getCastInstrCost(
+      Instruction::BitCast, Ty, NewVecTy, TTI::CastContextHint::None, CostKind);
+
+  IntrinsicCostAttributes ICANew(Intrinsic::bitreverse, NewVecTy, {NewVecTy});
+  InstructionCost NewIntrinsicCost =
+      TTI.getIntrinsicInstrCost(ICANew, CostKind);
+  InstructionCost NewCost = CastToVecCost + NewIntrinsicCost + CastToOrigCost;
+
+  LLVM_DEBUG(dbgs() << "foldBitOrderReverseAndSwap: OldCost=" << OldCost
+                    << " NewCost=" << NewCost << "\n");
+  if (!NewCost.isValid() || NewCost > OldCost)
+    return false;
+
+  // Perform transform: bitcast(arg, <N x i8>), bitreverse, bitcast back
+  Builder.SetInsertPoint(II);
+  Value *CastToVec = Builder.CreateBitCast(X, NewVecTy);
+  Value *NewCall =
+      Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, CastToVec);
+  Value *CastToOrig = Builder.CreateBitCast(NewCall, Ty);
+  replaceValue(I, *CastToOrig);
+  return true;
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -6259,6 +6335,10 @@ bool VectorCombine::run() {
         if (shrinkPhiOfShuffles(I))
           return true;
         break;
+      case Instruction::Call:
+        if (foldBitOrderReverseAndSwap(I))
+          return true;
+        break;
       default:
         if (shrinkType(I))
           return true;
@@ -6270,6 +6350,8 @@ bool VectorCombine::run() {
         if (foldShuffleFromReductions(I))
           return true;
         if (foldCastFromReductions(I))
+          return true;
+        if (foldBitOrderReverseAndSwap(I))
           return true;
         break;
       case Instruction::ExtractElement:

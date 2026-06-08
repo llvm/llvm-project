@@ -1643,49 +1643,6 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
-/// Fold the following cases into a single byte-level bit-reverse operation
-/// and accepts bswap and bitreverse intrinsics:
-///   bswap(bitreverse(x)) --> bitcast(bitreverse(bitcast(x)))
-///   bitreverse(bswap(x)) --> bitcast(bitreverse(bitcast(x)))
-template <Intrinsic::ID IntrID>
-static Value *foldBitOrderReverseAndSwap(IntrinsicInst *II,
-                                         InstCombiner::BuilderTy &Builder) {
-  static_assert(IntrID == Intrinsic::bswap || IntrID == Intrinsic::bitreverse,
-                "This helper only supports BSWAP and BITREVERSE intrinsics");
-
-  Value *Arg = II->getArgOperand(0);
-  Type *Ty = II->getType();
-
-  if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
-    auto VecEltCnt = VecTy->getElementCount();
-    if (VecEltCnt.isScalable())
-      return nullptr;
-  }
-
-  if (Ty->getScalarSizeInBits() <= 8)
-    return nullptr;
-
-  constexpr Intrinsic::ID ComplementID = (IntrID == Intrinsic::bitreverse)
-                                             ? Intrinsic::bswap
-                                             : Intrinsic::bitreverse;
-
-  Value *X;
-  if (match(Arg, m_OneUse(m_Intrinsic<ComplementID>(m_Value(X))))) {
-    unsigned TotalBits = Ty->getPrimitiveSizeInBits();
-    Type *I8Ty = Builder.getInt8Ty();
-    Type *NewVecTy =
-        VectorType::get(I8Ty, ElementCount::getFixed(TotalBits / 8));
-
-    // Cast to <N x i8>, perform a bitreverse, and cast back
-    Value *CastIn = Builder.CreateBitCast(X, NewVecTy);
-    Value *NewCall =
-        Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, CastIn);
-    return Builder.CreateBitCast(NewCall, Ty);
-  }
-
-  return nullptr;
-}
-
 /// Helper to match idempotent binary intrinsics, namely, intrinsics where
 /// `f(f(x, y), y) == f(x, y)` holds.
 static bool isIdempotentBinaryIntrinsic(Intrinsic::ID IID) {
@@ -2464,10 +2421,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         foldBitOrderCrossLogicOp<Intrinsic::bitreverse>(IIOperand, Builder))
       return crossLogicOpFold;
 
-    if (Value *swapReverseSwapFold =
-            foldBitOrderReverseAndSwap<Intrinsic::bitreverse>(II, Builder))
-      return replaceInstUsesWith(*II, swapReverseSwapFold);
-
     break;
   }
   case Intrinsic::bswap: {
@@ -2523,11 +2476,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *BitOp = matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ false,
                                                     /*MatchBitReversals*/ true))
       return BitOp;
-
-    if (Value *swapReverseSwapFold =
-            foldBitOrderReverseAndSwap<Intrinsic::bswap>(II, Builder))
-      return replaceInstUsesWith(*II, swapReverseSwapFold);
-
     break;
   }
   case Intrinsic::masked_load:
