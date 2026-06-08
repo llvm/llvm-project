@@ -263,11 +263,11 @@ func.func @test_rb_optional_ref_outside_target(%arg0: !fir.ref<i32> {fir.bindc_n
 
 // -----
 
-// Add loop test whose result is based on BlockArguments to ensure
-// no cycle.
+// Case: no finalValue, with iter args.
+// The iter arg is passed through unchanged; the result MustAliases the init.
 // CHECK-LABEL: Testing : "test_rb_do_loop_iter_carry_ref"
 // CHECK-DAG: carry_init#0 <-> outside_loop#0: NoAlias
-// CHECK-DAG: carry_init#0 <-> loop_join_ref#0: MayAlias
+// CHECK-DAG: carry_init#0 <-> loop_join_ref#0: MustAlias
 // CHECK-DAG: outside_loop#0 <-> loop_join_ref#0: MayAlias
 
 func.func @test_rb_do_loop_iter_carry_ref() {
@@ -282,5 +282,77 @@ func.func @test_rb_do_loop_iter_carry_ref() {
     fir.result %carry : !fir.ref<f32>
   }
   %join = fir.convert %loop_res {test.ptr = "loop_join_ref"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
+// Case: no finalValue, no iter args.
+// No value flow through the interface; two unrelated allocas remain NoAlias.
+// CHECK-LABEL: Testing : "test_rb_do_loop_no_iter_args"
+// CHECK-DAG: no_iter_a#0 <-> no_iter_b#0: NoAlias
+
+func.func @test_rb_do_loop_no_iter_args() {
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 2 : index
+  %st = arith.constant 1 : index
+  %a = fir.alloca f32 {uniq_name = "_QFEa"}
+  %b = fir.alloca f32 {uniq_name = "_QFEb"}
+  %da = fir.declare %a {uniq_name = "_QFEa", test.ptr = "no_iter_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b {uniq_name = "_QFEb", test.ptr = "no_iter_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  fir.do_loop %iv = %lb to %ub step %st {
+    fir.store %iv to %da : !fir.ref<index>
+    fir.result
+  }
+  return
+}
+
+// -----
+
+// Case: finalValue only, no iter args.
+// The loop result is index (the IV's final value), not a reference.
+// Unrelated allocas inside and outside the loop remain NoAlias.
+// CHECK-LABEL: Testing : "test_rb_do_loop_final_value_only"
+// CHECK-DAG: fv_only_a#0 <-> fv_only_b#0: NoAlias
+
+func.func @test_rb_do_loop_final_value_only() {
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 2 : index
+  %st = arith.constant 1 : index
+  %a = fir.alloca f32 {uniq_name = "_QFEfv_a"}
+  %b = fir.alloca f32 {uniq_name = "_QFEfv_b"}
+  %da = fir.declare %a {uniq_name = "_QFEfv_a", test.ptr = "fv_only_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b {uniq_name = "_QFEfv_b", test.ptr = "fv_only_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %iv_final:1 = fir.do_loop %iv = %lb to %ub step %st -> index {
+    fir.result %iv : index
+  }
+  return
+}
+
+// -----
+
+// Case: finalValue with iter args.
+// result#0 is the IV's final value (index); result#1 is the iter result.
+// The iter arg is passed through unchanged; result#1 MustAliases the init.
+// CHECK-LABEL: Testing : "test_rb_do_loop_final_value_and_iter_carry_ref"
+// CHECK-DAG: fv_carry_init#0 <-> fv_outside_loop#0: NoAlias
+// CHECK-DAG: fv_carry_init#0 <-> fv_loop_join_ref#0: MustAlias
+// CHECK-DAG: fv_outside_loop#0 <-> fv_loop_join_ref#0: MayAlias
+
+func.func @test_rb_do_loop_final_value_and_iter_carry_ref() {
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 2 : index
+  %st = arith.constant 1 : index
+  %a_carry = fir.alloca f32 {uniq_name = "_QFEfv_carry"}
+  %d_carry = fir.declare %a_carry {uniq_name = "_QFEfv_carry", test.ptr = "fv_carry_init"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %a_out = fir.alloca f32 {uniq_name = "_QFEfv_outside"}
+  %d_out = fir.declare %a_out {uniq_name = "_QFEfv_outside", test.ptr = "fv_outside_loop"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  // -> (index, !fir.ref<f32>): result#0 = IV final value, result#1 = iter result
+  %loop_res:2 = fir.do_loop %iv = %lb to %ub step %st
+                  iter_args(%carry = %d_carry) -> (index, !fir.ref<f32>) {
+    %next_iv = arith.addi %iv, %st : index
+    fir.result %next_iv, %carry : index, !fir.ref<f32>
+  }
+  %join = fir.convert %loop_res#1 {test.ptr = "fv_loop_join_ref"} : (!fir.ref<f32>) -> !fir.ref<f32>
   return
 }
