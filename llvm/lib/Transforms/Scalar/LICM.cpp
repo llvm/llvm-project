@@ -1075,7 +1075,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
                                           Loop *CurLoop,
                                           std::optional<uint64_t> HoistIndex) {
-  // Must have constant insertion lane
+  // Must have constant insertion lane.
   auto *InsertedIdxCI = dyn_cast<ConstantInt>(CurrIns->getOperand(2));
   if (!InsertedIdxCI)
     return nullptr;
