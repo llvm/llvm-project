@@ -52,6 +52,19 @@ static void foo() {
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({attr()}), targetsync: obj)
 
+  // attr() argument without the required 'ompx_' prefix.
+  // expected-error@+2 {{attr() argument 'cuda_prop' must start with the 'ompx_' prefix}}
+  // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
+  #pragma omp interop init(prefer_type({attr("cuda_prop")}), targetsync: obj)
+
+  // Valid attr() with 'ompx_' prefix — no error expected.
+  #pragma omp interop init(prefer_type({attr("ompx_propX")}), targetsync: obj)
+
+  // attr() argument with a comma — not permitted by the grammar.
+  // expected-error@+2 {{attr() argument 'ompx_a,b' must not contain a comma}}
+  // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
+  #pragma omp interop init(prefer_type({attr("ompx_a,b")}), targetsync: obj)
+
   // expected-error@+2 {{expected '(' after 'fr'}}
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({fr "sycl"}), targetsync: obj)

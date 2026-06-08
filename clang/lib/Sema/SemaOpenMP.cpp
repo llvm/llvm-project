@@ -18968,22 +18968,41 @@ OMPClause *SemaOpenMP::ActOnOpenMPInitClause(
     return nullptr;
 
   // Check prefer_type values. fr() arguments are either string literals or
-  // constant integral expressions; null Fr is only valid in OMP 6.0
+  // constant integral expressions; null Fr is only valid in OMP 6.0.
+  // attr() arguments must be ext-string-literals with the 'ompx_' prefix
+  // (OpenMP 6.0 spec, section 16.1.3).
   for (const OMPInteropPref &P : InteropInfo.Prefs) {
     const Expr *E = P.Fr;
     if (!E) {
       assert(InteropInfo.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
-      continue;
+    } else if (!E->isValueDependent() && !E->isTypeDependent() &&
+               !E->isInstantiationDependent() &&
+               !E->containsUnexpandedParameterPack()) {
+      if (!E->isIntegerConstantExpr(getASTContext()) && !isa<StringLiteral>(E)) {
+        Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
+        return nullptr;
+      }
     }
-    if (E->isValueDependent() || E->isTypeDependent() ||
-        E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
-      continue;
-    if (E->isIntegerConstantExpr(getASTContext()))
-      continue;
-    if (isa<StringLiteral>(E))
-      continue;
-    Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
-    return nullptr;
+    for (const Expr *A : P.Attrs) {
+      if (A->isValueDependent() || A->isTypeDependent() ||
+          A->isInstantiationDependent() || A->containsUnexpandedParameterPack())
+        continue;
+      const auto *SL = dyn_cast<StringLiteral>(A);
+      if (!SL) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_not_string);
+        return nullptr;
+      }
+      if (!SL->getString().starts_with("ompx_")) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_missing_ompx_prefix)
+            << SL->getString();
+        return nullptr;
+      }
+      if (SL->getString().contains(',')) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_contains_comma)
+            << SL->getString();
+        return nullptr;
+      }
+    }
   }
 
   return OMPInitClause::Create(getASTContext(), InteropVar, InteropInfo,
