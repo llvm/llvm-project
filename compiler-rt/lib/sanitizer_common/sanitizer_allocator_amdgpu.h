@@ -20,7 +20,7 @@ static const DeviceAllocationType DAT_AMDGPU =
 
 class AmdgpuDeviceAllocator {
  public:
-  static bool Init();
+  static bool Init(bool allow_dlopen = false);
   static void* Allocate(uptr size, uptr alignment,
                         DeviceAllocationInfo* da_info);
   static void Deallocate(void* p);
@@ -64,8 +64,11 @@ class VmemGpuReserveTracker {
     bool freed;
   };
 
+  void EnsureInited();
+
   StaticSpinMutex mu_;
-  InternalMmapVector<VmemGpuReservation> reservations_;
+  InternalMmapVectorNoCtor<VmemGpuReservation> reservations_;
+  atomic_uint8_t inited_;
 };
 
 // True when ROCr reserves host-accessible VA (e.g. HIP managed / SVM).
@@ -84,6 +87,7 @@ struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
     if (status == HSA_STATUS_SUCCESS)
       status = err;
   }
+
   hsa_status_t status;
   void* alloc_func;
   hsa_amd_memory_pool_t memory_pool;
