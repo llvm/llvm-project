@@ -30,18 +30,6 @@ namespace {
 class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
   const BugType LifetimeEndNode{this, "LifetimeEndReporter"};
 
-  bool report(CheckerContext &C, const Twine &Description,
-              ProgramStateRef State) const {
-    ExplodedNode *Node = C.generateNonFatalErrorNode(State);
-    if (!Node)
-      return false;
-
-    auto Report = std::make_unique<PathSensitiveBugReport>(
-        LifetimeEndNode, Description.str(), Node);
-    C.emitReport(std::move(Report));
-    return true;
-  }
-
 public:
   void checkLifetimeEnd(const VarDecl *D, CheckerContext &C) const {
     ProgramStateRef State = C.getState();
@@ -50,7 +38,13 @@ public:
     State = State->set<TestLifetimeEndReportCountTrait>(Count + 1);
     auto Description = llvm::formatv("{0} LIFETIME END {1}",
                                      D->getDeclName().getAsString(), Count);
-    report(C, Description, State);
+
+    ExplodedNode *Node = C.generateNonFatalErrorNode(State);
+    EXPECT_TRUE(Node != nullptr);
+
+    auto Report = std::make_unique<PathSensitiveBugReport>(
+        LifetimeEndNode, Description.str(), Node);
+    C.emitReport(std::move(Report));
   }
 };
 
