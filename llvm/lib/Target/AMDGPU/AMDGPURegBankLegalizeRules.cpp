@@ -2170,6 +2170,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_global_store_async_from_lds_b128})
       .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
 
+  addRulesForIOpcs({amdgcn_tensor_load_to_lds, amdgcn_tensor_store_from_lds})
+      .Any({{},
+            {{},
+             {IntrId, SgprV4S32_ReadFirstLane, SgprV8S32_ReadFirstLane,
+              SgprV4S32_ReadFirstLane, SgprV4S32_ReadFirstLane,
+              SgprV8S32_ReadFirstLane, Imm}}});
+
   addRulesForIOpcs({amdgcn_cluster_load_b32})
       .Any({{UniB32}, {{UniInVgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
       .Any({{DivB32, _, UniP1}, {{VgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
