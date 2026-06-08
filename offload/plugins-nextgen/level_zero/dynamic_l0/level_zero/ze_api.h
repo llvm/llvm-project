@@ -862,6 +862,15 @@ ZE_APIEXPORT ze_result_t ZE_APICALL
 zeEventHostSynchronize(ze_event_handle_t hEvent, uint64_t timeout);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeEventQueryKernelTimestamp(
     ze_event_handle_t hEvent, ze_kernel_timestamp_result_t *dstptr);
+ZE_APIEXPORT ze_result_t ZE_APICALL
+zeEventQueryStatus(ze_event_handle_t hEvent);
+
+/* Event append functions on command lists */
+ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendSignalEvent(
+    ze_command_list_handle_t hCommandList, ze_event_handle_t hEvent);
+ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendWaitOnEvents(
+    ze_command_list_handle_t hCommandList, uint32_t numEvents,
+    ze_event_handle_t *phEvents);
 
 /* Fence functions */
 ZE_APIEXPORT ze_result_t ZE_APICALL

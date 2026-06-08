@@ -278,8 +278,9 @@ cl::opt<ProfileFormatKind> ProfileFormat(
     cl::init(PF_Fdata),
     cl::values(clEnumValN(PF_Fdata, "fdata", "offset-based plaintext format"),
                clEnumValN(PF_YAML, "yaml", "dense YAML representation"),
-               clEnumValN(PF_PreAgg, "preagg",
-                          "pre-aggregated profile format")),
+               clEnumValN(PF_PreAgg, "preagg", "pre-aggregated profile format"),
+               clEnumValN(PF_PerfScript, "perfscript",
+                          "perfscript profile format")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<std::string> SaveProfile("w",
