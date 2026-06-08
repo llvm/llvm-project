@@ -27,7 +27,7 @@ define void @va_func(ptr readonly %b, ...) readonly nounwind willreturn {
 
 define i32 @caller(ptr %x) {
 ; CHECK-LABEL: define noundef i32 @caller(
-; CHECK-SAME: ptr readonly captures(address) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree readonly captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void (ptr, ...) @va_func(ptr null, i32 0, i32 0, i32 0, ptr [[X]])
 ; CHECK-NEXT:    ret i32 42
@@ -57,7 +57,7 @@ define void @va_func2(ptr readonly %b, ...) {
 
 define i32 @caller2(ptr %x, ptr %y) {
 ; CHECK-LABEL: define noundef i32 @caller2(
-; CHECK-SAME: ptr readonly captures(address) [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr nofree readonly captures(address) [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void (ptr, ...) @va_func2(ptr [[X]], i32 0, i32 0, i32 0, ptr [[Y]])
 ; CHECK-NEXT:    ret i32 42

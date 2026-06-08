@@ -232,9 +232,17 @@ C2y Feature Support
   ``stdc_rotate_left_{uc,us,ui,ul,ull}`` and
   ``stdc_rotate_right_{uc,us,ui,ul,ull}``.
 
+- Implemented C2y ``<stdbit.h>`` memory reversal functions:
+  ``__builtin_stdc_memreverse8`` / ``stdc_memreverse8`` (in-place byte
+  reversal of a byte array) and ``stdc_memreverse8u{8,16,32,64}`` (byte-swap
+  of an exact-width unsigned integer value, usable in constant expressions).
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
+- Fixed a failing assertion when validating an invalid structure redefinition
+  with a member which uses an incomplete enumeration type. (#GH190227)
+- Clang now supports the C23 ``wN`` and ``wfN`` length modifiers. (#GH116962)
 
 Objective-C Language Changes
 -----------------------------
@@ -680,6 +688,9 @@ Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 - Fixed ``init_priority`` attribute by delaying type checks until after the type is deduced.
+- Fixed a crash when a ``section`` attribute or ``#pragma clang section`` caused a
+  section type conflict with a declaration whose name is not a simple identifier,
+  such as a lambda's call operator. (#GH192264)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -729,6 +740,7 @@ Bug Fixes to C++ Support
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
+- Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -911,6 +923,9 @@ libclang
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 - The clang_Module_getASTFile API is deprecated and now always returns nullptr
 - The clang_Cursor_getCommentRange API will now return a comment range for macro definitions that have documentation comments.
+- Added CXType_PredefinedSugar for __ptrdiff_t, __size_t, and
+  __signed_size_t types, which are no longer exposed as
+  CXType_Unexposed.
 
 Code Completion
 ---------------
