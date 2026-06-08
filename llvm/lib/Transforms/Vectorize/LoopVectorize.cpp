@@ -7017,7 +7017,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       }
 
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
-                      PhiR->getFastMathFlags());
+                      PhiR->getFastMathFlagsOrNone());
       FinalReductionResult = Builder.createNaryOp(
           VPInstruction::ComputeReductionResult, {ReductionOp}, Flags, ExitDL);
       if (ExtendOpc != Instruction::CastOpsEnd)
@@ -7055,7 +7055,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
          !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
-          getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlags()));
+          getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone()));
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
@@ -7628,7 +7628,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
             [[maybe_unused]] auto StartValueIsIdentity = [&] {
               Value *IdentityValue = getRecurrenceIdentity(
                   PhiR->getRecurrenceKind(), ResumeV->getType(),
-                  PhiR->getFastMathFlags());
+                  PhiR->getFastMathFlagsOrNone());
               auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
               return StartValue && StartValue->getValue() == IdentityValue;
             };
