@@ -368,7 +368,7 @@ Modified Compiler Flags
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
 
-- Slightly changed hash id generation to get the unique linkage symbols names
+- Slightly changed hash id generation to get the unique linkage symbols names 
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
@@ -419,7 +419,7 @@ Attribute Changes in Clang
 
 - The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
   notes. For example:
-
+  
   .. code-block:: yaml
 
     Functions:
@@ -880,10 +880,10 @@ clang-format
 ------------
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
   '-'/'+' and the return type in Objective-C method declarations
-- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace
-  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to
-  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing
-  parameter and argument lists to be formatted with one parameter/argument on each
+- Deprecate the ``BinPackParameters`` and ``BinPackArguments`` options and replace 
+  them with the ``PackParameters`` and ``PackArguments`` structs (respectively) to 
+  unify packing behavior. Add the ``BreakAfter`` option to the structs, allowing 
+  parameter and argument lists to be formatted with one parameter/argument on each 
   line if they exceed the specified count.
 - Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
   constructor initializers after commas, keeping the colon on the same line.
