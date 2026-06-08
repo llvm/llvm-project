@@ -1464,6 +1464,47 @@ bool VPInstruction::isSingleScalar() const {
   }
 }
 
+void VPInstruction::addOperand(VPValue *Op) {
+#ifndef NDEBUG
+  Type *Ty = Op->getScalarType();
+  switch (getOpcode()) {
+  case VPInstruction::AnyOf:
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
+    assert(Ty == getOperand(0)->getScalarType() &&
+           "types of operand 0 and new operand must match");
+    break;
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::BuildVector:
+  case VPInstruction::BuildStructVector:
+    assert(Ty == getOperand(0)->getScalarType() &&
+           "appended operand must match operand 0's scalar type");
+    break;
+  case VPInstruction::ExtractLane:
+    assert(Ty == getOperand(1)->getScalarType() &&
+           "appended operand must match operand 1's scalar type");
+    break;
+  case VPInstruction::ExtractLastActive: {
+    // The recipe is constructed with 3 operands (result, data, mask). Extra
+    // operands beyond that are appended in (data, mask) pairs.
+    constexpr unsigned NumInitialOperands = 3;
+    assert(getNumOperands() >= NumInitialOperands &&
+           "ExtractLastActive must have at least the initial 3 operands");
+    bool IsMaskSlot = ((getNumOperands() - NumInitialOperands) & 1u) == 1u;
+    assert((IsMaskSlot ? Ty->isIntegerTy(1)
+                       : Ty == getOperand(1)->getScalarType()) &&
+           "ExtractLastActive expects alternating data/mask operands "
+           "matching operand 1's type and i1, respectively");
+    break;
+  }
+  default:
+    llvm_unreachable("opcode does not support growing the operand list "
+                     "outside of construction");
+  }
+#endif
+  VPUser::addOperand(Op);
+}
+
 void VPInstruction::execute(VPTransformState &State) {
   assert(!isMasked() && "cannot execute masked VPInstruction");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
@@ -1777,6 +1818,17 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   default:
     llvm_unreachable("opcode not implemented yet");
   }
+}
+
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // TODO: Compute cost for VPInstructions without underlying values.
+  if (!getUnderlyingValue())
+    return 0;
+  assert(Instruction::isCast(getOpcode()) &&
+         "only casts have underlying values currently");
+  return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                    Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3056,7 +3108,7 @@ void VPVectorEndPointerRecipe::materializeOffset(unsigned Part) {
   VPValue *Offset = Builder.createAdd(
       Offset0,
       Builder.createOverflowingOp(Instruction::Mul, {PartxStride, VF}));
-  addOperand(Offset);
+  addOffset(Offset);
 }
 
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
@@ -3647,21 +3699,6 @@ static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
   return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), L) ? Addr : nullptr;
 }
 
-/// Return true if \p R is a predicated store with a loop-invariant address
-/// only masked by the header mask.
-static bool isPredicatedUniformMemOpAfterTailFolding(const VPReplicateRecipe &R,
-                                                     const SCEV *PtrSCEV,
-                                                     VPCostContext &Ctx) {
-  const VPRegionBlock *ParentRegion = R.getRegion();
-  if (R.getOpcode() != Instruction::Store || !ParentRegion ||
-      !ParentRegion->isReplicator() || !PtrSCEV ||
-      !Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
-    return false;
-  auto *BOM =
-      cast<VPBranchOnMaskRecipe>(&ParentRegion->getEntryBasicBlock()->front());
-  return vputils::isHeaderMask(BOM->getOperand(0), *ParentRegion->getPlan());
-}
-
 InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   Instruction *UI = cast<Instruction>(getUnderlyingValue());
@@ -3770,21 +3807,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
         UsedByLoadStoreAddress ? UI : nullptr);
-
-    // Check if this is a predicated store with a loop-invariant address only
-    // masked by the header mask. If so, return the uniform mem op cost.
-    if (isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
-      InstructionCost UniformCost =
-          ScalarMemOpCost +
-          Ctx.TTI.getAddressComputationCost(ScalarPtrTy, /*SE=*/nullptr,
-                                            /*Ptr=*/nullptr, Ctx.CostKind);
-      auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-      VPValue *StoredVal = getOperand(0);
-      if (!StoredVal->isDefinedOutsideLoopRegions())
-        UniformCost += Ctx.TTI.getIndexedVectorInstrCostFromEnd(
-            Instruction::ExtractElement, VectorTy, Ctx.CostKind, 0);
-      return UniformCost;
-    }
 
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
     InstructionCost ScalarCost =
