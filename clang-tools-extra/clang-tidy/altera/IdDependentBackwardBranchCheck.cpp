@@ -50,11 +50,13 @@ void IdDependentBackwardBranchCheck::registerMatchers(MatchFinder *Finder) {
   // Bind all VarDecls that are assigned a value with a variable DeclRefExpr (in
   // case it is ID-dependent).
   Finder->addMatcher(
-      stmt(forEachDescendant(binaryOperator(
-          allOf(isAssignmentOperator(), hasRHS(RefVarOrField),
-                hasLHS(anyOf(
-                    declRefExpr(to(varDecl().bind("pot_tid_var"))),
-                    memberExpr(member(fieldDecl().bind("pot_tid_field"))))))))),
+      stmt(forEachDescendant(
+          binaryOperator(
+              allOf(isAssignmentOperator(), hasRHS(RefVarOrField),
+                    hasLHS(anyOf(declRefExpr(to(varDecl().bind("pot_tid_var"))),
+                                 memberExpr(member(
+                                     fieldDecl().bind("pot_tid_field")))))))
+              .bind("potential_assignment"))),
       this);
 
   // Second Matcher looks for branch statements inside of loops and bind on the
@@ -170,8 +172,8 @@ void IdDependentBackwardBranchCheck::saveIdDepVarFromPotentialReference(
 }
 
 void IdDependentBackwardBranchCheck::saveIdDepFieldFromPotentialReference(
-    const DeclRefExpr *RefExpr, const MemberExpr *MemExpr,
-    const FieldDecl *PotentialField) {
+    const Stmt *Statement, const DeclRefExpr *RefExpr,
+    const MemberExpr *MemExpr, const FieldDecl *PotentialField) {
   // If the field is already in IdDepFieldsMap, ignore it.
   if (IdDepFieldsMap.contains(PotentialField))
     return;
@@ -184,8 +186,8 @@ void IdDependentBackwardBranchCheck::saveIdDepFieldFromPotentialReference(
     // If field isn't ID-dependent, but RefVar is.
     if (IdDepVarsMap.contains(RefVar)) {
       StringStream << "variable " << RefVar->getNameAsString();
-      IdDepFieldsMap[PotentialField] = IdDependencyRecord(
-          PotentialField, PotentialField->getBeginLoc(), Message);
+      IdDepFieldsMap[PotentialField] =
+          IdDependencyRecord(PotentialField, Statement->getBeginLoc(), Message);
       return;
     }
   }
@@ -193,8 +195,8 @@ void IdDependentBackwardBranchCheck::saveIdDepFieldFromPotentialReference(
     const auto *RefField = dyn_cast<FieldDecl>(MemExpr->getMemberDecl());
     if (IdDepFieldsMap.contains(RefField)) {
       StringStream << "member " << RefField->getNameAsString();
-      IdDepFieldsMap[PotentialField] = IdDependencyRecord(
-          PotentialField, PotentialField->getBeginLoc(), Message);
+      IdDepFieldsMap[PotentialField] =
+          IdDependencyRecord(PotentialField, Statement->getBeginLoc(), Message);
     }
   }
 }
@@ -220,6 +222,8 @@ void IdDependentBackwardBranchCheck::check(
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("tid_dep_var");
   const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("tid_dep_field");
   const auto *Statement = Result.Nodes.getNodeAs<Stmt>("straight_assignment");
+  const auto *PotentialAssignment =
+      Result.Nodes.getNodeAs<Stmt>("potential_assignment");
   const auto *RefExpr = Result.Nodes.getNodeAs<DeclRefExpr>("assign_ref_var");
   const auto *MemExpr = Result.Nodes.getNodeAs<MemberExpr>("assign_ref_field");
   const auto *PotentialVar = Result.Nodes.getNodeAs<VarDecl>("pot_tid_var");
@@ -240,7 +244,8 @@ void IdDependentBackwardBranchCheck::check(
 
   // Save fields assigned to values of ID-dependent variables and fields.
   if ((RefExpr || MemExpr) && PotentialField)
-    saveIdDepFieldFromPotentialReference(RefExpr, MemExpr, PotentialField);
+    saveIdDepFieldFromPotentialReference(PotentialAssignment, RefExpr, MemExpr,
+                                         PotentialField);
 
   // The second part of the callback deals with checking if a branch inside a
   // loop is thread dependent.

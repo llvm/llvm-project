@@ -103,14 +103,14 @@ void error() {
   InferredField.FieldFromVar = ThreadID * 2;
   while (j < InferredField.FieldFromVar) {
     // CHECK-NOTES: :[[@LINE-1]]:10: warning: backward branch (while loop) is ID-dependent due to member reference to 'FieldFromVar' and may cause performance degradation [altera-id-dependent-backward-branch]
-    // CHECK-NOTES: :[[@LINE-7]]:5: note: inferred assignment of ID-dependent member from ID-dependent variable ThreadID
+    // CHECK-NOTES: :[[@LINE-3]]:3: note: inferred assignment of ID-dependent member from ID-dependent variable ThreadID
     accumulator++;
   }
 
   InferredField.FieldFromField = Example.IDDepField;
   while (j < InferredField.FieldFromField) {
     // CHECK-NOTES: :[[@LINE-1]]:10: warning: backward branch (while loop) is ID-dependent due to member reference to 'FieldFromField' and may cause performance degradation [altera-id-dependent-backward-branch]
-    // CHECK-NOTES: :[[@LINE-13]]:5: note: inferred assignment of ID-dependent member from ID-dependent member IDDepField
+    // CHECK-NOTES: :[[@LINE-3]]:3: note: inferred assignment of ID-dependent member from ID-dependent member IDDepField
     accumulator++;
   }
 

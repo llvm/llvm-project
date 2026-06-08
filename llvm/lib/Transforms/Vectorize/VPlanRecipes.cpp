@@ -1820,6 +1820,17 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   }
 }
 
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // TODO: Compute cost for VPInstructions without underlying values.
+  if (!getUnderlyingValue())
+    return 0;
+  assert(Instruction::isCast(getOpcode()) &&
+         "only casts have underlying values currently");
+  return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                    Ctx);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {

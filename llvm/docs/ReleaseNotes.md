@@ -313,6 +313,8 @@ Makes programs 10x faster by doing Special New Thing.
   prefixes, making it an alias of the existing `-check-prefixes` option.
 * Add `-mtune` option to `llc`.
 * Add `-mtune` option to `opt`.
+* Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
+  in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
 
 ### Changes to LLDB
 
