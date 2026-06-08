@@ -1225,6 +1225,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
     libc.src.sched.__sched_setcpuzero
     libc.src.sched.__sched_setcpuset

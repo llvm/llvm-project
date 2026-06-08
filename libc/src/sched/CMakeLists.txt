@@ -87,6 +87,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  __sched_cpualloc
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_cpualloc
+)
+
+add_entrypoint_object(
+  __sched_cpufree
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_cpufree
+)
+
+add_entrypoint_object(
   __sched_getcpucount
   ALIAS
   DEPENDS

@@ -107,6 +107,23 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  cpu_alloc_test
+  SUITE
+    libc_sched_unittests
+  SRCS
+    cpu_alloc_test.cpp
+  DEPENDS
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpufree
+    libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_getcpuisset
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_setcpuzero
+)
+
+add_libc_unittest(
   cpu_count_test
   SUITE
     libc_sched_unittests
