@@ -50,8 +50,6 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // are already live.
   bool closesLiveRange(const SUnit *SU, ScheduleDAGMILive *DAG) const;
 
-  bool DoLatencyReduction;
-
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                     SchedBoundary *Zone) const override;
