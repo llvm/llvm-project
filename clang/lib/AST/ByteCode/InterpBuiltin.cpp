@@ -1025,7 +1025,8 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   if (CarryOutPtr.canBeInitialized())
     CarryOutPtr.initialize();
 
-  assert(Call->getType() == Call->getArg(0)->getType());
+  assert(S.getASTContext().hasSimilarType(Call->getType(),
+                                          Call->getArg(0)->getType()));
   pushInteger(S, Result, Call->getType());
   return true;
 }
