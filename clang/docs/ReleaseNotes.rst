@@ -243,6 +243,9 @@ C23 Feature Support
 - Fixed a failing assertion when validating an invalid structure redefinition
   with a member which uses an incomplete enumeration type. (#GH190227)
 - Clang now supports the C23 ``wN`` and ``wfN`` length modifiers. (#GH116962)
+- Clang now recognizes the C23 ``H``, ``D``, and ``DD`` length modifiers in
+  format strings and diagnoses their use because Clang does not yet support
+  the corresponding decimal floating-point types, ``_Decimal32``, ``_Decimal64``, and ``_Decimal128``. (#GH116962)
 
 Objective-C Language Changes
 -----------------------------
@@ -674,6 +677,7 @@ Bug Fixes in This Version
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
+- Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -923,6 +927,9 @@ libclang
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 - The clang_Module_getASTFile API is deprecated and now always returns nullptr
 - The clang_Cursor_getCommentRange API will now return a comment range for macro definitions that have documentation comments.
+- Added CXType_PredefinedSugar for __ptrdiff_t, __size_t, and
+  __signed_size_t types, which are no longer exposed as
+  CXType_Unexposed.
 
 Code Completion
 ---------------

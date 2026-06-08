@@ -204,6 +204,14 @@ define void @redundant_align() {
   ret void
 }
 
+define void @non_power_of_two_align(ptr %ptr) {
+; CHECK-LABEL: @non_power_of_two_align(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3) ]
+  ret void
+}
+
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 
 define i32 @foo2(ptr %a) #0 {

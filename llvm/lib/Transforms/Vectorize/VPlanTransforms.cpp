@@ -367,11 +367,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
               dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
         // TODO: Handle converting to uniform recipes as separate transform,
         // then cloning should be sufficient here.
-        Clone = VPBuilder::createSingleScalarOp(
-            SinkCandidateRepR->getOpcode(), SinkCandidate->operands(),
-            /*Mask=*/nullptr, *SinkCandidateRepR, *SinkCandidateRepR,
-            SinkCandidate->getDebugLoc(),
-            SinkCandidate->getUnderlyingInstr());
+        Instruction *I = SinkCandidate->getUnderlyingInstr();
+        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
+                                      nullptr /*Mask*/, *SinkCandidateRepR,
+                                      *SinkCandidateRepR);
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -904,10 +903,9 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
-      auto *Clone = VPBuilder::createSingleScalarOp(
-          Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
-          /*Mask=*/nullptr, *Def, {}, DebugLoc::getUnknown(),
-          Def->getUnderlyingInstr());
+      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
+                                          Def->operands(), /*IsUniform*/ true,
+                                          /*Mask*/ nullptr, /*Flags*/ *Def);
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
     }
@@ -1967,10 +1965,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      auto *Clone = VPBuilder::createSingleScalarOp(
-          getOpcodeOrIntrinsicID(RepOrWidenR)->second, RepOrWidenR->operands(),
-          /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
-          RepOrWidenR->getUnderlyingInstr());
+      auto *Clone = new VPReplicateRecipe(
+          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
@@ -6964,9 +6961,9 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe = VPBuilder::createSingleScalarOp(
-          VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr, *VPI,
-          *VPI, VPI->getDebugLoc(), I);
+      auto *Recipe = new VPReplicateRecipe(
+          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
+          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();
