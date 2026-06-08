@@ -2167,7 +2167,7 @@ copy-construction, which :ref:`SmallSet <dss_smallset>` and :ref:`SmallPtrSet
 llvm/ADT/DenseSet.h
 ^^^^^^^^^^^^^^^^^^^
 
-``DenseSet`` is a simple quadratically probed hash table.  It excels at supporting
+``DenseSet`` is a simple linearly probed hash table.  It excels at supporting
 small values: it uses a single allocation to hold all of the pairs that are
 currently inserted in the set.  ``DenseSet`` is a great way to unique small values
 that are not simple pointers (use :ref:`SmallPtrSet <dss_smallptrset>` for
@@ -2413,7 +2413,7 @@ virtual register ID).
 llvm/ADT/DenseMap.h
 ^^^^^^^^^^^^^^^^^^^
 
-``DenseMap`` is a simple quadratically probed hash table.  It excels at supporting
+``DenseMap`` is a simple linearly probed hash table.  It excels at supporting
 small keys and values: it uses a single allocation to hold all of the pairs
 that are currently inserted in the map.  ``DenseMap`` is a great way to map
 pointers to pointers, or map other small types to each other.

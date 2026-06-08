@@ -23,7 +23,7 @@ static inline RT_API_ATTRS bool IsCharValueSeparator(
     const DataEdit &edit, char32_t ch) {
   return ch == ' ' || ch == '\t' || ch == '/' ||
       ch == edit.modes.GetSeparatorChar() ||
-      (edit.IsNamelist() && (ch == '&' || ch == '$'));
+      (edit.IsNamelist() && (ch == '&' || ch == '$' || ch == '!'));
 }
 
 // Checks that a list-directed input value has been entirely consumed and

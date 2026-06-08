@@ -1,8 +1,8 @@
 
 add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
+  IOHandlerProcessSTDIOWindows.cpp
   DebuggerThread.cpp
   LocalDebugDelegate.cpp
-  MSVCRTCFrameRecognizer.cpp
   NativeProcessWindows.cpp
   NativeRegisterContextWindows.cpp
   NativeRegisterContextWindows_arm.cpp
