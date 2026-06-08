@@ -1098,9 +1098,9 @@ hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
   //   %inner = insertelement %base, %variant, C1
   //   %outer = insertelement %inner, %invariant, C2
   // into:
-  //   %inner' = insertelement %base, %invariant, C2
-  //   %outer' = insertelement %inner', %variant, C1
-  // so we can push the variant insertelement through the shuffle.
+  //   %outer = insertelement %base, %invariant, C2
+  //   %inner = insertelement %outer, %variant, C1
+  // so we can hoist %outer
 
   // The instruction we are hoisting must have invariant insertion data
   Value *InsertedElt = Ins->getOperand(1);
