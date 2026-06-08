@@ -2342,16 +2342,16 @@ multiclass MTBUF_LoadIntrinsicPat<SDPatternOperator name, ValueType vt,
 }
 
 let OtherPredicates = [HasMTBUFInsts] in {
-foreach vt = Reg32Types.types in {
+foreach vt = [i32, f32] in {
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, vt, "TBUFFER_LOAD_FORMAT_X">;
 }
-foreach vt = Reg64Types.types in {
+foreach vt = [v2i32, v2f32] in {
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, vt, "TBUFFER_LOAD_FORMAT_XY">;
 }
-foreach vt = Reg96Types.types in {
+foreach vt = [v3i32, v3f32] in {
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, vt, "TBUFFER_LOAD_FORMAT_XYZ">;
 }
-foreach vt = Reg128Types.types in {
+foreach vt = [v4i32, v4f32] in {
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, vt, "TBUFFER_LOAD_FORMAT_XYZW">;
 }
 } // End HasMTBUFInsts.
@@ -2431,16 +2431,16 @@ multiclass MTBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
 }
 
 let OtherPredicates = [HasMTBUFInsts] in {
-foreach vt = Reg32Types.types in {
+foreach vt = [i32, f32] in {
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, vt, "TBUFFER_STORE_FORMAT_X">;
 }
-foreach vt = Reg64Types.types in {
+foreach vt = [v2i32, v2f32] in {
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, vt, "TBUFFER_STORE_FORMAT_XY">;
 }
-foreach vt = Reg96Types.types in {
+foreach vt = [v3i32, v3f32] in {
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, vt, "TBUFFER_STORE_FORMAT_XYZ">;
 }
-foreach vt = Reg128Types.types in {
+foreach vt = [v4i32, v4f32] in {
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, vt, "TBUFFER_STORE_FORMAT_XYZW">;
 }
 } // End HasMTBUFInsts.
