@@ -119,3 +119,17 @@ void caller_nine() {
 // means the second annotation never gets read here. That is a clear bug. It should be fixed
 // in order to analyze all the parameters which are annotated.
 }
+
+struct View {
+  int* p;
+};
+View makeView(int& x [[clang::lifetimebound]]);
+
+void clang_analyzer_lifetime_bound(View);
+
+void caller_view() {
+  int v = 42;
+  View w = makeView(v);
+  // FIXME: Currently none of the maps cover LazyCompoundVal
+  clang_analyzer_lifetime_bound(w); // no-warning
+}
