@@ -27093,6 +27093,30 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                              DAG.getTargetConstant(RC, dl, MVT::i32));
         if (!isRoundModeCurDirection(Rnd))
           return SDValue();
+
+        // CUR_DIRECTION means "use the current MXCSR rounding mode". In a
+        // function that accesses the FP environment (strictfp), lowering to a
+        // plain FADD/FSUB/FMUL/FDIV would let the DAG constant-fold the
+        // operation under round-to-nearest-even, discarding the live MXCSR
+        // rounding mode. Emit the corresponding strict node instead: it is not
+        // constant-folded and lowers to a real instruction that reads MXCSR.
+        if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+                Attribute::StrictFP)) {
+          unsigned StrictOpc = 0;
+          switch (IntrData->Opc0) {
+          case ISD::FADD: StrictOpc = ISD::STRICT_FADD; break;
+          case ISD::FSUB: StrictOpc = ISD::STRICT_FSUB; break;
+          case ISD::FMUL: StrictOpc = ISD::STRICT_FMUL; break;
+          case ISD::FDIV: StrictOpc = ISD::STRICT_FDIV; break;
+          default: break;
+          }
+          if (StrictOpc) {
+            SDValue StrictNode = DAG.getNode(
+                StrictOpc, dl, DAG.getVTList(Op.getValueType(), MVT::Other),
+                {DAG.getEntryNode(), Op.getOperand(1), Src2});
+            return StrictNode.getValue(0);
+          }
+        }
       }
 
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),

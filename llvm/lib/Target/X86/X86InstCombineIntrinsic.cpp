@@ -2451,7 +2451,14 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512_mul_pd_512:
   case Intrinsic::x86_avx512_sub_pd_512:
     // If the rounding mode is CUR_DIRECTION(4) we can turn these into regular
-    // IR operations.
+    // IR operations. A plain fadd/fsub/fmul/fdiv is unconstrained FP and
+    // assumes the default rounding mode (round-to-nearest-even), whereas
+    // CUR_DIRECTION must honor whatever rounding the live MXCSR selects. Only
+    // fold when the function does not access the FP environment; inside a
+    // strictfp function MXCSR may have been changed (e.g. via fesetround), so
+    // the intrinsic must be preserved.
+    if (II.getFunction()->getAttributes().hasFnAttr(Attribute::StrictFP))
+      break;
     if (auto *R = dyn_cast<ConstantInt>(II.getArgOperand(2))) {
       if (R->getValue() == 4) {
         Value *Arg0 = II.getArgOperand(0);
@@ -2493,7 +2500,14 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512_mask_mul_sd_round:
   case Intrinsic::x86_avx512_mask_sub_sd_round:
     // If the rounding mode is CUR_DIRECTION(4) we can turn these into regular
-    // IR operations.
+    // IR operations. A plain fadd/fsub/fmul/fdiv is unconstrained FP and
+    // assumes the default rounding mode (round-to-nearest-even), whereas
+    // CUR_DIRECTION must honor whatever rounding the live MXCSR selects. Only
+    // fold when the function does not access the FP environment; inside a
+    // strictfp function MXCSR may have been changed (e.g. via fesetround), so
+    // the intrinsic must be preserved.
+    if (II.getFunction()->getAttributes().hasFnAttr(Attribute::StrictFP))
+      break;
     if (auto *R = dyn_cast<ConstantInt>(II.getArgOperand(4))) {
       if (R->getValue() == 4) {
         // Extract the element as scalars.
