@@ -59,7 +59,8 @@ class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
-  llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
+  llvm::DenseMap<const ParmVarDecl *, const OriginEscapesFact *>
+      NoescapeWarningsMap;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
@@ -120,16 +121,7 @@ public:
     auto CheckParam = [&](const ParmVarDecl *PVD, bool IsMoved) {
       // NoEscape param should not escape.
       if (PVD->hasAttr<NoEscapeAttr>()) {
-        if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
-          NoescapeWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
-        if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
-          NoescapeWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
-        if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
-          NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
-        if (auto *CallEsc = dyn_cast<CallEscapeFact>(OEF))
-          // Currently this triggers the wrong reporting. Will fix with next
-          // commit!
-          NoescapeWarningsMap.try_emplace(PVD, CallEsc->getArgument());
+        NoescapeWarningsMap.try_emplace(PVD, OEF);
         return;
       }
       // Skip annotation suggestion for moved loans, as ownership transfer
@@ -410,15 +402,17 @@ public:
   }
 
   void reportNoescapeViolations() {
-    for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
-      if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
-        SemaHelper->reportNoescapeViolation(PVD, E);
-      else if (const auto *FD = EscapeTarget.dyn_cast<const FieldDecl *>())
-        SemaHelper->reportNoescapeViolation(PVD, FD);
-      else if (const auto *G = EscapeTarget.dyn_cast<const VarDecl *>())
-        SemaHelper->reportNoescapeViolation(PVD, G);
+    for (auto [PVD, OEF] : NoescapeWarningsMap) {
+      if (const auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+        SemaHelper->reportNoescapeViolation(PVD, ReturnEsc->getReturnExpr());
+      else if (const auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+        SemaHelper->reportNoescapeViolation(PVD, FieldEsc->getFieldDecl());
+      else if (const auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
+        SemaHelper->reportNoescapeViolation(PVD, GlobalEsc->getGlobal());
+      else if (const auto *CallEsc = dyn_cast<CallEscapeFact>(OEF))
+        SemaHelper->reportNoescapeViolationThroughCall(PVD, CallEsc->getCall());
       else
-        llvm_unreachable("Unhandled EscapingTarget type");
+        llvm_unreachable("Unhandled escape fact kind");
     }
   }
 

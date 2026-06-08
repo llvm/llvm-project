@@ -118,6 +118,11 @@ public:
   // assignment to a global variable
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const VarDecl *EscapeGlobal) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes through
+  // a function call.
+  virtual void
+  reportNoescapeViolationThroughCall(const ParmVarDecl *ParmWithNoescape,
+                                     const Expr *EscapeCall) {}
 
   // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
   // through return.
