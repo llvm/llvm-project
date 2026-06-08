@@ -1165,8 +1165,7 @@ public:
 
       // For BindingDecls, also store by name for remapped lookup.
       if (const auto *BD = dyn_cast<BindingDecl>(LocalVD))
-        CGF.OMPPrivatizedBindingsByName.insert_or_assign(BD->getName(),
-                                                         TempAddr);
+        CGF.OMPPrivatizedBindings.insert_or_assign(BD, TempAddr);
 
       // Only save it once.
       if (SavedLocals.count(LocalVD))
@@ -1228,12 +1227,12 @@ public:
     OMPMapVars MappedVars;
     OMPPrivateScope(const OMPPrivateScope &) = delete;
     void operator=(const OMPPrivateScope &) = delete;
-    llvm::StringMap<std::optional<Address>> SavedBindingsByName;
+    llvm::DenseMap<const BindingDecl*, Address> SavedBindings;
 
   public:
     /// Enter a new OpenMP private scope.
     explicit OMPPrivateScope(CodeGenFunction &CGF) : RunCleanupsScope(CGF) {
-      SavedBindingsByName = CGF.OMPPrivatizedBindingsByName;
+      SavedBindings = CGF.OMPPrivatizedBindings;
     }
 
     /// Registers \p LocalVD variable as a private with \p Addr as the address
@@ -1265,7 +1264,7 @@ public:
     ~OMPPrivateScope() {
       if (PerformCleanup)
         ForceCleanup();
-      CGF.OMPPrivatizedBindingsByName = std::move(SavedBindingsByName);
+      CGF.OMPPrivatizedBindings = std::move(SavedBindings);
     }
 
     /// Checks if the global variable is captured in current function.
@@ -1576,7 +1575,7 @@ private:
   /// Name-based lookup map for privatized BindingDecls.
   /// Used when BindingDecls are remapped during OpenMP outlining, since the
   /// remapped BindingDecl has a different pointer than the original.
-  llvm::StringMap<std::optional<Address>> OMPPrivatizedBindingsByName;
+  llvm::DenseMap<const BindingDecl *, Address> OMPPrivatizedBindings;
 
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
