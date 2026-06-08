@@ -258,11 +258,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     // FIXME: remove when multiset is made constexpr
     test_node_container<std::multiset<int> >([](int i) { return i; });
-
-    // FIXME: remove when multimap is made constexpr
-    test_node_container<std::multimap<int, int> >([](int i) { return std::make_pair(i, i); });
   }
   test_node_container<std::map<int, int> >([](int i) { return std::make_pair(i, i); });
+  test_node_container<std::multimap<int, int> >([](int i) { return std::make_pair(i, i); });
 
   if (!TEST_IS_CONSTANT_EVALUATED) {
     // FIXME: remove when set is made constexpr
