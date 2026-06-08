@@ -180,7 +180,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (WantsCooperativeMultithreading(ToolChain.getTriple(), Args))
-    CmdArgs.push_back("--cooperative-multithreading");
+    CmdArgs.push_back("--cooperative-threading");
 
   if (WantsSharedMemory(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");

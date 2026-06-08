@@ -561,8 +561,8 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
-  ctx.arg.cooperativeMultithreading =
-      args.hasArg(OPT_cooperative_multithreading);
+  ctx.arg.cooperativeThreading =
+      args.hasArg(OPT_cooperative_threading);
   ;
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
@@ -757,10 +757,10 @@ static void setConfigs() {
   if (!ctx.arg.memoryExport.has_value() && !ctx.arg.memoryImport.has_value()) {
     ctx.arg.memoryExport = memoryName;
   }
-  if (ctx.arg.cooperativeMultithreading) {
+  if (ctx.arg.cooperativeThreading) {
     if (ctx.arg.sharedMemory)
       error(
-          "--cooperative-multithreading is incompatible with --shared-memory");
+          "--cooperative-threading is incompatible with --shared-memory");
     ctx.arg.libcallThreadContext = true;
   }
 }

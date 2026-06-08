@@ -650,7 +650,7 @@ void Writer::populateTargetFeatures() {
                  sym->importModule && sym->importModule == "env";
         }))
       error(fileName + ": object file uses globals for thread context, "
-                       "but --cooperative-multithreading was specified");
+                       "but --cooperative-threading was specified");
   }
 
   if (inferFeatures)
@@ -1060,7 +1060,7 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   // TLS segments, so that they can be reused, and for .bss segments, which
   // don't need to be included in the binary at all.
   bool needsPassiveInit =
-      ctx.arg.sharedMemory || (ctx.arg.cooperativeMultithreading &&
+      ctx.arg.sharedMemory || (ctx.arg.cooperativeThreading &&
                                (s->isTLS() || s->name.starts_with(".bss")));
   if (needsPassiveInit)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;

@@ -1,15 +1,15 @@
-# Test that --cooperative-multithreading uses the libcall ABI naming for
+# Test that --cooperative-threading uses the libcall ABI naming for
 # thread-context globals (__init_stack_pointer, __init_tls_base, etc.) and
 # works without --shared-memory and atomics.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld --cooperative-multithreading -no-gc-sections -o %t.wasm %t.o
+# RUN: wasm-ld --cooperative-threading -no-gc-sections -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-print-imm-hex --no-show-raw-insn %t.wasm | FileCheck %s --check-prefix=DIS
 
-# Test that --cooperative-multithreading and --shared-memory are mutually exclusive.
-# RUN: not wasm-ld --cooperative-multithreading --shared-memory %t.o -o %t2.wasm 2>&1 | FileCheck %s --check-prefix=INCOMPAT
-# INCOMPAT: --cooperative-multithreading is incompatible with --shared-memory
+# Test that --cooperative-threading and --shared-memory are mutually exclusive.
+# RUN: not wasm-ld --cooperative-threading --shared-memory %t.o -o %t2.wasm 2>&1 | FileCheck %s --check-prefix=INCOMPAT
+# INCOMPAT: --cooperative-threading is incompatible with --shared-memory
 
 .globl         __wasm_get_tls_base
 __wasm_get_tls_base:
