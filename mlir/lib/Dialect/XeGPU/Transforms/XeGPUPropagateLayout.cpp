@@ -980,25 +980,24 @@ void LayoutInfoPropagation::visitStoreNdOp(
     if (!blockWHC)
       store.emitWarning("No known block params found for the element type.");
     auto [bWidth, bHeight, bCount] = blockWHC.value();
-    SmallVector<int> instData;
+    // Default to 1 for any leading batch dims; rank-1 and rank>=2 cases
+    // overwrite the trailing entries below.
+    SmallVector<int> instData(dataTy.getRank(), 1);
     int instWidth = xegpu::getLargestDivisor(
         static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth);
     if (instWidth == -1)
       store.emitWarning(
           "No suitable instruction multiple found for the given shape.");
-    if (dataTy.getRank() == 1)
+    if (dataTy.getRank() == 1) {
       instData = {instWidth};
-    else {
+    } else {
       int instHeight = xegpu::getLargestDivisor(
           static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 2)), bHeight);
       if (instHeight == -1)
         store.emitWarning(
             "No suitable instruction multiple found for the given shape.");
-      // For rank > 2, prepend unit dims for batch dimensions.
-      for (int64_t d = 0; d < dataTy.getRank() - 2; ++d)
-        instData.push_back(1);
-      instData.push_back(instHeight);
-      instData.push_back(instWidth);
+      instData[dataTy.getRank() - 2] = instHeight;
+      instData[dataTy.getRank() - 1] = instWidth;
     }
 
     if (layoutKind == xegpu::LayoutKind::InstData)

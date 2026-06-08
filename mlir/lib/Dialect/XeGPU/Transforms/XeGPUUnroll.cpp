@@ -227,18 +227,24 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     SmallVector<Value> newOps;
     for (SmallVector<int64_t> batchOffsets :
          StaticTileOffsetRange(shape, batchBlockSize)) {
-      SmallVector<OpFoldResult> svOffsets;
+      // Build memref.subview operands. The subview slices contiguously along
+      // each batch dimension (no gaps), so the subview's element stride is 1
+      // for every dim. This is unrelated to the source memref's strides, which
+      // describe the layout of the original buffer and are propagated by the
+      // SubViewOp builder onto the resulting memref type.
+      SmallVector<OpFoldResult> subviewOffsets;
       for (int64_t off : batchOffsets)
-        svOffsets.push_back(rewriter.getIndexAttr(off));
+        subviewOffsets.push_back(rewriter.getIndexAttr(off));
 
-      SmallVector<OpFoldResult> svSizes;
+      SmallVector<OpFoldResult> subviewSizes;
       for (int64_t d : batchBlockSize)
-        svSizes.push_back(rewriter.getIndexAttr(d));
+        subviewSizes.push_back(rewriter.getIndexAttr(d));
 
-      SmallVector<OpFoldResult> svStrides(rank, rewriter.getIndexAttr(1));
+      SmallVector<OpFoldResult> subviewStrides(rank, rewriter.getIndexAttr(1));
 
       auto subview = memref::SubViewOp::create(rewriter, loc, op.getSource(),
-                                               svOffsets, svSizes, svStrides);
+                                               subviewOffsets, subviewSizes,
+                                               subviewStrides);
 
       auto newOp = xegpu::CreateNdDescOp::create(
           rewriter, loc, newTdescTy,

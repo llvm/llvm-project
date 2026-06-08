@@ -52,8 +52,8 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
     });
   };
 
-  // We only interest in the case where all inputs and outputs have the
-  // identical VectorTypes
+  // We only interest in the case where all inputs and outputs have
+  // identical VectorTypes or TensorDescTypes.
   if (!hasIdenticalVectorOrTdescTypes(inputs) ||
       !hasIdenticalVectorOrTdescTypes(outputs)) {
     LDBG() << "skip unrealized conversion cast op not emulating pack/unpack.";
@@ -79,6 +79,10 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
       castOp->erase();
     }
   } else {
+    // TensorDescType case: collapse a pack(unpack(x)) chain back to x. This
+    // happens when blocking inserts a pack cast right after an unpack cast
+    // that produced the same set of unrolled tdescs (e.g., a load consumer
+    // re-packing the tdescs that CreateNdDesc just unpacked).
     if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
       if (auto prevCastOp =
               inputs[0].getDefiningOp<UnrealizedConversionCastOp>()) {
@@ -206,7 +210,7 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
         return std::nullopt;
     }
 
-    // semantic check for A and B: K dimension must match
+    // Semantic check for A and B: K dimension must match.
     // A[..., M, K] x B[..., K, N]
     if ((*aTile).back() != (*bTile)[bBatchRank])
       return std::nullopt;
@@ -254,7 +258,7 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
       return std::nullopt;
 
     // Return the K scale factor (last dim)
-    return (*aScaleTile)[scaleRank - 1];
+    return aScaleTile->back();
   };
 
   // Helper lambda to validate scale B tile for DpasMxOp
@@ -284,7 +288,7 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
     auto [aTile, bTile] = *abTiles;
 
-    // semantic check for C
+    // Semantic check for C.
     if (!validateCTile(op, 2, aTile, bTile))
       return std::nullopt;
 
@@ -499,14 +503,13 @@ void XeGPUBlockingPass::runOnOperation() {
       xegpu::TensorDescType newTy =
           xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
                                      tdescTy.getLayoutAttr().dropInstData());
-      // compute the product of batch (higher) dimensions
+      // Compute the product of batch (higher) dimensions.
       ArrayRef<int64_t> shape = type.getShape();
       int64_t batchCount =
           shape.size() > 2 ? computeProduct(shape.drop_back(2)) : 1;
       return SmallVector<Type>(batchCount, newTy);
     }
-    Type newTy;
-    newTy = VectorType::get(tileShape, elemTy);
+    Type newTy = VectorType::get(tileShape, elemTy);
 
     std::optional<SmallVector<int64_t>> ratio =
         computeShapeRatio(type.getShape(), tileShape);
