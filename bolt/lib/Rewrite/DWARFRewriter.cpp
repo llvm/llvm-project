@@ -484,16 +484,6 @@ static void fixupDWARFRanges(DIEBuilder &DIEBlder, DWARFUnit &Unit,
         DIEBlder.replaceValue(Die, dwarf::DW_AT_ranges, RangesVal.getForm(),
                               DIEInteger(OldVal + Offset));
     }
-
-    if (Version < 5) {
-      DIEValue GnuBaseVal = Die->findAttribute(dwarf::DW_AT_GNU_ranges_base);
-      if (GnuBaseVal) {
-        uint64_t OldVal = GnuBaseVal.getDIEInteger().getValue();
-        DIEBlder.replaceValue(Die, dwarf::DW_AT_GNU_ranges_base,
-                              GnuBaseVal.getForm(),
-                              DIEInteger(OldVal + Offset));
-      }
-    }
   }
 }
 
