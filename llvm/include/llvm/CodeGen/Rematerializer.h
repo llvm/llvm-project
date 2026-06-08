@@ -14,15 +14,11 @@
 #ifndef LLVM_CODEGEN_REMATERIALIZER_H
 #define LLVM_CODEGEN_REMATERIALIZER_H
 
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include <iterator>
 
 namespace llvm {
 
@@ -185,10 +181,11 @@ public:
     virtual void rematerializerNoteRegCreated(const Rematerializer &Remater,
                                               RegisterIdx NewRegIdx) {}
 
-    /// Called juste before register \p RegIdx is deleted from the MIR. At this
+    /// Called just before register \p RegIdx is deleted from the MIR. At this
     /// point the register still exists in the MIR but no longer has any user.
-    virtual void rematerializerNoteRegDeleted(const Rematerializer &Remater,
-                                              RegisterIdx RegIdx) {}
+    virtual void
+    rematerializerNoteRegWillBeDeleted(const Rematerializer &Remater,
+                                       RegisterIdx RegIdx) {}
 
     virtual ~Listener() = default;
 
@@ -368,14 +365,12 @@ public:
                                MachineBasicBlock::iterator InsertPos,
                                SmallVectorImpl<Reg::Dependency> &&Dependencies);
 
-  /// Re-creates a previously deleted register \p RegIdx before \p InsertPos in
-  /// \p DefRegion. \p DefReg must be the original virtual register that \p
-  /// RegIdx used to define. Sets the new register's rematerializable
-  /// dependencies to \p Dependencies (these are assumed to already exist in the
-  /// MIR).
-  void recreateReg(RegisterIdx RegIdx, unsigned DefRegion,
-                   MachineBasicBlock::iterator InsertPos, Register DefReg,
-                   SmallVectorImpl<Reg::Dependency> &&Dependencies);
+  /// Re-creates a previously deleted register \p RegIdx before \p InsertPos,
+  /// which must be in the register's original defining region. \p DefReg must
+  /// be the original virtual register that \p RegIdx used to define.
+  /// Dependencies are assumed to already exist in the MIR.
+  void recreateReg(RegisterIdx RegIdx, MachineBasicBlock::iterator InsertPos,
+                   Register DefReg);
 
   /// Transfers all users of register \p FromRegIdx in region \p UseRegion to \p
   /// ToRegIdx, the latter of which must be a rematerialization of the former or
@@ -432,9 +427,9 @@ private:
       Listen->rematerializerNoteRegCreated(*this, RegIdx);
   }
 
-  void noteRegDeleted(RegisterIdx RegIdx) const {
+  void noteRegWillBeDeleted(RegisterIdx RegIdx) const {
     for (Listener *Listen : Listeners)
-      Listen->rematerializerNoteRegDeleted(*this, RegIdx);
+      Listen->rematerializerNoteRegWillBeDeleted(*this, RegIdx);
   }
 
   /// Rematerializable registers identified since the rematerializer's creation,
@@ -494,7 +489,9 @@ private:
 
   /// Deletes register \p RootIdx if it no longer has any user. If the register
   /// is deleted, recursively deletes any of its transitive rematerializable
-  /// dependencies that no longer have users as a result.
+  /// dependencies that no longer have users as a result. In case of recursive
+  /// deletion, all of a register's users are always deleted before the register
+  /// itself.
   void deleteRegIfUnused(RegisterIdx RootIdx);
 
   /// Deletes rematerializable register \p RegIdx from the DAG and relevant
@@ -516,45 +513,71 @@ public:
   void rematerializerNoteRegCreated(const Rematerializer &Remater,
                                     RegisterIdx RegIdx) override;
 
-  void rematerializerNoteRegDeleted(const Rematerializer &Remater,
-                                    RegisterIdx RegIdx) override;
+  void rematerializerNoteRegWillBeDeleted(const Rematerializer &Remater,
+                                          RegisterIdx RegIdx) override;
 
 private:
-  struct RollbackInfo {
+  struct DeadReg {
+    /// Register index.
+    RegisterIdx Idx;
     /// Original register.
     Register DefReg;
-    /// Original defining region.
-    unsigned DefRegion;
-    /// Original dependencies.
-    SmallVector<Rematerializer::Reg::Dependency, 2> Dependencies;
-    /// Position to re-create the register before in case of rollback. This
-    /// becomes invalid if it originally points to an MI that is deleted later
-    /// as a consequence of other rematerializations. In such cases \ref
-    /// NextRegIdx is guaranteed to be an actual register index from which the
-    /// rollback logic will determine a valid insert position before which to
-    /// re-create this register.
-    MachineBasicBlock::iterator InsertPos;
-    /// If \ref InsertPos points to an MI defining a rematerializable register,
-    /// stores its index. Otherwise equals \ref Rematerializer::NoReg.
-    RegisterIdx NextRegIdx;
+    /// Original definition of the register. The underlying MI no longer exist
+    /// at rollback time, but may be referenced as re-creation position for
+    /// previously deleted registers.
+    MachineInstr *DefMI;
 
-    RollbackInfo(const Rematerializer::Reg &Reg, RegisterIdx NextRegIdx);
+    DeadReg(RegisterIdx Idx, const Rematerializer &Remater)
+        : Idx(Idx), DefReg(Remater.getReg(Idx).getDefReg()),
+          DefMI(Remater.getReg(Idx).DefMI) {}
   };
 
+  /// An insertion position in the MIR. The pointer should be interpreted as:
+  /// - a MachineInstr* if the int is 0/false (insert before the MI).
+  /// - a MachineBasicBlock* if the int is 1/true (insert at the MBB's end).
+  using InsertBeforePos = PointerIntPair<void *, 1, bool>;
+
   /// Original registers that have been deleted, in order of deletion.
-  MapVector<RegisterIdx, RollbackInfo> DeadRegs;
-  /// When there are two ajacent rematerializable MIs in the original
-  /// instruction order and the later one is deleted, stores a mapping from the
-  /// earlier one's register index to the later one's register index. If the
-  /// earlier one is then deleted, this makes it possible to rematerialize it at
-  /// the correct position after the later one is re-created.
-  DenseMap<RegisterIdx, RegisterIdx> AdjacentDeletedMIs;
+  SmallVector<DeadReg> DeadRegs;
+  /// Re-creation positions for all original registers that have been deleted,
+  /// in register deletion order. A position is either a MachineInstr* that
+  /// existed in the MIR at the time the rollbacker was attached to the
+  /// rematerializer, or a MachineBasicBlock*.
+  SmallVector<InsertBeforePos> Positions;
+  /// Maps all re-creation positions that exist in \ref Positions to the indices
+  /// of elements holding that position in the vector.
+  DenseMap<InsertBeforePos, SmallDenseSet<unsigned, 1>> PosToIdx;
   /// Registers which have been rematerialized (from original index to
   /// rematerialized index).
   DenseMap<RegisterIdx, Rematerializer::RematsOf> Rematerializations;
   /// Used to block further recording of events whenver we are actively rolling
   /// back.
   bool RollingBack = false;
+
+  InsertBeforePos makePos(MachineInstr *MI) const {
+    return InsertBeforePos(MI, false);
+  }
+  InsertBeforePos makePos(MachineBasicBlock *MBB) const {
+    return InsertBeforePos(MBB, true);
+  }
+  InsertBeforePos makePos(MachineBasicBlock::iterator It,
+                          MachineBasicBlock *MBB) const {
+    if (It == MBB->end())
+      return makePos(MBB);
+    return makePos(&*It);
+  }
+
+  /// Whether \p MI would be deleted if we were to rollback later. These are MIs
+  /// defining rematerializable registers whose creation has been recorded by
+  /// the rollbacker.
+  bool isRollbackableMI(const MachineInstr &MI,
+                        const Rematerializer &Remater) const;
+
+  /// Switches all positions that point to \p MI to \p It in the \ref Positions
+  /// vector, and updates \ref PosToIdx accordingly. This is used when it
+  /// becomes known that \p MI is about to be permanently deleted from the MIR
+  /// and thus becomes an invalid re-creation position.
+  void invalidatePosition(MachineInstr *MI, MachineBasicBlock::iterator It);
 };
 
 } // namespace llvm

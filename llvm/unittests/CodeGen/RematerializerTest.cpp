@@ -698,3 +698,75 @@ TEST_F(RematerializerTest, RollbackInvalidInsertPos) {
     RollbackAndCheckOriginalOrder();
   });
 }
+
+/// Checks that rollback re-creates MIs in the correct order when the next MI
+/// after a deleted one is a rematerialization of another MI.
+TEST_F(RematerializerTest, RollbackNextPosIsRemat) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    
+  bb.1:
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+
+  bb.2:
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %1
+
+  bb.3:
+    S_NOP 0, implicit %2, implicit %3
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+    Rollbacker Rollback;
+
+    const unsigned MBB1 = 1, MBB2 = 2, MBB3 = 3;
+    const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
+
+    MachineInstr *Nop1 = &*std::prev(RW.MF.getBlockNumbered(1)->end());
+    MachineInstr *Nop2 = &*std::prev(RW.MF.getBlockNumbered(2)->end());
+    MachineInstr *Nop3 =
+        &*std::prev(std::prev(RW.MF.getBlockNumbered(3)->end()));
+
+    auto ExpectSeq = [](MachineInstr *MI, MachineInstr *ExpectedNext) {
+      MachineInstr *ActualNext = &*std::next(MI->getIterator());
+      EXPECT_EQ(ActualNext, ExpectedNext);
+    };
+
+    // This rematerialization is created right after %2, which is later
+    // rematerialized. It is *not* recorded by the rollbacker.
+    RegisterIdx RematCst0 = RW->rematerializeToRegion(Cst0, MBB1, DRI.clear());
+    ExpectSeq(RW->getReg(Cst2).DefMI, RW->getReg(RematCst0).DefMI);
+    ExpectSeq(RW->getReg(RematCst0).DefMI, Nop1);
+
+    RW->addListener(&Rollback);
+
+    // This rematerialization is created right after %3, which is later
+    // rematerialized. It is recorded by the rollbacker.
+    RegisterIdx RematCst1 = RW->rematerializeToRegion(Cst1, MBB2, DRI.clear());
+    ExpectSeq(RW->getReg(Cst3).DefMI, RW->getReg(RematCst1).DefMI);
+    ExpectSeq(RW->getReg(RematCst1).DefMI, Nop2);
+
+    RegisterIdx RematCst2 = RW->rematerializeToRegion(Cst2, MBB3, DRI.clear());
+    RegisterIdx RematCst3 = RW->rematerializeToRegion(Cst3, MBB3, DRI.clear());
+
+    ExpectSeq(RW->getReg(RematCst2).DefMI, RW->getReg(RematCst3).DefMI);
+    ExpectSeq(RW->getReg(RematCst3).DefMI, Nop3);
+
+    // After rollback, %2 and %3 should be re-created at the beginning of their
+    // respective original region.
+    Rollback.rollback(*RW);
+
+    // The rematerialization of %0 was not recorded so isn't rolled back, %2 is
+    // re-created right before it.
+    ExpectSeq(RW->getReg(Cst2).DefMI, RW->getReg(RematCst0).DefMI);
+    ExpectSeq(RW->getReg(RematCst0).DefMI, Nop1);
+
+    // The rematerialization of %1 was recorded so is rolled back, %3 is
+    // re-created before the S_NOP in its region.
+    ExpectSeq(RW->getReg(Cst3).DefMI, Nop2);
+  });
+}
