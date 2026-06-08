@@ -1514,6 +1514,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
       OS << ",\n    " << (unsigned)RC.AllocationPriority << ",\n    "
          << (RC.GlobalPriority ? "true" : "false") << ",\n    "
          << format("0x%02x", RC.TSFlags) << ", /* TSFlags */\n    "
+         << (unsigned)RC.SpillStackID << ", /* SpillStackID */\n    "
          << (RC.HasDisjunctSubRegs ? "true" : "false")
          << ", /* HasDisjunctSubRegs */\n    "
          << (RC.CoveredBySubRegs ? "true" : "false")
