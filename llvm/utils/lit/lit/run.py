@@ -16,6 +16,7 @@ WINDOWS_MAX_WORKERS_PER_POOL = 60
 def _ceilDiv(a, b):
     return (a + b - 1) // b
 
+
 class MaxFailuresError(Exception):
     pass
 
@@ -141,12 +142,11 @@ class Run:
                 pool.join()
 
     def _wait_for(self, async_results, deadline):
-        timeout = deadline - time.time()
         idx = 0
         while len(async_results) > 0:
             try:
                 ar = async_results.pop(0)
-                test = ar.get(timeout)
+                test = ar.get(deadline - time.time())
             except multiprocessing.TimeoutError:
                 raise TimeoutError()
             else:
