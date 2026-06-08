@@ -1509,8 +1509,8 @@ void UnwrappedLineParser::parseStructuralElement(
   }
   switch (FormatTok->Tok.getKind()) {
   case tok::kw_asm: {
-    // Track whether to skip formatting the inline asm block with a variable.
-    // Formatting is skipped for any asm blocks inside of braces by default.
+    // Track whether to skip formatting inline asm by finalizing the tokens
+    // in the block. Formatting is skipped inside of braces by default.
     // A style option could be added to also skip formatting inside parens.
     bool DoNotFormat = false;
     tok::TokenKind OpenType;
