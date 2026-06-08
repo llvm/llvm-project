@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:70cbd7591abe'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -96,6 +96,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang-23 \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_USE_LINKER=lld-23 \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
             -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 
@@ -127,7 +128,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:70cbd7591abe'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:

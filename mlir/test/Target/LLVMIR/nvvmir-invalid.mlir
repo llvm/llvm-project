@@ -1,12 +1,5 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
-llvm.func @kernel_func(%numberOfThreads : i32) {
-  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
-  nvvm.barrier number_of_threads = %numberOfThreads
-}
-
-// -----
-
 // expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = "foo"} {
   llvm.return

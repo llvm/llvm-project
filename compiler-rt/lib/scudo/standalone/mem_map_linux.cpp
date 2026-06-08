@@ -68,6 +68,10 @@ static void *mmapWrapper(uptr Addr, uptr Size, const char *Name, uptr Flags) {
       reportMapError(errno == ENOMEM ? Size : 0);
     return nullptr;
   }
+
+  if (Addr && reinterpret_cast<uptr>(P) != Addr)
+    reportMapFixedError(reinterpret_cast<uptr>(P), Addr);
+
 #if SCUDO_ANDROID
   if (Name)
     prctl(ANDROID_PR_SET_VMA, ANDROID_PR_SET_VMA_ANON_NAME, P, Size, Name);
@@ -108,9 +112,7 @@ void MemMapLinux::unmapImpl(uptr Addr, uptr Size) {
 bool MemMapLinux::remapImpl(uptr Addr, uptr Size, const char *Name,
                             uptr Flags) {
   void *P = mmapWrapper(Addr, Size, Name, Flags);
-  if (reinterpret_cast<uptr>(P) != Addr)
-    reportMapError();
-  return true;
+  return reinterpret_cast<uptr>(P) == Addr;
 }
 
 void MemMapLinux::setMemoryPermissionImpl(uptr Addr, uptr Size, uptr Flags) {

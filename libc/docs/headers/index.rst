@@ -24,6 +24,7 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
+   netinet/tcp
    nl_types
    poll
    pwd

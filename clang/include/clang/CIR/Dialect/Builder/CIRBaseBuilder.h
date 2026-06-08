@@ -127,9 +127,12 @@ public:
       return getNullDataMemberAttr(dataMemberTy);
     if (auto methodTy = mlir::dyn_cast<cir::MethodType>(ty))
       return getNullMethodAttr(methodTy);
+    if (auto vptrTy = mlir::dyn_cast<cir::VPtrType>(ty))
+      return cir::ZeroAttr::get(vptrTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
+
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 
@@ -219,6 +222,10 @@ public:
     if (auto complexResultType = mlir::dyn_cast<cir::ComplexType>(resultType))
       resultType = complexResultType.getElementType();
     return cir::ComplexImagOp::create(*this, loc, resultType, operand);
+  }
+
+  mlir::Value createComplexConj(mlir::Location loc, mlir::Value operand) {
+    return cir::ComplexConjOp::create(*this, loc, operand.getType(), operand);
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
@@ -513,6 +520,15 @@ public:
     return createCast(src.getLoc(), kind, src, newTy);
   }
 
+  // Creates a cast from bool or int to an integer type.
+  mlir::Value createBoolIntToIntCast(mlir::Value src, mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
+    if (src.getType() == getBoolTy())
+      return createBoolToInt(src, newTy);
+    return createIntCast(src, newTy);
+  }
+
   mlir::Value createIntCast(mlir::Value src, mlir::Type newTy) {
     return createCast(cir::CastKind::integral, src, newTy);
   }
@@ -688,6 +704,50 @@ public:
 
   mlir::Value createRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return cir::RemOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FAddOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FSubOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FMulOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FDivOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FRemOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createFNeg(mlir::Location loc, mlir::Value operand) {
+    assert(cir::isFPOrVectorOfFPType(operand.getType()) &&
+           "expected floating-point or vector-of-float type");
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return cir::FNegOp::create(*this, loc, operand);
   }
 
   mlir::Value createXor(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {

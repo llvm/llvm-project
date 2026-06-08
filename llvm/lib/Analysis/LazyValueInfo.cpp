@@ -14,7 +14,6 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -23,6 +22,7 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -856,26 +856,24 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
       continue;
 
     if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[AssumeVH.Index])) {
-        if (RK.WasOn != Val)
-          continue;
-        switch (RK.AttrKind) {
-        case Attribute::NonNull:
+      auto OBU = I->getOperandBundleAt(AssumeVH.Index);
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::NonNull:
+        assert(getAssumeNonNullInfo(OBU).Ptr == Val);
+        BBLV = BBLV.intersect(ValueLatticeElement::getNot(
+            Constant::getNullValue(Val->getType())));
+        break;
+
+      case BundleAttr::Dereferenceable: {
+        auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
+        assert(Ptr == Val);
+        if (auto *CI = dyn_cast<ConstantInt>(Count); CI && !CI->isZero())
           BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-              Constant::getNullValue(RK.WasOn->getType())));
-          break;
+              Constant::getNullValue(Val->getType())));
+      } break;
 
-        case Attribute::Dereferenceable:
-          if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
-              CI && !CI->isZero())
-            BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-                Constant::getNullValue(RK.WasOn->getType())));
-          break;
-
-        default:
-          break;
-        }
+      default:
+        break;
       }
     } else {
       BBLV = BBLV.intersect(*getValueFromCondition(Val, I->getArgOperand(0),

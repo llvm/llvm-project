@@ -38,6 +38,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
@@ -704,21 +705,19 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
   // Helper to check if there are any calls in the range that may free memory.
-  auto hasNoFreeCalls = [](auto Range) {
+  auto hasNoFreeInRange = [](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
+
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (!CB->hasFnAttr(Attribute::NoFree))
           return false;
+      } else if (I.maySynchronize())
+        return false;
     }
     return true;
   };
-
-  // Make sure the current function cannot arrange for another thread to free on
-  // its behalf.
-  if (!CtxI->getFunction()->hasNoSync())
-    return false;
 
   // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
@@ -728,19 +727,19 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
 
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
+    if (!hasNoFreeInRange(make_range(CtxBB->begin(), CtxIter)))
       return false;
 
     CtxIter = AssumeBB->end();
   } else {
     // Same block case: check that Assume comes before CtxI.
-    if (!Assume->comesBefore(CtxI))
+    if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
   }
 
   // Check if there are any calls between Assume and CtxIter that may free
   // memory.
-  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
+  return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -829,32 +828,30 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (!V->getType()->isPointerTy())
-        continue;
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[Elem.Index])) {
-        if (RK.WasOn != V)
-          continue;
-        bool AssumeImpliesNonNull = [&]() {
-          if (RK.AttrKind == Attribute::NonNull)
-            return true;
+      bool AssumeImpliesNonNull = [&]() {
+        auto OBU = I->getOperandBundleAt(Elem.Index);
+        switch (getBundleAttrFromOBU(OBU)) {
+        case BundleAttr::Dereferenceable: {
+          auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
+          assert(Ptr == V);
+          if (NullPointerIsDefined(Q.CxtI->getFunction(),
+                                   V->getType()->getPointerAddressSpace()))
+            return false;
 
-          if (RK.AttrKind == Attribute::Dereferenceable) {
-            if (NullPointerIsDefined(Q.CxtI->getFunction(),
-                                     V->getType()->getPointerAddressSpace()))
-              return false;
-            assert(RK.IRArgValue &&
-                   "Dereferenceable attribute without IR argument?");
+          auto *CI = dyn_cast<ConstantInt>(Count);
+          return CI && !CI->isZero();
+        }
 
-            auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
-            return CI && !CI->isZero();
-          }
-
-          return false;
-        }();
-        if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q))
+        case BundleAttr::NonNull:
+          assert(getAssumeNonNullInfo(OBU).Ptr == V);
           return true;
-      }
+
+        default:
+          return false;
+        }
+      }();
+      if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q))
+        return true;
       continue;
     }
 
@@ -1090,13 +1087,15 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (!V->getType()->isPointerTy())
-        continue;
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[Elem.Index])) {
-        if (RK.WasOn == V && RK.AttrKind == Attribute::Alignment &&
-            isPowerOf2_64(RK.ArgValue) && isValidAssumeForContext(I, Q))
-          Known.Zero.setLowBits(Log2_64(RK.ArgValue));
+      if (auto OBU = I->getOperandBundleAt(Elem.Index);
+          getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
+        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+        assert(Ptr == V);
+        if (!Alignment || !Offset || !isPowerOf2_64(*Alignment))
+          continue;
+        auto AlignVal = MinAlign(*Offset, *Alignment);
+        if (isValidAssumeForContext(I, Q))
+          Known.Zero.setLowBits(Log2_64(AlignVal));
       }
       continue;
     }
@@ -9204,10 +9203,9 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(
-      CmpI, TrueVal, FalseVal, LHS, RHS,
-      isa<FPMathOperator>(SI) ? SI->getFastMathFlags() : FastMathFlags(),
-      CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
+                                            SI->getFastMathFlagsOrNone(),
+                                            CastOp, Depth);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(
