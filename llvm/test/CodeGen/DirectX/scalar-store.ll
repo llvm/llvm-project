@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
+; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library -o - | FileCheck %s
 
 ; Make sure we can store groupshared, static vectors and arrays of vectors
 

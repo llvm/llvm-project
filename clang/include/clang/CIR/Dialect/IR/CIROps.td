@@ -358,7 +358,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let results = (outs
-    CIR_PtrToAnyOf<[CIR_VoidType, CIR_RecordType]>:$result
+    CIR_PtrToAnyOf<[CIR_VoidType, CIR_StructType, CIR_UnionType]>:$result
   );
 
   let assemblyFormat = [{
@@ -819,6 +819,16 @@ def CIR_StoreOp : CIR_Op<"store", [
     (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
+
+  let builders = [
+    // Non-volatile, non-atomic store with default alignment.
+    OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$addr), [{
+      build($_builder, $_state, value, addr, /*is_volatile=*/mlir::UnitAttr(),
+            /*alignment=*/mlir::IntegerAttr(),
+            /*sync_scope=*/cir::SyncScopeKindAttr(),
+            /*mem_order=*/cir::MemOrderAttr());
+    }]>
+  ];
 
   // FIXME: add verifier.
 }
@@ -1858,8 +1868,9 @@ class CIR_UnaryOpWithOverflowFlag<string mnemonic, Type type,
 // IncOp
 //===----------------------------------------------------------------------===//
 
-def CIR_IncOp : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyType> {
-  let summary = "Increment by one";
+def CIR_IncOp
+    : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Increment an integer by one";
   let description = [{
     The `cir.inc` operation increments the operand by one. The operand and
     result must have the same type.
@@ -1882,8 +1893,9 @@ def CIR_IncOp : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyType> {
 // DecOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DecOp : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyType> {
-  let summary = "Decrement by one";
+def CIR_DecOp
+    : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Decrement an integer by one";
   let description = [{
     The `cir.dec` operation decrements the operand by one. The operand and
     result must have the same type.
@@ -1906,8 +1918,9 @@ def CIR_DecOp : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyType> {
 // MinusOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
-  let summary = "Unary minus (negation)";
+def CIR_MinusOp
+    : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Integer unary minus (negation)";
   let description = [{
     The `cir.minus` operation negates the operand. The operand and result
     must have the same type.
@@ -1921,7 +1934,6 @@ def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
     ```
     %1 = cir.minus %0 : !s32i
     %3 = cir.minus nsw %2 : !s32i
-    %5 = cir.minus %4 : !cir.float
     ```
   }];
 
@@ -1932,7 +1944,7 @@ def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
 // NotOp
 //===----------------------------------------------------------------------===//
 
-def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyType, [Involution]> {
+def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyBitwiseType, [Involution]> {
   let summary = "Bitwise NOT / logical NOT";
   let description = [{
     The `cir.not` operation performs a bitwise NOT on integer types or a
@@ -1948,6 +1960,30 @@ def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyType, [Involution]> {
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// FNegOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
+  let summary = "Floating-point negation";
+  let description = [{
+    The `cir.fneg` operation negates the operand. The operand and result must
+    have the same type.
+
+    Example:
+
+    ```
+    %1 = cir.fneg %0 : !cir.float
+    %3 = cir.fneg %2 : !cir.double
+    %5 = cir.fneg %4 : !cir.vector<4 x !cir.float>
+    ```
+  }];
+
+  let hasFolder = 1;
+
+  let llvmOp = "FNegOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2420,18 +2456,20 @@ class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
 // AddOp
 //===----------------------------------------------------------------------===//
 
-def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType> {
-  let summary = "Integer or floating-point addition";
+def CIR_AddOp
+    : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Integer addition";
   let description = [{
-    The `cir.add` operation performs addition on integer or floating-point
-    operands. Both operands and the result must have the same type.
+    The `cir.add` operation performs addition on integer operands. Both
+    operands and the result must have the same integer or vector-of-integer
+    type.
 
-    For integer types, the optional `nsw` (no signed wrap) and `nuw` (no
-    unsigned wrap) unit attributes indicate that the result is poison if signed
-    or unsigned overflow occurs, respectively. The optional `sat` (saturated)
-    attribute clamps the result to the type's representable range instead of
-    wrapping. The `nsw`/`nuw` flags and `sat` are mutually exclusive.
-    
+    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
+    attributes indicate that the result is poison if signed or unsigned
+    overflow occurs, respectively. The optional `sat` (saturated) attribute
+    clamps the result to the type's representable range instead of wrapping.
+    The `nsw`/`nuw` flags and `sat` are mutually exclusive.
+
     Example:
 
     ```
@@ -2439,7 +2477,7 @@ def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType> {
     %1 = cir.add nsw %a, %b : !s32i
     %2 = cir.add nuw %a, %b : !u32i
     %3 = cir.add sat %a, %b : !s32i
-    %4 = cir.add %a, %b : !cir.float
+    %4 = cir.add %va, %vb : !cir.vector<4 x !s32i>
     ```
   }];
 }
@@ -2448,25 +2486,27 @@ def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType> {
 // SubOp
 //===----------------------------------------------------------------------===//
 
-def CIR_SubOp : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyArithType> {
-  let summary = "Integer or floating-point subtraction";
+def CIR_SubOp
+    : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Integer subtraction";
   let description = [{
-    The `cir.sub` operation performs subtraction on integer or floating-point
-    operands. Both operands and the result must have the same type.
+    The `cir.sub` operation performs subtraction on integer operands. Both
+    operands and the result must have the same integer or vector-of-integer
+    type.
 
-    For integer types, the optional `nsw` (no signed wrap) and `nuw` (no
-    unsigned wrap) unit attributes indicate that the result is poison if signed
-    or unsigned overflow occurs, respectively. The optional `sat` (saturated)
-    attribute clamps the result to the type's representable range. The
-    `nsw`/`nuw` flags and `sat` are mutually exclusive.
-    
+    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
+    attributes indicate that the result is poison if signed or unsigned
+    overflow occurs, respectively. The optional `sat` (saturated) attribute
+    clamps the result to the type's representable range. The `nsw`/`nuw`
+    flags and `sat` are mutually exclusive.
+
     Example:
 
     ```
     %0 = cir.sub %a, %b : !s32i
     %1 = cir.sub nsw %a, %b : !s32i
     %2 = cir.sub sat %a, %b : !s32i
-    %3 = cir.sub %a, %b : !cir.float
+    %3 = cir.sub %va, %vb : !cir.vector<4 x !s32i>
     ```
   }];
 }
@@ -2475,15 +2515,16 @@ def CIR_SubOp : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyArithType> {
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType> {
-  let summary = "Integer or floating-point multiplication";
+def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Integer multiplication";
   let description = [{
-    The `cir.mul` operation performs multiplication on integer or floating-point
-    operands. Both operands and the result must have the same type.
+    The `cir.mul` operation performs multiplication on integer operands. Both
+    operands and the result must have the same integer or vector-of-integer
+    type.
 
-    For integer types, the optional `nsw` (no signed wrap) and `nuw` (no
-    unsigned wrap) unit attributes indicate that the result is poison if signed
-    or unsigned overflow occurs, respectively.
+    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
+    attributes indicate that the result is poison if signed or unsigned
+    overflow occurs, respectively.
 
     Example:
 
@@ -2491,12 +2532,12 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType> {
     %0 = cir.mul %a, %b : !s32i
     %1 = cir.mul nsw %a, %b : !s32i
     %2 = cir.mul nuw %a, %b : !u32i
-    %3 = cir.mul %a, %b : !cir.float
+    %3 = cir.mul %va, %vb : !cir.vector<4 x !s32i>
     ```
   }];
-  
+
   let arguments = (ins
-    CIR_AnyArithType:$lhs, CIR_AnyArithType:$rhs,
+    CIR_AnyIntOrVecOfIntType:$lhs, CIR_AnyIntOrVecOfIntType:$rhs,
     UnitProp:$no_signed_wrap,
     UnitProp:$no_unsigned_wrap
   );
@@ -2506,26 +2547,25 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType> {
     (`nuw` $no_unsigned_wrap^)?
     $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // DivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyArithType> {
-  let summary = "Integer or floating-point division";
+def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Integer division";
   let description = [{
-    The `cir.div` operation performs division on integer or floating-point
-    operands. Both operands and the result must have the same type.
+    The `cir.div` operation performs division on integer operands. Both
+    operands and the result must have the same integer or vector-of-integer
+    type.
 
     Example:
 
     ```
     %0 = cir.div %a, %b : !s32i
     %1 = cir.div %a, %b : !u32i
-    %2 = cir.div %a, %b : !cir.float
+    %2 = cir.div %va, %vb : !cir.vector<4 x !s32i>
     ```
   }];
 }
@@ -2534,21 +2574,146 @@ def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyArithType> {
 // RemOp
 //===----------------------------------------------------------------------===//
 
-def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyArithType> {
-  let summary = "Integer or floating-point remainder";
+def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Integer remainder";
   let description = [{
-    The `cir.rem` operation computes the remainder of division on integer or
-    floating-point operands. Both operands and the result must have the same
-    type.
-    
+    The `cir.rem` operation computes the remainder of division on integer
+    operands. Both operands and the result must have the same integer or
+    vector-of-integer type.
+
     Example:
 
     ```
     %0 = cir.rem %a, %b : !s32i
     %1 = cir.rem %a, %b : !u32i
-    %2 = cir.rem %a, %b : !cir.float
+    %2 = cir.rem %va, %vb : !cir.vector<4 x !s32i>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Floating-Point Binary Arithmetic Operations
+//===----------------------------------------------------------------------===//
+
+// Base class for floating-point binary arithmetic operations. The lhs, rhs,
+// and result must all be the same floating-point scalar or vector type.
+class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
+    : CIR_BinaryOp<mnemonic, CIR_AnyFloatOrVecOfFloatType,
+                   !listconcat([Pure], traits)>;
+
+//===----------------------------------------------------------------------===//
+// FAddOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FAddOp : CIR_FPBinaryOp<"fadd"> {
+  let summary = "Floating-point addition";
+  let description = [{
+    The `cir.fadd` operation performs floating-point addition on its operands.
+    Both operands and the result must have the same floating-point scalar or
+    vector-of-float type.
+
+    Example:
+
+    ```
+    %0 = cir.fadd %a, %b : !cir.float
+    %1 = cir.fadd %a, %b : !cir.double
+    %2 = cir.fadd %va, %vb : !cir.vector<4 x !cir.float>
+    ```
+  }];
+
+  let llvmOp = "FAddOp";
+}
+
+//===----------------------------------------------------------------------===//
+// FSubOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
+  let summary = "Floating-point subtraction";
+  let description = [{
+    The `cir.fsub` operation performs floating-point subtraction on its
+    operands. Both operands and the result must have the same floating-point
+    scalar or vector-of-float type.
+
+    Example:
+
+    ```
+    %0 = cir.fsub %a, %b : !cir.float
+    %1 = cir.fsub %a, %b : !cir.double
+    %2 = cir.fsub %va, %vb : !cir.vector<4 x !cir.float>
+    ```
+  }];
+
+  let llvmOp = "FSubOp";
+}
+
+//===----------------------------------------------------------------------===//
+// FMulOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FMulOp : CIR_FPBinaryOp<"fmul"> {
+  let summary = "Floating-point multiplication";
+  let description = [{
+    The `cir.fmul` operation performs floating-point multiplication on its
+    operands. Both operands and the result must have the same floating-point
+    scalar or vector-of-float type.
+
+    Example:
+
+    ```
+    %0 = cir.fmul %a, %b : !cir.float
+    %1 = cir.fmul %a, %b : !cir.double
+    %2 = cir.fmul %va, %vb : !cir.vector<4 x !cir.float>
+    ```
+  }];
+
+  let llvmOp = "FMulOp";
+}
+
+//===----------------------------------------------------------------------===//
+// FDivOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FDivOp : CIR_FPBinaryOp<"fdiv"> {
+  let summary = "Floating-point division";
+  let description = [{
+    The `cir.fdiv` operation performs floating-point division on its operands.
+    Both operands and the result must have the same floating-point scalar or
+    vector-of-float type.
+
+    Example:
+
+    ```
+    %0 = cir.fdiv %a, %b : !cir.float
+    %1 = cir.fdiv %a, %b : !cir.double
+    %2 = cir.fdiv %va, %vb : !cir.vector<4 x !cir.float>
+    ```
+  }];
+
+  let llvmOp = "FDivOp";
+}
+
+//===----------------------------------------------------------------------===//
+// FRemOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FRemOp : CIR_FPBinaryOp<"frem"> {
+  let summary = "Floating-point remainder";
+  let description = [{
+    The `cir.frem` operation computes the floating-point remainder of its
+    operands. Both operands and the result must have the same floating-point
+    scalar or vector-of-float type.
+
+    Example:
+
+    ```
+    %0 = cir.frem %a, %b : !cir.float
+    %1 = cir.frem %a, %b : !cir.double
+    %2 = cir.frem %va, %vb : !cir.vector<4 x !cir.float>
+    ```
+  }];
+
+  let llvmOp = "FRemOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4420,7 +4585,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
     /// record type. Otherwise returns the full type size.
     unsigned getCopySizeInBytes(const mlir::DataLayout &dl) {
       if (getSkipTailPadding())
-        return mlir::cast<cir::RecordType>(getType().getPointee())
+        return mlir::cast<cir::StructType>(getType().getPointee())
             .computeStructDataSize(dl);
       return dl.getTypeSize(getType().getPointee());
     }
@@ -4668,6 +4833,84 @@ def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
 
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+}
+
+//===----------------------------------------------------------------------===//
+// LifetimeStartOp & LifetimeEndOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LifetimeStartOp : CIR_Op<"lifetime.start"> {
+  let summary = "Marks the start of the lifetime of a variable produced by a cir.alloca operation";
+  let description = [{
+    The `cir.lifetime.start` operation marks the beginning of the lifetime
+    of the storage pointed to by `$ptr`. Between this operation and a
+    matching `cir.lifetime.end` on the same pointer, the underlying storage
+    is considered live; outside that range it is considered dead, and the
+    optimizer is free to reuse the storage for other purposes.
+
+    The `cir.scope` is the operation that models the block scope of the C/C++
+    source. Once ClangIR is no longer structured, `cir.scope` can no longer express
+    the lifetime of a local variable. This happens, for example, after `FlattenCFG`,
+    where `cir.scope` regions are dissolved into plain basic blocks, or after
+    `HoistAllocas`, where an alloca is moved to the function entry so that its
+    position no longer reflects the scope it was declared in. In that form, these
+    lifetime markers are what delimit the beginning and end of a variable's
+    lifetime.
+
+    The verifier requires `$ptr` to be produced by a `cir.alloca`. For the
+    lifetime to be meaningful, a matching `cir.lifetime.end` on the same
+    pointer should follow on every control-flow path. This is different from
+    LLVM, where an `llvm.lifetime.start` may appear without a matching
+    `llvm.lifetime.end` -- there the storage is also implicitly marked dead
+    when the function returns (see the
+    [LLVM LangRef](https://llvm.org/docs/LangRef.html#int-lifestart)).
+
+    This operation corresponds to the LLVM intrinsic `llvm.lifetime.start`.
+
+    Example:
+    ```
+    cir.lifetime.start %ptr : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+  let hasVerifier = 1;
+}
+
+def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
+  let summary = "Marks the end of the lifetime of a variable produced by a cir.alloca operation";
+  let description = [{
+    The `cir.lifetime.end` operation marks the end of the lifetime of the
+    storage pointed to by `$ptr`. After this operation the underlying storage
+    is considered dead, and the optimizer is free to reuse the storage for
+    other purposes, until a subsequent `cir.lifetime.start` on the same
+    pointer revives it.
+
+    The `cir.scope` is the operation that models the block scope of the C/C++
+    source. Once ClangIR is no longer structured, `cir.scope` can no longer express
+    the lifetime of a local variable. This happens, for example, after `FlattenCFG`,
+    where `cir.scope` regions are dissolved into plain basic blocks, or after
+    `HoistAllocas`, where an alloca is moved to the function entry so that its
+    position no longer reflects the scope it was declared in. In that form, these
+    lifetime markers are what delimit the beginning and end of a variable's
+    lifetime.
+
+    The verifier requires `$ptr` to be produced by a `cir.alloca`.
+    `cir.lifetime.end` should be preceded by a matching `cir.lifetime.start` on
+    the same pointer on every control-flow path that reaches it.
+
+    This operation corresponds to the LLVM intrinsic `llvm.lifetime.end`.
+
+    Example:
+    ```
+    cir.lifetime.end %ptr : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5843,6 +6086,34 @@ def CIR_ComplexDivOp : CIR_ComplexRangeBinOp<"complex.div"> {
     %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexConjOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ComplexConjOp
+    : CIR_Op<"complex.conj", [Pure, SameOperandsAndResultType]> {
+  let summary = "Complex conjugate";
+  let description = [{
+    The `cir.complex.conj` operation takes a complex number and returns its
+    complex conjugate, which is formed by negating the imaginary part.
+
+    Example:
+
+    ```
+    %1 = cir.complex.conj %0 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_ComplexType:$operand);
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//

@@ -156,6 +156,7 @@ private:
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
+  bool foldBitcastOfVPLoad(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -1756,6 +1757,10 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
     ReductionIID = Intrinsic::vector_reduce_add;
   if (ReductionIID == Intrinsic::not_intrinsic)
     return false;
+  // FP reductions have a start-value operand that this fold doesn't handle.
+  if (ReductionIID == Intrinsic::vector_reduce_fadd ||
+      ReductionIID == Intrinsic::vector_reduce_fmul)
+    return false;
 
   auto checkIntrinsicAndGetItsArgument = [](Value *V,
                                             Intrinsic::ID IID) -> Value * {
@@ -2015,7 +2020,10 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
 
   auto *LI = cast<LoadInst>(&I);
   auto *VecTy = cast<VectorType>(LI->getType());
-  if (LI->isVolatile() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
+
+  // The isSimple() check could be isUnordered(), but for now we cowardly
+  // refuse to handle even unordered atomics.
+  if (!LI->isSimple() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
   bool AllExtracts = true;
@@ -3022,8 +3030,11 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
     }
   }
 
-  if (!NewX)
-    return PoisonValue::get(ShuffleDstTy);
+  if (!NewX) {
+    replaceValue(I, *PoisonValue::get(ShuffleDstTy));
+    return true;
+  }
+
   if (!NewY)
     NewY = PoisonValue::get(ShuffleSrcTy);
 
@@ -3287,10 +3298,21 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   if (!isTriviallyVectorizable(IID))
     return false;
 
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI) &&
-        II0->getArgOperand(I) != II1->getArgOperand(I))
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
+    Value *Arg0 = II0->getArgOperand(I);
+    Value *Arg1 = II1->getArgOperand(I);
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
+      // Scalar operands must be identical.
+      if (Arg0 != Arg1)
+        return false;
+    } else if (Arg0->getType() != Arg1->getType()) {
+      // The corresponding vector operands are shuffled together, so they must
+      // share the same type. For intrinsics overloaded on their operand type
+      // (e.g. llvm.fptosi.sat), two calls can produce the same result type
+      // from different operand types; shuffling those would be invalid.
       return false;
+    }
+  }
 
   InstructionCost OldCost =
       CostII0 + CostII1 +
@@ -3956,6 +3978,10 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   std::optional<unsigned int> CommonCallOp = std::nullopt;
   std::optional<Instruction::BinaryOps> CommonBinOp = std::nullopt;
 
+  // For floating-point reductions, track FMF intersection across all binops.
+  FastMathFlags CommonFMF;
+  bool IsFloatReduction = false;
+
   bool IsFirstCallOrBinInst = true;
   bool ShouldBeCallOrBinInst = true;
 
@@ -3999,6 +4025,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   InstWorklist.push(VecOpEE);
 
   bool IsPartialReduction = false;
+  bool HasLaneDuplication = false;
 
   while (!InstWorklist.empty()) {
     Value *CI = InstWorklist.front();
@@ -4073,7 +4100,9 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       case BinaryOperator::Mul:
       case BinaryOperator::Or:
       case BinaryOperator::And:
-      case BinaryOperator::Xor: {
+      case BinaryOperator::Xor:
+      case BinaryOperator::FAdd:
+      case BinaryOperator::FMul: {
         auto *Op0 = BinOp->getOperand(0);
         auto *Op1 = BinOp->getOperand(1);
         PrevVecV[0] = Op0;
@@ -4083,6 +4112,20 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       default:
         return false;
       }
+
+      // For FP reductions, require reassoc on every binop and collect FMF.
+      if (*CommonBinOp == Instruction::FAdd ||
+          *CommonBinOp == Instruction::FMul) {
+        if (!BinOp->hasAllowReassoc())
+          return false;
+        if (!IsFloatReduction) {
+          CommonFMF = BinOp->getFastMathFlags();
+          IsFloatReduction = true;
+        } else {
+          CommonFMF &= BinOp->getFastMathFlags();
+        }
+      }
+
       ShouldBeCallOrBinInst ^= 1;
 
       OrigCost +=
@@ -4118,6 +4161,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       // Update mask values.
       ShuffleMaskHalf *= 2;
       ShuffleMaskHalf -= (ExpectedParityMask & 1);
+      HasLaneDuplication |= (ExpectedParityMask & 1) != 0;
       ExpectedParityMask >>= 1;
 
       OrigCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
@@ -4149,6 +4193,12 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   if (ShouldBeCallOrBinInst && !IsPartialReduction)
     return false;
 
+  // If the parity masks duplicated any lane, the fold only preserves semantics
+  // for idempotent ops.
+  if (HasLaneDuplication && CommonBinOp &&
+      !Instruction::isIdempotent(*CommonBinOp))
+    return false;
+
   assert(VecSize != -1 && "Expected Match for Vector Size");
 
   Value *FinalVecV = PrevVecV[0];
@@ -4177,7 +4227,12 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
                                   CostKind, 0, ReduceVecTy);
   }
 
-  IntrinsicCostAttributes ICA(ReducedOp, ReduceVecTy, {ReduceVecTy});
+  IntrinsicCostAttributes ICA(
+      ReducedOp, ReduceVecTy->getElementType(),
+      IsFloatReduction
+          ? SmallVector<Type *, 2>{ReduceVecTy->getElementType(), ReduceVecTy}
+          : SmallVector<Type *, 2>{ReduceVecTy},
+      IsFloatReduction ? CommonFMF : FastMathFlags());
   NewCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
 
   LLVM_DEBUG(dbgs() << "Found reduction shuffle chain: " << I << "\n OldCost : "
@@ -4190,8 +4245,18 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   if (IsPartialReduction)
     ReduceInput = Builder.CreateShuffleVector(FinalVecV, ExtractMask);
 
-  auto *ReducedResult = Builder.CreateIntrinsic(
-      ReducedOp, {ReduceInput->getType()}, {ReduceInput});
+  CallInst *ReducedResult;
+  if (IsFloatReduction) {
+    Value *Identity = ConstantExpr::getBinOpIdentity(
+        *CommonBinOp, ReduceVecTy->getElementType(), /*AllowRHSConstant=*/false,
+        CommonFMF.noSignedZeros());
+    ReducedResult = Builder.CreateIntrinsic(ReducedOp, {ReduceVecTy},
+                                            {Identity, ReduceInput});
+    ReducedResult->setFastMathFlags(CommonFMF);
+  } else {
+    ReducedResult =
+        Builder.CreateIntrinsic(ReducedOp, {ReduceVecTy}, {ReduceInput});
+  }
   replaceValue(I, *ReducedResult);
 
   return true;
@@ -5823,6 +5888,64 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
+bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
+  const DataLayout &DL = I.getDataLayout();
+  auto *Cast = dyn_cast<CastInst>(&I);
+  if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
+    return false;
+
+  // Fold away bit casts of the loaded value by loading the desired type,
+  // if the mask is all-ones.
+  Value *EVL;
+  auto *II = dyn_cast<VPIntrinsic>(I.getOperand(0));
+  if (!II || !match(II, m_OneUse(m_Intrinsic<Intrinsic::vp_load>(
+                            m_Value(), m_AllOnes(), m_Value(EVL)))))
+    return false;
+
+  VectorType *OrigVecTy = cast<VectorType>(II->getType());
+  Align OrigAlign =
+      DL.getValueOrABITypeAlignment(II->getPointerAlignment(), OrigVecTy);
+  ElementCount OrigVecCnt = OrigVecTy->getElementCount();
+  VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
+  ElementCount NewVecCnt = NewVecTy->getElementCount();
+
+  // Right now we only support cases where the NewVec is longer, because for
+  // cases where it's shorter, we have to be sure that EVL can be exactly
+  // divided, otherwise it might yield incorrect results or even page faults
+  // (if we round-up during the division).
+  if (!(OrigVecCnt.isScalable() == NewVecCnt.isScalable() &&
+        NewVecCnt.hasKnownScalarFactor(OrigVecCnt)))
+    return false;
+
+  InstructionCost OldCost =
+      TTI.getMemIntrinsicInstrCost({Intrinsic::vp_load, OrigVecTy,
+                                    II->getMemoryPointerParam(), false,
+                                    OrigAlign},
+                                   CostKind) +
+      TTI.getCastInstrCost(Instruction::BitCast, Cast->getType(), OrigVecTy,
+                           TTI::CastContextHint::None, CostKind);
+  InstructionCost NewCost = TTI.getMemIntrinsicInstrCost(
+      {Intrinsic::vp_load, NewVecTy, II->getMemoryPointerParam(), false,
+       OrigAlign},
+      CostKind);
+  LLVM_DEBUG(dbgs() << "foldBitcastOfVPLoad: OldCost=" << OldCost
+                    << " NewCost=" << NewCost << "\n");
+  if (NewCost > OldCost || !NewCost.isValid())
+    return false;
+
+  unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
+  Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
+  Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
+  CallInst *NewVP =
+      Builder.CreateIntrinsic(NewVecTy, Intrinsic::vp_load,
+                              {II->getMemoryPointerParam(), NewMask, NewEVL});
+  // Preserve the original alignment.
+  NewVP->addParamAttrs(
+      0, AttrBuilder(II->getContext()).addAlignmentAttr(OrigAlign));
+  replaceValue(*Cast, *NewVP);
+  return true;
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -6101,6 +6224,8 @@ bool VectorCombine::run() {
       if (scalarizeVPIntrinsic(I))
         return true;
       if (foldInterleaveIntrinsics(I))
+        return true;
+      if (foldBitcastOfVPLoad(I))
         return true;
     }
 

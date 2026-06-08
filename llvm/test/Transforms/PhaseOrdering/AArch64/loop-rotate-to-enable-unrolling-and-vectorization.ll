@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; runtime-unrolled at -O3.
 define ptr @search_loop_unrolled(ptr %begin, ptr %end, i8 %val) {
 ; CHECK-LABEL: define ptr @search_loop_unrolled(
-; CHECK-SAME: ptr readnone captures(address) [[BEGIN:%.*]], ptr readonly captures(address, ret: address, provenance) [[END:%.*]], i8 [[VAL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readnone captures(address) [[BEGIN:%.*]], ptr nofree readonly captures(address, ret: address, provenance) [[END:%.*]], i8 [[VAL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_ENTRY:%.*]] = icmp eq ptr [[BEGIN]], [[END]]
 ; CHECK-NEXT:    [[PTR_DEC1:%.*]] = getelementptr inbounds i8, ptr [[END]], i64 -1
@@ -103,7 +103,7 @@ exit:
 
 define i64 @rotate_needed_to_vectorize(ptr noalias %scan, ptr noalias %match) {
 ; CHECK-LABEL: define i64 @rotate_needed_to_vectorize(
-; CHECK-SAME: ptr noalias readonly captures(none) [[SCAN:%.*]], ptr noalias readonly captures(none) [[MATCH:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noalias nofree readonly captures(none) [[SCAN:%.*]], ptr noalias nofree readonly captures(none) [[MATCH:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:

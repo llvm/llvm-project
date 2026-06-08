@@ -121,6 +121,77 @@ entry:
   ret void
 }
 
+define void @align_with_constant_offset_0(ptr %ptr) {
+; DEFAULT-LABEL: @align_with_constant_offset_0(
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @align_with_constant_offset_0(
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16, i64 0) ]
+; BUNDLES-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 0) ]
+  ret void
+}
+
+define void @align_with_constant_offset_1(ptr %ptr) {
+; CHECK-LABEL: @align_with_constant_offset_1(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 9
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 1) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  %ptr2 = getelementptr i8, ptr %ptr, i64 9
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8, i64 1) ]
+  ret void
+}
+
+define void @align_with_constant_offset_4(ptr %ptr) {
+; CHECK-LABEL: @align_with_constant_offset_4(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 4) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  %ptr2 = getelementptr i8, ptr %ptr, i64 4
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8, i64 4) ]
+  ret void
+}
+
+define void @align_with_constant_offset_8(ptr %ptr) {
+; DEFAULT-LABEL: @align_with_constant_offset_8(
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 8) ]
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @align_with_constant_offset_8(
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16, i64 8) ]
+; BUNDLES-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 8) ]
+  ret void
+}
+
+define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
+; DEFAULT-LABEL: @align_with_variable_offset(
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 [[OFFSET:%.*]]) ]
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @align_with_variable_offset(
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16, i64 [[OFFSET:%.*]]) ]
+; BUNDLES-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 %offset) ]
+  ret void
+}
+
 define void @redundant_align() {
 ; CHECK-LABEL: @redundant_align(
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
@@ -487,6 +558,21 @@ define void @redundant_nonnull3(ptr %ptr) {
 ;
   call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
   call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
+}
+
+define void @partially_redundant(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5) {
+; CHECK-LABEL: @partially_redundant(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR2:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR4:%.*]]), "nonnull"(ptr [[PTR3:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR5:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr), "nonnull"(ptr %ptr2) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr), "nonnull"(ptr %ptr3) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr4), "nonnull"(ptr %ptr5), "nonnull"(ptr %ptr3) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr5) ]
   ret void
 }
 
