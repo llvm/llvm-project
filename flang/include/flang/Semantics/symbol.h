@@ -1221,6 +1221,12 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
 
 inline const DeclTypeSpec *Symbol::GetType() const { return GetTypeImpl(); }
 
+// Defined here, where Symbol is a complete type, so that it can be inlined
+// into FortranEvaluate without that library needing to link FortranSemantics.
+inline const Scope *DerivedTypeSpec::GetScope() const {
+  return scope_ ? scope_ : typeSymbol_.scope();
+}
+
 // Sets and maps keyed by Symbols
 
 struct SymbolAddressCompare {
