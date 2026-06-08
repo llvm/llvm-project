@@ -288,3 +288,84 @@ define float @fptrunc_narrow_outside_float_range(i64 %x) {
   %conv4 = fptrunc double %div3 to float
   ret float %conv4
 }
+
+; Narrowing fptrunc(binop(fpext,fpext)) recomputes the binop in a smaller type,
+; which can overflow to inf where the wide op was finite. ninf must NOT be
+; copied to the narrowed op (it would make that inf poison: miscompile). nnan is
+; value-based and stays sound, so it is preserved.
+
+define half @fmul_narrow_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fmul_narrow_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fmul half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fmul ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+define half @fadd_narrow_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fadd_narrow_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fadd half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fadd ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+define half @fsub_narrow_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fsub_narrow_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fsub half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fsub ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+define half @fdiv_narrow_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fdiv_narrow_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fdiv half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fdiv ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+; nnan is sound to keep; ninf is still dropped.
+
+define half @fmul_narrow_keep_nnan_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fmul_narrow_keep_nnan_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fmul nnan ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+; Other flags (reassoc) are preserved; only ninf is cleared.
+
+define half @fmul_narrow_keep_reassoc_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fmul_narrow_keep_reassoc_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fmul reassoc ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
