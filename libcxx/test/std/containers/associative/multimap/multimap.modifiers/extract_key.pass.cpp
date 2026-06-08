@@ -57,23 +57,15 @@ bool test() {
     std::multimap<int, int> m = {{1, 1}, {1, 2}, {1, 3}};
     auto ptr                  = std::addressof(m.begin()->first);
     auto res                  = m.extract(1);
-    assert(std::addressof(res.key()) == ptr);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(std::addressof(res.key()) == ptr);
+    }
   }
 
   { // Check that no element is returned if there is no match
     std::multimap<int, int> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     auto res                  = m.extract(0);
     assert(!res);
-  }
-
-  {
-    std::multimap<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
-    {
-      Counter<int> keys[] = {1, 2, 3, 4, 5, 6};
-      assert(Counter_base::gConstructed == 12 + 6);
-      test(m, std::begin(keys), std::end(keys));
-    }
-    assert(Counter_base::gConstructed == 0);
   }
 
   {
@@ -86,6 +78,16 @@ bool test() {
   return true;
 }
 int main(int, char**) {
+  {
+    std::multimap<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
+    {
+      Counter<int> keys[] = {1, 2, 3, 4, 5, 6};
+      assert(Counter_base::gConstructed == 12 + 6);
+      test(m, std::begin(keys), std::end(keys));
+    }
+    assert(Counter_base::gConstructed == 0);
+  }
+
   test();
 
 #if TEST_STD_VER >= 26
