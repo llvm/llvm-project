@@ -1596,7 +1596,7 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
 }
 
 /// Make a deep copy of the given function samples, interning all FunctionIds
-/// and context frames into a shared pool using the provided Remap function.
+/// and context frames into a shared pool using the provided \p Remap function.
 static sampleprof::FunctionSamples
 internFunctionSamples(const sampleprof::FunctionSamples &Samples,
                       function_ref<sampleprof::FunctionId(sampleprof::FunctionId)> Remap,
