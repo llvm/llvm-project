@@ -18523,8 +18523,8 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 SDValue
 SITargetLowering::performBuildVectorCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
-  // TODO: legalize for all targets instead of just v_mov_b64 enabled ones,
-  // legalizing could still enable s_mov_b64 which is supported on all targets.
+  // TODO: Lower for all targets instead of just v_mov_b64 enabled ones,
+  // lower could still enable s_mov_b64 which is supported on all targets.
   const GCNSubtarget *ST = getSubtarget();
   if (DCI.Level < AfterLegalizeDAG || !ST->hasVMovB64Inst())
     return SDValue();
@@ -18540,19 +18540,19 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
   // Skip if:
   //  - Value type isn't multiple of 64 bit (e.g., v3i32), or
   //  - Element type has already been combined into 64b elements
-  if ((SizeBits % 64) != 0 || EltVT == MVT::i64 || EltVT == MVT::f64)
+  if ((SizeBits % 64) != 0 || EltSize == 64)
     return SDValue();
 
   // Construct the 64b values.
   SmallVector<uint64_t, 8> ImmVals;
   uint64_t ImmVal = 0;
   uint64_t ImmSize = 0;
-  for (SDValue Opand : N->ops()) {
+  for (SDValue Operand : N->ops()) {
     // Build_vector with constants only.
-    ConstantSDNode *C = dyn_cast<ConstantSDNode>(Opand);
-    ConstantFPSDNode *FPC = dyn_cast<ConstantFPSDNode>(Opand);
+    ConstantSDNode *C = dyn_cast<ConstantSDNode>(Operand);
+    ConstantFPSDNode *FPC = dyn_cast<ConstantFPSDNode>(Operand);
     BuildVectorSDNode *BV =
-        dyn_cast<BuildVectorSDNode>(peekThroughBitcasts(Opand));
+        dyn_cast<BuildVectorSDNode>(peekThroughBitcasts(Operand));
 
     if (!C && !FPC && !BV)
       return SDValue();
