@@ -166,18 +166,10 @@ define void @freeze_bitcast_to_wider_elt_escape(ptr %origin, ptr %escape, ptr %d
 }
 
 define <4 x i32> @freeze_extract_bitcast_high_demanded(<2 x i64> %a, <2 x i64> %b) {
-; X86-LABEL: freeze_extract_bitcast_high_demanded:
-; X86:       # %bb.0:
-; X86-NEXT:    vpsrld $1, %xmm1, %xmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: freeze_extract_bitcast_high_demanded:
-; X64:       # %bb.0:
-; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; X64-NEXT:    vpsrld $1, %ymm0, %ymm0
-; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X64-NEXT:    vzeroupper
-; X64-NEXT:    retq
+; CHECK-LABEL: freeze_extract_bitcast_high_demanded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $1, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
   %poisonable = add nsw <2 x i64> %a, <i64 9223372036854775807, i64 9223372036854775807>
   %wide = shufflevector <2 x i64> %poisonable, <2 x i64> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %bc = bitcast <4 x i64> %wide to <8 x i32>
@@ -188,18 +180,10 @@ define <4 x i32> @freeze_extract_bitcast_high_demanded(<2 x i64> %a, <2 x i64> %
 }
 
 define <2 x i64> @freeze_extract_bitcast_low_width_high_demanded(<4 x i32> %a, <4 x i32> %b) {
-; X86-LABEL: freeze_extract_bitcast_low_width_high_demanded:
-; X86:       # %bb.0:
-; X86-NEXT:    vpsrlq $1, %xmm1, %xmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: freeze_extract_bitcast_low_width_high_demanded:
-; X64:       # %bb.0:
-; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; X64-NEXT:    vpsrlq $1, %ymm0, %ymm0
-; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X64-NEXT:    vzeroupper
-; X64-NEXT:    retq
+; CHECK-LABEL: freeze_extract_bitcast_low_width_high_demanded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrlq $1, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
   %poisonable = add nsw <4 x i32> %a, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %wide = shufflevector <4 x i32> %poisonable, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %bc = bitcast <8 x i32> %wide to <4 x i64>
@@ -210,18 +194,10 @@ define <2 x i64> @freeze_extract_bitcast_low_width_high_demanded(<4 x i32> %a, <
 }
 
 define <4 x i32> @freeze_extract_bitcast_equal_width_high_demanded(<4 x float> %a, <4 x float> %b) {
-; X86-LABEL: freeze_extract_bitcast_equal_width_high_demanded:
-; X86:       # %bb.0:
-; X86-NEXT:    vpsrld $1, %xmm1, %xmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: freeze_extract_bitcast_equal_width_high_demanded:
-; X64:       # %bb.0:
-; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; X64-NEXT:    vpsrld $1, %ymm0, %ymm0
-; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X64-NEXT:    vzeroupper
-; X64-NEXT:    retq
+; CHECK-LABEL: freeze_extract_bitcast_equal_width_high_demanded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $1, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
   %poisonable = fadd nnan <4 x float> %a, zeroinitializer
   %wide = shufflevector <4 x float> %poisonable, <4 x float> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %bc = bitcast <8 x float> %wide to <8 x i32>
@@ -796,17 +772,6 @@ define i32 @freeze_select_scalar_demanded(i1 %c, <2 x i32> %a, <2 x i32> %b, <2 
 ;
 ; X64-LABEL: freeze_select_scalar_demanded:
 ; X64:       # %bb.0:
-; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    jne .LBB27_1
-; X64-NEXT:  # %bb.2:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; X64-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
-; X64-NEXT:    jmp .LBB27_3
-; X64-NEXT:  .LBB27_1:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
-; X64-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; X64-NEXT:  .LBB27_3:
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    retq
   %poisonable.b = add nsw <2 x i32> %b, <i32 2147483647, i32 2147483647>

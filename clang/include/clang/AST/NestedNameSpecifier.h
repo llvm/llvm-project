@@ -253,8 +253,6 @@ SourceRange NestedNameSpecifierLocBuilder::getSourceRange() const {
 namespace llvm {
 
 template <> struct DenseMapInfo<clang::NestedNameSpecifier> {
-  static clang::NestedNameSpecifier getEmptyKey() { return std::nullopt; }
-
   static unsigned getHashValue(const clang::NestedNameSpecifier &V) {
     return hash_combine(V.getAsVoidPointer());
   }
@@ -263,11 +261,6 @@ template <> struct DenseMapInfo<clang::NestedNameSpecifier> {
 template <> struct DenseMapInfo<clang::NestedNameSpecifierLoc> {
   using FirstInfo = DenseMapInfo<clang::NestedNameSpecifier>;
   using SecondInfo = DenseMapInfo<void *>;
-
-  static clang::NestedNameSpecifierLoc getEmptyKey() {
-    return clang::NestedNameSpecifierLoc(FirstInfo::getEmptyKey(),
-                                         SecondInfo::getEmptyKey());
-  }
 
   static unsigned getHashValue(const clang::NestedNameSpecifierLoc &PairVal) {
     return hash_combine(
