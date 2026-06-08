@@ -6,15 +6,13 @@ target triple = "aarch64-unknown-linux"
 define void @predicate_as_counter_phi(i64 %N) {
 ; CHECK-LABEL: predicate_as_counter_phi:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    whilelo pn8.h, xzr, x0, vlx4
 ; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    mov p0.b, p8.b
+; CHECK-NEXT:    whilelo pn8.h, xzr, x0, vlx4
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    // fake_use: $p0
+; CHECK-NEXT:    // fake_use: $pn8
 ; CHECK-NEXT:    whilelo pn8.h, x8, x0, vlx4
 ; CHECK-NEXT:    incb x8, all, mul #2
-; CHECK-NEXT:    mov p0.b, p8.b
 ; CHECK-NEXT:    b .LBB0_1
 entry:
   %vscale = call i64 @llvm.vscale.i64()
