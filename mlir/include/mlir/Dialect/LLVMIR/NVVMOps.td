@@ -2403,7 +2403,7 @@ def NVVM_ConvertS2F6x2ToBF16x2Op : NVVM_SingleResultIntrinsicOp<"convert.s2f6x2.
   let results = (outs VectorOfLengthAndType<[2], [BF16]>:$dst);
   let arguments = (ins VectorOfLengthAndType<[2], [I8]>:$src,
       Optional<I16>:$scaleFactor,
-      DefaultValuedAttr<SaturationModeSatfiniteOrNone, "SaturationMode::NONE">:$sat,
+      DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
       DefaultValuedAttr<BoolAttr, "false">:$relu);
   let assemblyFormat =
       "$src (`,` $scaleFactor^)? attr-dict `:` type($src) `->` type($dst)";
