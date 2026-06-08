@@ -594,6 +594,13 @@ let ParentPackage = UnixAlpha in {
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "WarnOnLockOrderReversal",
+                  "Warn when locks are not released in LIFO order.",
+                  "false",
+                  Released>
+  ]>,
   Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 

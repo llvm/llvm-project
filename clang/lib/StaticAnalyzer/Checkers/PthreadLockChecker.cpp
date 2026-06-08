@@ -80,6 +80,7 @@ public:
   };
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
   CheckerNameRef CheckNames[CK_NumCheckKinds];
+  bool WarnOnLockOrderReversal = false;
 
 private:
   typedef void (PthreadLockChecker::*FnCheck)(const CallEvent &Call,
@@ -532,15 +533,18 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
   LockSetTy LS = state->get<LockSet>();
 
   if (!LS.isEmpty()) {
-    const MemRegion *firstLockR = LS.getHead();
-    if (firstLockR != lockR) {
+    if (WarnOnLockOrderReversal && LS.getHead() != lockR) {
       reportBug(C, BT_lor, MtxExpr, CheckKind,
                 "This was not the most recently acquired lock. Possible lock "
                 "order reversal");
       return;
     }
-    // Record that the lock was released.
-    state = state->set<LockSet>(LS.getTail());
+    auto &Factory = state->get_context<LockSet>();
+    llvm::ImmutableList<const MemRegion *> NewLS = Factory.getEmptyList();
+    for (auto I = LS.begin(), E = LS.end(); I != E; ++I)
+      if (*I != lockR)
+        NewLS = Factory.add(*I, NewLS);
+    state = state->set<LockSet>(NewLS);
   }
 
   state = state->set<LockMap>(lockR, LockState::getUnlocked());
@@ -742,8 +746,21 @@ bool ento::shouldRegisterPthreadLockBase(const CheckerManager &mgr) { return tru
                                                                                \
   bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
 
-REGISTER_CHECKER(PthreadLockChecker)
 REGISTER_CHECKER(FuchsiaLockChecker)
 REGISTER_CHECKER(C11LockChecker)
 
 #undef REGISTER_CHECKER
+
+void ento::registerPthreadLockChecker(CheckerManager &mgr) {
+  PthreadLockChecker *checker = mgr.getChecker<PthreadLockChecker>();
+  checker->ChecksEnabled[PthreadLockChecker::CK_PthreadLockChecker] = true;
+  checker->CheckNames[PthreadLockChecker::CK_PthreadLockChecker] =
+      mgr.getCurrentCheckerName();
+  checker->WarnOnLockOrderReversal =
+      mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          mgr.getCurrentCheckerName(), "WarnOnLockOrderReversal");
+}
+
+bool ento::shouldRegisterPthreadLockChecker(const CheckerManager &mgr) {
+  return true;
+}

@@ -1,4 +1,11 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.C11Lock -verify %s
+// RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=alpha.core.C11Lock \
+// RUN:   -verify %s
+// RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=alpha.core.C11Lock \
+// RUN:   -analyzer-checker=alpha.unix.PthreadLock \
+// RUN:   -analyzer-config alpha.unix.PthreadLock:WarnOnLockOrderReversal=true \
+// RUN:   -verify=expected,lor %s
 
 typedef int mtx_t;
 struct timespec;
@@ -61,7 +68,7 @@ void bad6(void) {
 void bad7(void) {
   mtx_lock(&mtx1);
   mtx_lock(&mtx2);
-  mtx_unlock(&mtx1); // expected-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
+  mtx_unlock(&mtx1); // lor-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
   mtx_unlock(&mtx2);
 }
 
