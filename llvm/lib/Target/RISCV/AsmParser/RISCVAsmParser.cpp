@@ -2461,25 +2461,10 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 }
 
 bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
-  if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvqwdota8i) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvqwdota16i) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvfwdota16bf) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvfqwdota8f) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
-      STI->hasFeature(RISCV::FeatureVendorXSfvfbfexp16e) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvqwbdota8i) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvqwbdota16i) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvfqwbdota8f) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvfwbdota16bf))
-    return Error(
-        ErrorLoc,
-        "operand must be "
-        "e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
   return Error(
       ErrorLoc,
       "operand must be "
-      "e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
+      "e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
 }
 
 ParseStatus RISCVAsmParser::parseXSfmmVType(OperandVector &Operands) {
