@@ -115,19 +115,10 @@ public:
     llvm::SmallVector<mlir::Value> rhsExtents =
         hlfir::getIndexExtents(loc, builder, rhsShape);
 
-    // When the LHS is (re-)allocated, its lower bounds come from the RHS
-    // descriptor, which Fortran lowering has already populated with the
-    // semantically-correct bounds:
-    //   - F2018 10.2.1.3 for intrinsic assignment: LBOUND(rhs);
-    //   - F2018 7.5.10 for a structure constructor: an allocatable source keeps
-    //     its bounds, other sources reset the lower bound to 1.
-    // Find the entity that carries those bounds:
-    //   - a variable RHS is itself the descriptor;
-    //   - an hlfir.expr produced by hlfir.as_expr from a variable (e.g. an
-    //     allocatable function result used in a structure constructor) keeps
-    //     the bounds in the wrapped variable's descriptor;
-    //   - any other hlfir.expr (elemental, array constructor, ...) has no
-    //     underlying descriptor, so its lower bounds are 1.
+    // The re-allocated LHS takes the RHS lower bounds, which lowering has
+    // already put in the RHS descriptor. Read them from the entity that owns
+    // that descriptor: a variable RHS itself, or the variable wrapped by
+    // hlfir.as_expr. Other hlfir.exprs have no descriptor, so lower bound is 1.
     mlir::Value lboundSource;
     if (!mlir::isa<hlfir::ExprType>(rhs.getType()))
       lboundSource = assign.getRhs();

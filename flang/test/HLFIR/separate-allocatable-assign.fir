@@ -184,8 +184,8 @@ func.func @test_lower_bounds(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32
 // hlfir.as_expr) must be preserved during reallocation.  This is the
 // structure-constructor case `t = x(f())` where `f` is an allocatable function
 // result with a non-default lower bound: the allocatable component must take
-// the source's bounds (F2018 7.5.10).  The pass must read the lower bound from
-// the wrapped variable's descriptor instead of assuming 1.
+// the source's bounds.  The pass must read the lower bound from the wrapped
+// variable's descriptor instead of assuming 1.
 func.func @test_expr_lower_bounds(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %arg1: !fir.ref<!fir.array<3xi32>>) {
   %c10 = arith.constant 10 : index
   %c3 = arith.constant 3 : index
