@@ -162,3 +162,4 @@ bool OpenMPClauseEmitter::emitMap(
   }
   return found;
 }
+
