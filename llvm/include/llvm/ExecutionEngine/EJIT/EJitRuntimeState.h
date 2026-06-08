@@ -80,7 +80,9 @@ public:
 
 private:
   PeriodArrayRegistry registry_;
+#ifndef EJIT_FREESTANDING
   mutable MutexType mutex_;
+#endif
   std::unordered_map<std::string, std::unordered_map<uint8_t, PeriodState>> states_;
 };
 

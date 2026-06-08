@@ -37,6 +37,10 @@ public:
   ///   5. Cleanup passes (only for L2/L3 which may expose new loads)
   void runPipeline(Module &M, const SpecializationContext &ctx);
 
+  /// Clear all cached analysis results. Must be called between compilations
+  /// to avoid dangling pointers to IR units from previous modules.
+  void clearAnalyses();
+
 private:
   /// Replace ejit_period_arr_ind parameters with their runtime constants.
   void preReplacePeriodIndices(Module &M, const SpecializationContext &ctx);
@@ -59,6 +63,11 @@ private:
   FunctionAnalysisManager FAM_;
   CGSCCAnalysisManager CGAM_;
   ModuleAnalysisManager MAM_;
+
+  // Cached pass pipelines — created once, reused across compilations.
+  FunctionPassManager L1FPM_;   // SCCP + ADCE + SimplifyCFG (always runs)
+  FunctionPassManager L2FPM_;   // SimplifyCFG only (L2 inline cleanup)
+  FunctionPassManager L3FPM_;   // LoopSimplify + LoopFullUnroll + Promote + SimplifyCFG
 };
 
 } // namespace ejit

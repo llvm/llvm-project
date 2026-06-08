@@ -27,6 +27,10 @@ struct GVPeriodInfo {
   size_t arraySize;
 };
 
+//===----------------------------------------------------------------------===//
+// Module-level metadata helpers
+//===----------------------------------------------------------------------===//
+
 static void buildGVPeriodMap(
     Module &M,
     DenseMap<const GlobalVariable *, GVPeriodInfo> &gvMap) {
@@ -61,6 +65,37 @@ static void buildGVPeriodMap(
   }
 }
 
+using MayConstOffsetMap =
+    DenseMap<const GlobalVariable *, SmallVector<uint64_t, 4>>;
+
+/// Build a GV-level map of may_const field byte offsets (v1.7 fallback for
+/// when optimization passes drop per-load !ejit.may_const metadata).
+static void buildMayConstFieldMap(Module &M, MayConstOffsetMap &map) {
+  for (GlobalVariable &GV : M.globals()) {
+    MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
+    if (!MD)
+      continue;
+    SmallVector<uint64_t, 4> offsets;
+    for (const MDOperand &Op : MD->operands()) {
+      auto *Sub = dyn_cast<MDNode>(Op.get());
+      if (!Sub || Sub->getNumOperands() < 2)
+        continue;
+      auto *Tag = dyn_cast<MDString>(Sub->getOperand(0));
+      if (!Tag || Tag->getString() != TAG_EJIT_MAY_CONST_FIELD)
+        continue;
+      if (auto *CI = mdconst::dyn_extract<ConstantInt>(Sub->getOperand(1)))
+        offsets.push_back(CI->getZExtValue());
+    }
+    if (!offsets.empty())
+      map[&GV] = std::move(offsets);
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// IR analysis helpers
+//===----------------------------------------------------------------------===//
+
+/// Walk pointer casts and GEP chains up to the root GlobalVariable.
 static const GlobalVariable *findRootGV(const Value *V) {
   V = V->stripPointerCasts();
   if (auto *GV = dyn_cast<GlobalVariable>(V))
@@ -68,6 +103,19 @@ static const GlobalVariable *findRootGV(const Value *V) {
   if (auto *GEP = dyn_cast<GEPOperator>(V))
     return findRootGV(GEP->getPointerOperand());
   return nullptr;
+}
+
+/// If all GEP indices are ConstantInt, compute the cumulative byte offset.
+/// Returns std::nullopt if any index is not constant.
+static std::optional<uint64_t>
+computeGEPOffset(const GEPOperator *GEP, const DataLayout &DL) {
+  SmallVector<Value *, 4> IdxList;
+  for (auto I = GEP->idx_begin(), E = GEP->idx_end(); I != E; ++I) {
+    if (!isa<ConstantInt>(*I))
+      return std::nullopt;
+    IdxList.push_back(*I);
+  }
+  return DL.getIndexedOffsetInType(GEP->getSourceElementType(), IdxList);
 }
 
 /// Walk a GEP chain from the load's pointer operand down to the root
@@ -86,23 +134,10 @@ accumulateFullOffset(const DataLayout &DL, const Value *PtrOp) {
     if (!GEP)
       return std::nullopt;
 
-    // Compute the total offset for all indices of this GEP in one call.
-    // getIndexedOffsetInType already returns the cumulative offset from the
-    // start of the source element type through all given indices.
-    SmallVector<Value *, 4> IdxList;
-    bool allConstant = true;
-    for (auto I = GEP->idx_begin(), E = GEP->idx_end(); I != E; ++I) {
-      if (!isa<ConstantInt>(*I)) {
-        allConstant = false;
-        break;
-      }
-      IdxList.push_back(*I);
-    }
-    if (!allConstant)
+    auto off = computeGEPOffset(GEP, DL);
+    if (!off)
       return std::nullopt;
-    total += APInt(total.getBitWidth(),
-                   DL.getIndexedOffsetInType(
-                       GEP->getSourceElementType(), IdxList));
+    total += APInt(total.getBitWidth(), *off);
 
     PtrOp = GEP->getPointerOperand();
   }
@@ -110,6 +145,46 @@ accumulateFullOffset(const DataLayout &DL, const Value *PtrOp) {
   return total.getZExtValue();
 }
 
+/// Check whether a load is (or can be treated as) a may_const access.
+static bool
+isMayConstLoad(LoadInst *LI, const MayConstOffsetMap &mayConstFieldMap,
+               const DataLayout &DL) {
+  if (LI->hasMetadata(MD_EJIT_MAY_CONST))
+    return true;
+
+  // v1.7 fallback: check GV-level may_const field offsets
+  Value *Ptr = LI->getPointerOperand();
+  if (auto *RootGV = findRootGV(Ptr)) {
+    auto It = mayConstFieldMap.find(RootGV);
+    if (It != mayConstFieldMap.end()) {
+      auto Off = accumulateFullOffset(DL, Ptr);
+      if (Off && is_contained(It->second, *Off))
+        return true;
+    }
+  }
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// Runtime value helpers
+//===----------------------------------------------------------------------===//
+
+/// Resolve the runtime base address of a global variable (array or static).
+static void *resolveBase(const GlobalVariable *GV, const GVPeriodInfo &info,
+                         PeriodArrayRegistry &reg) {
+  if (info.isArray) {
+    const auto *arrs = reg.getArrays(info.periodName);
+    if (!arrs || arrs->empty())
+      return nullptr;
+    if (arrs->size() == 1)
+      return arrs->front().baseAddr;
+    const auto *paInfo = reg.getArrayInfo(GV->getName().str());
+    return paInfo ? paInfo->baseAddr : nullptr;
+  }
+  return reg.getStaticVarAddr(GV->getName().str());
+}
+
+/// Create an LLVM Constant from raw memory bytes.
 static Constant *createConstantFromMemory(const void *addr, Type *Ty,
                                           const DataLayout &DL) {
   LLVMContext &Ctx = Ty->getContext();
@@ -120,6 +195,8 @@ static Constant *createConstantFromMemory(const void *addr, Type *Ty,
     if (byteSize <= 8) {
       uint64_t raw = 0;
       std::memcpy(&raw, addr, byteSize);
+      if (!DL.isLittleEndian())
+        raw >>= (8 - byteSize) * 8;
       val = APInt(byteSize * 8, raw);
     }
     return ConstantInt::get(Ty, val);
@@ -143,7 +220,133 @@ static Constant *createConstantFromMemory(const void *addr, Type *Ty,
   return nullptr;
 }
 
+//===----------------------------------------------------------------------===//
+// Load replacement helpers — one per access pattern
+//===----------------------------------------------------------------------===//
+
+using GVPeriodMap =
+    DenseMap<const GlobalVariable *, GVPeriodInfo>;
+
+/// Pattern 1: load directly from a GlobalVariable (scalar static variable).
+static Constant *
+tryReplaceDirectGV(LoadInst *LI, const GlobalVariable *GV,
+                   const GVPeriodMap &gvMap, PeriodArrayRegistry &reg,
+                   const DataLayout &DL) {
+  auto it = gvMap.find(GV);
+  if (it == gvMap.end())
+    return nullptr;
+
+  void *base = resolveBase(GV, it->second, reg);
+  if (!base)
+    return nullptr;
+
+  return createConstantFromMemory(base, LI->getType(), DL);
+}
+
+/// Pattern 2: load via a GEP chain rooted at a GlobalVariable.
+/// e.g. @g_cellCfg → GEP 0, idx → GEP 0, fieldIdx → load
+static Constant *
+tryReplaceDirectGEP(LoadInst *LI, const Value *PtrOp,
+                    const GVPeriodMap &gvMap, PeriodArrayRegistry &reg,
+                    const DataLayout &DL) {
+  const GlobalVariable *GV = findRootGV(PtrOp);
+  if (!GV)
+    return nullptr;
+
+  auto it = gvMap.find(GV);
+  if (it == gvMap.end())
+    return nullptr;
+
+  auto byteOffset = accumulateFullOffset(DL, PtrOp);
+  if (!byteOffset)
+    return nullptr;
+
+  void *base = resolveBase(GV, it->second, reg);
+  if (!base)
+    return nullptr;
+
+  auto *fieldAddr = static_cast<const uint8_t *>(base) + *byteOffset;
+  return createConstantFromMemory(fieldAddr, LI->getType(), DL);
+}
+
+/// Pattern 3: load via an indirect pointer — first load a pointer from a GV,
+/// then GEP into the pointed-to data.
+/// e.g. %ptr = load ptr, ptr @g_pCfg  → GEP %S, ptr %ptr, i32 0, i32 0
+static Constant *
+tryReplaceIndirect(LoadInst *LI, const Value *PtrOp,
+                   const GVPeriodMap &gvMap, PeriodArrayRegistry &reg,
+                   const DataLayout &DL) {
+  // Walk the GEP chain from the load's pointer operand to find
+  // the base LoadInst that reads the pointer value from a GV.
+  const Value *V = PtrOp;
+  SmallVector<const GEPOperator *, 4> FieldGEPs;
+  while (V) {
+    V = V->stripPointerCasts();
+    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
+      FieldGEPs.push_back(GEP);
+      V = GEP->getPointerOperand();
+      continue;
+    }
+    break;
+  }
+
+  auto *BaseLoad = dyn_cast<LoadInst>(V);
+  if (!BaseLoad)
+    return nullptr;
+
+  // Resolve the pointer-valued GV that BaseLoad reads from.
+  const Value *LoadPtr = BaseLoad->getPointerOperand()->stripPointerCasts();
+  const GlobalVariable *PtrGV = nullptr;
+  uint64_t ptrArrayByteOff = 0;
+
+  if (auto *DirectGV = dyn_cast<GlobalVariable>(LoadPtr)) {
+    PtrGV = DirectGV;
+  } else if (auto *PtrGEP = dyn_cast<GEPOperator>(LoadPtr)) {
+    PtrGV = dyn_cast<GlobalVariable>(
+        PtrGEP->getPointerOperand()->stripPointerCasts());
+    if (PtrGV) {
+      auto off = computeGEPOffset(PtrGEP, DL);
+      if (!off)
+        return nullptr;
+      ptrArrayByteOff = *off;
+    }
+  }
+  if (!PtrGV)
+    return nullptr;
+
+  auto it = gvMap.find(PtrGV);
+  if (it == gvMap.end())
+    return nullptr;
+
+  void *gvBase = resolveBase(PtrGV, it->second, reg);
+  if (!gvBase)
+    return nullptr;
+
+  // Read the stored pointer: *(void**)(gvBase + ptrArrayByteOff)
+  uintptr_t ptrSlot = reinterpret_cast<uintptr_t>(gvBase) + ptrArrayByteOff;
+  void *dataBase = nullptr;
+  std::memcpy(&dataBase, reinterpret_cast<void *>(ptrSlot), sizeof(void *));
+  if (!dataBase)
+    return nullptr;
+
+  // Compute field offset from the GEPs past the pointer dereference.
+  uint64_t fieldOff = 0;
+  for (auto It = FieldGEPs.rbegin(); It != FieldGEPs.rend(); ++It) {
+    auto off = computeGEPOffset(*It, DL);
+    if (!off)
+      return nullptr;
+    fieldOff += *off;
+  }
+
+  auto *fieldAddr = static_cast<const uint8_t *>(dataBase) + fieldOff;
+  return createConstantFromMemory(fieldAddr, LI->getType(), DL);
+}
+
 } // anonymous namespace
+
+//===----------------------------------------------------------------------===//
+// Public interface
+//===----------------------------------------------------------------------===//
 
 PreservedAnalyses
 EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -153,31 +356,14 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   const DataLayout &DL = M->getDataLayout();
 
-  DenseMap<const GlobalVariable *, GVPeriodInfo> gvPeriodMap;
+  // 1. Build module-level metadata maps (once per function).
+  GVPeriodMap gvPeriodMap;
   buildGVPeriodMap(*M, gvPeriodMap);
 
-  // Build GV-level may_const field offset map (v1.7 fallback for when
-  // optimization passes drop per-load !ejit.may_const metadata).
-  DenseMap<const GlobalVariable *, SmallVector<uint64_t, 4>> mayConstFieldMap;
-  for (GlobalVariable &GV : M->globals()) {
-    MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
-    if (!MD)
-      continue;
-    SmallVector<uint64_t, 4> offsets;
-    for (const MDOperand &Op : MD->operands()) {
-      auto *Sub = dyn_cast<MDNode>(Op.get());
-      if (!Sub || Sub->getNumOperands() < 2)
-        continue;
-      auto *Tag = dyn_cast<MDString>(Sub->getOperand(0));
-      if (!Tag || Tag->getString() != TAG_EJIT_MAY_CONST_FIELD)
-        continue;
-      if (auto *CI = mdconst::dyn_extract<ConstantInt>(Sub->getOperand(1)))
-        offsets.push_back(CI->getZExtValue());
-    }
-    if (!offsets.empty())
-      mayConstFieldMap[&GV] = std::move(offsets);
-  }
+  MayConstOffsetMap mayConstFieldMap;
+  buildMayConstFieldMap(*M, mayConstFieldMap);
 
+  // 2. Scan all loads and collect replacements.
   struct Replacement { LoadInst *LI; Constant *ConstVal; };
   SmallVector<Replacement, 16> replacements;
 
@@ -186,164 +372,33 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
       auto *LI = dyn_cast<LoadInst>(&I);
       if (!LI)
         continue;
-      bool isMayConst = LI->hasMetadata(MD_EJIT_MAY_CONST);
 
-      if (!isMayConst) {
-        // v1.7 fallback: check GV-level may_const field offsets
-        Value *Ptr = LI->getPointerOperand();
-        if (auto *RootGV = findRootGV(Ptr)) {
-          auto It = mayConstFieldMap.find(RootGV);
-          if (It != mayConstFieldMap.end()) {
-            auto Off = accumulateFullOffset(DL, Ptr);
-            if (Off && is_contained(It->second, *Off))
-              isMayConst = true;
-          }
-        }
-      }
-      if (!isMayConst)
+      if (!isMayConstLoad(LI, mayConstFieldMap, DL))
         continue;
 
       Value *PtrOp = LI->getPointerOperand();
 
-      // Helper: resolve base address for a global variable
-      auto resolveBase = [&](const GlobalVariable *GV,
-                             const GVPeriodInfo &info) -> void * {
-        if (info.isArray) {
-          const auto *arrs = registry_.getArrays(info.periodName);
-          if (!arrs || arrs->empty())
-            return nullptr;
-          // For single-array periods, use the only array's base.
-          // For multi-array periods, look up by variable name to get the
-          // correct array's base address (not just the first one).
-          if (arrs->size() == 1)
-            return arrs->front().baseAddr;
-          const auto *paInfo = registry_.getArrayInfo(GV->getName().str());
-          return paInfo ? paInfo->baseAddr : nullptr;
-        }
-        return registry_.getStaticVarAddr(GV->getName().str());
-      };
+      // Try each access pattern in order.
+      Constant *C = nullptr;
 
-      // Direct global variable load
-      if (auto *GV = dyn_cast<GlobalVariable>(PtrOp->stripPointerCasts())) {
-        auto it = gvPeriodMap.find(GV);
-        if (it == gvPeriodMap.end())
-          continue;
+      // Pattern 1: direct GlobalVariable load (scalar static variable).
+      if (auto *GV = dyn_cast<GlobalVariable>(PtrOp->stripPointerCasts()))
+        C = tryReplaceDirectGV(LI, GV, gvPeriodMap, registry_, DL);
 
-        void *base = resolveBase(GV, it->second);
-        if (!base)
-          continue;
+      // Pattern 2: GEP-based access (array or struct field).
+      if (!C)
+        C = tryReplaceDirectGEP(LI, PtrOp, gvPeriodMap, registry_, DL);
 
-        if (auto *C = createConstantFromMemory(base, LI->getType(), DL))
-          replacements.push_back({LI, C});
-        continue;
-      }
+      // Pattern 3: indirect pointer access (pointer-type period variable).
+      if (!C)
+        C = tryReplaceIndirect(LI, PtrOp, gvPeriodMap, registry_, DL);
 
-      // GEP-based access
-      // Walk the full GEP chain (may be multiple GEPs: array index + field)
-      {
-        const GlobalVariable *GV = findRootGV(PtrOp);
-        if (GV) {
-          auto it = gvPeriodMap.find(GV);
-          if (it == gvPeriodMap.end())
-            continue;
-
-          auto byteOffset = accumulateFullOffset(DL, PtrOp);
-          if (!byteOffset)
-            continue;
-
-          void *base = resolveBase(GV, it->second);
-          if (!base)
-            continue;
-
-          uint8_t *fieldAddr = static_cast<uint8_t *>(base) + *byteOffset;
-          if (auto *C = createConstantFromMemory(fieldAddr, LI->getType(), DL))
-            replacements.push_back({LI, C});
-          continue;
-        }
-
-        // Indirect path: load ptr from GV, then GEP into pointed-to data.
-        // Pattern A: %ptr = load ptr, ptr @g_ptr  → GEP %S, ptr %ptr, ...
-        // Pattern B: %ptr = load ptr, ptr @ptrArr[idx] → GEP %S, ptr %ptr, ...
-        // Supported for pointer-type ejit_period and ejit_period_arr globals.
-        const Value *V = PtrOp;
-        SmallVector<const GEPOperator *, 4> FieldGEPs;
-        while (V) {
-          V = V->stripPointerCasts();
-          if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-            FieldGEPs.push_back(GEP);
-            V = GEP->getPointerOperand();
-            continue;
-          }
-          break;
-        }
-
-        auto *BaseLoad = dyn_cast<LoadInst>(V);
-        if (!BaseLoad)
-          continue;
-
-        // Resolve which GV the load reads from (direct or via ptr-array GEP).
-        const Value *LoadPtr = BaseLoad->getPointerOperand()->stripPointerCasts();
-        const GlobalVariable *PtrGV = nullptr;
-        uint64_t ptrArrayByteOff = 0;
-
-        if (auto *DirectGV = dyn_cast<GlobalVariable>(LoadPtr)) {
-          PtrGV = DirectGV;
-        } else if (auto *PtrGEP = dyn_cast<GEPOperator>(LoadPtr)) {
-          PtrGV = dyn_cast<GlobalVariable>(
-              PtrGEP->getPointerOperand()->stripPointerCasts());
-          if (PtrGV) {
-            SmallVector<Value *, 4> PtrIdxList;
-            bool allConst = true;
-            for (auto I = PtrGEP->idx_begin(), E = PtrGEP->idx_end();
-                 I != E; ++I) {
-              if (!isa<ConstantInt>(*I)) { allConst = false; break; }
-              PtrIdxList.push_back(*I);
-            }
-            if (!allConst) continue;
-            ptrArrayByteOff = DL.getIndexedOffsetInType(
-                PtrGEP->getSourceElementType(), PtrIdxList);
-          }
-        }
-        if (!PtrGV)
-          continue;
-
-        auto it = gvPeriodMap.find(PtrGV);
-        if (it == gvPeriodMap.end())
-          continue;
-
-        void *gvBase = resolveBase(PtrGV, it->second);
-        if (!gvBase)
-          continue;
-
-        // Read the pointer value stored in the GV: *(void**)(gvBase + ptrArrayByteOff)
-        uintptr_t ptrSlot = reinterpret_cast<uintptr_t>(gvBase) + ptrArrayByteOff;
-        void *dataBase = nullptr;
-        std::memcpy(&dataBase, reinterpret_cast<void *>(ptrSlot), sizeof(void *));
-        if (!dataBase)
-          continue;
-
-        // Compute field offset from GEPs past the pointer dereference.
-        uint64_t fieldOff = 0;
-        for (auto It = FieldGEPs.rbegin(); It != FieldGEPs.rend(); ++It) {
-          SmallVector<Value *, 4> IdxList;
-          for (auto I = (*It)->idx_begin(), E = (*It)->idx_end(); I != E; ++I) {
-            if (!isa<ConstantInt>(*I)) { fieldOff = UINT64_MAX; break; }
-            IdxList.push_back(*I);
-          }
-          if (fieldOff == UINT64_MAX) break;
-          fieldOff += DL.getIndexedOffsetInType(
-              (*It)->getSourceElementType(), IdxList);
-        }
-        if (fieldOff == UINT64_MAX)
-          continue;
-
-        uint8_t *fieldAddr = static_cast<uint8_t *>(dataBase) + fieldOff;
-        if (auto *C = createConstantFromMemory(fieldAddr, LI->getType(), DL))
-          replacements.push_back({LI, C});
-      }
+      if (C)
+        replacements.push_back({LI, C});
     }
   }
 
+  // 3. Apply replacements.
   bool changed = false;
   for (auto &R : replacements) {
     R.LI->replaceAllUsesWith(R.ConstVal);
@@ -352,7 +407,7 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
   }
 
   LLVM_DEBUG(if (changed) dbgs() << "ejit-struct-field: replaced "
-                                  << replacements.size() << " load(s) in "
-                                  << F.getName() << "\n");
+                                 << replacements.size() << " load(s) in "
+                                 << F.getName() << "\n");
   return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

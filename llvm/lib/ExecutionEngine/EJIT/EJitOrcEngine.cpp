@@ -34,6 +34,8 @@ struct EJitOrcEngine::Impl {
   std::map<std::string, void *> userSymbols;
   /// If non-empty, dump JIT-optimized IR to this directory.
   std::string dumpJITDir;
+  /// Persistent optimizer — analysis managers are registered once and reused.
+  std::unique_ptr<EJitOptimizer> optimizer;
 };
 
 EJitOrcEngine::EJitOrcEngine() : P(std::make_unique<Impl>()) {}
@@ -82,6 +84,10 @@ EJitOrcEngine::Create(const Config &config,
 
   engine->P->J = std::move(*J);
 
+  // Create persistent optimizer — analysis managers are registered once here
+  // and reused across compilations (cleared between runs).
+  engine->P->optimizer = std::make_unique<EJitOptimizer>(periodReg);
+
   // Register all known global variable addresses from the PeriodArrayRegistry
   // so that external global references in any loaded bitcode module resolve
   // to the AOT process's memory. Deduplicate: the constructor may run twice
@@ -104,33 +110,23 @@ EJitOrcEngine::Create(const Config &config,
   // JIT compilation (parameter substitution → InstCombine → StructFieldPass
   // → core optimization pipeline).
   engine->P->J->getIRTransformLayer().setTransform(
-      [engine = engine.get(), &periodReg](
+      [engine = engine.get()](
           orc::ThreadSafeModule TSM,
           const orc::MaterializationResponsibility &R)
           -> Expected<orc::ThreadSafeModule> {
-        TSM.withModuleDo([engine, &periodReg](Module &M) {
+        TSM.withModuleDo([engine](Module &M) {
           LLVM_DEBUG(dbgs() << "ejit-orc-engine: JIT transform on "
                             << M.getName() << "\n");
           const SpecializationContext *ctx = engine->P->activeCtx;
           if (!ctx)
             return;
 
-          EJitOptimizer opt(periodReg);
+          // Clear stale analysis results from previous compilations
+          // (each compilation uses a fresh Module with new IR unit pointers).
+          engine->P->optimizer->clearAnalyses();
+          engine->P->optimizer->runPipeline(M, *ctx);
 
-          // Dump pre-optimization IR if configured.
-          if (!engine->P->dumpJITDir.empty()) {
-            std::string path = engine->P->dumpJITDir + "/" +
-                               ctx->fnName + "_" +
-                               std::to_string(ctx->cacheKey) + "_pre.ll";
-            std::error_code EC;
-            llvm::raw_fd_ostream OS(path, EC);
-            if (!EC)
-              M.print(OS, nullptr);
-          }
-
-          opt.runPipeline(M, *ctx);
-
-          // Dump post-optimization IR if configured.
+          // Dump post-optimization IR only (pre-dump already captured in bitcode).
           if (!engine->P->dumpJITDir.empty()) {
             std::string path = engine->P->dumpJITDir + "/" +
                                ctx->fnName + "_" +

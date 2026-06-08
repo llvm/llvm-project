@@ -30,6 +30,32 @@ EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
   EJitPassBuilder::registerCGSCCAnalyses(CGAM_);
   EJitPassBuilder::registerModuleAnalyses(MAM_);
   EJitPassBuilder::crossRegisterProxies(LAM_, FAM_, CGAM_, MAM_);
+
+  // Pre-build cached pass pipelines.
+  // L1: SCCP + ADCE + SimplifyCFG (always runs).
+  L1FPM_.addPass(SCCPPass());
+  L1FPM_.addPass(ADCEPass());
+  L1FPM_.addPass(SimplifyCFGPass());
+
+  // L2: SimplifyCFG cleanup after inlining.
+  L2FPM_.addPass(SimplifyCFGPass());
+
+  // L3: LoopSimplify + FullUnroll + Promote (Mem2Reg) + SimplifyCFG.
+  L3FPM_.addPass(LoopSimplifyPass());
+  {
+    LoopPassManager LPM;
+    LPM.addPass(LoopFullUnrollPass());
+    L3FPM_.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+  }
+  L3FPM_.addPass(PromotePass());
+  L3FPM_.addPass(SimplifyCFGPass());
+}
+
+void EJitOptimizer::clearAnalyses() {
+  FAM_.clear();
+  LAM_.clear();
+  CGAM_.clear();
+  MAM_.clear();
 }
 
 void EJitOptimizer::runPipeline(Module &M,
@@ -108,16 +134,10 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
   // L1: SCCP + ADCE + SimplifyCFG — constant propagation, dead code
   // elimination, and CFG cleanup. Captures the vast majority of EJIT
   // performance gains (may_const load → constant → branch folding).
-  {
-    FunctionPassManager FPM;
-    FPM.addPass(SCCPPass());
-    FPM.addPass(ADCEPass());
-    FPM.addPass(SimplifyCFGPass());
-
-    for (Function &F : M.functions())
-      if (!F.isDeclaration())
-        FPM.run(F, FAM_);
-  }
+  // L1FPM_ is pre-built in the constructor and reused across compilations.
+  for (Function &F : M.functions())
+    if (!F.isDeclaration())
+      L1FPM_.run(F, FAM_);
 
   // L2: Inline always_inline helpers, then clean up + re-run
   // StructFieldPass for loads exposed by inlining.
@@ -126,13 +146,9 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
     MPM.addPass(AlwaysInlinerPass());
     MPM.run(M, MAM_);
 
-    {
-      FunctionPassManager FPM;
-      FPM.addPass(SimplifyCFGPass());
-      for (Function &F : M.functions())
-        if (!F.isDeclaration())
-          FPM.run(F, FAM_);
-    }
+    for (Function &F : M.functions())
+      if (!F.isDeclaration())
+        L2FPM_.run(F, FAM_);
 
     runStructFieldPass(M);
     runInstCombine(M);
@@ -141,18 +157,9 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
   // L3: Unroll small loops with may_const-dependent bodies, then clean up
   // + re-run StructFieldPass for loads exposed by unrolling.
   if (static_cast<int>(level) >= 3) {
-    FunctionPassManager FPM3;
-    FPM3.addPass(LoopSimplifyPass());
-    {
-      LoopPassManager LPM;
-      LPM.addPass(LoopFullUnrollPass());
-      FPM3.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
-    }
-    FPM3.addPass(PromotePass());
-    FPM3.addPass(SimplifyCFGPass());
     for (Function &F : M.functions())
       if (!F.isDeclaration())
-        FPM3.run(F, FAM_);
+        L3FPM_.run(F, FAM_);
 
     runStructFieldPass(M);
     runInstCombine(M);
