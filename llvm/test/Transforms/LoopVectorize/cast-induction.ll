@@ -276,16 +276,16 @@ define void @cast_induction_tail_folding(ptr %A) {
 ; IC2-NEXT:    [[INDEX1:%.*]] = add i32 [[INDEX]], 1
 ; IC2-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[INDEX]], 2
 ; IC2-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[INDEX1]], 2
-; IC2-NEXT:    [[TMP4:%.*]] = sext i32 [[INDEX]] to i64
-; IC2-NEXT:    [[TMP6:%.*]] = sext i32 [[INDEX1]] to i64
 ; IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; IC2:       [[PRED_STORE_IF]]:
+; IC2-NEXT:    [[TMP4:%.*]] = sext i32 [[INDEX]] to i64
 ; IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP4]]
 ; IC2-NEXT:    store i32 [[INDEX]], ptr [[TMP5]], align 4
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; IC2:       [[PRED_STORE_CONTINUE]]:
 ; IC2-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; IC2:       [[PRED_STORE_IF1]]:
+; IC2-NEXT:    [[TMP6:%.*]] = sext i32 [[INDEX1]] to i64
 ; IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; IC2-NEXT:    store i32 [[INDEX1]], ptr [[TMP7]], align 4
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
