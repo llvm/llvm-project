@@ -20,12 +20,18 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
 namespace llvm {
+LLVM_ABI cl::opt<bool> ShouldPreserveAllAttributes(
+    "assume-preserve-all", cl::init(false), cl::Hidden,
+    cl::desc("enable preservation of all attributes. even those that are "
+             "unlikely to be useful"));
+
 cl::opt<bool> EnableKnowledgeRetention(
     "enable-knowledge-retention", cl::init(false), cl::Hidden,
     cl::desc(
@@ -187,7 +193,8 @@ struct AssumeBuilderState {
 
   void addAttribute(Attribute Attr, Value *WasOn) {
     if (Attr.isTypeAttribute() || Attr.isStringAttribute() ||
-        !isUsefullToPreserve(Attr.getKindAsEnum()))
+        (!ShouldPreserveAllAttributes &&
+         !isUsefullToPreserve(Attr.getKindAsEnum())))
       return;
     uint64_t AttrArg = 0;
     if (Attr.isIntAttribute())
