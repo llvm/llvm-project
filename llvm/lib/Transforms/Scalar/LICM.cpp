@@ -1072,25 +1072,32 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   return Changed;
 }
 
-static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
-                                          Loop *CurLoop,
-                                          std::optional<uint64_t> HoistIndex) {
+static std::optional<uint64_t>
+getConstantInsertionIndex(InsertElementInst *Ins) {
   // Must have constant insertion lane.
-  auto *InsertedIdxCI = dyn_cast<ConstantInt>(CurrIns->getOperand(2));
+  auto *InsertedIdxCI = dyn_cast<ConstantInt>(Ins->getOperand(2));
   if (!InsertedIdxCI)
-    return nullptr;
-  auto *VecTy = cast<VectorType>(CurrIns->getType());
+    return std::nullopt;
+  auto *VecTy = cast<VectorType>(Ins->getType());
 
   // Avoid hoisting past out of bounds inserts
   if (InsertedIdxCI->isNegative() ||
       InsertedIdxCI->getValue().uge(
           VecTy->getElementCount().getKnownMinValue()))
-    return nullptr;
+    return std::nullopt;
+  return InsertedIdxCI->getValue().getLimitedValue();
+}
 
+static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
+                                          Loop *CurLoop,
+                                          std::optional<uint64_t> HoistIndex) {
   // Make sure not hoisting past insertions into the same lane
+  std::optional<uint64_t> InsertIdx = getConstantInsertionIndex(CurrIns);
+  if (!InsertIdx)
+    return nullptr;
   if (!HoistIndex)
-    HoistIndex = InsertedIdxCI->getValue().getLimitedValue();
-  else if (*HoistIndex == InsertedIdxCI->getValue().getLimitedValue())
+    HoistIndex = InsertIdx;
+  else if (*HoistIndex == *InsertIdx)
     return nullptr;
 
   Value *InnerVal = CurrIns->getOperand(0);
