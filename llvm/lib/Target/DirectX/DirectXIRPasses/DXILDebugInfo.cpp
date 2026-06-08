@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILDebugInfo.h"
+#include "DirectX.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
@@ -66,6 +67,8 @@ static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
 }
 
 DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
+  M.convertFromNewDbgValues();
+
   DXILDebugInfoMap Res;
   DebugInfoFinder DIF;
   DIF.processModule(M);
@@ -86,7 +89,14 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     // for (Function &F : M) loop.
     DenseSet<DILocalVariable *> DbgVariablesSeen;
 
+    const AttributeMask &AttrMask = getNonDXILAttributeMask();
+
     for (Function &F : M) {
+      F.removeFnAttrs(AttrMask);
+      F.removeRetAttrs(AttrMask);
+      for (unsigned ArgNo = 0; ArgNo != F.arg_size(); ++ArgNo)
+        F.removeParamAttrs(ArgNo, AttrMask);
+
       bool IsEntryBlock = true;
       DbgVariablesSeen.clear();
       for (BasicBlock &BB : F) {

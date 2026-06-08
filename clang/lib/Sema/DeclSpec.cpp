@@ -1162,6 +1162,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
   // Check the type specifier components first. No checking for an invalid
   // type.
+  CheckTypeSpec(S, Policy);
+
+  CheckFriendSpec(S, Policy);
+
+  assert(!TypeSpecOwned || isDeclRep((TST)TypeSpecType));
+
+  // Okay, now we can infer the real type.
+
+  // TODO: return "auto function" and other bad things based on the real type.
+
+  // 'data definition has no type or storage class'?
+}
+
+void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   if (TypeSpecType == TST_error)
     return;
 
@@ -1441,6 +1455,9 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_consteval);
   else if (getConstexprSpecifier() == ConstexprSpecKind::Constinit)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_constinit);
+}
+
+void DeclSpec::CheckFriendSpec(Sema &S, const PrintingPolicy &Policy) {
   // C++ [class.friend]p6:
   //   No storage-class-specifier shall appear in the decl-specifier-seq
   //   of a friend declaration.
@@ -1498,14 +1515,6 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     FS_explicit_specifier = ExplicitSpecifier();
     FS_virtualLoc = FS_explicitLoc = SourceLocation();
   }
-
-  assert(!TypeSpecOwned || isDeclRep((TST) TypeSpecType));
-
-  // Okay, now we can infer the real type.
-
-  // TODO: return "auto function" and other bad things based on the real type.
-
-  // 'data definition has no type or storage class'?
 }
 
 bool DeclSpec::isMissingDeclaratorOk() {
