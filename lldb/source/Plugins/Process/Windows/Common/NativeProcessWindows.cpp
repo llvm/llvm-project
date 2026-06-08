@@ -599,8 +599,11 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     // Halt all threads at the kernel level.
     for (uint32_t i = 0; i < m_threads.size(); ++i) {
       auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
-      if (t->DoStop().Fail())
+      if (Status err = t->DoStop(); err.Fail()) {
+        LLDB_LOG(log, "Failed to stop thread {1}: {0}", t->GetID(),
+                 err.GetError());
         exit(1);
+      }
     }
     if (!m_threads.empty()) {
       auto first = static_cast<NativeThreadWindows *>(m_threads[0].get());
