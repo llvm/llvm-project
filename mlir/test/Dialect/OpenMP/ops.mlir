@@ -2011,6 +2011,42 @@ func.func @omp_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
   return
 }
 
+// CHECK-LABEL: omp_atomic_compare
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare(%x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.compare %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: }
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi eq, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  // CHECK: omp.atomic.compare %[[X]] : memref<i32> {
+  // CHECK:   omp.yield
+  // CHECK-NEXT: } {weak}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi eq, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  } {weak}
+  // CHECK: omp.atomic.compare memory_order(seq_cst) %[[X]] : memref<i32> {
+  // CHECK:   omp.yield
+  // CHECK-NEXT: } {weak}
+  omp.atomic.compare memory_order(seq_cst) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi eq, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  } {weak}
+  return
+}
+
 // CHECK-LABEL: omp_sectionsop
 func.func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
                      %data_var3 : memref<i32>, %redn_var : !llvm.ptr) {
@@ -3602,7 +3638,6 @@ func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
     // CHECK: %{{.*}}map_clauses(attach_auto){{.*}}
     // CHECK: %{{.*}}map_clauses(ref_ptr){{.*}}
     // CHECK: %{{.*}}map_clauses(ref_ptee){{.*}}
-    // CHECK: %{{.*}}map_clauses(ref_ptr_ptee){{.*}}
     %mapv0 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(none) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv1 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv2 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
@@ -3622,7 +3657,6 @@ func.func @omp_target_map_clause_type_test(%arg0 : memref<?xi32>) -> () {
     %mapv16 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(attach_auto) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv17 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptr) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv18 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptee) capture(ByRef) -> memref<?xi32> {name = ""}
-    %mapv19 = omp.map.info var_ptr(%arg0 : memref<?xi32>, tensor<?xi32>) map_clauses(ref_ptr_ptee) capture(ByRef) -> memref<?xi32> {name = ""}
 
     return
 }

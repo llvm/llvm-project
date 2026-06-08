@@ -444,8 +444,8 @@ define signext i32 @cttz_i32(i32 signext %a) nounwind {
   ret i32 %1
 }
 
-define signext i32 @cttz_zero_undef_i32(i32 signext %a) nounwind {
-; RV64I-LABEL: cttz_zero_undef_i32:
+define signext i32 @cttz_zero_poison_i32(i32 signext %a) nounwind {
+; RV64I-LABEL: cttz_zero_poison_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    and a0, a0, a1
@@ -476,7 +476,7 @@ define signext i32 @cttz_zero_undef_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    ret
 ;
-; RV64XTHEADBB-NOB-LABEL: cttz_zero_undef_i32:
+; RV64XTHEADBB-NOB-LABEL: cttz_zero_poison_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
 ; RV64XTHEADBB-NOB-NEXT:    addi a1, a0, -1
 ; RV64XTHEADBB-NOB-NEXT:    not a0, a0
@@ -486,7 +486,7 @@ define signext i32 @cttz_zero_undef_i32(i32 signext %a) nounwind {
 ; RV64XTHEADBB-NOB-NEXT:    sub a0, a1, a0
 ; RV64XTHEADBB-NOB-NEXT:    ret
 ;
-; RV64XTHEADBB-B-LABEL: cttz_zero_undef_i32:
+; RV64XTHEADBB-B-LABEL: cttz_zero_poison_i32:
 ; RV64XTHEADBB-B:       # %bb.0:
 ; RV64XTHEADBB-B-NEXT:    ctzw a0, a0
 ; RV64XTHEADBB-B-NEXT:    ret

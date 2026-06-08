@@ -1,7 +1,13 @@
 // RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -std=c23 -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -std=c23 -analyzer-checker=core,security.VAList -analyzer-output=text -verify %s
 
+#if __STDC_VERSION__ >= 202311L
+#include "Inputs/system-header-simulator-for-valist-c23.h"
+#else
 #include "Inputs/system-header-simulator-for-valist.h"
+#endif
 
 void f1(int fst, ...) {
   va_list va;

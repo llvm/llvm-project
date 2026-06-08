@@ -176,7 +176,7 @@ ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
 }
 
 void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,
-                                         ModuleMacroInfo &Info) {
+                                         FullModuleMacroInfo &Info) {
   assert(Info.ActiveModuleMacrosGeneration !=
              CurSubmoduleState->VisibleModules.getGeneration() &&
          "don't need to update this macro name info");
@@ -264,7 +264,9 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
     State = &Pos->second;
 
   llvm::errs() << "MacroState " << State << " " << II->getNameStart();
-  if (State && State->isAmbiguous(*this, II))
+  const auto ModuleInfo =
+      State ? State->getModuleInfo(*this, II) : ModuleMacroInfo{};
+  if (ModuleInfo.IsAmbiguous)
     llvm::errs() << " ambiguous";
   if (State && !State->getOverriddenMacros().empty()) {
     llvm::errs() << " overrides";
@@ -281,10 +283,8 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
   }
 
   // Dump module macros.
-  llvm::DenseSet<ModuleMacro*> Active;
-  for (auto *MM : State ? State->getActiveModuleMacros(*this, II)
-                        : ArrayRef<ModuleMacro *>())
-    Active.insert(MM);
+  llvm::DenseSet<ModuleMacro *> Active(llvm::from_range,
+                                       ModuleInfo.ActiveModuleMacros);
   llvm::DenseSet<ModuleMacro*> Visited;
   llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf);
   while (!Worklist.empty()) {

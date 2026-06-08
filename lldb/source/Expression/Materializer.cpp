@@ -488,8 +488,8 @@ public:
 
       if (!write_error.Success()) {
         err = Status::FromErrorStringWithFormatv(
-            "couldn't write the contents of reference variable {0} to memory: "
-            "{0}",
+            "couldn't write the contents of reference variable {} to memory: "
+            "{}",
             GetName(), write_error.AsCString());
         return;
       }

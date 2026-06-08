@@ -183,15 +183,15 @@ protected:
       return nullptr;
     }
 
-    std::optional<EntityName> EN = getEntityName(ContributorDefn);
+    std::optional<EntityId> ContributorEntityId =
+        Extractor->addEntity(ContributorDefn);
 
-    if (!EN) {
+    if (!ContributorEntityId) {
       ADD_FAILURE() << "failed to get EntityName for contributor \""
                     << toStringRef(Name) << "\"";
       return nullptr;
     }
 
-    EntityId ContributorEntityId = Builder.addEntity(*EN);
     auto &TUSumData = getData(TUSum);
     auto EntitiesSumIter =
         TUSumData.find(PointerFlowEntitySummary::summaryName());
@@ -201,7 +201,7 @@ protected:
     if (EntitiesSumIter == TUSumData.end())
       return nullptr;
 
-    auto EntitySumIter = EntitiesSumIter->second.find(ContributorEntityId);
+    auto EntitySumIter = EntitiesSumIter->second.find(*ContributorEntityId);
 
     // If entity summary is empty, it may not exist:
     if (EntitySumIter == EntitiesSumIter->second.end())
@@ -213,16 +213,14 @@ protected:
 public:
   std::optional<EntityId> getEntityId(FindEntityByName Name) {
     if (const auto *D = findEntityByName(Name, AST->getASTContext())) {
-      if (auto EntityName = getEntityName(D))
-        return Builder.addEntity(*EntityName);
+      return Extractor->addEntity(D);
     }
     return std::nullopt;
   }
 
   std::optional<EntityId> getEntityIdForReturn(FindEntityByName FunName) {
     if (const auto *D = findFnByName(FunName, AST->getASTContext())) {
-      if (auto EntityName = getEntityNameForReturn(D))
-        return Builder.addEntity(*EntityName);
+      return Extractor->addEntityForReturn(D);
     }
     return std::nullopt;
   }

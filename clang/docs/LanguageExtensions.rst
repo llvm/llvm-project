@@ -903,6 +903,8 @@ T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Co
                                                 the first argument is 0 and an optional second argument is provided,
                                                 the second argument is returned. It is undefined behaviour if the
                                                 first argument is 0 and no second argument is provided.
+T __builtin_elementwise_clmul(T x, T y)         perform a carry-less multiplication of x and y, returning the least    integer types
+                                                significant bits of the wide result.
 ============================================== ====================================================================== =========================================
 
 

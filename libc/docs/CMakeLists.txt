@@ -42,6 +42,7 @@ if (SPHINX_FOUND)
       aio
       arpa/inet
       assert
+      byteswap
       cpio
       ctype
       dirent
@@ -57,6 +58,7 @@ if (SPHINX_FOUND)
       nl_types
       net/if
       netinet/in
+      netinet/tcp
       poll
       pthread
       pwd

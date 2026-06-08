@@ -65,10 +65,9 @@ static bool HaveSameAssociatedConstraints(
     return true;
 
   // General case: pairwise compare each associated constraint expression.
-  Sema::TemplateCompareNewDeclInfo NewInfo(New);
   for (size_t I = 0, E = OldACs.size(); I != E; ++I)
-    if (!SemaRef.AreConstraintExpressionsEqual(
-            Old, OldACs[I].ConstraintExpr, NewInfo, NewACs[I].ConstraintExpr))
+    if (!SemaRef.AreConstraintExpressionsEqual(Old, OldACs[I].ConstraintExpr,
+                                               New, NewACs[I].ConstraintExpr))
       return false;
 
   return true;
@@ -311,10 +310,11 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
 }
 
 // Transform a given template type parameter `TTP`.
-TemplateTypeParmDecl *transformTemplateTypeParam(
-    Sema &SemaRef, DeclContext *DC, TemplateTypeParmDecl *TTP,
-    MultiLevelTemplateArgumentList &Args, unsigned NewDepth, unsigned NewIndex,
-    bool EvaluateConstraint) {
+TemplateTypeParmDecl *
+transformTemplateParam(Sema &SemaRef, DeclContext *DC,
+                       TemplateTypeParmDecl *TTP,
+                       MultiLevelTemplateArgumentList &Args, unsigned NewDepth,
+                       unsigned NewIndex, bool EvaluateConstraint) {
   // TemplateTypeParmDecl's index cannot be changed after creation, so
   // substitute it directly.
   auto *NewTTP = TemplateTypeParmDecl::Create(
@@ -335,20 +335,131 @@ TemplateTypeParmDecl *transformTemplateTypeParam(
   SemaRef.CurrentInstantiationScope->InstantiatedLocal(TTP, NewTTP);
   return NewTTP;
 }
-// Similar to above, but for non-type template or template template parameters.
-template <typename NonTypeTemplateOrTemplateTemplateParmDecl>
-NonTypeTemplateOrTemplateTemplateParmDecl *
+
+NonTypeTemplateParmDecl *
 transformTemplateParam(Sema &SemaRef, DeclContext *DC,
-                       NonTypeTemplateOrTemplateTemplateParmDecl *OldParam,
-                       MultiLevelTemplateArgumentList &Args, unsigned NewIndex,
-                       unsigned NewDepth) {
-  // Ask the template instantiator to do the heavy lifting for us, then adjust
-  // the index of the parameter once it's done.
-  auto *NewParam = cast<NonTypeTemplateOrTemplateTemplateParmDecl>(
-      SemaRef.SubstDecl(OldParam, DC, Args));
-  NewParam->setPosition(NewIndex);
-  NewParam->setDepth(NewDepth);
-  return NewParam;
+                       NonTypeTemplateParmDecl *TTP, unsigned NewDepth,
+                       unsigned NewIndex,
+                       MultiLevelTemplateArgumentList &Args) {
+  NonTypeTemplateParmDecl *NewTTP;
+  if (TTP->isExpandedParameterPack()) {
+    SmallVector<TypeSourceInfo *, 4> ExpandedTypeSourceInfos(
+        TTP->getNumExpansionTypes());
+    SmallVector<QualType, 4> ExpandedTypes(TTP->getNumExpansionTypes());
+    for (unsigned I = 0, N = TTP->getNumExpansionTypes(); I != N; ++I) {
+      TypeSourceInfo *NewTSI =
+          SemaRef.SubstType(TTP->getExpansionTypeSourceInfo(I), Args,
+                            TTP->getLocation(), TTP->getDeclName());
+      assert(NewTSI);
+
+      QualType NewT =
+          SemaRef.CheckNonTypeTemplateParameterType(NewTSI, TTP->getLocation());
+      assert(!NewT.isNull());
+
+      ExpandedTypeSourceInfos[I] = NewTSI;
+      ExpandedTypes[I] = NewT;
+    }
+    NewTTP = NonTypeTemplateParmDecl::Create(
+        SemaRef.Context, DC, TTP->getBeginLoc(), TTP->getLocation(), NewDepth,
+        NewIndex, TTP->getIdentifier(), TTP->getType(),
+        TTP->getTypeSourceInfo(), ExpandedTypes, ExpandedTypeSourceInfos);
+  } else {
+    TypeSourceInfo *NewTSI = SemaRef.SubstType(
+        TTP->getTypeSourceInfo(), Args, TTP->getLocation(), TTP->getDeclName());
+    assert(NewTSI);
+
+    QualType NewT =
+        SemaRef.CheckNonTypeTemplateParameterType(NewTSI, TTP->getLocation());
+    assert(!NewT.isNull());
+
+    NewTTP = NonTypeTemplateParmDecl::Create(
+        SemaRef.Context, DC, TTP->getBeginLoc(), TTP->getLocation(), NewDepth,
+        NewIndex, TTP->getIdentifier(), NewT, TTP->isParameterPack(), NewTSI);
+  }
+
+  if (TypeSourceInfo *TSI = TTP->getTypeSourceInfo();
+      AutoTypeLoc AutoLoc = TSI->getTypeLoc().getContainedAutoTypeLoc()) {
+    if (AutoLoc.isConstrained()) {
+      SourceLocation EllipsisLoc;
+      if (TTP->isExpandedParameterPack())
+        EllipsisLoc =
+            TSI->getTypeLoc().getAs<PackExpansionTypeLoc>().getEllipsisLoc();
+      else if (auto *Constraint = dyn_cast_if_present<CXXFoldExpr>(
+                   TTP->getPlaceholderTypeConstraint()))
+        EllipsisLoc = Constraint->getEllipsisLoc();
+      // Note: We attach the non-instantiated constraint here, so that it can be
+      // instantiated relative to the top level, like all our other
+      // constraints.
+      if (SemaRef.AttachTypeConstraint(AutoLoc, /*NewConstrainedParm=*/NewTTP,
+                                       /*OrigConstrainedParm=*/TTP,
+                                       EllipsisLoc))
+        llvm_unreachable("unexpected failure attaching type constraint");
+    }
+  }
+
+  NewTTP->setAccess(AS_public);
+  NewTTP->setImplicit(TTP->isImplicit());
+
+  if (TTP->hasDefaultArgument()) {
+    TemplateArgumentLoc InstantiatedDefaultArg;
+    if (!SemaRef.SubstTemplateArgument(
+            TTP->getDefaultArgument(), Args, InstantiatedDefaultArg,
+            TTP->getDefaultArgumentLoc(), TTP->getDeclName()))
+      NewTTP->setDefaultArgument(SemaRef.Context, InstantiatedDefaultArg);
+  }
+
+  SemaRef.CurrentInstantiationScope->InstantiatedLocal(TTP, NewTTP);
+  return NewTTP;
+}
+
+TemplateParameterList *
+transformTemplateParameters(Sema &SemaRef, DeclContext *DC,
+                            TemplateParameterList *TPL,
+                            MultiLevelTemplateArgumentList &Args,
+                            unsigned NewDepth, bool EvaluateConstraint);
+
+TemplateTemplateParmDecl *
+transformTemplateParam(Sema &SemaRef, DeclContext *DC,
+                       TemplateTemplateParmDecl *TTP, unsigned NewDepth,
+                       unsigned NewIndex, MultiLevelTemplateArgumentList &Args,
+                       bool EvaluateConstraint) {
+  TemplateTemplateParmDecl *NewTTP;
+  if (TTP->isExpandedParameterPack()) {
+    SmallVector<TemplateParameterList *, 4> ExpandedTPLs(
+        TTP->getNumExpansionTemplateParameters());
+    for (unsigned I = 0, N = TTP->getNumExpansionTemplateParameters(); I != N;
+         ++I)
+      ExpandedTPLs[I] = transformTemplateParameters(
+          SemaRef, DC, TTP->getExpansionTemplateParameters(I), Args,
+          NewDepth + 1, EvaluateConstraint);
+    NewTTP = TemplateTemplateParmDecl::Create(
+        SemaRef.Context, DC, TTP->getLocation(), NewDepth, NewIndex,
+        TTP->getIdentifier(), TTP->templateParameterKind(),
+        TTP->wasDeclaredWithTypename(), TTP->getTemplateParameters(),
+        ExpandedTPLs);
+  } else {
+    TemplateParameterList *NewTPL =
+        transformTemplateParameters(SemaRef, DC, TTP->getTemplateParameters(),
+                                    Args, NewDepth + 1, EvaluateConstraint);
+    NewTTP = TemplateTemplateParmDecl::Create(
+        SemaRef.Context, DC, TTP->getLocation(), NewDepth, NewIndex,
+        TTP->isParameterPack(), TTP->getIdentifier(),
+        TTP->templateParameterKind(), TTP->wasDeclaredWithTypename(), NewTPL);
+  }
+
+  NewTTP->setAccess(AS_public);
+  NewTTP->setImplicit(TTP->isImplicit());
+
+  if (TTP->hasDefaultArgument()) {
+    TemplateArgumentLoc InstantiatedDefaultArg;
+    if (!SemaRef.SubstTemplateArgument(
+            TTP->getDefaultArgument(), Args, InstantiatedDefaultArg,
+            TTP->getDefaultArgumentLoc(), TTP->getDeclName()))
+      NewTTP->setDefaultArgument(SemaRef.Context, InstantiatedDefaultArg);
+  }
+
+  SemaRef.CurrentInstantiationScope->InstantiatedLocal(TTP, NewTTP);
+  return NewTTP;
 }
 
 NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
@@ -357,14 +468,30 @@ NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
                                       unsigned NewIndex, unsigned NewDepth,
                                       bool EvaluateConstraint = true) {
   if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
-    return transformTemplateTypeParam(
-        SemaRef, DC, TTP, Args, NewDepth, NewIndex,
-        /*EvaluateConstraint=*/EvaluateConstraint);
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-    return transformTemplateParam(SemaRef, DC, TTP, Args, NewIndex, NewDepth);
+    return transformTemplateParam(SemaRef, DC, TTP, Args, NewDepth, NewIndex,
+                                  EvaluateConstraint);
   if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
-    return transformTemplateParam(SemaRef, DC, NTTP, Args, NewIndex, NewDepth);
+    return transformTemplateParam(SemaRef, DC, NTTP, NewDepth, NewIndex, Args);
+  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
+    return transformTemplateParam(SemaRef, DC, TTP, NewDepth, NewIndex, Args,
+                                  EvaluateConstraint);
   llvm_unreachable("Unhandled template parameter types");
+}
+
+TemplateParameterList *
+transformTemplateParameters(Sema &SemaRef, DeclContext *DC,
+                            TemplateParameterList *TPL,
+                            MultiLevelTemplateArgumentList &Args,
+                            unsigned NewDepth, bool EvaluateConstraint) {
+  SmallVector<NamedDecl *, 4> Params(TPL->size());
+  for (unsigned I = 0, E = TPL->size(); I < E; ++I) {
+    Params[I] = transformTemplateParameter(SemaRef, DC, TPL->getParam(I), Args,
+                                           /*NewIndex=*/I, NewDepth,
+                                           EvaluateConstraint);
+  }
+  return TemplateParameterList::Create(
+      SemaRef.Context, TPL->getTemplateLoc(), TPL->getLAngleLoc(), Params,
+      TPL->getRAngleLoc(), TPL->getRequiresClause());
 }
 
 /// Transform to convert portions of a constructor declaration into the
@@ -375,6 +502,7 @@ struct ConvertConstructorToDeductionGuideTransform {
       : SemaRef(S), Template(Template) {
     // If the template is nested, then we need to use the original
     // pattern to iterate over the constructors.
+    // FIXME: Should this just use getTemplateInstantiationPattern?
     ClassTemplateDecl *Pattern = Template;
     while (Pattern->getInstantiatedFromMemberTemplate()) {
       if (Pattern->isMemberSpecialization())
@@ -382,9 +510,9 @@ struct ConvertConstructorToDeductionGuideTransform {
       Pattern = Pattern->getInstantiatedFromMemberTemplate();
       NestedPattern = Pattern;
     }
-
     if (NestedPattern)
-      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(Template);
+      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(
+          Decl::castFromDeclContext(Template->getDeclContext()));
   }
 
   Sema &SemaRef;
@@ -925,52 +1053,9 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     }
   }
 
-  // A list of template arguments for transforming the require-clause of F.
-  // It must contain the entire set of template argument lists.
-  MultiLevelTemplateArgumentList ArgsForBuildingRC;
+  MultiLevelTemplateArgumentList ArgsForBuildingRC =
+      SemaRef.getTemplateInstantiationArgs(F, TemplateArgsForBuildingRC);
   ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
-  ArgsForBuildingRC.addOuterTemplateArguments(TemplateArgsForBuildingRC);
-  // For 2), if the underlying deduction guide F is nested in a class template,
-  // we need the entire template argument list, as the constraint AST in the
-  // require-clause of F remains completely uninstantiated.
-  //
-  // For example:
-  //   template <typename T> // depth 0
-  //   struct Outer {
-  //      template <typename U>
-  //      struct Foo { Foo(U); };
-  //
-  //      template <typename U> // depth 1
-  //      requires C<U>
-  //      Foo(U) -> Foo<int>;
-  //   };
-  //   template <typename U>
-  //   using AFoo = Outer<int>::Foo<U>;
-  //
-  // In this scenario, the deduction guide for `Foo` inside `Outer<int>`:
-  //   - The occurrence of U in the require-expression is [depth:1, index:0]
-  //   - The occurrence of U in the function parameter is [depth:0, index:0]
-  //   - The template parameter of U is [depth:0, index:0]
-  //
-  // We add the outer template arguments which is [int] to the multi-level arg
-  // list to ensure that the occurrence U in `C<U>` will be replaced with int
-  // during the substitution.
-  //
-  // NOTE: The underlying deduction guide F is instantiated -- either from an
-  // explicitly-written deduction guide member, or from a constructor.
-  // getInstantiatedFromMemberTemplate() can only handle the former case, so we
-  // check the DeclContext kind.
-  if (F->getLexicalDeclContext()->getDeclKind() ==
-      clang::Decl::ClassTemplateSpecialization) {
-    auto OuterLevelArgs = SemaRef.getTemplateInstantiationArgs(
-        F, F->getLexicalDeclContext(),
-        /*Final=*/false, /*Innermost=*/std::nullopt,
-        /*RelativeToPrimary=*/true,
-        /*Pattern=*/nullptr,
-        /*ForConstraintInstantiation=*/true);
-    for (auto It : OuterLevelArgs)
-      ArgsForBuildingRC.addOuterTemplateArguments(It.Args);
-  }
 
   ExprResult E = SemaRef.SubstExpr(RC, ArgsForBuildingRC);
   if (E.isInvalid())

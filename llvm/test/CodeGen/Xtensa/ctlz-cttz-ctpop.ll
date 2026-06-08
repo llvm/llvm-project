@@ -41,8 +41,8 @@ define i32 @test_cttz_i32(i32 %a) nounwind {
   ret i32 %tmp
 }
 
-define i32 @test_cttz_i32_zero_undef(i32 %a) nounwind {
-; XTENSA-LABEL: test_cttz_i32_zero_undef:
+define i32 @test_cttz_i32_zero_poison(i32 %a) nounwind {
+; XTENSA-LABEL: test_cttz_i32_zero_poison:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    movi a8, -1
 ; XTENSA-NEXT:    xor a8, a2, a8
@@ -114,8 +114,8 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
   ret i32 %tmp
 }
 
-define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
-; XTENSA-LABEL: test_ctlz_i32_zero_undef:
+define i32 @test_ctlz_i32_zero_poison(i32 %a) nounwind {
+; XTENSA-LABEL: test_ctlz_i32_zero_poison:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    srli a8, a2, 1
 ; XTENSA-NEXT:    or a8, a2, a8

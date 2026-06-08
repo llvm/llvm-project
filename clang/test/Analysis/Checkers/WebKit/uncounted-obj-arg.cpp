@@ -480,11 +480,20 @@ public:
 
   int nonTrivial13() { return ~otherFunction(); }
   int nonTrivial14() { int r = 0xff; r |= otherFunction(); return r; }
-  void nonTrivial15() { ++complex; }
-  void nonTrivial16() { complex++; }
-  ComplexNumber nonTrivial17() { return complex << 2; }
-  ComplexNumber nonTrivial18() { return +complex; }
-  ComplexNumber* nonTrivial19() { return new ComplexNumber(complex); }
+  void nonTrivial15() { ++complex; } // expected-warning{{Call argument for 'this' parameter is uncounted and unsafe}}
+  void nonTrivial16() { complex++; } // expected-warning{{Call argument for 'this' parameter is uncounted and unsafe}}
+  ComplexNumber nonTrivial17() {
+    return complex << 2; // expected-warning{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+  }
+  ComplexNumber nonTrivial18() {
+    return +complex; // expected-warning{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+  }
+  ComplexNumber* nonTrivial19() {
+    return new ComplexNumber(complex);
+    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+  }
   unsigned nonTrivial20() { return ObjectWithMutatingDestructor { 7 }.value(); }
   unsigned nonTrivial21() { return Number("123").value(); }
   unsigned nonTrivial22() { return ComplexNumber(123, "456").real().value(); }

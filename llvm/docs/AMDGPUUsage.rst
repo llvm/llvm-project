@@ -1,3 +1,5 @@
+.. _amdgpu-usage-guide:
+
 =============================
 User Guide for AMDGPU Backend
 =============================
@@ -30,6 +32,7 @@ User Guide for AMDGPU Backend
    AMDGPUInstructionNotation
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
    AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
+   AMDGPU/DeveloperGuideline
 
 Introduction
 ============
@@ -827,6 +830,55 @@ For example:
 
      =============== ============================ ==================================================
 
+.. _amdgpu-module-flags:
+
+Module Flags
+------------
+
+AMDGPU-specific behaviour can be controlled via LLVM module flags (see
+`Module Flags Metadata
+<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+reference). These flags are set by frontends and are
+consumed by the AMDGPU backend during code generation.
+
+.. list-table:: AMDGPU Module Flags
+   :name: amdgpu-module-flags-table
+   :header-rows: 1
+
+   * - Flag Name
+     - Type
+     - Merge
+     - Description
+   * - ``amdgpu.buffer.oob.mode``
+     - ``i32``
+     - Max
+     - Controls out-of-bounds semantics for untyped buffer
+       instructions (``buffer_load`` / ``buffer_store``).
+
+       - ``0`` (or absent): **any**. The module does not care about OOB
+         semantics. This is an alias of **strict** that is allowed to link
+         with any other module. Code generation is identical to **strict**.
+       - ``1``: **relaxed**. The backend may merge misaligned buffer
+         accesses for performance, even if that changes OOB behaviour.
+       - ``2``: **strict**. The backend preserves per-byte OOB guarantees
+         by preventing merging of misaligned buffer accesses that could
+         straddle an OOB boundary (e.g. as required by Vulkan
+         ``robustBufferAccess2``).
+
+   * - ``amdgpu.tbuffer.oob.mode``
+     - ``i32``
+     - Max
+     - Same as above, but for typed buffer instructions (``tbuffer_load`` /
+       ``tbuffer_store``).
+
+.. note::
+
+   Frontends that require misaligned-access merging for performance should
+   set both flags to ``1`` (relaxed).  Frontends that require strict
+   per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
+   Modules that do not use buffer operations or are indifferent to OOB semantics
+   (e.g. device libraries) should leave the flags absent.
+
 .. _amdgpu-target-id:
 
 Target ID
@@ -1130,7 +1182,7 @@ supported for the ``amdgcn`` target.
 
   These pointers can be created by ``addrspacecast`` from a buffer resource
   (``ptr addrspace(8)``) or by using ``llvm.amdgcn.make.buffer.rsrc`` to produce a
-  ``ptr addrspace(9)``` directly, which produces a buffer strided pointer whose initial
+  ``ptr addrspace(9)`` directly, which produces a buffer strided pointer whose initial
   index and offset values are both 0. This prevents the address space cast from
   being rewritten away.
 
@@ -1151,6 +1203,15 @@ supported for the ``amdgcn`` target.
 
 Memory Scopes
 -------------
+
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
 
 This section provides LLVM memory synchronization scopes supported by the AMDGPU
 backend memory model when the target triple OS is ``amdhsa`` (see
@@ -1322,6 +1383,45 @@ It is undefined behavior to use a pointer to any part of a named barrier object
 as the pointer operand of a regular memory access instruction or intrinsic.
 Pointers to named barrier objects are intended to be used with dedicated
 intrinsics. Reading from or writing to such pointers is undefined behavior.
+
+Strided Buffer Marker (``stridemark``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The strided buffer marker type ``target("amdgpu.stridemark")`` is a type used to
+allow representing the mixed index/offset access provided by buffer instructions,
+which is used with ``ptr addrspace(9)`` - a pointer that carries both indices.
+
+This type is a compile-time marker that has no real value and appears only in
+element type metadata. No value of this type can be created.
+
+The marker type has one optional parameter - an integer indicating the constant
+value of the stride of the buffer(s) being addressed if known. That integer, if
+given, must be non-negative (but can be 0, indicating the degenarate case where
+no stride is set but the index field should be used anyway).
+
+When creating a structured GEP, arrays of ``amdgpu.stridemark``s are used to
+represent indexing into the *index* component of the structured/strided buffer,
+while a subsequent bare ``getelementptr`` - is used to manipulate the *offset*
+part.
+
+Example usage:
+
+.. code-block:: llvm
+
+      ;; A 2-D array of unknown length and stride.
+      %q1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+        (ptr addrspace(9) elementtype([0 x target("amdgpu.stridemark") ]) %p,
+        i32 %index)
+      %q = getelementptr i8, ptr addrspace(9) %q1, i32 %offset
+
+      ;; Known bounds on index and offset.
+      %y1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+        (ptr addrspace(9) elementtype([256 x target("amdgpu.stridemark", 16) ]) %p,
+        i32 %index)
+      %y = getelementptr ptr addrspace(9) %y1, i32 %offset
+
+Note that the lowering for these examples is not yet implemented and will
+be added in future changes.
 
 LLVM IR Intrinsics
 ------------------
@@ -1824,6 +1924,98 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 .. TODO::
 
    List AMDGPU intrinsics.
+
+'``llvm.amdgcn.av``' Intrinsics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The '``llvm.amdgcn.av``' intrinsics perform
+:ref:`store-available<amdgpu-store-available>` and
+:ref:`load-visible<amdgpu-load-visible>` operations on flat or global memory
+with *scope* supplied as a metadata argument.
+
+The pointer argument can be a global pointer (``addrspace(1)``) or a flat
+pointer (``addrspace(0)``). Global pointers select ``global_load``/
+``global_store`` instructions; flat pointers select ``flat_load``/
+``flat_store`` instructions. The cache policy bits are the same in both cases.
+
+.. code-block:: llvm
+
+   <4 x i32> @llvm.amdgcn.av.load.b128.p1(
+       ptr addrspace(1), ; source (global)
+       metadata)         ; scope    - e.g. '!0' where '!0 = !{!"workgroup"}'
+
+   <4 x i32> @llvm.amdgcn.av.load.b128.p0(
+       ptr,              ; source (flat)
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p1(
+       ptr addrspace(1), ; destination (global)
+       <4 x i32>,        ; value
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p0(
+       ptr,              ; destination (flat)
+       <4 x i32>,        ; value
+       metadata)         ; scope
+
+Implementation Details
+++++++++++++++++++++++
+
+This section is informational and for **internal reference only**. Users should
+not rely on the expansions described below. The only reliable user-level
+guarantees are those provided by the :ref:`AMDGPU memory model<amdgpu-memmodel>`.
+
+The tables below show the cache policy bits for global pointer variants.
+Flat pointer variants use the corresponding ``flat_load``/``flat_store``
+instructions with the same cache policy bits.
+
+**TODO:** Currently the compiler does not support WGP mode on gfx12+. Hence,
+``"workgroup"`` scope currently maps to CU scope (no bits). When WGP mode is
+enabled this should map to ``scope:SCOPE_SE``.
+
+.. table:: AMDGPU Load-Visible Implementation
+   :class: longtable
+
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target       | instruction             | wavefront     | workgroup     | cluster       | agent         | system        |
+   +==============+=========================+===============+===============+===============+===============+===============+
+   | gfx90*       | ``global_load_dwordx4`` |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10*       | ``global_load_dwordx4`` |               |               | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* (WGP) | ``global_load_dwordx4`` |               | ``glc``       | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11*       | ``global_load_b128``    |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* (WGP) | ``global_load_b128``    |               | ``glc``       | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+       | ``global_load_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+
+.. table:: AMDGPU Store-Available Implementation
+   :class: longtable
+
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target | instruction              | wavefront     | workgroup     | cluster       | agent         | system        |
+   +========+==========================+===============+===============+===============+===============+===============+
+   | gfx90* | ``global_store_dwordx4`` |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942 | ``global_store_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950 | ``global_store_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* | ``global_store_dwordx4`` |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* | ``global_store_b128``    |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+ | ``global_store_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+
+**Note:** Cache control bits for Store are not affected by WGP mode.
 
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2434,6 +2626,9 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
      ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
                                            value of all its arguments.
 
+     ``min(arg, ...)``   1 or more         Variadic signed operation that returns the minimum
+                                           value of all its arguments
+
      ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
                                            result of all its arguments.
 
@@ -2880,6 +3075,8 @@ An AMDGPU target ELF code object has the standard ELF sections which include:
      ``.strtab``        ``SHT_STRTAB``   *none*
      ``.symtab``        ``SHT_SYMTAB``   *none*
      ``.text``          ``SHT_PROGBITS`` ``SHF_ALLOC`` + ``SHF_EXECINSTR``
+     ``.amdgpu.info``   ``SHT_PROGBITS`` ``SHF_EXCLUDE``
+     ``.amdgpu.strtab`` ``SHT_STRTAB``   ``SHF_EXCLUDE``
      ================== ================ =================================
 
 These sections have their standard meanings (see [ELF]_) and are only generated
@@ -2914,6 +3111,67 @@ if needed.
 
 ``.amdgpu.kernel.runtime.handle``
   Symbols used for device enqueue.
+
+.. _amdgpu-info-section:
+
+``.amdgpu.info``
+  Per-function metadata for AMDGPU object linking, emitted only in relocatable
+  code objects when object linking is enabled
+  (``-amdgpu-enable-object-linking``).  The linker uses this section to
+  propagate resource usage (registers, stack, LDS) and resolve call graph
+  dependencies across translation units.
+
+  Each entry uses a tagged, length-prefixed binary encoding:
+
+  .. code-block:: none
+
+     [kind: u8] [len: u8] [payload: <len> bytes]
+
+  A function scope is opened by an ``INFO_FUNC`` entry whose payload is an
+  8-byte relocated symbol reference.  All subsequent entries until the next
+  ``INFO_FUNC`` or end of section belong to that scope.  The format is
+  forward-compatible: unknown kinds can be skipped by reading the length byte.
+
+  .. table:: AMDGPU Info Entry Kinds
+     :name: amdgpu-info-entry-kinds-table
+
+     ===== ============================== ==========================================
+     Value Name                           Payload
+     ===== ============================== ==========================================
+     1     ``INFO_FUNC``                  8B symbol ref; opens function scope
+     2     ``INFO_FLAGS``                 u32; ``FuncInfoFlags`` bitfield
+     3     ``INFO_NUM_SGPR``              u32; SGPRs explicitly used
+     4     ``INFO_NUM_VGPR``              u32; architectural VGPRs used
+     5     ``INFO_NUM_AGPR``              u32; accumulator VGPRs (AGPRs) used
+     6     ``INFO_PRIVATE_SEGMENT_SIZE``  u32; private (scratch) segment bytes
+     7     ``INFO_USE``                   8B symbol ref; resource dependency edge
+     8     ``INFO_CALL``                  8B symbol ref; direct call edge
+     9     ``INFO_INDIRECT_CALL``         u32 strtab offset; indirect call type-ID
+     10    ``INFO_TYPEID``                u32 strtab offset; function type-ID
+     ===== ============================== ==========================================
+
+  .. table:: AMDGPU Info Function Flags (``INFO_FLAGS``)
+     :name: amdgpu-info-flags-table
+
+     ===== =========================== ==========================================
+     Bit   Name                        Description
+     ===== =========================== ==========================================
+     0x1   ``FUNC_USES_VCC``           Function uses the VCC register
+     0x2   ``FUNC_USES_FLAT_SCRATCH``  Function uses flat scratch addressing
+     0x4   ``FUNC_HAS_DYN_STACK``      Function has dynamic stack allocation
+     ===== =========================== ==========================================
+
+  Symbol references (``INFO_FUNC``, ``INFO_USE``, ``INFO_CALL``) generate
+  ``R_AMDGPU_ABS64`` relocations in ``.rela.amdgpu.info``.  String payloads
+  (``INFO_INDIRECT_CALL``, ``INFO_TYPEID``) store a ``u32`` offset into
+  the companion ``.amdgpu.strtab`` section.
+
+  See :ref:`amdgpu-assembler-directive-amdgpu-info` for the assembly syntax.
+
+``.amdgpu.strtab``
+  Null-terminated string pool for the ``.amdgpu.info`` section.  Contains
+  type-ID strings referenced by ``INFO_INDIRECT_CALL`` and ``INFO_TYPEID``
+  entries.  Only present when ``.amdgpu.info`` requires string data.
 
 .. _amdgpu-note-records:
 
@@ -6868,6 +7126,15 @@ code (see :ref:`memmodel`).
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
 
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
+
 The code sequences used to implement the memory model specify the order of
 instructions that a single thread must execute. The ``s_waitcnt`` and cache
 management instructions such as ``buffer_wbinvl1_vol`` are defined with respect
@@ -6993,7 +7260,11 @@ table
      ============ ==============================================================
 
 The code sequences used to implement the memory model are defined in the
-following sections:
+sections listed below.
+
+**Note:** The presence of :ref:`AV metadata<amdgpu-av-metadata>` can **suppress
+cache operations** (such as write-back or invalidate) that are usually part of
+these sequences.
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
@@ -21400,6 +21671,49 @@ semantics described in :ref:`amdgpu-amdhsa-code-object-metadata-v3`,
 :ref:`amdgpu-amdhsa-code-object-metadata-v5`.
 
 This directive is terminated by an ``.end_amdgpu_metadata`` directive.
+
+.. _amdgpu-assembler-directive-amdgpu-info:
+
+.amdgpu_info <symbol>
++++++++++++++++++++++
+
+Begins a per-function metadata block for ``<symbol>`` in the ``.amdgpu.info``
+section (see :ref:`amdgpu-info-section`).  Only valid when the OS is ``amdhsa``.
+The block is terminated by an ``.end_amdgpu_info`` directive.
+
+The following sub-directives may appear inside the block:
+
+  .. table:: .amdgpu_info Sub-Directives
+     :name: amdgpu-info-sub-directives-table
+
+     ====================================== ==========================================
+     Directive                              Description
+     ====================================== ==========================================
+     ``.amdgpu_flags`` *value*              ``FuncInfoFlags`` bitfield (u32)
+     ``.amdgpu_num_sgpr`` *value*           SGPRs explicitly used (u32)
+     ``.amdgpu_num_vgpr`` *value*           Architectural VGPRs used (u32)
+     ``.amdgpu_num_agpr`` *value*           Accumulator VGPRs used (u32)
+     ``.amdgpu_private_segment_size`` *n*   Private segment size in bytes (u32)
+     ``.amdgpu_use`` *symbol*               Resource dependency (LDS or barrier)
+     ``.amdgpu_call`` *symbol*              Direct call edge to *symbol*
+     ``.amdgpu_indirect_call`` *"type-id"*  Indirect call with given type-ID string
+     ``.amdgpu_typeid`` *"type-id"*         Type-ID for an address-taken function
+     ====================================== ==========================================
+
+Example:
+
+.. code-block:: nasm
+
+   .amdgpu_info my_kernel
+     .amdgpu_flags 7
+     .amdgpu_num_sgpr 33
+     .amdgpu_num_vgpr 32
+     .amdgpu_num_agpr 0
+     .amdgpu_private_segment_size 0
+     .amdgpu_use lds_var
+     .amdgpu_call helper
+     .amdgpu_indirect_call "vi"
+   .end_amdgpu_info
 
 .. _amdgpu-amdhsa-assembler-example-v3-onwards:
 

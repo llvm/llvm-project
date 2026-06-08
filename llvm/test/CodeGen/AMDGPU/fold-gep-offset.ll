@@ -8,13 +8,13 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11,GFX11-SDAG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12,GFX12-SDAG %s
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -mattr=-enable-flat-scratch < %s | FileCheck --check-prefixes=GFX90A,GFX90A-GISEL,GFX90A-MUBUF,GFX90A-GISEL-MUBUF %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -mattr=+enable-flat-scratch < %s | FileCheck --check-prefixes=GFX90A,GFX90A-GISEL,GFX90A-FLATSCR,GFX90A-GISEL-FLATSCR %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1030 -mattr=-enable-flat-scratch < %s | FileCheck --check-prefixes=GFX10,GFX10-GISEL,GFX10-MUBUF,GFX10-GISEL-MUBUF %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1030 -mattr=+enable-flat-scratch < %s | FileCheck --check-prefixes=GFX10,GFX10-GISEL,GFX10-FLATSCR,GFX10-GISEL-FLATSCR %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefixes=GFX942,GFX942-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11,GFX11-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12,GFX12-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx90a -mattr=-enable-flat-scratch < %s | FileCheck --check-prefixes=GFX90A,GFX90A-GISEL,GFX90A-MUBUF,GFX90A-GISEL-MUBUF %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx90a -mattr=+enable-flat-scratch < %s | FileCheck --check-prefixes=GFX90A,GFX90A-GISEL,GFX90A-FLATSCR,GFX90A-GISEL-FLATSCR %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1030 -mattr=-enable-flat-scratch < %s | FileCheck --check-prefixes=GFX10,GFX10-GISEL,GFX10-MUBUF,GFX10-GISEL-MUBUF %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1030 -mattr=+enable-flat-scratch < %s | FileCheck --check-prefixes=GFX10,GFX10-GISEL,GFX10-FLATSCR,GFX10-GISEL-FLATSCR %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefixes=GFX942,GFX942-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11,GFX11-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12,GFX12-GISEL %s
 
 ; This test checks memory addresses with constant offset components that should
 ; not be folded into memory accesses with immediate offsets.

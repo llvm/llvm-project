@@ -63,6 +63,7 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
+class VPSCEVExpander;
 enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
@@ -200,16 +201,6 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 };
 
 template <> struct DenseMapInfo<SCEVUse> {
-  static inline SCEVUse getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
-  static inline SCEVUse getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
   static unsigned getHashValue(SCEVUse U) {
     return hash_value(U.getOpaqueValue());
   }
@@ -336,7 +327,7 @@ public:
   LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 
   /// Return the canonical SCEV.
-  LLVM_ABI const SCEV *getCanonical() const {
+  const SCEV *getCanonical() const {
     assert(CanonicalSCEV && "canonical SCEV not yet computed");
     return CanonicalSCEV;
   }
@@ -1660,6 +1651,7 @@ private:
   friend class SCEVCallbackVH;
   friend class SCEVExpander;
   friend class SCEVUnknown;
+  friend class VPSCEVExpander;
 
   /// The function we are analyzing.
   Function &F;
@@ -2130,9 +2122,10 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsOnlyExit,
                                          bool AllowPredicates);
-  std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
-      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
-      bool ControlsOnlyExit, bool AllowPredicates);
+  std::optional<ScalarEvolution::ExitLimit>
+  computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache, const Loop *L,
+                                    Value *ExitCond, bool ExitIfTrue,
+                                    bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
@@ -2573,23 +2566,20 @@ public:
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionVerifierPass
-    : public PassInfoMixin<ScalarEvolutionVerifierPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
-    : public PassInfoMixin<ScalarEvolutionPrinterPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI ScalarEvolutionWrapperPass : public FunctionPass {
@@ -2657,8 +2647,11 @@ public:
   /// Attempts to produce an AddRecExpr for V by adding additional SCEV
   /// predicates. If we can't transform the expression into an AddRecExpr we
   /// return nullptr and not add additional SCEV predicates to the current
-  /// context.
-  LLVM_ABI const SCEVAddRecExpr *getAsAddRec(Value *V);
+  /// context. If \p WrapPredsAdded is non-null, the required predicates are
+  /// collected there instead of being added to this context.
+  LLVM_ABI const SCEVAddRecExpr *
+  getAsAddRec(Value *V,
+              SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
   /// Proves that V doesn't overflow by adding SCEV predicate.
   LLVM_ABI void setNoOverflow(Value *V,
@@ -2680,9 +2673,10 @@ public:
   LLVM_ABI void print(raw_ostream &OS, unsigned Depth) const;
 
   /// Check if \p AR1 and \p AR2 are equal, while taking into account
-  /// Equal predicates in Preds.
-  LLVM_ABI bool areAddRecsEqualWithPreds(const SCEVAddRecExpr *AR1,
-                                         const SCEVAddRecExpr *AR2) const;
+  /// Equal predicates in Preds and \p ExtraPreds.
+  LLVM_ABI bool areAddRecsEqualWithPreds(
+      const SCEVAddRecExpr *AR1, const SCEVAddRecExpr *AR2,
+      ArrayRef<const SCEVPredicate *> ExtraPreds = {}) const;
 
 private:
   /// Increments the version number of the predicate.  This needs to be called
@@ -2730,15 +2724,6 @@ private:
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
-  static inline ScalarEvolution::FoldID getEmptyKey() {
-    ScalarEvolution::FoldID ID(0);
-    return ID;
-  }
-  static inline ScalarEvolution::FoldID getTombstoneKey() {
-    ScalarEvolution::FoldID ID(1);
-    return ID;
-  }
-
   static unsigned getHashValue(const ScalarEvolution::FoldID &Val) {
     return Val.computeHash();
   }

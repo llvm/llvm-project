@@ -19,6 +19,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
@@ -218,10 +219,9 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
-                                  /*insertIntoFnEntryBlock=*/false);
-    fnRetAlloca = addr;
-    returnValue = Address(addr, alignment);
+    Address allocaAddr = Address::invalid();
+    returnValue = createMemTemp(type, alignment, loc, "__retval", &allocaAddr);
+    fnRetAlloca = allocaAddr.getPointer();
   }
 }
 
@@ -231,7 +231,8 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   assert(isa<NamedDecl>(var) && "Needs a named decl");
   assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
-  auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
+  Address addr(addrVal, alignment);
+  cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
   assert(allocaOp && "expected cir::AllocaOp");
 
   if (isParam)
@@ -239,7 +240,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
 
-  symbolTable.insert(var, allocaOp);
+  symbolTable.insert(var, addrVal);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
@@ -531,8 +532,12 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
   }
 
+  // Only implicit-object member functions (without an explicit `this`
+  // parameter) receive an implicit `this` argument that the CXXABI prolog has
+  // to set up. C++23 explicit-object members (P0847R7) carry their object via a
+  // regular parameter and use the standard parameter prolog instead.
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
-      cast<CXXMethodDecl>(d)->isInstance()) {
+      cast<CXXMethodDecl>(d)->isImplicitObjectMemberFunction()) {
     cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
 
     const auto *md = cast<CXXMethodDecl>(d);
@@ -757,6 +762,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
+    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>()) {
+      cgm.errorNYI(loc, "STDC FENV_ACCESS");
+      return fn;
+    }
 
     // Save parameters for coroutine function.
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
@@ -1017,8 +1026,11 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
   QualType retTy = fd->getReturnType();
 
+  // Only implicit-object member functions need the CXXABI-supplied `this`
+  // parameter prepended to the arg list.  Explicit-object members carry the
+  // object as a regular parameter that fd->parameters() already enumerates.
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
-  if (md && md->isInstance()) {
+  if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "this return");
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
@@ -1081,10 +1093,6 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
 
       // Skip unique OVEs.
       if (ov->isUnique()) {
-        // FIXME: This doesn't really affect anything, but I cannot find a test
-        // for this, so leave an ErrorNYI here until we can find one.
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "emitPseudoObjectExpr skipped for uniqueness");
         assert(ov != resultExpr &&
                "A unique OVE cannot be used as the result expression");
         continue;
@@ -1120,9 +1128,7 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
       if (forLValue)
         result = cgf.emitLValue(semantic);
       else
-        cgf.cgm.errorNYI(
-            e->getSourceRange(),
-            "emitPseudoObjectExpr as an RValue, when semantic is result");
+        result = cgf.emitAnyExpr(semantic, slot);
     } else {
       // FIXME: best I can tell, this is only reachable as an r-value, so this
       // isn't properly tested.
@@ -1134,6 +1140,12 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
   }
 
   return result;
+}
+
+RValue CIRGenFunction::emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                              AggValueSlot slot) {
+  return std::get<RValue>(
+      emitPseudoObjectExpr(*this, e, /*forLValue=*/false, slot));
 }
 
 LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {
@@ -1174,11 +1186,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
     QualType ty = e->getType();
-    if (ty->getAs<AtomicType>()) {
-      cgm.errorNYI(e->getSourceRange(),
-                   "CompoundAssignOperator with AtomicType");
-      return LValue();
-    }
+    if (const AtomicType *at = ty->getAs<AtomicType>())
+      ty = at->getValueType();
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
 
@@ -1191,9 +1200,19 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(e);
-    RunCleanupsScope scope(*this);
+    FullExprCleanupScope scope(*this, cleanups->getSubExpr());
     LValue lv = emitLValue(cleanups->getSubExpr());
-    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    if (lv.isSimple()) {
+      // Defend against branches out of gnu statement expressions surrounded by
+      // cleanups.
+      Address addr = lv.getAddress();
+      mlir::Value v = addr.getPointer();
+      scope.exit({&v});
+      return LValue::makeAddr(addr.withPointer(v), lv.getType(),
+                              lv.getBaseInfo());
+    }
+    // FIXME: Is it possible to create an ExprWithCleanups that produces a
+    // bitfield lvalue or some other non-simple lvalue?
     return lv;
   }
   case Expr::CXXDefaultArgExprClass: {
@@ -1458,8 +1477,15 @@ mlir::Value CIRGenFunction::emitAlignmentAssumption(
     mlir::Value ptrValue, QualType ty, SourceLocation loc,
     SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
   assert(!cir::MissingFeatures::sanitizers());
-  return cir::AssumeAlignedOp::create(builder, getLoc(assumptionLoc), ptrValue,
-                                      alignment, offsetValue);
+  mlir::Location assumeLoc = getLoc(assumptionLoc);
+  mlir::Value alignValue = builder.getUInt64(alignment, assumeLoc);
+  mlir::Value cond = builder.getBool(true, assumeLoc);
+  llvm::SmallVector<mlir::Value> bundleArgs{ptrValue, alignValue};
+  if (offsetValue)
+    bundleArgs.push_back(offsetValue);
+  cir::AssumeOp::create(builder, assumeLoc, cond, cir::AssumeBundleKind::Align,
+                        bundleArgs);
+  return ptrValue;
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
@@ -1611,7 +1637,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
           // Always zexting here would be wrong if it weren't
           // undefined behavior to have a negative bound.
           // FIXME: What about when size's type is larger than size_t?
-          entry = builder.createIntCast(size, sizeTy);
+          entry = builder.createBoolIntToIntCast(size, sizeTy);
         }
       }
       type = vat->getElementType();

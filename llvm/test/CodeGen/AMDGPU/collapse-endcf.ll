@@ -14,26 +14,26 @@ define amdgpu_kernel void @simple_nested_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    s_cbranch_execz .LBB0_3
 ; GCN-NEXT:  ; %bb.1: ; %bb.outer.then
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, 0
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    buffer_store_dword v2, v[1:2], s[0:3], 0 addr64
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NEXT:    v_add_i32_e32 v1, vcc, s0, v3
+; GCN-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v0
+; GCN-NEXT:    buffer_store_dword v4, v[3:4], s[0:3], 0 addr64
 ; GCN-NEXT:    s_and_b64 exec, exec, vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB0_3
 ; GCN-NEXT:  ; %bb.2: ; %bb.inner.then
-; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, s1
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v1
-; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; GCN-NEXT:    s_mov_b32 s0, s2
 ; GCN-NEXT:    s_mov_b32 s1, s2
-; GCN-NEXT:    v_mov_b32_e32 v2, 1
-; GCN-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64 offset:4
+; GCN-NEXT:    v_mov_b32_e32 v0, 1
+; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64 offset:4
 ; GCN-NEXT:  .LBB0_3: ; %bb.outer.end
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 3
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_mov_b32 m0, -1
@@ -376,18 +376,18 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, 0
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    buffer_store_dword v2, v[1:2], s[0:3], 0 addr64
-; GCN-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GCN-NEXT:    s_cbranch_execz .LBB2_5
-; GCN-NEXT:  ; %bb.1: ; %bb.outer.then
 ; GCN-NEXT:    v_mov_b32_e32 v4, s1
 ; GCN-NEXT:    v_add_i32_e32 v3, vcc, s0, v1
 ; GCN-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cmp_lt_u32_e32 vcc, 1, v0
+; GCN-NEXT:    buffer_store_dword v2, v[1:2], s[0:3], 0 addr64
 ; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GCN-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
+; GCN-NEXT:    s_cbranch_execz .LBB2_5
+; GCN-NEXT:  ; %bb.1: ; %bb.outer.then
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v0
+; GCN-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GCN-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; GCN-NEXT:    s_cbranch_execz .LBB2_3
 ; GCN-NEXT:  ; %bb.2: ; %bb.else
 ; GCN-NEXT:    s_mov_b32 s6, 0
@@ -398,7 +398,7 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    buffer_store_dword v0, v[3:4], s[4:7], 0 addr64 offset:8
 ; GCN-NEXT:    ; implicit-def: $vgpr3_vgpr4
 ; GCN-NEXT:  .LBB2_3: ; %Flow
-; GCN-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
+; GCN-NEXT:    s_andn2_saveexec_b64 s[2:3], s[2:3]
 ; GCN-NEXT:    s_cbranch_execz .LBB2_5
 ; GCN-NEXT:  ; %bb.4: ; %bb.then
 ; GCN-NEXT:    s_mov_b32 s6, 0
@@ -409,7 +409,7 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-NEXT:    buffer_store_dword v0, v[3:4], s[4:7], 0 addr64 offset:4
 ; GCN-NEXT:  .LBB2_5: ; %bb.outer.end
-; GCN-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GCN-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 3
 ; GCN-NEXT:    s_mov_b32 m0, -1
