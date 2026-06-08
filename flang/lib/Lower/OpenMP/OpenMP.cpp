@@ -4746,11 +4746,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpGroupprivateDirective &directive) {
-  // The OmpGroupPrivate symbol flag and any device_type modifier are
-  // recorded during semantic analysis (see OmpAttributeVisitor::Pre on
-  // OmpGroupprivateDirective). The omp.groupprivate operation itself is
-  // materialised on first use inside a teams region by groupprivatizeVars,
-  // so this declarative directive has no remaining lowering work to do.
+  // The semantic analysis sets the flag and device_type on the
+  // symbols; omp.groupprivate is materialised on first use in a teams region
+  // by groupprivatizeVars.
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

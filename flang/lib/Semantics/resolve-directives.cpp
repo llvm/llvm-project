@@ -2203,9 +2203,9 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
 
   if (device) {
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-      if (const parser::OmpObject *
-          object{parser::omp::GetArgumentObject(arg)}) {
-        if (const Symbol * sym{omp::GetObjectSymbol(*object)}) {
+      if (const parser::OmpObject *object{
+              parser::omp::GetArgumentObject(arg)}) {
+        if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
           common::visit(
               [&](auto &d) {
                 using TypeD = llvm::remove_cvref_t<decltype(d)>;
