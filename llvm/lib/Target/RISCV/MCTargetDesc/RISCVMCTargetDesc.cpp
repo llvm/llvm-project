@@ -90,7 +90,7 @@ void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
       STI.hasFeature(RISCV::FeatureStdExtD) &&
       !STI.hasFeature(RISCV::FeatureStdExtZcd) &&
       !(STI.hasFeature(RISCV::Feature64Bit) &&
-       STI.hasFeature(RISCV::FeatureStdExtY)))
+        STI.hasFeature(RISCV::FeatureStdExtY)))
     STI.ToggleFeature(RISCV::FeatureStdExtZcd);
 
   // Add Zcf if F and C or Zce are enabled on RV32 and Y is not enabled.
