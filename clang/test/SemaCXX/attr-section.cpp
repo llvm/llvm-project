@@ -84,3 +84,11 @@ auto lambda = [](int val) __attribute__((section("lambda_op_pragma"))) { return 
 #pragma clang section bss="lambda_op_pragma" // expected-error {{this causes a section type conflict with 'operator()'}}
 #pragma clang section bss=""
 } // namespace lambda_call_operator_pragma
+
+// original: https://github.com/llvm/llvm-project/issues/192264
+namespace GH192264_original {
+struct S {};
+using F = decltype([](auto val) // expected-note {{declared here}}
+__attribute__((section("gh192264"))) const S s{}; // expected-error {{expected body of lambda expression}}
+__attribute__((section("gh192264"))) int i{}; // expected-error {{'i' causes a section type conflict with 'operator()'}}
+} // namespace GH192264_original
