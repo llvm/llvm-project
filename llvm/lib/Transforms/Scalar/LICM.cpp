@@ -1088,37 +1088,6 @@ getConstantInsertionIndex(InsertElementInst *Ins) {
   return InsertedIdxCI->getValue().getLimitedValue();
 }
 
-static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
-                                          Loop *CurLoop,
-                                          std::optional<uint64_t> HoistIndex) {
-  // Make sure not hoisting past insertions into the same lane
-  std::optional<uint64_t> InsertIdx = getConstantInsertionIndex(CurrIns);
-  if (!InsertIdx)
-    return nullptr;
-  if (!HoistIndex)
-    HoistIndex = InsertIdx;
-  else if (*HoistIndex == *InsertIdx)
-    return nullptr;
-
-  Value *InnerVal = CurrIns->getOperand(0);
-  // If the value we are inserting into is not invariant/poison, recurse
-  // if it is another insert
-  if (!CurLoop->isLoopInvariant(InnerVal)) {
-    // Only hoist past other insertions
-    // All instructions in the chain must be in the same basic block
-    auto *InnerIns = dyn_cast<InsertElementInst>(InnerVal);
-    if (!InnerIns || InnerIns->getParent() != CurrIns->getParent())
-      return nullptr;
-
-    // Instruction being hoisted past must only have one use
-    if (!InnerIns->hasOneUse())
-      return nullptr;
-
-    return canBypassInsert(InnerIns, CurLoop, HoistIndex);
-  }
-  return CurrIns;
-}
-
 static bool
 hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
                       BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
@@ -1138,9 +1107,38 @@ hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
   if (!CurLoop->isLoopInvariant(InsertedElt))
     return false;
 
-  InsertElementInst *Inner =
-      canBypassInsert(Ins, CurLoop, /*HoistIndex*/ std::nullopt);
-  if (!Inner || Inner == Ins)
+  std::optional<uint64_t> InsertIdx = getConstantInsertionIndex(Ins);
+  if (!InsertIdx)
+    return false;
+  uint64_t HoistIdx = *InsertIdx;
+
+  InsertElementInst *Inner = Ins;
+  while (true) {
+    Value *InnerVal = Inner->getOperand(0);
+    if (CurLoop->isLoopInvariant(InnerVal))
+      break;
+
+    // If the inner value isn't invariant, check to see if it is another insert
+    // All instructions in the chain must be in the same basic block
+    auto *InnerIns = dyn_cast<InsertElementInst>(InnerVal);
+    if (!InnerIns || InnerIns->getParent() != Ins->getParent())
+      return false;
+
+    // Make sure not hoisting past insertions into the same lane
+    std::optional<uint64_t> InsertIdx = getConstantInsertionIndex(InnerIns);
+    if (!InsertIdx || *InsertIdx == HoistIdx)
+      return false;
+
+    // Instruction being hoisted past must only have one use
+    if (!InnerIns->hasOneUse())
+      return false;
+
+    Inner = InnerIns;
+  }
+
+  // Base case of `insertelement <4 x i8> %invar0, i8 %invar1, i32 2` handled in
+  // base LICM logic
+  if (Inner == Ins)
     return false;
 
   Value *IOp1 = Ins->getOperand(1);
