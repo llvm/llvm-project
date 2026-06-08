@@ -14583,6 +14583,119 @@ static bool isEXTMask(ArrayRef<int> M, EVT VT, bool &ReverseEXT,
   return true;
 }
 
+/// Flag slide shuffle patterns where one operand is zeros.
+/// Left slide: shufflevector %v, zeros, <1,2,3,...> -> ushr
+/// Right slide: shufflevector zeros, %v, <N-1,N,N+1,...> -> shl
+/// Check if a single 64-bit lane has a valid slide pattern.
+/// LaneStart: first element index of this lane in the full vector
+/// LaneElts: number of elements in the lane
+/// Returns slide amount in elements, or 0 if not a valid slide.
+static unsigned checkLaneSlide(ArrayRef<int> Mask, unsigned LaneStart,
+                               unsigned LaneElts, unsigned NumElts,
+                               bool &IsLeftSlide) {
+  // Check for left slide: <k, k+1, ..., LaneElts-1, zero, ...>
+  // where k > 0 and elements stay within lane
+  int FirstIdx = Mask[LaneStart];
+  if (FirstIdx > (int)LaneStart && FirstIdx < (int)(LaneStart + LaneElts)) {
+    unsigned SlideAmt = FirstIdx - LaneStart;
+    for (unsigned i = 0; i < LaneElts; ++i) {
+      int MaskIdx = Mask[LaneStart + i];
+      if (MaskIdx < 0)
+        continue;
+      if (i < LaneElts - SlideAmt) {
+        // Data element: must be consecutive within lane
+        if (MaskIdx != (int)(LaneStart + SlideAmt + i))
+          return 0;
+      } else {
+        // Zero element: any index >= NumElts is fine (all from V2 which is
+        // zeros)
+        if (MaskIdx < (int)NumElts)
+          return 0;
+      }
+    }
+    IsLeftSlide = true;
+    return SlideAmt;
+  }
+
+  // Check for right slide: <zero, ..., 0, 1, ...>
+  // where zeros come first, then consecutive from lane start
+  if (Mask[LaneStart] >= (int)NumElts || Mask[LaneStart] < 0) {
+    unsigned ZeroCount = 0;
+    for (unsigned i = 0; i < LaneElts; ++i) {
+      int MaskIdx = Mask[LaneStart + i];
+      if (MaskIdx >= 0 && MaskIdx < (int)NumElts)
+        break;
+      ZeroCount++;
+    }
+    if (ZeroCount > 0 && ZeroCount < LaneElts) {
+      for (unsigned i = ZeroCount; i < LaneElts; ++i) {
+        int MaskIdx = Mask[LaneStart + i];
+        if (MaskIdx < 0)
+          continue;
+        if (MaskIdx != (int)(LaneStart + i - ZeroCount))
+          return 0;
+      }
+      IsLeftSlide = false;
+      return ZeroCount;
+    }
+  }
+
+  return 0;
+}
+
+static SDValue isSlideWithZerosMask(ArrayRef<int> M, EVT VT, SDValue V1,
+                                    SDValue V2, unsigned &ShiftAmount,
+                                    bool &IsRightShift) {
+  unsigned VTSize = VT.getSizeInBits();
+  if (VTSize != 64 && VTSize != 128)
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSize = VT.getScalarSizeInBits();
+
+  bool V1IsZeros = ISD::isBuildVectorAllZeros(V1.getNode());
+  bool V2IsZeros = ISD::isBuildVectorAllZeros(V2.getNode());
+
+  // Exactly one operand must be zeros
+  if (V1IsZeros == V2IsZeros)
+    return SDValue();
+
+  // Canonicalize so V2 is zeros
+  SmallVector<int, 16> Mask(M.begin(), M.end());
+  SDValue DataVec = V1;
+  if (V1IsZeros) {
+    ShuffleVectorSDNode::commuteMask(Mask);
+    DataVec = V2;
+  }
+
+  // For 64-bit vectors, check single lane
+  // For 128-bit vectors, check both 64-bit lanes have same slide
+  unsigned LaneElts = 64 / EltSize;
+  unsigned NumLanes = VTSize / 64;
+
+  bool FirstIsLeftSlide;
+  unsigned FirstSlideAmt =
+      checkLaneSlide(Mask, 0, LaneElts, NumElts, FirstIsLeftSlide);
+  if (FirstSlideAmt == 0)
+    return SDValue();
+
+  // For 128-bit, verify second lane matches
+  if (NumLanes == 2) {
+    bool SecondIsLeftSlide;
+    unsigned SecondSlideAmt =
+        checkLaneSlide(Mask, LaneElts, LaneElts, NumElts, SecondIsLeftSlide);
+    if (SecondSlideAmt != FirstSlideAmt ||
+        SecondIsLeftSlide != FirstIsLeftSlide)
+      return SDValue();
+  }
+
+  ShiftAmount = FirstSlideAmt * EltSize;
+  IsRightShift = FirstIsLeftSlide; // left slide = right shift in bits
+  if (ShiftAmount > 0 && ShiftAmount < 64)
+    return DataVec;
+  return SDValue();
+}
+
 // Check if an EXT instruction can handle the shuffle mask when one source is a
 // splat. This matches shuffles where the splat occupies either a prefix or a
 // suffix and the remaining lanes are a contiguous slice from the non-splat
@@ -15336,6 +15449,23 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     SDValue Rev = DAG.getNode(AArch64ISD::REV64, DL, VT, V1);
     return DAG.getNode(AArch64ISD::EXT, DL, VT, Rev, Rev,
                        DAG.getConstant(8, DL, MVT::i32));
+  }
+
+  // Check for slide-with-zeros pattern before EXT (slide is also valid EXT)
+  {
+    unsigned ShiftAmount;
+    bool IsRightShift;
+    if (SDValue DataVec = isSlideWithZerosMask(ShuffleMask, VT, V1, V2,
+                                               ShiftAmount, IsRightShift)) {
+      MVT ShiftVT = VT.getSizeInBits() == 64 ? MVT::v1i64 : MVT::v2i64;
+      SDValue Vec = DAG.getNode(AArch64ISD::NVCAST, DL, ShiftVT, DataVec);
+
+      SDValue ShiftAmt = DAG.getTargetConstant(ShiftAmount, DL, MVT::i32);
+      unsigned Opc = IsRightShift ? AArch64ISD::VLSHR : AArch64ISD::VSHL;
+      SDValue Shifted = DAG.getNode(Opc, DL, ShiftVT, Vec, ShiftAmt);
+
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Shifted);
+    }
   }
 
   bool IsSplat1 =
