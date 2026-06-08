@@ -174,6 +174,5 @@ add_clang_library(clangCodeGen
   clangBasic
   clangFrontend
   clangLex
-  clangOptions
   clangSerialization
   )

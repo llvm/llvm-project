@@ -272,6 +272,10 @@ public:
   /// if non-empty.
   std::string HLSLRecordCommandLine;
 
+  /// The vector contains parsed commandline for the dx.source.args metadata,
+  /// if parsing was successful.
+  llvm::SmallVector<llvm::SmallString<8>> HLSLParsedCommandLine;
+
   llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
 
   /// Prefix replacement map for source-based code coverage to remap source

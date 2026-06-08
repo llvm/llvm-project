@@ -30,7 +30,6 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Options/OptionUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -198,6 +197,7 @@ findAssociatedResourceDeclForStruct(ASTContext &AST, const MemberExpr *ME) {
 void addSourceInfo(CodeGenModule &CGM, llvm::Module &M) {
   auto &SM = CGM.getContext().getSourceManager();
   auto &Macros = CGM.getPreprocessorOpts().Macros;
+  auto &CodeGenOpts = CGM.getCodeGenOpts();
   auto &Ctx = M.getContext();
 
   // Names and content of shader source code files.
@@ -273,23 +273,16 @@ void addSourceInfo(CodeGenModule &CGM, llvm::Module &M) {
   M.getOrInsertNamedMetadata("dx.source.defines")
       ->addOperand(llvm::MDNode::get(Ctx, Defines));
 
-  if (!CGM.getCodeGenOpts().MainFileName.empty())
-    llvm::sys::path::native(CGM.getCodeGenOpts().MainFileName, *MainFileName);
+  if (!CodeGenOpts.MainFileName.empty())
+    llvm::sys::path::native(CodeGenOpts.MainFileName, *MainFileName);
   M.getOrInsertNamedMetadata("dx.source.mainFileName")
       ->addOperand(
           llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, *MainFileName)));
 
-  auto ParsedArgs = clang::parseEscapedCommandLine(
-      CGM.getCodeGenOpts().HLSLRecordCommandLine.c_str());
-  if (!ParsedArgs) {
-    CGM.getDiags().Report(diag::err_drv_invalid_escaped_command_line)
-        << llvm::toString(ParsedArgs.takeError());
-    return;
-  }
   SmallVector<llvm::Metadata *> Args;
-  Args.reserve(ParsedArgs->size());
-  if (!ParsedArgs->empty())
-    for (const auto &Arg : llvm::drop_begin(*ParsedArgs))
+  Args.reserve(CodeGenOpts.HLSLParsedCommandLine.size());
+  if (!CodeGenOpts.HLSLParsedCommandLine.empty())
+    for (const auto &Arg : llvm::drop_begin(CodeGenOpts.HLSLParsedCommandLine))
       Args.push_back(llvm::MDString::get(Ctx, Arg));
   M.getOrInsertNamedMetadata("dx.source.args")
       ->addOperand(llvm::MDNode::get(Ctx, Args));
