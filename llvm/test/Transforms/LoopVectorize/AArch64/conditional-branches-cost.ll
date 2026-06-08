@@ -1038,50 +1038,19 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ;
 ; PRED-LABEL: define void @redundant_branch_and_tail_folding(
 ; PRED-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
-; PRED-NEXT:  [[ENTRY:.*:]]
-; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
-; PRED:       [[VECTOR_PH]]:
-; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
-; PRED:       [[VECTOR_BODY]]:
-; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; PRED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
-; PRED-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[VEC_IND]], splat (i64 20)
-; PRED-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 1)
-; PRED-NEXT:    [[TMP2:%.*]] = trunc nuw nsw <4 x i64> [[TMP1]] to <4 x i32>
-; PRED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; PRED-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; PRED:       [[PRED_STORE_IF]]:
-; PRED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
-; PRED-NEXT:    store i32 [[TMP4]], ptr [[DST]], align 4
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; PRED-NEXT:  [[PRED_STORE_IF:.*]]:
+; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE:.*]]
 ; PRED:       [[PRED_STORE_CONTINUE]]:
-; PRED-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
-; PRED-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PRED_STORE_IF]] ], [ [[IV_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
+; PRED-NEXT:    br i1 [[C]], label %[[PRED_STORE_CONTINUE2]], label %[[PRED_STORE_IF1:.*]]
 ; PRED:       [[PRED_STORE_IF1]]:
-; PRED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP2]], i64 1
-; PRED-NEXT:    store i32 [[TMP6]], ptr [[DST]], align 4
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; PRED:       [[PRED_STORE_CONTINUE2]]:
-; PRED-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
-; PRED-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; PRED:       [[PRED_STORE_IF3]]:
-; PRED-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i64 2
+; PRED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; PRED-NEXT:    [[TMP8:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
 ; PRED-NEXT:    store i32 [[TMP8]], ptr [[DST]], align 4
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; PRED:       [[PRED_STORE_CONTINUE4]]:
-; PRED-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
-; PRED-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
-; PRED:       [[PRED_STORE_IF5]]:
-; PRED-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i64 3
-; PRED-NEXT:    store i32 [[TMP10]], ptr [[DST]], align 4
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; PRED:       [[PRED_STORE_CONTINUE6]]:
-; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; PRED-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
-; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 21
+; PRED-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE]]
 ; PRED:       [[EXIT]]:
 ; PRED-NEXT:    ret void
 ;
@@ -1261,7 +1230,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT]], i64 [[TMP0]])
 ; PRED-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PRED-NEXT:    [[TMP29:%.*]] = xor i1 [[TMP28]], true
-; PRED-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br [[EXIT:label %.*]]
 ; PRED:       [[SCALAR_PH]]:

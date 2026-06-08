@@ -10989,6 +10989,11 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
       AMDGPU::isGenericAtomic(Opcode)) {
     return ValueUniformity::NeverUniform;
   }
+
+  // Result is computed from uniform SP and uniform wave-wide max size.
+  if (Opcode == TargetOpcode::G_DYN_STACKALLOC)
+    return ValueUniformity::AlwaysUniform;
+
   return ValueUniformity::Default;
 }
 

@@ -29,7 +29,7 @@ void S::key() {}
 // LLVM:      @_ZTV1S = global { [4 x ptr] } { [4 x ptr]
 // LLVM-SAME:      [ptr null, ptr null, ptr @_ZN1S3keyEv, ptr @_ZN1S6nonKeyEv] }
 
-// OGCG:      @_ZTV1S = constant { [4 x ptr] } { [4 x ptr]
+// OGCG:      @_ZTV1S = unnamed_addr constant { [4 x ptr] } { [4 x ptr]
 // OGCG-SAME:      [ptr null, ptr null, ptr @_ZN1S3keyEv, ptr @_ZN1S6nonKeyEv] }
 
 // CHECK: cir.func {{.*}} @_ZN1S3keyEv

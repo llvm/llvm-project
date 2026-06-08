@@ -1256,11 +1256,6 @@ SourceOrderedSymbolSet OrderBySourcePosition(const A &container) {
 // Define required  info so that SymbolRef can be used inside llvm::DenseMap.
 namespace llvm {
 template <> struct DenseMapInfo<Fortran::semantics::SymbolRef> {
-  static inline Fortran::semantics::SymbolRef getEmptyKey() {
-    auto ptr = DenseMapInfo<const Fortran::semantics::Symbol *>::getEmptyKey();
-    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
-  }
-
   static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
     return DenseMapInfo<const Fortran::semantics::Symbol *>::getHashValue(
         &sym.get());

@@ -117,4 +117,3 @@ void call_virtual_fn_in_cleanup_scope() {
 // OGCG:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
 // OGCG:   call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef signext 99)
 // OGCG:   call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])
-  
