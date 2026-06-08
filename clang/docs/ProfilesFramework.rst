@@ -203,11 +203,10 @@ framework intentionally does not learn the profile name).
    Analysis-based passes in ``AnalysisBasedWarnings.cpp::IssueWarnings`` are
    normally run only when their corresponding warning flag is enabled.  To
    run the pass for an enforced profile even when the underlying warning is
-   silenced, OR a ``llvm::any_of(Table, [&](const auto &E) { return
-   S.isProfileEnforced(E.Name); })`` check into the existing pass guard.
-   The in-tree example wraps this as ``anyCFGUninitProfileEnforced(S)`` and
-   the pass guard becomes
-   ``anyCFGUninitProfileEnforced(S) || !Diags.isIgnored(...)``.
+   silenced, OR an ``S.anyProfileEnforced(Table)`` check (the shared
+   ``Sema::anyProfileEnforced`` gate, also used by the finalization dispatch)
+   into the existing pass guard.  The in-tree example's pass guard becomes
+   ``S.anyProfileEnforced(CFGUninitProfiles) || !Diags.isIgnored(...)``.
 
 3. **Walk the table in the analysis's diagnostic reporter.**
    For each use site the analysis would have warned about, iterate the
@@ -263,7 +262,9 @@ single function reached from every class-completion path -- the parser
 (``InstantiateClass``), and lambda completion -- so wiring the hook there
 covers all of them with no extra plumbing.
 
-The dispatcher filters out classes the rules are not meant to see:
+The class-finalization entry point
+``checkProfileViolationsAtClassFinalization`` filters out classes the rules
+are not meant to see:
 
 - Dependent classes (``isDependentType()``).  The hook will re-fire on each
   instantiation via the template-instantiation completion path.
@@ -279,17 +280,20 @@ This pattern needs two pieces, both colocated with the dispatcher.
 
    .. code-block:: c++
 
-      struct ClassFinalizationProfileEntry {
+      // FinalizationProfile<Node> is shared with pattern 4.
+      template <class Node> struct FinalizationProfile {
         StringRef Name;
-        void (*Callback)(Sema &, CXXRecordDecl *);
+        void (*Callback)(Sema &, Node *);
       };
-      constexpr ClassFinalizationProfileEntry ClassFinalizationProfiles[] = {
+      constexpr FinalizationProfile<CXXRecordDecl> ClassFinalizationProfiles[] = {
           {"my::profile", &runMyProfileCallback},
       };
 
-   The dispatcher iterates the table, skips entries whose profile is not
-   enforced, sets up a ``ProfileSuppressScope(*this, RD,
-   /*WalkLexicalParents=*/true)``, and invokes the callback.  Because the
+   The shared ``dispatchFinalizationProfiles`` dispatcher (used by both
+   patterns 3 and 4) checks ``anyProfileEnforced(Table)``, sets up a
+   ``ProfileSuppressScope(S, RD, /*WalkLexicalParents=*/true)``, iterates the
+   table, skips entries whose profile is not enforced, and invokes the
+   callback.  Because the
    suppress scope is established by the dispatcher, the callback can use
    the location-based ``shouldEmitProfileViolation`` overload and have
    ``[[profiles::suppress]]`` on the class or any enclosing lexical
@@ -343,7 +347,9 @@ of them through ``Sema::InstantiateMemInitializers``, so the hook sees every
 constructor at the point its ``inits()`` (including synthesized entries) is
 complete.
 
-The dispatcher filters out constructors the rules are not meant to see:
+The constructor-finalization entry point
+``checkProfileViolationsAtConstructorFinalization`` filters out constructors
+the rules are not meant to see:
 
 - Dependent constructors (``isDependentContext()``).  The hook re-fires on
   each instantiation.
@@ -351,11 +357,13 @@ The dispatcher filters out constructors the rules are not meant to see:
 - Delegating constructors (``isDelegatingConstructor()``), which leave member
   initialization to their target.
 
-The two pieces mirror pattern 3: a per-pass opt-in table
-``ConstructorFinalizationProfiles`` (profile name plus a
-``void (*)(Sema &, CXXConstructorDecl *)`` callback), and a callback that
-emits via ``Sema::shouldEmitProfileViolation``.  The dispatcher establishes a
-``ProfileSuppressScope(*this, Ctor, /*WalkLexicalParents=*/true)`` around each
+The two pieces mirror pattern 3 and share its machinery: a per-pass opt-in
+table ``ConstructorFinalizationProfiles`` of the same
+``FinalizationProfile<Node>`` row (here
+``FinalizationProfile<CXXConstructorDecl>``), and a callback that emits via
+``Sema::shouldEmitProfileViolation``.  The same shared
+``dispatchFinalizationProfiles`` dispatcher establishes a
+``ProfileSuppressScope(S, Ctor, /*WalkLexicalParents=*/true)`` around each
 callback, so ``[[profiles::suppress]]`` on the constructor, the class, or an
 enclosing lexical ``Decl`` works.  A callback that should only apply to
 user-written constructors checks ``Ctor->isUserProvided()``.
@@ -545,7 +553,7 @@ CFG-based uninitialized-variables analysis.
   declaration.
 - **Opt-in table**: ``CFGUninitProfiles`` in
   ``clang/lib/Sema/AnalysisBasedWarnings.cpp``.  The ``IssueWarnings`` pass
-  guard consults it via ``anyCFGUninitProfileEnforced(S)`` so the analysis
+  guard consults it via ``S.anyProfileEnforced(CFGUninitProfiles)`` so the analysis
   runs even when ``-Wuninitialized`` is silenced, and
   ``UninitValsDiagReporter::diagnoseUnitializedVar`` walks it *before* the
   default warning path -- when an entry's

@@ -1052,6 +1052,16 @@ public:
   SmallVector<ProfileSuppressEntry, 4> ProfileSuppressStack;
 
   bool isProfileEnforced(StringRef ProfileName) const;
+
+  /// True if any entry of \p Entries names an enforced profile. \p Entries is
+  /// any profile opt-in table whose elements expose a \c Name member; shared by
+  /// the post-parse dispatch gates (the CFG analysis pass guard and the
+  /// finalization dispatcher).
+  template <typename Table> bool anyProfileEnforced(const Table &Entries) const {
+    return llvm::any_of(
+        Entries, [&](const auto &E) { return isProfileEnforced(E.Name); });
+  }
+
   const ProfileEnforcement *getProfileEnforcement(StringRef ProfileName) const;
   bool addProfileEnforcement(StringRef Name, StringRef Designator,
                              SourceLocation Loc);

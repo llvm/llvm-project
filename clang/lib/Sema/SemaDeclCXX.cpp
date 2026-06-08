@@ -7030,15 +7030,16 @@ ReportOverrides(Sema &S, unsigned DiagID, const CXXMethodDecl *MD,
 }
 
 namespace {
-// Profiles that opt into the class-finalization dispatch. Each entry pairs
-// the profile name with a callback invoked once per completed,
-// non-dependent, non-lambda, non-invalid CXXRecordDecl. Adding a new
-// profile is a single row here plus a ProfileRuleError diagnostic in
+// Row for the unified finalization dispatch shared by class-finalization
+// (pattern 3) and constructor-finalization (pattern 4): a profile name plus a
+// callback invoked once per finalized, non-dependent, non-invalid Node (a
+// CXXRecordDecl or a CXXConstructorDecl). Adding a new profile is a single row
+// in the matching table below plus a ProfileRuleError diagnostic in
 // DiagnosticSemaKinds.td and a callback that consults
 // Sema::shouldEmitProfileViolation before emitting.
-struct ClassFinalizationProfileEntry {
+template <class Node> struct FinalizationProfile {
   StringRef Name;
-  void (*Callback)(Sema &, CXXRecordDecl *);
+  void (*Callback)(Sema &, Node *);
 };
 
 void runTestClassFinalCallback(Sema &S, CXXRecordDecl *RD) {
@@ -7048,21 +7049,6 @@ void runTestClassFinalCallback(Sema &S, CXXRecordDecl *RD) {
   S.Diag(RD->getLocation(), diag::err_profile_class_final_test)
       << "test::class_final" << RD;
 }
-
-constexpr ClassFinalizationProfileEntry ClassFinalizationProfiles[] = {
-    {"test::class_final", &runTestClassFinalCallback},
-};
-
-// Profiles that opt into the constructor-finalization dispatch. Each entry
-// pairs the profile name with a callback invoked once per fully-processed,
-// non-dependent, non-invalid, non-delegating constructor (the point at which
-// its member-initializer list, including synthesized entries, is complete).
-// Adding a new profile is a single row here plus a ProfileRuleError diagnostic
-// and a callback that consults Sema::shouldEmitProfileViolation.
-struct ConstructorFinalizationProfileEntry {
-  StringRef Name;
-  void (*Callback)(Sema &, CXXConstructorDecl *);
-};
 
 void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
   if (!S.shouldEmitProfileViolation("test::ctor_final", /*Rule=*/"",
@@ -7109,11 +7095,38 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
   }
 }
 
-constexpr ConstructorFinalizationProfileEntry
+// Class-finalization opt-in table (pattern 3).
+constexpr FinalizationProfile<CXXRecordDecl> ClassFinalizationProfiles[] = {
+    {"test::class_final", &runTestClassFinalCallback},
+};
+
+// Constructor-finalization opt-in table (pattern 4).
+constexpr FinalizationProfile<CXXConstructorDecl>
     ConstructorFinalizationProfiles[] = {
         {"test::ctor_final", &runTestCtorFinalCallback},
         {"std::init", &runStdInitCtorUninitMemberCallback},
 };
+
+// Run the enforced finalization-profile callbacks in Table for D, setting up a
+// suppress scope so [[profiles::suppress]] on D or a lexical parent is honored.
+// Merges the former per-node dispatchers; the per-node filter (dependent,
+// lambda, delegating, ...) stays at each call site. The table is taken by
+// reference-to-array, not ArrayRef: deducing Node from a C array against an
+// ArrayRef<FinalizationProfile<Node>> parameter is not possible (no
+// array-to-ArrayRef conversion happens during template argument deduction).
+template <class Node, std::size_t N>
+void dispatchFinalizationProfiles(Sema &S, Node *D,
+                                  const FinalizationProfile<Node> (&Table)[N]) {
+  if (!S.anyProfileEnforced(Table))
+    return;
+  // ProfileSuppressScope is profile-agnostic (it pushes every
+  // [[profiles::suppress]] entry it finds and isProfileSuppressed filters by
+  // name later), so set it up once for all callbacks.
+  Sema::ProfileSuppressScope Scope(S, D, /*WalkLexicalParents=*/true);
+  for (const auto &E : Table)
+    if (S.isProfileEnforced(E.Name))
+      E.Callback(S, D);
+}
 } // namespace
 
 void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
@@ -7544,15 +7557,7 @@ void Sema::checkProfileViolationsAtClassFinalization(CXXRecordDecl *RD) {
     return;
   if (RD->isInvalidDecl() || RD->isDependentType() || RD->isLambda())
     return;
-  // ProfileSuppressScope is profile-agnostic (it pushes every
-  // [[profiles::suppress]] entry it finds and isProfileSuppressed filters by
-  // name later), so set it up once for all callbacks.
-  ProfileSuppressScope Scope(*this, RD, /*WalkLexicalParents=*/true);
-  for (const auto &E : ClassFinalizationProfiles) {
-    if (!isProfileEnforced(E.Name))
-      continue;
-    E.Callback(*this, RD);
-  }
+  dispatchFinalizationProfiles(*this, RD, ClassFinalizationProfiles);
 }
 
 void Sema::checkProfileViolationsAtConstructorFinalization(
@@ -7564,12 +7569,7 @@ void Sema::checkProfileViolationsAtConstructorFinalization(
   if (Ctor->isInvalidDecl() || Ctor->isDependentContext() ||
       Ctor->isDelegatingConstructor())
     return;
-  ProfileSuppressScope Scope(*this, Ctor, /*WalkLexicalParents=*/true);
-  for (const auto &E : ConstructorFinalizationProfiles) {
-    if (!isProfileEnforced(E.Name))
-      continue;
-    E.Callback(*this, Ctor);
-  }
+  dispatchFinalizationProfiles(*this, Ctor, ConstructorFinalizationProfiles);
 }
 
 /// Look up the special member function that would be called by a special

@@ -1701,12 +1701,6 @@ constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
     {"std::init", "uninit_read", diag::err_init_uninit_read},
 };
 
-bool anyCFGUninitProfileEnforced(const Sema &S) {
-  return llvm::any_of(CFGUninitProfiles, [&](const CFGUninitProfileEntry &E) {
-    return S.isProfileEnforced(E.Name);
-  });
-}
-
 class UninitValsDiagReporter : public UninitVariablesHandler {
   Sema &S;
   AnalysisDeclContext &AC;
@@ -3339,7 +3333,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     Analyzer.run(AC);
   }
 
-  if (anyCFGUninitProfileEnforced(S) ||
+  if (S.anyProfileEnforced(CFGUninitProfiles) ||
       !Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
