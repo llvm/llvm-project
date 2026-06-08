@@ -430,6 +430,26 @@ public:
     V.Destroy(getAllocator());
   }
 
+  /// Remove entries that match the given predicate. \p Pred is invoked with a
+  /// reference to each live entry and must not access the map being modified.
+  /// This is the safe replacement for erase-while-iterating.
+  template <typename Predicate> bool remove_if(Predicate Pred) {
+    bool Removed = false;
+    for (StringMapEntryBase *&Bucket : buckets()) {
+      if (!Bucket || Bucket == getTombstoneVal())
+        continue;
+      auto *Entry = static_cast<MapEntryTy *>(Bucket);
+      if (Pred(*Entry)) {
+        Entry->Destroy(getAllocator());
+        Bucket = getTombstoneVal();
+        --NumItems;
+        ++NumTombstones;
+        Removed = true;
+      }
+    }
+    return Removed;
+  }
+
   bool erase(StringRef Key) {
     iterator I = find(Key);
     if (I == end())
