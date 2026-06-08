@@ -130,7 +130,7 @@ public:
   Derived1(int d, int &b) : Callable<int>(d), a(b) {}
 };
 
-class Derived2 : Callable<int&> { // expected-note {{within base of type 'Callable<int &>' declared here}}
+class Derived2 : Callable<int&> { // expected-note {{within base class of type 'Callable<int &>' declared here}}
   int a;
 public:
   Derived2(int d, int &b) : Callable<int&>(b), a(d) {}
@@ -163,7 +163,7 @@ public:
   Base(int &a) : data(a) {}
 };
 
-class Derived : virtual Base { // expected-note {{within base of type 'Base' declared here}}
+class Derived : virtual Base { // expected-note {{within base class of type 'Base' declared here}}
 public:
   Derived(int &a) : Base(a) {}
 
