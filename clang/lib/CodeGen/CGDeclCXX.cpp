@@ -216,8 +216,15 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
     }
     bool NeedsDtor =
         D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
-    if (PerformInit)
+    if (PerformInit) {
+      // The initializer may push cleanups that are lifetime-extended to the
+      // enclosing scope (e.g. destructors for block-literal captures). Bound
+      // them here so they run as part of this initialization instead of
+      // escaping to the enclosing function, where the on-stack storage they
+      // reference may not dominate (e.g. under a guarded local-static init).
+      RunCleanupsScope Scope(*this);
       EmitDeclInit(*this, D, DeclAddr);
+    }
     if (D.getType().isConstantStorage(getContext(), true, !NeedsDtor))
       EmitDeclInvariant(*this, D, DeclPtr);
     else

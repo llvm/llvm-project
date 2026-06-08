@@ -667,6 +667,7 @@ Bug Fixes in This Version
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
+- Fixed a crash (``Instruction does not dominate all uses`` / broken module) when a block literal capturing variables with non-trivial destructors is used to initialize a block-scope ``static`` or ``thread_local`` variable. The captures' destructors were emitted outside the guarded initialization region, producing invalid IR. (#GH188058)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
