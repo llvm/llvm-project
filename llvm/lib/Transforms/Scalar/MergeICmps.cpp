@@ -162,13 +162,6 @@ static BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     return {};
   }
 
-  if (!isDereferenceablePointer(Addr, LoadI->getType(), DL)) {
-    LLVM_DEBUG(dbgs() << "not dereferenceable\n");
-    // We need to make sure that we can do comparison in any order, so we
-    // require memory to be unconditionally dereferenceable.
-    return {};
-  }
-
   APInt Offset = APInt(DL.getIndexTypeSizeInBits(Addr->getType()), 0);
   Value *Base = Addr;
   auto *GEP = dyn_cast<GetElementPtrInst>(Addr);
@@ -225,7 +218,9 @@ class BCECmpBlock {
 
   // Returns true if the non-BCE-cmp instructions can be separated from BCE-cmp
   // instructions in the block.
-  bool canSplit(AliasAnalysis &AA) const;
+  // SplitAt is set to the instruction before which the block will have to be
+  // split.
+  bool canSplit(AliasAnalysis &AA, Instruction *&SplitAt) const;
 
   // Return true if this all the relevant instructions in the BCE-cmp-block can
   // be sunk below this instruction. By doing this, we know we can separate the
@@ -290,9 +285,11 @@ void BCECmpBlock::split(BasicBlock *NewParent, AliasAnalysis &AA) const {
     Inst->moveBeforePreserving(*NewParent, NewParent->begin());
 }
 
-bool BCECmpBlock::canSplit(AliasAnalysis &AA) const {
+bool BCECmpBlock::canSplit(AliasAnalysis &AA, Instruction *&SplitAt) const {
+  SplitAt = nullptr;
   for (Instruction &Inst : *BB) {
     if (!BlockInsts.count(&Inst)) {
+      SplitAt = Inst.getNextNode();
       if (!canSinkBCECmpInst(&Inst, AA))
         return false;
     }
@@ -416,6 +413,8 @@ public:
   BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
               AliasAnalysis &AA);
 
+  bool isDereferenceable();
+
   bool simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
                 DomTreeUpdater &DTU);
 
@@ -430,6 +429,9 @@ private:
   std::vector<ContiguousBlocks> MergedBlocks_;
   // The original entry block (before sorting);
   BasicBlock *EntryBlock_;
+  // The instruction before which the entry block needs to be split (or null
+  // if no splitting required).
+  Instruction *SplitAt = nullptr;
 };
 } // namespace
 
@@ -518,13 +520,14 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
         // and start anew.
         //
         // NOTE: we only handle blocks a with single predecessor for now.
-        if (Comparison->canSplit(AA)) {
+        if (Comparison->canSplit(AA, SplitAt)) {
           LLVM_DEBUG(dbgs()
                      << "Split initial block '" << Comparison->BB->getName()
                      << "' that does extra work besides compare\n");
           Comparison->RequireSplit = true;
           enqueueBlock(Comparisons, std::move(*Comparison));
         } else {
+          SplitAt = nullptr;
           LLVM_DEBUG(dbgs()
                      << "ignoring initial block '" << Comparison->BB->getName()
                      << "' that does extra work besides compare\n");
@@ -734,6 +737,37 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
   return BB;
 }
 
+// The transform may change the order in which the comparison is performed,
+// in which case we may perform loads that were not performed by the original
+// program. As such, we need to ensure that all the accessed memory is
+// dereferenceable.
+bool BCECmpChain::isDereferenceable() {
+  // We know that there can be no frees inside the merged blocks, so it's
+  // sufficient for dereferenceability to hold at the entry block. One
+  // exception to this is if the entry block performs "other work" and will
+  // get split. In that case, we need to consider frees prior to the splitting
+  // point.
+  Instruction *CxtI = SplitAt ? SplitAt : &EntryBlock_->front();
+
+  for (const auto &Blocks : MergedBlocks_) {
+    const BCECmpBlock &LowestBlock = Blocks.front();
+    const Value *Lhs = LowestBlock.Lhs().LoadI->getPointerOperand();
+    const Value *Rhs = LowestBlock.Rhs().LoadI->getPointerOperand();
+    const DataLayout &DL = LowestBlock.Lhs().LoadI->getDataLayout();
+
+    unsigned SizeInBits = 0;
+    for (const BCECmpBlock &Block : Blocks)
+      SizeInBits += Block.SizeBits();
+
+    APInt Size(64, SizeInBits / 8);
+    SimplifyQuery SQ(DL, CxtI);
+    if (!isDereferenceableAndAlignedPointer(Lhs, Align(1), Size, SQ) ||
+        !isDereferenceableAndAlignedPointer(Rhs, Align(1), Size, SQ))
+      return false;
+  }
+  return true;
+}
+
 bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
                            DomTreeUpdater &DTU) {
   assert(atLeastOneMerged() && "simplifying trivial BCECmpChain");
@@ -885,6 +919,11 @@ static bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI,
 
   if (!CmpChain.atLeastOneMerged()) {
     LLVM_DEBUG(dbgs() << "skip: nothing merged\n");
+    return false;
+  }
+
+  if (!CmpChain.isDereferenceable()) {
+    LLVM_DEBUG(dbgs() << "not dereferenceable\n");
     return false;
   }
 
