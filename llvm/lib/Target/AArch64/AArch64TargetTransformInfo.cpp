@@ -5244,6 +5244,45 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     if (MinElts % Factor == 0 &&
         TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
       return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+
+    // Cost the alternative approach for scalable vectors where the interleave
+    // factor is larger than the VF: use a contiguous load/store of the full
+    // wide vector followed by deinterleave/interleave shuffles.
+    if (VecTy->isScalableTy() && MinElts % Factor == 0) {
+      unsigned SubVecElts = SubVecTy->getElementCount().getKnownMinValue();
+
+      if (SubVecElts < 2)
+        return InstructionCost::getInvalid();
+
+      // Cost of the contiguous memory operation on the wide vector.
+      InstructionCost MemCost;
+      if (UseMaskForCond) {
+        unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                                   : Intrinsic::masked_store;
+        MemCost = getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(IID, VecTy, Alignment, AddressSpace),
+            CostKind);
+      } else {
+        MemCost =
+            getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
+      }
+
+      if (!MemCost.isValid())
+        return InstructionCost::getInvalid();
+
+      // llvm.vector.deinterleaveN is lowered as log2(Factor) deinterleave2
+      // operations. Each deinterleave2 on a pair of SVE registers emits one
+      // uzp1 + one uzp2.
+      auto LT = getTypeLegalizationCost(VecTy);
+      if (!LT.first.isValid())
+        return InstructionCost::getInvalid();
+
+      // Total shuffle cost: log2(Factor) levels, each processing
+      // LT.first legal vector parts, with one uzp shuffle per part.
+      InstructionCost ShuffleCost = Log2_32(Factor) * LT.first;
+
+      return MemCost + ShuffleCost;
+    }
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
