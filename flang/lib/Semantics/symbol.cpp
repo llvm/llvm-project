@@ -605,7 +605,6 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const DerivedTypeDetails &x) {
   DumpBool(os, "sequence", x.sequence_);
-  DumpBool(os, "isEnumerationType", x.isEnumerationType_);
   DumpList(os, "components", x.componentNames_);
   return os;
 }
