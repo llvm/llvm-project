@@ -22,8 +22,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
-using llvm::formatv;
-
 namespace clang {
 namespace ento {
 
@@ -77,13 +75,14 @@ public:
   std::string asExtentDesc(bool ForceBytes) const {
     if (ForceBytes || isBytes())
       return "the extent of";
-    return formatv("the number of '{0}' elements in", AsType.getAsString());
+    return llvm::formatv("the number of '{0}' elements in",
+                         AsType.getAsString());
   }
 
   std::string asElementName(bool ForceBytes) const {
     if (ForceBytes || isBytes())
       return "byte";
-    return formatv("'{0}' element", AsType.getAsString());
+    return llvm::formatv("'{0}' element", AsType.getAsString());
   }
 };
 

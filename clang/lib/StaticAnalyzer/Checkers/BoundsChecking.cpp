@@ -19,6 +19,8 @@
 #include "clang/StaticAnalyzer/Checkers/BoundsChecking.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 
+using llvm::formatv;
+
 namespace clang {
 namespace ento {
 
