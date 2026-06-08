@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=column-major -o - | FileCheck %s
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=column-major -o - | FileCheck %s --check-prefixes=CHECK,COL
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - | FileCheck %s --check-prefixes=CHECK,ROW
 
 // Verifies that a per-decl `[[hlsl::row_major]]` / `[[hlsl::column_major]]`
 // (spelled `row_major` / `column_major` in HLSL) overrides the
@@ -107,19 +107,28 @@ export float2x2 mat_mat_cm_rm(column_major float2x3 a, row_major float3x2 b) { r
 // CHECK: call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> [[AMat]], <6 x float> [[T]], i32 2, i32 3, i32 2)
 
 // -----------------------------------------------------------------------------
-// __builtin_hlsl_transpose: row-major operand swaps Rows/Cols passed to the
-// underlying intrinsic.
+// __builtin_hlsl_transpose: the lowering depends on both the operand layout and
+// the result layout. The builtin's result type carries the TU default layout,
+// so when the operand's per-decl layout differs from the default the operand
+// already holds the transposed bits and no intrinsic is emitted. When the
+// layouts match a real transpose is emitted (row-major swaps Rows/Cols).
 // -----------------------------------------------------------------------------
 
-// Row-major float2x3 transposed: passes (Cols=3, Rows=2) to the intrinsic.
+// Row-major float2x3 operand. With a column-major default result the layouts
+// differ -> no intrinsic. With a row-major default they match -> transpose
+// (Cols=3, Rows=2).
 export float3x2 transpose_rm(row_major float2x3 m) { return transpose(m); }
 // CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_rmu11matrix_typeILm2ELm3EfE
-// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
+// COL-NOT: @llvm.matrix.transpose
+// ROW: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
 
-// Column-major float2x3 transposed: passes (Rows=2, Cols=3) to the intrinsic.
+// Column-major float2x3 operand. With a column-major default result the layouts
+// match -> transpose (Rows=2, Cols=3). With a row-major default they differ ->
+// no intrinsic.
 export float3x2 transpose_cm(column_major float2x3 m) { return transpose(m); }
 // CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_cmu11matrix_typeILm2ELm3EfE
-// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// COL: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// ROW-NOT: @llvm.matrix.transpose
 
 // -----------------------------------------------------------------------------
 // CK_HLSLMatrixTruncation: the shuffle mask that picks elements from the

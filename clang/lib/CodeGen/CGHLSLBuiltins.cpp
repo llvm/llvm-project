@@ -1281,12 +1281,21 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    // The matrix transpose intrinsic operates on column-major matrices.
-    // For row-major, a row-major RxC matrix is equivalent to a column-major
-    // CxR matrix, so transposing with swapped dimensions produces the correct
-    // row-major CxR result directly.
-    bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
-    if (IsRowMajor)
+    // The flattened in-register layout of an HLSL matrix depends on its
+    // declared row_major/column_major layout, so the correct lowering of a
+    // transpose depends on both the source layout and the result layout.
+    bool SrcRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
+    bool DstRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
+    // A row-major RxC matrix and a column-major CxR matrix share the same
+    // flattened representation. When the source and result layouts differ, the
+    // operand already holds the transposed result, so the transpose is a no-op
+    // on the underlying vector.
+    if (SrcRowMajor != DstRowMajor)
+      return Op0;
+    // When the source and result share a layout, emit a real transpose. For
+    // row-major operands the dimensions are swapped because a row-major RxC
+    // matrix is laid out like a column-major CxR matrix.
+    if (SrcRowMajor)
       return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
