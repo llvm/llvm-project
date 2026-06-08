@@ -36,6 +36,9 @@
 // declarations of some other intrinsics, breaking compilation.
 // Therefore, we simply declare __rdtsc ourselves. See also
 // http://connect.microsoft.com/VisualStudio/feedback/details/262047
+//
+// Note that MSVC defines the x64 preprocessor macros when building
+// for Arm64EC, despite it using Arm64 assembly instructions.
 #if defined(COMPILER_MSVC) && !defined(_M_IX86) && !defined(_M_ARM64) && \
     !defined(_M_ARM64EC)
 extern "C" uint64_t __rdtsc();
@@ -70,7 +73,7 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   // frequency scaling).  Also note that when the Mac sleeps, this
   // counter pauses; it does not continue counting, nor does it
   // reset to zero.
-  return mach_absolute_time();
+  return static_cast<int64_t>(mach_absolute_time());
 #elif defined(BENCHMARK_OS_EMSCRIPTEN)
   // this goes above x86-specific code because old versions of Emscripten
   // define __x86_64__, although they have nothing to do with it.
@@ -79,10 +82,13 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   int64_t ret;
   __asm__ volatile("rdtsc" : "=A"(ret));
   return ret;
+
+// Note that Clang, like MSVC, defines the x64 preprocessor macros when building
+// for Arm64EC, despite it using Arm64 assembly instructions.
 #elif (defined(__x86_64__) || defined(__amd64__)) && !defined(__arm64ec__)
   uint64_t low, high;
   __asm__ volatile("rdtsc" : "=a"(low), "=d"(high));
-  return (high << 32) | low;
+  return static_cast<int64_t>((high << 32) | low);
 #elif defined(__powerpc__) || defined(__ppc__)
   // This returns a time-base, which is not always precisely a cycle-count.
 #if defined(__powerpc64__) || defined(__ppc64__)
@@ -205,11 +211,12 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
       "sub %0, zero, %0\n"
       "and %1, %1, %0\n"
       : "=r"(cycles_hi0), "=r"(cycles_lo), "=r"(cycles_hi1));
-  return (static_cast<uint64_t>(cycles_hi1) << 32) | cycles_lo;
+  return static_cast<int64_t>((static_cast<uint64_t>(cycles_hi1) << 32) |
+                              cycles_lo);
 #else
   uint64_t cycles;
   asm volatile("rdtime %0" : "=r"(cycles));
-  return cycles;
+  return static_cast<int64_t>(cycles);
 #endif
 #elif defined(__e2k__) || defined(__elbrus__)
   struct timeval tv;
@@ -218,7 +225,7 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
 #elif defined(__hexagon__)
   uint64_t pcycle;
   asm volatile("%0 = C15:14" : "=r"(pcycle));
-  return static_cast<double>(pcycle);
+  return static_cast<int64_t>(pcycle);
 #elif defined(__alpha__)
   // Alpha has a cycle counter, the PCC register, but it is an unsigned 32-bit
   // integer and thus wraps every ~4s, making using it for tick counts
@@ -228,6 +235,18 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   struct timeval tv;
   gettimeofday(&tv, nullptr);
   return static_cast<int64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
+#elif defined(__hppa__) || defined(__linux__)
+  // Fallback for all other architectures with a recent Linux kernel, e.g.:
+  // HP PA-RISC provides a user-readable clock counter (cr16), but
+  // it's not syncronized across CPUs and only 32-bit wide when programs
+  // are built as 32-bit binaries.
+  // Same for SH-4 and possibly others.
+  // Use clock_gettime(CLOCK_MONOTONIC, ...) instead of gettimeofday
+  // because is provides nanosecond resolution.
+  // Initialize to always return 0 if clock_gettime fails.
+  struct timespec ts = {0, 0};
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return static_cast<int64_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 #else
   // The soft failover to a generic implementation is automatic only for ARM.
   // For other platforms the developer is expected to make an attempt to create

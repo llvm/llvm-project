@@ -946,6 +946,20 @@ bool tools::isUseSeparateSections(const llvm::Triple &Triple) {
   return Triple.isPS();
 }
 
+void tools::addSeparateSectionFlags(const llvm::Triple &Triple,
+                                    const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  bool UseSeparateSections = isUseSeparateSections(Triple);
+  if (Args.hasFlag(options::OPT_ffunction_sections,
+                   options::OPT_fno_function_sections, UseSeparateSections))
+    CmdArgs.push_back("-ffunction-sections");
+
+  bool HasDefaultDataSections = Triple.isOSBinFormatXCOFF();
+  if (Args.hasFlag(options::OPT_fdata_sections, options::OPT_fno_data_sections,
+                   UseSeparateSections || HasDefaultDataSections))
+    CmdArgs.push_back("-fdata-sections");
+}
+
 bool tools::isTLSDESCEnabled(const ToolChain &TC,
                              const llvm::opt::ArgList &Args) {
   const llvm::Triple &Triple = TC.getEffectiveTriple();
@@ -981,7 +995,7 @@ void tools::addDTLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
     const Driver &D = ToolChain.getDriver();
     CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
-                                         Twine(D.getClangProgramPath())));
+                                         Twine(D.getDriverProgramPath())));
     if (auto *PA = D.getPrependArg())
       CmdArgs.push_back(Args.MakeArgString(
           "--thinlto-remote-compiler-prepend-arg=" + Twine(PA)));
@@ -3315,7 +3329,7 @@ void tools::escapeSpacesAndBackslashes(const char *Arg,
 const char *tools::renderEscapedCommandLine(const ToolChain &TC,
                                             const llvm::opt::ArgList &Args) {
   const Driver &D = TC.getDriver();
-  const char *Exec = D.getClangProgramPath();
+  const char *Exec = D.getDriverProgramPath();
 
   llvm::opt::ArgStringList OriginalArgs;
   for (const auto &Arg : Args)
@@ -3392,8 +3406,9 @@ void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,
 }
 
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
-                                               ArgStringList &CmdArgs) {
-  bool use_fwrapv = false;
+                                               ArgStringList &CmdArgs,
+                                               bool IsMSVCCompat) {
+  bool use_fwrapv = IsMSVCCompat;
   bool use_fwrapv_pointer = false;
   for (const Arg *A : Args.filtered(
            options::OPT_fstrict_overflow, options::OPT_fno_strict_overflow,
@@ -3426,6 +3441,8 @@ void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
 
   if (use_fwrapv)
     CmdArgs.push_back("-fwrapv");
+  if (!use_fwrapv && IsMSVCCompat)
+    CmdArgs.push_back("-fno-wrapv");
   if (use_fwrapv_pointer)
     CmdArgs.push_back("-fwrapv-pointer");
 }

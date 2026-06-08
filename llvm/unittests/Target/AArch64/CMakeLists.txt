@@ -30,6 +30,7 @@ add_llvm_target_unittest(AArch64Tests
   InstSizes.cpp
   MatrixRegisterAliasing.cpp
   SMEAttributesTest.cpp
+  AArch64CacheLineSizeTest.cpp
   AArch64RegisterInfoTest.cpp
   AArch64SVESchedPseudoTest.cpp
   AArch64SelectionDAGTest.cpp

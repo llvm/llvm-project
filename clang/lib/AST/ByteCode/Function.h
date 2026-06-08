@@ -254,6 +254,10 @@ public:
     return false;
   }
 
+  bool hasImplicitThisParam() const {
+    return hasThisPointer() && !isThisPointerExplicit();
+  }
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,

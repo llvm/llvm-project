@@ -31,6 +31,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/StmtVisitor.h"
@@ -286,7 +287,7 @@ RValue CodeGenFunction::EmitAnyExpr(const Expr *E,
     return RValue::getComplex(EmitComplexExpr(E, ignoreResult, ignoreResult));
   case TEK_Aggregate:
     if (!ignoreResult && aggSlot.isIgnored())
-      aggSlot = CreateAggTemp(E->getType(), "agg-temp");
+      aggSlot = CreateAggTemp(E->getType().getUnqualifiedType(), "agg-temp");
     EmitAggExpr(E, aggSlot);
     return aggSlot.asRValue();
   }
@@ -492,11 +493,11 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         CharUnits alignment = CGF.getContext().getTypeAlignInChars(Ty);
         GV->setAlignment(alignment.getAsAlign());
         llvm::Constant *C = GV;
-        if (AS != LangAS::Default)
+        if (AS != Ty.getAddressSpace())
           C = CGF.CGM.performAddrSpaceCast(
-              GV, llvm::PointerType::get(
-                      CGF.getLLVMContext(),
-                      CGF.getContext().getTargetAddressSpace(LangAS::Default)));
+              GV, llvm::PointerType::get(CGF.getLLVMContext(),
+                                         CGF.getContext().getTargetAddressSpace(
+                                             Ty.getAddressSpace())));
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
@@ -2360,9 +2361,8 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   // getEncodedElementAccess returns row-major linearized indices
   // If the matrix memory layout is column-major, convert indices
   // to column-major indices.
-  bool IsColMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                    LangOptions::MatrixMemoryLayout::MatrixColMajor;
-  if (IsColMajor) {
+  bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getBase()->getType());
+  if (!IsRowMajor) {
     const auto *MT = E->getBase()->getType()->castAs<ConstantMatrixType>();
     unsigned NumCols = MT->getNumColumns();
     for (uint32_t &Idx : Indices) {
@@ -2617,8 +2617,7 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
         ColIdx = ColConstsIndices->getAggregateElement(Col);
       else
         ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
-      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      bool IsMatrixRowMajor = isMatrixRowMajor(getLangOpts(), MatTy);
       llvm::Value *EltIndex =
           MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
       llvm::Value *Elt = Builder.CreateExtractElement(MatrixVec, EltIndex);
@@ -2936,8 +2935,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
           ColIdx = ColConstsIndices->getAggregateElement(Col);
         else
           ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
-        bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                                LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+        bool IsMatrixRowMajor = isMatrixRowMajor(getLangOpts(), Dst.getType());
         llvm::Value *EltIndex =
             MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
         llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
@@ -5229,8 +5227,8 @@ LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(getLangOpts(), E->getBase()->getType());
   llvm::Value *FinalIdx =
       MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
 
@@ -5977,7 +5975,7 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
     // make sure to emit the VLA size.
     EmitVariablyModifiedType(E->getType());
 
-  Address DeclPtr = CreateMemTemp(E->getType(), ".compoundliteral");
+  Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
 
@@ -7453,8 +7451,7 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
       Address MatAddr = MaybeConvertMatrixAddress(Base.getAddress(), *this);
       unsigned NumRows = MT->getNumRows();
       unsigned NumCols = MT->getNumColumns();
-      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      bool IsMatrixRowMajor = isMatrixRowMajor(getLangOpts(), T);
       llvm::MatrixBuilder MB(Builder);
       for (unsigned Row = 0; Row < MT->getNumRows(); Row++) {
         for (unsigned Col = 0; Col < MT->getNumColumns(); Col++) {

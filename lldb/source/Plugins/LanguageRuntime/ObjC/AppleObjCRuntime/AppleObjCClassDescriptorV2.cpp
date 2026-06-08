@@ -78,7 +78,8 @@ ClassDescriptorV2::objc_class_t::Read(Process *process, lldb::addr_t addr) {
   return objc_class_t{isa, superclass, cache_ptr, vtable_ptr, data_ptr, flags};
 }
 
-bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
+llvm::Expected<ClassDescriptorV2::class_rw_t>
+ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
   size_t ptr_size = process->GetAddressByteSize();
 
   size_t size = sizeof(uint32_t)   // uint32_t flags;
@@ -95,40 +96,42 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
   Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail()) {
-    return false;
-  }
+  if (error.Fail())
+    return error.takeError();
 
   DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
                           process->GetAddressByteSize());
 
+  class_rw_t result{};
   lldb::offset_t cursor = 0;
-  m_flags = extractor.GetU32_unchecked(&cursor);
-  m_version = extractor.GetU32_unchecked(&cursor);
-  m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_flags = extractor.GetU32_unchecked(&cursor);
+  result.m_version = extractor.GetU32_unchecked(&cursor);
+  result.m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
   if (ABISP abi_sp = process->GetABI())
-    m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
-  m_method_list_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_properties_ptr = extractor.GetAddress_unchecked(&cursor);
+    result.m_ro_ptr = abi_sp->FixCodeAddress(result.m_ro_ptr);
+  result.m_method_list_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_properties_ptr = extractor.GetAddress_unchecked(&cursor);
 
-  if (m_ro_ptr & 1) {
+  if (result.m_ro_ptr & 1) {
     DataBufferHeap buffer(ptr_size, '\0');
-    process->ReadMemory(m_ro_ptr ^ 1, buffer.GetBytes(), ptr_size, error);
+    process->ReadMemory(result.m_ro_ptr ^ 1, buffer.GetBytes(), ptr_size,
+                        error);
     if (error.Fail())
-      return false;
+      return error.takeError();
     DataExtractor extractor(buffer.GetBytes(), ptr_size,
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
     lldb::offset_t cursor = 0;
-    m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
+    result.m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
     if (ABISP abi_sp = process->GetABI())
-      m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
+      result.m_ro_ptr = abi_sp->FixCodeAddress(result.m_ro_ptr);
   }
 
-  return true;
+  return result;
 }
 
-bool ClassDescriptorV2::class_ro_t::Read(Process *process, lldb::addr_t addr) {
+llvm::Expected<ClassDescriptorV2::class_ro_t>
+ClassDescriptorV2::class_ro_t::Read(Process *process, lldb::addr_t addr) {
   size_t ptr_size = process->GetAddressByteSize();
 
   size_t size = sizeof(uint32_t)   // uint32_t flags;
@@ -148,82 +151,60 @@ bool ClassDescriptorV2::class_ro_t::Read(Process *process, lldb::addr_t addr) {
   Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail()) {
-    return false;
-  }
+  if (error.Fail())
+    return error.takeError();
 
   DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
                           process->GetAddressByteSize());
 
+  class_ro_t result{};
   lldb::offset_t cursor = 0;
 
-  m_flags = extractor.GetU32_unchecked(&cursor);
-  m_instanceStart = extractor.GetU32_unchecked(&cursor);
-  m_instanceSize = extractor.GetU32_unchecked(&cursor);
+  result.m_flags = extractor.GetU32_unchecked(&cursor);
+  result.m_instanceStart = extractor.GetU32_unchecked(&cursor);
+  result.m_instanceSize = extractor.GetU32_unchecked(&cursor);
   if (ptr_size == 8)
-    m_reserved = extractor.GetU32_unchecked(&cursor);
+    result.m_reserved = extractor.GetU32_unchecked(&cursor);
   else
-    m_reserved = 0;
-  m_ivarLayout_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_name_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_baseMethods_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_baseProtocols_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_ivars_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_weakIvarLayout_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_baseProperties_ptr = extractor.GetAddress_unchecked(&cursor);
+    result.m_reserved = 0;
+  result.m_ivarLayout_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_name_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_baseMethods_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_baseProtocols_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_ivars_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_weakIvarLayout_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_baseProperties_ptr = extractor.GetAddress_unchecked(&cursor);
 
   DataBufferHeap name_buf(1024, '\0');
 
-  process->ReadCStringFromMemory(m_name_ptr, (char *)name_buf.GetBytes(),
+  process->ReadCStringFromMemory(result.m_name_ptr, (char *)name_buf.GetBytes(),
                                  name_buf.GetByteSize(), error);
 
-  if (error.Fail()) {
-    return false;
-  }
+  if (error.Fail())
+    return error.takeError();
 
-  m_name.assign((char *)name_buf.GetBytes());
+  result.m_name.assign((char *)name_buf.GetBytes());
 
-  return true;
+  return result;
 }
 
-bool ClassDescriptorV2::Read_class_row(
-    Process *process, const objc_class_t &objc_class,
-    std::unique_ptr<class_ro_t> &class_ro,
-    std::unique_ptr<class_rw_t> &class_rw) const {
-  class_ro.reset();
-  class_rw.reset();
-
+llvm::Expected<ClassDescriptorV2::class_ro_t>
+ClassDescriptorV2::Read_class_row(Process *process,
+                                  const objc_class_t &objc_class) {
   Status error;
   uint32_t class_row_t_flags = process->ReadUnsignedIntegerFromMemory(
       objc_class.m_data_ptr, sizeof(uint32_t), 0, error);
   if (!error.Success())
-    return false;
+    return error.takeError();
 
   if (class_row_t_flags & RW_REALIZED) {
-    class_rw = std::make_unique<class_rw_t>();
-
-    if (!class_rw->Read(process, objc_class.m_data_ptr)) {
-      class_rw.reset();
-      return false;
-    }
-
-    class_ro = std::make_unique<class_ro_t>();
-
-    if (!class_ro->Read(process, class_rw->m_ro_ptr)) {
-      class_rw.reset();
-      class_ro.reset();
-      return false;
-    }
-  } else {
-    class_ro = std::make_unique<class_ro_t>();
-
-    if (!class_ro->Read(process, objc_class.m_data_ptr)) {
-      class_ro.reset();
-      return false;
-    }
+    // Only class_rw->m_ro_ptr is used, the rw class doesn't need to exist.
+    auto class_rw = class_rw_t::Read(process, objc_class.m_data_ptr);
+    if (!class_rw)
+      return class_rw.takeError();
+    return class_ro_t::Read(process, class_rw->m_ro_ptr);
   }
-
-  return true;
+  return class_ro_t::Read(process, objc_class.m_data_ptr);
 }
 
 llvm::Expected<ClassDescriptorV2::method_list_t>
@@ -357,7 +338,8 @@ bool ClassDescriptorV2::method_t::Read(DataExtractor &extractor,
   return true;
 }
 
-bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
+llvm::Expected<ClassDescriptorV2::ivar_list_t>
+ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
   size_t size = sizeof(uint32_t)    // uint32_t entsize;
                 + sizeof(uint32_t); // uint32_t count;
 
@@ -365,76 +347,80 @@ bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
   Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail()) {
-    return false;
-  }
+  if (error.Fail())
+    return error.takeError();
 
   DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
                           process->GetAddressByteSize());
 
   lldb::offset_t cursor = 0;
-
-  m_entsize = extractor.GetU32_unchecked(&cursor);
-  m_count = extractor.GetU32_unchecked(&cursor);
-  m_first_ptr = addr + cursor;
-
-  return true;
+  uint32_t entsize = extractor.GetU32_unchecked(&cursor);
+  uint32_t count = extractor.GetU32_unchecked(&cursor);
+  lldb::addr_t first_ptr = addr + cursor;
+  return ivar_list_t{entsize, count, first_ptr};
 }
 
-bool ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
+llvm::Expected<ClassDescriptorV2::ivar_t>
+ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
   size_t size = GetSize(process);
 
   DataBufferHeap buffer(size, '\0');
   Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail()) {
-    return false;
-  }
+  if (error.Fail())
+    return error.takeError();
 
   DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
                           process->GetAddressByteSize());
 
+  ivar_t result{};
   lldb::offset_t cursor = 0;
 
-  m_offset_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_name_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_type_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_alignment = extractor.GetU32_unchecked(&cursor);
-  m_size = extractor.GetU32_unchecked(&cursor);
+  result.m_offset_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_name_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_type_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_alignment = extractor.GetU32_unchecked(&cursor);
+  result.m_size = extractor.GetU32_unchecked(&cursor);
 
-  process->ReadCStringFromMemory(m_name_ptr, m_name, error);
-  if (error.Fail()) {
-    return false;
-  }
+  llvm::SmallVector<std::optional<std::string>> strs =
+      process->ReadCStringsFromMemory({result.m_name_ptr, result.m_type_ptr});
 
-  process->ReadCStringFromMemory(m_type_ptr, m_type, error);
-  return !error.Fail();
+  if (!strs[0])
+    return llvm::createStringErrorV(
+        "failed to read ivar_t::m_name_str at address {0:x}",
+        result.m_name_ptr);
+  if (!strs[1])
+    return llvm::createStringErrorV(
+        "failed to read ivar_t::m_type_str at address {0:x}",
+        result.m_type_ptr);
+
+  result.m_name = std::move(*strs[0]);
+  result.m_type = std::move(*strs[1]);
+  return result;
 }
 
-llvm::Expected<ClassDescriptorV2::relative_list_entry_t>
-ClassDescriptorV2::relative_list_entry_t::Read(Process *process,
-                                               lldb::addr_t addr) {
+llvm::Expected<llvm::SmallVector<ClassDescriptorV2::relative_list_entry_t>>
+ClassDescriptorV2::ReadRelativeListEntries(Process &process,
+                                           llvm::ArrayRef<lldb::addr_t> addrs) {
   size_t size = sizeof(uint64_t); // m_image_index : 16
                                   // m_list_offset : 48
 
-  DataBufferHeap buffer(size, '\0');
-  Status error;
+  llvm::SmallVector<std::optional<uint64_t>> raw_entries =
+      process.ReadUnsignedIntegersFromMemory(addrs, size);
 
-  process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail())
-    return llvm::joinErrors(
-        error.takeError(),
-        llvm::createStringErrorV(
-            "Failed to read relative_list_entry_t at address {0:x}", addr));
-
-  DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
-                          process->GetAddressByteSize());
-  lldb::offset_t cursor = 0;
-  uint64_t raw_entry = extractor.GetU64_unchecked(&cursor);
-  uint16_t image_index = raw_entry & 0xFFFF;
-  int64_t list_offset = llvm::SignExtend64<48>(raw_entry >> 16);
-  return relative_list_entry_t{image_index, list_offset};
+  llvm::SmallVector<relative_list_entry_t> results;
+  results.reserve(addrs.size());
+  for (auto [addr, maybe_raw] : llvm::zip(addrs, raw_entries)) {
+    if (!maybe_raw)
+      return llvm::createStringErrorV(
+          "Failed to read relative_list_entry_t at address {0:x}", addr);
+    uint64_t raw = *maybe_raw;
+    uint16_t image_index = raw & 0xFFFF;
+    int64_t list_offset = llvm::SignExtend64<48>(raw >> 16);
+    results.push_back(relative_list_entry_t{image_index, list_offset});
+  }
+  return results;
 }
 
 llvm::Expected<ClassDescriptorV2::relative_list_list_t>
@@ -524,18 +510,23 @@ llvm::Error ClassDescriptorV2::ProcessRelativeMethodLists(
   if (!relative_method_lists)
     return relative_method_lists.takeError();
 
-  for (uint32_t i = 0; i < relative_method_lists->m_count; i++) {
-    // 2. Extract the image index and the list offset from the
-    // relative_list_entry_t
-    const lldb::addr_t entry_addr = relative_method_lists->m_first_ptr +
-                                    (i * relative_method_lists->m_entsize);
-    auto entry = relative_list_entry_t::Read(process, entry_addr);
-    if (!entry)
-      return entry.takeError();
+  // 2. Compute the address of every relative_list_entry_t and read them all in
+  // a single batched memory read.
+  auto to_entry_addr = [&](uint64_t idx) {
+    return relative_method_lists->m_first_ptr +
+           (idx * relative_method_lists->m_entsize);
+  };
+  auto entry_addrs = llvm::to_vector(llvm::map_range(
+      llvm::seq<uint64_t>(relative_method_lists->m_count), to_entry_addr));
 
+  auto entries = ReadRelativeListEntries(*process, entry_addrs);
+  if (!entries)
+    return entries.takeError();
+
+  for (auto [entry_addr, entry] : llvm::zip(entry_addrs, *entries)) {
     // 3. Calculate the pointer to the method_list_t from the
     // relative_list_entry_t
-    const lldb::addr_t method_list_addr = entry_addr + entry->m_list_offset;
+    const lldb::addr_t method_list_addr = entry_addr + entry.m_list_offset;
 
     // 4. Get the method_list_t from the pointer
     llvm::Expected<method_list_t> method_list =
@@ -544,10 +535,10 @@ llvm::Error ClassDescriptorV2::ProcessRelativeMethodLists(
       return method_list.takeError();
 
     // 5. Cache the result so we don't need to reconstruct it later.
-    m_image_to_method_lists[entry->m_image_index].emplace_back(*method_list);
+    m_image_to_method_lists[entry.m_image_index].emplace_back(*method_list);
 
     // 6. If the relevant image is loaded, add the methods to the Decl
-    if (!m_runtime.IsSharedCacheImageLoaded(entry->m_image_index))
+    if (!m_runtime.IsSharedCacheImageLoaded(entry.m_image_index))
       continue;
 
     ProcessMethodList(instance_method_func, *method_list);
@@ -568,16 +559,16 @@ bool ClassDescriptorV2::Describe(
                        uint64_t)> const &ivar_func) const {
   lldb_private::Process *process = m_runtime.GetProcess();
 
-  std::unique_ptr<class_ro_t> class_ro;
-  std::unique_ptr<class_rw_t> class_rw;
-
   auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
   if (!objc_class) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
     return false;
   }
-  if (!Read_class_row(process, *objc_class, class_ro, class_rw))
+  auto class_ro = Read_class_row(process, *objc_class);
+  if (!class_ro) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), class_ro.takeError(), "{0}");
     return false;
+  }
 
   static ConstString NSObject_name("NSObject");
 
@@ -621,20 +612,25 @@ bool ClassDescriptorV2::Describe(
 
   if (ivar_func) {
     if (class_ro->m_ivars_ptr != 0) {
-      ivar_list_t ivar_list;
-      if (!ivar_list.Read(process, class_ro->m_ivars_ptr))
+      auto ivar_list = ivar_list_t::Read(process, class_ro->m_ivars_ptr);
+      if (!ivar_list) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), ivar_list.takeError(), "{0}");
+        return false;
+      }
+
+      if (ivar_list->m_entsize != ivar_t::GetSize(process))
         return false;
 
-      if (ivar_list.m_entsize != ivar_t::GetSize(process))
-        return false;
+      for (uint32_t i = 0, e = ivar_list->m_count; i < e; ++i) {
+        auto ivar = ivar_t::Read(process, ivar_list->m_first_ptr +
+                                              (i * ivar_list->m_entsize));
+        if (!ivar) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Types), ivar.takeError(), "{0}");
+          continue;
+        }
 
-      ivar_t ivar;
-
-      for (uint32_t i = 0, e = ivar_list.m_count; i < e; ++i) {
-        ivar.Read(process, ivar_list.m_first_ptr + (i * ivar_list.m_entsize));
-
-        if (ivar_func(ivar.m_name.c_str(), ivar.m_type.c_str(),
-                      ivar.m_offset_ptr, ivar.m_size))
+        if (ivar_func(ivar->m_name.c_str(), ivar->m_type.c_str(),
+                      ivar->m_offset_ptr, ivar->m_size))
           break;
       }
     }
@@ -648,16 +644,16 @@ ConstString ClassDescriptorV2::GetClassName() {
     lldb_private::Process *process = m_runtime.GetProcess();
 
     if (process) {
-      std::unique_ptr<class_ro_t> class_ro;
-      std::unique_ptr<class_rw_t> class_rw;
-
       auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
       if (!objc_class) {
         LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
         return m_name;
       }
-      if (!Read_class_row(process, *objc_class, class_ro, class_rw))
+      auto class_ro = Read_class_row(process, *objc_class);
+      if (!class_ro) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), class_ro.takeError(), "{0}");
         return m_name;
+      }
 
       m_name = ConstString(class_ro->m_name);
     }
@@ -703,16 +699,16 @@ uint64_t ClassDescriptorV2::GetInstanceSize() {
   lldb_private::Process *process = m_runtime.GetProcess();
 
   if (process) {
-    std::unique_ptr<class_ro_t> class_ro;
-    std::unique_ptr<class_rw_t> class_rw;
-
     auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
     if (!objc_class) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
       return 0;
     }
-    if (!Read_class_row(process, *objc_class, class_ro, class_rw))
+    auto class_ro = Read_class_row(process, *objc_class);
+    if (!class_ro) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), class_ro.takeError(), "{0}");
       return 0;
+    }
 
     return class_ro->m_instanceSize;
   }

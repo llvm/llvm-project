@@ -429,3 +429,12 @@ functions:
     arguments:
       - type: wint_t
       - type: FILE *
+  - name: swprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wchar_t *__restrict
+      - type: size_t
+      - type: const wchar_t *__restrict
+      - type: '...'
