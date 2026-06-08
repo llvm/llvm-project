@@ -487,6 +487,8 @@ public:
     return true;
   }
 
+  virtual bool preferWideActiveLaneMask() const { return false; }
+
   virtual bool shouldExpandGetVectorLength(EVT CountVT, unsigned VF,
                                            bool IsScalable) const {
     return true;

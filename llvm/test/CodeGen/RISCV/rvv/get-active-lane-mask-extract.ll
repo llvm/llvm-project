@@ -4,18 +4,18 @@
 define void @test_2x4bit_mask_with_extracts(i64 %i, i64 %n) #0 {
 ; CHECK-LABEL: test_2x4bit_mask_with_extracts:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    vsetvli a3, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsaddu.vx v8, v8, a0
-; CHECK-NEXT:    vmsltu.vx v0, v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    srli a0, a0, 1
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    srli a2, a2, 1
+; CHECK-NEXT:    vsaddu.vx v12, v8, a0
+; CHECK-NEXT:    vmsltu.vx v0, v12, a1
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    sltu a0, a2, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    vsaddu.vx v12, v8, a0
+; CHECK-NEXT:    vmsltu.vx v8, v12, a1
 ; CHECK-NEXT:    tail use
   %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
   %v0 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
@@ -27,12 +27,15 @@ define void @test_2x4bit_mask_with_extracts(i64 %i, i64 %n) #0 {
 define void @test_2x8bit_mask_with_extracts(i64 %i, i64 %n) #0 {
 ; CHECK-LABEL: test_2x8bit_mask_with_extracts:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vsaddu.vx v16, v8, a0
-; CHECK-NEXT:    vadd.vx v8, v8, a2
+; CHECK-NEXT:    add a2, a0, a2
 ; CHECK-NEXT:    vmsltu.vx v0, v16, a1
+; CHECK-NEXT:    sltu a0, a2, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    or a0, a0, a2
 ; CHECK-NEXT:    vsaddu.vx v16, v8, a0
 ; CHECK-NEXT:    vmsltu.vx v8, v16, a1
 ; CHECK-NEXT:    tail use
@@ -46,17 +49,16 @@ define void @test_2x8bit_mask_with_extracts(i64 %i, i64 %n) #0 {
 define void @test_fixed_2x4bit_mask_with_extract(i64 %i, i64 %n) #0 {
 ; CHECK-LABEL: test_fixed_2x4bit_mask_with_extract:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsaddu.vx v8, v8, a0
-; CHECK-NEXT:    vmsltu.vx v0, v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 4
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    addi a2, a0, 4
+; CHECK-NEXT:    vsaddu.vx v10, v8, a0
+; CHECK-NEXT:    sltu a0, a2, a0
+; CHECK-NEXT:    vmsltu.vx v0, v10, a1
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    vsaddu.vx v10, v8, a0
+; CHECK-NEXT:    vmsltu.vx v8, v10, a1
 ; CHECK-NEXT:    tail use
   %r = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 %i, i64 %n)
   %v0 = call <4 x i1> @llvm.vector.extract.v4i1.v8i1.i64(<8 x i1> %r, i64 0)
@@ -68,29 +70,33 @@ define void @test_fixed_2x4bit_mask_with_extract(i64 %i, i64 %n) #0 {
 define void @test_4x2bit_mask_with_extracts_and_reinterpret_casts(i64 %i, i64 %n) #0 {
 ; CHECK-LABEL: test_4x2bit_mask_with_extracts_and_reinterpret_casts:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsaddu.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli a2, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vsaddu.vx v8, v10, a0
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a1
-; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    bnez a0, .LBB3_2
+; CHECK-NEXT:    vfirst.m a2, v0
+; CHECK-NEXT:    bnez a2, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
-; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    srli a2, a0, 1
-; CHECK-NEXT:    vslidedown.vx v8, v10, a1
-; CHECK-NEXT:    vslidedown.vx v9, v10, a2
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v8, 0
-; CHECK-NEXT:    vmsne.vi v9, v9, 0
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v10, v10, a0
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmsne.vi v10, v10, 0
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a2, a2, 2
+; CHECK-NEXT:    add a3, a0, a2
+; CHECK-NEXT:    sltu a0, a3, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    or a0, a0, a3
+; CHECK-NEXT:    vsaddu.vx v12, v10, a0
+; CHECK-NEXT:    add a3, a0, a2
+; CHECK-NEXT:    vmsltu.vx v8, v12, a1
+; CHECK-NEXT:    sltu a0, a3, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    or a0, a0, a3
+; CHECK-NEXT:    vsaddu.vx v12, v10, a0
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    vmsltu.vx v9, v12, a1
+; CHECK-NEXT:    sltu a0, a2, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    vsaddu.vx v12, v10, a0
+; CHECK-NEXT:    vmsltu.vx v10, v12, a1
 ; CHECK-NEXT:    tail use
 ; CHECK-NEXT:  .LBB3_2: # %if.end
 ; CHECK-NEXT:    ret

@@ -558,6 +558,8 @@ public:
   EVT getAsmOperandValueType(const DataLayout &DL, Type *Ty,
                              bool AllowUnknown = false) const override;
 
+  bool preferWideActiveLaneMask() const override;
+
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
   bool shouldExpandCttzElements(EVT VT) const override;

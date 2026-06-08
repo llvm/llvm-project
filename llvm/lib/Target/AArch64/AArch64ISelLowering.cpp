@@ -2439,6 +2439,11 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   }
 }
 
+bool AArch64TargetLowering::preferWideActiveLaneMask() const {
+  return Subtarget->isSVEorStreamingSVEAvailable() &&
+         (Subtarget->hasSVE2p1() || Subtarget->hasSME2());
+}
+
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
   // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).

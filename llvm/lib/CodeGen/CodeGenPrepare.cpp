@@ -426,6 +426,7 @@ private:
   bool optimizeGatherScatterInst(Instruction *MemoryInst, Value *Ptr);
   bool optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                ModifyDT &ModifiedDT);
+  bool optimizeGetActiveLaneMask(Instruction *I);
   bool optimizeInlineAsmInst(CallInst *CS);
   bool optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT);
   bool optimizeExt(Instruction *&I);
@@ -2834,6 +2835,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       return optimizeMulWithOverflow(II, /*IsSigned=*/false, ModifiedDT);
     case Intrinsic::smul_with_overflow:
       return optimizeMulWithOverflow(II, /*IsSigned=*/true, ModifiedDT);
+    case Intrinsic::get_active_lane_mask:
+      return optimizeGetActiveLaneMask(II);
     }
 
     SmallVector<Value *, 2> PtrOps;
@@ -6605,6 +6608,103 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                      {DominatorTree::Insert, OverflowBB, OverflowResBB}});
 
   ModifiedDT = ModifyDT::ModifyBBDT;
+  return true;
+}
+
+// Rewrite a get.active.lane.mask intrinsic followed by vector extracts
+// into multiple smaller get.active.lane.mask intrinsics. This should
+// only be rewritten if the target prefers this form over using a
+// wide active lane mask.
+//
+// Example:
+//   %alm = call <16 x i1> @llvm.get.active.lane.mask(i32 %i, i32 %n)
+//   %p0  = call <8 x i1> @llvm.vector.extract(<16 x i1> %alm, i64 0)
+//   %p1  = call <8 x i1> @llvm.vector.extract(<16 x i1> %alm, i64 8)
+//
+// is rewritten as:
+//   %alm0 = call <8 x i1> @llvm.get.active.lane.mask(i32 %i, i32 %n)
+//   %next = call i32 @llvm.uadd.sat(i32 %i, i32 8)
+//   %alm1 = call <8 x i1> @llvm.get.active.lane.mask(i32 %next, i32 %n)
+//
+bool CodeGenPrepare::optimizeGetActiveLaneMask(Instruction *ALM) {
+  if (TLI->preferWideActiveLaneMask())
+    return false;
+
+  // Count the number of users of ALM which are vector extracts
+  unsigned NumExts = count_if(ALM->users(), [](User *U) {
+    auto *II = dyn_cast<IntrinsicInst>(U);
+    return II && II->getIntrinsicID() == Intrinsic::vector_extract;
+  });
+
+  // Return false if the extracts are not the right type for the number
+  // of parts (e.g. 4 x v2i1 extracts of a single v8i1 mask).
+  auto RetTy = cast<VectorType>(ALM->getType());
+  auto MaskEC = RetTy->getElementCount();
+  if (NumExts < 2 || !MaskEC.isKnownMultipleOf(NumExts))
+    return false;
+
+  ElementCount ExtractEC = MaskEC.divideCoefficientBy(NumExts);
+  if (ExtractEC.getKnownMinValue() < 2)
+    return false;
+
+  SmallVector<IntrinsicInst *> Extracts(NumExts, nullptr);
+  for (User *U : ALM->users()) {
+    // The only users accepted are vector extracts and an extract of
+    // element 0.
+    if (auto ExtElt = dyn_cast<ExtractElementInst>(U)) {
+      auto CIdx = dyn_cast<ConstantInt>(ExtElt->getIndexOperand());
+      if (!CIdx || CIdx->getZExtValue() != 0)
+        return false;
+      continue;
+    }
+
+    auto *II = dyn_cast<IntrinsicInst>(U);
+    if (!II || II->getIntrinsicID() != Intrinsic::vector_extract)
+      return false;
+
+    unsigned Idx = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+    if (cast<VectorType>(II->getType())->getElementCount() != ExtractEC)
+      return false;
+
+    unsigned Part = Idx / ExtractEC.getKnownMinValue();
+    if (Extracts[Part] != nullptr)
+      return false;
+
+    Extracts[Part] = II;
+  }
+
+  IRBuilder<> Builder(ALM);
+  Value *Part0Mask;
+  auto *StartVal = ALM->getOperand(0);
+  auto StartEC = Builder.CreateElementCount(StartVal->getType(), ExtractEC);
+  // Replace each vector extract with a get.active.lane.mask of the same type.
+  for (unsigned I = 0; I < NumExts; ++I) {
+    auto ExtTy = Extracts[0]->getType();
+    if (I > 0)
+      StartVal =
+          Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, StartVal, StartEC);
+
+    Value *ALMForPart = Builder.CreateIntrinsic(
+        ExtTy, Intrinsic::get_active_lane_mask, {StartVal, ALM->getOperand(1)});
+    if (I == 0)
+      Part0Mask = ALMForPart;
+    Extracts[I]->replaceAllUsesWith(ALMForPart);
+    Extracts[I]->replaceUsesOfWith(ALM, PoisonValue::get(RetTy));
+  }
+
+  // Update the remaining users, which must be extracts of element 0 from
+  // the original wide mask.
+  SmallVector<User *> RemainingUsers(ALM->users());
+  for (User *U : RemainingUsers) {
+    auto *ExtElt = dyn_cast<ExtractElementInst>(U);
+    assert(ExtElt && "Unexpected user of get.active.lane.mask");
+    auto *NewExt =
+        Builder.CreateExtractElement(Part0Mask, ExtElt->getIndexOperand());
+    ExtElt->replaceAllUsesWith(NewExt);
+    ExtElt->replaceUsesOfWith(ALM, PoisonValue::get(RetTy));
+  }
+  ALM->eraseFromParent();
+
   return true;
 }
 
