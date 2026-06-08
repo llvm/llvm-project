@@ -82,9 +82,13 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     DenseMap<std::pair<DILocalVariable *, DIExpression *>,
              std::pair<Instruction *, DbgValueInst *>>
         DbgValueFragments;
+    // Likewise, logically, this should be a variable in the
+    // for (Function &F : M) loop.
+    DenseSet<DILocalVariable *> DbgVariablesSeen;
 
     for (Function &F : M) {
       bool IsEntryBlock = true;
+      DbgVariablesSeen.clear();
       for (BasicBlock &BB : F) {
         Instruction *NextNonDebugInst = nullptr;
         DbgValues.clear();
@@ -162,16 +166,15 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
         // If this is the entry block, if the first value we see for each debug
         // value is undef, it is redundant.
         if (IsEntryBlock) {
-          DenseSet<DILocalVariable *> Seen;
           for (Instruction &I : make_early_inc_range(BB)) {
             auto *DV = dyn_cast<DbgValueInst>(&I);
-            if (!DV || Seen.contains(DV->getVariable()))
+            if (!DV || DbgVariablesSeen.contains(DV->getVariable()))
               continue;
             if (isa<UndefValue>(DV->getValue())) {
               DV->eraseFromParent();
               continue;
             }
-            Seen.insert(DV->getVariable());
+            DbgVariablesSeen.insert(DV->getVariable());
           }
         }
         IsEntryBlock = false;
