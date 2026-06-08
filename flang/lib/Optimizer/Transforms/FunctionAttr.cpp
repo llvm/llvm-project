@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/Twine.h"
 #include <string>
 
@@ -42,6 +43,21 @@ public:
   void runOnOperation() override;
 };
 
+/// Return true if the function body contains any OpenMP synchronization or
+/// work-sharing constructs.
+static bool containsOpenMPSyncOrWorkshare(mlir::func::FuncOp func) {
+  bool found = false;
+  func.walk([&](mlir::Operation *op) {
+    if (mlir::isa<mlir::omp::SingleOp, mlir::omp::MasterOp,
+                  mlir::omp::BarrierOp, mlir::omp::CriticalOp,
+                  mlir::omp::OrderedOp, mlir::omp::ParallelOp>(op)) {
+      found = true;
+      return mlir::WalkResult::interrupt();
+    }
+    return mlir::WalkResult::advance();
+  });
+  return found;
+}
 } // namespace
 
 void FunctionAttrPass::runOnOperation() {
@@ -59,7 +75,7 @@ void FunctionAttrPass::runOnOperation() {
     llvm::StringRef nocapture = mlir::LLVM::LLVMDialect::getNoCaptureAttrName();
     llvm::StringRef noalias = mlir::LLVM::LLVMDialect::getNoAliasAttrName();
     mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
-
+    bool hasOmpSync = containsOpenMPSyncOrWorkshare(func);
     for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
       bool isNoCapture = false;
       bool isNoAlias = false;
@@ -68,12 +84,13 @@ void FunctionAttrPass::runOnOperation() {
           !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
           !func.getArgAttr(index, fir::getVolatileAttrName())) {
         isNoCapture = true;
-        isNoAlias = !fir::isPointerType(argType);
+        isNoAlias = !fir::isPointerType(argType) && !hasOmpSync;
       } else if (mlir::isa<fir::BaseBoxType>(argType)) {
         // !fir.box arguments will be passed as descriptor pointers
         // at LLVM IR dialect level - they cannot be captured,
         // and cannot alias with anything within the function.
-        isNoCapture = isNoAlias = true;
+        isNoCapture = true;
+        isNoAlias = !hasOmpSync;
       }
       if (isNoCapture && setNoCapture)
         func.setArgAttr(index, nocapture, unitAttr);
