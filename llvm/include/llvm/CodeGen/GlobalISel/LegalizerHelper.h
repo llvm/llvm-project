@@ -305,16 +305,13 @@ private:
   // Memcpy family legalization helpers.
   LegalizeResult lowerMemset(MachineInstr &MI, Register Dst, Register Val,
                              uint64_t KnownLen, Align Alignment,
-                             bool IsVolatile, bool DstAlignCanChange,
-                             ArrayRef<LLT> MemOps);
+                             bool IsVolatile);
   LegalizeResult lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
-                             uint64_t KnownLen, Align DstAlign, Align SrcAlign,
-                             bool IsVolatile, bool DstAlignCanChange,
-                             ArrayRef<LLT> MemOps);
+                             uint64_t KnownLen, uint64_t Limit, Align DstAlign,
+                             Align SrcAlign, bool IsVolatile);
   LegalizeResult lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
                               uint64_t KnownLen, Align DstAlign, Align SrcAlign,
-                              bool IsVolatile, bool DstAlignCanChange,
-                              ArrayRef<LLT> MemOps);
+                              bool IsVolatile);
 
   // Implements floating-point environment read/write via library function call.
   LegalizeResult createGetStateLibcall(MachineInstr &MI,
@@ -573,12 +570,6 @@ public:
   LLVM_ABI LegalizeResult lowerAbsDiffToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFAbs(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerVectorReduction(MachineInstr &MI);
-  LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI, Register Dst,
-                                            Register Src, uint64_t KnownLen,
-                                            Align DstAlign, Align SrcAlign,
-                                            bool IsVolatile,
-                                            bool DstAlignCanChange,
-                                            ArrayRef<LLT> MemOps);
   LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI,
                                             unsigned MaxLen = 0);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);
