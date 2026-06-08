@@ -833,8 +833,8 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
         switch (getBundleAttrFromOBU(OBU)) {
         case BundleAttr::Dereferenceable: {
           auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
-          assert(Ptr == V);
-          if (NullPointerIsDefined(Q.CxtI->getFunction(),
+          if (Ptr != V ||
+              NullPointerIsDefined(Q.CxtI->getFunction(),
                                    V->getType()->getPointerAddressSpace()))
             return false;
 
@@ -843,8 +843,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
         }
 
         case BundleAttr::NonNull:
-          assert(getAssumeNonNullInfo(OBU).Ptr == V);
-          return true;
+          return getAssumeNonNullInfo(OBU).Ptr == V;
 
         default:
           return false;
@@ -1090,8 +1089,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       if (auto OBU = I->getOperandBundleAt(Elem.Index);
           getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
         auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
-        assert(Ptr == V);
-        if (!Alignment || !Offset || !isPowerOf2_64(*Alignment))
+        if (Ptr != V || !Alignment || !Offset || !isPowerOf2_64(*Alignment))
           continue;
         auto AlignVal = MinAlign(*Offset, *Alignment);
         if (isValidAssumeForContext(I, Q))
@@ -1632,6 +1630,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
       Known.Zero.setLowBits(C->countr_zero());
+
+    // shl X, sub(Y, xor(ctlz(X, true), BitWidth-1)) shifts X so that its MSB
+    // lands at bit Y, when BitWidth is a power of 2.
+    const APInt *YC;
+    Value *X = I->getOperand(0);
+    if (isPowerOf2_32(BitWidth) &&
+        match(I->getOperand(1),
+              m_Sub(m_APInt(YC), m_Xor(m_Ctlz(m_Specific(X), m_One()),
+                                       m_SpecificInt(BitWidth - 1)))) &&
+        YC->ult(BitWidth - 1)) {
+      unsigned Y = YC->getZExtValue();
+      Known.One.setBit(Y);
+      Known.Zero.setBitsFrom(Y + 1);
+    }
     break;
   }
   case Instruction::LShr: {
