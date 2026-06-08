@@ -90,10 +90,8 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
       if (auto *NewTrunc = dyn_cast<TruncInst>(Res)) {
         if (Trunc->getType()->getScalarSizeInBits() <=
             Ty->getScalarSizeInBits()) {
-          if (Trunc->hasNoSignedWrap())
-            NewTrunc->setHasNoSignedWrap(true);
-          if (Trunc->hasNoUnsignedWrap())
-            NewTrunc->setHasNoUnsignedWrap(true);
+          NewTrunc->setHasNoSignedWrap(Trunc->hasNoSignedWrap());
+          NewTrunc->setHasNoUnsignedWrap(Trunc->hasNoUnsignedWrap());
         }
       } else if (auto *NewZExt = dyn_cast<ZExtInst>(Res)) {
         if (Trunc->hasNoUnsignedWrap())
