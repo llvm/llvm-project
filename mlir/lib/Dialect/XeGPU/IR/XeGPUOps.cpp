@@ -126,9 +126,6 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       return success();
   }
 
-  if (mdescTy.getRank() < 2)
-    return emitError() << "mem_desc must be 2D or greater.";
-
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
 
@@ -163,23 +160,16 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
                     SmallVector<int64_t>(dataShape.begin(), dataShape.end())))
     return emitError() << "Value shape is not distributable with the layout";
 
-  if (dataShape.size() == 2) {
+  if (dataShape.size() == mdescShape.size()) {
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
       return emitError() << "data shape must not exceed mem_desc shape.";
-  } else {
-    // if the subgroup_block_io attribute is set,  mdescTy must have block
-    // attribute
-    if (subgroup_block_io && !blockShape.size())
-      return emitError() << "mem_desc must have block attribute when "
-                            "subgroup_block_io is set.";
-    // if the subgroup_block_io attribute is set, the memdesc should be row
-    // major
-    if (subgroup_block_io && mdescTy.isColMajor())
-      return emitError() << "mem_desc should be row major when "
-                            "subgroup_block_io is set.";
   }
-
+  // if the subgroup_block_io attribute is set, mdescTy must have block
+  // attribute
+  if (subgroup_block_io && !blockShape.size())
+    return emitError() << "mem_desc must have block attribute when "
+                          "subgroup_block_io is set.";
   return success();
 }
 
@@ -354,9 +344,6 @@ LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
 
-  if (tdescTy.getRank() > 2)
-    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
-
   if (!valueTy)
     return emitOpError("Invalid result, it should be a VectorType.\n");
 
@@ -475,9 +462,6 @@ void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
 LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
-
-  if (dstTy.getRank() > 2)
-    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valTy)
     return emitOpError("Expecting a VectorType result.\n");
@@ -703,60 +687,127 @@ void StoreScatterOp::build(
 }
 
 //===----------------------------------------------------------------------===//
+// DPAS Common Verification Helpers
+//===----------------------------------------------------------------------===//
+
+// Helper to verify layout distributability for a value
+static LogicalResult
+verifyLayoutDistributable(Operation *op,
+                          std::optional<DistributeLayoutAttr> layout,
+                          ArrayRef<int64_t> shape, StringRef operandName) {
+  if (layout && !layout->isDistributable(
+                    SmallVector<int64_t>(shape.begin(), shape.end())))
+    return op->emitOpError(operandName)
+           << " shape is not distributable with the layout";
+  return success();
+}
+
+// Helper to verify M, N, K dimensions match between A, B, and result matrices
+static LogicalResult verifyDpasDimensions(Operation *op,
+                                          ArrayRef<int64_t> aShape,
+                                          ArrayRef<int64_t> bShape,
+                                          ArrayRef<int64_t> resShape) {
+
+  auto aRank = aShape.size();
+  auto bRank = bShape.size();
+  auto resRank = resShape.size();
+  if (aRank == 1 && bRank == 1 && resRank == 1)
+    return success();
+
+  // A must be at least 2D, B must be 2D or 3D (innermost dims), result at
+  // least 2D.
+  if (aRank < 2)
+    return op->emitOpError("A operand must be at least a 2D vector.");
+  if (bRank < 2)
+    return op->emitOpError("B operand must be at least a 2D vector.");
+  if (resRank < 2)
+    return op->emitOpError("Result must be at least a 2D vector.");
+
+  // FIXME: B may have one extra trailing dim for VNNI packing
+  // (B[batch..., K/vnni, N, vnni]). We plan to drop VNNI packing support, so
+  // rather than properly verifying the packed dimensions, we simply accept
+  // the packed form here and skip the detailed verification. This branch
+  // should be removed once VNNI packing support is dropped.
+  if (bRank == aRank + 1)
+    return success();
+
+  // All operands have the same rank. They share the same batch dimensions,
+  // with the last two dims being the core matmul dims: A[batch..., M, K],
+  // B[batch..., K, N], result[batch..., M, N].
+  if (aRank != bRank || aRank != resRank)
+    return op->emitOpError("Rank mismatch among A, B, and result.");
+
+  int64_t batchRank = aRank - 2;
+
+  // Verify batch dimensions match.
+  for (int64_t i = 0; i < batchRank; ++i) {
+    if (aShape[i] != resShape[i])
+      return op->emitOpError("Batch dimension mismatch at dim ")
+             << i << ": A has " << aShape[i] << " but result has "
+             << resShape[i] << ".";
+    if (aShape[i] != bShape[i])
+      return op->emitOpError("Batch dimension mismatch at dim ")
+             << i << ": A has " << aShape[i] << " but B has " << bShape[i]
+             << ".";
+  }
+
+  // Core matmul dimensions (last two dims of each operand).
+  int64_t aM = aShape[batchRank];
+  int64_t aK = aShape[batchRank + 1];
+  int64_t bK = bShape[batchRank];
+  int64_t bN = bShape[batchRank + 1];
+  int64_t resM = resShape[batchRank];
+  int64_t resN = resShape[batchRank + 1];
+
+  // Verify K dimension match between A and B
+  if (bK != aK)
+    return op->emitOpError("K-dimension mismatch: A has K=")
+           << aK << " but B has K=" << bK << ".";
+
+  // Verify M dimension match between A and result
+  if (aM != resM)
+    return op->emitOpError("M-dimension mismatch: A has M=")
+           << aM << " but result has M=" << resM << ".";
+
+  // Verify N dimension match between B and result
+  if (bN != resN)
+    return op->emitOpError("N-dimension mismatch: B has N=")
+           << bN << " but result has N=" << resN << ".";
+
+  return success();
+}
+
+// Helper to verify accumulator matches result type
+static LogicalResult verifyDpasAccumulator(Operation *op, Type accType,
+                                           Type resultType) {
+  if (accType != resultType)
+    return op->emitOpError("Accumulator type must match result type.");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // XeGPU_DpasOp
 //===----------------------------------------------------------------------===//
 LogicalResult DpasOp::verify() {
-  int64_t lhsRank = getLhsType().getRank();
-  int64_t rhsRank = getRhsType().getRank();
-  int64_t resRank = getResultType().getRank();
   auto lhsShape = getLhsType().getShape();
   auto rhsShape = getRhsType().getShape();
   auto resShape = getResultType().getShape();
 
-  if (auto cdLayout = getLayoutCd())
-    if (!cdLayout->isDistributable(
-            SmallVector<int64_t>(resShape.begin(), resShape.end())))
-      return emitOpError("Value shape is not distributable with the layout");
+  // Verify layout distributability
+  if (failed(
+          verifyLayoutDistributable(*this, getLayoutCd(), resShape, "Result")))
+    return failure();
+  if (failed(verifyLayoutDistributable(*this, getLayoutA(), lhsShape, "A")))
+    return failure();
+  if (failed(verifyLayoutDistributable(*this, getLayoutB(), rhsShape, "B")))
+    return failure();
 
-  if (auto aLayout = getLayoutA())
-    if (!aLayout->isDistributable(
-            SmallVector<int64_t>(lhsShape.begin(), lhsShape.end())))
-      return emitOpError("Value shape is not distributable with the layout");
+  // Verify accumulator if present
+  if (getAcc() &&
+      failed(verifyDpasAccumulator(*this, getAcc().getType(), getResultType())))
+    return failure();
 
-  if (auto bLayout = getLayoutB())
-    if (!bLayout->isDistributable(
-            SmallVector<int64_t>(rhsShape.begin(), rhsShape.end())))
-      return emitOpError("Value shape is not distributable with the layout");
-
-  if (getAcc() && getAcc().getType() != getResultType())
-    return emitOpError("Expecting the acc type to be the same as result.");
-
-  // SIMT code: the size of the B operand has to be a multiple of 32 bits.
-  // It skips the semantic check since lack of architecture information.
-  // Users need to ensure the correctness.
-  if (lhsRank == 1 && rhsRank == 1 && resRank == 1) {
-    auto numElems = getRhsType().getNumElements();
-    auto elemTy = getRhsType().getElementType();
-    auto factor = 32 / elemTy.getIntOrFloatBitWidth();
-    if (numElems % factor != 0)
-      return emitOpError("Expecting B operand to be a multiple of 32 bits.");
-    return success();
-  }
-
-  // SIMD code
-  if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
-    return emitOpError(
-        "expecting lhs and result to be a 2D vector, and rhs to be either "
-        "2D or 3D (packed) vector.");
-  auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
-  if (bK != lhsShape[1])
-    return emitOpError("K-dimension mismatch.");
-  if (lhsShape[0] != resShape[0])
-    return emitOpError("M-dimension mismatch.");
-  if (rhsShape[1] != resShape[1])
-    return emitOpError("N-dimension mismatch.");
-
-  return success();
+  return verifyDpasDimensions(*this, lhsShape, rhsShape, resShape);
 }
 
 //===----------------------------------------------------------------------===//
@@ -862,8 +913,100 @@ LogicalResult TruncfOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DpasMxOp::verify() {
-  if (getAcc() && getAcc().getType() != getResultType())
-    return emitOpError("Expecting the acc type to be the same as result.");
+  auto aShape = getAType().getShape();
+  auto bShape = getBType().getShape();
+  auto resShape = getResultType().getShape();
+
+  // Verify layout distributability for A, B, and result
+  if (failed(
+          verifyLayoutDistributable(*this, getLayoutCd(), resShape, "Result")))
+    return failure();
+  if (failed(verifyLayoutDistributable(*this, getLayoutA(), aShape, "A")))
+    return failure();
+  if (failed(verifyLayoutDistributable(*this, getLayoutB(), bShape, "B")))
+    return failure();
+
+  // Verify accumulator if present
+  if (getAcc() &&
+      failed(verifyDpasAccumulator(*this, getAcc().getType(), getResultType())))
+    return failure();
+
+  // Verify M, N, K dimensions
+  if (failed(verifyDpasDimensions(*this, aShape, bShape, resShape)))
+    return failure();
+
+  // Determine batch rank from A operand.
+  int64_t aBatchRank = aShape.size() - 2;
+
+  // Validate scale_a if present
+  if (getScaleA()) {
+    auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
+    // Only validate if scale is a vector (scalars are always valid)
+    if (scaleAVecType && scaleAVecType.getRank() > 1) {
+      auto scaleAShape = scaleAVecType.getShape();
+
+      if (scaleAVecType.getRank() < 2)
+        return emitOpError("Scale A must be at least a 2D vector when not a "
+                           "scalar.");
+
+      // Verify layout distributability for scale_a
+      if (failed(verifyLayoutDistributable(*this, getLayoutAScale(),
+                                           scaleAShape, "ScaleA")))
+        return failure();
+
+      // Validate M dimension: scale_a's M must match A's M (last-1 dim)
+      if (scaleAShape[scaleAShape.size() - 2] != aShape[aBatchRank])
+        return emitOpError("Scale A M dimension [")
+               << scaleAShape[scaleAShape.size() - 2]
+               << "] must match A M dimension [" << aShape[aBatchRank] << "].";
+    }
+  }
+
+  // Validate scale_b if present
+  if (getScaleB()) {
+    auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
+    // Only validate if scale is a vector (scalars are always valid)
+    if (scaleBVecType && scaleBVecType.getRank() > 1) {
+      auto scaleBShape = scaleBVecType.getShape();
+
+      if (scaleBVecType.getRank() < 2)
+        return emitOpError("Scale B must be at least a 2D vector when not a "
+                           "scalar.");
+
+      // Verify layout distributability for scale_b
+      if (failed(verifyLayoutDistributable(*this, getLayoutBScale(),
+                                           scaleBShape, "ScaleB")))
+        return failure();
+
+      // Validate N dimension: scale_b's N (last dim) must match B's N (last
+      // dim)
+      if (scaleBShape.back() != bShape.back())
+        return emitOpError("Scale B N dimension [")
+               << scaleBShape.back() << "] must match B N dimension ["
+               << bShape.back() << "].";
+    }
+  }
+
+  // Validate scale K dimension compatibility if both scales are present and
+  // vectors
+  if (getScaleA() && getScaleB()) {
+    auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
+    auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
+
+    if (scaleAVecType && scaleBVecType && scaleAVecType.getRank() > 1 &&
+        scaleBVecType.getRank() > 1) {
+      auto scaleAShape = scaleAVecType.getShape();
+      auto scaleBShape = scaleBVecType.getShape();
+
+      // Validate scale K dimension compatibility: scale_a's last dim must
+      // match scale_b's second-to-last dim
+      if (scaleAShape.back() != scaleBShape[scaleBShape.size() - 2])
+        return emitOpError("Scale K dimension mismatch: scale_a has K=")
+               << scaleAShape.back()
+               << " but scale_b has K=" << scaleBShape[scaleBShape.size() - 2]
+               << ".";
+    }
+  }
 
   return success();
 }

@@ -109,14 +109,6 @@ func.func @load_nd_vc_4(%src: memref<24x32xf32>) {
 }
 
 // -----
-func.func @subgroup_load_nd_9(%src: memref<4x8x16xf16>) {
-  %1 = xegpu.create_nd_tdesc %src : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
-  // expected-error@+1 {{Expects a 1D or 2D TensorDesc}}
-  %2 = xegpu.load_nd %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
-  return
-}
-
-// -----
 func.func @subgroup_load_nd_offset_1(%src: memref<4x8x16xf16>, %x : index) {
   %1 = xegpu.create_nd_tdesc %src: memref<4x8x16xf16> -> !xegpu.tensor_desc<16xf16>
 // expected-error@+1 {{Mismatched ranks between offsets and tensor descriptor}}
@@ -173,15 +165,6 @@ func.func @store_nd_vc_3(%dst: memref<24x32xf16>) {
   %2 = xegpu.create_nd_tdesc %dst : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16, #xegpu.block_tdesc_attr<array_length = 2>>
   // expected-error@+1 {{array length is not supported by store_nd}}
   xegpu.store_nd %1, %2[0, 0]: vector<2x24x32xf16>, !xegpu.tensor_desc<24x32xf16, #xegpu.block_tdesc_attr<array_length = 2>>
-  return
-}
-
-// -----
-func.func @store_nd_vc_4(%dst: memref<8x24x32xf16>) {
-  %1 = arith.constant dense<1.0>: vector<8x24x32xf16>
-  %2 = xegpu.create_nd_tdesc %dst : memref<8x24x32xf16> -> !xegpu.tensor_desc<8x24x32xf16>
-  // expected-error@+1 {{Expects a 1D or 2D TensorDesc}}
-  xegpu.store_nd %1, %2[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<8x24x32xf16>, !xegpu.tensor_desc<8x24x32xf16>
   return
 }
 
@@ -386,44 +369,37 @@ func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
 }
 
 // -----
-func.func @dpas_vc_1(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_vc_1(%a : vector<8x8xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{K-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
 func.func @dpas_vc_2(%a : vector<8x8x2xf16>, %b: vector<8x16x2xf16>) {
-  // expected-error@+1 {{expecting lhs and result to be a 2D vector, and rhs to be either 2D or 3D (packed) vector}}
+  // expected-error@+1 {{'xegpu.dpas' op Rank mismatch among A, B, and result}}
   %1 = xegpu.dpas %a, %b : vector<8x8x2xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_3(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_3(%a : vector<8x8xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{K-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_4(%a : vector<16x16xf16>, %b: vector<8x16x2xf16>) {
+func.func @dpas_4(%a : vector<16x16xf16>, %b: vector<16x16xf16>) {
   // expected-error@+1 {{M-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<16x16xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b : vector<16x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
   return
 }
 
 // -----
-func.func @dpas_5(%a : vector<8x16xf16>, %b: vector<8x8x2xf16>) {
+func.func @dpas_5(%a : vector<8x16xf16>, %b: vector<16x8xf16>) {
   // expected-error@+1 {{N-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<8x8x2xf16> -> vector<8x16xf32>
-  return
-}
-
-// -----
-func.func @dpas_simt_1(%a : vector<8xf16>, %b: vector<15xf16>) {
-  // expected-error@+1 {{Expecting B operand to be a multiple of 32 bits}}
-  %1 = xegpu.dpas %a, %b : vector<8xf16>, vector<15xf16> -> vector<8xf32>
+  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<16x8xf16> -> vector<8x16xf32>
   return
 }
 
@@ -642,9 +618,9 @@ func.func @load_mem_desc_invalid_result_size(%arg0: !xegpu.mem_desc<16x64xf16>) 
 }
 
 // -----
-func.func @load_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>) {
-  // expected-error@+1 {{mem_desc must be 2D or greater}}
-  %data = xegpu.load_matrix %arg0[16]: !xegpu.mem_desc<64xf16> -> vector<16xf16>
+func.func @load_mem_desc_1d_exceeds_shape(%arg0: !xegpu.mem_desc<16xf16>) {
+  // expected-error@+1 {{data shape must not exceed mem_desc shape}}
+  %data = xegpu.load_matrix %arg0[0]: !xegpu.mem_desc<16xf16> -> vector<32xf16>
   return
 }
 
@@ -663,9 +639,9 @@ func.func @store_mem_desc_invalid_data_size(%arg0: !xegpu.mem_desc<16x64xf16>, %
 }
 
 // -----
-func.func @store_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>, %arg1: vector<32xf16>) {
-  // expected-error@+1 {{mem_desc must be 2D or greater}}
-  xegpu.store_matrix %arg1, %arg0[32] : vector<32xf16>, !xegpu.mem_desc<64xf16>
+func.func @store_mem_desc_1d_exceeds_shape(%arg0: !xegpu.mem_desc<16xf16>, %arg1: vector<32xf16>) {
+  // expected-error@+1 {{data shape must not exceed mem_desc shape}}
+  xegpu.store_matrix %arg1, %arg0[0] : vector<32xf16>, !xegpu.mem_desc<16xf16>
   return
 }
 
@@ -702,7 +678,97 @@ func.func @truncf_invalid_result_size(%a: vector<8x16xf16>) {
 
 // -----
 func.func @dpas_mx_acc_result_type_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xbf16>) {
-  // expected-error@+1 {{Expecting the acc type to be the same as result.}}
-  %1 = xegpu.dpas_mx %a, %b, %acc : vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xbf16> -> vector<8x16xf32>
+  // expected-error@+1 {{Accumulator type must match result type.}}
+  %1 = xegpu.dpas_mx %a, %b, %acc : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xbf16>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_a_not_2d(%a : vector<128xf8E5M2>, %b: vector<16x16xf8E5M2>) {
+  // expected-error@+1 {{A operand must be at least a 2D vector.}}
+  %1 = xegpu.dpas_mx %a, %b : (vector<128xf8E5M2>, vector<16x16xf8E5M2>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_b_not_2d(%a : vector<8x16xf8E5M2>, %b: vector<256xf8E5M2>) {
+  // expected-error@+1 {{B operand must be at least a 2D vector.}}
+  %1 = xegpu.dpas_mx %a, %b : (vector<8x16xf8E5M2>, vector<256xf8E5M2>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_result_not_2d(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>) {
+  // expected-error@+1 {{Result must be at least a 2D vector.}}
+  %1 = xegpu.dpas_mx %a, %b : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>) -> vector<128xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_k_dimension_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<8x16xf8E5M2>) {
+  // expected-error@+1 {{K-dimension mismatch: A has K=16 but B has K=8.}}
+  %1 = xegpu.dpas_mx %a, %b : (vector<8x16xf8E5M2>, vector<8x16xf8E5M2>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_m_dimension_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>) {
+  // expected-error@+1 {{M-dimension mismatch: A has M=8 but result has M=16.}}
+  %1 = xegpu.dpas_mx %a, %b : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>) -> vector<16x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_n_dimension_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>) {
+  // expected-error@+1 {{N-dimension mismatch: B has N=16 but result has N=8.}}
+  %1 = xegpu.dpas_mx %a, %b : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>) -> vector<8x8xf32>
+  return
+}
+
+
+// -----
+func.func @dpas_mx_scale_a_m_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a: vector<4x2xf8E8M0FNU>) {
+  // expected-error@+1 {{Scale A M dimension [4] must match A M dimension [8].}}
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<4x2xf8E8M0FNU>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_scale_b_n_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a: vector<8x2xf8E8M0FNU>, %scale_b: vector<2x8xf8E8M0FNU>) {
+  // expected-error@+1 {{Scale B N dimension [8] must match B N dimension [16].}}
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a scale_b = %scale_b : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<2x8xf8E8M0FNU>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_scale_k_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a_val: vector<8x2xf8E8M0FNU>, %scale_b_val: vector<4x16xf8E8M0FNU>) {
+  // expected-error@+1 {{Scale K dimension mismatch: scale_a has K=2 but scale_b has K=4.}}
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val scale_b = %scale_b_val : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<4x16xf8E8M0FNU>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+#layout_a = #xegpu.layout<sg_layout = [1, 1], sg_data = [8, 32]>
+#layout_b = #xegpu.layout<sg_layout = [1, 1], sg_data = [32, 16]>
+#layout_cd = #xegpu.layout<sg_layout = [1, 1], sg_data = [8, 16]>
+func.func @dpas_mx_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>) {
+  // expected-error@+1 {{A shape is not distributable with the layout}}
+  %1 = xegpu.dpas_mx %a, %b {layout_a = #layout_a, layout_b = #layout_b, layout_cd = #layout_cd} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+#layout_a_scale_invalid = #xegpu.layout<sg_layout = [1, 1], sg_data = [5, 3]>
+func.func @dpas_mx_scale_a_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a_val: vector<8x2xf8E8M0FNU>) {
+  // expected-error@+1 {{ScaleA shape is not distributable with the layout}}
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val {layout_a_scale = #layout_a_scale_invalid} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+#layout_b_scale_invalid = #xegpu.layout<sg_layout = [1, 1], sg_data = [3, 11]>
+func.func @dpas_mx_scale_b_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a_val: vector<8x2xf8E8M0FNU>, %scale_b_val: vector<2x16xf8E8M0FNU>) {
+  // expected-error@+1 {{ScaleB shape is not distributable with the layout}}
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val scale_b = %scale_b_val {layout_b_scale = #layout_b_scale_invalid} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
   return
 }

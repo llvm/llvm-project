@@ -11,12 +11,6 @@
 
 include "llvm/Target/GlobalISel/Combine.td"
 
-def fconstant_to_constant : GICombineRule<
-  (defs root:$root),
-  (match (G_FCONSTANT $dst, $src):$root,
-         [{ return matchFConstantToConstant(*${root}, MRI); }]),
-  (apply [{ applyFConstantToConstant(*${root}); }])>;
-
 def icmp_redundant_trunc : GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
@@ -66,8 +60,18 @@ def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
 def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
+def simplify_uaddo_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
+def simplify_uaddo : GICombineRule<
+  (defs root:$root, simplify_uaddo_matchinfo:$matchinfo),
+  (match (G_UADDO $dst, $carry_out, $src1, $src2):$root,
+         [{ return matchSimplifyUADDO(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
+                               ${matchinfo}); }])>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      select_zero_true,
+                                      combine_shuffle_vector,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
                                       ext_addv_to_udot_addv,
@@ -77,12 +81,14 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_mul_through_zext,
                                       push_sub_through_sext,
                                       push_add_through_sext,
-                                      push_mul_through_sext]> {
+                                      push_mul_through_sext,
+                                      simplify_uaddo]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AArch64O0PreLegalizerCombiner: GICombiner<
-  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
+  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines,
+                                        combine_shuffle_vector]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -173,7 +179,7 @@ def form_duplane : GICombineRule <
 >;
 
 // Clean up G_UNMERGE(G_DUPLANE16) -> G_DUPLANE16
-class unmerge_duplane<Instruction Op> : GICombineRule <
+class unmerge_duplane<Instruction Op> : GICombineRule<
   (defs root:$root),
   (match (Op $a, $src, $c),
          (G_UNMERGE_VALUES $d1, $d2, $a):$root,
@@ -184,8 +190,22 @@ def unmerge_duplane8 : unmerge_duplane<G_DUPLANE8>;
 def unmerge_duplane16 : unmerge_duplane<G_DUPLANE16>;
 def unmerge_duplane32 : unmerge_duplane<G_DUPLANE32>;
 // G_DUPLANE64 is not included as the result in scalar.
+
+// G_EXTRACT_SUBVECTOR(G_DUPLANE16) -> G_DUPLANE16
+class extract_duplane<Instruction Op> : GICombineRule<
+  (defs root:$root),
+  (match (Op $a, $src, $c),
+         (G_EXTRACT_SUBVECTOR $d1, $a, $l):$root,
+         [{ return MRI.getType(${d1}.getReg()).getSizeInBits() == 64; }]),
+  (apply (Op $d1, $src, $c))
+>;
+def extract_duplane8 : extract_duplane<G_DUPLANE8>;
+def extract_duplane16 : extract_duplane<G_DUPLANE16>;
+def extract_duplane32 : extract_duplane<G_DUPLANE32>;
+
 def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
-                                       unmerge_duplane32]>;
+                                       unmerge_duplane32, extract_duplane8,
+                                       extract_duplane16, extract_duplane32]>;
 
 def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
                                               uzp, trn, fullrev, shuf_to_ins]>;
@@ -345,7 +365,7 @@ def AArch64PostLegalizerLowering
     : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
-                        lower_vector_fcmp, form_truncstore, fconstant_to_constant,
+                        lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,
@@ -365,11 +385,13 @@ def AArch64PostLegalizerCombiner
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, overflow_combines,
-                        select_combines, fold_merge_to_zext, merge_combines,
+                        select_combines, select_zero_true, select_zero_false, select_not,
+                        fold_merge_to_zext, merge_combines,
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
+                        combine_build_vector_of_bitcast,
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate,

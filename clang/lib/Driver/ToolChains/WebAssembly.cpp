@@ -88,6 +88,11 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   return WantsPthread;
 }
 
+static bool WantsLibcallThreadContext(const llvm::Triple &Triple,
+                                      const ArgList &Args) {
+  return Triple.getOS() == llvm::Triple::WASIp3;
+}
+
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -169,6 +174,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  if (WantsLibcallThreadContext(ToolChain.getTriple(), Args))
+    CmdArgs.push_back("--libcall-thread-context");
+
   if (WantsPthread(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");
 
@@ -240,10 +248,12 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 /// Append `Dir` to `Paths`, but also include the LTO directories before that if
-/// LTO is eanbled.
-static void AppendLibDirAndLTODir(ToolChain::path_list &Paths, const Driver &D,
+/// LTO is enabled.
+static void AppendLibDirAndLTODir(ToolChain::path_list &Paths,
+                                  const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
                                   const std::string &Dir) {
-  if (D.isUsingLTO()) {
+  if (TC.isUsingLTO(Args)) {
     // The version allows the path to be keyed to the specific version of
     // LLVM in used, as the bitcode format is not stable.
     Paths.push_back(Dir + "/llvm-lto/" LLVM_VERSION_STRING);
@@ -275,9 +285,9 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
     // sysroots that contain libraries that are capable of producing binaries
     // entirely without exception-handling instructions but also with if
     // exceptions are enabled, for example.
-    AppendLibDirAndLTODir(getFilePaths(), D,
+    AppendLibDirAndLTODir(getFilePaths(), *this, Args,
                           TripleLibDir + "/" + GetCXXExceptionsDir(Args));
-    AppendLibDirAndLTODir(getFilePaths(), D, TripleLibDir);
+    AppendLibDirAndLTODir(getFilePaths(), *this, Args, TripleLibDir);
   }
 
   if (getTriple().getOS() == llvm::Triple::WASI) {
@@ -560,8 +570,10 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   }
 }
 
-SanitizerMask WebAssembly::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask WebAssembly::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   if (getTriple().isOSEmscripten()) {
     Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }

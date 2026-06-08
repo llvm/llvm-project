@@ -256,6 +256,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
+    libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.mlock2
@@ -287,6 +288,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.accept4
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
+    libc.src.sys.socket.getpeername
+    libc.src.sys.socket.getsockname
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.listen
     libc.src.sys.socket.recv
@@ -300,6 +303,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
     libc.src.sys.socket.recvmsg
+    libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
 
     # sys/stat.h entrypoints
@@ -348,6 +352,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcsetattr
 
     # unistd.h entrypoints
+    libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.close
@@ -412,6 +417,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswprint
     libc.src.wctype.iswctype
     libc.src.wctype.wctype
+    libc.src.wctype.towlower
+    libc.src.wctype.towupper
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -764,6 +771,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.getpayloadf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
+    libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
@@ -1038,6 +1046,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getthreadid_np
+    libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_key_create
     libc.src.pthread.pthread_key_delete
@@ -1148,10 +1158,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.setenv
     libc.src.stdlib.quick_exit
 
     # signal.h entrypoints
     libc.src.signal.kill
+    libc.src.signal.pthread_sigmask
     libc.src.signal.raise
     libc.src.signal.sigaction
     libc.src.signal.sigaddset
@@ -1194,10 +1206,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.cnd_destroy
     libc.src.threads.cnd_init
     libc.src.threads.cnd_signal
+    libc.src.threads.cnd_timedwait
     libc.src.threads.cnd_wait
     libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
+    libc.src.threads.mtx_trylock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
     libc.src.threads.thrd_current
@@ -1242,7 +1256,40 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
+
+    # link.h entrypoints
+    libc.src.link.dl_iterate_phdr
+
+    # wchar.h entrypoints
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fgetws
+    libc.src.wchar.fputwc
+    libc.src.wchar.fputws
+    libc.src.wchar.fwide
+    libc.src.wchar.getwc
+    libc.src.wchar.getwchar
+    libc.src.wchar.putwc
+    libc.src.wchar.putwchar
+    libc.src.wchar.ungetwc
   )
+endif()
+
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # regex.h entrypoints
+      libc.src.regex.regcomp
+      libc.src.regex.regexec
+      libc.src.regex.regerror
+      libc.src.regex.regfree
+
+      # sys/ptrace.h entrypoints
+      libc.src.sys.ptrace.ptrace
+
+      # wchar.h entrypoints
+      libc.src.wchar.swprintf
+    )
+  endif()
 endif()
 
 set(TARGET_LIBMVEC_ENTRYPOINTS)

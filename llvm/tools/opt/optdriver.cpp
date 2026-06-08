@@ -974,6 +974,11 @@ optMain(int argc, char **argv,
   if (DebugifyEach && !DebugifyExport.empty())
     exportDebugifyStats(DebugifyExport, Passes.getDebugifyStatsMap());
 
+  // If a pass reported an error via LLVMContext::emitError, fail without
+  // writing the output module.
+  if (Context.getDiagHandlerPtr()->HasErrors)
+    return 1;
+
   // Declare success.
   if (!NoOutput)
     Out->keep();

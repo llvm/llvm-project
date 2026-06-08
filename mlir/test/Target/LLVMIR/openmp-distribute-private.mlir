@@ -39,7 +39,7 @@ llvm.func @_QQmain() {
 
 // CHECK:       omp.loop_nest.region:
 // CHECK-NEXT:    store i32 %{{.*}}, ptr %[[IV_ALLOC]], align 4
-// CHECK-NEXT:    store float 0x40091EB860000000, ptr %[[PRIV_VAR_ALLOC]], align 4
+// CHECK-NEXT:    store float 3.140000e+00, ptr %[[PRIV_VAR_ALLOC]], align 4
 // CHECK:       }
 
 // -----
@@ -82,7 +82,7 @@ llvm.func @_QQmain() {
 // CHECK-NEXT:    store float %[[SHARED_VAR_VAL]], ptr %[[PRIV_VAR_ALLOC]], align 4
 
 // CHECK:       omp.loop_nest.region:
-// CHECK-NEXT:    store float 0x40091EB860000000, ptr %[[PRIV_VAR_ALLOC]], align 4
+// CHECK-NEXT:    store float 3.140000e+00, ptr %[[PRIV_VAR_ALLOC]], align 4
 
 // CHECK:       omp_loop.after:
 // CHECK-NEXT:    br label %omp.region.cont

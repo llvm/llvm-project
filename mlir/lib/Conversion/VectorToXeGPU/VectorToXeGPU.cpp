@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -595,7 +596,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     auto chip = xegpu::getChipStr(readOp);
     // Lower to scattered load Op if the target HW doesn't have 2d block load
     // support and the load is not from shared memory.
-    if ((chip != "pvc" && chip != "bmg") ||
+    if ((chip != "pvc" && chip != "bmg" && chip != "cri") ||
         readOp.getVectorType().getRank() > 2) {
 
       // TODO: add support for OutOfBound access
@@ -728,7 +729,7 @@ struct TransferWriteLowering
     auto chip = xegpu::getChipStr(writeOp);
     // Lower to scattered store Op if the target HW doesn't have 2d block
     // store support and the memref is not SLM.
-    if ((chip != "pvc" && chip != "bmg") ||
+    if ((chip != "pvc" && chip != "bmg" && chip != "cri") ||
         writeOp.getVectorType().getRank() > 2) {
 
       // TODO: add support for OutOfBound access
@@ -951,9 +952,86 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
   }
 };
 
+// Returns `memrefTy` with its memory space replaced by `newMemSpace`.
+static MemRefType withMemorySpace(MemRefType memrefTy, Attribute newMemSpace) {
+  return MemRefType::get(memrefTy.getShape(), memrefTy.getElementType(),
+                         memrefTy.getLayout(), newMemSpace);
+}
+
+// Rewrite every `memref.alloca` not already in shared local memory (SLM) to
+// be in SLM (address space 3), and propagate the new memory space through
+// memref-producing aliasing users (e.g. memref.cast, memref.subview,
+// memref.expand_shape, ...). Consumers that take a memref operand but
+// produce a non-memref result (e.g. vector.transfer_read, vector.load) are
+// left untouched: their operand type simply reflects the new memory space.
+//
+// This makes `xegpu.load_matrix`/`xegpu.store_matrix` lowering work end-to-end
+// for IR coming from bufferization, which by default assigns memory space 0/1
+// to allocations.
+static void promoteAllocasToSLM(Operation *root) {
+  MLIRContext *ctx = root->getContext();
+  Attribute slmAttr = IntegerAttr::get(IntegerType::get(ctx, 64), 3);
+
+  // A user is treated as a memref-producing alias (e.g. memref.cast,
+  // memref.subview, memref.expand_shape, ...) if it is side-effect free and
+  // produces at least one memref result. This excludes ops like memref.copy
+  // that have memory effects.
+  auto isMemrefResultOp = [](Operation *op) {
+    if (!isMemoryEffectFree(op))
+      return false;
+    return llvm::any_of(op->getResultTypes(),
+                        [](Type t) { return isa<MemRefType>(t); });
+  };
+
+  // Update `v`'s type to have SLM memory space, then walk forward through
+  // memref-producing users and update their result types accordingly.
+  std::function<void(Value)> propagate = [&](Value v) {
+    auto memrefTy = dyn_cast<MemRefType>(v.getType());
+    if (!memrefTy || xegpu::XeGPUDialect::isSharedMemory(memrefTy))
+      return;
+    v.setType(withMemorySpace(memrefTy, slmAttr));
+    for (Operation *user : v.getUsers()) {
+      if (!isMemrefResultOp(user))
+        continue;
+      for (Value result : user->getResults())
+        propagate(result);
+    }
+  };
+
+  SmallVector<memref::AllocaOp> allocas;
+  root->walk([&](memref::AllocaOp op) {
+    auto memrefTy = dyn_cast<MemRefType>(op.getResult().getType());
+    if (!memrefTy || xegpu::XeGPUDialect::isSharedMemory(memrefTy))
+      return;
+    allocas.push_back(op);
+  });
+
+  for (memref::AllocaOp alloca : allocas) {
+    OpBuilder builder(alloca);
+    auto memrefTy = cast<MemRefType>(alloca.getResult().getType());
+    auto newTy = withMemorySpace(memrefTy, slmAttr);
+    auto newOp = memref::AllocaOp::create(
+        builder, alloca.getLoc(), newTy, alloca.getDynamicSizes(),
+        alloca.getSymbolOperands(), alloca.getAlignmentAttr());
+    alloca.getResult().replaceAllUsesWith(newOp.getResult());
+    alloca.erase();
+    // Propagate the new memory space through memref-producing consumers.
+    for (Operation *user : newOp.getResult().getUsers()) {
+      if (!isMemrefResultOp(user))
+        continue;
+      for (Value result : user->getResults())
+        propagate(result);
+    }
+  }
+}
+
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
   void runOnOperation() override {
+    // Promote local allocations to SLM (address space 3) so that
+    // load_matrix/store_matrix lowerings have well-typed memref operands.
+    promoteAllocasToSLM(getOperation());
+
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
     populatePrepareVectorToMMAPatterns(patterns);

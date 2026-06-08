@@ -15,7 +15,9 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
@@ -156,11 +158,8 @@ protected:
 
   /// For internal use by compiler and assembler, not meant to be visible
   /// externally. They are usually not emitted to the symbol table in the
-  /// object file.
+  /// object file. This is also used for labels for basic blocks.
   StringRef InternalSymbolPrefix = "L";
-
-  /// This prefix is used for labels for basic blocks. Defaults to "L"
-  StringRef PrivateLabelPrefix = "L";
 
   /// This prefix is used for symbols that should be passed through the
   /// assembler but be removed by the linker.  This is 'l' on Darwin, currently
@@ -433,6 +432,10 @@ protected:
   llvm::StringMap<uint32_t> NameToAtSpecifier;
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
+  // Lowercase identifiers (e.g. register names, dialect keywords) that must be
+  // quoted when used as a symbol name.
+  llvm::DenseSet<llvm::CachedHashStringRef> ReservedIdentifiers;
+
   const MCTargetOptions &TargetOptions;
 
 public:
@@ -492,6 +495,14 @@ public:
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
 
+  llvm::DenseSet<llvm::CachedHashStringRef> &getReservedIdentifiers() {
+    return ReservedIdentifiers;
+  }
+  const llvm::DenseSet<llvm::CachedHashStringRef> &
+  getReservedIdentifiers() const {
+    return ReservedIdentifiers;
+  }
+
   virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
                                     const Triple &, raw_ostream &) const {}
 
@@ -549,7 +560,6 @@ public:
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
   StringRef getInternalSymbolPrefix() const { return InternalSymbolPrefix; }
-  StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
 
   bool hasLinkerPrivateGlobalPrefix() const {
     return !LinkerPrivateGlobalPrefix.empty();

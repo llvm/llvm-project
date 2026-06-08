@@ -31,7 +31,6 @@
 namespace llvm {
 class MCInst;
 class MachineFunction;
-class MachineInstr;
 class MachineInstrBuilder;
 class MachineIRBuilder;
 class MachineRegisterInfo;
@@ -40,7 +39,6 @@ class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
 class SPIRVGlobalRegistry;
-class SPIRVTypeInst;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
@@ -238,6 +236,7 @@ constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::Workgroup:
   case SPIRV::StorageClass::CrossWorkgroup:
   case SPIRV::StorageClass::Function:
+  case SPIRV::StorageClass::CodeSectionINTEL:
     return true;
   default:
     return false;
@@ -373,6 +372,12 @@ inline bool isPointerTy(const Type *T) {
   return isUntypedPointerTy(T) || isTypedPointerTy(T);
 }
 
+// True if this is a vector whose element type is an (untyped) PointerType.
+inline bool isUntypedPointerVectorTy(const Type *T) {
+  return isa_and_nonnull<VectorType>(T) &&
+         isUntypedPointerTy(T->getScalarType());
+}
+
 // Get the address space of this pointer or pointer vector type for instances of
 // PointerType or TypedPointerType.
 inline unsigned getPointerAddressSpace(const Type *T) {
@@ -396,13 +401,6 @@ inline Type *getPointeeTypeByAttr(Argument *Arg) {
   if (Arg->hasByRefAttr())
     return Arg->getParamByRefType();
   return nullptr;
-}
-
-inline Type *reconstructFunctionType(Function *F) {
-  SmallVector<Type *> ArgTys;
-  for (unsigned i = 0; i < F->arg_size(); ++i)
-    ArgTys.push_back(F->getArg(i)->getType());
-  return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
 }
 
 #define TYPED_PTR_TARGET_EXT_NAME "spirv.$TypedPointerType"
