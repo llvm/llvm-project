@@ -3659,7 +3659,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!Alignment || !Offset || *Offset != 0)
           break;
 
-        // Remove align 1 and non-power-of-wto bundles; they don't add any
+        // Remove align 1 and non-power-of-two bundles; they don't add any
         // useful information.
         if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
           return CallBase::removeOperandBundleAt(II, Idx);

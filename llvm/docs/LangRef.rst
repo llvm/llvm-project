@@ -3158,7 +3158,8 @@ The following attributes are currently accepted:
   Equivalent to :ref:`align(%align) <attr_align>` on ``%p``, or ``%p - %offset``
   if the ``%offset`` argument exists, except that ``%align`` may be a
   non-power-of-two alignment (including a zero alignment). If ``%align`` is not
-  a power of two the bundle is meaningless.
+  a power of two the pointer value must be all-zero. Otherwise the behavior is
+  undefined.
 
 ``"cold"()``
   Equivalent to :ref:`cold <attr_cold>`.
