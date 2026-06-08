@@ -1890,6 +1890,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
 
       char const *tmp_in_start = start;
       uint32_t *tmp_out_start = buffer_begin;
+      std::string UTF8String(start, begin);
       llvm::ConversionResult res =
           llvm::ConvertUTF8toUTF32(reinterpret_cast<llvm::UTF8 const **>(&start),
                              reinterpret_cast<llvm::UTF8 const *>(begin),
@@ -1912,26 +1913,28 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
           HadError = true;
         }
       } else {
-        for (; tmp_out_start < buffer_begin; ++tmp_out_start) {
-          if (*tmp_out_start > largest_character_for_kind) {
+        uint32_t *validation_ptr = tmp_out_start;
+        for (; validation_ptr < buffer_begin; ++validation_ptr) {
+          if (*validation_ptr > largest_character_for_kind) {
             HadError = true;
             PP.Diag(Loc, diag::err_character_too_large);
           }
-          if (!HadError && Converter) {
-            assert(isOrdinary() && "Only ordinary characters are supported");
-            std::string UTF8String;
-            convertUTF32ToUTF8String(
-                ArrayRef<char>(reinterpret_cast<const char *>(tmp_out_start),
-                               4),
-                UTF8String);
-            auto ErrorOrChar = convertCharacter(UTF8String, *Converter);
-            if (ErrorOrChar) {
-              *tmp_out_start = *ErrorOrChar;
-            } else {
-              HadError = true;
-              PP.Diag(Loc, diag::err_exec_charset_conversion_failed)
-                  << ErrorOrChar.getError().message();
+        }
+
+        // Convert to execution character set if needed
+        if (!HadError && Converter) {
+          assert(isOrdinary() && "Only ordinary characters are supported");
+          SmallString<4> Converted;
+          auto ErrorOrChar = Converter->convert(UTF8String, Converted);
+          if (!ErrorOrChar) {
+            for (int i = 0; tmp_out_start < buffer_begin;
+                 ++tmp_out_start, ++i) {
+              *tmp_out_start = Converted[i];
             }
+          } else {
+            HadError = true;
+            PP.Diag(Loc, diag::err_exec_charset_conversion_failed)
+                << ErrorOrChar.message();
           }
         }
       }
