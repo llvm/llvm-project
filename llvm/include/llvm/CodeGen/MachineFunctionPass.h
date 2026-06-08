@@ -74,6 +74,8 @@ private:
                           const std::string &Banner) const override;
 
   bool runOnFunction(Function &F) override;
+
+  bool printIRUnit(raw_ostream &OS, Function &F) override;
 };
 
 } // End llvm namespace

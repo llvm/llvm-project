@@ -1,5 +1,8 @@
 ; REQUIRES: aarch64-registered-target
-; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed %s 2>&1 | FileCheck %s --check-prefixes=VERBOSE,VERBOSE-BAR
+;; --implicit-check-not verifies that analyses passes are not reported.
+; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed %s 2>&1 | \
+; RUN:   FileCheck %s --check-prefixes=VERBOSE,VERBOSE-BAR \
+; RUN:     --implicit-check-not='(cseinfo)' --implicit-check-not='Free MachineFunction'
 ; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed -filter-print-funcs=foo %s 2>&1 | FileCheck %s --check-prefixes=VERBOSE,NO-BAR
 
 ; VERBOSE:       *** IR Dump After IRTranslator (irtranslator) on foo ***
@@ -35,9 +38,28 @@
 
 ; QUIET-FILTER: *** IR Dump After IRTranslator (irtranslator) on foo ***
 ; QUIET-FILTER: *** IR Dump After IRTranslator (irtranslator) on bar ***
+; QUIET-FILTER: *** IR Dump After IRTranslator (irtranslator) on atomic_load ***
+; QUIET-FILTER: *** IR Dump After IRTranslator (irtranslator) on lr ***
 
 ;; dot-cfg/dot-cfg-quiet are unimplemented. Currently they behave like 'quiet'.
 ; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=dot-cfg %s 2>&1 | FileCheck %s --check-prefix=QUIET
+
+;; Covers the IR-level FunctionPasses run by the legacy codegen pass manager.
+;; atomic-expand lowers the wide atomic load below before instruction selection.
+; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=diff-quiet \
+; RUN:   -filter-passes=atomic-expand -filter-print-funcs=atomic_load %s 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=IR-PASS
+; IR-PASS:      *** IR Dump After Expand Atomic instructions (atomic-expand) on atomic_load ***
+; IR-PASS-NEXT: define i128 @atomic_load
+; IR-PASS:      - %v = load atomic i128, ptr %p seq_cst, align 16
+
+;; Covers the module passes run by MPPassManager; pre-isel-intrinsic-lowering
+;; lowers the llvm.load.relative call below.
+; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=diff-quiet \
+; RUN:   -filter-passes=pre-isel-intrinsic-lowering %s 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=MODULE
+; MODULE:      *** IR Dump After Pre-ISel Intrinsic Lowering (pre-isel-intrinsic-lowering) on {{.*}} ***
+; MODULE:      - %v = call ptr @llvm.load.relative.i32(ptr %p, i32 %n)
 
 @var = global i32 0
 
@@ -53,4 +75,14 @@ entry:
   %b = add i32 %a, 2
   store i32 %b, ptr @var
   ret void
+}
+
+define i128 @atomic_load(ptr %p) {
+  %v = load atomic i128, ptr %p seq_cst, align 16
+  ret i128 %v
+}
+
+define ptr @lr(ptr %p, i32 %n) {
+  %v = call ptr @llvm.load.relative.i32(ptr %p, i32 %n)
+  ret ptr %v
 }
