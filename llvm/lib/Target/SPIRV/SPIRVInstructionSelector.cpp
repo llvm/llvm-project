@@ -2070,45 +2070,46 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
 
   if (PointeeType.isTypePtr()) {
-    if (STI.isPhysicalSPIRV()) {
-      // If data to store is a pointer type we cast it to an integer type of the
-      // same size as the pointer size using OpConvertPtrToU, bitcast Ptr
-      // parameter to pointer to integer type and then generate OpAtomicStore
-      // with casted values as required by spec.
-      unsigned PtrSize = GR.getPointerSize();
-      SPIRVTypeInst PtrAsIntSpirvType =
-          GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
+    if (!STI.isPhysicalSPIRV())
+      return diagnoseUnsupported(
+          I, "Lowering to SPIR-V of atomic store is only "
+             "allowed for pointer types for physical addressing model");
+    // If data to store is a pointer type we cast it to an integer type of the
+    // same size as the pointer size using OpConvertPtrToU, bitcast Ptr
+    // parameter to pointer to integer type and then generate OpAtomicStore
+    // with casted values as required by spec.
+    unsigned PtrSize = GR.getPointerSize();
+    SPIRVTypeInst PtrAsIntSpirvType =
+        GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
 
-      Register PtrToUVal =
-          MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
-      MRI->setRegClass(PtrToUVal, MRI->getRegClassOrNull(StoreVal));
-      GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal,
-                               MIRBuilder.getMF());
-      MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
-          .addDef(PtrToUVal)
-          .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType)) // Result type
-          .addUse(StoreVal)                             // Pointer operand
-          .constrainAllUses(TII, TRI, RBI);
+    Register PtrToUVal =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrToUVal, MRI->getRegClassOrNull(StoreVal));
+    GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
+    MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
+        .addDef(PtrToUVal)
+        .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType)) // Result type
+        .addUse(StoreVal)                             // Pointer operand
+        .constrainAllUses(TII, TRI, RBI);
 
-      Register PtrCastedToMatchValReg =
-          MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
-      MRI->setRegClass(PtrCastedToMatchValReg, MRI->getRegClassOrNull(Ptr));
-      SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
-          PtrAsIntSpirvType, MIRBuilder,
-          addressSpaceToStorageClass(MemOp.getAddrSpace(), STI));
-      GR.assignSPIRVTypeToVReg(PtrType, PtrCastedToMatchValReg,
-                               MIRBuilder.getMF());
+    Register PtrCastedToMatchValReg =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrCastedToMatchValReg, MRI->getRegClassOrNull(Ptr));
+    SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
+        PtrAsIntSpirvType, MIRBuilder,
+        addressSpaceToStorageClass(MemOp.getAddrSpace(), STI));
+    GR.assignSPIRVTypeToVReg(PtrType, PtrCastedToMatchValReg,
+                             MIRBuilder.getMF());
 
-      MIRBuilder.buildInstr(SPIRV::OpBitcast)
-          .addDef(PtrCastedToMatchValReg)
-          .addUse(GR.getSPIRVTypeID(PtrType))
-          .addUse(Ptr)
-          .constrainAllUses(TII, TRI, RBI);
+    MIRBuilder.buildInstr(SPIRV::OpBitcast)
+        .addDef(PtrCastedToMatchValReg)
+        .addUse(GR.getSPIRVTypeID(PtrType))
+        .addUse(Ptr)
+        .constrainAllUses(TII, TRI, RBI);
 
-      StoreVal = PtrToUVal;
-      Ptr = PtrCastedToMatchValReg;
-      PointeeType = PtrAsIntSpirvType;
-    }
+    StoreVal = PtrToUVal;
+    Ptr = PtrCastedToMatchValReg;
+    PointeeType = PtrAsIntSpirvType;
   }
 
   if (!PointeeType.isTypeIntOrFloat())
