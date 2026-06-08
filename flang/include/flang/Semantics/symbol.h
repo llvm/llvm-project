@@ -32,7 +32,7 @@ class raw_ostream;
 namespace Fortran::parser {
 struct Expr;
 struct OpenMPDeclarativeConstruct;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -881,6 +881,8 @@ public:
       AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
+      // OpenACC declare on allocatable/pointer needs cross-TU action recipes
+      AccDeclareAction,
       // OpenACC data-movement attribute
       AccDevice, AccHost, AccSelf,
       // OpenACC miscellaneous flags
@@ -1256,11 +1258,6 @@ SourceOrderedSymbolSet OrderBySourcePosition(const A &container) {
 // Define required  info so that SymbolRef can be used inside llvm::DenseMap.
 namespace llvm {
 template <> struct DenseMapInfo<Fortran::semantics::SymbolRef> {
-  static inline Fortran::semantics::SymbolRef getEmptyKey() {
-    auto ptr = DenseMapInfo<const Fortran::semantics::Symbol *>::getEmptyKey();
-    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
-  }
-
   static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
     return DenseMapInfo<const Fortran::semantics::Symbol *>::getHashValue(
         &sym.get());

@@ -87,9 +87,9 @@ struct LoweringPreparePass
 
   void runOnOp(mlir::Operation *op);
   void lowerCastOp(cir::CastOp op);
+  void lowerComplexConjOp(cir::ComplexConjOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
-  void lowerUnaryOp(cir::UnaryOpInterface op);
   void lowerGetGlobalOp(cir::GetGlobalOp op);
   void lowerGlobalOp(cir::GlobalOp op);
   void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
@@ -1028,35 +1028,22 @@ void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
   op.erase();
 }
 
-void LoweringPreparePass::lowerUnaryOp(cir::UnaryOpInterface op) {
-  if (!mlir::isa<cir::ComplexType>(op.getResult().getType()))
-    return;
-
-  mlir::Location loc = op->getLoc();
+void LoweringPreparePass::lowerComplexConjOp(cir::ComplexConjOp op) {
+  mlir::Location loc = op.getLoc();
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
 
-  mlir::Value operand = op.getInput();
+  mlir::Value operand = op.getOperand();
   mlir::Value operandReal = builder.createComplexReal(loc, operand);
   mlir::Value operandImag = builder.createComplexImag(loc, operand);
 
-  mlir::Value resultReal = operandReal;
-  mlir::Value resultImag = operandImag;
+  // The complex conjugate is formed by negating the imaginary component.
+  const bool isFP = cir::isFPOrVectorOfFPType(operandReal.getType());
+  mlir::Value resultImag = isFP ? builder.createFNeg(loc, operandImag)
+                                : builder.createMinus(loc, operandImag);
 
-  llvm::TypeSwitch<mlir::Operation *>(op)
-      .Case<cir::IncOp>(
-          [&](auto) { resultReal = builder.createInc(loc, operandReal); })
-      .Case<cir::DecOp>(
-          [&](auto) { resultReal = builder.createDec(loc, operandReal); })
-      .Case<cir::MinusOp>([&](auto) {
-        resultReal = builder.createMinus(loc, operandReal);
-        resultImag = builder.createMinus(loc, operandImag);
-      })
-      .Case<cir::NotOp>(
-          [&](auto) { resultImag = builder.createMinus(loc, operandImag); })
-      .Default([](auto) { llvm_unreachable("unhandled unary complex op"); });
-
-  mlir::Value result = builder.createComplexCreate(loc, resultReal, resultImag);
+  mlir::Value result =
+      builder.createComplexCreate(loc, operandReal, resultImag);
   op->replaceAllUsesWith(mlir::ValueRange{result});
   op->erase();
 }
@@ -2270,6 +2257,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerArrayDtor(arrayDtor);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
+  } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
+    lowerComplexConjOp(complexConj);
   } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op)) {
     lowerComplexDivOp(complexDiv);
   } else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op)) {
@@ -2281,8 +2270,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       cudaDeviceVars.emplace_back(glob, regAttr);
   } else if (auto getGlob = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
     lowerGetGlobalOp(getGlob);
-  } else if (auto unaryOp = mlir::dyn_cast<cir::UnaryOpInterface>(op)) {
-    lowerUnaryOp(unaryOp);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
@@ -2903,10 +2890,10 @@ void LoweringPreparePass::runOnOperation() {
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
-                  cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
-                  cir::MinusOp, cir::NotOp, cir::LocalInitOp>(op))
+                  cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
+                  cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
+                  cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
+                  cir::CmpThreeWayOp, cir::LocalInitOp>(op))
       opsToTransform.push_back(op);
   });
 

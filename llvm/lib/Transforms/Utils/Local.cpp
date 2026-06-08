@@ -1432,12 +1432,6 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
   // one having an undef where the other doesn't could be collapsed.
 
   struct PHIDenseMapInfo {
-    static PHINode *getEmptyKey() {
-      return DenseMapInfo<PHINode *>::getEmptyKey();
-    }
-
-    static bool isSentinel(PHINode *PN) { return PN == getEmptyKey(); }
-
     // WARNING: this logic must be kept in sync with
     //          Instruction::isIdenticalToWhenDefined()!
     static unsigned getHashValueImpl(PHINode *PN) {
@@ -1462,8 +1456,6 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     }
 
     static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
-      if (isSentinel(LHS) || isSentinel(RHS))
-        return LHS == RHS;
       return LHS->isIdenticalTo(RHS);
     }
 
@@ -1471,8 +1463,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
       // These comparisons are nontrivial, so assert that equality implies
       // hash equality (DenseMap demands this as an invariant).
       bool Result = isEqualImpl(LHS, RHS);
-      assert(!Result || (isSentinel(LHS) && LHS == RHS) ||
-             getHashValueImpl(LHS) == getHashValueImpl(RHS));
+      assert(!Result || getHashValueImpl(LHS) == getHashValueImpl(RHS));
       return Result;
     }
   };
@@ -2817,18 +2808,12 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
     } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
       // Remove catchpads which cannot be reached.
       struct CatchPadDenseMapInfo {
-        static CatchPadInst *getEmptyKey() {
-          return DenseMapInfo<CatchPadInst *>::getEmptyKey();
-        }
-
         static unsigned getHashValue(CatchPadInst *CatchPad) {
           return static_cast<unsigned>(hash_combine_range(
               CatchPad->value_op_begin(), CatchPad->value_op_end()));
         }
 
         static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
-          if (LHS == getEmptyKey() || RHS == getEmptyKey())
-            return LHS == RHS;
           return LHS->isIdenticalTo(RHS);
         }
       };
@@ -3157,6 +3142,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
+    case LLVMContext::MD_invariant_group:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;

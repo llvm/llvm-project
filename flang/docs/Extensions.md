@@ -224,6 +224,16 @@ end
 * `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
 * When kind-param is used for REAL literals, allow a matching exponent letter
 * Quad precision REAL literals with `Q`
+* The `ISO_C_BINDING` module exports the named constants `c_float128` and
+  `c_float128_complex` (both with the value 16), the kind parameter for
+  128-bit (quad precision) real and complex C interoperable types. These
+  extensions are gfortran-compatible.
+* The `ISO_C_BINDING` module exports the named constants `c_float16` and
+  `c_float16_complex` (both with the value 2), the kind parameter for
+  16-bit (half precision) real and complex C interoperable types,
+  corresponding to C `_Float16` (ISO/IEC TS 18661-3). `REAL(KIND=2)` and
+  `COMPLEX(KIND=2)` are accordingly accepted as interoperable types. These
+  extensions are gfortran-compatible.
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
 * Support for using bare `L` in FORMAT statement

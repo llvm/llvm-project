@@ -34,10 +34,6 @@ set(LLDB_DRIVER_LINK_LIBS
   lldbUtility
 )
 
-if(WIN32)
-  list(APPEND LLDB_DRIVER_LINK_LIBS lldbHostPythonPathSetup)
-endif()
-
 add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
