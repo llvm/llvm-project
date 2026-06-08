@@ -19,7 +19,7 @@ program test_character_reduction
 end program test_character_reduction
 
 ! Verify the declare_reduction is generated with reference type for character
-! CHECK-LABEL: omp.declare_reduction @char_max : !fir.ref<!fir.char<1>>
+! CHECK-LABEL: omp.declare_reduction @_QQFchar_max : !fir.ref<!fir.char<1>>
 ! CHECK: init {
 ! CHECK: omp.yield
 
@@ -30,4 +30,4 @@ end program test_character_reduction
 
 ! Verify the reduction is used in the parallel sections
 ! CHECK: omp.parallel
-! CHECK:   omp.sections reduction(byref @char_max
+! CHECK:   omp.sections reduction(byref @_QQFchar_max

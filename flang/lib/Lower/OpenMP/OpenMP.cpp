@@ -4409,7 +4409,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                   defOp.u);
             },
             [&](const clause::ProcedureDesignator &pd) -> std::string {
-              return pd.v.sym()->name().ToString();
+              // Qualify the name with the scope in which the user-defined
+              // reduction is declared so that reductions with the same name
+              // in different scopes produce distinct omp.declare_reduction ops.
+              const semantics::Symbol *sym = pd.v.sym();
+              std::string name = sym->name().ToString();
+              return converter.mangleName(name, sym->GetUltimate().owner());
             },
         },
         redOp.u);
