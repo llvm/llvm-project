@@ -292,10 +292,6 @@ template <typename KeyT, typename ValueT, typename Config>
 struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   using VH = ValueMapCallbackVH<KeyT, ValueT, Config>;
 
-  static inline VH getEmptyKey() {
-    return VH(DenseMapInfo<Value *>::getEmptyKey());
-  }
-
   static unsigned getHashValue(const VH &Val) {
     return DenseMapInfo<KeyT>::getHashValue(Val.Unwrap());
   }
