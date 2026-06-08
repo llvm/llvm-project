@@ -351,9 +351,8 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
                          const WebAssemblyFunctionInfo &MFI,
                          const MachineRegisterInfo &MRI, bool Optimize) {
   const MachineInstr *DefI = Def->getParent();
-  const MachineInstr *UseI = Use->getParent();
   assert(DefI->getParent() == Insert->getParent());
-  assert(UseI->getParent() == Insert->getParent());
+  assert(Use->getParent()->getParent() == Insert->getParent());
 
   // For now avoid stackifying any multi-def instructions. While it's
   // theoretically possible to do so for the first def in some cases this has
