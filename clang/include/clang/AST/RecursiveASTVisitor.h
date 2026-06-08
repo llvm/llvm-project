@@ -153,6 +153,10 @@ isSameMethod([[maybe_unused]] FirstMethodPtrTy FirstMethodPtr,
 /// By default, this visitor preorder traverses the AST. If postorder traversal
 /// is needed, the \c shouldTraversePostOrder method needs to be overridden
 /// to return \c true.
+#ifdef __clang__
+#pragma clang attribute push(__attribute__((minsize)), apply_to = function)
+#endif
+
 template <typename Derived> class RecursiveASTVisitor {
 public:
   /// A queue used for performing data recursion over statements.
@@ -4349,6 +4353,10 @@ DEF_TRAVERSE_STMT(HLSLOutArgExpr, {})
 #undef DEF_TRAVERSE_STMT
 #undef TRAVERSE_STMT
 #undef TRAVERSE_STMT_BASE
+
+#ifdef __clang__
+#pragma clang attribute pop
+#endif
 
 #undef TRY_TO
 
