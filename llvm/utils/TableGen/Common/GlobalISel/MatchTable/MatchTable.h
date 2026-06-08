@@ -63,6 +63,8 @@ struct MatchTableRecord {
     /// Causes the formatter to not use encoding macros to emit this multi-byte
     /// value.
     MTRF_PreEncoded = 0x80,
+    /// Causes a jump target to be emitted relative to the end of this record.
+    MTRF_RelativeJumpTarget = 0x100,
   };
 
   /// When MTRF_Label or MTRF_JumpTarget is used, indicates a label id to
@@ -99,8 +101,21 @@ public:
     NumElements = 0;
   }
 
+  void makeRelativeJumpTarget(unsigned NumBytes) {
+    assert(Flags & MTRF_JumpTarget);
+    assert((NumBytes == 1 || NumBytes == 2) && "Unsupported jump size");
+    Flags |= MTRF_RelativeJumpTarget;
+    NumElements = NumBytes;
+  }
+
+  void clear() {
+    EmitStr.clear();
+    NumElements = 0;
+    Flags = MTRF_None;
+  }
+
   void emit(raw_ostream &OS, bool LineBreakNextAfterThis,
-            const MatchTable &Table) const;
+            const MatchTable &Table, unsigned CurrentIndex) const;
   unsigned size() const { return NumElements; }
 };
 
@@ -124,6 +139,10 @@ class MatchTable {
   /// Whether this table is for the GISel combiner.
   bool IsCombinerTable;
 
+  void compactFailureTargets();
+  void compactRootOperandIndices();
+  void rebuildLabelMap();
+
 public:
   static MatchTableRecord LineBreak;
   static MatchTableRecord Comment(StringRef Comment);
@@ -142,6 +161,7 @@ public:
 
   bool isWithCoverage() const { return IsWithCoverage; }
   bool isCombiner() const { return IsCombinerTable; }
+  void compact();
 
   void push_back(const MatchTableRecord &Value) {
     if (Value.Flags & MatchTableRecord::MTRF_Label)

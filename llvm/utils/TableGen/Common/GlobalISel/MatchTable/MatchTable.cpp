@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MatchTable.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -19,6 +20,10 @@ namespace llvm {
 namespace gi {
 // GIMT_Encode2/4/8
 constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
+
+// Avoid adding specialized bytecode to small tables where the linked size
+// reduction is negligible.
+constexpr unsigned MinMatchTableSizeForCompaction = 64 * 1024;
 
 //===- Helpers ------------------------------------------------------------===//
 
@@ -73,7 +78,8 @@ static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
 //===- MatchTableRecord ---------------------------------------------------===//
 
 void MatchTableRecord::emit(raw_ostream &OS, bool LineBreakIsNextAfterThis,
-                            const MatchTable &Table) const {
+                            const MatchTable &Table,
+                            unsigned CurrentIndex) const {
   bool UseLineComment =
       LineBreakIsNextAfterThis || (Flags & MTRF_LineBreakFollows);
   if (Flags & (MTRF_JumpTarget | MTRF_CommaFollows))
@@ -96,9 +102,17 @@ void MatchTableRecord::emit(raw_ostream &OS, bool LineBreakIsNextAfterThis,
   if (Flags & MTRF_JumpTarget) {
     if (Flags & MTRF_Comment)
       OS << " ";
-    // TODO: Could encode this AOT to speed up build of generated file
-    OS << getEncodedEmitStr(llvm::to_string(Table.getLabelIndex(LabelID)),
-                            NumElements);
+    unsigned Target = Table.getLabelIndex(LabelID);
+    if (Flags & MTRF_RelativeJumpTarget) {
+      assert(Target >= CurrentIndex + NumElements &&
+             "Relative jumps must be forward");
+      Target -= CurrentIndex + NumElements;
+    }
+    // TODO: Could encode this AOT to speed up build of generated file.
+    if (NumElements == 1)
+      OS << Target;
+    else
+      OS << getEncodedEmitStr(llvm::to_string(Target), NumElements);
   }
 
   if (Flags & MTRF_CommaFollows) {
@@ -204,7 +218,7 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
   static constexpr unsigned BaseIndent = 4;
   unsigned Indentation = 0;
   OS << "  constexpr static uint8_t MatchTable" << ID << "[] = {";
-  LineBreak.emit(OS, true, *this);
+  LineBreak.emit(OS, true, *this, 0);
 
   // We want to display the table index of each line in a consistent
   // manner. It has to appear as a column on the left side of the table.
@@ -236,7 +250,7 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
     if (I->Flags & MatchTableRecord::MTRF_Indent)
       Indentation += 2;
 
-    I->emit(OS, LineBreakIsNext, *this);
+    I->emit(OS, LineBreakIsNext, *this, CurIndex);
     if (I->Flags & MatchTableRecord::MTRF_LineBreakFollows)
       BeginLine();
 
@@ -247,6 +261,102 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
   }
   assert(CurIndex == CurrentSize);
   OS << "}; // Size: " << CurrentSize << " bytes\n";
+}
+
+void MatchTable::rebuildLabelMap() {
+  LabelMap.clear();
+  CurrentSize = 0;
+  for (const MatchTableRecord &Record : Contents) {
+    if (Record.Flags & MatchTableRecord::MTRF_Label)
+      defineLabel(Record.LabelID);
+    CurrentSize += Record.size();
+  }
+}
+
+void MatchTable::compactFailureTargets() {
+  if (CurrentSize < MinMatchTableSizeForCompaction)
+    return;
+
+  std::vector<unsigned> RecordOffsets;
+  RecordOffsets.reserve(Contents.size());
+  unsigned Offset = 0;
+  for (const MatchTableRecord &Record : Contents) {
+    RecordOffsets.push_back(Offset);
+    Offset += Record.size();
+  }
+
+  for (unsigned I = 0, E = Contents.size(); I != E; ++I) {
+    MatchTableRecord &Opcode = Contents[I];
+    StringRef OpcodeName = Opcode.EmitStr;
+    if (OpcodeName != "GIM_Try" && OpcodeName != "GIM_Try_CheckFeatures")
+      continue;
+
+    unsigned JumpRecord = I + 1;
+    while (JumpRecord != E && Contents[JumpRecord].size() == 0)
+      ++JumpRecord;
+    assert(JumpRecord != E &&
+           (Contents[JumpRecord].Flags & MatchTableRecord::MTRF_JumpTarget));
+
+    MatchTableRecord &Jump = Contents[JumpRecord];
+    unsigned Target = getLabelIndex(Jump.LabelID);
+    unsigned JumpOffset = RecordOffsets[JumpRecord];
+    assert(Target > JumpOffset && "GIM_Try targets must be forward");
+
+    unsigned NumBytes;
+    StringRef Suffix;
+    unsigned Distance = Target - JumpOffset;
+    if (Distance <= 256) {
+      NumBytes = 1;
+      Suffix = "8";
+    } else if (Distance <= 65537) {
+      NumBytes = 2;
+      Suffix = "16";
+    } else {
+      continue;
+    }
+
+    Opcode.EmitStr += Suffix;
+    Jump.makeRelativeJumpTarget(NumBytes);
+  }
+
+  rebuildLabelMap();
+}
+
+void MatchTable::compactRootOperandIndices() {
+  if (CurrentSize < MinMatchTableSizeForCompaction)
+    return;
+
+  static constexpr StringLiteral RootOperandOpcodes[] = {
+      "GIM_RootCheckType", "GIM_RootCheckRegBankForClass",
+      "GIR_RootToRootCopy"};
+
+  for (unsigned I = 0, E = Contents.size(); I != E; ++I) {
+    MatchTableRecord &Opcode = Contents[I];
+    if (!is_contained(RootOperandOpcodes, Opcode.EmitStr))
+      continue;
+
+    unsigned OperandRecord = I + 1;
+    while (OperandRecord != E && Contents[OperandRecord].size() == 0)
+      ++OperandRecord;
+    assert(OperandRecord != E && "Missing root operand index");
+
+    MatchTableRecord &Operand = Contents[OperandRecord];
+    unsigned OperandIndex;
+    if (Operand.size() != 1 ||
+        StringRef(Operand.EmitStr).getAsInteger(10, OperandIndex) ||
+        OperandIndex > 8)
+      continue;
+
+    Opcode.EmitStr += llvm::to_string(OperandIndex);
+    Operand.clear();
+  }
+
+  rebuildLabelMap();
+}
+
+void MatchTable::compact() {
+  compactFailureTargets();
+  compactRootOperandIndices();
 }
 
 } // namespace gi

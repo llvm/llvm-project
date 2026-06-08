@@ -141,7 +141,9 @@ MatchTable llvm::gi::buildMatchTable(ArrayRef<Matcher *> Rules,
   for (Matcher *Rule : Rules)
     Rule->emit(Table);
 
-  return Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
+  Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
+  Table.compact();
+  return Table;
 }
 
 template <class Range> static bool matchersRecordOperand(Range &&R) {
