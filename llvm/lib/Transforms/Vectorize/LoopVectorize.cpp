@@ -6365,7 +6365,7 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
   return false;
 }
 
-VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
+VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
                                                       VFRange &Range) {
   auto *I = VPI->getUnderlyingInstr();
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -6423,9 +6423,14 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  auto *Recipe =
-      new VPReplicateRecipe(I, VPI->operandsWithoutMask(), IsUniform,
-                            BlockInMask, *VPI, *VPI, VPI->getDebugLoc());
+  if (IsUniform) {
+    return VPBuilder::createSingleScalarOp(
+        VPI->getOpcode(), VPI->operandsWithoutMask(), BlockInMask, *VPI, *VPI,
+        VPI->getDebugLoc(), I);
+  }
+  auto *Recipe = new VPReplicateRecipe(I, VPI->operandsWithoutMask(),
+                                       /*IsSingleScalar=*/false, BlockInMask,
+                                       *VPI, *VPI, VPI->getDebugLoc());
   return Recipe;
 }
 
@@ -6726,7 +6731,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
               VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
-              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R))
+              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
+          (isa<VPInstructionWithType>(R) &&
+           Instruction::isCast(cast<VPInstructionWithType>(R).getOpcode()) &&
+           vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
       if (!VPI->getUnderlyingValue())
