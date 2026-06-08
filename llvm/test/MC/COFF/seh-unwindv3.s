@@ -68,10 +68,10 @@ push_and_alloc:
 // CHECK-NEXT:     NumberOfEpilogs: 1
 // CHECK:          Prolog [2 ops]:
 // CHECK:          ALLOC_SMALL Size=0x20
-// CHECK:          PUSH Reg=
+// CHECK:          PUSH Reg=RBX
 // CHECK:          Epilog [0] {
 // CHECK:            ALLOC_SMALL Size=0x20
-// CHECK:            PUSH Reg=
+// CHECK:            PUSH Reg=RBX
 
 // --- Test 3: multiple pushes + alloc + frame register ---
 frame_register:
@@ -112,13 +112,13 @@ frame_register:
 // CHECK:          Prolog [4 ops]:
 // CHECK:          SET_FPREG Reg=RBP, Offset=0x20
 // CHECK:          ALLOC_SMALL Size=0x20
-// CHECK:          PUSH Reg=
-// CHECK:          PUSH Reg=
+// CHECK:          PUSH Reg=RBX
+// CHECK:          PUSH Reg=RBP
 // CHECK:          Epilog [0] {
 // CHECK:            SET_FPREG Reg=RBP, Offset=0x20
 // CHECK:            ALLOC_SMALL Size=0x20
-// CHECK:            PUSH Reg=
-// CHECK:            PUSH Reg=
+// CHECK:            PUSH Reg=RBX
+// CHECK:            PUSH Reg=RBP
 
 // --- Test 4: multiple epilogs ---
 multiple_epilogs:
@@ -190,10 +190,10 @@ large_alloc:
 // CHECK-NEXT:     NumberOfEpilogs: 1
 // CHECK:          Prolog [2 ops]:
 // CHECK:          ALLOC_LARGE Size=0x1000
-// CHECK:          PUSH Reg=
+// CHECK:          PUSH Reg=RBX
 // CHECK:          Epilog [0] {
 // CHECK:            ALLOC_LARGE Size=0x1000
-// CHECK:            PUSH Reg=
+// CHECK:            PUSH Reg=RBX
 
 // --- Test 6: handler ---
 with_handler:

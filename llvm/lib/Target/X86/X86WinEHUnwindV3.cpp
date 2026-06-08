@@ -193,7 +193,9 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     if (STI.hasEGPR()) {
       Ctx.diagnose(DiagnosticInfoUnsupported(
           F, "EGPR (R16-R31) requires V3 unwind info on Windows x64"));
+      // Stripping the SEH pseudos modifies the function, so report a change.
       suppressWinCFI(MF);
+      return true;
     }
     return false;
   }
@@ -213,8 +215,9 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
       Ctx.diagnose(DiagnosticInfoGenericWithLoc(
           "sub-fragment splitting for prolog overflow is not yet implemented",
           F, F.getSubprogram(), DS_Note));
+      // Stripping the SEH pseudos modifies the function, so report a change.
       suppressWinCFI(MF);
-      return Changed;
+      return true;
     }
 
     if (Info.MaxEpilogOpCount > MaxV3EpilogOps) {
@@ -224,8 +227,9 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
       Ctx.diagnose(DiagnosticInfoGenericWithLoc(
           "sub-fragment splitting for epilog overflow is not yet implemented",
           F, F.getSubprogram(), DS_Note));
+      // Stripping the SEH pseudos modifies the function, so report a change.
       suppressWinCFI(MF);
-      return Changed;
+      return true;
     }
 
     if (Info.EpilogCount > MaxV3Epilogs) {

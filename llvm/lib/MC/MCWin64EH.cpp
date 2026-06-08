@@ -15,6 +15,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Win64EH.h"
 
 namespace llvm {
@@ -277,8 +278,9 @@ void Win64EH::EncodeWOD(const WinEH::Instruction &Inst,
     // WOD_ALLOC_SMALL: 1 byte, bits [3:0] = 8, bits [7:4] = (size/8 - 1)
     // V1/V2 stores (size-8)/8 in OpInfo; actual size = Offset.
     // Inst.Offset is the raw allocation size.
-    assert(Inst.Offset >= 8 && Inst.Offset <= 128 && Inst.Offset % 8 == 0 &&
-           "UOP_AllocSmall outside expected range or alignment");
+    if (Inst.Offset < 8 || Inst.Offset > 128 || Inst.Offset % 8 != 0)
+      reportFatalInternalError(
+          "UOP_AllocSmall outside expected range or alignment");
     uint8_t Encoded = ((Inst.Offset / 8 - 1) & 0x0F);
     Out.push_back((Encoded << 4) | Win64EH::WOD_ALLOC_SMALL);
     break;
@@ -303,6 +305,11 @@ void Win64EH::EncodeWOD(const WinEH::Instruction &Inst,
   }
   case Win64EH::UOP_SetFPReg: {
     // WOD_SET_FPREG: 2 bytes, byte[0] = 0, byte[1] = reg(4) | (offset/16)(4)
+    // The frame register field is only 4 bits, so EGPR (R16-R31) cannot be
+    // used as the frame pointer in V3 unwind info.
+    if (Inst.Register > 0x0F)
+      reportFatalInternalError(
+          "SET_FPREG frame register does not fit in 4 bits");
     Out.push_back(Win64EH::WOD_SET_FPREG);
     uint8_t Reg = Inst.Register & 0x0F;
     uint8_t Off = (Inst.Offset / 16) & 0x0F;
@@ -334,6 +341,12 @@ void Win64EH::EncodeWOD(const WinEH::Instruction &Inst,
   case Win64EH::UOP_SaveXMM128: {
     // WOD_SAVE_XMM128: 3 bytes, bits [3:0] = 10, bits [7:4] = reg,
     // bytes[1:2] = LE16(displacement/16)
+    // The XMM register field is only 4 bits, so XMM16-XMM31 (AVX-512 EVEX)
+    // cannot be encoded. Such registers are caller-saved on Win64 and should
+    // never reach here from codegen.
+    if (Inst.Register > 0x0F)
+      reportFatalInternalError(
+          "SAVE_XMM128 register does not fit in 4 bits (XMM16-31 unsupported)");
     uint8_t Reg = Inst.Register & 0x0F;
     Out.push_back((Reg << 4) | Win64EH::WOD_SAVE_XMM128);
     uint16_t Disp = Inst.Offset / 16;
@@ -344,6 +357,9 @@ void Win64EH::EncodeWOD(const WinEH::Instruction &Inst,
   case Win64EH::UOP_SaveXMM128Big: {
     // WOD_SAVE_XMM128_FAR: 5 bytes, bits [3:0] = 9, bits [7:4] = reg,
     // bytes[1:4] = LE32(displacement)
+    if (Inst.Register > 0x0F)
+      reportFatalInternalError("SAVE_XMM128_FAR register does not fit in 4 "
+                               "bits (XMM16-31 unsupported)");
     uint8_t Reg = Inst.Register & 0x0F;
     Out.push_back((Reg << 4) | Win64EH::WOD_SAVE_XMM128_FAR);
     uint32_t Disp = Inst.Offset;
@@ -764,10 +780,8 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
   // The unwind info structure itself is 4-byte aligned, so when PayloadWords
   // is odd, the natural end of the payload sits at +2 mod 4 and requires 2
   // additional zero bytes of padding before the handler/chain.
-  if (PayloadWords % 2 != 0) {
-    Streamer.emitInt8(0);
-    Streamer.emitInt8(0);
-  }
+  if (PayloadWords % 2 != 0)
+    Streamer.emitInt16(0);
 
   // --- Emit handler/chained info (same position as V1/V2) ---
   if (Flags & Win64EH::UNW_ChainInfo)
