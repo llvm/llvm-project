@@ -2493,12 +2493,12 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         *C1 == *C2) {
       APInt NotC = ~(*C1);
       if (NotC.isZero() || NotC.isPowerOf2()) {
-        return BinaryOperator::CreateAnd(
-            X, ConstantInt::get(I.getType(), NotC));
+        return BinaryOperator::CreateAnd(X,
+                                         ConstantInt::get(I.getType(), NotC));
       }
     }
   }
- 
+
   // Reassociate sub/add sequences to create more add instructions and
   // reduce dependency chains:
   // ((X - Y) + Z) - Op1 --> (X + Z) - (Y + Op1)
