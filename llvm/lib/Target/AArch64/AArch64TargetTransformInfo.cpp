@@ -6103,7 +6103,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (IsUSDot && IsSupported(ST->hasMatMulInt8(), ST->hasMatMulInt8()))
       return Cost + INegCost;
     // Without +i8mm, lower SUMLA via two udots plus an eor and a sub on plain
-    // +dotprod targets. Charge an extra factor for the expansion.
+    // +dotprod targets. Note that this is only implemented for NEON, as all
+    // modern CPUs with SVE also have +i8mm. Charge an extra factor for the
+    // expansion.
     if (IsUSDot && IsSupported(false, ST->hasDotProd()))
       return Cost * 3 + INegCost;
   }
