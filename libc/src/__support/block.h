@@ -44,7 +44,7 @@ LIBC_INLINE constexpr size_t align_up(size_t value, size_t alignment) {
 using ByteSpan = cpp::span<LIBC_NAMESPACE::cpp::byte>;
 using cpp::optional;
 
-/// Proxy for a memory region with links to adjacent blocks.
+/// Reference to a memory region with links to adjacent blocks.
 ///
 /// The blocks store their offsets to the previous and next blocks. The latter
 /// is also the block's size. The metadata is stored in raw bytes and accessed
@@ -104,13 +104,13 @@ class BlockRef {
   static constexpr size_t LAST_MASK = 1 << 1;
   static constexpr size_t SIZE_MASK = ~(PREV_FREE_MASK | LAST_MASK);
 
-  // Header field offsets. The previous offset is only meaningful when this
-  // block's PREV_FREE_MASK bit is set in the next field.
+  // Header field offsets. The value at PREV_OFFSET is only meaningful when the
+  // PREV_FREE_MASK bit is set in the next field.
   static constexpr size_t PREV_OFFSET = 0;
-  static constexpr size_t NEXT_OFFSET = sizeof(size_t);
+  static constexpr size_t NEXT_OFFSET = PREV_OFFSET + sizeof(size_t);
 
 public:
-  static constexpr size_t HEADER_SIZE = 2 * sizeof(size_t);
+  static constexpr size_t HEADER_SIZE = NEXT_OFFSET + sizeof(size_t);
 
   // To ensure block sizes have two lower unused bits, ensure usable space is
   // always aligned to at least 4 bytes. (The distances between usable spaces,
@@ -118,20 +118,20 @@ public:
   static constexpr size_t MIN_ALIGN = cpp::max(size_t{4}, alignof(max_align_t));
 
   LIBC_INLINE constexpr BlockRef() = default;
-  LIBC_INLINE explicit constexpr BlockRef(cpp::byte *ptr) : self(ptr) {}
+  LIBC_INLINE explicit constexpr BlockRef(cpp::byte *ptr) : header_ptr(ptr) {}
   LIBC_INLINE explicit constexpr operator bool() const {
-    return self != nullptr;
+    return header_ptr != nullptr;
   }
   LIBC_INLINE constexpr bool operator==(BlockRef other) const {
-    return self == other.self;
+    return header_ptr == other.header_ptr;
   }
   LIBC_INLINE constexpr bool operator!=(BlockRef other) const {
     return !(*this == other);
   }
 
-  LIBC_INLINE cpp::byte *data() const { return self; }
+  LIBC_INLINE cpp::byte *data() const { return header_ptr; }
   LIBC_INLINE uintptr_t addr() const {
-    return reinterpret_cast<uintptr_t>(self);
+    return reinterpret_cast<uintptr_t>(header_ptr);
   }
 
   /// Initializes a given memory region into a first block and a sentinel last
@@ -195,14 +195,14 @@ public:
   ///
   /// Aligned to some multiple of MIN_ALIGN.
   LIBC_INLINE cpp::byte *usable_space() const {
-    auto *s = self + HEADER_SIZE;
+    auto *s = header_ptr + HEADER_SIZE;
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % MIN_ALIGN == 0 &&
                 "usable space must be aligned to MIN_ALIGN");
     return s;
   }
 
   // @returns The region of memory the block manages, including the header.
-  LIBC_INLINE ByteSpan region() const { return {self, outer_size()}; }
+  LIBC_INLINE ByteSpan region() const { return {header_ptr, outer_size()}; }
 
   /// Attempts to split this block.
   ///
@@ -223,14 +223,14 @@ public:
     size_t next_value = load_next();
     if (next_value & LAST_MASK)
       return BlockRef();
-    return BlockRef(self + (next_value & SIZE_MASK));
+    return BlockRef(header_ptr + (next_value & SIZE_MASK));
   }
 
   /// @returns The free block immediately before this one, otherwise null.
   LIBC_INLINE BlockRef prev_free() const {
     if (!(load_next() & PREV_FREE_MASK))
       return BlockRef();
-    return BlockRef(self - load_prev());
+    return BlockRef(header_ptr - load_prev());
   }
 
   /// @returns Whether the block is unavailable for allocation.
@@ -335,7 +335,7 @@ private:
   }
 
   LIBC_INLINE cpp::byte *field_ptr(size_t offset) const {
-    cpp::byte *ptr = self + offset;
+    cpp::byte *ptr = header_ptr + offset;
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(ptr) % alignof(size_t) == 0 &&
                 "block metadata fields must be aligned");
     // BlockRef points to block header which should be well-aligned. However,
@@ -387,7 +387,7 @@ private:
     store_field(NEXT_OFFSET, value);
   }
 
-  cpp::byte *self = nullptr;
+  cpp::byte *header_ptr = nullptr;
 };
 
 // This is the return type for `allocate` which can split one block into up to

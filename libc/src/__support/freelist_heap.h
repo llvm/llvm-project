@@ -176,6 +176,11 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {
     if (next.has_value()) {
       BlockRef next_block = *next;
       BlockRef right = next_block.next();
+      // Since the original block was not the last block (the sentinel last
+      // block is never split), the split-off remainder block `next_block` is
+      // also not the last block. Thus, its next block `right` is guaranteed
+      // to be non-null.
+      LIBC_ASSERT(right && "right block must be non-null");
       if (!right.used()) {
         free_store.remove(right);
         next_block.merge_next();
