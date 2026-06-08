@@ -1045,7 +1045,12 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
 
   LLVM_DEBUG(dbgs() << "Unfolding SU #" << SU->NodeNum << "\n");
 
-  // Now that we are committed to unfolding replace DAG Uses.
+  // Now that we are committed to unfolding replace DAG Uses, fixing up SUnits
+  // whose nodes get deleted by the replacements.
+  SelectionDAG::DAGNodeDeletedListener Listener(
+      *DAG, [&](SDNode *DeadNode, SDNode *NewNode) {
+        RedirectMergedNode(DeadNode, NewNode);
+      });
   for (unsigned i = 0; i != NumVals; ++i)
     DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), i), SDValue(N, i));
   DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals - 1),

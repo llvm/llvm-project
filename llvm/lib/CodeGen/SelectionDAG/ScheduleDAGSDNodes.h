@@ -90,6 +90,11 @@ class InstrItineraryData;
     ///
     SUnit *Clone(SUnit *Old);
 
+    /// If an SUnit owns \p DeadNode, which is being deleted and replaced by
+    /// \p NewNode (e.g. when a node is CSE'd into an existing one), point that
+    /// SUnit at \p NewNode so it is not left with a dangling node pointer.
+    void RedirectMergedNode(SDNode *DeadNode, SDNode *NewNode);
+
     /// BuildSchedGraph - Build the SUnit graph from the selection dag that we
     /// are input.  This SUnit graph is similar to the SelectionDAG, but
     /// excludes nodes that aren't interesting to scheduling, and represents
