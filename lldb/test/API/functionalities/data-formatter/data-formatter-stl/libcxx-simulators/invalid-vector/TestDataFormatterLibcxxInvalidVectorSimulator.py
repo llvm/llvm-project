@@ -37,7 +37,7 @@ class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
         )
         self.expect(
             "frame variable v5",
-            substrs=["size=error: size not multiple of element size"],
+            substrs=["size=error: failed to determine start/end of vector data"],
         )
         self.expect(
             "frame variable v6",
@@ -45,19 +45,19 @@ class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
         )
         self.expect(
             "frame variable v7",
-            substrs=["size=error: failed to determine start/end of vector data"],
+            substrs=["size=error: invalid value for end of vector"],
         )
         self.expect(
             "frame variable v8",
-            substrs=["size=error: invalid value for end of vector"],
+            substrs=["size=error: failed to determine start/end of vector data"],
         )
         self.expect(
             "frame variable v9",
-            substrs=["size=error: invalid value for end of vector"],
+            substrs=["size=error: failed to determine start/end of vector data"],
         )
         self.expect(
             "frame variable v10",
-            substrs=["size=error: invalid value for start of vector"],
+            substrs=["size=error: invalid value for end of vector"],
         )
         self.expect(
             "frame variable v11",
@@ -69,5 +69,49 @@ class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
         )
         self.expect(
             "frame variable v13",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )
+        self.expect(
+            "frame variable v14",
+            substrs=["size=error: invalid value for end of vector"],
+        )
+        self.expect(
+            "frame variable v15",
+            substrs=["size=1"],
+        )
+        self.expect(
+            "frame variable v16",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )
+        self.expect(
+            "frame variable v17",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )
+        self.expect(
+            "frame variable v18",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )
+        self.expect(
+            "frame variable v19",
+            substrs=["size=error: size not multiple of element size"],
+        )
+        self.expect(
+            "frame variable v20",
+            substrs=["size=error: size not multiple of element size"],
+        )
+        self.expect(
+            "frame variable v21",
+            substrs=["size=1"],
+        )
+        self.expect(
+            "frame variable v23",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )
+        self.expect(
+            "frame variable v24",
+            substrs=["size=error: failed to determine start/end of vector data"],
+        )
+        self.expect(
+            "frame variable v25",
             substrs=["size=error: failed to determine start/end of vector data"],
         )
