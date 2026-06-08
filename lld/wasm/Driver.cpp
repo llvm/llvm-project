@@ -561,8 +561,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
-  ctx.arg.cooperativeThreading =
-      args.hasArg(OPT_cooperative_threading);
+  ctx.arg.cooperativeThreading = args.hasArg(OPT_cooperative_threading);
   ;
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
@@ -759,8 +758,7 @@ static void setConfigs() {
   }
   if (ctx.arg.cooperativeThreading) {
     if (ctx.arg.sharedMemory)
-      error(
-          "--cooperative-threading is incompatible with --shared-memory");
+      error("--cooperative-threading is incompatible with --shared-memory");
     ctx.arg.libcallThreadContext = true;
   }
 }
@@ -1030,8 +1028,8 @@ static void createOptionalSymbols() {
   // TLS object files may be linked into single-threaded programs, so
   // __tls_base must always be defined. In this case it is immutable and points
   // directly to the start of the `.tdata` segment. __tls_size and __tls_align
-  // are omitted since they are only used by __wasm_init_tls, which is not created
-  // in this case.
+  // are omitted since they are only used by __wasm_init_tls, which is not
+  // created in this case.
   if (!ctx.sym.tlsBase)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
