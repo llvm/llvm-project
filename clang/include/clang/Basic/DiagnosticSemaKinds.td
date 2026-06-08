@@ -11527,6 +11527,8 @@ def err_builtin_setjmp_unsupported : Error<
 def err_builtin_longjmp_invalid_val : Error<
   "argument to __builtin_longjmp must be a constant 1">;
 def err_builtin_requires_language : Error<"'%0' is only available in %1">;
+def err_builtin_requires_char_bit_8 : Error<
+  "'%0' is only available on targets where 'CHAR_BIT == 8'">;
 
 def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
