@@ -15,7 +15,9 @@ class LibcxxVectorDataFormatterSimulatorTestCase(TestBase):
     def _run_test(self, test_case):
         cxxflags_extras = f"-DLLDB_TEST_CASE={test_case}"
         self.build(dictionary=dict(CXXFLAGS_EXTRAS=cxxflags_extras))
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp")
+        )
 
         self.expect(
             "frame variable v0",

@@ -184,6 +184,7 @@ int main() {
   std::__ValidSizeLayout::vector<short> v21{
       .__layout_ = {.__begin_ = reinterpret_cast<short *>(carr), .__size_ = 1}};
 
+#ifndef _WIN32
   struct ZeroSizeStruct {
     int x[0];
   };
@@ -195,5 +196,6 @@ int main() {
       .__layout_ = {.__begin_ = nullptr, .__end_ = nullptr}};
   std::__ValidSizeLayout::vector<ZeroSizeStruct> v25{
       .__layout_ = {.__begin_ = nullptr, .__size_ = 0}};
+#endif
   return 0;
 }

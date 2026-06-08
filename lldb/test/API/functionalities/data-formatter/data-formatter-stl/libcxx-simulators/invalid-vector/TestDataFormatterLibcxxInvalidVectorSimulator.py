@@ -13,9 +13,8 @@ import functools
 class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-
     @skipIf(compiler="clang", compiler_version=['<', '18.0'])
-    def test(self):
+    def test_most(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "return 0", lldb.SBFileSpec("main.cpp"))
 
@@ -103,6 +102,13 @@ class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
             "frame variable v21",
             substrs=["size=1"],
         )
+
+    @skipIf(compiler="clang", compiler_version=["<", "18.0"])
+    @skipIfWindows
+    def test_zero_sized_struct_extension(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, "return 0", lldb.SBFileSpec("main.cpp"))
+
         self.expect(
             "frame variable v23",
             substrs=["size=error: failed to determine start/end of vector data"],
