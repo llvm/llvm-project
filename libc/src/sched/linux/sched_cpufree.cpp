@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(void, __sched_cpufree, (cpu_set_t *set)) {
+LLVM_LIBC_FUNCTION(void, __sched_cpufree, (cpu_set_t * set)) {
   delete[] reinterpret_cast<uint8_t *>(set);
 }
 

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sched_macros.h"
+#include "hdr/types/cpu_set_t.h"
 #include "src/sched/sched_cpualloc.h"
 #include "src/sched/sched_cpufree.h"
 #include "src/sched/sched_getcpucount.h"
@@ -13,8 +15,6 @@
 #include "src/sched/sched_setcpuset.h"
 #include "src/sched/sched_setcpuzero.h"
 #include "test/UnitTest/Test.h"
-#include "hdr/sched_macros.h"
-#include "hdr/types/cpu_set_t.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

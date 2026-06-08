@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_CPUFREE_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_CPUFREE_H
 
-#include "src/__support/macros/config.h"
 #include "hdr/types/cpu_set_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
