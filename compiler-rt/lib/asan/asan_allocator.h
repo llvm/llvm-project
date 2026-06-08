@@ -330,6 +330,20 @@ void asan_mz_force_unlock();
 void PrintInternalAllocatorStats();
 void AsanSoftRssLimitExceededCallback(bool exceeded);
 
+#if SANITIZER_AMDHSA
+// Hooks for asan_hsa_amd* wrappers.
+void* AsanHsaAllocate(uptr size, uptr alignment, BufferedStackTrace* stack,
+                      DeviceAllocationInfo* da_info);
+void AsanHsaDeallocate(void* ptr, BufferedStackTrace* stack);
+void* AsanHsaGetBlockBegin(const void* ptr);
+uptr AsanHsaGetActuallyAllocatedSize(void* ptr);
+bool AsanHsaTranslateIpcCreate(void* ptr, size_t len, void** out_ptr,
+                               size_t* out_len);
+bool AsanHsaIsVmemFreeValid(void* ptr, uptr size);
+bool AsanHsaGetLiveMappingInfo(const void* ptr, void** map_base,
+                               uptr* used_size, uptr* offset);
+#endif  // SANITIZER_AMDHSA
+
 }  // namespace __asan
 
 #endif  // ASAN_ALLOCATOR_H
