@@ -4,15 +4,6 @@
 
 ; Regression test for an unsigned-underflow infinite loop in the Pre-GFX12
 ; waitcnt profiling expansion (WaitcntGeneratorPreGFX12::createNewWaitcnt).
-;
-; When -amdgpu-expand-waitcnt-profiling expands a wait into a descending
-; sequence and the number of outstanding operations for a counter is 0, the
-; old do/while computed "--Outstanding", wrapping 0 to UINT_MAX and looping
-; ~4 billion times. -amdgpu-waitcnt-forcezero deterministically requests an
-; all-zero wait even when nothing is outstanding (e.g. before the first
-; instruction), exercising that edge. The GFX12+ generator already guarded
-; against the wrap; this checks the Pre-GFX12 path terminates and emits a
-; single waitcnt(0) for the zero-outstanding counters.
 
 define amdgpu_kernel void @no_outstanding(ptr addrspace(1) %p) #0 {
 ; GFX9-LABEL: no_outstanding:
