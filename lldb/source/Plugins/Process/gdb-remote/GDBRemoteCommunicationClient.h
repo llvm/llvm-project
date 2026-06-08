@@ -128,10 +128,17 @@ public:
   /// \param[in] data_len
   ///     The number of bytes available at \a data.
   ///
+  /// \param[in] interrupt_timeout
+  ///     If the inferior is running, how long to wait for a `\x03` BREAK
+  ///     to interrupt it before giving up. Pass zero only when the caller knows
+  ///     the inferior is stopped.
+  ///
   /// \return
   ///     Zero if the attach was successful, or an error indicating
   ///     an error code.
-  int SendStdinNotification(const char *data, size_t data_len);
+  int SendStdinNotification(
+      const char *data, size_t data_len,
+      std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));
 
   /// Sets the path to use for stdin/out/err for a process
   /// that will be launched with the 'A' packet.
