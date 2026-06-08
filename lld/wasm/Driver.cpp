@@ -1027,15 +1027,11 @@ static void createOptionalSymbols() {
   if (ctx.sym.firstPageEnd)
     ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
 
-  // For non-multithreaded programs we still need to define __tls_base since we
-  // allow object files built with TLS to be linked into single threaded
-  // programs, and such object files can contain references to this symbol.
-  //
-  // However, in this case __tls_base is immutable and points directly to the
-  // start of the `.tdata` static segment.
-  //
-  // __tls_size and __tls_align are not needed in this case since they are only
-  // needed for __wasm_init_tls (which we do not create in this case).
+  // TLS object files may be linked into single-threaded programs, so
+  // __tls_base must always be defined. In this case it is immutable and points
+  // directly to the start of the `.tdata` segment. __tls_size and __tls_align
+  // are omitted since they are only used by __wasm_init_tls, which is not created
+  // in this case.
   if (!ctx.sym.tlsBase)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
