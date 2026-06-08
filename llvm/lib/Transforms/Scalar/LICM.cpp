@@ -1096,7 +1096,7 @@ static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
   Value *InnerVal = CurrIns->getOperand(0);
   // If the value we are inserting into is not invariant/poison, recurse
   // if it is another insert
-  if (!CurLoop->isLoopInvariant(InnerVal) && !isa<PoisonValue>(InnerVal)) {
+  if (!CurLoop->isLoopInvariant(InnerVal)) {
     // Only hoist past other insertions
     // All instructions in the chain must be in the same basic block
     auto *InnerIns = dyn_cast<InsertElementInst>(InnerVal);
