@@ -22,8 +22,7 @@ class TestComputeProjects(unittest.TestCase):
             "check-bolt check-clang check-clang-tools check-cross-project check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"],
-            "libcxx;libcxxabi;libunwind",
+            env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -444,8 +443,7 @@ class TestComputeProjects(unittest.TestCase):
             "check-bolt check-clang check-clang-tools check-cross-project check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"],
-            "libcxx;libcxxabi;libunwind",
+            env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
