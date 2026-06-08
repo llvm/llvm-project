@@ -2694,6 +2694,9 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
 bool SPIRVInstructionSelector::selectPtrMask(Register ResVReg,
                                              SPIRVTypeInst ResType,
                                              MachineInstr &I) const {
+  if (STI.isLogicalSPIRV())
+    return diagnoseUnsupported(
+        I, "G_PTRMASK is not supported with logical SPIR-V");
   MachineBasicBlock &BB = *I.getParent();
   MachineFunction &MF = *BB.getParent();
   const DebugLoc &DL = I.getDebugLoc();
