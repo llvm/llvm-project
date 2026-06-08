@@ -5,8 +5,8 @@ if(DOXYGEN_FOUND)
   set(DOT dot)
   set(PACKAGE_VERSION mainline)
   set(abs_top_builddir ..)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
+  include(HandleDoxygen)
+  llvm_configure_doxygen()
 
   add_custom_target(lldb-cpp-doc
     ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg

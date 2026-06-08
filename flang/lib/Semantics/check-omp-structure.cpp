@@ -837,7 +837,7 @@ void OmpStructureChecker::CheckMultListItems() {
     for (const auto &ompObject : alignedList.v) {
       if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
         if (name->symbol) {
-          if (FindCommonBlockContaining(*(name->symbol))) {
+          if (name->symbol->has<CommonBlockDetails>()) {
             context_.Say(clause->source,
                 "'%s' is a common block name and can not appear in an "
                 "ALIGNED clause"_err_en_US,

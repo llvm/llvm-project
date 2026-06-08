@@ -17,9 +17,9 @@ function(llvm_find_program name)
 endfunction()
 
 if (LLVM_ENABLE_DOXYGEN)
-  message(STATUS "Doxygen enabled.")
   llvm_find_program(dot)
   find_package(Doxygen REQUIRED)
+  message(STATUS "Doxygen enabled (${DOXYGEN_VERSION}).")
 
   if (DOXYGEN_FOUND)
     # If we find doxygen and we want to enable doxygen by default create a
@@ -35,6 +35,22 @@ if (LLVM_ENABLE_DOXYGEN)
       set(LLVM_DOXYGEN_SEARCH_MAPPINGS "" CACHE STRING "Doxygen Search Mappings")
     endif()
   endif()
+
+  # Uses all CPUs for doxygen >= 1.17 where multi-threading is fast, and
+  # single-threaded (1) for older versions where multi-threading is slower than
+  # single-threaded.
+  if (DOXYGEN_VERSION VERSION_GREATER_EQUAL "1.17")
+    set(DOXYGEN_NUM_PROC_THREADS 0)
+  else()
+    set(DOXYGEN_NUM_PROC_THREADS 1)
+  endif()
 else()
   message(STATUS "Doxygen disabled.")
 endif()
+
+# Configure doxygen.cfg.in -> doxygen.cfg, using a macro here to ensure that
+# DOXYGEN_NUM_PROC_THREADS has been set.
+macro(llvm_configure_doxygen)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
+    ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
+endmacro()

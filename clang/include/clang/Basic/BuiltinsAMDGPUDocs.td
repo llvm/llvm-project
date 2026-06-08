@@ -623,8 +623,8 @@ scale variant.
 def DocCatTensorDMA : DocumentationCategory<"Tensor DMA Builtins"> {
   let Content = [{
 Asynchronous tensor DMA transfers between global memory and LDS. Track
-completion using ``TENSOR_CNT`` or *asyncmarks* (see
-:ref:`amdgpu-async-operations`).
+completion using ``TENSOR_CNT`` or *asyncmarks* (see the ``AMDGPU
+Asynchronous Operations`` document).
 
 ``D0``..``D4`` are the five chunks of the hardware tensor descriptor. The
 ``_d2`` machine instruction is selected when ``D2`` and ``D3`` are zero-

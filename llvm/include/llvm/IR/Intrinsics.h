@@ -182,6 +182,7 @@ struct IITDescriptor {
     Overloaded, // AnyKind and overload index in OverloadInfo.
 
     // Fully dependent types. Overload index in OverloadInfo.
+    Match,
     Extend,
     Trunc,
     OneNthEltsVec,
@@ -212,10 +213,11 @@ struct IITDescriptor {
   };
 
   unsigned getOverloadIndex() const {
-    assert(Kind == Overloaded || Kind == Extend || Kind == Trunc ||
-           Kind == SameVecWidth || Kind == VecElement || Kind == Subdivide2 ||
-           Kind == Subdivide4 || Kind == VecOfBitcastsToInt ||
-           Kind == VecOfAnyPtrsToElt || Kind == OneNthEltsVec);
+    assert(Kind == Overloaded || Kind == Match || Kind == Extend ||
+           Kind == Trunc || Kind == SameVecWidth || Kind == VecElement ||
+           Kind == Subdivide2 || Kind == Subdivide4 ||
+           Kind == VecOfBitcastsToInt || Kind == VecOfAnyPtrsToElt ||
+           Kind == OneNthEltsVec);
     // Overload index is packed into lower 5 bits.
     return OverloadInfo & 0x1f;
   }
