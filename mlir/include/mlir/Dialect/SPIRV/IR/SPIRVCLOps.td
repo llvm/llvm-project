@@ -274,6 +274,27 @@ def SPIRV_CLAtanhOp : SPIRV_CLUnaryArithmeticOp<"atanh", 8, SPIRV_Float > {
 
 // -----
 
+def SPIRV_CLCbrtOp : SPIRV_CLUnaryArithmeticOp<"cbrt", 11, SPIRV_Float> {
+  let summary = "Compute the cube root of x.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.cbrt %0 : f32
+    %3 = spirv.CL.cbrt %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLCeilOp : SPIRV_CLUnaryArithmeticOp<"ceil", 12, SPIRV_Float> {
   let summary = [{
     Round x to integral value using the round to positive infinity rounding
