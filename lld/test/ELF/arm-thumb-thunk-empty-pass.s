@@ -2,6 +2,7 @@
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
+// RUN: rm %t.o %t
  .syntax unified
  .global _start, foo
  .type _start, %function

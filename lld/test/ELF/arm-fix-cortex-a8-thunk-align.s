@@ -2,6 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes %s -o %t.o
 // RUN: ld.lld --fix-cortex-a8 --shared %t.o -o %t2
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t2 | FileCheck %s
+// RUN: rm %t.o %t2
 
 /// Test case that for an OutputSection larger than the ThunkSectionSpacing
 /// --fix-cortex-a8 will cause the size of the ThunkSection to be rounded up to
