@@ -24,6 +24,7 @@ one arg per line, a "---" separator, then one KEY=VALUE env entry per line.
 
 import os
 import shlex
+import subprocess
 import sys
 
 import lit.formats
@@ -119,6 +120,61 @@ class LibcTest(lit.formats.ExecutableTest):
 
         return None
 
+    def _run_diagnostics(self, pid):
+        import subprocess
+        diag_out = []
+        diag_out.append(f"--- Process {pid} diagnostics ---")
+        
+        # wchan
+        diag_out.append("--- wchan ---")
+        try:
+            with open(f"/proc/{pid}/wchan", "r") as f:
+                diag_out.append(f.read().strip())
+        except Exception as e:
+            diag_out.append(f"Failed to read wchan: {e}")
+            
+        # stack
+        diag_out.append("--- stack ---")
+        try:
+            with open(f"/proc/{pid}/stack", "r") as f:
+                diag_out.append(f.read())
+        except Exception as e:
+            diag_out.append(f"Failed to read stack: {e}")
+
+        # lldb
+        diag_out.append("--- LLDB Backtrace ---")
+        lldb_cmd = ["lldb", "-p", str(pid), "--batch", "-o", "thread backtrace all", "-o", "quit"]
+        try:
+            out = subprocess.check_output(lldb_cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
+            diag_out.append(out)
+        except Exception as e:
+            diag_out.append(f"Failed to run lldb: {e}")
+            
+            # gdb fallback
+            diag_out.append("--- GDB Backtrace ---")
+            gdb_cmd = ["gdb", "-p", str(pid), "--batch", "-ex", "thread apply all bt", "-ex", "quit"]
+            try:
+                out = subprocess.check_output(gdb_cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
+                diag_out.append(out)
+            except Exception as e2:
+                diag_out.append(f"Failed to run gdb: {e2}")
+
+        # strace
+        diag_out.append("--- Strace (2 seconds) ---")
+        strace_cmd = ["timeout", "2", "strace", "-p", str(pid)]
+        try:
+            out = subprocess.check_output(strace_cmd, stderr=subprocess.STDOUT, text=True)
+            diag_out.append(out)
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 124:
+                diag_out.append(e.output)
+            else:
+                diag_out.append(f"Strace failed with exit code {e.returncode}: {e.output}")
+        except Exception as e:
+            diag_out.append(f"Failed to run strace: {e}")
+
+        return "\n".join(diag_out)
+
     def execute(self, test, litConfig):
         """
         Execute a test by running the test executable.
@@ -169,6 +225,16 @@ class LibcTest(lit.formats.ExecutableTest):
         env.update(extra_env)
 
         timeout = test.config.maxIndividualTestTime
+        diag_threshold_str = litConfig.params.get("libc_diag_threshold", "30.0")
+        try:
+            diag_threshold = float(diag_threshold_str)
+        except ValueError:
+            diag_threshold = 30.0
+
+        # Determine watch timeout
+        watch_timeout = diag_threshold
+        if timeout and timeout < diag_threshold:
+            watch_timeout = timeout
 
         test_cmd_template = getattr(test.config, "libc_test_cmd", "")
         if test_cmd_template:
@@ -195,15 +261,68 @@ class LibcTest(lit.formats.ExecutableTest):
         else:
             cmd_args = [test_path] + test_args
 
+        hit_timeout = False
+        hit_diag = False
+        out = b""
+        err = b""
+
+        p = subprocess.Popen(
+            cmd_args,
+            cwd=exec_dir,
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
         try:
-            out, err, exit_code = lit.util.executeCommand(
-                cmd_args, cwd=exec_dir, env=env, timeout=timeout
-            )
-        except lit.util.ExecuteCommandTimeoutException as e:
-            return (
-                lit.Test.TIMEOUT,
-                f"{e.out}\n--\n" f"Reached timeout of {timeout} seconds",
-            )
+            stdout_data, stderr_data = p.communicate(timeout=watch_timeout)
+            out += stdout_data if stdout_data else b""
+            err += stderr_data if stderr_data else b""
+            exit_code = p.wait()
+        except subprocess.TimeoutExpired as e:
+            out += e.stdout if e.stdout else b""
+            err += e.stderr if e.stderr else b""
+
+            if watch_timeout == diag_threshold:
+                hit_diag = True
+                diag_info = self._run_diagnostics(p.pid)
+
+                lit.util.killProcessAndChildren(p.pid)
+                try:
+                    stdout_data, stderr_data = p.communicate(timeout=5)
+                    out += stdout_data if stdout_data else b""
+                    err += stderr_data if stderr_data else b""
+                except subprocess.TimeoutExpired as e2:
+                    p.kill()
+                    out += e2.stdout if e2.stdout else b""
+                    err += e2.stderr if e2.stderr else b""
+                    p.communicate()
+
+                exit_code = p.wait()
+                hit_timeout = True
+            else:
+                lit.util.killProcessAndChildren(p.pid)
+                try:
+                    stdout_data, stderr_data = p.communicate(timeout=5)
+                    out += stdout_data if stdout_data else b""
+                    err += stderr_data if stderr_data else b""
+                except subprocess.TimeoutExpired as e2:
+                    p.kill()
+                    out += e2.stdout if e2.stdout else b""
+                    err += e2.stderr if e2.stderr else b""
+                    p.communicate()
+                exit_code = p.wait()
+                hit_timeout = True
+
+        out = out.decode("utf-8", errors="replace")
+        err = err.decode("utf-8", errors="replace")
+
+        if hit_timeout:
+            report = f"Reached timeout of {watch_timeout} seconds.\n"
+            if hit_diag:
+                report += f"\nDiagnostics gathered:\n{diag_info}\n"
+            return lit.Test.TIMEOUT, report + out + err
 
         if not exit_code:
             return lit.Test.PASS, ""
