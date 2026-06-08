@@ -15,6 +15,7 @@
 #include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include <map>
 #include <optional>
 #include <random>
@@ -279,6 +280,14 @@ class Context {
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
                MutableBytesView Bytes, bool PaddingBits);
 
+  AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
+  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
+  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
+                               const APInt &Scale, GEPNoWrapFlags Flags,
+                               AnyValue &AccumulatedOffset);
+
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
   std::map<Constant *, AnyValue> ConstCache;
@@ -290,6 +299,7 @@ class Context {
       ValidBlockTargets;
   DenseMap<GlobalVariable *, Pointer> GlobalAddrMap;
   std::optional<AnyValue> getConstantValueImpl(Constant *C);
+  std::optional<AnyValue> evaluateConstantExpression(ConstantExpr *CE);
 
   // Floating-point environment
   RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
@@ -396,6 +406,9 @@ public:
 
   /// Freeze the value in-place.
   void freeze(AnyValue &Val, Type *Ty);
+
+  AnyValue computeGEP(GEPOperator &GEP,
+                      function_ref<const AnyValue &(Value *V)> GetValue);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

@@ -17,7 +17,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Operator.h"
@@ -30,42 +29,6 @@
 namespace llvm::ubi {
 
 using namespace PatternMatch;
-
-static AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  APInt Res = LHS + RHS;
-  if (HasNUW && Res.ult(RHS))
-    return AnyValue::poison();
-  if (HasNSW && LHS.isNonNegative() == RHS.isNonNegative() &&
-      LHS.isNonNegative() != Res.isNonNegative())
-    return AnyValue::poison();
-  return Res;
-}
-
-static AnyValue subNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  APInt Res = LHS - RHS;
-  if (HasNUW && Res.ugt(LHS))
-    return AnyValue::poison();
-  if (HasNSW && LHS.isNonNegative() != RHS.isNonNegative() &&
-      LHS.isNonNegative() != Res.isNonNegative())
-    return AnyValue::poison();
-  return Res;
-}
-
-static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  bool Overflow = false;
-  APInt Res = LHS.smul_ov(RHS, Overflow);
-  if (HasNSW && Overflow)
-    return AnyValue::poison();
-  if (HasNUW) {
-    (void)LHS.umul_ov(RHS, Overflow);
-    if (Overflow)
-      return AnyValue::poison();
-  }
-  return Res;
-}
 
 /// Visit the scalar values recursively. The callback function may modify the
 /// value in-place.
@@ -711,99 +674,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     if (auto *Asm = dyn_cast<InlineAsm>(V))
       return Asm->getAsmString().empty() && RetTy->isVoidTy();
     return false;
-  }
-
-  AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
-    if (Offset.isZero())
-      return Ptr;
-    APInt IndexBits = Ptr.address().trunc(Offset.getBitWidth());
-    auto NewIndex = addNoWrap(IndexBits, Offset, /*HasNSW=*/false,
-                              Flags.hasNoUnsignedWrap());
-    if (NewIndex.isPoison())
-      return AnyValue::poison();
-    if (Flags.hasNoUnsignedSignedWrap()) {
-      // The successive addition of the current address, truncated to the
-      // pointer index type and interpreted as an unsigned number, and each
-      // offset, interpreted as a signed number, does not wrap the pointer index
-      // type.
-      if (Offset.isNonNegative() ? NewIndex.asInteger().ult(IndexBits)
-                                 : NewIndex.asInteger().ugt(IndexBits))
-        return AnyValue::poison();
-    }
-    APInt NewAddr = Ptr.address();
-    NewAddr.insertBits(NewIndex.asInteger(), 0);
-
-    MemoryObject *MO = nullptr;
-    if (Flags.isInBounds()) {
-      MO = Ctx.checkProvenance(
-          Ptr, [](const Provenance &) { return true; },
-          /*HasSideEffect=*/false);
-      if (!MO || !MO->inBounds(NewAddr))
-        return AnyValue::poison();
-    }
-
-    if (!AccumulatedOffset.isPoison()) {
-      AccumulatedOffset =
-          addNoWrap(AccumulatedOffset.asInteger(), Offset,
-                    Flags.hasNoUnsignedSignedWrap(), Flags.hasNoUnsignedWrap());
-      if (AccumulatedOffset.isPoison())
-        return AnyValue::poison();
-    }
-
-    // Should not expose provenance here even if the new address doesn't point
-    // to the original object.
-    auto Res = Ptr.getWithNewAddr(NewAddr);
-    if (MO) {
-      auto &Prov = Res.provenance();
-      if (Prov.isWildcard() && !Prov.getMemoryObject())
-        Res = Res.getWithNewProvenance(Prov.getWithKnownMemoryObject(*MO));
-    }
-    return Res;
-  }
-
-  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
-    if (Ptr.isPoison())
-      return AnyValue::poison();
-    return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset);
-  }
-
-  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
-                               const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset) {
-    if (Ptr.isPoison() || Index.isPoison())
-      return AnyValue::poison();
-    assert(Ptr.isPointer() && Index.isInteger() && "Unexpected type.");
-    if (Scale.isOne())
-      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset);
-    auto ScaledOffset =
-        mulNoWrap(Index.asInteger(), Scale, Flags.hasNoUnsignedSignedWrap(),
-                  Flags.hasNoUnsignedWrap());
-    if (ScaledOffset.isPoison())
-      return AnyValue::poison();
-    return computePtrAdd(Ptr, ScaledOffset.asInteger(), Flags,
-                         AccumulatedOffset);
-  }
-
-  AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
-                             GEPNoWrapFlags Flags) {
-    if (Idx.isPoison())
-      return AnyValue::poison();
-    auto &IdxInt = Idx.asInteger();
-    if (IdxInt.getBitWidth() == IndexBitWidth)
-      return Idx;
-    if (IdxInt.getBitWidth() > IndexBitWidth) {
-      if (Flags.hasNoUnsignedSignedWrap() &&
-          !IdxInt.isSignedIntN(IndexBitWidth))
-        return AnyValue::poison();
-
-      if (Flags.hasNoUnsignedWrap() && !IdxInt.isIntN(IndexBitWidth))
-        return AnyValue::poison();
-
-      return IdxInt.trunc(IndexBitWidth);
-    }
-    return IdxInt.sext(IndexBitWidth);
   }
 
   DenormalMode getCurrentDenormalMode(Type *Ty) {
@@ -2361,76 +2231,10 @@ public:
   }
 
   void visitGetElementPtrInst(GetElementPtrInst &GEP) {
-    uint32_t IndexBitWidth =
-        DL.getIndexSizeInBits(GEP.getType()->getPointerAddressSpace());
-    GEPNoWrapFlags Flags = GEP.getNoWrapFlags();
-    AnyValue Res = getValue(GEP.getPointerOperand());
-    AnyValue AccumulatedOffset = APInt(IndexBitWidth, 0);
-    if (Res.isAggregate())
-      AccumulatedOffset =
-          AnyValue::getVectorSplat(AccumulatedOffset, Res.asAggregate().size());
-    auto ApplyScaledOffset = [&](const AnyValue &Index, const APInt &Scale) {
-      if (Index.isAggregate() && !Res.isAggregate()) {
-        Res = AnyValue::getVectorSplat(Res, Index.asAggregate().size());
-        AccumulatedOffset = AnyValue::getVectorSplat(
-            AccumulatedOffset, Index.asAggregate().size());
-      }
-      if (Index.isAggregate() && Res.isAggregate()) {
-        for (auto &&[ResElem, IndexElem, OffsetElem] :
-             zip(Res.asAggregate(), Index.asAggregate(),
-                 AccumulatedOffset.asAggregate()))
-          ResElem = computeScaledPtrAdd(
-              ResElem, canonicalizeIndex(IndexElem, IndexBitWidth, Flags),
-              Scale, Flags, OffsetElem);
-      } else {
-        AnyValue CanonicalIndex =
-            canonicalizeIndex(Index, IndexBitWidth, Flags);
-        if (Res.isAggregate()) {
-          for (auto &&[ResElem, OffsetElem] :
-               zip(Res.asAggregate(), AccumulatedOffset.asAggregate()))
-            ResElem = computeScaledPtrAdd(ResElem, CanonicalIndex, Scale, Flags,
-                                          OffsetElem);
-        } else {
-          Res = computeScaledPtrAdd(Res, CanonicalIndex, Scale, Flags,
-                                    AccumulatedOffset);
-        }
-      }
-    };
-
-    for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
-         GTI != GTE; ++GTI) {
-      Value *V = GTI.getOperand();
-
-      // Fast path for zero offsets.
-      if (auto *CI = dyn_cast<ConstantInt>(V)) {
-        if (CI->isZero())
-          continue;
-      }
-      if (isa<ConstantAggregateZero>(V))
-        continue;
-
-      // Handle a struct index, which adds its field offset to the pointer.
-      if (StructType *STy = GTI.getStructTypeOrNull()) {
-        unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
-        const StructLayout *SL = DL.getStructLayout(STy);
-        // Element offset is in bytes.
-        ApplyScaledOffset(
-            APInt(IndexBitWidth, SL->getElementOffset(ElementIdx)),
-            APInt(IndexBitWidth, 1));
-        continue;
-      }
-
-      // Truncate if type size exceeds index space.
-      // TODO: Should be documented in LangRef: GEPs with nowrap flags should
-      // return poison when the type size exceeds index space.
-      TypeSize Offset = GTI.getSequentialElementStride(DL);
-      APInt Scale(IndexBitWidth, Ctx.getEffectiveTypeSize(Offset),
-                  /*isSigned=*/false, /*implicitTrunc=*/true);
-      if (!Scale.isZero())
-        ApplyScaledOffset(getValue(V), Scale);
-    }
-
-    setResult(GEP, std::move(Res));
+    setResult(GEP, Ctx.computeGEP(cast<GEPOperator>(GEP),
+                                  [this](Value *V) -> const AnyValue & {
+                                    return getValue(V);
+                                  }));
   }
 
   void visitPtrToInt(PtrToIntInst &I) {
