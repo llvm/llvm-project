@@ -34,7 +34,7 @@ static EntityLinkageType getLinkageForDecl(const Decl *D) {
   //   to be assigned different EntityIDs. As a result, the behavior of the
   //   parameter across multiple TUs cannot be correlated.
   if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
-    if (const auto *FD = llvm::dyn_cast<FunctionDecl>(
+    if (const auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(
             PVD->getParentFunctionOrMethod())) {
       return getLinkageForDecl(FD);
     }

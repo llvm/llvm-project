@@ -4,19 +4,15 @@
 // during bounds propagation.
 
 
+// DEFINE: %{extract} = %clang_cc1 -fsyntax-only -I %t --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage
+
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 
 // Extract per-TU PointerFlow + UnsafeBufferUsage summaries.
-// RUN: %clang_cc1 -fsyntax-only -I %t %t/tu1.cpp \
-// RUN:   --ssaf-extract-summaries=PointerFlow \
-// RUN:   --ssaf-extract-summaries=UnsafeBufferUsage \
-// RUN:   --ssaf-tu-summary-file=%t/tu1.summary.json
-// RUN: %clang_cc1 -fsyntax-only -I %t %t/tu2.cpp \
-// RUN:   --ssaf-extract-summaries=PointerFlow \
-// RUN:   --ssaf-extract-summaries=UnsafeBufferUsage \
-// RUN:   --ssaf-tu-summary-file=%t/tu2.summary.json
+// RUN: %{extract} %t/tu1.cpp --ssaf-tu-summary-file=%t/tu1.summary.json
+// RUN: %{extract} %t/tu2.cpp --ssaf-tu-summary-file=%t/tu2.summary.json
 
 // Link the two TU summaries into a single LU summary.
 // RUN: clang-ssaf-linker %t/tu1.summary.json %t/tu2.summary.json \
