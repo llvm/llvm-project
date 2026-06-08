@@ -334,14 +334,6 @@ public:
 
   bool hasNativeBF16Support(int Opcode) const;
 
-  // Get maximum value of required alignments among the supported data types.
-  // From the PTX ISA doc, section 8.2.3:
-  //  The memory consistency model relates operations executed on memory
-  //  locations with scalar data-types, which have a maximum size and alignment
-  //  of 64 bits. Memory operations with a vector data-type are modelled as a
-  //  set of equivalent memory operations with a scalar data-type, executed in
-  //  an unspecified order on the elements in the vector.
-  unsigned getMaxRequiredAlignment() const { return 8; }
   // Get the smallest cmpxchg word size that the hardware supports.
   unsigned getMinCmpXchgSizeInBits() const { return 32; }
 

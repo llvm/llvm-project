@@ -1360,150 +1360,151 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   const NVPTXMachineFunctionInfo *MFI =
       MF ? MF->getInfo<NVPTXMachineFunctionInfo>() : nullptr;
 
-  bool IsFirst = true;
   const bool IsKernelFunc = isKernelFunction(*F);
 
-  if (F->arg_empty() && !F->isVarArg()) {
+  assert(!F->isVarArg() && "VarArg functions lowered in ExpandVariadics");
+
+  if (F->arg_empty()) {
     O << "()";
     return;
   }
 
   O << "(\n";
 
-  for (const Argument &Arg : F->args()) {
-    Type *Ty = Arg.getType();
-    const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
+  interleave(
+      F->args(), O,
+      [&](const Argument &Arg) {
+        Type *Ty = Arg.getType();
+        const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
 
-    if (!IsFirst)
-      O << ",\n";
+        // Handle image/sampler parameters
+        if (IsKernelFunc) {
+          const PTXOpaqueType ArgOpaqueType = getPTXOpaqueType(Arg);
+          if (ArgOpaqueType != PTXOpaqueType::None) {
+            const bool EmitImgPtr =
+                !MFI || !MFI->checkImageHandleSymbol(ParamSym);
+            O << "\t.param ";
+            if (EmitImgPtr)
+              O << ".u64 .ptr ";
 
-    IsFirst = false;
-
-    // Handle image/sampler parameters
-    if (IsKernelFunc) {
-      const PTXOpaqueType ArgOpaqueType = getPTXOpaqueType(Arg);
-      if (ArgOpaqueType != PTXOpaqueType::None) {
-        const bool EmitImgPtr = !MFI || !MFI->checkImageHandleSymbol(ParamSym);
-        O << "\t.param ";
-        if (EmitImgPtr)
-          O << ".u64 .ptr ";
-
-        switch (ArgOpaqueType) {
-        case PTXOpaqueType::Sampler:
-          O << ".samplerref ";
-          break;
-        case PTXOpaqueType::Texture:
-          O << ".texref ";
-          break;
-        case PTXOpaqueType::Surface:
-          O << ".surfref ";
-          break;
-        case PTXOpaqueType::None:
-          llvm_unreachable("handled above");
-        }
-        O << ParamSym;
-        continue;
-      }
-    }
-
-    if (Arg.hasByValAttr()) {
-      // param has byVal attribute.
-      Type *ETy = Arg.getParamByValType();
-      assert(ETy && "Param should have byval type");
-
-      // Print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
-      // size = typeallocsize of element type
-      const Align OptimalAlign =
-          IsKernelFunc
-              ? getPTXParamAlign(
-                    F, ETy, Arg.getArgNo() + AttributeList::FirstArgIndex, DL)
-              : getDeviceByValParamAlign(F, ETy,
-                                         Arg.getParamAlign().valueOrOne(), DL);
-
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
-        << "[" << DL.getTypeAllocSize(ETy) << "]";
-      continue;
-    }
-
-    if (shouldPassAsArray(Ty)) {
-      // Just print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
-      // size = typeallocsize of element type
-      Align OptimalAlign = getPTXParamAlign(
-          F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
-
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
-        << "[" << DL.getTypeAllocSize(Ty) << "]";
-
-      continue;
-    }
-    // Just a scalar
-    auto *PTy = dyn_cast<PointerType>(Ty);
-    unsigned PTySizeInBits = 0;
-    if (PTy) {
-      PTySizeInBits =
-          TLI->getPointerTy(DL, PTy->getAddressSpace()).getSizeInBits();
-      assert(PTySizeInBits && "Invalid pointer size");
-    }
-
-    if (IsKernelFunc) {
-      if (PTy) {
-        O << "\t.param .u" << PTySizeInBits << " .ptr";
-
-        switch (PTy->getAddressSpace()) {
-        default:
-          break;
-        case ADDRESS_SPACE_GLOBAL:
-          O << " .global";
-          break;
-        case ADDRESS_SPACE_SHARED:
-          O << " .shared";
-          break;
-        case ADDRESS_SPACE_CONST:
-          O << " .const";
-          break;
-        case ADDRESS_SPACE_LOCAL:
-          O << " .local";
-          break;
+            switch (ArgOpaqueType) {
+            case PTXOpaqueType::Sampler:
+              O << ".samplerref ";
+              break;
+            case PTXOpaqueType::Texture:
+              O << ".texref ";
+              break;
+            case PTXOpaqueType::Surface:
+              O << ".surfref ";
+              break;
+            case PTXOpaqueType::None:
+              llvm_unreachable("handled above");
+            }
+            O << ParamSym;
+            return;
+          }
         }
 
-        O << " .align " << Arg.getParamAlign().valueOrOne().value() << " "
-          << ParamSym;
-        continue;
-      }
+        auto GetOptimalAlignForParam = [&DL, F, &Arg](Type *Ty) -> Align {
+          if (MaybeAlign StackAlign =
+                  getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
+            return StackAlign.value();
 
-      // non-pointer scalar to kernel func
-      O << "\t.param .";
-      // Special case: predicate operands become .u8 types
-      if (Ty->isIntegerTy(1))
-        O << "u8";
-      else
-        O << getPTXFundamentalTypeStr(Ty);
-      O << " " << ParamSym;
-      continue;
-    }
-    // Non-kernel function, just print .param .b<size> for ABI
-    // and .reg .b<size> for non-ABI
-    unsigned Size;
-    if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-      Size = promoteScalarArgumentSize(ITy->getBitWidth());
-    } else if (PTy) {
-      assert(PTySizeInBits && "Invalid pointer size");
-      Size = PTySizeInBits;
-    } else
-      Size = Ty->getPrimitiveSizeInBits();
-    O << "\t.param .b" << Size << " " << ParamSym;
-  }
+          Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
+          MaybeAlign ParamAlign =
+              Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
+          return std::max(TypeAlign, ParamAlign.valueOrOne());
+        };
 
-  if (F->isVarArg()) {
-    if (!IsFirst)
-      O << ",\n";
-    O << "\t.param .align " << STI.getMaxRequiredAlignment() << " .b8 "
-      << TLI->getParamName(F, /* vararg */ -1) << "[]";
-  }
+        if (Arg.hasByValAttr()) {
+          // param has byVal attribute.
+          Type *ETy = Arg.getParamByValType();
+          assert(ETy && "Param should have byval type");
+
+          // Print .param .align <a> .b8 .param[size];
+          // <a>  = optimal alignment for the element type; always multiple of
+          //        PAL.getParamAlignment
+          // size = typeallocsize of element type
+          const Align OptimalAlign =
+              IsKernelFunc ? GetOptimalAlignForParam(ETy)
+                           : getFunctionByValParamAlign(
+                                 F, ETy, Arg.getParamAlign().valueOrOne(), DL);
+
+          O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
+            << "[" << DL.getTypeAllocSize(ETy) << "]";
+          return;
+        }
+
+        if (shouldPassAsArray(Ty)) {
+          // Just print .param .align <a> .b8 .param[size];
+          // <a>  = optimal alignment for the element type; always multiple of
+          //        PAL.getParamAlignment
+          // size = typeallocsize of element type
+          Align OptimalAlign = GetOptimalAlignForParam(Ty);
+
+          O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
+            << "[" << DL.getTypeAllocSize(Ty) << "]";
+
+          return;
+        }
+        // Just a scalar
+        auto *PTy = dyn_cast<PointerType>(Ty);
+        unsigned PTySizeInBits = 0;
+        if (PTy) {
+          PTySizeInBits =
+              TLI->getPointerTy(DL, PTy->getAddressSpace()).getSizeInBits();
+          assert(PTySizeInBits && "Invalid pointer size");
+        }
+
+        if (IsKernelFunc) {
+          if (PTy) {
+            O << "\t.param .u" << PTySizeInBits << " .ptr";
+
+            switch (PTy->getAddressSpace()) {
+            default:
+              break;
+            case ADDRESS_SPACE_GLOBAL:
+              O << " .global";
+              break;
+            case ADDRESS_SPACE_SHARED:
+              O << " .shared";
+              break;
+            case ADDRESS_SPACE_CONST:
+              O << " .const";
+              break;
+            case ADDRESS_SPACE_LOCAL:
+              O << " .local";
+              break;
+            }
+
+            O << " .align " << Arg.getParamAlign().valueOrOne().value() << " "
+              << ParamSym;
+            return;
+          }
+
+          // non-pointer scalar to kernel func
+          O << "\t.param .";
+          // Special case: predicate operands become .u8 types
+          if (Ty->isIntegerTy(1))
+            O << "u8";
+          else
+            O << getPTXFundamentalTypeStr(Ty);
+          O << " " << ParamSym;
+          return;
+        }
+        // Non-kernel function, just print .param .b<size> for ABI
+        // and .reg .b<size> for non-ABI
+        unsigned Size;
+        if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
+          Size = promoteScalarArgumentSize(ITy->getBitWidth());
+        } else if (PTy) {
+          assert(PTySizeInBits && "Invalid pointer size");
+          Size = PTySizeInBits;
+        } else
+          Size = Ty->getPrimitiveSizeInBits();
+        O << "\t.param .b" << Size << " " << ParamSym;
+      },
+      ",\n");
 
   O << "\n)";
 }
