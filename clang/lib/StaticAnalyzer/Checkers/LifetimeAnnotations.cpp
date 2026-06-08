@@ -10,7 +10,6 @@
 
 using namespace clang;
 using namespace ento;
-using namespace clang::lifetimes;
 
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SymbolRef,
                                const MemRegion *);
@@ -29,7 +28,7 @@ public:
 };
 
 typedef void (LifetimeAnnotations::*FnCheck)(const CallEvent &Call, const CallExpr *,
-                                              CheckerContext &) const;
+                                              CheckerContext &C) const;
 CallDescriptionMap<FnCheck> Callbacks = {
   {{CDM::SimpleFunc, {"clang_analyzer_lifetime_bound"}},
     &LifetimeAnnotations::analyzerLifetimeBound},
@@ -39,7 +38,7 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
-  const auto *FC = dyn_cast_if_present<AnyFunctionCall>(&Call);
+  const auto *FC = dyn_cast<AnyFunctionCall>(&Call);
   if (!FC)
     return;
 
@@ -67,17 +66,17 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
     if (const MemRegion *ArgValRegion = ArgVal.getAsRegion()) {
       if (RetValSym)
         State = State->set<LifetimeBoundMap>(RetValSym, ArgValRegion);
-      if (const MemRegion *RetValRegion = RetVal.getAsRegion())
+      else if (const MemRegion *RetValRegion = RetVal.getAsRegion())
         State = State->set<LifetimeBoundMapVal>(RetValRegion, ArgValRegion);
     }
   }
 
   if (const auto *IC = dyn_cast<CXXInstanceCall>(&Call)) {
-    if (implicitObjectParamIsLifetimeBound(FD)) {
+    if (clang::lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
       if (const MemRegion *AttrRegion = IC->getCXXThisVal().getAsRegion()) {
         if (RetValSym)
           State = State->set<LifetimeBoundMap>(RetValSym, AttrRegion);
-        if (const MemRegion *RetValRegion = RetVal.getAsRegion())
+        else if (const MemRegion *RetValRegion = RetVal.getAsRegion())
           State = State->set<LifetimeBoundMapVal>(RetValRegion, AttrRegion);
       }
     }
@@ -104,7 +103,7 @@ void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
 
 bool LifetimeAnnotations::evalCall(const CallEvent &Call, CheckerContext &C) const {
 
-  const auto *CE = llvm::dyn_cast_if_present<CallExpr>(Call.getOriginExpr());
+  const auto *CE = dyn_cast_if_present<CallExpr>(Call.getOriginExpr());
   if (!CE)
     return false;
 
@@ -114,7 +113,6 @@ bool LifetimeAnnotations::evalCall(const CallEvent &Call, CheckerContext &C) con
 
   (this->*(*Handler))(Call, CE, C);
   return true;
-  C.addTransition(C.getState());
 }
 
 void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const CallExpr *CE, CheckerContext &C) const {

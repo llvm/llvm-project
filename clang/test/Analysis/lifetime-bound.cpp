@@ -77,7 +77,7 @@ void caller_six() {
   int odd = 55;
   int& s = fn(even, odd);
 
-  clang_analyzer_lifetime_bound(s); // expected-warning {{bound to odd}}
+  clang_analyzer_lifetime_bound(s); // expected-warning {{Origin odd bound to odd}}
 }
 
 
@@ -92,14 +92,7 @@ void caller_seven() {
   int* y_ptr = &y;
   auto* bind = foo(y_ptr);
 
-  clang_analyzer_lifetime_bound(bind); // expected-warning {{bound to y}}
-                                       // expected-warning@-1 {{contains loan y}}
-// FIXME: The full warning does look like this:
-// Origin SymRegion{conj_$5{int *, LC1, S847, #1}} bound to n
-// Origin conj_$5{int *, LC1, S847, #1} contains loan n
-// Since the conj sym number and the ID can change across runs I have decided to just include
-// string parts of the error message since that is the only consistent part of the emitted report.
-// This does not apply to the test cases above this test case.
+  clang_analyzer_lifetime_bound(bind); // expected-warning {{contains loan y}}
 }
 
 // Function returns a reference and has an annotated parameter
@@ -109,9 +102,7 @@ void caller_eight() {
   int f = 15;
   auto& bind = func(f);
 
-  clang_analyzer_lifetime_bound(bind); // expected-warning {{bound to f}}
-                                       // expected-warning@-1 {{contains loan f}}
-// The FIXME about the full warning applies to this text case as well.
+  clang_analyzer_lifetime_bound(bind); // expected-warning {{contains loan f}}
 }
 
 // Function returns a reference and has two annotated parameters.
@@ -122,8 +113,7 @@ void caller_nine() {
   int second_num = 2;
   int& numbers = f(first_num, second_num);
 
-  clang_analyzer_lifetime_bound(numbers); // expected-warning {{bound to first_num}}
-                                          // expected-warning@-1 {{contains loan first_num}}
+  clang_analyzer_lifetime_bound(numbers); // expected-warning {{contains loan first_num}}
 
 // FIXME: Currently the callback only iterates until the first annotated parameter which
 // means the second annotation never gets read here. That is a clear bug. It should be fixed
