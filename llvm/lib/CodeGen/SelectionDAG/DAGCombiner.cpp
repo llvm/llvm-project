@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -27170,26 +27171,55 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
   return CombineTo(N, &Ops);
 }
 
-// Helper that peeks through INSERT_SUBVECTOR/CONCAT_VECTORS to find
-// if the subvector can be sourced for free.
-static SDValue getSubVectorSrc(SDValue V, unsigned Index, EVT SubVT) {
-  if (V.getOpcode() == ISD::INSERT_SUBVECTOR &&
-      V.getOperand(1).getValueType() == SubVT &&
-      V.getConstantOperandAPInt(2) == Index) {
-    return V.getOperand(1);
+// Scan one wide operand's INSERT_SUBVECTOR chain (optionally rooted at a
+// CONCAT_VECTORS) a single time and fill in OpNo's source slot for the indices
+// we actually want, i.e. those already seeded in Srcs by the extract users.
+// Indices not in Srcs are ignored, so the chain is never recorded wholesale.
+// The outermost definition of an index wins; an insert that is not
+// SubVT-aligned can straddle two slots, so we stop there and leave deeper
+// indices unavailable.
+static void collectSubVectorSrcs(
+    SDValue V, EVT SubVT, unsigned OpNo,
+    SmallMapVector<unsigned, std::tuple<SDNode *, SDValue, SDValue>, 4> &Srcs) {
+  unsigned NumSubElts = SubVT.getVectorMinNumElements();
+  auto record = [&](unsigned Idx, SDValue Sub) {
+    auto It = Srcs.find(Idx);
+    if (It == Srcs.end())
+      return;
+    SDValue &Slot =
+        OpNo == 0 ? std::get<1>(It->second) : std::get<2>(It->second);
+    if (!Slot)
+      Slot = Sub;
+  };
+  while (V.getOpcode() == ISD::INSERT_SUBVECTOR &&
+         V.getOperand(1).getValueType() == SubVT) {
+    uint64_t InsIdx = V.getConstantOperandVal(2);
+    if ((InsIdx % NumSubElts) != 0)
+      return;
+    record(InsIdx, V.getOperand(1));
+    V = V.getOperand(0);
   }
   if (V.getOpcode() == ISD::CONCAT_VECTORS &&
-      V.getOperand(0).getValueType() == SubVT &&
-      (Index % SubVT.getVectorMinNumElements()) == 0) {
-    uint64_t SubIdx = Index / SubVT.getVectorMinNumElements();
-    return V.getOperand(SubIdx);
-  }
-  return SDValue();
+      V.getOperand(0).getValueType() == SubVT)
+    for (unsigned I = 0, E = V.getNumOperands(); I != E; ++I)
+      record(I * NumSubElts, V.getOperand(I));
 }
 
-static SDValue narrowInsertExtractVectorBinOp(SDNode *N, EVT SubVT,
-                                              SDValue BinOp, unsigned Index,
-                                              const SDLoc &DL,
+// Try to narrow a wide vector binop whose result is consumed *only* by
+// extract_subvector nodes that all extract the SAME narrow type. The pattern
+// is:
+//   extract (binop (insert/concat ..., X, Idx), (insert/concat ..., Y, Idx)),
+//   Idx
+// When every extract pulls the same SubVT out of both wide operands for free,
+// we replace the wide binop by one narrow binop per extract, eliminating all of
+// the inserts/extracts and the wide binop in a single combine:
+//   extract ..., Idx --> binop X, Y
+// We seed a map with the wanted extract indices, then scan each wide operand's
+// insert/concat chain exactly once to fill in the per-operand sources, so the
+// chains are never re-walked per extract. N is the extract currently being
+// combined: its narrow binop is returned for the caller to fold in, while the
+// sibling extracts are rewritten here so the wide binop is left with no users.
+static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
                                               SelectionDAG &DAG,
                                               bool LegalOperations) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -27201,32 +27231,48 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, EVT SubVT,
   SDValue Bop0 = BinOp.getOperand(0), Bop1 = BinOp.getOperand(1);
   if (VecVT != Bop0.getValueType() || VecVT != Bop1.getValueType())
     return SDValue();
+
+  // This fold only pays off when the wide binop disappears completely, so every
+  // user must be an extract_subvector. Require them all to extract N's type so
+  // a single chain scan serves every extract, and seed the source map by index.
+  EVT SubVT = N->getValueType(0);
+  SmallMapVector<unsigned, std::tuple<SDNode *, SDValue, SDValue>, 4> Extracts;
+  for (SDNode *User : BinOp->users()) {
+    if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        User->getValueType(0) != SubVT ||
+        (User->getCombinerWorklistIndex() < 0 && User != N))
+      return SDValue();
+    Extracts[User->getConstantOperandVal(1)] =
+        std::make_tuple(User, SDValue(), SDValue());
+  }
+
   if (!TLI.isOperationLegalOrCustom(BinOpcode, SubVT, LegalOperations))
     return SDValue();
 
-  SDValue Sub0 = getSubVectorSrc(Bop0, Index, SubVT);
-  SDValue Sub1 = getSubVectorSrc(Bop1, Index, SubVT);
+  // Scan each wide operand's chain once, filling the seeded indices' sources.
+  collectSubVectorSrcs(Bop0, SubVT, /*OpNo=*/0, Extracts);
+  collectSubVectorSrcs(Bop1, SubVT, /*OpNo=*/1, Extracts);
 
-  // TODO: We could handle the case where only 1 operand is being inserted by
-  //       creating an extract of the other operand, but that requires checking
-  //       number of uses and/or costs.
-  if (!Sub0 || !Sub1)
-    return SDValue();
-
-  // Every other user of the wide binop must be an EXTRACT_SUBVECTOR that is
-  // still on the combiner worklist; otherwise the wide binop may remain needed.
-  for (SDNode *User : BinOp->users()) {
-    if (User == N)
-      continue;
-    if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        User->getCombinerWorklistIndex() < 0)
+  // Bail unless every wanted index was sourced for free from both operands, so
+  // we commit to rewriting all of the extracts or none.
+  for (auto &[Idx, Ext] : Extracts)
+    if (!std::get<1>(Ext) || !std::get<2>(Ext))
       return SDValue();
-  }
 
-  // We are inserting both operands of the wide binop only to extract back
-  // to the narrow vector size. Eliminate all of the insert/extract:
-  // ext (binop (ins ?, X, Index), (ins ?, Y, Index)), Index --> binop X, Y
-  return DAG.getNode(BinOpcode, DL, SubVT, Sub0, Sub1, BinOp->getFlags());
+  // Replace each extract with a narrow binop over the matching subvectors:
+  // ext (binop (ins ?, X, Idx), (ins ?, Y, Idx)), Idx --> binop X, Y
+  // Build N's replacement first so node creation order (and thus scheduling)
+  // matches the combiner visiting N directly; rewrite the siblings in place.
+  SDValue Result = SDValue();
+  for (auto &[Idx, Entry] : Extracts) {
+    auto [Ext, Sub0, Sub1] = Entry;
+    SDValue Narrow = DAG.getNode(BinOpcode, SDLoc(Ext), SubVT, Sub0, Sub1,
+                                 BinOp->getFlags());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Ext, 0), Narrow);
+    if (Ext == N)
+      Result = Narrow;
+  }
+  return Result;
 }
 
 /// If we are extracting a subvector produced by a wide binary operator try
@@ -27238,8 +27284,7 @@ static SDValue narrowExtractedVectorBinOp(SDNode *N, EVT VT, SDValue Src,
   // TODO: Refactor with the caller (visitEXTRACT_SUBVECTOR), so we can share
   // some of these bailouts with other transforms.
 
-  if (SDValue V = narrowInsertExtractVectorBinOp(N, VT, Src, Index, DL, DAG,
-                                                 LegalOperations))
+  if (SDValue V = narrowInsertExtractVectorBinOp(N, Src, DAG, LegalOperations))
     return V;
 
   // We are looking for an optionally bitcasted wide vector binary operator
