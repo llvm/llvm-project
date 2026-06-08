@@ -23,6 +23,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -39,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/JSON.h"
 
 #if HAVE_LIBCOMPRESSION
@@ -223,6 +225,79 @@ bool GDBRemoteCommunicationClient::GetMultiBreakpointSupported() {
   return m_supports_multi_breakpoint == eLazyBoolYes;
 }
 
+bool GDBRemoteCommunicationClient::GetAcceleratorPluginsSupported() {
+  if (m_supports_accelerator_plugins == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_accelerator_plugins == eLazyBoolYes;
+}
+
+llvm::Expected<std::vector<AcceleratorActions>>
+GDBRemoteCommunicationClient::GetAcceleratorInitializeActions() {
+  // Get the initial actions (e.g. breakpoints to set) requested by any
+  // accelerator plugins using the "jAcceleratorPluginInitialize" packet. This
+  // is sent once when a native process is launched or attached. The empty
+  // state (no plugins / no actions) is modelled as an empty vector; errors are
+  // returned to the caller to report.
+  if (!GetAcceleratorPluginsSupported())
+    return std::vector<AcceleratorActions>();
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse("jAcceleratorPluginInitialize", response) !=
+      PacketResult::Success)
+    return llvm::createStringError(
+        "failed to send jAcceleratorPluginInitialize packet");
+
+  if (response.IsUnsupportedResponse())
+    return std::vector<AcceleratorActions>();
+
+  if (response.IsErrorResponse())
+    return response.GetStatus().takeError();
+
+  llvm::Expected<std::vector<AcceleratorActions>> actions =
+      llvm::json::parse<std::vector<AcceleratorActions>>(response.Peek(),
+                                                         "AcceleratorActions");
+  if (actions)
+    return actions;
+
+  // A bare JSON parse error (e.g. "missing comma at line 4") is meaningless on
+  // its own, so include both the full response and the parse error; the caller
+  // logs this and the user can spot the problem in the response.
+  return llvm::createStringErrorV(
+      "malformed jAcceleratorPluginInitialize response '{0}': {1}",
+      response.GetStringRef(), llvm::toString(actions.takeError()));
+}
+
+llvm::Expected<AcceleratorBreakpointHitResponse>
+GDBRemoteCommunicationClient::AcceleratorBreakpointHit(
+    const AcceleratorBreakpointHitArgs &args) {
+  StreamGDBRemote packet;
+  packet.PutCString("jAcceleratorPluginBreakpointHit:");
+  packet.PutAsJSON(args, /*hex_ascii=*/false);
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+      PacketResult::Success)
+    return llvm::createStringError(
+        "failed to send jAcceleratorPluginBreakpointHit packet");
+
+  if (response.IsErrorResponse())
+    return response.GetStatus().takeError();
+
+  llvm::Expected<AcceleratorBreakpointHitResponse> hit_response =
+      llvm::json::parse<AcceleratorBreakpointHitResponse>(
+          response.Peek(), "AcceleratorBreakpointHitResponse");
+  if (hit_response)
+    return hit_response;
+
+  // A bare JSON parse error (e.g. "missing comma at line 4") is meaningless on
+  // its own, so include both the full response and the parse error; the caller
+  // logs this and the user can spot the problem in the response.
+  return llvm::createStringErrorV(
+      "malformed jAcceleratorPluginBreakpointHit response '{0}': {1}",
+      response.GetStringRef(), llvm::toString(hit_response.takeError()));
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;
@@ -321,6 +396,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_x_packet_state.reset();
     m_supports_reverse_continue = eLazyBoolCalculate;
     m_supports_reverse_step = eLazyBoolCalculate;
+    m_supports_accelerator_plugins = eLazyBoolCalculate;
     m_supports_qProcessInfoPID = true;
     m_supports_qfProcessInfo = true;
     m_supports_qUserName = true;
@@ -381,6 +457,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_reverse_step = eLazyBoolNo;
   m_supports_multi_mem_read = eLazyBoolNo;
   m_supports_multi_breakpoint = eLazyBoolNo;
+  m_supports_accelerator_plugins = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -444,6 +521,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_multi_mem_read = eLazyBoolYes;
       else if (x == "jMultiBreakpoint+")
         m_supports_multi_breakpoint = eLazyBoolYes;
+      else if (x == "accelerator-plugins+")
+        m_supports_accelerator_plugins = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma

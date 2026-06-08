@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/GDBRemote.h"
@@ -346,6 +347,26 @@ public:
 
   bool GetMultiBreakpointSupported();
 
+  bool GetAcceleratorPluginsSupported();
+
+  /// Send the "jAcceleratorPluginInitialize" packet and return the actions
+  /// requested by each accelerator plugin installed in lldb-server. The packet
+  /// is only sent if the lldb-server advertised accelerator plugin support via
+  /// "accelerator-plugins+" in its qSupported response; otherwise (and when no
+  /// plugin returns actions) this returns an empty vector. Errors are returned
+  /// for the caller to report.
+  llvm::Expected<std::vector<AcceleratorActions>>
+  GetAcceleratorInitializeActions();
+
+  /// Send the "jAcceleratorPluginBreakpointHit" packet to notify the
+  /// accelerator plugin that one of its requested breakpoints was hit, and
+  /// return the plugin's response. This is only used when the lldb-server
+  /// advertised accelerator plugin support via "accelerator-plugins+" in its
+  /// qSupported response, since the breakpoints that trigger it are only set in
+  /// that case. Errors are returned for the caller to report.
+  llvm::Expected<AcceleratorBreakpointHitResponse>
+  AcceleratorBreakpointHit(const AcceleratorBreakpointHitArgs &args);
+
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
@@ -582,6 +603,7 @@ protected:
   LazyBool m_supports_reverse_step = eLazyBoolCalculate;
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
   LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
+  LazyBool m_supports_accelerator_plugins = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,
