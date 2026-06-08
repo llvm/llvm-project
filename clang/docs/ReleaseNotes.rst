@@ -937,6 +937,13 @@ Crash and bug fixes
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
 
+Improvements
+^^^^^^^^^^^^
+
+- The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled
+  by default. It can be re-enabled with
+  ``-analyzer-config alpha.unix.PthreadLock:WarnOnLockOrderReversal=true``.
+
 .. comment:
   This is for the Static Analyzer.
   Using the caret `^^^` underlining for subsections:
