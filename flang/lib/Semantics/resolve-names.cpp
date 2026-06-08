@@ -1000,6 +1000,7 @@ public:
   bool Pre(const parser::NamedConstant &);
   void Post(const parser::EnumDef &);
   bool Pre(const parser::Enumerator &);
+  bool Pre(const parser::EnumerationTypeDef &);
   bool Pre(const parser::AccessSpec &);
   bool Pre(const parser::AsynchronousStmt &);
   bool Pre(const parser::ContiguousStmt &);
@@ -5230,8 +5231,14 @@ void SubprogramVisitor::CreateEntry(
     return static_cast<const parser::Name *>(nullptr);
   }()};
   std::optional<SourceName> distinctResultName;
-  if (resultName && resultName->source != entryName.source) {
-    distinctResultName = resultName->source;
+  if (resultName) {
+    if (resultName->source == entryName.source) {
+      Say(*resultName,
+          "Explicit RESULT('%s') of ENTRY '%s' cannot have the same name as the ENTRY"_err_en_US,
+          resultName->source, entryName.source);
+    } else {
+      distinctResultName = resultName->source;
+    }
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
@@ -6001,6 +6008,12 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   if (enumerationState_.value) {
     (*enumerationState_.value)++;
   }
+  return false;
+}
+
+bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
+  Say(std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source,
+      "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
   return false;
 }
 

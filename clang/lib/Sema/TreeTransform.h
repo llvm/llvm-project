@@ -39,6 +39,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -7671,6 +7672,15 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
   const AttributedType *oldType = TL.getTypePtr();
   QualType modifiedType = getDerived().TransformType(TLB, TL.getModifiedLoc());
   if (modifiedType.isNull())
+    return QualType();
+
+  // HLSL: re-validate matrix-layout markers after substitution. If the
+  // post-substitution type is no longer a matrix, diagnose now.
+  if (SemaRef.getLangOpts().HLSL &&
+      SemaRef.HLSL().diagnoseMatrixLayoutInstantiation(
+          oldType->getAttrKind(), modifiedType,
+          TL.getAttr() ? TL.getAttr()->getLocation()
+                       : TL.getModifiedLoc().getBeginLoc()))
     return QualType();
 
   // oldAttr can be null if we started with a QualType rather than a TypeLoc.

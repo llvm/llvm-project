@@ -17,11 +17,14 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/State.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -50,9 +53,10 @@ NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            llvm::Error &E)
     : NativeProcessProtocol(
           LLDB_INVALID_PROCESS_ID,
-          PseudoTerminal::invalid_fd, // TODO: Implement on Windows
+          PseudoTerminal::invalid_fd, // NativeProcessWindows owns the ConPTY.
           delegate),
-      ProcessDebugger(), m_arch(launch_info.GetArchitecture()) {
+      ProcessDebugger(), m_arch(launch_info.GetArchitecture()),
+      m_stdio_communication("lldb.NativeProcessWindows.stdio") {
   ErrorAsOutParameter EOut(&E);
   DebugDelegateSP delegate_sp(new NativeDebugDelegate(*this));
   E = LaunchProcess(launch_info, delegate_sp).ToError();
@@ -60,12 +64,16 @@ NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
     return;
 
   SetID(GetDebuggedProcessId());
+
+  m_pty = launch_info.TakePTY();
+  StartStdioForwarding();
 }
 
 NativeProcessWindows::NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
-    : NativeProcessProtocol(pid, terminal_fd, delegate), ProcessDebugger() {
+    : NativeProcessProtocol(pid, terminal_fd, delegate), ProcessDebugger(),
+      m_stdio_communication("lldb.NativeProcessWindows.stdio") {
   ErrorAsOutParameter EOut(&E);
   DebugDelegateSP delegate_sp(new NativeDebugDelegate(*this));
   ProcessAttachInfo attach_info;
@@ -431,6 +439,10 @@ void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
+  // Closing the ConPTY signals EOF on the parent-side STDOUT pipe so the
+  // read thread can exit. Tear it down before the debuggee is destroyed.
+  StopStdioForwarding();
+
   ProcessDebugger::OnExitProcess(exit_code);
 
   // No signal involved.  It is just an exit event.
@@ -633,6 +645,18 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
                           wp.m_hardware);
   }
 
+  if (StateType state = GetState();
+      state == eStateStopped || state == eStateCrashed) {
+    if (Status error = thread->DoStop(); error.Fail()) {
+      Log *log = GetLog(WindowsLog::Thread);
+      LLDB_LOG(log, "failed to suspend newly-created thread {0}: {1}",
+               thread->GetID(), error);
+    }
+    ThreadStopInfo stop_info;
+    stop_info.reason = lldb::eStopReasonNone;
+    thread->SetStopReason(stop_info, "");
+  }
+
   m_threads.push_back(std::move(thread));
 }
 
@@ -685,5 +709,59 @@ NativeProcessWindows::Manager::Attach(
   if (E)
     return std::move(E);
   return std::move(process_up);
+}
+
+NativeProcessWindows::~NativeProcessWindows() { StopStdioForwarding(); }
+
+void NativeProcessWindows::StartStdioForwarding() {
+  if (!m_pty || !m_pty->IsConnected())
+    return;
+
+  m_stdio_communication.SetConnection(
+      std::make_unique<ConnectionConPTY>(m_pty));
+  if (!m_stdio_communication.IsConnected())
+    return;
+  m_stdio_communication.SetReadThreadBytesReceivedCallback(
+      &NativeProcessWindows::STDIOReadThreadBytesReceived, this);
+  m_stdio_communication.StartReadThread();
+}
+
+void NativeProcessWindows::StopStdioForwarding() {
+  if (!m_stdio_communication.HasConnection())
+    return;
+
+  if (m_pty)
+    m_pty->Close();
+
+  if (m_stdio_communication.ReadThreadIsRunning())
+    m_stdio_communication.JoinReadThread();
+
+  if (m_stdio_communication.HasConnection())
+    m_stdio_communication.Disconnect();
+}
+
+void NativeProcessWindows::STDIOReadThreadBytesReceived(void *baton,
+                                                        const void *src,
+                                                        size_t src_len) {
+  auto *self = static_cast<NativeProcessWindows *>(baton);
+  if (src_len == 0)
+    return;
+  self->m_delegate.NewProcessOutput(
+      self, llvm::StringRef(static_cast<const char *>(src), src_len));
+}
+
+size_t NativeProcessWindows::WriteStdin(const void *buf, size_t len,
+                                        Status &error) {
+  if (!m_stdio_communication.HasConnection()) {
+    error = Status::FromErrorString(
+        "no ConPTY connection on this NativeProcessWindows");
+    return 0;
+  }
+  ConnectionStatus status;
+  size_t written = m_stdio_communication.Write(buf, len, status, &error);
+  if (status != eConnectionStatusSuccess && error.Success())
+    error = Status::FromErrorStringWithFormatv(
+        "ConPTY stdin write returned status {0}", static_cast<int>(status));
+  return written;
 }
 } // namespace lldb_private

@@ -64,6 +64,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Comdat.h"
@@ -4246,18 +4247,6 @@ void Verifier::verifyTailCCMustTailAttrs(const AttrBuilder &Attrs,
         Twine("byref attribute not allowed in ") + Context);
 }
 
-/// Two types are "congruent" if they are identical, or if they are both pointer
-/// types with different pointee types and the same address space.
-static bool isTypeCongruent(Type *L, Type *R) {
-  if (L == R)
-    return true;
-  PointerType *PL = dyn_cast<PointerType>(L);
-  PointerType *PR = dyn_cast<PointerType>(R);
-  if (!PL || !PR)
-    return false;
-  return PL->getAddressSpace() == PR->getAddressSpace();
-}
-
 static AttrBuilder getParameterABIAttributes(LLVMContext& C, unsigned I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet,  Attribute::ByVal,          Attribute::InAlloca,
@@ -4287,32 +4276,21 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   FunctionType *CalleeTy = CI.getFunctionType();
   Check(CallerTy->isVarArg() == CalleeTy->isVarArg(),
         "cannot guarantee tail call due to mismatched varargs", &CI);
-  Check(isTypeCongruent(CallerTy->getReturnType(), CalleeTy->getReturnType()),
+  Check(CallerTy->getReturnType() == CalleeTy->getReturnType(),
         "cannot guarantee tail call due to mismatched return types", &CI);
 
   // - The calling conventions of the caller and callee must match.
   Check(F->getCallingConv() == CI.getCallingConv(),
         "cannot guarantee tail call due to mismatched calling conv", &CI);
 
-  // - The call must immediately precede a :ref:`ret <i_ret>` instruction,
-  //   or a pointer bitcast followed by a ret instruction.
-  // - The ret instruction must return the (possibly bitcasted) value
-  //   produced by the call or void.
-  Value *RetVal = &CI;
+  // - The call must immediately precede a :ref:`ret <i_ret>` instruction.
+  // - The ret instruction must return the value produced by the call or void.
   Instruction *Next = CI.getNextNode();
-
-  // Handle the optional bitcast.
-  if (BitCastInst *BI = dyn_cast_or_null<BitCastInst>(Next)) {
-    Check(BI->getOperand(0) == RetVal,
-          "bitcast following musttail call must use the call", BI);
-    RetVal = BI;
-    Next = BI->getNextNode();
-  }
 
   // Check the return.
   ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
-  Check(Ret, "musttail call must precede a ret with an optional bitcast", &CI);
-  Check(!Ret->getReturnValue() || Ret->getReturnValue() == RetVal ||
+  Check(Ret, "musttail call must precede a ret", &CI);
+  Check(!Ret->getReturnValue() || Ret->getReturnValue() == &CI ||
             isa<UndefValue>(Ret->getReturnValue()),
         "musttail call result must be returned", Ret);
 
@@ -4341,16 +4319,14 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
     return;
   }
 
-  // - The caller and callee prototypes must match.  Pointer types of
-  //   parameters or return types may differ in pointee type, but not
-  //   address space.
+  // - The caller and callee prototypes must match.
   if (!CI.getIntrinsicID()) {
     Check(CallerTy->getNumParams() == CalleeTy->getNumParams(),
           "cannot guarantee tail call due to mismatched parameter counts", &CI);
     for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-      Check(
-          isTypeCongruent(CallerTy->getParamType(I), CalleeTy->getParamType(I)),
-          "cannot guarantee tail call due to mismatched parameter types", &CI);
+      Check(CallerTy->getParamType(I) == CalleeTy->getParamType(I),
+            "cannot guarantee tail call due to mismatched parameter types",
+            &CI);
     }
   }
 
@@ -6102,56 +6078,67 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Check(Cond && Cond->isOne(),
             "assume with operand bundles must have i1 true condition", Call);
     }
-    for (auto &Elem : Call.bundle_op_infos()) {
-      unsigned ArgCount = Elem.End - Elem.Begin;
+    for (auto OBU : Call.operand_bundles()) {
       // Separate storage assumptions are special insofar as they're the only
       // operand bundles allowed on assumes that aren't parameter attributes.
-      if (Elem.Tag->getKey() == "separate_storage") {
-        Check(ArgCount == 2,
+
+      auto GetTypeAt = [&](unsigned Index) {
+        return OBU.Inputs[Index]->getType();
+      };
+
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::None:
+        CheckFailed("tags must be valid attribute names", Call);
+        break;
+      case BundleAttr::Align:
+        Check(OBU.Inputs.size() >= 2 && OBU.Inputs.size() <= 3,
+              "alignment assumptions should have 2 or 3 arguments", Call);
+        Check(GetTypeAt(0)->isPointerTy(), "first argument should be a pointer",
+              Call);
+        Check(GetTypeAt(1)->isIntegerTy() &&
+                  GetTypeAt(1)->getIntegerBitWidth() <= 64,
+              "second argument should be an integer with a maximum width of 64 "
+              "bits",
+              Call);
+        Check(OBU.Inputs.size() < 3 ||
+                  GetTypeAt(2)->isIntegerTy() &&
+                      GetTypeAt(2)->getIntegerBitWidth() <= 64,
+              "third argument should be an integer with a maximum width of 64 "
+              "bits if present",
+              Call);
+        break;
+      case BundleAttr::Cold:
+        Check(OBU.Inputs.size() == 0,
+              "cold assumptions should have no arguments", Call);
+        break;
+      case BundleAttr::Dereferenceable:
+      case BundleAttr::DereferenceableOrNull:
+        Check(OBU.Inputs.size() == 2,
+              "dereferenceable assumptions should have 2 arguments", Call);
+        Check(GetTypeAt(0)->isPointerTy(), "first argument should be a pointer",
+              Call);
+        Check(GetTypeAt(1)->isIntegerTy(),
+              "second argument should be an integer", Call);
+        break;
+      case BundleAttr::Ignore:
+        break;
+      case BundleAttr::NonNull:
+        Check(OBU.Inputs.size() == 1,
+              "nonnull assumptions should have 1 argument", Call);
+        Check(GetTypeAt(0)->isPointerTy(), "first argument should be a pointer",
+              Call);
+        break;
+      case BundleAttr::NoUndef:
+        Check(OBU.Inputs.size() == 1,
+              "noundef assumptions should have 1 argument", Call);
+        break;
+      case BundleAttr::SeparateStorage:
+        Check(OBU.Inputs.size() == 2,
               "separate_storage assumptions should have 2 arguments", Call);
-        Check(Call.getOperand(Elem.Begin)->getType()->isPointerTy() &&
-                  Call.getOperand(Elem.Begin + 1)->getType()->isPointerTy(),
+        Check(GetTypeAt(0)->isPointerTy() && GetTypeAt(1)->isPointerTy(),
               "arguments to separate_storage assumptions should be pointers",
               Call);
-        continue;
-      }
-      Check(Elem.Tag->getKey() == "ignore" ||
-                Attribute::isExistingAttribute(Elem.Tag->getKey()),
-            "tags must be valid attribute names", Call);
-      Attribute::AttrKind Kind =
-          Attribute::getAttrKindFromName(Elem.Tag->getKey());
-      if (Kind == Attribute::Alignment) {
-        Check(ArgCount <= 3 && ArgCount >= 2,
-              "alignment assumptions should have 2 or 3 arguments", Call);
-        Check(Call.getOperand(Elem.Begin)->getType()->isPointerTy(),
-              "first argument should be a pointer", Call);
-        Check(Call.getOperand(Elem.Begin + 1)->getType()->isIntegerTy(),
-              "second argument should be an integer", Call);
-        if (ArgCount == 3)
-          Check(Call.getOperand(Elem.Begin + 2)->getType()->isIntegerTy(),
-                "third argument should be an integer if present", Call);
-        continue;
-      }
-      if (Kind == Attribute::Dereferenceable) {
-        Check(ArgCount == 2,
-              "dereferenceable assumptions should have 2 arguments", Call);
-        Check(Call.getOperand(Elem.Begin)->getType()->isPointerTy(),
-              "first argument should be a pointer", Call);
-        Check(Call.getOperand(Elem.Begin + 1)->getType()->isIntegerTy(),
-              "second argument should be an integer", Call);
-        continue;
-      }
-      Check(ArgCount <= 2, "too many arguments", Call);
-      if (Kind == Attribute::None)
         break;
-      if (Attribute::isIntAttrKind(Kind)) {
-        Check(ArgCount == 2, "this attribute should have 2 arguments", Call);
-        Check(isa<ConstantInt>(Call.getOperand(Elem.Begin + 1)),
-              "the second argument should be a constant integral value", Call);
-      } else if (Attribute::canUseAsParamAttr(Kind)) {
-        Check((ArgCount) == 1, "this attribute should have one argument", Call);
-      } else if (Attribute::canUseAsFnAttr(Kind)) {
-        Check((ArgCount) == 0, "this attribute has no argument", Call);
       }
     }
     break;

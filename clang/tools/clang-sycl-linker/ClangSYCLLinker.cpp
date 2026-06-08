@@ -18,11 +18,13 @@
 #include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Version.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/Frontend/Offloading/ArchiveLinker.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -187,84 +189,59 @@ static Error executeCommands(StringRef ExecutablePath,
   return Error::success();
 }
 
-static Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
-  // Collect all input bitcode files to be passed to the linking stage.
-  SmallVector<std::string> BitcodeFiles;
-  auto Inputs = Args.filtered(OPT_INPUT);
-  if (Inputs.empty())
+static Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
+getInput(const ArgList &Args) {
+  // Build input descriptors for the shared archive resolver
+  SmallVector<offloading::InputDesc> InputDescs;
+  bool WholeArchive = false;
+  for (const opt::Arg *Arg : Args.filtered(
+           OPT_INPUT, OPT_library, OPT_whole_archive, OPT_no_whole_archive)) {
+    if (Arg->getOption().matches(OPT_whole_archive) ||
+        Arg->getOption().matches(OPT_no_whole_archive)) {
+      WholeArchive = Arg->getOption().matches(OPT_whole_archive);
+      continue;
+    }
+
+    offloading::InputDesc Desc;
+    Desc.Value = Arg->getValue();
+    Desc.InputKind = Arg->getOption().matches(OPT_library)
+                         ? offloading::InputDesc::Kind::Library
+                         : offloading::InputDesc::Kind::File;
+    Desc.WholeArchive = WholeArchive;
+
+    // Validate positional file inputs exist before passing to
+    // resolveArchiveMembers (which silently skips non-existent paths).
+    if (Desc.InputKind == offloading::InputDesc::Kind::File) {
+      if (!sys::fs::exists(Desc.Value))
+        return createStringError("input file not found: '" + Desc.Value + "'");
+      if (sys::fs::is_directory(Desc.Value))
+        return createStringError("'" + Desc.Value + "': Is a directory");
+    }
+
+    InputDescs.push_back(Desc);
+  }
+
+  if (InputDescs.empty())
     return createStringError("No input files provided");
-  for (const opt::Arg *Arg : Inputs) {
-    StringRef Filename = Arg->getValue();
-    if (!sys::fs::exists(Filename) || sys::fs::is_directory(Filename))
-      return createStringError("Input file '" + Filename + "' does not exist");
-    file_magic Magic;
-    if (auto EC = identify_magic(Filename, Magic))
-      return createStringError("Failed to open file " + Filename);
-    // TODO: Current use case involves LLVM IR bitcode files as input.
-    // This will be extended to support SPIR-V IR files.
-    if (Magic != file_magic::bitcode)
-      return createStringError("Unsupported file type for '" + Filename + "'");
-    BitcodeFiles.push_back(std::string(Filename));
-  }
-  return BitcodeFiles;
-}
 
-/// Handle cases where input file is a LLVM IR bitcode file.
-/// When clang-sycl-linker is called via clang-linker-wrapper tool, input files
-/// are LLVM IR bitcode files.
-// TODO: Support SPIR-V IR files.
-static Expected<std::unique_ptr<Module>> getBitcodeModule(StringRef File,
-                                                          LLVMContext &C) {
-  SMDiagnostic Err;
-
-  auto M = getLazyIRFileModule(File, Err, C);
-  if (M)
-    return std::move(M);
-  return createStringError(Err.getMessage());
-}
-
-static std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
-  SmallString<128> Path(Dir);
-  llvm::sys::path::append(Path, Name);
-  if (sys::fs::exists(Path) && !sys::fs::is_directory(Path))
-    return std::string(Path);
-  return std::nullopt;
-}
-
-static std::optional<std::string>
-searchLibrary(StringRef Name, ArrayRef<StringRef> SearchPaths) {
-  // An absolute path is taken as-is; -L paths are only consulted for relative
-  // names.
-  if (sys::path::is_absolute(Name)) {
-    if (sys::fs::exists(Name) && !sys::fs::is_directory(Name))
-      return std::string(Name);
-    return std::nullopt;
-  }
-  for (StringRef Dir : SearchPaths)
-    if (std::optional<std::string> File = findFile(Dir, Name))
-      return File;
-  return std::nullopt;
-}
-
-/// Gather all library files. The list of files and its location are passed from
-/// driver.
-static Expected<SmallVector<std::string>>
-getBCLibraryNames(const ArgList &Args) {
+  // Gather search paths and forced undefined symbols
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
     LibraryPaths.push_back(Arg->getValue());
 
-  SmallVector<std::string> LibraryFiles;
-  for (const opt::Arg *Arg : Args.filtered(OPT_bc_library)) {
-    std::optional<std::string> LibName =
-        searchLibrary(Arg->getValue(), LibraryPaths);
-    if (!LibName)
-      return createStringError("'" + Twine(Arg->getValue()) +
-                               "' library file not found");
-    LibraryFiles.push_back(std::move(*LibName));
-  }
+  std::vector<std::string> ForcedUndefStorage = Args.getAllArgValues(OPT_u);
+  SmallVector<StringRef> ForcedUndefs(ForcedUndefStorage.begin(),
+                                      ForcedUndefStorage.end());
 
-  return LibraryFiles;
+  Expected<offloading::ResolvedInputs> ResolvedOrErr =
+      offloading::resolveArchiveMembers(InputDescs, LibraryPaths, ForcedUndefs);
+  if (!ResolvedOrErr)
+    return ResolvedOrErr.takeError();
+
+  if (ResolvedOrErr->Buffers.empty())
+    return createStringError("No input files could be resolved");
+
+  return std::move(ResolvedOrErr->Buffers);
 }
 
 namespace {
@@ -280,19 +257,12 @@ struct LinkResult {
 /// first input that supplies a triple as canonical. Issue an error if any
 /// triple inputs disagree.
 /// 2. Link all input bitcode images into one image using the linkInModule API.
-/// 3. Gather all library bitcode images.
-/// 4. Link all the images gathered in Step 3 with the output of Step 2 using
-/// linkInModule API. LinkOnlyNeeded flag is used.
-static Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
-                                       const ArgList &Args, LLVMContext &C) {
+static Expected<LinkResult>
+linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> InputBuffers,
+           const ArgList &Args, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("Link code");
 
-  assert(InputFiles.size() && "No inputs to link");
-
-  // Get all library files.
-  Expected<SmallVector<std::string>> BCLibFiles = getBCLibraryNames(Args);
-  if (!BCLibFiles)
-    return BCLibFiles.takeError();
+  assert(InputBuffers.size() && "No inputs to link");
 
   // Create a new file to write the linked file to.
   auto BitcodeOutput =
@@ -301,11 +271,12 @@ static Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
     return BitcodeOutput.takeError();
 
   if (Verbose) {
-    std::string Inputs = llvm::join(InputFiles.begin(), InputFiles.end(), ", ");
-    std::string LibInputs =
-        llvm::join((*BCLibFiles).begin(), (*BCLibFiles).end(), ", ");
-    errs() << formatv("link: inputs: {0} libfiles: {1} output: {2}\n", Inputs,
-                      LibInputs, *BitcodeOutput);
+    std::string Inputs = llvm::join(
+        llvm::map_range(InputBuffers,
+                        [](const auto &B) { return B->getBufferIdentifier(); }),
+        ", ");
+    errs() << formatv("link: inputs: {0} output: {1}\n", Inputs,
+                      *BitcodeOutput);
   }
 
   // Link input files. Resolve the target triple.
@@ -314,8 +285,14 @@ static Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
   auto LinkerOutput = std::make_unique<Module>("linker-output", C);
   Linker L(*LinkerOutput);
 
-  for (auto &File : InputFiles) {
-    auto ModOrErr = getBitcodeModule(File, C);
+  for (const auto &Buffer : InputBuffers) {
+    // Check file type before attempting to parse as bitcode
+    file_magic Magic = identify_magic(Buffer->getBuffer());
+    if (Magic != file_magic::bitcode)
+      return createStringError("Unsupported file type: '" +
+                               Buffer->getBufferIdentifier() + "'");
+
+    auto ModOrErr = parseBitcodeFile(Buffer->getMemBufferRef(), C);
     if (!ModOrErr)
       return ModOrErr.takeError();
 
@@ -323,11 +300,12 @@ static Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
     if (!T.empty() && T != TargetTriple) {
       if (TargetTriple.empty()) {
         TargetTriple = T;
-        TripleSource = File;
+        TripleSource = Buffer->getBufferIdentifier();
       } else {
         return createStringError(
             "conflicting target triples: '" + TargetTriple.str() + "' (from " +
-            TripleSource + ") vs '" + T.str() + "' (from " + File + ")");
+            TripleSource + ") vs '" + T.str() + "' (from " +
+            Buffer->getBufferIdentifier() + ")");
       }
     }
 
@@ -338,18 +316,6 @@ static Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
   if (TargetTriple.empty())
     return createStringError(
         "Target triple must be specified or inferable from inputs");
-
-  // Link in library files.
-  for (auto &File : *BCLibFiles) {
-    auto LibMod = getBitcodeModule(File, C);
-    if (!LibMod)
-      return LibMod.takeError();
-    if ((*LibMod)->getTargetTriple() == TargetTriple) {
-      unsigned Flags = Linker::Flags::LinkOnlyNeeded;
-      if (L.linkInModule(std::move(*LibMod), Flags))
-        return createStringError("Could not link IR");
-    }
-  }
 
   // Dump linked output for testing.
   if (Args.hasArg(OPT_print_linked_module))
@@ -693,13 +659,14 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
 /// 4. Optionally run AOT compilation when targeting an Intel HW arch.
 /// 5. Pack the resulting images into a single OffloadBinary written to the
 ///    output file.
-static Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
+static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
+                         const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("SYCL linking");
 
   LLVMContext C;
 
   // Link all input bitcode files and library files.
-  Expected<LinkResult> LinkedOrErr = linkInputs(Files, Args, C);
+  Expected<LinkResult> LinkedOrErr = linkInputs(Buffers, Args, C);
   if (!LinkedOrErr)
     return LinkedOrErr.takeError();
   LinkResult &Result = *LinkedOrErr;
@@ -849,10 +816,10 @@ int main(int argc, char **argv) {
     reportError(createStringError("Output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
 
-  // Get the input files to pass to the linking stage.
-  auto FilesOrErr = getInput(Args);
-  if (!FilesOrErr)
-    reportError(FilesOrErr.takeError());
+  // Get the input buffers to pass to the linking stage.
+  auto BuffersOrErr = getInput(Args);
+  if (!BuffersOrErr)
+    reportError(BuffersOrErr.takeError());
 
   if (auto *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ)) {
     StringRef V = A->getValue();
@@ -871,7 +838,7 @@ int main(int argc, char **argv) {
   }
 
   // Run SYCL linking process on the generated inputs.
-  if (Error Err = runSYCLLink(*FilesOrErr, Args))
+  if (Error Err = runSYCLLink(*BuffersOrErr, Args))
     reportError(std::move(Err));
 
   // Remove the temporary files created.

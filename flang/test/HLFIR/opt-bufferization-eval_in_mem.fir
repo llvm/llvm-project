@@ -60,3 +60,33 @@ func.func @_QPnegative_test_is_target(%arg0: !fir.ref<!fir.array<10xf32>> {fir.b
 // CHECK:         hlfir.destroy %[[VAL_10]] : !hlfir.expr<10xf32>
 // CHECK:         return
 // CHECK:       }
+
+// A hlfir.shape_of user of the eval_in_mem (such as the one left behind by
+// SeparateAllocatableAssign when sizing a reallocation) must not block the
+// in-place rewrite: it is redirected to the eval_in_mem shape operand.
+func.func @_QPtest_shape_of_user(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<index>) {
+  %c10 = arith.constant 10 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %3 = hlfir.eval_in_mem shape %1 : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+  ^bb0(%arg2: !fir.ref<!fir.array<10xf32>>):
+    %4 = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
+    fir.save_result %4 to %arg2(%1) : !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>, !fir.shape<1>
+  }
+  %shp = hlfir.shape_of %3 : (!hlfir.expr<10xf32>) -> !fir.shape<1>
+  %ext = hlfir.get_extent %shp {dim = 0 : index} : (!fir.shape<1>) -> index
+  hlfir.assign %3 to %2#0 : !hlfir.expr<10xf32>, !fir.ref<!fir.array<10xf32>>
+  hlfir.destroy %3 : !hlfir.expr<10xf32>
+  fir.store %ext to %arg1 : !fir.ref<index>
+  return
+}
+// CHECK-LABEL: func.func @_QPtest_shape_of_user(
+// CHECK:         %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+// The shape_of is redirected to the eval_in_mem shape operand...
+// CHECK:         hlfir.get_extent %[[SHAPE]]
+// ...and the result is still evaluated directly into the LHS (no temporary).
+// CHECK:         %[[CALL:.*]] = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
+// CHECK:         fir.save_result %[[CALL]] to %{{.*}}#0(%[[SHAPE]])
+// CHECK-NOT:     hlfir.eval_in_mem
+// CHECK-NOT:     hlfir.shape_of

@@ -37,12 +37,6 @@ tensor_load_to_lds null, s[4:11], s[12:15], s[16:19]
 tensor_load_to_lds s[0:3], null, s[12:15], s[16:19]
 // GFX1250-ERR: :[[@LINE-1]]:28: error: invalid operand for instruction
 
-tensor_load_to_lds s[0:3], s[4:11], null, s[16:19]
-// GFX1250-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
-
-tensor_load_to_lds s[0:3], s[4:11], s[12:15], null
-// GFX1250-ERR: :[[@LINE-1]]:47: error: invalid operand for instruction
-
 tensor_store_from_lds null, s[4:11]
 // GFX1250-ERR: :[[@LINE-1]]:23: error: invalid operand for instruction
 
@@ -54,12 +48,6 @@ tensor_store_from_lds null, s[4:11], s[12:15], s[16:19]
 
 tensor_store_from_lds s[0:3], null, s[12:15], s[16:19]
 // GFX1250-ERR: :[[@LINE-1]]:31: error: invalid operand for instruction
-
-tensor_store_from_lds s[0:3], s[4:11], null, s[16:19]
-// GFX1250-ERR: :[[@LINE-1]]:40: error: invalid operand for instruction
-
-tensor_store_from_lds s[0:3], s[4:11], s[12:15], null
-// GFX1250-ERR: :[[@LINE-1]]:50: error: invalid operand for instruction
 
 tensor_load_to_lds s[14:17], s[4:11]
 // GFX1250-ERR: :[[@LINE-1]]:20: error: invalid register alignment

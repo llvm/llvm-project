@@ -28,6 +28,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "colon";
   case Kind::coloncolon:
     return "coloncolon";
+  case Kind::equal:
+    return "equal";
   case Kind::eof:
     return "eof";
   case Kind::float_constant:
@@ -50,12 +52,16 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "lessless";
   case Kind::minus:
     return "minus";
+  case Kind::minusequal:
+    return "minusequal";
   case Token::percent:
     return "percent";
   case Kind::period:
     return "period";
   case Kind::plus:
     return "plus";
+  case Kind::plusequal:
+    return "plusequal";
   case Kind::r_paren:
     return "r_paren";
   case Kind::r_square:
@@ -188,13 +194,19 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(kind, word.str(), position);
   }
 
+  // IMPORTANT: If two or more tokens share the same prefix, the tokens need to
+  // be ordered longest-to-shortest in the list below. E.g. '::' must come
+  // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
       {Token::arrow, "->"},
       {Token::coloncolon, "::"},
       {Token::greatergreater, ">>"},
       {Token::lessless, "<<"},
+      {Token::minusequal, "-="},
+      {Token::plusequal, "+="},
       {Token::amp, "&"},
       {Token::colon, ":"},
+      {Token::equal, "="},
       {Token::l_paren, "("},
       {Token::l_square, "["},
       {Token::minus, "-"},
