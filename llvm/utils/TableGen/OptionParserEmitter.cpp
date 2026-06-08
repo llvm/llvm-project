@@ -13,8 +13,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/OptTable.h"
-#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -204,50 +204,68 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
-static void emitHelpTextsForVariants(
-    raw_ostream &OS, std::vector<std::pair<std::vector<std::string>, StringRef>>
-                         HelpTextsForVariants) {
-  // OptTable must be constexpr so it uses std::arrays with these capacities.
+struct HelpTextVariant {
+  std::vector<std::string> Visibilities;
+  StringRef Text;
+};
+
+static std::optional<HelpTextVariant> getHelpTextVariant(const Record &R) {
   const unsigned MaxVisibilityPerHelp = 2;
   const unsigned MaxVisibilityHelp = 1;
 
-  assert(HelpTextsForVariants.size() <= MaxVisibilityHelp &&
-         "Too many help text variants to store in "
-         "OptTable::HelpTextsForVariants");
+  std::vector<const Record *> Variants =
+      R.getValueAsListOfDefs("HelpTextsForVariants");
+  if (Variants.size() > MaxVisibilityHelp)
+    PrintFatalError(R.getLoc(),
+                    "at most one HelpTextForVariants entry is supported");
+  if (Variants.empty())
+    return std::nullopt;
 
-  // This function must initialise any unused elements of those arrays.
-  for (auto [Visibilities, _] : HelpTextsForVariants)
-    while (Visibilities.size() < MaxVisibilityPerHelp)
-      Visibilities.push_back("0");
+  const Record &Variant = *Variants.front();
+  ArrayRef<const Init *> VisibilityInits =
+      Variant.getValueAsListInit("Visibilities")->getElements();
+  if (VisibilityInits.size() > MaxVisibilityPerHelp)
+    PrintFatalError(
+        Variant.getLoc(),
+        "at most two visibilities are supported per HelpTextForVariants entry");
 
-  while (HelpTextsForVariants.size() < MaxVisibilityHelp)
-    HelpTextsForVariants.push_back(
-        {std::vector<std::string>(MaxVisibilityPerHelp, "0"), ""});
+  HelpTextVariant Result;
+  for (const Init *Visibility : VisibilityInits)
+    Result.Visibilities.push_back(Visibility->getAsUnquotedString());
+  Result.Text = Variant.getValueAsString("Text");
+  return Result;
+}
 
-  OS << ", (std::array<std::pair<std::array<unsigned, " << MaxVisibilityPerHelp
-     << ">, const char*>, " << MaxVisibilityHelp << ">{{ ";
+struct IndexedHelpTextVariant {
+  const Record *Option;
+  HelpTextVariant Variant;
+};
 
-  auto VisibilityHelpEnd = HelpTextsForVariants.cend();
-  for (auto VisibilityHelp = HelpTextsForVariants.cbegin();
-       VisibilityHelp != VisibilityHelpEnd; ++VisibilityHelp) {
-    auto [Visibilities, Help] = *VisibilityHelp;
+static void
+emitHelpTextVariants(raw_ostream &OS,
+                     ArrayRef<IndexedHelpTextVariant> HelpTextVariants) {
+  if (HelpTextVariants.empty())
+    return;
 
-    assert(Visibilities.size() <= MaxVisibilityPerHelp &&
-           "Too many visibilities to store in an "
-           "OptTable::HelpTextsForVariants entry");
-    OS << "{std::array<unsigned, " << MaxVisibilityPerHelp << ">{{"
-       << llvm::interleaved(Visibilities) << "}}, ";
-
-    if (Help.size())
-      writeCstring(OS, Help);
+  OS << "\nstatic constexpr llvm::opt::OptTable::HelpTextVariants "
+        "OptionHelpTextVariants[] = {\n";
+  for (const IndexedHelpTextVariant &Entry : HelpTextVariants) {
+    OS << "  {";
+    if (!isa<UnsetInit>(Entry.Option->getValueInit("HelpText")))
+      writeCstring(OS, Entry.Option->getValueAsString("HelpText"));
     else
       OS << "nullptr";
-    OS << "}";
-
-    if (std::next(VisibilityHelp) != VisibilityHelpEnd)
-      OS << ", ";
+    OS << ", ";
+    writeCstring(OS, Entry.Variant.Text);
+    OS << ", ";
+    llvm::ListSeparator Sep(" | ");
+    for (const std::string &Visibility : Entry.Variant.Visibilities)
+      OS << Sep << Visibility;
+    if (Entry.Variant.Visibilities.empty())
+      OS << "0";
+    OS << "}, // " << getOptionName(*Entry.Option) << "\n";
   }
-  OS << " }})";
+  OS << "};\n";
 }
 
 /// OptionParserEmitter - This tablegen backend takes an input .td file
@@ -259,6 +277,15 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       Records.getAllDerivedDefinitions("OptionGroup");
   std::vector<const Record *> Opts = Records.getAllDerivedDefinitions("Option");
   llvm::sort(Opts, IsOptionRecordsLess);
+
+  std::map<const Record *, unsigned> HelpTextVariantIndices;
+  std::vector<IndexedHelpTextVariant> HelpTextVariants;
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
+    if (std::optional<HelpTextVariant> Variant = getHelpTextVariant(R)) {
+      HelpTextVariantIndices.try_emplace(&R, HelpTextVariants.size());
+      HelpTextVariants.push_back({&R, std::move(*Variant)});
+    }
+  }
 
   std::vector<const Record *> SubCommands =
       Records.getAllDerivedDefinitions("SubCommand");
@@ -355,6 +382,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     }
   }
   OS << "\n};\n";
+  emitHelpTextVariants(OS, HelpTextVariants);
   OS << "#endif // OPTTABLE_PREFIXES_TABLE_CODE\n\n";
 
   // Dump subcommand IDs.
@@ -461,8 +489,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << ", nullptr";
     }
 
-    // Not using Visibility specific text for group help.
-    emitHelpTextsForVariants(OS, {});
+    // Groups do not use visibility-specific help text.
+    OS << ", false";
 
     // The option meta-variable name (unused).
     OS << ", nullptr";
@@ -560,30 +588,20 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     // The option parameter field.
     OS << ", " << R.getValueAsInt("NumArgs");
 
-    // The option help text.
-    if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
+    // The option help text. Options with visibility-specific help point to a
+    // sparse descriptor emitted next to the option prefix table.
+    auto HelpTextVariant = HelpTextVariantIndices.find(&R);
+    if (HelpTextVariant != HelpTextVariantIndices.end()) {
+      OS << ",\n       &OptionHelpTextVariants[" << HelpTextVariant->second
+         << "]";
+    } else if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
       OS << ",\n";
       OS << "       ";
       writeCstring(OS, R.getValueAsString("HelpText"));
     } else {
       OS << ", nullptr";
     }
-
-    std::vector<std::pair<std::vector<std::string>, StringRef>>
-        HelpTextsForVariants;
-    for (const Record *VisibilityHelp :
-         R.getValueAsListOfDefs("HelpTextsForVariants")) {
-      ArrayRef<const Init *> Visibilities =
-          VisibilityHelp->getValueAsListInit("Visibilities")->getElements();
-
-      std::vector<std::string> VisibilityNames;
-      for (const Init *Visibility : Visibilities)
-        VisibilityNames.push_back(Visibility->getAsUnquotedString());
-
-      HelpTextsForVariants.emplace_back(
-          VisibilityNames, VisibilityHelp->getValueAsString("Text"));
-    }
-    emitHelpTextsForVariants(OS, std::move(HelpTextsForVariants));
+    OS << ", " << (HelpTextVariant != HelpTextVariantIndices.end());
 
     // The option meta-variable name.
     OS << ", ";

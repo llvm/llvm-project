@@ -144,7 +144,7 @@ public:
   /// Get the help text for this option.
   StringRef getHelpText() const {
     assert(Info && "Must have a valid info!");
-    return Info->HelpText;
+    return Info->getHelpText();
   }
 
   /// Get the meta-variable list for this option.

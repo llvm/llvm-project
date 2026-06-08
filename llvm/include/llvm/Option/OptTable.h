@@ -60,36 +60,43 @@ public:
     const char *Usage;
   };
 
+  struct HelpTextVariants {
+    const char *Default;
+    const char *Text;
+    unsigned VisibilityMask;
+  };
+
   /// Entry for a single option instance in the option data table.
   struct Info {
     unsigned PrefixesOffset;
     StringTable::Offset PrefixedNameOffset;
-    const char *HelpText;
-    // Help text for specific visibilities. A list of pairs, where each pair
-    // is a list of visibilities and a specific help string for those
-    // visibilities. If no help text is found in this list for the visibility of
-    // the program, HelpText is used instead. This cannot use std::vector
-    // because OptTable is used in constexpr contexts. Increase the array sizes
-    // here if you need more entries and adjust the constants in
-    // OptionParserEmitter::EmitHelpTextsForVariants.
-    std::array<std::pair<std::array<unsigned int, 2 /*MaxVisibilityPerHelp*/>,
-                         const char *>,
-               1 /*MaxVisibilityHelp*/>
-        HelpTextsForVariants;
-    const char *MetaVar;
     unsigned ID;
-    unsigned char Kind;
-    unsigned char Param;
-    unsigned int Flags;
-    unsigned int Visibility;
-    unsigned short GroupID;
-    unsigned short AliasID;
-    const char *AliasArgs;
-    const char *Values;
+    unsigned Flags;
+    unsigned Visibility;
     // Offset into OptTable's SubCommandIDsTable.
     unsigned SubCommandIDsOffset;
+    unsigned short GroupID;
+    unsigned short AliasID;
+    unsigned char Kind;
+    unsigned char Param;
+    bool HasHelpTextVariants;
+    // Points to a C string unless HasHelpTextVariants is set, in which case it
+    // points to a HelpTextVariants descriptor.
+    const void *HelpText;
+    const char *MetaVar;
+    const char *AliasArgs;
+    const char *Values;
 
     bool hasNoPrefix() const { return PrefixesOffset == 0; }
+
+    const char *getHelpText(
+        llvm::opt::Visibility VisibilityMask = llvm::opt::Visibility(0)) const {
+      if (!HasHelpTextVariants)
+        return static_cast<const char *>(HelpText);
+      const auto *Variants = static_cast<const HelpTextVariants *>(HelpText);
+      return Variants->VisibilityMask & VisibilityMask ? Variants->Text
+                                                       : Variants->Default;
+    }
 
     unsigned getNumPrefixes(ArrayRef<StringTable::Offset> PrefixesTable) const {
       // We embed the number of prefixes in the value of the first offset.
@@ -142,6 +149,9 @@ public:
       return getPrefixedName(StrTable).drop_front(PrefixLength);
     }
   };
+
+  static_assert(sizeof(void *) != 8 || sizeof(Info) == 64,
+                "unexpected OptTable::Info layout");
 
 public:
   bool isValidForSubCommand(const Info *CandidateInfo,
@@ -285,12 +295,7 @@ public:
   // visibility mask, use that text instead of the generic text.
   const char *getOptionHelpText(OptSpecifier id,
                                 Visibility VisibilityMask) const {
-    auto Info = getInfo(id);
-    for (auto [Visibilities, Text] : Info.HelpTextsForVariants)
-      for (auto Visibility : Visibilities)
-        if (VisibilityMask & Visibility)
-          return Text;
-    return Info.HelpText;
+    return getInfo(id).getHelpText(VisibilityMask);
   }
 
   /// Get the meta-variable name to use when describing
@@ -525,10 +530,10 @@ protected:
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
     METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)                                     \
   llvm::opt::OptTable::Info {                                                  \
-    PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, HELPTEXT, HELPTEXTSFORVARIANTS,     \
-        METAVAR, ID_PREFIX##ID, llvm::opt::Option::KIND##Class, PARAM, FLAGS,  \
-        VISIBILITY, ID_PREFIX##GROUP, ID_PREFIX##ALIAS, ALIASARGS, VALUES,     \
-        SUBCOMMANDIDS_OFFSET                                                   \
+    PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID_PREFIX##ID, FLAGS, VISIBILITY,   \
+        SUBCOMMANDIDS_OFFSET, ID_PREFIX##GROUP, ID_PREFIX##ALIAS,              \
+        llvm::opt::Option::KIND##Class, PARAM, HELPTEXTSFORVARIANTS, HELPTEXT, \
+        METAVAR, ALIASARGS, VALUES                                             \
   }
 
 #define LLVM_CONSTRUCT_OPT_INFO(                                               \
