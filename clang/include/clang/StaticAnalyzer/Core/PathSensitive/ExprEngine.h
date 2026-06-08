@@ -368,6 +368,7 @@ public:
   void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
   void ProcessLoopExit(const Stmt* S, ExplodedNode *Pred);
+  void ProcessLifetimeEnd(const Stmt *S, const VarDecl *D, ExplodedNode *Pred);
 
   void ProcessInitializer(const CFGInitializer I, ExplodedNode *Pred);
 
