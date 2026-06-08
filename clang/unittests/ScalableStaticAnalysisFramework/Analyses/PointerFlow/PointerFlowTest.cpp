@@ -18,9 +18,9 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
