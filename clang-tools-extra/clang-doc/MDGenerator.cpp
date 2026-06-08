@@ -223,7 +223,11 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
 
       LDBG() << "paragraph -> " << Nodes.size() << " Markdown node(s)";
 
-      if (!Nodes.empty()) {
+      bool HasMarkdown = llvm::any_of(Nodes, [](const markdown::MDNode &N) {
+        return N.Kind != markdown::NodeKind::NK_Text;
+      });
+
+      if (HasMarkdown) {
         for (const auto &Node : Nodes)
           writeMDNode(Node, OS);
         writeNewLine(OS);
