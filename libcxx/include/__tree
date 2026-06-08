@@ -582,7 +582,7 @@ public:
     __parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__p);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node_base() = default;
+  _LIBCPP_HIDE_FROM_ABI __tree_node_base()             = default;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
