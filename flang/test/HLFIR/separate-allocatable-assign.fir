@@ -179,3 +179,35 @@ func.func @test_lower_bounds(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32
 // Lower bound 10 should appear in the embox/store of the new allocation.
 // CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK: hlfir.assign %{{.*}} to %[[BOX]] : !fir.box<!fir.array<3xi32>>, !fir.box<!fir.heap<!fir.array<?xi32>>>
+
+// Test: lower bounds from an hlfir.expr RHS that wraps a variable (via
+// hlfir.as_expr) must be preserved during reallocation.  This is the
+// structure-constructor case `t = x(f())` where `f` is an allocatable function
+// result with a non-default lower bound: the allocatable component must take
+// the source's bounds (F2018 7.5.10).  The pass must read the lower bound from
+// the wrapped variable's descriptor instead of assuming 1.
+func.func @test_expr_lower_bounds(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %arg1: !fir.ref<!fir.array<3xi32>>) {
+  %c10 = arith.constant 10 : index
+  %c3 = arith.constant 3 : index
+  %true = arith.constant true
+  %shapeshift = fir.shape_shift %c10, %c3 : (index, index) -> !fir.shapeshift<1>
+
+  %dest:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEdest"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %source:2 = hlfir.declare %arg1(%shapeshift) {uniq_name = "_QFEsource"} : (!fir.ref<!fir.array<3xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+  %expr = hlfir.as_expr %source#0 move %true : (!fir.box<!fir.array<3xi32>>, i1) -> !hlfir.expr<3xi32>
+
+  hlfir.assign %expr to %dest#0 realloc temporary_lhs : !hlfir.expr<3xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  hlfir.destroy %expr : !hlfir.expr<3xi32>
+  return
+}
+
+// CHECK-LABEL: func.func @test_expr_lower_bounds
+// The realloc should be separated with the wrapped variable's lower bound 10.
+// CHECK-NOT: hlfir.assign{{.*}}realloc
+// CHECK: %[[C10:.*]] = arith.constant 10 : index
+// CHECK: fir.if
+// CHECK: fir.allocmem
+// Lower bound 10 (not 1) must appear in the embox/store of the new allocation.
+// CHECK: fir.shape_shift %[[C10]]
+// CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+// CHECK: hlfir.assign %{{.*}} to %[[BOX]] temporary_lhs : !hlfir.expr<3xi32>, !fir.box<!fir.heap<!fir.array<?xi32>>>
