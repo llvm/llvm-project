@@ -1,0 +1,5 @@
+# UNSUPPORTED: zlib
+# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t
+# RUN: not llvm-objcopy --compress-sections '.debug_foo=zlib' %t /dev/null 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK: error: '[[FILE]]': failed to compress section '.debug_foo': LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
