@@ -110,8 +110,8 @@
 ## folded symbols but not folded cstrings; we print both.
 
 # ICF:     Symbols:
-# ICF-DAG: 0x[[#%X,FOO:]]     0x00000000  [  3] __ZTIN3foo3bar4MethE
-# ICF-DAG: 0x[[#FOO]]         0x00000001  [  2] _bar
+# ICF-DAG: 0x[[#%X,FOO:]]     0x00000001  [  3] __ZTIN3foo3bar4MethE
+# ICF-DAG: 0x[[#FOO]]         0x00000000  [  2] _bar
 # ICF-DAG: 0x[[#%X,HIWORLD:]] 0x0000000E  [  4]  literal string: Hello world!\n
 # ICF-DAG: 0x[[#%X,HIWORLD]]  0x00000000  [  4]  literal string: Hello world!\n
 
