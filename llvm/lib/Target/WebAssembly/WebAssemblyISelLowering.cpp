@@ -185,6 +185,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
     setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
     setOperationAction(ISD::UADDO, MVT::i64, Custom);
+  } else {
+    setOperationAction(ISD::MUL, MVT::i128, Custom);
   }
 
   if (Subtarget->hasNontrappingFPToInt())
@@ -1732,6 +1734,10 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
   case ISD::SUB:
     Results.push_back(Replace128Op(N, DAG));
     break;
+  case ISD::MUL:
+    if (SDValue Res = LowerMUL128(N, DAG))
+      Results.push_back(Res);
+    break;
   default:
     llvm_unreachable(
         "ReplaceNodeResults not implemented for this op for WebAssembly!");
@@ -1992,6 +1998,29 @@ SDValue WebAssemblyTargetLowering::Replace128Op(SDNode *N,
                                   LHS_0, LHS_1, RHS_0, RHS_1);
   SDValue Result_HI(Result_LO.getNode(), 1);
   return DAG.getNode(ISD::BUILD_PAIR, DL, N->getVTList(), Result_LO, Result_HI);
+}
+
+SDValue WebAssemblyTargetLowering::LowerMUL128(SDNode *N,
+                                               SelectionDAG &DAG) const {
+  assert(N->getOpcode() == ISD::MUL);
+  assert(N->getValueType(0) == MVT::i128);
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Only expand the multiply if the upper 64 bits of each operand are zero
+  APInt HighMask = APInt::getHighBitsSet(128, 64);
+  if (!DAG.MaskedValueIsZero(LHS, HighMask) ||
+      !DAG.MaskedValueIsZero(RHS, HighMask))
+    return SDValue();
+
+  SDValue C0 = DAG.getConstant(0, DL, MVT::i64);
+  SDValue LHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C0);
+  SDValue RHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C0);
+
+  SDValue Lo, Hi;
+  forceExpandMultiply(DAG, DL, /*Signed=*/false, Lo, Hi, LHS_0, RHS_0);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128, Lo, Hi);
 }
 
 SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
