@@ -20,10 +20,6 @@ body:             |
     ; GCN-NEXT: $vgpr47 = V_LSHL_ADD_U32_e64 killed $vgpr42, 1, $vgpr42, implicit $exec
     ; GCN-NEXT: $vgpr48 = V_LSHL_ADD_U32_e64 killed $vgpr41, 1, $vgpr41, implicit $exec
     ; GCN-NEXT: $vgpr49 = V_LSHL_ADD_U32_e64 killed $vgpr40, 1, $vgpr40, implicit $exec
-    ; GCN-NEXT: V_NOP_e32 implicit $exec
-    ; GCN-NEXT: V_NOP_e32 implicit $exec
-    ; GCN-NEXT: V_NOP_e32 implicit $exec
-    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: $vgpr4 = V_ADD_F32_e32 1065353216, killed $vgpr4, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr5 = V_ADD_F32_e32 1065353216, killed $vgpr5, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr6 = V_ADD_F32_e32 1065353216, killed $vgpr6, implicit $mode, implicit $exec
