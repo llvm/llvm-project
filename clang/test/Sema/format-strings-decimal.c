@@ -4,38 +4,38 @@ int printf(const char *restrict, ...);
 int scanf(const char *restrict, ...);
 
 void t1(float f, double d, long double ld) {
-  printf("%Hf", f);   // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
-  printf("%He", f);   // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
-  printf("%Hg", f);   // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
-  printf("%Ha", f);   // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
-  printf("%HF", f);   // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
-  printf("%HE", f);   // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
-  printf("%HG", f);   // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
-  printf("%HA", f);   // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
+  printf("%Hf", f);   // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
+  printf("%He", f);   // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
+  printf("%Hg", f);   // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
+  printf("%Ha", f);   // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
+  printf("%HF", f);   // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
+  printf("%HE", f);   // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
+  printf("%HG", f);   // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
+  printf("%HA", f);   // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
 
-  printf("%Df", d);   // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
-  printf("%De", d);   // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
-  printf("%Dg", d);   // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
-  printf("%Da", d);   // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
-  printf("%DF", d);   // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
-  printf("%DE", d);   // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
-  printf("%DG", d);   // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
-  printf("%DA", d);   // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
+  printf("%Df", d);   // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
+  printf("%De", d);   // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
+  printf("%Dg", d);   // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
+  printf("%Da", d);   // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
+  printf("%DF", d);   // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
+  printf("%DE", d);   // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
+  printf("%DG", d);   // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
+  printf("%DA", d);   // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
 
-  printf("%DDf", ld); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
-  printf("%DDe", ld); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
-  printf("%DDg", ld); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
-  printf("%DDa", ld); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
-  printf("%DDF", ld); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
-  printf("%DDE", ld); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
-  printf("%DDG", ld); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
-  printf("%DDA", ld); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
+  printf("%DDf", ld); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
+  printf("%DDe", ld); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
+  printf("%DDg", ld); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
+  printf("%DDa", ld); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
+  printf("%DDF", ld); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
+  printf("%DDE", ld); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
+  printf("%DDG", ld); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
+  printf("%DDA", ld); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
 }
 
 void t2(int i) {
-  printf("%Df", i);  // expected-warning{{format specifier requires type '_Decimal64' which is not supported}}
-  printf("%Hf", i);  // expected-warning{{format specifier requires type '_Decimal32' which is not supported}}
-  printf("%DDf", i); // expected-warning{{format specifier requires type '_Decimal128' which is not supported}}
+  printf("%Df", i);  // expected-warning{{format specifies type '_Decimal64' which is not supported yet}}
+  printf("%Hf", i);  // expected-warning{{format specifies type '_Decimal32' which is not supported yet}}
+  printf("%DDf", i); // expected-warning{{format specifies type '_Decimal128' which is not supported yet}}
 }
 
 void t3(float f) {
@@ -46,12 +46,12 @@ void t3(float f) {
 }
 
 void t4(double *d_ptr, float *f_ptr, long double *ld_ptr) {
-  scanf("%Hf", f_ptr);   // expected-warning{{format specifier requires type '_Decimal32 *' which is not supported}}
-  scanf("%Df", d_ptr);   // expected-warning{{format specifier requires type '_Decimal64 *' which is not supported}}
-  scanf("%DDf", ld_ptr); // expected-warning{{format specifier requires type '_Decimal128 *' which is not supported}}
+  scanf("%Hf", f_ptr);   // expected-warning{{format specifies type '_Decimal32 *' which is not supported yet}}
+  scanf("%Df", d_ptr);   // expected-warning{{format specifies type '_Decimal64 *' which is not supported yet}}
+  scanf("%DDf", ld_ptr); // expected-warning{{format specifies type '_Decimal128 *' which is not supported yet}}
 }
 
 void t5(int *i_ptr) {
-  scanf("%Df", i_ptr); // expected-warning{{format specifier requires type '_Decimal64 *' which is not supported}}
-  scanf("%Hf", i_ptr); // expected-warning{{format specifier requires type '_Decimal32 *' which is not supported}}
+  scanf("%Df", i_ptr); // expected-warning{{format specifies type '_Decimal64 *' which is not supported yet}}
+  scanf("%Hf", i_ptr); // expected-warning{{format specifies type '_Decimal32 *' which is not supported yet}}
 }
