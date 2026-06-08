@@ -53,8 +53,11 @@ getEffectiveDirectiveKind(const OMPExecutableDirective &S);
 static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
                                         const OMPLoopDirective &S,
                                         OpenMPDirectiveKind DKind) {
+  // Reduction-only for now. Non-reduction cases might follow in the future, but
+  // need more analysis for maximum profit.
   return CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU() &&
          isOpenMPLoopBoundSharingDirective(DKind) &&
+         S.hasClausesOfKind<OMPReductionClause>() &&
          !S.getSingleClause<OMPDistScheduleClause>() &&
          !S.getSingleClause<OMPScheduleClause>() &&
          !S.getSingleClause<OMPOrderedClause>();

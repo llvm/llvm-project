@@ -53,12 +53,15 @@ int metadirective1() {
 // CHECK: ret void
 
 
-// On GPU/SPIR targets the combined `teams distribute parallel for` lowering
-// emits a single fused for_static_init (schedule constant 93) in the inner
-// outlined region; no outer distribute_static_init is emitted.
+// CHECK: define internal {{(spir_func )?}}void @[[METADIRECTIVE]]_omp_outlined
+// CHECK: entry:
+// CHECK: call{{.*}} void @__kmpc_distribute_static_init
+// CHECK: omp.loop.exit:
+// CHECK: call{{.*}} void @__kmpc_distribute_static_fini
+
 // CHECK: define internal {{(spir_func )?}}void @[[METADIRECTIVE]]_omp_outlined_omp_outlined
 // CHECK: entry:
-// CHECK: call{{.*}} void @__kmpc_for_static_init_4{{.*}}, i32 93,
+// CHECK: call{{.*}} void @__kmpc_for_static_init_4
 // CHECK: omp.inner.for.body:
 // CHECK: store atomic {{.*}} monotonic
 // CHECK: omp.loop.exit:
