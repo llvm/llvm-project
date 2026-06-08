@@ -64,6 +64,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %25 = math.atanh %arg0 : f32
   // CHECK: spirv.CL.trunc %{{.*}}: f32
   %26 = math.trunc %arg0 : f32
+  // CHECK: spirv.CL.cbrt %{{.*}}: f32
+  %27 = math.cbrt %arg0 : f32
   return
 }
 
