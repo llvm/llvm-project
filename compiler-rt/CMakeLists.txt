@@ -523,7 +523,6 @@ if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
 endif()
 
 # Build sanitizer runtimes with debug info.
-# GPU targets (amdgcn, nvptx, spirv64) may not support debug info flags.
 if(MSVC)
   # Use /Z7 instead of /Zi for the asan runtime. This avoids the LNK4099
   # warning from the MS linker complaining that it can't find the 'vc140.pdb'
@@ -536,19 +535,17 @@ if(MSVC)
     string(REGEX REPLACE "(^| )/Z[i7I]($| )" " /Z7 "
            "${var_to_update}" "${${var_to_update}}")
   endforeach()
-elseif(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
-  if(APPLE)
-    # On Apple platforms use full debug info (i.e. not `-gline-tables-only`)
-    # for all build types so that the runtime can be debugged.
-    if(NOT COMPILER_RT_HAS_G_FLAG)
-      message(FATAL_ERROR "-g is not supported by host compiler")
-    endif()
-    list(APPEND SANITIZER_COMMON_CFLAGS -g)
-  elseif(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
-    list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
-  elseif(COMPILER_RT_HAS_G_FLAG)
-    list(APPEND SANITIZER_COMMON_CFLAGS -g)
+elseif("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES "apple")
+  # On Apple platforms use full debug info (i.e. not `-gline-tables-only`)
+  # for all build types so that the runtime can be debugged.
+  if(NOT COMPILER_RT_HAS_G_FLAG)
+    message(FATAL_ERROR "-g is not supported by host compiler")
   endif()
+  list(APPEND SANITIZER_COMMON_CFLAGS -g)
+elseif(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
+  list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
+elseif(COMPILER_RT_HAS_G_FLAG)
+  list(APPEND SANITIZER_COMMON_CFLAGS -g)
 endif()
 
 if(LLVM_ENABLE_MODULES)
