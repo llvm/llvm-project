@@ -36,15 +36,26 @@
 // We do this by simply traversing uses of the param "mov" instructions an
 // trivially checking if they are all loads.
 //
+// The same "mov" also appears for grid constant kernel parameters: those are
+// lowered to a bare parameter symbol that SelectionDAG can fold directly into a
+// `ld.param` only within a single basic block. When such a parameter is used
+// outside its defining block its address is instead materialized with a `mov`,
+// and this pass forwards it back into the loads just like the device parameter
+// case above.
+//
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
+#include "NVPTXSubtarget.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -82,7 +93,8 @@ static bool traverseMoveUse(MachineInstr &U, const MachineRegisterInfo &MRI,
 }
 
 static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
-                          SmallVectorImpl<MachineInstr *> &RemoveList) {
+                          SmallVectorImpl<MachineInstr *> &RemoveList,
+                          unsigned ParamAddrSpace) {
   SmallVector<MachineInstr *, 16> MaybeRemoveList;
   SmallVector<MachineInstr *, 16> LoadInsts;
 
@@ -102,20 +114,64 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
     (LI->uses().begin() + LDInstBasePtrOpIdx)
         ->ChangeToES(ParamSymbol->getSymbolName());
     (LI->uses().begin() + LDInstAddrSpaceOpIdx)
-        ->ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
+        ->ChangeToImmediate(ParamAddrSpace);
   }
   return true;
 }
 
+// Return true if \p MI is a `mov` that materializes the address of a byval
+// parameter and is a candidate for forwarding. Device function parameters are
+// lowered through NVPTXISD::MoveParam (MOV{32,64}_PARAM), while grid constant
+// kernel parameters are lowered to a bare parameter symbol that ISel
+// materializes with the generic symbol `mov` (MOV_B{32,64}_sym) when the
+// parameter is used outside its defining block. The latter opcode is shared
+// with global address materialization, so check that the operand actually
+// names a parameter of this function.
+static bool isForwardableParamMove(const MachineInstr &MI,
+                                   const StringSet<> &ParamSymbols) {
+  switch (MI.getOpcode()) {
+  case NVPTX::MOV32_PARAM:
+  case NVPTX::MOV64_PARAM:
+    return true;
+  case NVPTX::MOV_B32_sym:
+  case NVPTX::MOV_B64_sym: {
+    const MachineOperand &Src = MI.getOperand(1);
+    return Src.isSymbol() && ParamSymbols.contains(Src.getSymbolName());
+  }
+  default:
+    return false;
+  }
+}
+
 static bool forwardDeviceParams(MachineFunction &MF) {
   const auto &MRI = MF.getRegInfo();
+  const Function &F = MF.getFunction();
 
+  // Kernel parameters live in the read-only ".param::entry" space, device
+  // function parameters in ".param::func"; both are read with `ld.param`.
+  const bool IsKernel = isKernelFunction(F);
+  const unsigned ParamAddrSpace = IsKernel ? NVPTX::AddressSpace::EntryParam
+                                           : NVPTX::AddressSpace::DeviceParam;
+
+  // Grid constant kernel parameters are materialized with the generic symbol
+  // `mov`, which is also used for global addresses. Collect the parameter
+  // symbol names so they can be told apart (see isForwardableParamMove).
+  StringSet<> ParamSymbols;
+  if (IsKernel) {
+    const NVPTXTargetLowering *TLI =
+        MF.getSubtarget<NVPTXSubtarget>().getTargetLowering();
+    for (const Argument &Arg : F.args())
+      ParamSymbols.insert(TLI->getParamName(&F, Arg.getArgNo()));
+  }
+
+  // The `mov` may have been sunk out of the entry block (e.g. to the single
+  // block that uses it), so scan the whole function rather than just the entry.
   bool Changed = false;
   SmallVector<MachineInstr *, 16> RemoveList;
-  for (auto &MI : make_early_inc_range(*MF.begin()))
-    if (MI.getOpcode() == NVPTX::MOV32_PARAM ||
-        MI.getOpcode() == NVPTX::MOV64_PARAM)
-      Changed |= eliminateMove(MI, MRI, RemoveList);
+  for (MachineBasicBlock &MBB : MF)
+    for (auto &MI : make_early_inc_range(MBB))
+      if (isForwardableParamMove(MI, ParamSymbols))
+        Changed |= eliminateMove(MI, MRI, RemoveList, ParamAddrSpace);
 
   for (auto *MI : RemoveList)
     MI->eraseFromParent();
