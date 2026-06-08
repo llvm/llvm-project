@@ -194,7 +194,10 @@ LIBC_INLINE double sin(double x) {
   //             = sin(y) * cos(k*pi/128) + cos(y) * sin(k*pi/128)
   DoubleDouble sin_k_cos_y = fputil::quick_mult(cos_y, sin_k);
   DoubleDouble cos_k_sin_y = fputil::quick_mult(sin_y, cos_k);
-
+  // When k != 0 mod 128,
+  //   |sin( k * pi/128 )| > pi/128 - epsilon > |y| >= |sin(y)|,
+  // and cos(y) > 1 - pi/128.  So we can use Fast2Sum for the addition:
+  //   sin(y) * cos(k*pi/128) + cos(y) * sin(k*pi/128).
   DoubleDouble rr = fputil::exact_add(sin_k_cos_y.hi, cos_k_sin_y.hi);
   rr.lo += sin_k_cos_y.lo + cos_k_sin_y.lo;
 

@@ -98,7 +98,7 @@ LIBC_INLINE double cos(double x) {
       // No range reduction needed.
 
       // Use degree-8 polynomial approximation:
-      //   sin(x) ~ 1 + a1 * x^2 + a2 * x^4 + a3 * x^6 + a4 * x^8
+      //   cos(x) ~ 1 + a1 * x^2 + a2 * x^4 + a3 * x^6 + a4 * x^8
       //          ~ 1 + x^2 * Q(x^2).
       // > P = fpminimax(cos(x), [|0, 2, 4, 6, 8|], [|1, D...|], [0, 2^-4]);
       // > dirtyinfnorm(cos(x) - P, [-2^-4, 2^-4]);
@@ -185,8 +185,11 @@ LIBC_INLINE double cos(double x) {
   //             = cos(y) * cos(k*pi/128) - sin(y) * sin(k*pi/128)
   DoubleDouble cos_k_cos_y = fputil::quick_mult(cos_y, cos_k);
   DoubleDouble msin_k_sin_y = fputil::quick_mult(sin_y, msin_k);
-
-  DoubleDouble rr = fputil::exact_add<false>(cos_k_cos_y.hi, msin_k_sin_y.hi);
+  // When k != 64 mod 128,
+  //   |cos( k * pi/128 )| > pi/128 - epsilon > |y| >= |sin(y)|,
+  // and cos(y) > 1 - pi/128.  So we can use Fast2Sum for the subtraction:
+  //   cos(y) * cos(k*pi/128) - sin(y) * sin(k*pi/128).
+  DoubleDouble rr = fputil::exact_add(cos_k_cos_y.hi, msin_k_sin_y.hi);
   rr.lo += msin_k_sin_y.lo + cos_k_cos_y.lo;
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
