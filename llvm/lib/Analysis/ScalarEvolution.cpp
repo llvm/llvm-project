@@ -2813,14 +2813,15 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
     // (B), if trunc (A) + -A + B  does not unsigned-wrap.
     const SCEVAddExpr *InnerAdd;
     if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
-      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
+      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType(), Depth + 1);
       if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
           getZeroExtendExpr(NarrowA, B->getType()) == A &&
           hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
                                          SCEV::FlagAnyWrap),
                    SCEV::FlagNUW)) {
-        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType(),
-                                 Depth + 1);
+        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd, SCEV::FlagAnyWrap,
+                                            Depth + 1),
+                                 B->getType(), Depth + 1);
       }
     }
   }
