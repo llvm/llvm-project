@@ -32,6 +32,13 @@ EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
   EJitPassBuilder::crossRegisterProxies(LAM_, FAM_, CGAM_, MAM_);
 }
 
+void EJitOptimizer::clearAnalyses() {
+  FAM_.clear();
+  LAM_.clear();
+  CGAM_.clear();
+  MAM_.clear();
+}
+
 void EJitOptimizer::runPipeline(Module &M,
                                 const SpecializationContext &ctx) {
   // 1. Parameter substitution: replace ejit_period_arr_ind args with constants

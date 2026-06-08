@@ -37,6 +37,10 @@ public:
   ///   5. Cleanup passes (only for L2/L3 which may expose new loads)
   void runPipeline(Module &M, const SpecializationContext &ctx);
 
+  /// Clear all cached analysis results. Must be called between compilations
+  /// to avoid dangling pointers to IR units from previous modules.
+  void clearAnalyses();
+
 private:
   /// Replace ejit_period_arr_ind parameters with their runtime constants.
   void preReplacePeriodIndices(Module &M, const SpecializationContext &ctx);
