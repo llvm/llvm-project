@@ -2572,7 +2572,9 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     Status error;
 
 #if defined(_WIN32)
-    // On Windows the inferior's stdio is owned by NativeProcessWindows.
+    // On Windows the inferior's stdio is owned by NativeProcessWindows (which
+    // holds the ConPTY). Route stdin through NativeProcessProtocol::WriteStdin
+    // rather than m_stdio_communication, which is unconnected on Windows.
     if (m_current_process->WriteStdin(tmp, read, error) != read || error.Fail())
       return SendErrorResponse(0x15);
 #else
