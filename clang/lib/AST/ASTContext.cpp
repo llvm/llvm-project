@@ -9996,7 +9996,7 @@ static TypedefDecl *CreateMSVaListDecl(const ASTContext *Context) {
 }
 
 static TypedefDecl *CreateZOSVaListDecl(const ASTContext *Context) {
-  // typedef char *__builtin_va_list[2];
+  // typedef char *__builtin_zos_va_list[2];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 2);
   QualType T = Context->getPointerType(Context->CharTy);
   QualType ArrayType = Context->getConstantArrayType(
