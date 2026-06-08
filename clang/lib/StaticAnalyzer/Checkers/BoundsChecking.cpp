@@ -326,7 +326,8 @@ std::string BoundsCheckResult::getMessage(PathSensitiveBugReport &BR,
 }
 
 bool BoundsCheckResult::providesInformationAboutInteresting(
-    SymbolRef Sym, PathSensitiveBugReport &BR) {
+    SVal SV, PathSensitiveBugReport &BR) {
+  SymbolRef Sym = SV.getAsSymbol();
   if (!Sym)
     return false;
   for (SymbolRef PartSym : Sym->symbols()) {

@@ -175,10 +175,10 @@ public:
                          SizeUnit SU) const;
 
 private:
-  /// Return true if information about the value of `Sym` can put constraints
-  /// on some symbol which is interesting within the bug report `BR`.
-  /// In particular, this returns true when `Sym` is interesting within `BR`;
-  /// but it also returns true if `Sym` is an expression that contains integer
+  /// Return true if information about the symbol behind `SV` can constrain
+  /// some symbol which is interesting within the bug report `BR`.
+  /// In particular, this returns true when `SV` is interesting within `BR`;
+  /// but it also returns true if `SV` is an expression that contains integer
   /// constants and a single symbolic operand which is interesting (in `BR`).
   /// We need to use this instead of plain `BR.isInteresting()` because if we
   /// are analyzing code like
@@ -189,12 +189,8 @@ private:
   /// then the byte offsets are `arg * 4` and `(arg + 10) * 4`, which are not
   /// sub-expressions of each other (but `getSimplifiedOffsets` is smart enough
   /// to detect this out of bounds access).
-  static bool providesInformationAboutInteresting(SymbolRef Sym,
-                                                  PathSensitiveBugReport &BR);
   static bool providesInformationAboutInteresting(SVal SV,
-                                                  PathSensitiveBugReport &BR) {
-    return providesInformationAboutInteresting(SV.getAsSymbol(), BR);
-  }
+                                                  PathSensitiveBugReport &BR);
 };
 
 BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
