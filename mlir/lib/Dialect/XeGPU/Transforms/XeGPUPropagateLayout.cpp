@@ -423,18 +423,18 @@ public:
   visitOperation(Operation *op, ArrayRef<LayoutInfoLattice *> operands,
                  ArrayRef<const LayoutInfoLattice *> results) override;
 
-  void visitBranchOperand(OpOperand &operand) override{};
+  void visitBranchOperand(OpOperand &operand) override {};
 
-  void visitCallOperand(OpOperand &operand) override{};
+  void visitCallOperand(OpOperand &operand) override {};
 
   void
   visitNonControlFlowArguments(RegionSuccessor &successor,
-                               ArrayRef<BlockArgument> arguments) override{};
+                               ArrayRef<BlockArgument> arguments) override {};
 
-  void
-  visitExternalCall(CallOpInterface call,
-                    ArrayRef<LayoutInfoLattice *> operands,
-                    ArrayRef<const LayoutInfoLattice *> results) override{};
+  void visitExternalCall(CallOpInterface call,
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results) override {
+  };
 
   void setToExitState(LayoutInfoLattice *lattice) override {
     (void)lattice->meet(LayoutInfo());
