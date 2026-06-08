@@ -11250,6 +11250,21 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                         Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
                         IndexKeyi32, Op.getOperand(7)});
   }
+  case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4: {
+    unsigned AFmt = (unsigned)Op.getConstantOperandVal(1);
+    unsigned BFmt = (unsigned)Op.getConstantOperandVal(3);
+    unsigned AScaleFmt = (unsigned)Op.getConstantOperandVal(8);
+    unsigned BScaleFmt = (unsigned)Op.getConstantOperandVal(11);
+    if (!AMDGPU::isValidWMMAScaleFmtCombination(AFmt, AScaleFmt, BFmt,
+                                                BScaleFmt)) {
+      DAG.getMachineFunction().getFunction().getContext().emitError(
+          "invalid matrix and scale format combination in wmma call");
+      Op->print(errs());
+      errs() << '\n';
+    }
+    return SDValue();
+  }
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return lowerADDRSPACECAST(Op, DAG);
   case Intrinsic::amdgcn_readlane:

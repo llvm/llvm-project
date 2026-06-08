@@ -5613,11 +5613,14 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   const MCInstrDesc &Desc = MII.get(Opc);
 
-  auto validateFmt = [&](AMDGPU::OpName FmtOp, AMDGPU::OpName SrcOp) -> bool {
-    int FmtIdx = AMDGPU::getNamedOperandIdx(Opc, FmtOp);
-    if (FmtIdx == -1)
-      return true;
-    unsigned Fmt = Inst.getOperand(FmtIdx).getImm();
+  int AFmtIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_fmt);
+  if (AFmtIdx == -1)
+    return true;
+  unsigned AFmt = Inst.getOperand(AFmtIdx).getImm();
+  int BFmtIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_fmt);
+  unsigned BFmt = Inst.getOperand(BFmtIdx).getImm();
+
+  auto validateFmt = [&](unsigned Fmt, AMDGPU::OpName SrcOp) -> bool {
     int SrcIdx = AMDGPU::getNamedOperandIdx(Opc, SrcOp);
     unsigned RegSize =
         TRI->getRegClass(MII.getOpRegClassID(Desc.operands()[SrcIdx], HwMode))
@@ -5632,8 +5635,25 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
     return false;
   };
 
-  return validateFmt(AMDGPU::OpName::matrix_a_fmt, AMDGPU::OpName::src0) &&
-         validateFmt(AMDGPU::OpName::matrix_b_fmt, AMDGPU::OpName::src1);
+  if (!validateFmt(AFmt, AMDGPU::OpName::src0) ||
+      !validateFmt(BFmt, AMDGPU::OpName::src1))
+    return false;
+
+  int AScaleIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_scale_fmt);
+  if (AScaleIdx == -1)
+    return true;
+  unsigned AScale = Inst.getOperand(AScaleIdx).getImm();
+  int BScaleIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_scale_fmt);
+  unsigned BScale = Inst.getOperand(BScaleIdx).getImm();
+  if (!isValidWMMAScaleFmtCombination(AFmt, AScale, BFmt, BScale)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyMatrixAFMT, Operands),
+          "invalid matrix and scale format combination");
+    return false;
+  }
+
+  return true;
 }
 
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,

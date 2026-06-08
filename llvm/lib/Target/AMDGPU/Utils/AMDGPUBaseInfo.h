@@ -661,6 +661,11 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
                                                       unsigned FmtB,
                                                       unsigned F8F8Opcode);
 
+/// \return true if this combination is listed as valid.
+LLVM_READONLY
+bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
+                                    unsigned BFmt, unsigned BScale);
+
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
