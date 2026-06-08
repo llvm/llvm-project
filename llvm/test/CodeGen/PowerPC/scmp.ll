@@ -12,30 +12,29 @@
 define i8 @scmp_8_8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK-LABEL: scmp_8_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpw 3, 4
-; CHECK-NEXT:    sub 5, 4, 3
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    rldicl 5, 5, 1, 63
-; CHECK-NEXT:    isellt 3, 3, 5
+; CHECK-NEXT:    cmpw 7, 3, 4
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    rlwinm 4, 3, 30, 31, 31
+; CHECK-NEXT:    rlwinm 3, 3, 29, 31, 31
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: scmp_8_8:
 ; AIX32:       # %bb.0:
-; AIX32-NEXT:    cmpw 3, 4
-; AIX32-NEXT:    li 3, 0
-; AIX32-NEXT:    li 4, 1
-; AIX32-NEXT:    iselgt 3, 4, 3
-; AIX32-NEXT:    li 4, -1
-; AIX32-NEXT:    isellt 3, 4, 3
+; AIX32-NEXT:    cmpw 7, 3, 4
+; AIX32-NEXT:    mfocrf 3, 1
+; AIX32-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX32-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX32-NEXT:    sub 3, 4, 3
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: scmp_8_8:
 ; AIX64:       # %bb.0:
-; AIX64-NEXT:    cmpw 3, 4
-; AIX64-NEXT:    sub 5, 4, 3
-; AIX64-NEXT:    li 3, -1
-; AIX64-NEXT:    rldicl 5, 5, 1, 63
-; AIX64-NEXT:    isellt 3, 3, 5
+; AIX64-NEXT:    cmpw 7, 3, 4
+; AIX64-NEXT:    mfocrf 3, 1
+; AIX64-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX64-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX64-NEXT:    sub 3, 4, 3
 ; AIX64-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: scmp_8_8:
@@ -66,30 +65,29 @@ define i8 @scmp_8_8(i8 signext %x, i8 signext %y) nounwind {
 define i8 @scmp_8_16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK-LABEL: scmp_8_16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpw 3, 4
-; CHECK-NEXT:    sub 5, 4, 3
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    rldicl 5, 5, 1, 63
-; CHECK-NEXT:    isellt 3, 3, 5
+; CHECK-NEXT:    cmpw 7, 3, 4
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    rlwinm 4, 3, 30, 31, 31
+; CHECK-NEXT:    rlwinm 3, 3, 29, 31, 31
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: scmp_8_16:
 ; AIX32:       # %bb.0:
-; AIX32-NEXT:    cmpw 3, 4
-; AIX32-NEXT:    li 3, 0
-; AIX32-NEXT:    li 4, 1
-; AIX32-NEXT:    iselgt 3, 4, 3
-; AIX32-NEXT:    li 4, -1
-; AIX32-NEXT:    isellt 3, 4, 3
+; AIX32-NEXT:    cmpw 7, 3, 4
+; AIX32-NEXT:    mfocrf 3, 1
+; AIX32-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX32-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX32-NEXT:    sub 3, 4, 3
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: scmp_8_16:
 ; AIX64:       # %bb.0:
-; AIX64-NEXT:    cmpw 3, 4
-; AIX64-NEXT:    sub 5, 4, 3
-; AIX64-NEXT:    li 3, -1
-; AIX64-NEXT:    rldicl 5, 5, 1, 63
-; AIX64-NEXT:    isellt 3, 3, 5
+; AIX64-NEXT:    cmpw 7, 3, 4
+; AIX64-NEXT:    mfocrf 3, 1
+; AIX64-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX64-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX64-NEXT:    sub 3, 4, 3
 ; AIX64-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: scmp_8_16:
@@ -120,34 +118,29 @@ define i8 @scmp_8_16(i16 signext %x, i16 signext %y) nounwind {
 define i8 @scmp_8_32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: scmp_8_32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    extsw 4, 4
-; CHECK-NEXT:    extsw 3, 3
-; CHECK-NEXT:    cmpw 3, 4
+; CHECK-NEXT:    cmpw 7, 3, 4
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    rlwinm 4, 3, 30, 31, 31
+; CHECK-NEXT:    rlwinm 3, 3, 29, 31, 31
 ; CHECK-NEXT:    sub 3, 4, 3
-; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    rldicl 3, 3, 1, 63
-; CHECK-NEXT:    isellt 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: scmp_8_32:
 ; AIX32:       # %bb.0:
-; AIX32-NEXT:    cmpw 3, 4
-; AIX32-NEXT:    li 3, 0
-; AIX32-NEXT:    li 4, 1
-; AIX32-NEXT:    iselgt 3, 4, 3
-; AIX32-NEXT:    li 4, -1
-; AIX32-NEXT:    isellt 3, 4, 3
+; AIX32-NEXT:    cmpw 7, 3, 4
+; AIX32-NEXT:    mfocrf 3, 1
+; AIX32-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX32-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX32-NEXT:    sub 3, 4, 3
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: scmp_8_32:
 ; AIX64:       # %bb.0:
-; AIX64-NEXT:    extsw 4, 4
-; AIX64-NEXT:    extsw 3, 3
-; AIX64-NEXT:    cmpw 3, 4
+; AIX64-NEXT:    cmpw 7, 3, 4
+; AIX64-NEXT:    mfocrf 3, 1
+; AIX64-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX64-NEXT:    rlwinm 3, 3, 29, 31, 31
 ; AIX64-NEXT:    sub 3, 4, 3
-; AIX64-NEXT:    li 4, -1
-; AIX64-NEXT:    rldicl 3, 3, 1, 63
-; AIX64-NEXT:    isellt 3, 4, 3
 ; AIX64-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: scmp_8_32:
@@ -178,14 +171,11 @@ define i8 @scmp_8_32(i32 %x, i32 %y) nounwind {
 define i8 @scmp_8_64(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: scmp_8_64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sradi 5, 4, 63
-; CHECK-NEXT:    rldicl 6, 3, 1, 63
-; CHECK-NEXT:    subc 7, 4, 3
-; CHECK-NEXT:    adde 5, 6, 5
-; CHECK-NEXT:    cmpd 3, 4
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    xori 5, 5, 1
-; CHECK-NEXT:    isellt 3, 3, 5
+; CHECK-NEXT:    cmpd 7, 3, 4
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    rlwinm 4, 3, 30, 31, 31
+; CHECK-NEXT:    rlwinm 3, 3, 29, 31, 31
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: scmp_8_64:
@@ -207,14 +197,11 @@ define i8 @scmp_8_64(i64 %x, i64 %y) nounwind {
 ;
 ; AIX64-LABEL: scmp_8_64:
 ; AIX64:       # %bb.0:
-; AIX64-NEXT:    sradi 5, 4, 63
-; AIX64-NEXT:    rldicl 6, 3, 1, 63
-; AIX64-NEXT:    subc 7, 4, 3
-; AIX64-NEXT:    adde 5, 6, 5
-; AIX64-NEXT:    cmpd 3, 4
-; AIX64-NEXT:    li 3, -1
-; AIX64-NEXT:    xori 5, 5, 1
-; AIX64-NEXT:    isellt 3, 3, 5
+; AIX64-NEXT:    cmpd 7, 3, 4
+; AIX64-NEXT:    mfocrf 3, 1
+; AIX64-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX64-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX64-NEXT:    sub 3, 4, 3
 ; AIX64-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: scmp_8_64:
@@ -402,34 +389,29 @@ define i8 @scmp_8_128(i128 %x, i128 %y) nounwind {
 define i32 @scmp_32_32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: scmp_32_32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    extsw 4, 4
-; CHECK-NEXT:    extsw 3, 3
-; CHECK-NEXT:    cmpw 3, 4
+; CHECK-NEXT:    cmpw 7, 3, 4
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    rlwinm 4, 3, 30, 31, 31
+; CHECK-NEXT:    rlwinm 3, 3, 29, 31, 31
 ; CHECK-NEXT:    sub 3, 4, 3
-; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    rldicl 3, 3, 1, 63
-; CHECK-NEXT:    isellt 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: scmp_32_32:
 ; AIX32:       # %bb.0:
-; AIX32-NEXT:    cmpw 3, 4
-; AIX32-NEXT:    li 3, 0
-; AIX32-NEXT:    li 4, 1
-; AIX32-NEXT:    iselgt 3, 4, 3
-; AIX32-NEXT:    li 4, -1
-; AIX32-NEXT:    isellt 3, 4, 3
+; AIX32-NEXT:    cmpw 7, 3, 4
+; AIX32-NEXT:    mfocrf 3, 1
+; AIX32-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX32-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX32-NEXT:    sub 3, 4, 3
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: scmp_32_32:
 ; AIX64:       # %bb.0:
-; AIX64-NEXT:    extsw 4, 4
-; AIX64-NEXT:    extsw 3, 3
-; AIX64-NEXT:    cmpw 3, 4
+; AIX64-NEXT:    cmpw 7, 3, 4
+; AIX64-NEXT:    mfocrf 3, 1
+; AIX64-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX64-NEXT:    rlwinm 3, 3, 29, 31, 31
 ; AIX64-NEXT:    sub 3, 4, 3
-; AIX64-NEXT:    li 4, -1
-; AIX64-NEXT:    rldicl 3, 3, 1, 63
-; AIX64-NEXT:    isellt 3, 4, 3
 ; AIX64-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: scmp_32_32:
@@ -460,14 +442,11 @@ define i32 @scmp_32_32(i32 %x, i32 %y) nounwind {
 define i32 @scmp_32_64(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: scmp_32_64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sradi 5, 4, 63
-; CHECK-NEXT:    rldicl 6, 3, 1, 63
-; CHECK-NEXT:    subc 7, 4, 3
-; CHECK-NEXT:    adde 5, 6, 5
-; CHECK-NEXT:    cmpd 3, 4
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    xori 5, 5, 1
-; CHECK-NEXT:    isellt 3, 3, 5
+; CHECK-NEXT:    cmpd 7, 3, 4
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    rlwinm 4, 3, 30, 31, 31
+; CHECK-NEXT:    rlwinm 3, 3, 29, 31, 31
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: scmp_32_64:
@@ -489,14 +468,11 @@ define i32 @scmp_32_64(i64 %x, i64 %y) nounwind {
 ;
 ; AIX64-LABEL: scmp_32_64:
 ; AIX64:       # %bb.0:
-; AIX64-NEXT:    sradi 5, 4, 63
-; AIX64-NEXT:    rldicl 6, 3, 1, 63
-; AIX64-NEXT:    subc 7, 4, 3
-; AIX64-NEXT:    adde 5, 6, 5
-; AIX64-NEXT:    cmpd 3, 4
-; AIX64-NEXT:    li 3, -1
-; AIX64-NEXT:    xori 5, 5, 1
-; AIX64-NEXT:    isellt 3, 3, 5
+; AIX64-NEXT:    cmpd 7, 3, 4
+; AIX64-NEXT:    mfocrf 3, 1
+; AIX64-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX64-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX64-NEXT:    sub 3, 4, 3
 ; AIX64-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: scmp_32_64:
@@ -534,14 +510,11 @@ define i32 @scmp_32_64(i64 %x, i64 %y) nounwind {
 define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: scmp_64_64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sradi 5, 4, 63
-; CHECK-NEXT:    rldicl 6, 3, 1, 63
-; CHECK-NEXT:    subc 7, 4, 3
-; CHECK-NEXT:    adde 5, 6, 5
-; CHECK-NEXT:    cmpd 3, 4
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    xori 5, 5, 1
-; CHECK-NEXT:    isellt 3, 3, 5
+; CHECK-NEXT:    cmpd 7, 3, 4
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    rlwinm 4, 3, 30, 31, 31
+; CHECK-NEXT:    rlwinm 3, 3, 29, 31, 31
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: scmp_64_64:
@@ -565,14 +538,11 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
 ;
 ; AIX64-LABEL: scmp_64_64:
 ; AIX64:       # %bb.0:
-; AIX64-NEXT:    sradi 5, 4, 63
-; AIX64-NEXT:    rldicl 6, 3, 1, 63
-; AIX64-NEXT:    subc 7, 4, 3
-; AIX64-NEXT:    adde 5, 6, 5
-; AIX64-NEXT:    cmpd 3, 4
-; AIX64-NEXT:    li 3, -1
-; AIX64-NEXT:    xori 5, 5, 1
-; AIX64-NEXT:    isellt 3, 3, 5
+; AIX64-NEXT:    cmpd 7, 3, 4
+; AIX64-NEXT:    mfocrf 3, 1
+; AIX64-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX64-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX64-NEXT:    sub 3, 4, 3
 ; AIX64-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: scmp_64_64:
@@ -612,15 +582,11 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
 define noundef signext range(i32 -1, 2) i32 @test_scmp(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: test_scmp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sradi 5, 4, 63
-; CHECK-NEXT:    rldicl 6, 3, 1, 63
-; CHECK-NEXT:    subc 7, 4, 3
-; CHECK-NEXT:    adde 5, 6, 5
-; CHECK-NEXT:    cmpd 3, 4
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    xori 5, 5, 1
-; CHECK-NEXT:    isellt 3, 3, 5
-; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    cmpd 7, 3, 4
+; CHECK-NEXT:    mfocrf 3, 1
+; CHECK-NEXT:    rlwinm 4, 3, 30, 31, 31
+; CHECK-NEXT:    rlwinm 3, 3, 29, 31, 31
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: test_scmp:
@@ -642,15 +608,11 @@ define noundef signext range(i32 -1, 2) i32 @test_scmp(i64 noundef %a, i64 nound
 ;
 ; AIX64-LABEL: test_scmp:
 ; AIX64:       # %bb.0: # %entry
-; AIX64-NEXT:    sradi 5, 4, 63
-; AIX64-NEXT:    rldicl 6, 3, 1, 63
-; AIX64-NEXT:    subc 7, 4, 3
-; AIX64-NEXT:    adde 5, 6, 5
-; AIX64-NEXT:    cmpd 3, 4
-; AIX64-NEXT:    li 3, -1
-; AIX64-NEXT:    xori 5, 5, 1
-; AIX64-NEXT:    isellt 3, 3, 5
-; AIX64-NEXT:    extsw 3, 3
+; AIX64-NEXT:    cmpd 7, 3, 4
+; AIX64-NEXT:    mfocrf 3, 1
+; AIX64-NEXT:    rlwinm 4, 3, 30, 31, 31
+; AIX64-NEXT:    rlwinm 3, 3, 29, 31, 31
+; AIX64-NEXT:    sub 3, 4, 3
 ; AIX64-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: test_scmp:
