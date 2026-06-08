@@ -33,6 +33,8 @@ AST_MATCHER(ParenExpr, isInMacro) {
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
 }
 
+} // namespace
+
 static FixItHint createSpacedRemoval(SourceLocation Loc,
                                      const SourceManager &SM,
                                      const LangOptions &LangOpts) {
@@ -49,8 +51,6 @@ static FixItHint createSpacedRemoval(SourceLocation Loc,
   }
   return FixItHint::CreateRemoval(Loc);
 }
-
-} // namespace
 
 RedundantParenthesesCheck::RedundantParenthesesCheck(StringRef Name,
                                                      ClangTidyContext *Context)
