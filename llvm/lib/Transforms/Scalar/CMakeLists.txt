@@ -47,6 +47,7 @@ add_llvm_component_library(LLVMScalarOpts
   LoopSimplifyCFG.cpp
   LoopStrengthReduce.cpp
   LoopTermFold.cpp
+  LoopUnrollForVectorization.cpp
   LoopUnrollPass.cpp
   LoopUnrollAndJamPass.cpp
   LoopVersioningLICM.cpp

@@ -1241,6 +1241,32 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   assert(FPKeepKindStr && "unknown FramePointerKind");
   CmdArgs.push_back(FPKeepKindStr);
 
+  bool IsO3OrHigher = false;
+  if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O4)) {
+      CmdArgs.push_back("-O3");
+      D.Diag(diag::warn_O4_is_O3);
+      IsO3OrHigher = true;
+    } else if (A->getOption().matches(options::OPT_Ofast)) {
+      CmdArgs.push_back("-O3");
+      D.Diag(diag::warn_drv_deprecated_arg_ofast_for_flang);
+      IsO3OrHigher = true;
+    } else if (A->getOption().matches(options::OPT_O)) {
+      StringRef S(A->getValue());
+      unsigned OptLevel = 0;
+      if (!S.getAsInteger(10, OptLevel) && OptLevel >= 3)
+        IsO3OrHigher = true;
+      A->render(Args, CmdArgs);
+    } else {
+      A->render(Args, CmdArgs);
+    }
+  }
+
+  if (IsO3OrHigher) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-enable-outer-loop-vectorization-prep");
+  }
+
   // Forward -mllvm options to the LLVM option parser. In practice, this means
   // forwarding to `-fc1` as that's where the LLVM parser is run.
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
@@ -1258,19 +1284,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
     D.Diag(diag::warn_drv_unsupported_diag_option_for_flang)
         << A->getOption().getName();
-  }
-
-  // Optimization level for CodeGen.
-  if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O4)) {
-      CmdArgs.push_back("-O3");
-      D.Diag(diag::warn_O4_is_O3);
-    } else if (A->getOption().matches(options::OPT_Ofast)) {
-      CmdArgs.push_back("-O3");
-      D.Diag(diag::warn_drv_deprecated_arg_ofast_for_flang);
-    } else {
-      A->render(Args, CmdArgs);
-    }
   }
 
   renderGlobalISelOptions(D, Args, CmdArgs, Triple);

@@ -120,6 +120,7 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LoopSink.h"
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
+#include "llvm/Transforms/Scalar/LoopUnrollForVectorization.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Scalar/LoopVersioningLICM.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
@@ -328,6 +329,10 @@ extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
 
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
+
+static cl::opt<bool> EnableOuterLoopVecPrep(
+    "enable-outer-loop-vectorization-prep", cl::init(false), cl::Hidden,
+    cl::desc("Enable outer loop vectorization prep pass (prototype)"));
 
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
@@ -1341,6 +1346,24 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   FunctionPassManager &FPM,
                                   ThinOrFullLTOPhase LTOPhase) {
+  const bool IsFullLTO = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink;
+
+  if (!IsFullLTO && Level == OptimizationLevel::O3 && PTO.LoopUnrolling &&
+      EnableOuterLoopVecPrep) {
+    FPM.addPass(LoopUnrollForVectorizationPass());
+    FPM.addPass(ReassociatePass());
+    FPM.addPass(createFunctionToLoopPassAdaptor(
+        LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+                 /*AllowSpeculation=*/true),
+        /*UseMemorySSA=*/true));
+    FPM.addPass(GVNPass());
+    FPM.addPass(createFunctionToLoopPassAdaptor(
+        LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+                 /*AllowSpeculation=*/true),
+        /*UseMemorySSA=*/true));
+    FPM.addPass(InstCombinePass());
+  }
+
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
