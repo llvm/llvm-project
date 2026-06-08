@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import errno
 import itertools
 import math
@@ -12,7 +10,6 @@ import signal
 import subprocess
 import sys
 import threading
-import functools
 
 def pythonize_bool(value):
     if value is None:
@@ -443,7 +440,22 @@ def killProcessAndChildren(pid):
             pass
 
 
-@functools.cache
+def memoize(f):
+    cache = {}  # Unbounded
+
+    def make_key(args, kwargs):
+        return args, tuple(kwargs.items())
+
+    def memoized(*args, **kwargs):
+        key = make_key(args, kwargs)
+        if key not in cache:
+            cache[key] = f(*args, **kwargs)
+        return cache[key]
+
+    return memoized
+
+
+@memoize
 def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
     """
     Run a command with subprocess.run, with a cache global to this llvm-lit invocation

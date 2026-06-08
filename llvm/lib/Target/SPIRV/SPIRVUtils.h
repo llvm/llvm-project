@@ -236,6 +236,7 @@ constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::Workgroup:
   case SPIRV::StorageClass::CrossWorkgroup:
   case SPIRV::StorageClass::Function:
+  case SPIRV::StorageClass::CodeSectionINTEL:
     return true;
   default:
     return false;
@@ -369,6 +370,12 @@ inline bool isUntypedPointerTy(const Type *T) {
 // True if this is an instance of PointerType or TypedPointerType.
 inline bool isPointerTy(const Type *T) {
   return isUntypedPointerTy(T) || isTypedPointerTy(T);
+}
+
+// True if this is a vector whose element type is an (untyped) PointerType.
+inline bool isUntypedPointerVectorTy(const Type *T) {
+  return isa_and_nonnull<VectorType>(T) &&
+         isUntypedPointerTy(T->getScalarType());
 }
 
 // Get the address space of this pointer or pointer vector type for instances of

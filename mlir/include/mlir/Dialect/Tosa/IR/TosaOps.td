@@ -2206,7 +2206,6 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat", [Pure]> {
   ];
 
   let hasCanonicalizer = 1;
-  let hasFolder = 1;
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -2351,8 +2350,12 @@ def Tosa_ReshapeBlockScaledOp
 // Operator: reverse
 //===----------------------------------------------------------------------===//
 def Tosa_ReverseOp: Tosa_Op<"reverse", [
-    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>, Pure]> {
+      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                                ["inferReturnTypeComponents"]>,
+      SameOperandsAndResultRank,
+      SameOperandsAndResultShape,
+      SameOperandsAndResultElementType,
+      Pure]> {
   let summary = "Reverse operator.";
 
   let description = [{

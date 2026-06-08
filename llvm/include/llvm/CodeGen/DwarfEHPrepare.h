@@ -20,12 +20,12 @@ namespace llvm {
 
 class TargetMachine;
 
-class DwarfEHPreparePass : public OptionalPassInfoMixin<DwarfEHPreparePass> {
+class DwarfEHPreparePass : public RequiredPassInfoMixin<DwarfEHPreparePass> {
   const TargetMachine *TM;
 
 public:
   explicit DwarfEHPreparePass(const TargetMachine &TM_) : TM(&TM_) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

@@ -99,6 +99,205 @@ func.func @unary_ops_non_identity(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> t
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
+              
+func.func @binary_ops_int(%A: memref<10xi32>, %B: memref<10xi32>,
+                          %Out: memref<10xi32>) {
+  linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<sub>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<div>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<div_unsigned>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_int
+// CHECK-SAME: %[[A:.+]]: memref<10xi32>, %[[B:.+]]: memref<10xi32>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xi32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<div>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<div_unsigned>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+
+// -----
+              
+func.func @binary_ops_float(%A: memref<10xf32>, %B: memref<10xf32>,
+                            %Out: memref<10xf32>) {
+  linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<sub>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<div>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<powf>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_float
+// CHECK-SAME: %[[A:.+]]: memref<10xf32>, %[[B:.+]]: memref<10xf32>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<div>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<powf>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+
+// -----
+              
+func.func @binary_ops_complex(%A: memref<10xcomplex<f32>>, %B: memref<10xcomplex<f32>>,
+                              %Out: memref<10xcomplex<f32>>) {
+  linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+    outs(%Out : memref<10xcomplex<f32>>)
+  linalg.elementwise kind=#linalg.elementwise_kind<sub>
+    ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+    outs(%Out : memref<10xcomplex<f32>>)
+  linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+    outs(%Out : memref<10xcomplex<f32>>)
+  linalg.elementwise kind=#linalg.elementwise_kind<div>
+    ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+    outs(%Out : memref<10xcomplex<f32>>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_complex
+// CHECK-SAME: %[[A:.+]]: memref<10xcomplex<f32>>, %[[B:.+]]: memref<10xcomplex<f32>>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xcomplex<f32>>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<div>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+
+// -----
+              
+func.func @binary_ops_bool(%A: memref<10xi1>, %B: memref<10xi1>,
+                           %Out: memref<10xi1>) {
+  linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%A, %B : memref<10xi1>, memref<10xi1>) outs(%Out : memref<10xi1>)
+  linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%A, %B : memref<10xi1>, memref<10xi1>) outs(%Out : memref<10xi1>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_bool
+// CHECK-SAME: %[[A:.+]]: memref<10xi1>, %[[B:.+]]: memref<10xi1>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xi1>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi1>, memref<10xi1>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi1>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi1>, memref<10xi1>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi1>)
+
+// -----
+              
+func.func @binary_ops_uint(%A: memref<10xi32>, %B: memref<10xi32>,
+                           %Out: memref<10xi32>) {
+  linalg.elementwise kind=#linalg.elementwise_kind<max_unsigned>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<min_unsigned>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_uint
+// CHECK-SAME: %[[A:.+]]: memref<10xi32>, %[[B:.+]]: memref<10xi32>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xi32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<max_unsigned>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<min_unsigned>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+
+// -----
+
+func.func @binary_ops_non_identity(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
+                                   %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.elementwise
+    kind=#linalg.elementwise_kind<add>
+    indexing_maps = [affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d1, d0)>,
+                     affine_map<(d0, d1) -> (d0, d1)>]
+    ins(%A, %B : tensor<?xf32>, tensor<?x?xf32>)
+    outs(%Out : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// CHECK-DAG: #[[MAP_BC:.+]] = affine_map<(d0, d1) -> (d1)>
+// CHECK-DAG: #[[MAP_TP:.+]] = affine_map<(d0, d1) -> (d1, d0)>
+// CHECK-DAG: #[[MAP_ID:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: binary_ops_non_identity
+// CHECK-SAME: %[[A:.+]]: tensor<?xf32>, %[[B:.+]]: tensor<?x?xf32>,
+// CHECK-SAME: %[[OUT:.+]]: tensor<?x?xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-SAME: indexing_maps = [#[[MAP_BC]], #[[MAP_TP]], #[[MAP_ID]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?xf32>, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// -----
 
 #map = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
@@ -124,6 +323,22 @@ func.func @contract_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
+func.func @contract_matmul_bool(%arg0: tensor<?x?xi1>, %arg1: tensor<?x?xi1>,
+    %arg2: tensor<?x?xi1>) -> tensor<?x?xi1> {
+  %0 = linalg.contract indexing_maps = [#map, #map1, #map2]
+    ins(%arg0, %arg1 : tensor<?x?xi1>, tensor<?x?xi1>)
+    outs(%arg2 : tensor<?x?xi1>) -> tensor<?x?xi1>
+  return %0 : tensor<?x?xi1>
+}
+
+// CHECK-LABEL: contract_matmul_bool
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xi1>, %[[B:.+]]: tensor<?x?xi1>,
+// CHECK-SAME: %[[OUT:.+]]: tensor<?x?xi1>) -> tensor<?x?xi1>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.contract
+// CHECK-SAME: indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xi1>, tensor<?x?xi1>)
+// CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi1>) -> tensor<?x?xi1>
 
 func.func @contract_matmul_memref(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
     %arg2: memref<?x?xf32>) {

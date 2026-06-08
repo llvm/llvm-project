@@ -234,7 +234,7 @@ public:
 
   unsigned arg_size() const { return NumArgs; }
 
-  static FunctionInfo *
+  static std::unique_ptr<FunctionInfo>
   create(CallingConv::ID CC, const Type *ReturnType,
          ArrayRef<const Type *> ArgTypes,
          std::optional<unsigned> NumRequired = std::nullopt);

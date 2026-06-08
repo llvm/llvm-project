@@ -147,9 +147,9 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                          "VGPRCriticalLimit calculation method.\n");
     unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
     unsigned Granule =
-        AMDGPU::IsaInfo::getVGPRAllocGranule(&ST, DynamicVGPRBlockSize);
+        AMDGPU::IsaInfo::getVGPRAllocGranule(ST, DynamicVGPRBlockSize);
     unsigned Addressable =
-        AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST, DynamicVGPRBlockSize);
+        AMDGPU::IsaInfo::getAddressableNumVGPRs(ST, DynamicVGPRBlockSize);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
@@ -1075,7 +1075,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
   if (LiveInIt != MBBLiveIns.end()) {
     auto LiveIn = std::move(LiveInIt->second);
-    RPTracker.reset(*MBB->begin(), &LiveIn);
+    RPTracker.reset(*MBB->begin(), MBB->end(), &LiveIn);
     MBBLiveIns.erase(LiveInIt);
   } else {
     I = Rgn.first;
@@ -1083,7 +1083,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
 #ifdef EXPENSIVE_CHECKS
     assert(isEqual(getLiveRegsBefore(*NonDbgMI, *LIS), LRS));
 #endif
-    RPTracker.reset(*I, &LRS);
+    RPTracker.reset(*I, I->getParent()->end(), &LRS);
   }
 
   for (;;) {
@@ -1207,16 +1207,10 @@ void GCNScheduleDAGMILive::runSchedStages() {
       }
 
       if (S.useGCNTrackers()) {
-        GCNDownwardRPTracker *DownwardTracker = S.getDownwardTracker();
-        GCNUpwardRPTracker *UpwardTracker = S.getUpwardTracker();
-        GCNRPTracker::LiveRegSet *RegionLiveIns =
-            &LiveIns[Stage->getRegionIdx()];
-
-        reinterpret_cast<GCNRPTracker *>(DownwardTracker)
-            ->reset(MRI, *RegionLiveIns);
-        reinterpret_cast<GCNRPTracker *>(UpwardTracker)
-            ->reset(MRI, RegionLiveOuts.getLiveRegsForRegionIdx(
-                             Stage->getRegionIdx()));
+        const unsigned RegionIdx = Stage->getRegionIdx();
+        S.getDownwardTracker()->reset(MRI, LiveIns[RegionIdx]);
+        S.getUpwardTracker()->reset(
+            MRI, RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx));
       }
 
       ScheduleDAGMILive::schedule();
@@ -2079,11 +2073,10 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
+        ST, DAG.MFI.getDynamicVGPRBlockSize(),
         PressureBefore.getVGPRNum(false));
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureAfter.getVGPRNum(false));
+        ST, DAG.MFI.getDynamicVGPRBlockSize(), PressureAfter.getVGPRNum(false));
     if (BlocksAfter > BlocksBefore)
       return true;
   }
@@ -2255,11 +2248,56 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
   DAG.Regions[RegionIdx].first = MIOrder.front();
 }
 
-bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
+/// Returns true when \p RD will already be in AGPR-form after the rewrite, so
+/// no bridge copy is needed at this reaching definition.
+static bool isReachingDefAGPRForm(MachineInstr *RD,
+                                  const DenseSet<Register> &CandSrc2Regs,
+                                  const SIInstrInfo &TII) {
+  if (TII.isMAI(*RD))
+    return true;
+  if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
+      RD->getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO)
+    return true;
+  if (RD->isCopy() && CandSrc2Regs.contains(RD->getOperand(1).getReg()))
+    return true;
+  return false;
+}
 
+void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
+    ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands) {
+  for (auto [MI, OriginalOpcode] : RewriteCands) {
+    assert(TII->isMAI(*MI));
+    const TargetRegisterClass *ADefRC =
+        DAG.MRI.getRegClass(MI->getOperand(0).getReg());
+    const TargetRegisterClass *VDefRC = SRI->getEquivalentVGPRClass(ADefRC);
+    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VDefRC);
+    MI->setDesc(TII->get(OriginalOpcode));
+
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (!Src2->isReg())
+      continue;
+
+    // Have to get src types separately since subregs may cause C and D
+    // registers to be different types even though the actual operand is
+    // the same size.
+    const TargetRegisterClass *AUseRC = DAG.MRI.getRegClass(Src2->getReg());
+    const TargetRegisterClass *VUseRC = SRI->getEquivalentVGPRClass(AUseRC);
+    DAG.MRI.setRegClass(Src2->getReg(), VUseRC);
+  }
+}
+
+bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
-  return AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) != -1;
+  if (AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) == -1)
+    return false;
+  // Reject candidates whose users force an unavoidable bridge copy.
+  Register DstReg = MI->getOperand(0).getReg();
+  for (const MachineOperand &Use : DAG.MRI.use_nodbg_operands(DstReg)) {
+    if (!TII->isMAI(*Use.getParent()) && !Use.getParent()->isCopy())
+      return false;
+  }
+  return true;
 }
 
 bool RewriteMFMAFormStage::initHeuristics(
@@ -2267,6 +2305,21 @@ bool RewriteMFMAFormStage::initHeuristics(
     DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
   bool Changed = false;
+
+  // Collect the candidate group, its members share AGPR-form operands
+  // post-rewrite, so reaching defs feeding any member don't need bridge copy.
+  SmallPtrSet<MachineInstr *, 16> RewriteSet;
+  DenseSet<Register> CandSrc2Regs;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isRewriteCandidate(&MI))
+        continue;
+      RewriteSet.insert(&MI);
+      MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+      if (Src2 && Src2->isReg())
+        CandSrc2Regs.insert(Src2->getReg());
+    }
+  }
 
   // Prepare for the heuristics
   for (MachineBasicBlock &MBB : MF) {
@@ -2285,12 +2338,11 @@ bool RewriteMFMAFormStage::initHeuristics(
         SmallVector<SlotIndex, 8> Src2ReachingDefs;
         findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
 
-        // For any definition of the src2 register which is non-MFMA, we
-        // insert a copy.
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-          if (!TII->isMAI(*RD))
-            CopyForDef.insert(RD);
+          if (isReachingDefAGPRForm(RD, CandSrc2Regs, *TII))
+            continue;
+          CopyForDef.insert(RD);
         }
       }
 
@@ -2300,13 +2352,18 @@ bool RewriteMFMAFormStage::initHeuristics(
       findReachingUses(&MI, DAG.LIS, DstReachingUses);
 
       for (MachineOperand *RUOp : DstReachingUses) {
-        if (TII->isMAI(*RUOp->getParent()))
+        MachineInstr *UserMI = RUOp->getParent();
+        // Group members read the AGPR result directly.
+        if (TII->isMAI(*UserMI) && RewriteSet.contains(UserMI))
           continue;
 
         // For any user of the result of the MFMA which is not an MFMA, we
         // insert a copy. For a given register, we will only insert one copy
         // per user block.
-        CopyForUse[RUOp->getParent()->getParent()].insert(RUOp->getReg());
+        CopyForUse[UserMI->getParent()].insert(RUOp->getReg());
+
+        if (TII->isMAI(*UserMI))
+          continue;
 
         SmallVector<SlotIndex, 8> DstUsesReachingDefs;
         findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
@@ -2344,7 +2401,7 @@ bool RewriteMFMAFormStage::initHeuristics(
 }
 
 int64_t RewriteMFMAFormStage::getRewriteCost(
-    const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
+    ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands,
     const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     const SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
   MachineBlockFrequencyInfo *MBFI = DAG.MBFI;
@@ -2396,8 +2453,10 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
       SpillCost *= (int64_t)RelativeFreq;
 
     // If we have increased spilling in any block, just bail.
-    if (SpillCost > 0)
+    if (SpillCost > 0) {
+      resetRewriteCandsToVGPR(RewriteCands);
       return SpillCost;
+    }
 
     if (SpillCost < BestSpillCost)
       BestSpillCost = SpillCost;
@@ -2434,36 +2493,17 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     }
   }
 
-  // Reset the classes that were changed to AGPR for better RB analysis.
-  // We must do rewriting after copy-insertion, as some defs of the register
-  // may require VGPR.  Additionally, if we bail out and don't perform the
-  // rewrite then these need to be restored anyway.
-  for (auto &[MI, OriginalOpcode] : RewriteCands) {
-    assert(TII->isMAI(*MI));
-    const TargetRegisterClass *ADefRC =
-        DAG.MRI.getRegClass(MI->getOperand(0).getReg());
-    const TargetRegisterClass *VDefRC = SRI->getEquivalentVGPRClass(ADefRC);
-    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VDefRC);
-    MI->setDesc(TII->get(OriginalOpcode));
-
-    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    assert(Src2);
-    if (!Src2->isReg())
-      continue;
-
-    // Have to get src types separately since subregs may cause C and D
-    // registers to be different types even though the actual operand is
-    // the same size.
-    const TargetRegisterClass *AUseRC = DAG.MRI.getRegClass(Src2->getReg());
-    const TargetRegisterClass *VUseRC = SRI->getEquivalentVGPRClass(AUseRC);
-    DAG.MRI.setRegClass(Src2->getReg(), VUseRC);
-  }
+  // Reset the classes that were changed to AGPR for better register bank
+  // analysis. We must do rewriting after copy-insertion, as some defs of the
+  // register may require VGPR.  Additionally, if we bail out and don't perform
+  // the rewrite then these need to be restored anyway.
+  resetRewriteCandsToVGPR(RewriteCands);
 
   return Cost + CopyCost;
 }
 
 bool RewriteMFMAFormStage::rewrite(
-    const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands) {
+    ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands) {
   DenseMap<MachineInstr *, unsigned> FirstMIToRegion;
   DenseMap<MachineInstr *, unsigned> LastMIToRegion;
 
@@ -2529,6 +2569,17 @@ bool RewriteMFMAFormStage::rewrite(
   DenseMap<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>
       ReachingUseTracker;
 
+  // Collect the candidate group; its members share AGPR-form operands
+  // post-rewrite, so reaching defs feeding any member need no bridge copy.
+  SmallPtrSet<MachineInstr *, 16> RewriteCandsSet;
+  DenseSet<Register> RewriteSrc2Regs;
+  for (auto &[MI, OriginalOpcode] : RewriteCands) {
+    RewriteCandsSet.insert(MI);
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (Src2 && Src2->isReg())
+      RewriteSrc2Regs.insert(Src2->getReg());
+  }
+
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
     int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
     if (ReplacementOp == -1)
@@ -2549,15 +2600,14 @@ bool RewriteMFMAFormStage::rewrite(
 
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (TII->isMAI(*RD))
+        if (isReachingDefAGPRForm(RD, RewriteSrc2Regs, *TII))
           continue;
 
-        // If there is a non mai reaching def, then we need a copy.
         Src2DefsReplace.insert(RD);
       }
 
       if (!Src2DefsReplace.empty()) {
-        DenseMap<Register, Register>::iterator RI = RedefMap.find(Src2Reg);
+        auto RI = RedefMap.find(Src2Reg);
         if (RI != RedefMap.end()) {
           MappedReg = RI->second;
         } else {
@@ -2619,12 +2669,19 @@ bool RewriteMFMAFormStage::rewrite(
     findReachingUses(MI, DAG.LIS, DstReachingUses);
 
     for (MachineOperand *RUOp : DstReachingUses) {
-      if (TII->isMAI(*RUOp->getParent()))
+      MachineInstr *UserMI = RUOp->getParent();
+      // Group members read the AGPR result directly.
+      if (TII->isMAI(*UserMI) && RewriteCandsSet.contains(UserMI))
         continue;
 
       // If there is a non mai reaching use, then we need a copy.
       if (find(DstReachingUseCopies, RUOp) == DstReachingUseCopies.end())
         DstReachingUseCopies.push_back(RUOp);
+
+      // Non-rewritten MAI: its defs aren't being reclassified.
+      if (TII->isMAI(*UserMI))
+        continue;
+
       SmallVector<SlotIndex, 8> DstUsesReachingDefs;
       findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
 
@@ -2641,7 +2698,7 @@ bool RewriteMFMAFormStage::rewrite(
     }
 
     if (!DstUseDefsReplace.empty()) {
-      DenseMap<Register, Register>::iterator RI = RedefMap.find(DstReg);
+      auto RI = RedefMap.find(DstReg);
       if (RI != RedefMap.end()) {
         MappedReg = RI->second;
       } else {
@@ -2668,8 +2725,7 @@ bool RewriteMFMAFormStage::rewrite(
 
           // If this reaching def was the last MI in the region, update the
           // region boundaries.
-          DenseMap<MachineInstr *, unsigned>::iterator LMI =
-              LastMIToRegion.find(RD);
+          auto LMI = LastMIToRegion.find(RD);
           if (LMI != LastMIToRegion.end()) {
             unsigned UpdateRegion = LMI->second;
             DAG.Regions[UpdateRegion].second = VGPRCopy;
@@ -2747,8 +2803,7 @@ bool RewriteMFMAFormStage::rewrite(
 
       // If this UseInst was the first MI in the region, update the region
       // boundaries.
-      DenseMap<MachineInstr *, unsigned>::iterator FI =
-          FirstMIToRegion.find(UseInst);
+      auto FI = FirstMIToRegion.find(UseInst);
       if (FI != FirstMIToRegion.end()) {
         unsigned UpdateRegion = FI->second;
         DAG.Regions[UpdateRegion].first = VGPRCopy;
@@ -2782,7 +2837,7 @@ bool RewriteMFMAFormStage::rewrite(
     Register RegToRewrite = RewriteReg;
 
     // Be sure to update the replacement register and not the original.
-    DenseMap<Register, Register>::iterator RI = RedefMap.find(RewriteReg);
+    auto RI = RedefMap.find(RewriteReg);
     if (RI != RedefMap.end())
       RegToRewrite = RI->second;
 

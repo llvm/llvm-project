@@ -36,7 +36,7 @@ public:
     std::unique_ptr<MachineFunction> MF;
 
   public:
-    Result(std::unique_ptr<MachineFunction> MF);
+    LLVM_ABI Result(std::unique_ptr<MachineFunction> MF);
     MachineFunction &getMF() { return *MF; };
     LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
                              FunctionAnalysisManager::Invalidator &);
@@ -47,7 +47,7 @@ public:
 };
 
 class FreeMachineFunctionPass
-    : public OptionalPassInfoMixin<FreeMachineFunctionPass> {
+    : public RequiredPassInfoMixin<FreeMachineFunctionPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

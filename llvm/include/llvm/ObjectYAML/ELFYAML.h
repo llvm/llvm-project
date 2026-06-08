@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/ObjectYAML/BBAddrMapYAML.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -154,63 +155,6 @@ struct SectionOrType {
 struct DynamicEntry {
   ELF_DYNTAG Tag;
   llvm::yaml::Hex64 Val;
-};
-
-struct BBAddrMapEntry {
-  struct BBEntry {
-    uint32_t ID;
-    llvm::yaml::Hex64 AddressOffset;
-    llvm::yaml::Hex64 Size;
-    llvm::yaml::Hex64 Metadata;
-    std::optional<std::vector<llvm::yaml::Hex64>> CallsiteEndOffsets;
-    std::optional<llvm::yaml::Hex64> Hash;
-  };
-  uint8_t Version;
-  llvm::yaml::Hex16 Feature;
-
-  struct BBRangeEntry {
-    llvm::yaml::Hex64 BaseAddress;
-    std::optional<uint64_t> NumBlocks;
-    std::optional<std::vector<BBEntry>> BBEntries;
-  };
-
-  std::optional<uint64_t> NumBBRanges;
-  std::optional<std::vector<BBRangeEntry>> BBRanges;
-
-  llvm::yaml::Hex64 getFunctionAddress() const {
-    if (!BBRanges || BBRanges->empty())
-      return 0;
-    return BBRanges->front().BaseAddress;
-  }
-
-  // Returns if any BB entries have non-empty callsite offsets.
-  bool hasAnyCallsiteEndOffsets() const {
-    if (!BBRanges)
-      return false;
-    for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *BBRanges) {
-      if (!BBR.BBEntries)
-        continue;
-      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries)
-        if (BBE.CallsiteEndOffsets && !BBE.CallsiteEndOffsets->empty())
-          return true;
-    }
-    return false;
-  }
-};
-
-struct PGOAnalysisMapEntry {
-  struct PGOBBEntry {
-    struct SuccessorEntry {
-      uint32_t ID;
-      llvm::yaml::Hex32 BrProb;
-      std::optional<uint32_t> PostLinkBrFreq;
-    };
-    std::optional<uint64_t> BBFreq;
-    std::optional<uint32_t> PostLinkBBFreq;
-    std::optional<std::vector<SuccessorEntry>> Successors;
-  };
-  std::optional<uint64_t> FuncEntryCount;
-  std::optional<std::vector<PGOBBEntry>> PGOBBEntries;
 };
 
 struct StackSizeEntry {
@@ -359,8 +303,8 @@ struct SectionHeaderTable : Chunk {
 };
 
 struct BBAddrMapSection : Section {
-  std::optional<std::vector<BBAddrMapEntry>> Entries;
-  std::optional<std::vector<PGOAnalysisMapEntry>> PGOAnalyses;
+  std::optional<std::vector<BBAddrMapYAML::BBAddrMapEntry>> Entries;
+  std::optional<std::vector<BBAddrMapYAML::PGOAnalysisMapEntry>> PGOAnalyses;
 
   BBAddrMapSection() : Section(ChunkKind::BBAddrMap) {}
 
@@ -780,13 +724,6 @@ bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBRangeEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOAnalysisMapEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOAnalysisMapEntry::PGOBBEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(
-    llvm::ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntryWeight)
@@ -945,33 +882,6 @@ struct MappingTraits<ELFYAML::Symbol> {
 
 template <> struct MappingTraits<ELFYAML::StackSizeEntry> {
   static void mapping(IO &IO, ELFYAML::StackSizeEntry &Rel);
-};
-
-template <> struct MappingTraits<ELFYAML::BBAddrMapEntry> {
-  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry &E);
-};
-
-template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBRangeEntry> {
-  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBRangeEntry &E);
-};
-
-template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry> {
-  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &E);
-};
-
-template <> struct MappingTraits<ELFYAML::PGOAnalysisMapEntry> {
-  static void mapping(IO &IO, ELFYAML::PGOAnalysisMapEntry &Rel);
-};
-
-template <> struct MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry> {
-  static void mapping(IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &Rel);
-};
-
-template <>
-struct MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry> {
-  static void
-  mapping(IO &IO,
-          ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::GnuHashHeader> {

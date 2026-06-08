@@ -204,7 +204,6 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
-  Hash.cpp
   HexagonAttributeParser.cpp
   HexagonAttributes.cpp
   InitLLVM.cpp
@@ -283,6 +282,7 @@ add_llvm_component_library(LLVMSupport
   VirtualOutputConfig.cpp
   VirtualOutputError.cpp
   VirtualOutputFile.cpp
+  Win64EH.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
@@ -400,7 +400,12 @@ endif()
 target_include_directories(LLVMSupport
   PRIVATE
   ${LLVM_THIRD_PARTY_DIR}/siphash/include
+  ${LLVM_SOURCE_DIR}/../libc
 )
+
+if(NOT MSVC)
+  target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.
+endif()
 
 # SupportLSP depends on Support and therefore must be included afterwards.
 add_subdirectory(LSP)

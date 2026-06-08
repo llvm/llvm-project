@@ -13,9 +13,9 @@
 
 namespace llvm {
 
-class JMCInstrumenterPass : public OptionalPassInfoMixin<JMCInstrumenterPass> {
+class JMCInstrumenterPass : public RequiredPassInfoMixin<JMCInstrumenterPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

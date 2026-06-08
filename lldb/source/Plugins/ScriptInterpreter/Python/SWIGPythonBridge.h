@@ -12,7 +12,6 @@
 #include <optional>
 #include <string>
 
-// LLDB Python header must be included first
 #include "lldb-python.h"
 
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
@@ -269,6 +268,7 @@ void *LLDBSWIGPython_CastPyObjectToSBValueList(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *data);
 } // namespace python
 
 } // namespace lldb_private

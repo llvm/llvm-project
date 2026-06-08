@@ -38,7 +38,7 @@
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vaddh_f16(
 float16_t test_vaddh_f16(float16_t a, float16_t b) {
-// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.f16
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half{{.*}} [[B:%.*]]) {{.*}} {
 // LLVM:  [[ADD:%.*]] = fadd half [[A]], [[B]]
@@ -51,7 +51,7 @@ float16_t test_vaddh_f16(float16_t a, float16_t b) {
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vsubh_f16(
 float16_t test_vsubh_f16(float16_t a, float16_t b) {
-// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.f16
+// CIR: {{%.*}} = cir.fsub {{%.*}}, {{%.*}} : !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
 // LLVM:  [[SUB:%.*]] = fsub half [[A]], [[B]]
@@ -64,7 +64,7 @@ float16_t test_vsubh_f16(float16_t a, float16_t b) {
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vmulh_f16(
 float16_t test_vmulh_f16(float16_t a, float16_t b) {
-// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.f16
+// CIR: {{%.*}} = cir.fmul {{%.*}}, {{%.*}} : !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
 // LLVM:  [[MUL:%.*]] = fmul half [[A]], [[B]]
@@ -77,7 +77,7 @@ float16_t test_vmulh_f16(float16_t a, float16_t b) {
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vdivh_f16(
 float16_t test_vdivh_f16(float16_t a, float16_t b) {
-// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.f16
+// CIR: {{%.*}} = cir.fdiv {{%.*}}, {{%.*}} : !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
 // LLVM:  [[DIV:%.*]] = fdiv half [[A]], [[B]]
@@ -96,7 +96,7 @@ uint16_t test_vceqzh_f16(float16_t a) {
 // CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
 
 // LLVM-SAME: (half {{.*}} [[A:%.*]])
-// LLVM:  [[TMP1:%.*]] = fcmp oeq half [[A]], 0xH0000
+// LLVM:  [[TMP1:%.*]] = fcmp oeq half [[A]], 0.000000e+00
 // LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
 // LLVM:  ret i16 [[TMP2]]
   return vceqzh_f16(a);
@@ -179,7 +179,7 @@ float16_t test_vrsqrtsh_f16(float16_t a, float16_t b) {
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vnegh_f16
 float16_t test_vnegh_f16(float16_t a) {
-// CIR: cir.minus {{.*}} : !cir.f16
+// CIR: cir.fneg {{.*}} : !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]])
 // LLVM: [[NEG:%.*]] = fneg half [[A:%.*]]
@@ -202,7 +202,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 
 // ALL-LABEL: test_vfmsh_f16
 float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
-// CIR: [[SUB:%.*]] = cir.minus %{{.*}} : !cir.f16
+// CIR: [[SUB:%.*]] = cir.fneg %{{.*}} : !cir.f16
 // CIR: cir.call_llvm_intrinsic "fma" [[SUB]], {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])

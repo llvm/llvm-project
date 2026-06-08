@@ -14,9 +14,9 @@
 namespace llvm {
 
 class InlineAsmPreparePass
-    : public OptionalPassInfoMixin<InlineAsmPreparePass> {
+    : public RequiredPassInfoMixin<InlineAsmPreparePass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

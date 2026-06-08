@@ -233,6 +233,11 @@ The check considers a variable to be reinitialized in the following cases:
   - A member function marked with the ``[[clang::reinitializes]]`` attribute is
     called on the variable.
 
+  - The variable is passed as an argument to ``std::tie`` on the left-hand
+    side of an assignment (e.g. ``std::tie(a, b) = f(...)``). The tuple
+    assignment operator writes back through the stored references, which
+    reinitializes each named variable.
+
 If the variable in question is a struct and an individual member variable of
 that struct is written to, the check does not consider this to be a
 reinitialization -- even if, eventually, all member variables of the struct are

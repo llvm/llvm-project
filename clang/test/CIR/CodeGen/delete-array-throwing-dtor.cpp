@@ -16,7 +16,7 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
   delete[] ptr;
 }
 
-// CIR-BEFORE-CXXABI: IR Dump Before CXXABILowering (cir-cxxabi-lowering)
+// CIR-BEFORE-CXXABI: IR Dump Before CXXABILowering: cir-cxxabi-lowering
 
 // CIR-BEFORE-CXXABI: cir.func {{.*}} @_Z31test_delete_array_throwing_dtorP12ThrowingDtor
 // CIR-BEFORE-CXXABI:   %[[PTR:.*]] = cir.load
@@ -26,7 +26,7 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 // CIR-BEFORE-CXXABI:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_ThrowingDtor> dtor_may_throw {delete_fn = @_ZdaPvm, delete_params = #cir.usual_delete_params<size = true>, element_dtor = @_ZN12ThrowingDtorD1Ev}
 // CIR-BEFORE-CXXABI:   }
 
-// CIR-AFTER-CXXABI: IR Dump After CXXABILowering (cir-cxxabi-lowering)
+// CIR-AFTER-CXXABI: IR Dump After CXXABILowering: cir-cxxabi-lowering
 
 // CIR-AFTER-CXXABI: cir.func {{.*}} @_Z31test_delete_array_throwing_dtorP12ThrowingDtor
 // CIR-AFTER-CXXABI:   %[[PTR:.*]] = cir.load

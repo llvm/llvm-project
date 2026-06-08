@@ -29,12 +29,12 @@ class TestCommandCache(unittest.TestCase):
     def test_basic(self):
         lit_config = self._lit_config()
 
-        self.assertEqual(lit_config.run_command_cached(["echo", "-n", "hi"]), b"hi")
+        self.assertEqual(lit_config.run_command_cached(["printf", "hi"]), b"hi")
         self.assertNotEqual(lit_config.run_command_cached("ls"), None)
 
         # Test that arguments (e.g. text=True) get forwarded to subprocess.run
         self.assertEqual(
-            lit_config.run_command_cached(["echo", "-n", "hi"], text=True), "hi"
+            lit_config.run_command_cached(["printf", "hi"], text=True), "hi"
         )
 
         # shell=True is not implied
@@ -76,12 +76,17 @@ class TestCommandCache(unittest.TestCase):
     def test_cache(self):
         lit_config = self._lit_config()
 
-        # Check the date (with nanoseconds)
-        date = lit_config.run_command_cached("date -Ins", shell=True)
+        date = lit_config.run_command_cached("date", shell=True)
         self.assertNotEqual(date, None)
 
+        # Ideally, we'd just use `date -Ins` and not need to sleep,
+        # but nanosecond support was only added in macOS 15.4-ish.
+        # (Note that even if this sleep is too short/too long the
+        # test should still pass.)
+        time.sleep(2)
+
         # Second time should be cached, i.e. equal to the first
-        self.assertEqual(lit_config.run_command_cached("date -Ins", shell=True), date)
+        self.assertEqual(lit_config.run_command_cached("date", shell=True), date)
 
 
 if __name__ == "__main__":

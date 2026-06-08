@@ -403,6 +403,28 @@ static const ParmVarDecl *getCanonicalParamDecl(const Decl *D, unsigned I) {
   return nullptr;
 }
 
+static const ValueDecl *getValueDeclFromSExpr(const til::SExpr *E) {
+  if (const auto *V = dyn_cast<til::Variable>(E))
+    return V->clangDecl();
+  if (const auto *Ph = dyn_cast<til::Phi>(E))
+    return Ph->clangDecl();
+  if (const auto *P = dyn_cast<til::Project>(E))
+    return P->clangDecl();
+  if (const auto *L = dyn_cast<til::LiteralPtr>(E))
+    return L->clangDecl();
+  return nullptr;
+}
+
+static bool hasAnyPointerType(const til::SExpr *E) {
+  auto *VD = getValueDeclFromSExpr(E);
+  if (VD && VD->getType()->isAnyPointerType())
+    return true;
+  if (const auto *C = dyn_cast<til::Cast>(E))
+    return C->castOpcode() == til::CAST_objToPtr;
+
+  return false;
+}
+
 til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
                                                CallingContext *Ctx) {
   const auto *VD = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
@@ -444,6 +466,20 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
   if (const auto *VarD = dyn_cast<VarDecl>(VD))
     return translateVariable(VarD, Ctx);
 
+  // FIXME: A FieldDecl reached via a DeclRefExpr should ideally be modelled as
+  // a MemberExpr with an artificial self in the AST (e.g. ImplicitThisExpr as a
+  // C equivalent of CXXThisExpr). Until such AST support is available, project
+  // the field on the current SelfArg, so implicit member references in C and in
+  // parameter attributes are not lost.
+  if (const auto *FD = dyn_cast<FieldDecl>(VD); FD && Ctx && Ctx->SelfArg) {
+    til::SExpr *BE = translateCXXThisExpr(nullptr, Ctx);
+    til::SExpr *E = new (Arena) til::SApply(BE);
+    til::Project *P = new (Arena) til::Project(E, FD);
+    if (hasAnyPointerType(BE))
+      P->setArrow(true);
+    return P;
+  }
+
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);
 }
@@ -459,28 +495,6 @@ til::SExpr *SExprBuilder::translateCXXThisExpr(const CXXThisExpr *TE,
   }
   assert(SelfVar && "We have no variable for 'this'!");
   return SelfVar;
-}
-
-static const ValueDecl *getValueDeclFromSExpr(const til::SExpr *E) {
-  if (const auto *V = dyn_cast<til::Variable>(E))
-    return V->clangDecl();
-  if (const auto *Ph = dyn_cast<til::Phi>(E))
-    return Ph->clangDecl();
-  if (const auto *P = dyn_cast<til::Project>(E))
-    return P->clangDecl();
-  if (const auto *L = dyn_cast<til::LiteralPtr>(E))
-    return L->clangDecl();
-  return nullptr;
-}
-
-static bool hasAnyPointerType(const til::SExpr *E) {
-  auto *VD = getValueDeclFromSExpr(E);
-  if (VD && VD->getType()->isAnyPointerType())
-    return true;
-  if (const auto *C = dyn_cast<til::Cast>(E))
-    return C->castOpcode() == til::CAST_objToPtr;
-
-  return false;
 }
 
 // Grab the very first declaration of virtual method D

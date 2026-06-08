@@ -370,6 +370,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
+  if (StrPtr.isConstexprUnknown())
+    return false;
+
   if (!CheckArray(S, OpPC, StrPtr))
     return false;
 
@@ -1019,7 +1022,8 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignIntegral(S, CarryOutPtr, CarryOutT, CarryOut);
-  CarryOutPtr.initialize();
+  if (CarryOutPtr.canBeInitialized())
+    CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
   pushInteger(S, Result, Call->getType());
@@ -4613,6 +4617,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
   case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BIstdc_rotate_left_uc:
+  case Builtin::BIstdc_rotate_left_us:
+  case Builtin::BIstdc_rotate_left_ui:
+  case Builtin::BIstdc_rotate_left_ul:
+  case Builtin::BIstdc_rotate_left_ull:
   case Builtin::BI_rotl8: // Microsoft variants of rotate left
   case Builtin::BI_rotl16:
   case Builtin::BI_rotl:
@@ -4623,6 +4632,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
   case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BIstdc_rotate_right_uc:
+  case Builtin::BIstdc_rotate_right_us:
+  case Builtin::BIstdc_rotate_right_ui:
+  case Builtin::BIstdc_rotate_right_ul:
+  case Builtin::BIstdc_rotate_right_ull:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
@@ -4636,6 +4650,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     case Builtin::BI__builtin_rotateright32:
     case Builtin::BI__builtin_rotateright64:
     case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BIstdc_rotate_right_uc:
+    case Builtin::BIstdc_rotate_right_us:
+    case Builtin::BIstdc_rotate_right_ui:
+    case Builtin::BIstdc_rotate_right_ul:
+    case Builtin::BIstdc_rotate_right_ull:
     case Builtin::BI_rotr8:
     case Builtin::BI_rotr16:
     case Builtin::BI_rotr:
@@ -4661,7 +4680,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_leading_zeros_ui:
   case Builtin::BIstdc_leading_zeros_ul:
   case Builtin::BIstdc_leading_zeros_ull:
-  case Builtin::BIstdc_leading_zeros:
   case Builtin::BI__builtin_stdc_leading_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4675,7 +4693,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_leading_ones_ui:
   case Builtin::BIstdc_leading_ones_ul:
   case Builtin::BIstdc_leading_ones_ull:
-  case Builtin::BIstdc_leading_ones:
   case Builtin::BI__builtin_stdc_leading_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4689,7 +4706,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_trailing_zeros_ui:
   case Builtin::BIstdc_trailing_zeros_ul:
   case Builtin::BIstdc_trailing_zeros_ull:
-  case Builtin::BIstdc_trailing_zeros:
   case Builtin::BI__builtin_stdc_trailing_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4703,7 +4719,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_trailing_ones_ui:
   case Builtin::BIstdc_trailing_ones_ul:
   case Builtin::BIstdc_trailing_ones_ull:
-  case Builtin::BIstdc_trailing_ones:
   case Builtin::BI__builtin_stdc_trailing_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4717,7 +4732,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_first_leading_zero_ui:
   case Builtin::BIstdc_first_leading_zero_ul:
   case Builtin::BIstdc_first_leading_zero_ull:
-  case Builtin::BIstdc_first_leading_zero:
   case Builtin::BI__builtin_stdc_first_leading_zero: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4731,7 +4745,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_first_leading_one_ui:
   case Builtin::BIstdc_first_leading_one_ul:
   case Builtin::BIstdc_first_leading_one_ull:
-  case Builtin::BIstdc_first_leading_one:
   case Builtin::BI__builtin_stdc_first_leading_one: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4745,7 +4758,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_first_trailing_zero_ui:
   case Builtin::BIstdc_first_trailing_zero_ul:
   case Builtin::BIstdc_first_trailing_zero_ull:
-  case Builtin::BIstdc_first_trailing_zero:
   case Builtin::BI__builtin_stdc_first_trailing_zero: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4759,7 +4771,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_first_trailing_one_ui:
   case Builtin::BIstdc_first_trailing_one_ul:
   case Builtin::BIstdc_first_trailing_one_ull:
-  case Builtin::BIstdc_first_trailing_one:
   case Builtin::BI__builtin_stdc_first_trailing_one: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4773,7 +4784,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_count_zeros_ui:
   case Builtin::BIstdc_count_zeros_ul:
   case Builtin::BIstdc_count_zeros_ull:
-  case Builtin::BIstdc_count_zeros:
   case Builtin::BI__builtin_stdc_count_zeros: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4788,7 +4798,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_count_ones_ui:
   case Builtin::BIstdc_count_ones_ul:
   case Builtin::BIstdc_count_ones_ull:
-  case Builtin::BIstdc_count_ones:
   case Builtin::BI__builtin_stdc_count_ones: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4802,7 +4811,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_has_single_bit_ui:
   case Builtin::BIstdc_has_single_bit_ul:
   case Builtin::BIstdc_has_single_bit_ull:
-  case Builtin::BIstdc_has_single_bit:
   case Builtin::BI__builtin_stdc_has_single_bit: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4816,7 +4824,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_bit_width_ui:
   case Builtin::BIstdc_bit_width_ul:
   case Builtin::BIstdc_bit_width_ull:
-  case Builtin::BIstdc_bit_width:
   case Builtin::BI__builtin_stdc_bit_width: {
     unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
     return interp__builtin_elementwise_int_unaryop(
@@ -4831,7 +4838,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_bit_floor_ui:
   case Builtin::BIstdc_bit_floor_ul:
   case Builtin::BIstdc_bit_floor_ull:
-  case Builtin::BIstdc_bit_floor:
   case Builtin::BI__builtin_stdc_bit_floor:
     return interp__builtin_elementwise_int_unaryop(
         S, OpPC, Call, [](const APSInt &Val) {
@@ -4847,7 +4853,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_bit_ceil_ui:
   case Builtin::BIstdc_bit_ceil_ul:
   case Builtin::BIstdc_bit_ceil_ull:
-  case Builtin::BIstdc_bit_ceil:
   case Builtin::BI__builtin_stdc_bit_ceil:
     return interp__builtin_elementwise_int_unaryop(
         S, OpPC, Call, [](const APSInt &Val) {
@@ -5095,33 +5100,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_pdep_si:
   case clang::X86::BI__builtin_ia32_pdep_di:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
-          unsigned BitWidth = Val.getBitWidth();
-          APInt Result = APInt::getZero(BitWidth);
-
-          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-            if (Mask[I])
-              Result.setBitVal(I, Val[P++]);
-          }
-
-          return Result;
-        });
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::expandBits);
 
   case clang::X86::BI__builtin_ia32_pext_si:
   case clang::X86::BI__builtin_ia32_pext_di:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
-          unsigned BitWidth = Val.getBitWidth();
-          APInt Result = APInt::getZero(BitWidth);
-
-          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-            if (Mask[I])
-              Result.setBitVal(P++, Val[I]);
-          }
-
-          return Result;
-        });
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::compressBits);
 
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
@@ -5531,6 +5516,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pclmulqdq256:
   case clang::X86::BI__builtin_ia32_pclmulqdq512:
     return interp__builtin_ia32_pclmulqdq(S, OpPC, Call);
+  case Builtin::BI__builtin_elementwise_clmul:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::clmul);
 
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(
@@ -6663,15 +6651,17 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
   assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
   const Record *R = DestDesc->ElemRecord;
   for (const Record::Field &F : R->fields()) {
+    Pointer FP = Src.atField(F.Offset);
+
+    if (!CheckMutable(S, OpPC, FP))
+      return false;
+
     if (R->isUnion()) {
       // For unions, only copy the active field. Zero all others.
-      const Pointer &SrcField = Src.atField(F.Offset);
-      if (SrcField.isActive()) {
+      if (FP.isActive()) {
         if (!copyField(F, /*Activate=*/true))
           return false;
       } else {
-        if (!CheckMutable(S, OpPC, Src.atField(F.Offset)))
-          return false;
         Pointer DestField = Dest.atField(F.Offset);
         zeroAll(DestField);
       }
@@ -6701,6 +6691,8 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   assert(!DestDesc->isPrimitive() && !SrcDesc->isPrimitive());
 
   if (DestDesc->isPrimitiveArray()) {
+    if (!SrcDesc->isPrimitiveArray())
+      return false;
     assert(SrcDesc->isPrimitiveArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
     PrimType ET = DestDesc->getPrimType();
@@ -6715,6 +6707,8 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   }
 
   if (DestDesc->isCompositeArray()) {
+    if (!SrcDesc->isCompositeArray())
+      return false;
     assert(SrcDesc->isCompositeArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
@@ -6726,8 +6720,11 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
     return true;
   }
 
-  if (DestDesc->isRecord())
+  if (DestDesc->isRecord()) {
+    if (!SrcDesc->isRecord())
+      return false;
     return copyRecord(S, OpPC, Src, Dest, Activate);
+  }
   return Invalid(S, OpPC);
 }
 

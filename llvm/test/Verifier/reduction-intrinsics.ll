@@ -3,13 +3,13 @@
 ; Reject a vector reduction with a non-vector argument.
 
 define float @reduce_vector_not_vec_arg(float %x) {
-; CHECK: intrinsic has incorrect argument type!
+; CHECK: intrinsic argument 0 type (overload type 0) expected any vector type, but got float
   %r0 = call float @llvm.vector.reduce.fmax.f32(float %x)
   ret float %r0
 }
 
 define i32 @reduce_vector_not_vec_arg2(i32 %x) {
-; CHECK: intrinsic has incorrect argument type!
+; CHECK: intrinsic argument 0 type (overload type 0) expected any vector type, but got i32
   %r0 = call i32 @llvm.vector.reduce.smax.i32(i32 %x)
   ret i32 %r0
 }
@@ -17,7 +17,7 @@ define i32 @reduce_vector_not_vec_arg2(i32 %x) {
 ; Type mismatch for start value.
 
 define float @fadd_match_arg_types(<4 x float> %x) {
-; CHECK: intrinsic has incorrect argument type!
+; CHECK: intrinsic argument 0 type (vector element of overload type 0) expected float (overload type 0 is <4 x float>), but got double
   %r = call float @llvm.vector.reduce.fadd.v4f32(double 0.0, <4 x float> %x)
   ret float %r
 }
@@ -25,7 +25,7 @@ define float @fadd_match_arg_types(<4 x float> %x) {
 ; Wrong result type.
 
 define i64 @result_too_wide(<4 x i32> %x) {
-; CHECK: intrinsic has incorrect return type!
+; CHECK: intrinsic return type (vector element of overload type 0) expected i32 (overload type 0 is <4 x i32>), but got i64
   %r = call i64 @llvm.vector.reduce.add.v4i32(<4 x i32> %x)
   ret i64 %r
 }

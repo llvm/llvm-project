@@ -296,14 +296,14 @@ LLVM_ABI PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI,
                                             const TargetRegisterInfo *TRI);
 
 class FinalizeBundleTestPass
-    : public OptionalPassInfoMixin<FinalizeBundleTestPass> {
+    : public RequiredPassInfoMixin<FinalizeBundleTestPass> {
 public:
-  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 class UnpackMachineBundlesPass
-    : public OptionalPassInfoMixin<UnpackMachineBundlesPass> {
+    : public RequiredPassInfoMixin<UnpackMachineBundlesPass> {
 
 public:
   UnpackMachineBundlesPass(

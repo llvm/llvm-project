@@ -136,6 +136,10 @@ llvm::StringRef clang::ssaf::getToolName() { return ToolName; }
 
 void clang::ssaf::loadPlugins(llvm::ArrayRef<std::string> Paths) {
   for (const std::string &PluginPath : Paths) {
+    if (!fs::exists(PluginPath)) {
+      fail(ErrorMessages::FailedToLoadPlugin, PluginPath,
+           ErrorMessages::PathDoesNotExist);
+    }
     std::string ErrMsg;
     if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(PluginPath.c_str(),
                                                           &ErrMsg)) {
