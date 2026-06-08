@@ -7,6 +7,19 @@ declare i64 @llvm.umax.i64(i64, i64)
 
 ; 0 - smax(a, 0 - a)  ->  smin(a, 0 - a)   (i.e. -abs(a))
 define i64 @ASubSMax(i64 %a) {
+; CHECK-SD-LABEL: ASubSMax:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    neg x8, x0
+; CHECK-SD-NEXT:    cmp x0, x8
+; CHECK-SD-NEXT:    cneg x0, x0, gt
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ASubSMax:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg x8, x0
+; CHECK-GI-NEXT:    cmp x0, x8
+; CHECK-GI-NEXT:    cneg x0, x0, ge
+; CHECK-GI-NEXT:    ret
   %sub1 = sub i64 0, %a
   %max = call i64 @llvm.smax.i64(i64 %a, i64 %sub1)
   %sub2 = sub i64 0, %max
@@ -15,6 +28,13 @@ define i64 @ASubSMax(i64 %a) {
 
 ; Extra use of %max blocks the combine.
 define i64 @ASubSMaxOneUse(i64 %a) {
+; CHECK-LABEL: ASubSMaxOneUse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x0
+; CHECK-NEXT:    cmp x0, x8
+; CHECK-NEXT:    cneg x8, x0, le
+; CHECK-NEXT:    mneg x0, x8, x8
+; CHECK-NEXT:    ret
   %sub1 = sub i64 0, %a
   %max = call i64 @llvm.smax.i64(i64 %a, i64 %sub1)
   %sub2 = sub i64 0, %max
@@ -24,6 +44,19 @@ define i64 @ASubSMaxOneUse(i64 %a) {
 
 ; 0 - umax(a, 0 - a)  ->  umin(a, 0 - a)
 define i64 @ASubUMax(i64 %a) {
+; CHECK-SD-LABEL: ASubUMax:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    neg x8, x0
+; CHECK-SD-NEXT:    cmp x0, x8
+; CHECK-SD-NEXT:    cneg x0, x0, hi
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ASubUMax:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg x8, x0
+; CHECK-GI-NEXT:    cmp x0, x8
+; CHECK-GI-NEXT:    cneg x0, x0, hs
+; CHECK-GI-NEXT:    ret
   %sub1 = sub i64 0, %a
   %max = call i64 @llvm.umax.i64(i64 %a, i64 %sub1)
   %sub2 = sub i64 0, %max
