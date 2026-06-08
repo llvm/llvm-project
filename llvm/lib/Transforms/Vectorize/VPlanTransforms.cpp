@@ -3041,19 +3041,15 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                      StoredVal, EVL, Mask);
   }
 
-  if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
-    if (Rdx->isConditional() &&
-        match(Rdx->getCondOp(), m_RemoveMask(HeaderMask, Mask))) {
-      // Remove the predicated select since vp.reduce already contains mask and
-      // evl.
-      VPSingleDefRecipe *VecOp = cast<VPSingleDefRecipe>(Rdx->getVecOp());
-      assert(
-          !match(VecOp, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
-          "Inloop reduction should be predicated before folding tail by evl");
-      VecOp->replaceAllUsesWith(VecOp->getOperand(1));
-      VecOp->eraseFromParent();
-      return new VPReductionEVLRecipe(*Rdx, EVL, Mask);
-    }
+  VPValue *VecOp;
+  if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe);
+      Rdx && match(Rdx->getVecOp(), m_Intrinsic<Intrinsic::vp_merge>(
+                                        m_VPValue(Mask), m_VPValue(VecOp),
+                                        m_VPValue(), m_VPValue()))) {
+    Rdx->setOperand(1, VecOp);
+    return new VPReductionEVLRecipe(*Rdx, EVL,
+                                    match(Mask, m_True()) ? nullptr : Mask);
+  }
 
   if (auto *Interleave = dyn_cast<VPInterleaveRecipe>(&CurRecipe))
     if (Interleave->getMask() &&
@@ -4604,9 +4600,10 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                                      VFRange &Range) {
   Type *RedTy = Red->getScalarType();
   VPValue *VecOp = Red->getVecOp();
+  VPValue *HeaderMask = vputils::findHeaderMask(*Red->getParent()->getPlan());
 
   // If the reduction is predicated, get the corresponding VecOp from select.
-  if (Red->isConditional())
+  if (HeaderMask)
     VecOp = cast<VPInstruction>(VecOp)->getOperand(1);
 
   assert(!Red->isPartialReduction() &&
@@ -4645,7 +4642,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
     auto *Cast = cast<VPWidenCastRecipe>(VecOp);
     // Hoist the predicated select before extended reduction for backend pattern
     // match and cost model.
-    if (Red->isConditional()) {
+    if (HeaderMask) {
       VPInstruction *Select = cast<VPInstruction>(Red->getVecOp());
       assert(match(Select, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
              "VecOp of predicated reduction must be select");
@@ -4655,7 +4652,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
         ? Red->getFastMathFlagsOrNone()
         : FastMathFlags();
       auto *NewSelect =
-          Builder.createSelect(Select->getOperand(0), Cast->getOperand(0),
+          Builder.createSelect(HeaderMask, Cast->getOperand(0),
                                new VPIRValue(getRecurrenceIdentity(
                                    Red->getRecurrenceKind(),
                                    Cast->getOperand(0)->getScalarType(), FMFs)),
@@ -4733,9 +4730,10 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   VPRecipeBase *Sub = nullptr;
   VPValue *A, *B;
   VPValue *Tmp = nullptr;
+  VPValue *HeaderMask = vputils::findHeaderMask(*Red->getParent()->getPlan());
 
   // If the reduction is predicated, get the corresponding VecOp from select.
-  if (Red->isConditional())
+  if (HeaderMask)
     VecOp = cast<VPInstruction>(VecOp)->getOperand(1);
 
   if (RedTy->isFloatingPointTy())
@@ -4781,11 +4779,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   // double the select but helps cost estimation and generate specific
   // instruction for MulAcc in the backend.
   auto HoistPredicatedSelect = [](VPExpressionRecipe *Expr,
-                                  VPReductionRecipe *Red) {
-     FastMathFlags FMFs =
-            Expr->getOperandOfResultType()->getScalarType()->isFloatingPointTy()
-                 ? Red->getFastMathFlagsOrNone()
-                 : FastMathFlags();
+                                  VPReductionRecipe *Red, VPValue *HeaderMask) {
+    FastMathFlags FMFs =
+        Expr->getOperandOfResultType()->getScalarType()->isFloatingPointTy()
+            ? Red->getFastMathFlagsOrNone()
+            : FastMathFlags();
     // Hoist predicated select to the first two operands of VPExpressionRecipe
     // with MulAcc pattern.
     for (unsigned i = 0; i < 2; ++i) {
@@ -4794,7 +4792,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         continue;
       VPBuilder Builder(R->getParent(), std::next(R->getIterator()));
       auto *NewSelect = Builder.createSelect(
-          Expr->getOperand(Expr->getNumOperands() - 1), R,
+          HeaderMask, R,
           new VPIRValue(getRecurrenceIdentity(Red->getRecurrenceKind(),
                                               R->getScalarType(), FMFs)),
           Red->getDebugLoc());
@@ -4817,7 +4815,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         IsMulAccValidAndClampRange(Mul, RecipeA, RecipeB, nullptr)) {
       // Remove the predicated select, which will be added back before
       // ExpressionRecipe.
-      if (Red->isConditional())
+      if (HeaderMask)
         Red->setOperand(1, cast<VPInstruction>(Red->getVecOp())->getOperand(1));
       VPExpressionRecipe *Expr;
       if (Sub)
@@ -4825,19 +4823,19 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                       cast<VPWidenRecipe>(Sub), Red);
       else
         Expr = new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
-      if (Red->isConditional())
-        HoistPredicatedSelect(Expr, Red);
+      if (HeaderMask)
+        HoistPredicatedSelect(Expr, Red, HeaderMask);
       return Expr;
     }
     // TODO: Add an expression type for this variant with a negated mul
     if (!Sub && IsMulAccValidAndClampRange(Mul, nullptr, nullptr, nullptr)) {
       // Remove the predicated select, which will be added back before
       // ExpressionRecipe.
-      if (Red->isConditional())
+      if (HeaderMask)
         Red->setOperand(1, cast<VPInstruction>(Red->getVecOp())->getOperand(1));
       auto *Expr = new VPExpressionRecipe(Mul, Red);
-      if (Red->isConditional())
-        HoistPredicatedSelect(Expr, Red);
+      if (HeaderMask)
+        HoistPredicatedSelect(Expr, Red, HeaderMask);
       return Expr;
     }
   }
@@ -4886,11 +4884,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
       Mul->eraseFromParent();
       // Remove the predicated select, which will be added back before
       // ExpressionRecipe.
-      if (Red->isConditional())
+      if (HeaderMask)
         Red->setOperand(1, cast<VPInstruction>(Red->getVecOp())->getOperand(1));
       auto *Expr = new VPExpressionRecipe(NewExt0, NewExt1, NewMul, Red);
-      if (Red->isConditional())
-        HoistPredicatedSelect(Expr, Red);
+      if (HeaderMask)
+        HoistPredicatedSelect(Expr, Red, HeaderMask);
       return Expr;
     }
   }
@@ -6577,10 +6575,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
                            ? WidenRecipe->getFastMathFlagsOrNone()
                            : FastMathFlags();
   auto *PartialRed = new VPReductionRecipe(
-      RdxKind,
-      RdxKind == RecurKind::FAdd ? WidenRecipe->getFastMathFlagsOrNone()
-                                 : FastMathFlags(),
-      WidenRecipe->getUnderlyingInstr(), Accumulator, ExtendedOp, Cond,
+      RdxKind, FMFs, WidenRecipe->getUnderlyingInstr(), Accumulator, ExtendedOp,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
@@ -6604,27 +6599,22 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
             ? ScalarIdentity1
             : new VPIRValue(getRecurrenceIdentity(
                   RdxKind, E->getOperand(0)->getScalarType(), FMFs));
-    switch (E->getExpressionType()) {
-    case VPExpressionRecipe::ExpressionTypes::MulAccReduction:
-    case VPExpressionRecipe::ExpressionTypes::ExtMulAccReduction:
-    case VPExpressionRecipe::ExpressionTypes::ExtNegatedMulAccReduction: {
+
+    // MulAcc patterns need both operands predicated,
+    if (E->isMulAccPattern()) {
       auto *Identity =
           Builder.createNaryOp(VPInstruction::Broadcast, ScalarIdentity1);
       VPValue *PredV = Builder.createSelect(
           Cond, Op1, Identity, WidenRecipe->getDebugLoc(), "", FMFs);
       E->setOperand(1, PredV);
-      LLVM_FALLTHROUGH;
     }
-    case VPExpressionRecipe::ExpressionTypes::ExtendedReduction:
-    case VPExpressionRecipe::ExpressionTypes::NegatedExtendedReduction: {
-      auto *Identity =
-          Builder.createNaryOp(VPInstruction::Broadcast, ScalarIdentity0);
-      VPValue *PredV = Builder.createSelect(
-          Cond, Op0, Identity, WidenRecipe->getDebugLoc(), "", FMFs);
-      E->setOperand(0, PredV);
-      break;
-    }
-    }
+
+    // Predicate the first operand for all reduction type.
+    auto *Identity =
+        Builder.createNaryOp(VPInstruction::Broadcast, ScalarIdentity0);
+    VPValue *PredV = Builder.createSelect(Cond, Op0, Identity,
+                                          WidenRecipe->getDebugLoc(), "", FMFs);
+    E->setOperand(0, PredV);
   }
 
   // We only need to update the PHI node once, which is when we find the

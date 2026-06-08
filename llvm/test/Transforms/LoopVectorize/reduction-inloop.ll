@@ -1792,9 +1792,6 @@ define float @reduction_fmuladd_blend(ptr %a, ptr %b, i64 %n, i1 %c) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1847,9 +1844,6 @@ define float @reduction_fmuladd_blend(ptr %a, ptr %b, i64 %n, i1 %c) {
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
-; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1950,12 +1944,12 @@ define i32 @predicated_not_dominates_reduction(ptr nocapture noundef readonly %h
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[H]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i8> [[WIDE_LOAD]], splat (i8 31)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <4 x i8> [[TMP2]], splat (i8 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv <4 x i8> [[TMP3]], splat (i8 31)
-; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP9]], <4 x i8> [[TMP4]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP14]] to <4 x i32>
+; CHECK-NEXT:    [[TMP14:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> zeroinitializer, <4 x i32> [[TMP14]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7]] = add i32 [[VEC_PHI]], [[TMP6]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -2008,20 +2002,20 @@ define i32 @predicated_not_dominates_reduction(ptr nocapture noundef readonly %h
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 4
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD2]], zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = udiv <4 x i8> [[WIDE_LOAD]], splat (i8 31)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = udiv <4 x i8> [[WIDE_LOAD2]], splat (i8 31)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = shl nuw nsw <4 x i8> [[TMP3]], splat (i8 3)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = shl nuw nsw <4 x i8> [[TMP4]], splat (i8 3)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = udiv <4 x i8> [[TMP5]], splat (i8 31)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = udiv <4 x i8> [[TMP6]], splat (i8 31)
-; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP16]], <4 x i8> [[TMP7]], <4 x i8> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[TMP21]], <4 x i8> [[TMP8]], <4 x i8> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = zext <4 x i8> [[TMP22]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = zext <4 x i8> [[TMP7]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP23:%.*]] = zext <4 x i8> [[TMP8]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP16]], <4 x i32> zeroinitializer, <4 x i32> [[TMP22]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP21]], <4 x i32> zeroinitializer, <4 x i32> [[TMP23]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP9]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11]] = add i32 [[VEC_PHI]], [[TMP10]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = zext <4 x i8> [[TMP23]] to <4 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP12]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14]] = add i32 [[VEC_PHI1]], [[TMP13]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -2103,16 +2097,15 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[H]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i8> [[WIDE_LOAD]], splat (i8 31)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <4 x i8> [[TMP2]], splat (i8 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv <4 x i8> [[TMP3]], splat (i8 31)
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP6]], <4 x i8> [[TMP4]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP6]], <4 x i8> [[TMP5]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i8> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> zeroinitializer, <4 x i32> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP9]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[VEC_PHI]], [[TMP7]]
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <4 x i8> [[TMP13]] to <4 x i32>
+; CHECK-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> zeroinitializer, <4 x i32> [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP18]])
 ; CHECK-NEXT:    [[TMP11]] = add i32 [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -2166,28 +2159,26 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 4
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP27:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP28:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD2]], zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP27:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD2]], zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = udiv <4 x i8> [[WIDE_LOAD]], splat (i8 31)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = udiv <4 x i8> [[WIDE_LOAD2]], splat (i8 31)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = shl nuw nsw <4 x i8> [[TMP3]], splat (i8 3)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = shl nuw nsw <4 x i8> [[TMP4]], splat (i8 3)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = udiv <4 x i8> [[TMP5]], splat (i8 31)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = udiv <4 x i8> [[TMP6]], splat (i8 31)
-; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP27]], <4 x i8> [[TMP7]], <4 x i8> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP29:%.*]] = select <4 x i1> [[TMP28]], <4 x i8> [[TMP8]], <4 x i8> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP27]], <4 x i8> [[TMP22]], <4 x i8> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = select <4 x i1> [[TMP28]], <4 x i8> [[TMP29]], <4 x i8> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = zext <4 x i8> [[TMP22]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = zext <4 x i8> [[TMP7]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = zext <4 x i8> [[TMP8]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> zeroinitializer, <4 x i32> [[TMP12]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP27]], <4 x i32> zeroinitializer, <4 x i32> [[TMP22]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = add i32 [[VEC_PHI]], [[TMP10]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = zext <4 x i8> [[TMP29]] to <4 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP18]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = add i32 [[VEC_PHI1]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP30:%.*]] = zext <4 x i8> [[TMP12]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP30:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> zeroinitializer, <4 x i32> [[TMP12]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = select <4 x i1> [[TMP27]], <4 x i32> zeroinitializer, <4 x i32> [[TMP22]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP30]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17]] = add i32 [[TMP11]], [[TMP16]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = zext <4 x i8> [[TMP32]] to <4 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP31]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP20]] = add i32 [[TMP14]], [[TMP19]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

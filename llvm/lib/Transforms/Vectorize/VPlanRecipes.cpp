@@ -3283,13 +3283,6 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 
   if (isPartialReduction()) {
     InstructionCost CondCost = 0;
-    if (isConditional()) {
-      CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-      auto *CondTy =
-          cast<VectorType>(toVectorTy(getCondOp()->getScalarType(), VF));
-      CondCost = Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VectorTy,
-                                            CondTy, Pred, Ctx.CostKind);
-    }
     return CondCost + Ctx.TTI.getPartialReductionCost(
                           Opcode, ElementTy, ElementTy, ElementTy, VF,
                           TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind,
@@ -3495,8 +3488,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  VPValue *RdxStart =
-      getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1));
+  VPValue *RdxStart = getOperand(getNumOperands() - 1);
 
   switch (ExpressionType) {
   case ExpressionTypes::NegatedExtendedReduction:
@@ -3515,10 +3507,6 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
     O << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
       << *Ext0->getScalarType();
-    if (Red->isConditional()) {
-      O << ", ";
-      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    }
     O << ")";
     break;
   }
@@ -3539,10 +3527,6 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     auto *Ext1 = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
     O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
       << *Ext1->getScalarType() << ")";
-    if (Red->isConditional()) {
-      O << ", ";
-      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    }
     O << "))";
     break;
   }
@@ -3574,10 +3558,6 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
         << *Ext1->getScalarType() << ")";
     }
-    if (Red->isConditional()) {
-      O << ", ";
-      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    }
     O << ")";
     break;
   }
@@ -3599,10 +3579,6 @@ void VPReductionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printRecurrenceKind(O, getRecurrenceKind());
   O << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
-  if (isConditional()) {
-    O << ", ";
-    getCondOp()->printAsOperand(O, SlotTracker);
-  }
   O << ")";
 }
 

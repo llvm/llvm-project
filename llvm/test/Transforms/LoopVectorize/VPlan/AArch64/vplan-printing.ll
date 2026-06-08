@@ -157,7 +157,7 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<[[PTR_B]]>, vp<[[MASK]]>
 ; CHECK-NEXT:     EMIT vp<[[SELECT0:%[0-9]+]]> = select vp<[[MASK]]>, ir<%load.a>, vp<[[BROADCAST1]]>
 ; CHECK-NEXT:     EMIT vp<[[SELECT1:%[0-9]+]]> = select vp<[[MASK]]>, ir<%load.b>, vp<[[BROADCAST2]]>
-; CHECK-NEXT:     EXPRESSION vp<[[REDUCE]]> = ir<%accum> + partial.reduce.add (mul (vp<[[SELECT1]]> zext to i32), (vp<[[SELECT0]]> zext to i32), vp<[[MASK]]>)
+; CHECK-NEXT:     EXPRESSION vp<[[REDUCE]]> = ir<%accum> + partial.reduce.add (mul (vp<[[SELECT1]]> zext to i32), (vp<[[SELECT0]]> zext to i32))
 ; CHECK-NEXT:     EMIT vp<%index.next> = add vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[PART_IDX:%[0-9]+]]> = VF * Part + vp<%index.next>, vp<[[VF]]>
 ; CHECK-NEXT:     EMIT vp<%active.lane.mask.next> = active lane mask vp<[[PART_IDX]]>, ir<%N>, ir<1>
