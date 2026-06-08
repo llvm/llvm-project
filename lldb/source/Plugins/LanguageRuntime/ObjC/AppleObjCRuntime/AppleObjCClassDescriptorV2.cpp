@@ -388,7 +388,7 @@ ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
 
   if (!strs[0])
     return llvm::createStringErrorV(
-        "Failed to read ivar_t::m_name_str at address {0:x}",
+        "failed to read ivar_t::m_name_str at address {0:x}",
         result.m_name_ptr);
   if (!strs[1])
     return llvm::createStringErrorV(
