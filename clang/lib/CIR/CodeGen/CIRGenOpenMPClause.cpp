@@ -100,12 +100,12 @@ bool OpenMPClauseEmitter::emitNumThreads(
     if (!ntc)
       continue;
 
-    const Expr *numThreadsExpr = ntc->getNumThreads();
-    mlir::Value numThreadsValue = cgf.emitScalarExpr(numThreadsExpr);
-    auto intType = builder.getIntegerType(32); // Assuming 32-bit integer type.
-    numThreadsValue = builder.createBuiltinIntCast(numThreadsValue, intType);
-
-    result.numThreadsVars.assign({numThreadsValue});
+    for (const Expr *expr : ntc->getNumThreads()) {
+      mlir::Value numThreadsValue = cgf.emitScalarExpr(expr);
+      auto intType = builder.getIntegerType(32);
+      numThreadsValue = builder.createBuiltinIntCast(numThreadsValue, intType);
+      result.numThreadsVars.push_back(numThreadsValue);
+    }
 
     return true;
   }
@@ -162,4 +162,3 @@ bool OpenMPClauseEmitter::emitMap(
   }
   return found;
 }
-
