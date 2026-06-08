@@ -45,9 +45,12 @@
 // CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 // CHECK:           fir.call @_FortranAPushArrayConstructorValue(%[[VAL_14]], %[[VAL_33]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>
+// CHECK:           %[[VAL_35B:.*]] = arith.constant 1 : index
+// CHECK:           %[[SHIFT:.*]] = fir.shift %[[VAL_35B]]
+// CHECK:           %[[REBOX:.*]] = fir.rebox %[[VAL_35]](%[[SHIFT]]) : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, !fir.shift<1>) -> !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>
 // CHECK:           %[[VAL_36:.*]] = fir.undefined tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
 // CHECK:           %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[VAL_2]], [1 : index] : (tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>, i1) -> tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
-// CHECK:           %[[VAL_38:.*]] = fir.insert_value %[[VAL_37]], %[[VAL_35]], [0 : index] : (tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>, !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
+// CHECK:           %[[VAL_38:.*]] = fir.insert_value %[[VAL_37]], %[[REBOX]], [0 : index] : (tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>, !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
 // CHECK:           %[[VAL_39:.*]] = fir.box_elesize %[[VAL_35]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> index
 // CHECK:           %[[VAL_40:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_41:.*]] = fir.allocmem !fir.array<1x!fir.char<1,?>>(%[[VAL_39]] : index) {bindc_name = ".tmp.array", uniq_name = ""}
@@ -56,7 +59,7 @@
 // CHECK:           %[[VAL_44:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_45:.*]] = %[[VAL_44]] to %[[VAL_3]] step %[[VAL_44]] {
 // CHECK:             %[[VAL_46:.*]] = fir.box_elesize %[[VAL_35]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> index
-// CHECK:             %[[VAL_47:.*]] = hlfir.designate %[[VAL_35]] (%[[VAL_45]])  typeparams %[[VAL_46]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, index, index) -> !fir.boxchar<1>
+// CHECK:             %[[VAL_47:.*]] = hlfir.designate %[[REBOX]] (%[[VAL_45]])  typeparams %[[VAL_46]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, index, index) -> !fir.boxchar<1>
 // CHECK:             %[[VAL_48:.*]] = arith.constant false
 // CHECK:             %[[VAL_49:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:             %[[VAL_50:.*]] = fir.insert_value %[[VAL_49]], %[[VAL_48]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
@@ -76,7 +79,7 @@
 // CHECK:           %[[VAL_62:.*]]:2 = hlfir.declare %[[VAL_60]](%[[VAL_61]]) typeparams %[[VAL_39]] {uniq_name = "_QFtest1Ey"} : (!fir.ref<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.array<1x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_63:.*]] = fir.convert %[[VAL_60]] : (!fir.ref<!fir.array<1x!fir.char<1,?>>>) -> !fir.heap<!fir.array<1x!fir.char<1,?>>>
 // CHECK:           fir.freemem %[[VAL_63]] : !fir.heap<!fir.array<1x!fir.char<1,?>>>
-// CHECK:           %[[VAL_64:.*]] = fir.box_addr %[[VAL_35]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<1x!fir.char<1,?>>>
+// CHECK:           %[[VAL_64:.*]] = fir.box_addr %[[REBOX]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<1x!fir.char<1,?>>>
 // CHECK:           fir.freemem %[[VAL_64]] : !fir.heap<!fir.array<1x!fir.char<1,?>>>
 // CHECK:           return
 // CHECK:         }
