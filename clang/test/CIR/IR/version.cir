@@ -1,0 +1,19 @@
+// RUN: cir-opt %s -split-input-file --verify-roundtrip | FileCheck %s
+
+// CHECK: module attributes {cir.cl.version = #cir.cl.version<1, 2>}
+module attributes {cir.cl.version = #cir.cl.version<1, 2>} { }
+
+// -----
+
+// CHECK: module attributes {cir.cl.version = #cir.cl.version<3, 0>}
+module attributes {cir.cl.version = #cir.cl.version<3, 0>} { }
+
+// -----
+
+// CHECK: module attributes {cir.cl.cxx.version = #cir.cl.version<1, 0>, cir.cl.version = #cir.cl.version<2, 0>}
+module attributes {cir.cl.cxx.version = #cir.cl.version<1, 0>, cir.cl.version = #cir.cl.version<2, 0>} { }
+
+// -----
+
+// CHECK: module attributes {cir.cl.cxx.version = #cir.cl.version<2021, 0>, cir.cl.version = #cir.cl.version<3, 0>}
+module attributes {cir.cl.cxx.version = #cir.cl.version<2021, 0>, cir.cl.version = #cir.cl.version<3, 0>} { }
