@@ -17,6 +17,7 @@
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -3733,6 +3734,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   target.addIllegalDialect<mlir::BuiltinDialect, cir::CIRDialect,
                            mlir::func::FuncDialect>();
 
+  target.addLegalOp<mlir::UnrealizedConversionCastOp>();
+
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(module);
   cir::collectUnreachable(module, ops);
@@ -5022,6 +5025,7 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
   mlir::populateCIRPreLoweringPasses(pm);
   pm.addPass(mlir::omp::createMarkDeclareTargetPass());
   pm.addPass(createConvertCIRToLLVMPass());
+  pm.addPass(mlir::createReconcileUnrealizedCastsPass());
 }
 
 std::unique_ptr<llvm::Module>
