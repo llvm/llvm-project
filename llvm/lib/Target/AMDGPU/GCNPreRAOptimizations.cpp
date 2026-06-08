@@ -258,6 +258,15 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   bool Changed = false;
   // Add RA anti-hints to reduce MFMA hazard NOPs
   if (EnableAntiHintsForMFMARegs && ST.hasMAIInsts()) {
+
+    // Approximate the MFMA hazard wait states from
+    // GCNHazardRecognizer::checkMAIVALUHazards. Intentionally
+    // under-approximating (e.g. DGEMM) to keep the heuristic simple.
+    auto getMFMAHazardWaitStates = [&](const MachineInstr &MI) {
+      const unsigned NumPasses = SchedModel.computeInstrLatency(&MI);
+      return (!ST.hasGFX940Insts() || TII->isXDL(MI)) ? NumPasses + 3
+                                                      : NumPasses + 2;
+    };
     // Max lookback window for RAW or WAW hazard (in instructions)
     constexpr unsigned MaxLookbackWindow = 19;
 
@@ -266,7 +275,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     struct MFMAInfo {
       SmallVector<Register, 4> Regs;
       unsigned InstrCount;
-      unsigned FinishedOnCycle;
+      unsigned HazardExpireAt;
     };
 
     for (const MachineBasicBlock &MBB : MF) {
@@ -279,11 +288,11 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
           continue;
 
         ++InstrCount;
-        const unsigned InstrLatency = SchedModel.computeInstrLatency(&MI);
         const unsigned NumWaitStates = SIInstrInfo::getNumWaitStates(MI);
 
         // Handle MFMA instructions
         if (SIInstrInfo::isMFMA(MI)) {
+          const unsigned HazardWaitStates = getMFMAHazardWaitStates(MI);
           SmallVector<Register, 4> MFMARegisters;
           // Helper to get named operand
           auto collectNamedOperand = [&](AMDGPU::OpName OpName,
@@ -311,7 +320,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
 
           if (!MFMARegisters.empty()) {
             RecentMFMAs.push_back({std::move(MFMARegisters), InstrCount,
-                                   CurrentCycle + InstrLatency});
+                                   CurrentCycle + HazardWaitStates});
             // Maintain the lookback window
             while (!RecentMFMAs.empty() &&
                    (InstrCount - RecentMFMAs.front().InstrCount) >
@@ -354,8 +363,8 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
 
           for (MFMAInfo &MFMA : reverse(RecentMFMAs)) {
             // To minimize anti-hint pressure we add anti-hints while this
-            // MFMA is still in its latency window.
-            if (CurrentCycle >= MFMA.FinishedOnCycle)
+            // MFMA is still in its hazard window.
+            if (CurrentCycle >= MFMA.HazardExpireAt)
               continue;
 
             // If the previous check has not triggered (e.g., consecutive
