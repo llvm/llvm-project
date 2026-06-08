@@ -658,6 +658,109 @@ directory_iterator OverlayFileSystem::dir_begin(const Twine &Dir,
 
 void ProxyFileSystem::anchor() {}
 
+//===-----------------------------------------------------------------------===/
+// CaseInsensitiveFileSystem implementation
+//===-----------------------------------------------------------------------===/
+
+bool CaseInsensitiveFileSystem::exclude(StringRef Dir, uint32_t DirHash,
+                                        StringRef File) {
+  if (auto I = Maps.find(Dir, DirHash); I != Maps.end())
+    return !I->second.contains(File.lower());
+  // We have no map for this Dir, but see if we can exclude the file by
+  // excluding Dir from its parent.
+  StringRef Parent = llvm::sys::path::parent_path(Dir);
+  return (!Parent.empty() &&
+          exclude(Parent, Maps.hash(Parent), llvm::sys::path::filename(Dir)));
+}
+
+std::error_code CaseInsensitiveFileSystem::findCaseInsensitivePath(
+    StringRef Path, SmallVectorImpl<char> &FoundPath) {
+  StringRef FileName = llvm::sys::path::filename(Path);
+  StringRef Dir = llvm::sys::path::parent_path(Path);
+
+  if (Dir.empty())
+    Dir = ".";
+
+  auto DirHash = Maps.hash(Dir);
+  if (exclude(Dir, DirHash, FileName))
+    return llvm::errc::no_such_file_or_directory;
+
+  if (auto It = Maps.find(Dir, DirHash); It != Maps.end()) {
+    // If we have a map for this Dir and File wasn't excluded above, it must
+    // exist.
+    llvm::sys::path::append(FoundPath, Dir, It->second.at(FileName.lower()));
+    return {};
+  }
+
+  std::error_code EC;
+  directory_iterator I = FS->dir_begin(Dir, EC);
+  if (EC == errc::no_such_file_or_directory) {
+    // If the dir doesn't exist, try to find it and try again.
+    SmallString<512> NewDir;
+    if (llvm::sys::path::parent_path(Dir).empty() ||
+        (EC = findCaseInsensitivePath(Dir, NewDir))) {
+      // Insert a dummy map value to mark the dir as non-existent.
+      Maps.try_emplace_with_hash(Dir, DirHash);
+      return EC;
+    }
+    llvm::sys::path::append(NewDir, FileName);
+    return findCaseInsensitivePath(StringRef(NewDir.data(), NewDir.size()),
+                                   FoundPath);
+  }
+
+  // These special entries always exist, but won't show up in the listing below.
+  StringMap<std::string> DirMap = {{".", "."}, {"..", ".."}};
+
+  directory_iterator E;
+  while (I != E) {
+    StringRef DirEntry = llvm::sys::path::filename(I->path());
+    // Keep the first match.
+    DirMap.try_emplace(DirEntry.lower(), DirEntry);
+    I.increment(EC);
+    if (EC)
+      return EC;
+  }
+
+  // If there were no problems, insert the map.
+  auto [DirMapIt, Inserted] =
+      Maps.try_emplace_with_hash(Dir, DirHash, std::move(DirMap));
+  assert(Inserted && "Maps[Dir] shouldn't exist");
+  const auto &DirMapRef = DirMapIt->second;
+
+  if (auto MI = DirMapRef.find(FileName.lower()); MI != DirMapRef.end()) {
+    llvm::sys::path::append(FoundPath, Dir, MI->second);
+    return {};
+  }
+
+  return llvm::errc::no_such_file_or_directory;
+}
+
+llvm::ErrorOr<Status> CaseInsensitiveFileSystem::status(const Twine &Path) {
+  SmallString<512> NewPath;
+  if (auto EC = findCaseInsensitivePath(Path.str(), NewPath))
+    return EC;
+
+  return FS->status(NewPath);
+}
+
+llvm::ErrorOr<std::unique_ptr<File>>
+CaseInsensitiveFileSystem::openFileForRead(const Twine &Path) {
+  SmallString<512> NewPath;
+  if (auto EC = findCaseInsensitivePath(Path.str(), NewPath))
+    return EC;
+
+  return FS->openFileForRead(NewPath);
+}
+
+directory_iterator CaseInsensitiveFileSystem::dir_begin(const Twine &Path,
+                                                        std::error_code &EC) {
+  SmallString<512> NewPath;
+  if ((EC = findCaseInsensitivePath(Path.str(), NewPath)))
+    return {};
+
+  return FS->dir_begin(NewPath, EC);
+}
+
 namespace llvm {
 namespace vfs {
 
@@ -3019,6 +3122,7 @@ void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
 const char FileSystem::ID = 0;
 const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
+const char CaseInsensitiveFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
 const char TracingFileSystem::ID = 0;

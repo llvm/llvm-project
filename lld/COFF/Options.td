@@ -35,6 +35,8 @@ def arm64xsameaddress
     : P<"arm64xsameaddress", "Generate a thunk for the symbol with the same "
                              "address in both native and EC views on ARM64X.">;
 def base    : P<"base", "Base address of the program">;
+def case_insensitive_paths : Flag<["--"], "case-insensitive-paths">,
+                             HelpText<"Treat file paths as case-insensitive">;
 def color_diagnostics: Flag<["--"], "color-diagnostics">,
     HelpText<"Alias for --color-diagnostics=always">;
 def no_color_diagnostics: Flag<["--"], "no-color-diagnostics">,

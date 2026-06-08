@@ -137,8 +137,15 @@ public:
 
   vfs::directory_iterator dir_begin(const Twine &Dir,
                                     std::error_code &EC) override {
-    return vfs::directory_iterator(
+    auto I = vfs::directory_iterator(
         std::make_shared<DirIterImpl>(FilesAndDirs, Dir));
+
+    // Even if there is no entry for /foo, /foo/bar may exist, so only set the
+    // error code if /foo returns an empty iterator.
+    if (I == vfs::directory_iterator())
+      EC = status(Dir).getError();
+
+    return I;
   }
 
   void addEntry(StringRef Path, const vfs::Status &Status) {
@@ -3731,4 +3738,51 @@ TEST(TracingFileSystemTest, PrintOutput) {
             "NumIsLocalCalls=6\n"
             "  InMemoryFileSystem\n",
             Output);
+}
+
+class CaseInsensitiveFileSystemTest : public ::testing::Test {
+protected:
+  vfs::CaseInsensitiveFileSystem FS;
+
+  CaseInsensitiveFileSystemTest()
+      : FS([] {
+          auto Base = makeIntrusiveRefCnt<DummyFileSystem>();
+          Base->addRegularFile("/foo");
+          Base->addDirectory("/bar");
+          Base->addRegularFile("/bar/baz");
+          return Base;
+        }()) {}
+};
+
+TEST_F(CaseInsensitiveFileSystemTest, Basic) {
+  // Not just accepting anything.
+  auto Status = FS.status("/F00");
+  ASSERT_EQ(llvm::errc::no_such_file_or_directory, Status.getError());
+
+  // Case-insensitive file is found.
+  Status = FS.status("/FoO");
+  ASSERT_FALSE(Status.getError());
+
+  // Case-insensitive dir works too.
+  Status = FS.status("/bAr/baZ");
+  ASSERT_FALSE(Status.getError());
+
+  // Test openFileForRead.
+  auto File = FS.openFileForRead("/F00");
+  ASSERT_EQ(llvm::errc::no_such_file_or_directory, File.getError());
+  File = FS.openFileForRead("/Foo");
+  ASSERT_FALSE(File.getError());
+  File = FS.openFileForRead("/Bar/Baz");
+  ASSERT_FALSE(File.getError());
+
+  // Test directory listing.
+  std::error_code EC;
+  auto Dir = FS.dir_begin("/b4r", EC);
+  ASSERT_EQ(llvm::errc::no_such_file_or_directory, EC);
+  Dir = FS.dir_begin("/bAr", EC);
+  ASSERT_FALSE(EC);
+  ASSERT_EQ("/bar/baz", Dir->path());
+  Dir.increment(EC);
+  ASSERT_FALSE(EC);
+  ASSERT_EQ(vfs::directory_iterator(), Dir);
 }
