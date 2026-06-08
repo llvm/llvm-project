@@ -20,7 +20,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace err_reporting {
 
-void report(bool show_err, const char *fmt, internal::ArgList &args);
+void report(bool show_err, int err_num, const char *fmt,
+            internal::ArgList &args);
 
 } // namespace err_reporting
 } // namespace LIBC_NAMESPACE_DECL

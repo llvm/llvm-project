@@ -30,46 +30,42 @@ extern "C" char *program_invocation_short_name;
 namespace LIBC_NAMESPACE_DECL {
 namespace err_reporting {
 
-namespace {
-
-void write_to_stderr(cpp::string_view msg) {
-  LIBC_NAMESPACE::write_to_stderr(msg);
-}
-
-} // namespace
-
-void report(bool show_err, const char *fmt, internal::ArgList &args) {
-  int saved_errno = libc_errno;
-
+void report(bool show_err, int err_num, const char *fmt,
+            internal::ArgList &args) {
   const char *progname = "libllvmlibc";
   // TODO: Use a proper way to get progname if available.
 #ifdef __linux__
   progname = program_invocation_short_name;
 #endif
 
-  write_to_stderr(progname);
-  write_to_stderr(": ");
+  char buffer[1024];
+  printf_core::FlushingBuffer wb(
+      buffer, sizeof(buffer),
+      [](cpp::string_view str, [[maybe_unused]] void *raw_stream) -> int {
+        write_to_stderr(str);
+        return static_cast<int>(str.size());
+      },
+      nullptr);
+  printf_core::Writer writer(wb);
+
+  writer.write(progname);
+  if (fmt != nullptr || show_err)
+    writer.write(": ");
 
   if (fmt != nullptr) {
-    char buffer[1024];
-    printf_core::FlushingBuffer wb(
-        buffer, sizeof(buffer),
-        [](cpp::string_view str, [[maybe_unused]] void *raw_stream) -> int {
-          LIBC_NAMESPACE::write_to_stderr(str);
-          return static_cast<int>(str.size());
-        },
-        nullptr);
-    printf_core::Writer writer(wb);
-    printf_core::printf_main(&writer, fmt, args);
-    wb.flush_to_stream();
+    if (!printf_core::printf_main(&writer, fmt, args)) {
+      wb.flush_to_stream();
+      return;
+    }
     if (show_err)
-      write_to_stderr(": ");
+      writer.write(": ");
   }
 
   if (show_err)
-    write_to_stderr(get_error_string(saved_errno));
+    writer.write(get_error_string(err_num));
 
-  write_to_stderr("\n");
+  writer.write("\n");
+  wb.flush_to_stream();
 }
 
 } // namespace err_reporting

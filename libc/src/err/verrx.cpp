@@ -15,18 +15,19 @@
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 #include "src/err/report.h"
 
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(void, verrx, (int eval, const char *fmt, va_list args)) {
-  LIBC_CRASH_ON_NULLPTR(fmt);
+[[noreturn]] LLVM_LIBC_FUNCTION(void, verrx,
+                                (int eval, const char *fmt, va_list args)) {
+  int saved_errno = libc_errno;
   internal::ArgList arg_list(args);
-  err_reporting::report(false, fmt, arg_list);
+  err_reporting::report(false, saved_errno, fmt, arg_list);
   internal::exit(eval);
 }
 

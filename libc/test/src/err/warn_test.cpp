@@ -7,26 +7,24 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Unit tests for err.
+/// Unit tests for warn.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/libc_errno.h"
-#include "src/err/err.h"
+#include "src/err/warn.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE {
 
-TEST(LlvmLibcErrTest, ErrExitCode) {
+TEST(LlvmLibcWarnTest, WarnNoExit) {
   libc_errno = 0;
-  EXPECT_EXITS([] { err(1, "test err"); }, 1);
-  libc_errno = 2; // ENOENT
-  EXPECT_EXITS([] { err(127, "test err %d", 42); }, 127);
+  warn("test warn");
 }
 
-TEST(LlvmLibcErrTest, ErrNullFormat) {
-  libc_errno = 2; // ENOENT
-  EXPECT_EXITS([] { err(1, nullptr); }, 1);
+TEST(LlvmLibcWarnTest, WarnNullFormat) {
+  libc_errno = 2;
+  warn(nullptr);
 }
 
 } // namespace LIBC_NAMESPACE

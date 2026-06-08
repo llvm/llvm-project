@@ -7,26 +7,35 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Unit tests for err.
+/// Unit tests for verr.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/libc_errno.h"
-#include "src/err/err.h"
+#include "src/err/verr.h"
 #include "test/UnitTest/Test.h"
+
+#include <stdarg.h>
 
 namespace LIBC_NAMESPACE {
 
-TEST(LlvmLibcErrTest, ErrExitCode) {
+namespace {
+void call_verr(int eval, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  verr(eval, fmt, args);
+  va_end(args);
+}
+} // namespace
+
+TEST(LlvmLibcVerrTest, VerrExitCode) {
   libc_errno = 0;
-  EXPECT_EXITS([] { err(1, "test err"); }, 1);
-  libc_errno = 2; // ENOENT
-  EXPECT_EXITS([] { err(127, "test err %d", 42); }, 127);
+  EXPECT_EXITS([] { call_verr(1, "test verr"); }, 1);
 }
 
-TEST(LlvmLibcErrTest, ErrNullFormat) {
-  libc_errno = 2; // ENOENT
-  EXPECT_EXITS([] { err(1, nullptr); }, 1);
+TEST(LlvmLibcVerrTest, VerrNullFormat) {
+  libc_errno = 2;
+  EXPECT_EXITS([] { call_verr(1, nullptr); }, 1);
 }
 
 } // namespace LIBC_NAMESPACE

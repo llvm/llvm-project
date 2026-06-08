@@ -16,6 +16,8 @@ add_object_library(
     libc.src.__support.StringUtil.error_to_string
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -30,7 +32,7 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -45,7 +47,7 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -60,7 +62,7 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -75,7 +77,7 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -89,7 +91,7 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -103,7 +105,7 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -117,7 +119,7 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -131,5 +133,5 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
 )
