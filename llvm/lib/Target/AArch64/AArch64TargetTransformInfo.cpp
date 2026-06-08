@@ -5789,7 +5789,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       return BaseCost + FixedVTy->getNumElements();
     }
 
-    if (Opcode != Instruction::FAdd)
+    if (Opcode != Instruction::FAdd || ValTy->getElementType()->isBFloatTy())
       return InstructionCost::getInvalid();
 
     auto *VTy = cast<ScalableVectorType>(ValTy);
