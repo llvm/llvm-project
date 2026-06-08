@@ -355,37 +355,15 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   assert(DefI->getParent() == Insert->getParent());
   assert(UseI->getParent() == Insert->getParent());
 
-  // The first def of a multivalue instruction can be stackified by moving,
-  // since the later defs can always be placed into locals if necessary. Later
-  // defs can only be stackified if all previous defs are already stackified
-  // since ExplicitLocals will not know how to place a def in a local if a
-  // subsequent def is stackified. But only one def can be stackified by moving
-  // the instruction, so it must be the first one.
-  //
-  // TODO: This could be loosened to be the first *live* def, but care would
-  // have to be taken to ensure the drops of the initial dead defs can be
-  // placed. This would require checking that no previous defs are used in the
-  // same instruction as subsequent defs.
-  if (Def != DefI->defs().begin())
+  // For now avoid stackifying any multi-def instructions. While it's
+  // theoretically possible to do so for the first def in some cases this has
+  // historically led to bugs such as #199910 and #98323. For now this
+  // conservatively skips all multi-def instructions as a consequence. Note that
+  // multi-def instructions are expected to be not all that common so this in
+  // theory doesn't have a massive impact, but nevertheless this'd still be
+  // something to optimize better in the future.
+  if (DefI->getNumExplicitDefs() > 1)
     return false;
-
-  // If any subsequent def is used prior to the current value by the same
-  // instruction in which the current value is used, we cannot
-  // stackify. Stackifying in this case would require that def moving below the
-  // current def in the stack, which cannot be achieved, even with locals.
-  // Also ensure we don't sink the def past any other prior uses.
-  for (const auto &SubsequentDef : drop_begin(DefI->defs())) {
-    auto I = std::next(MachineBasicBlock::const_iterator(DefI));
-    auto E = std::next(MachineBasicBlock::const_iterator(UseI));
-    for (; I != E; ++I) {
-      for (const auto &PriorUse : I->uses()) {
-        if (&PriorUse == Use)
-          break;
-        if (PriorUse.isReg() && SubsequentDef.getReg() == PriorUse.getReg())
-          return false;
-      }
-    }
-  }
 
   // If moving is a semantic nop, it is always allowed
   const MachineBasicBlock *MBB = DefI->getParent();
