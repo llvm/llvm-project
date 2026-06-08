@@ -52,15 +52,13 @@ struct AMDGPUImageDMaskIntrinsic {
 // handling NaNs.
 static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
                            const APFloat &Src2) {
+  assert(!Src0.isNaN() && !Src1.isNaN() && !Src2.isNaN() &&
+         "nans handled separately");
   APFloat Max3 = maxnum(maxnum(Src0, Src1), Src2);
 
-  assert(Max3.compare(Src0) != APFloat::cmpUnordered &&
-         "nans handled separately");
   if (Max3.bitwiseIsEqual(Src0))
     return maxnum(Src1, Src2);
 
-  assert(Max3.compare(Src1) != APFloat::cmpUnordered &&
-         "nans handled separately");
   if (Max3.bitwiseIsEqual(Src1))
     return maxnum(Src0, Src2);
 
