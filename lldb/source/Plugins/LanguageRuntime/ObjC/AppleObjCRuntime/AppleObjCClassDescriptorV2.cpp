@@ -392,7 +392,7 @@ ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
         result.m_name_ptr);
   if (!strs[1])
     return llvm::createStringErrorV(
-        "Failed to read ivar_t::m_type_str at address {0:x}",
+        "failed to read ivar_t::m_type_str at address {0:x}",
         result.m_type_ptr);
 
   result.m_name = std::move(*strs[0]);
