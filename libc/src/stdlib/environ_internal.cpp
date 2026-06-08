@@ -18,6 +18,9 @@
 #include "src/__support/alloc-checker.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#ifdef LIBC_SUPPORT_ENVIRON
+#include "src/unistd/environ.h"
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -142,6 +145,9 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
 
     // Update the global environ pointer.
     app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
+#ifdef LIBC_SUPPORT_ENVIRON
+    environ = storage;
+#endif
 
     return true;
   }
@@ -168,6 +174,9 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
 
   // Update the global environ pointer.
   app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
+#ifdef LIBC_SUPPORT_ENVIRON
+  environ = storage;
+#endif
 
   return true;
 }
@@ -217,6 +226,33 @@ int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
     count++;
     env_array[count] = nullptr; // Maintain null terminator.
   }
+
+  return 0;
+}
+
+int EnvironmentManager::unset(cpp::string_view name) {
+  cpp::optional<size_t> idx = find_var(name);
+  if (!idx)
+    return 0; // Variable not found; POSIX defines this as success.
+
+  // Transition to managed storage so we can modify the array and track
+  // ownership correctly.
+  if (!ensure_capacity(count))
+    return -1;
+
+  char **env_array = get_array();
+
+  // Free the string if we allocated it.
+  if (ownership[*idx].can_free())
+    delete[] env_array[*idx];
+
+  // Compact: shift remaining entries left to fill the gap.
+  for (size_t i = *idx; i < count - 1; i++) {
+    env_array[i] = env_array[i + 1];
+    ownership[i] = ownership[i + 1];
+  }
+  count--;
+  env_array[count] = nullptr;
 
   return 0;
 }

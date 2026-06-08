@@ -31,6 +31,20 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 
   add_integration_test(
+    unsetenv_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      unsetenv_test.cpp
+    DEPENDS
+      libc.src.stdlib.getenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.unsetenv
+      libc.src.string.strcmp
+      libc.src.unistd.environ
+  )
+
+  add_integration_test(
     abort_test
     SUITE
       stdlib-integration-tests
