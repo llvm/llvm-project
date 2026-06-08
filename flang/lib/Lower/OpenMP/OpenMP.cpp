@@ -783,24 +783,22 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
   }
 }
 
-// Translate a semantics-layer groupprivate device_type to the MLIR enum used
-// by omp.groupprivate. Kept here (rather than in semantics) to avoid making
-// the semantics layer depend on MLIR.
+// Translate a semantics-layer device_type to the MLIR enum used by
+// omp.groupprivate.
 static mlir::omp::DeclareTargetDeviceType
-toMLIRDeclareTargetDeviceType(semantics::OmpGroupprivateDeviceType deviceType) {
+toMLIRDeclareTargetDeviceType(Fortran::common::OmpDeviceType deviceType) {
   switch (deviceType) {
-  case semantics::OmpGroupprivateDeviceType::Any:
+  case Fortran::common::OmpDeviceType::Any:
     return mlir::omp::DeclareTargetDeviceType::any;
-  case semantics::OmpGroupprivateDeviceType::Host:
+  case Fortran::common::OmpDeviceType::Host:
     return mlir::omp::DeclareTargetDeviceType::host;
-  case semantics::OmpGroupprivateDeviceType::Nohost:
+  case Fortran::common::OmpDeviceType::Nohost:
     return mlir::omp::DeclareTargetDeviceType::nohost;
   }
-  llvm_unreachable("invalid OmpGroupprivateDeviceType");
+  llvm_unreachable("invalid OmpDeviceType");
 }
 
 static void groupprivatizeVars(lower::AbstractConverter &converter,
-                               semantics::SemanticsContext &semaCtx,
                                lower::pft::Evaluation &eval) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -818,15 +816,19 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
     }
 
     // The device_type modifier was recorded on the symbol during semantic
-    // analysis. Default to 'any' when the directive omitted a device_type
-    // clause (per OpenMP spec) or the symbol was flagged before this
-    // mechanism became available (e.g. a stale module file).
+    // analysis.
     mlir::omp::DeclareTargetDeviceType deviceTypeEnum =
         mlir::omp::DeclareTargetDeviceType::any;
-    if (auto recorded =
-            semaCtx.GetOmpGroupprivateDeviceType(sym.GetUltimate())) {
-      deviceTypeEnum = toMLIRDeclareTargetDeviceType(*recorded);
-    }
+    Fortran::common::visit(
+        [&](auto &&details) {
+          using TypeD = llvm::remove_cvref_t<decltype(details)>;
+          if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
+                                          TypeD>) {
+            if (auto dt = details.ompGroupprivateDeviceType())
+              deviceTypeEnum = toMLIRDeclareTargetDeviceType(*dt);
+          }
+        },
+        sym.GetUltimate().details());
     mlir::omp::DeclareTargetDeviceTypeAttr deviceTypeAttr =
         mlir::omp::DeclareTargetDeviceTypeAttr::get(firOpBuilder.getContext(),
                                                     deviceTypeEnum);
@@ -1450,7 +1452,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   }
 
   if (info.dir == llvm::omp::Directive::OMPD_teams) {
-    groupprivatizeVars(info.converter, info.semaCtx, info.eval);
+    groupprivatizeVars(info.converter, info.eval);
   }
 
   if (!info.genSkeletonOnly) {
