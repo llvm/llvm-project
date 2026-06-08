@@ -863,6 +863,23 @@ define i8 @test_cmp_sd_signaling_sae(<2 x double> %a, <2 x double> %b, i8 %mask)
   ret i8 %3
 }
 
+; Explicit negative test: even the most fcmp-like form (predicate 0 = _CMP_EQ_OQ,
+; ordered + quiet; rounding 4 = _MM_FROUND_CUR_DIRECTION, i.e. no SAE) must NOT be
+; folded to an fcmp. The intrinsic must survive untouched. This function's checks
+; are maintained by hand (CHECK-NOT is not emitted by update_test_checks.py); do
+; not regenerate it.
+define i8 @test_cmp_ss_not_folded_to_fcmp(<4 x float> %a, <4 x float> %b, i8 %mask) {
+; CHECK-LABEL: @test_cmp_ss_not_folded_to_fcmp(
+; CHECK-NOT:   fcmp
+; CHECK:       tail call i8 @llvm.x86.avx512.mask.cmp.ss({{.*}}, i32 0, i8 {{.*}}, i32 4)
+; CHECK-NOT:   fcmp
+;
+  %1 = insertelement <4 x float> %a, float 1.000000e+00, i32 1
+  %2 = insertelement <4 x float> %b, float 2.000000e+00, i32 1
+  %3 = tail call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %1, <4 x float> %2, i32 0, i8 %mask, i32 4)
+  ret i8 %3
+}
+
 define i64 @test(float %f, double %d) {
 ;
 ; CHECK-LABEL: @test(
