@@ -26,6 +26,7 @@
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
@@ -238,10 +239,8 @@ void addSourceInfo(CodeGenModule &CGM, llvm::Module &M) {
     std::optional<llvm::MemoryBufferRef> Buffer = CCEntry.getBufferOrNone(
         SM.getDiagnostics(), SM.getFileManager(), SourceLocation());
     if (!Buffer) {
-      unsigned ID = SM.getDiagnostics().getCustomDiagID(
-          clang::DiagnosticsEngine::Warning,
-          "failed to embed source for \"%0\" into dx.source.contents");
-      SM.getDiagnostics().Report(ID) << Path;
+      SM.getDiagnostics().Report(diag::warn_hlsl_failed_to_embed_source)
+          << Path;
       continue;
     }
 
@@ -283,9 +282,8 @@ void addSourceInfo(CodeGenModule &CGM, llvm::Module &M) {
   auto ParsedArgs = clang::parseEscapedCommandLine(
       CGM.getCodeGenOpts().HLSLRecordCommandLine.c_str());
   if (!ParsedArgs) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Error, "invalid escaped command line: %0");
-    CGM.getDiags().Report(DiagID) << llvm::toString(ParsedArgs.takeError());
+    CGM.getDiags().Report(diag::err_drv_invalid_escaped_command_line)
+        << llvm::toString(ParsedArgs.takeError());
     return;
   }
   SmallVector<llvm::Metadata *> Args;
