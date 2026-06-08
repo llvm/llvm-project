@@ -2706,6 +2706,20 @@ The packets below support debugging hardware accelerators (e.g. GPUs,
 FPGAs) alongside the native host process via accelerator plugins installed
 in lldb-server.
 
+An accelerator plugin drives the client by returning a list of
+`AcceleratorActions` (currently just breakpoints to set in the native
+process). The client can receive `AcceleratorActions` at two points:
+
+1. Once, in response to the `jAcceleratorPluginInitialize` packet sent when
+   the native process is launched or attached.
+2. In response to a `jAcceleratorPluginBreakpointHit` packet, when a
+   breakpoint the plugin previously requested is hit. The hit response may
+   carry a further set of `AcceleratorActions`.
+
+Each set of `AcceleratorActions` is tagged with a `plugin_name` and an
+`identifier` that is unique within that plugin, so the client can ignore a
+set it has already processed if the same actions are delivered again.
+
 ### jAcceleratorPluginInitialize
 
 This packet requests initialization data from all accelerator plugins
@@ -2746,9 +2760,19 @@ If no accelerator plugins are installed, the server does not advertise the
 `accelerator-plugins+` feature and this packet should not be sent.
 
 Each `accelerator_action` may include a `breakpoints` array requesting
-breakpoints to be set in the native process. See
-`jAcceleratorPluginBreakpointHit` for the callback when those breakpoints
-are hit.
+breakpoints to be set in the native process. The client sets each of these
+as an internal breakpoint and sends a `jAcceleratorPluginBreakpointHit`
+packet when one is hit. Each breakpoint object has the following fields:
+
+| Key            | Type    | Description |
+|----------------|---------|-------------|
+| `identifier`   | integer | Identifier for this breakpoint, unique within the plugin. It is echoed back in the `jAcceleratorPluginBreakpointHit` packet so the plugin knows which breakpoint was hit. |
+| `by_name`      | object  | Set the breakpoint by function name. Contains `function_name` (string) and an optional `shlib` (string) to scope the breakpoint to a single shared library. |
+| `by_address`   | object  | Set the breakpoint by load address. Contains `load_address` (integer). |
+| `symbol_names` | array   | Symbol names whose load addresses the client should resolve and deliver in the `jAcceleratorPluginBreakpointHit` packet when this breakpoint is hit. May be empty. |
+
+Exactly one of `by_name` or `by_address` must be provided for each
+breakpoint.
 
 In future patches, each `accelerator_action` will include additional fields
 such as connection info for secondary debug sessions and synchronization
@@ -2774,7 +2798,7 @@ The request JSON has the following fields:
 |-----------------|--------|-------------|
 | `plugin_name`   | string | Name of the plugin that requested the breakpoint. |
 | `breakpoint`    | object | The `AcceleratorBreakpointInfo` that was hit, including its `identifier`. |
-| `symbol_values` | array  | Array of `{"name": "<name>", "value": <addr>}` for each symbol requested in the breakpoint's `symbol_names`. |
+| `symbol_values` | array  | Array of `{"name": "<name>", "value": <addr>}`, one entry for each name in the breakpoint's `symbol_names`. `value` is the resolved load address, or `null` if the client could not find the symbol or convert it to a load address. |
 
 The response JSON has the following fields:
 
