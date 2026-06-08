@@ -771,6 +771,45 @@ func.func @gather_minimum_info(%arg0 : tensor<3x?x5xi32>, %arg1 : tensor<?x6xi32
 
 // -----
 
+// CHECK-LABEL: @row_gather_static
+func.func @row_gather_static(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x6xi32>) {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: tosa.row_gather %arg0, %arg1, %[[ROW_COUNT:.+]] : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<3x12x5xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<?x?x?xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @row_gather_minimum_info
+func.func @row_gather_minimum_info(%arg0 : tensor<3x?x5xi32>, %arg1 : tensor<?x6xi32>) {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: tosa.row_gather %arg0, %arg1, %[[ROW_COUNT:.+]] : (tensor<3x?x5xi32>, tensor<?x6xi32>, tensor<1xi32>) -> tensor<3x12x5xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<3x?x5xi32>, tensor<?x6xi32>, tensor<1xi32>) -> tensor<?x?x?xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @row_gather_nonconstant_row_count
+func.func @row_gather_nonconstant_row_count(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x6xi32>, %row_count : tensor<1xi32>) {
+  // CHECK: tosa.row_gather %arg0, %arg1, %arg2 : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<3x?x5xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<?x?x?xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @row_gather_row_count_one
+func.func @row_gather_row_count_one(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x6xi32>) {
+  %row_count = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: tosa.row_gather %arg0, %arg1, %[[ROW_COUNT:.+]] : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<3x6x5xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<?x?x?xi32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @row_gather_block_scaled_static
 func.func @row_gather_block_scaled_static(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x6xi32>) {
   %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>

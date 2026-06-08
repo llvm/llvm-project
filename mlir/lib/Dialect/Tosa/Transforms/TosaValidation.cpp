@@ -125,6 +125,15 @@ checkConstantOperandRowGatherBlockScaled(Operation *op, const TargetEnv &env) {
   return success();
 }
 
+static LogicalResult checkConstantOperandRowGather(Operation *op,
+                                                   const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::RowGatherOp>(op)) {
+    // Check 'row_count'
+    return checkConstantOperands(op, {2});
+  }
+  return success();
+}
+
 static LogicalResult checkConstantOperandAvgPool2d(Operation *op,
                                                    const TargetEnv &env) {
   if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dOp>(op)) {
@@ -210,6 +219,7 @@ private:
     constCheckers.emplace_back(
         checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
     constCheckers.emplace_back(checkConstantOperandMatMul);
+    constCheckers.emplace_back(checkConstantOperandRowGather);
     constCheckers.emplace_back(checkConstantOperandRowGatherBlockScaled);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
     constCheckers.emplace_back(checkConstantOperandAvgPool2dAdaptive);
@@ -834,6 +844,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
   CHECK_SIZES(Gather);
+  CHECK_SIZES(RowGather);
   CHECK_SIZES(Scatter);
   // Image Operators
   CHECK_SIZES(Resize);
