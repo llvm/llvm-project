@@ -795,8 +795,8 @@ public:
     }
     setResult(CB, std::move(RetVal));
 
-    for (auto &ByValArgs : CurrentFrame->CalleeByValArgs)
-      Ctx.free(*ByValArgs);
+    for (auto &ByValArg : CurrentFrame->CalleeByValArgs)
+      Ctx.free(*ByValArg);
     CurrentFrame->CalleeByValArgs.clear();
 
     if (auto *II = dyn_cast<InvokeInst>(&CB))
@@ -1748,7 +1748,7 @@ public:
           }
           // Byval pointers cannot be passed via variadic arguments.
           auto Obj = Ctx.allocate(
-              Size, AllocAlign.value().value(), Callee->getArg(I)->getName(),
+              Size, AllocAlign->value(), Callee->getArg(I)->getName(),
               ArgTy->getPointerAddressSpace(), MemInitKind::Uninitialized,
               MemAllocKind::Stack);
           if (!Obj) {
