@@ -761,6 +761,21 @@ define void @nonnull_gep_inbounds_bundle(ptr %p, i64 %i) {
   ret void
 }
 
+define void @nonnull_gep_inbounds_bundle_null_is_valid(ptr %p, i64 %i) null_pointer_is_valid {
+; DEFAULT-LABEL: @nonnull_gep_inbounds_bundle_null_is_valid(
+; DEFAULT-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[I:%.*]]
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P2]]) ]
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @nonnull_gep_inbounds_bundle_null_is_valid(
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
+; BUNDLES-NEXT:    ret void
+;
+  %p2 = getelementptr inbounds i8, ptr %p, i64 %i
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %p2)]
+  ret void
+}
+
 define void @nonnull_gep_inbounds(ptr %p, i64 %i) {
 ; CHECK-LABEL: @nonnull_gep_inbounds(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
