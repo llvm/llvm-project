@@ -1982,7 +1982,7 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     SmallVector<Instruction *> LifetimeMarkers;
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
-      if (isa<AllocaInst>(&I) && User->isLifetimeStartOrEnd()) {
+      if (User->isLifetimeStartOrEnd()) {
         LifetimeMarkers.push_back(User);
       } else {
         if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
@@ -2021,14 +2021,9 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
 
     // Lifetime markers cannot be rewritten through PHIs. If threading leaves
     // one of them pointing at a PHI, drop the whole set.
-    bool HasPhiArg = false;
-    for (Instruction *User : LifetimeMarkers) {
-      auto *CB = cast<CallBase>(User);
-      if (isa<PHINode>(CB->getOperand(0))) {
-        HasPhiArg = true;
-        break;
-      }
-    }
+    bool HasPhiArg = any_of(LifetimeMarkers, [](Instruction *User) {
+      return isa<PHINode>(cast<CallBase>(User)->getOperand(0));
+    });
     if (HasPhiArg) {
       for (Instruction *User : LifetimeMarkers)
         User->eraseFromParent();

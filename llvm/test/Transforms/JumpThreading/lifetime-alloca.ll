@@ -75,8 +75,6 @@ bb4:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(ptr captures(none)) #0
-declare void @llvm.lifetime.end.p0(ptr captures(none)) #0
 declare void @dummy()
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
