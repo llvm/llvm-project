@@ -63,6 +63,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libmpfr-dev libpfm4-dev m4 libedit-dev
           sudo curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.27.0/bazelisk-amd64.deb --fail > /tmp/bazelisk.deb
+          echo "d8b00ea975c823e15263c80200ac42979e17368547fbff4ab177af035badfa83  /tmp/bazelisk.deb" | shasum --check -
           sudo apt-get install -y /tmp/bazelisk.deb
           rm /tmp/bazelisk.deb
       - name: Build/Test
