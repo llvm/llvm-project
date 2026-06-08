@@ -21,7 +21,7 @@
 // CHECK-SAME:  %[[ARG_J:.*]]: !emitc.size_t)
 func.func private @memref_alloc_store(%v : f32, %i: index, %j: index) {
   /// Allocation size  computation
-  // CHECK:     %[[SIZEOF_F32:.*]] = call_opaque "sizeof"() {args = [f32]} : () -> !emitc.size_t
+  // CHECK:     %[[SIZEOF_F32:.*]] = call_opaque "sizeof"() <{args = [f32]}> : () -> !emitc.size_t
   // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 32 : index}> : () -> index
   // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_F32]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
   /// Alloc
@@ -42,7 +42,7 @@ func.func private @memref_alloc_store(%v : f32, %i: index, %j: index) {
 // CHECK-SAME:  %[[ARG_I:.*]]: !emitc.size_t,
 // CHECK-SAME:  %[[ARG_J:.*]]: !emitc.size_t) -> f32
 func.func private @memref_alloc_load(%i: index, %j: index) -> f32 {
-  // CHECK:     %[[SIZEOF_F32:.*]] = call_opaque "sizeof"() {args = [f32]} : () -> !emitc.size_t
+  // CHECK:     %[[SIZEOF_F32:.*]] = call_opaque "sizeof"() <{args = [f32]}> : () -> !emitc.size_t
   // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 32 : index}> : () -> index
   // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_F32]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
   // CHECK:     %[[MALLOC_PTR:.*]] = call_opaque "malloc"(%[[TOTAL_BYTES]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
