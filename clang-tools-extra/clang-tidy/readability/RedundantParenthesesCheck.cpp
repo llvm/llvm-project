@@ -13,6 +13,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Lex/Lexer.h"
 #include <cassert>
 
 using namespace clang::ast_matchers;
@@ -30,6 +31,23 @@ AST_MATCHER(ParenExpr, isInMacro) {
   const Expr *E = Node.getSubExpr();
   return Node.getLParen().isMacroID() || Node.getRParen().isMacroID() ||
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
+}
+
+static FixItHint createSpacedRemoval(SourceLocation Loc,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
+  if (Loc.isValid() && !Loc.isMacroID()) {
+    auto LocInfo = SM.getDecomposedLoc(Loc);
+    bool Invalid = false;
+    StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
+    if (!Invalid && LocInfo.second > 0 && LocInfo.second + 1 < Buffer.size() &&
+        Lexer::isAsciiIdentifierContinueChar(Buffer[LocInfo.second - 1],
+                                             LangOpts) &&
+        Lexer::isAsciiIdentifierContinueChar(Buffer[LocInfo.second + 1],
+                                             LangOpts))
+      return FixItHint::CreateReplacement(SourceRange(Loc, Loc), " ");
+  }
+  return FixItHint::CreateRemoval(Loc);
 }
 
 } // namespace
@@ -66,7 +84,8 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
   diag(PE->getBeginLoc(), "redundant parentheses around expression")
-      << FixItHint::CreateRemoval(PE->getLParen())
+      << createSpacedRemoval(PE->getLParen(), *Result.SourceManager,
+                             getLangOpts())
       << FixItHint::CreateRemoval(PE->getRParen());
 }
 
