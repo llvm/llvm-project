@@ -617,7 +617,8 @@ namespace {
     SDValue unfoldMaskedMerge(SDNode *N);
     SDValue unfoldExtremeBitClearingToShifts(SDNode *N);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
-                          const SDLoc &DL, bool foldBooleans);
+                          const SDLoc &DL, bool foldBooleans,
+                          SDNodeFlags Flags = SDNodeFlags());
     SDValue rebuildSetCC(SDValue N);
 
     bool isSetCCEquivalent(SDValue N, SDValue &LHS, SDValue &RHS,
@@ -14439,7 +14440,8 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   SDLoc DL(N);
 
-  if (SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, DL, !PreferSetCC)) {
+  if (SDValue Combined =
+          SimplifySetCC(VT, N0, N1, Cond, DL, !PreferSetCC, N->getFlags())) {
     // If we prefer to have a setcc, and we don't, we'll try our best to
     // recreate one using rebuildSetCC.
     if (PreferSetCC && Combined.getOpcode() != ISD::SETCC) {
@@ -30783,11 +30785,11 @@ static SDValue matchMergedBFX(SDValue Root, SelectionDAG &DAG,
 /// This is a stub for TargetLowering::SimplifySetCC.
 SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                                    ISD::CondCode Cond, const SDLoc &DL,
-                                   bool foldBooleans) {
+                                   bool foldBooleans, SDNodeFlags Flags) {
   TargetLowering::DAGCombinerInfo
     DagCombineInfo(DAG, Level, false, this);
-  if (SDValue C =
-          TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL))
+  if (SDValue C = TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans,
+                                    DagCombineInfo, DL, Flags))
     return C;
 
   if (ISD::isIntEqualitySetCC(Cond) && N0.getOpcode() == ISD::AND &&

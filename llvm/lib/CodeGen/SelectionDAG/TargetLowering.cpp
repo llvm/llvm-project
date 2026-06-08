@@ -4714,8 +4714,8 @@ static SDValue foldSetCCWithFunnelShift(EVT VT, SDValue N0, SDValue N1,
 /// unable to simplify it, return a null SDValue.
 SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                                       ISD::CondCode Cond, bool foldBooleans,
-                                      DAGCombinerInfo &DCI,
-                                      const SDLoc &dl) const {
+                                      DAGCombinerInfo &DCI, const SDLoc &dl,
+                                      SDNodeFlags Flags) const {
   SelectionDAG &DAG = DCI.DAG;
   const DataLayout &Layout = DAG.getDataLayout();
   EVT OpVT = N0.getValueType();
@@ -5751,6 +5751,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       N0->getFlags().hasNoSignedWrap() && ISD::isSignedIntSetCC(Cond)) {
     return DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), Cond);
   }
+
+  if ((Cond == ISD::SETO || Cond == ISD::SETUO) &&
+      ((DAG.isKnownNeverNaN(N0) && DAG.isKnownNeverNaN(N1)) ||
+       Flags.hasNoNaNs()))
+    return DAG.getBoolConstant(Cond == ISD::SETO, dl, VT, OpVT);
 
   // Could not fold it.
   return SDValue();
