@@ -255,7 +255,7 @@ end
 * `.NOT. .NOT.` accepted
 * `NAME=` as synonym for `FILE=`
 * Data edit descriptors without width or other details
-* `D` lines in fixed form as comments or debug code
+* `D` lines in fixed form source are treated as comments by default
 * `CARRIAGECONTROL=` on the OPEN and INQUIRE statements
 * `CONVERT=` on the OPEN and INQUIRE statements
 * `DISPOSE=` on the OPEN and INQUIRE statements
@@ -529,6 +529,54 @@ end program
 * When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
   rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
   stern warning.
+* PowerPC `VECTOR(type)`, `__VECTOR_PAIR`, and `__VECTOR_QUAD` type specifiers
+  are accepted as an altivec extension, with a portability warning.
+* Multiple program units may appear on the same source line, separated by
+  semicolons; the standard requires each program unit to begin on a new line.
+  A portability warning is emitted.
+* Branching into a DO loop body from outside the loop via `GO TO` or arithmetic
+  `IF` is accepted with a portability warning.
+* Branching (via `GO TO` or `ASSIGN`/assigned `GO TO`) to a label that is not
+  a standard branch target is accepted with a portability warning.
+* A labeled `DO` loop is allowed to end at any labeled executable statement,
+  not only `END DO` or `CONTINUE`, with a portability warning.
+* Names that exceed the maximum length of 63 characters (F2023 C612) are
+  accepted with a portability warning.
+* An element of a contiguous `POINTER` or assumed-shape array may be used as
+  the initial element of a storage sequence (sequence association), with a
+  portability warning.
+* A variable in an OpenMP `THREADPRIVATE` directive that also appears in an
+  `EQUIVALENCE` statement is accepted as an OpenMP extension, with a portability
+  warning.
+* A Cray `POINTER` pointee whose type is a derived type that is neither
+  `SEQUENCE` nor `BIND(C)` is accepted with a portability warning.
+* A named `COMMON` block may have different total sizes in different scoping
+  units, with a portability warning.
+* A Hollerith literal constant may be passed to an unlimited polymorphic
+  (`CLASS(*)`) dummy argument, treated as if it were `CHARACTER`, with a
+  portability warning.
+* `C_PTR` and `C_DEVPTR` values from `ISO_C_BINDING` may appear directly in
+  formatted I/O lists without defined I/O, with a portability warning.
+* `INTENT`, `VALUE`, or `OPTIONAL` attributes on a variable that is not a
+  dummy argument are accepted with a portability warning.
+* A dummy argument may be used in a specification expression before its
+  explicit type declaration when its implicit type would differ from the
+  declared type, with a portability warning.
+* A duplicate `DEFAULT(NONE)` locality specification in a `DO CONCURRENT`
+  construct is accepted with a portability warning.
+* Some generic interfaces whose specific procedures are formally
+  indistinguishable under F2023 15.4.3.4.5 are accepted when no ambiguous
+  call is possible (extending the `DistinguishableSpecifics` extension
+  documented above).
+* A Hollerith or character literal constant may be passed to a scalar dummy
+  argument of a numeric type and is treated as a BOZ typeless value, with a
+  portability warning.
+* `NULL()` as an actual argument associated with an `INTENT(IN) ALLOCATABLE`
+  dummy argument is accepted with a portability warning.
+* `NULL(MOLD=...)` with a non-null pointer mold may be used as the explicit
+  value of an `ALLOCATABLE` component in a structure constructor, with a
+  portability warning. (Bare `NULL()` for `ALLOCATABLE` components is
+  standard-conforming per F2023 7.5.10 p6.)
 
 ### Extensions supported when enabled by options
 
@@ -567,6 +615,15 @@ end program
   legacy code; legacy code should be updated to be correct.
   This could be removed at any time.
   [-frelaxed-c-loc-checks]
+* All variables in every scoping unit implicitly have the `SAVE` attribute,
+  equivalent to a blanket `SAVE` statement. [-fno-automatic]
+* All local variables in the main program implicitly have the `SAVE` attribute.
+  [-fsave-main-program]
+* Each specification part is treated as if it has `IMPLICIT NONE(EXTERNAL)`,
+  requiring all procedures to have explicit interfaces.
+  [-fimplicit-none-ext]
+* `D` lines in fixed form source are treated as executable code rather than
+  comments. [-fd-lines-as-code]
 
 ### Extensions and legacy features deliberately not supported
 
@@ -589,7 +646,6 @@ end program
 * ALLOCATE(TYPE(derived)::...) as variant of correct ALLOCATE(derived::...) (PGI only)
 * Defining an explicit interface for a subprogram within itself (PGI only)
 * USE association of a procedure interface within that same procedure's definition
-* NULL() as a structure constructor expression for an ALLOCATABLE component (PGI).
 * Conversion of LOGICAL to INTEGER in expressions.
 * Use of INTEGER data with the intrinsic logical operators `.NOT.`, `.AND.`, `.OR.`,
   and `.XOR.`.
@@ -615,7 +671,6 @@ end program
   PGI converts the arguments while Intel and XLF replace the specific by the related generic.
 * VMS listing control directives (`%LIST`, `%NOLIST`, `%EJECT`)
 * Continuation lines on `INCLUDE` lines
-* `NULL()` actual argument corresponding to an `ALLOCATABLE` dummy data object
 * User (non-intrinsic) `ELEMENTAL` procedures may not be passed as actual
   arguments, in accordance with the standard; some Fortran compilers
   permit such usage.
