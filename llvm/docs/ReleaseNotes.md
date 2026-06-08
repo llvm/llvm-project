@@ -87,6 +87,11 @@ Makes programs 10x faster by doing Special New Thing.
   and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
+* Assume bundles now only accept attributes that are actually handled.
+  Specifically, they are ``align``, ``cold``, ``dereferenceable``,
+  ``dereferenceable_or_null``, ``nonnull``, ``noundef`` and
+  ``separate_storage``.
+
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
 ### Changes to LLVM infrastructure
