@@ -1786,7 +1786,7 @@ hsa_status_t asan_hsa_init() {
       __sanitizer::AmdgpuDeviceAllocator::ClearRuntimeShutdownState();
     // Load HSA entry points once the runtime is up; device allocator may stay
     // disabled, but interceptors and RegisterSystemEventHandlers need them.
-    if (__sanitizer::AmdgpuDeviceAllocator::Init())
+    if (__sanitizer::AmdgpuDeviceAllocator::Init(/*allow_dlopen=*/true))
       __sanitizer::AmdgpuDeviceAllocator::RegisterSystemEventHandlers();
   }
   return status;
