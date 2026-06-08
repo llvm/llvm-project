@@ -260,3 +260,35 @@ subroutine atomic_compare_weak(x, e, d)
   if (x == e) x = d
 end 
 
+! Integer equality compare+capture: cmpxchg + store old value
+!CHECK-LABEL: define void @atomic_compare_capture_int_eq_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
+!CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: store i32 %[[OLD]], ptr %[[V]]
+subroutine atomic_compare_capture_int_eq(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic compare capture
+    v = x
+    if (x == e) x = d
+  !$omp end atomic
+end
+
+! Compare+capture with clause order reversed: capture compare
+!CHECK-LABEL: define void @atomic_capture_compare_int_eq_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
+!CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: store i32 %[[OLD]], ptr %[[V]]
+subroutine atomic_capture_compare_int_eq(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic capture compare
+    v = x
+    if (x == e) x = d
+  !$omp end atomic
+end
+

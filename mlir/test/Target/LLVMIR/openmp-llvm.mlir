@@ -2795,6 +2795,47 @@ llvm.func @omp_atomic_compare_float_neg_zero(%xf : !llvm.ptr, %ef : f32, %df : f
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_compare_capture_int_eq
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_int_eq(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality compare+capture → cmpxchg + extractvalue + store
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_weak_int_eq
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_weak_int_eq(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality compare+capture → cmpxchg + extractvalue + store
+  // CHECK: %[[RES:.*]] = cmpxchg weak ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    } {weak}
+  }
+  llvm.return
+}
+// -----
+
 // CHECK-LABEL: @omp_sections_empty
 llvm.func @omp_sections_empty() -> () {
   omp.sections {
