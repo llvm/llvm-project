@@ -291,13 +291,8 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   if (should_forward_stdio) {
-    // Temporarily relax the following for Windows until we can take advantage
-    // of the recently added pty support. This doesn't really affect the use of
-    // lldb-server on Windows.
-#if !defined(_WIN32)
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
       return Status::FromError(std::move(Err));
-#endif
   }
 
   {
@@ -1224,6 +1219,33 @@ void GDBRemoteCommunicationServerLLGS::NewSubprocess(
       DebuggedProcess{std::move(child_process), DebuggedProcess::Flag{}});
 }
 
+void GDBRemoteCommunicationServerLLGS::NewProcessOutput(NativeProcessProtocol *,
+                                                        llvm::StringRef data) {
+  if (data.empty())
+    return;
+
+  {
+    std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+    m_pending_output_buffer.append(data.begin(), data.end());
+  }
+  m_mainloop.AddPendingCallback(
+      [this](MainLoopBase &) { FlushPendingProcessOutput(); });
+}
+
+void GDBRemoteCommunicationServerLLGS::FlushPendingProcessOutput() {
+  if (!m_current_process || !StateIsRunningState(m_current_process->GetState()))
+    return;
+
+  std::string out;
+  {
+    std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+    if (m_pending_output_buffer.empty())
+      return;
+    out.swap(m_pending_output_buffer);
+  }
+  SendONotification(out.data(), out.size());
+}
+
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
   Log *log = GetLog(GDBRLog::Comm);
 
@@ -2031,6 +2053,16 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     bool force_synchronous) {
   Log *log = GetLog(LLDBLog::Process);
 
+  {
+    std::string out;
+    {
+      std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+      out.swap(m_pending_output_buffer);
+    }
+    if (!out.empty())
+      SendONotification(out.data(), out.size());
+  }
+
   if (m_disabling_non_stop) {
     // Check if we are waiting for any more processes to stop.  If we are,
     // do not send the OK response yet.
@@ -2537,12 +2569,21 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     // write directly to stdin *this might block if stdin buffer is full*
     // TODO: enqueue this block in circular buffer and send window size to
     // remote host
-    ConnectionStatus status;
     Status error;
+
+#if defined(_WIN32)
+    // On Windows the inferior's stdio is owned by NativeProcessWindows (which
+    // holds the ConPTY). Route stdin through NativeProcessProtocol::WriteStdin
+    // rather than m_stdio_communication, which is unconnected on Windows.
+    if (m_current_process->WriteStdin(tmp, read, error) != read || error.Fail())
+      return SendErrorResponse(0x15);
+#else
+    ConnectionStatus status;
     m_stdio_communication.WriteAll(tmp, read, status, &error);
     if (error.Fail()) {
       return SendErrorResponse(0x15);
     }
+#endif
   }
 
   return SendOKResponse();

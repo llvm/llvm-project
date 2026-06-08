@@ -878,7 +878,10 @@ std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &type,
     return true;
   case TypeCategory::Real:
   case TypeCategory::Complex:
-    return type.kind() >= 4 /* not a short or half float */ || !features ||
+    // KIND=2 is IEEE-754 binary16, interoperable with C _Float16.
+    // KIND=3 (bfloat16) has no standard interoperable C type, so it is
+    // accepted only under CUDA (or when reading a module file).
+    return type.kind() == 2 || type.kind() >= 4 || !features ||
         features->IsEnabled(common::LanguageFeature::CUDA);
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL
