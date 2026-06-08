@@ -10,8 +10,8 @@
 target triple = "x86_64-unknown-linux-gnu"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 
-define void @test_inttoptr_reuse(ptr %base1, ptr %base2, ptr %base3, i64 %n) {
-; CHECK-LABEL: @test_inttoptr_reuse(
+define void @test_no_inttoptr_casts(ptr %base1, ptr %base2, ptr %base3, i64 %n) {
+; CHECK-LABEL: @test_no_inttoptr_casts(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N:%.*]], 3
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
