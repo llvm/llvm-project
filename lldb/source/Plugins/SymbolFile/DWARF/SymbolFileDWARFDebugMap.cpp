@@ -1302,8 +1302,8 @@ SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
     FileSpec oso_file;
     ConstString oso_object;
     if (ObjectFile::SplitArchivePathWithObject(info.oso_path.GetStringRef(),
-                                              oso_file, oso_object,
-                                              /*must_exist=*/false)) {
+                                               oso_file, oso_object,
+                                               /*must_exist=*/false)) {
       spec.GetFileSpec() = oso_file;
       spec.GetObjectName() = oso_object;
     } else {
@@ -1311,7 +1311,7 @@ SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
     }
 
     spec.GetObjectModificationTime() = info.oso_mod_time;
-    spec_list.Append(lldb_private::FileSpec(info.oso_path));
+    spec_list.Append(spec);
   }
   return spec_list;
 }

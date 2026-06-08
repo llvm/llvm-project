@@ -1,5 +1,7 @@
+extern int bar(void);
+
 int main() {
-  int x = 40;
+  int x = bar();
   x += 2; // break here
   return x;
 }

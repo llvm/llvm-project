@@ -4379,22 +4379,37 @@ lldb_private::ModuleSpecList SymbolFileDWARF::GetSeparateDebugInfoFiles() {
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
   lldb_private::ModuleSpecList spec_list;
+  // Check if a .dwp file exists, returning it if it does.
+  if (const auto &dwp_sp = GetDwpSymbolFile()) {
+    if (ObjectFile *dwp_obj = dwp_sp->GetObjectFile()) {
+      spec_list.Append(ModuleSpec(dwp_obj->GetFileSpec()));
+      // Only one .dwp file is expected, so return early.
+      return spec_list;
+    }
+  }
+
   for (uint32_t cu_idx = 0; cu_idx < num_cus; ++cu_idx) {
     DWARFUnit *unit = info.GetUnitAtIndex(cu_idx);
     DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(unit);
-    if (dwarf_cu == nullptr)
+    if (dwarf_cu == nullptr || !dwarf_cu->GetDWOId().has_value())
       continue;
 
-    if (!dwarf_cu->GetDWOId().has_value())
+    const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+    if (!die)
       continue;
 
-    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile();
-    if (!dwo_symfile)
+    const char *dwo_name = GetDWOName(*dwarf_cu, *die.GetDIE());
+    if (!dwo_name)
       continue;
 
-    lldb_private::FileSpec symfile_spec =
-        dwo_symfile->GetObjectFile()->GetFileSpec();
-    spec_list.Append(symfile_spec);
+    lldb_private::FileSpec dwo_file(dwo_name);
+    if (!dwo_file.IsAbsolute()) {
+      const char *comp_dir = die.GetDIE()->GetAttributeValueAsString(
+          dwarf_cu, DW_AT_comp_dir, nullptr);
+      if (comp_dir)
+        dwo_file.PrependPathComponent(comp_dir);
+    }
+    spec_list.Append(ModuleSpec(dwo_file));
   }
   return spec_list;
 }
