@@ -5242,7 +5242,7 @@ LogicalResult IteratorOp::verify() {
   }
 
   Block &b = getRegion().front();
-  auto yield = b.empty() ? nullptr : llvm::dyn_cast<omp::YieldOp>(b.back());
+  auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());
 
   if (!yield)
     return emitOpError() << "region must be terminated by omp.yield";
