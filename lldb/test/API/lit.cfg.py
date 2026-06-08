@@ -259,6 +259,18 @@ if is_configured("clang_module_cache"):
 
 if is_configured("lldb_executable"):
     dotest_cmd += ["--executable", config.lldb_executable]
+    try:
+        version_output = subprocess.check_output(
+            [config.lldb_executable, "--version"],
+            stderr=subprocess.STDOUT,
+            text=True,
+        ).strip()
+        for line in version_output.splitlines():
+            lit_config.note(line.strip())
+    except (subprocess.CalledProcessError, OSError) as e:
+        lit_config.warning(
+            "Could not get lldb version from {}: {}".format(config.lldb_executable, e)
+        )
 
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
