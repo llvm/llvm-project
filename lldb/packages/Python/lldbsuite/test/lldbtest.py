@@ -293,7 +293,7 @@ class ValueCheck:
         self.children = children
         self.dereference = dereference
 
-    def check_value(self, test_base, val, error_msg=None):
+    def check_value(self, test_base, val, error_msg=""):
         """
         Checks that the given value matches the currently set properties
         of this ValueCheck. If a match failed, the given TestBase will
@@ -336,7 +336,7 @@ class ValueCheck:
         if self.dereference is not None:
             self.dereference.check_value(test_base, val.Dereference(), error_msg)
 
-    def check_value_children(self, test_base, val, error_msg=None):
+    def check_value_children(self, test_base, val, error_msg=""):
         """
         Checks that the children of a SBValue match a certain structure and
         have certain properties.
@@ -2938,7 +2938,7 @@ FileCheck output:
             summary=result_summary,
             children=result_children,
         )
-        value_check.check_value(self, eval_result, str(eval_result))
+        value_check.check_value(self, eval_result)
         return eval_result
 
     def expect_var_path(
@@ -2965,7 +2965,7 @@ FileCheck output:
         value_check = ValueCheck(
             type=type, value=value, summary=summary, children=children
         )
-        value_check.check_value(self, eval_result, str(eval_result))
+        value_check.check_value(self, eval_result)
         return eval_result
 
     """Assert that an lldb.SBError is in the "success" state."""
