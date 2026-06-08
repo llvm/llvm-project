@@ -117,13 +117,15 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
-// True if the pair writes to the same physical register.
-static bool haveWAWDependency(const MachineInstr &FirstMI,
-                              const MachineInstr &SecondMI) {
+// True unless the pair provably writes different physical registers. Pre-RA
+// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
+// reg).
+static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
+                                 const MachineInstr &SecondMI) {
   Register DestFirst = FirstMI.getOperand(0).getReg();
   Register DestSecond = SecondMI.getOperand(0).getReg();
-  assert(DestFirst.isPhysical() && DestSecond.isPhysical() &&
-         "Pair should have physical registers post-RA");
+  if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
+    return true;
   return DestFirst == DestSecond;
 }
 
@@ -141,7 +143,7 @@ static bool isAESPair(const MachineInstr *FirstMI,
     if (FirstMI->getOpcode() != AArch64::AESErr)
       return false;
     return SecondOpcode == AArch64::AESMCrrTied ||
-           haveWAWDependency(*FirstMI, SecondMI);
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
@@ -150,7 +152,7 @@ static bool isAESPair(const MachineInstr *FirstMI,
     if (FirstMI->getOpcode() != AArch64::AESDrr)
       return false;
     return SecondOpcode == AArch64::AESIMCrrTied ||
-           haveWAWDependency(*FirstMI, SecondMI);
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   }
 
   return false;
