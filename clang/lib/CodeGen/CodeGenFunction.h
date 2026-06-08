@@ -1222,7 +1222,7 @@ public:
     OMPMapVars MappedVars;
     OMPPrivateScope(const OMPPrivateScope &) = delete;
     void operator=(const OMPPrivateScope &) = delete;
-    llvm::DenseMap<const BindingDecl*, Address> SavedBindings;
+    llvm::DenseMap<const BindingDecl *, Address> SavedBindings;
 
   public:
     /// Enter a new OpenMP private scope.
