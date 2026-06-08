@@ -1956,6 +1956,8 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     if (GetContext().directive == llvm::acc::ACCD_declare) {
       object.set(Symbol::Flag::AccDeclare);
       object.set(accFlag);
+      if (IsAllocatableOrObjectPointer(&object))
+        object.set(Symbol::Flag::AccDeclareAction);
     }
   }
   return &object;
