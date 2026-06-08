@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #if SANITIZER_AMDHSA
-#  include <dlfcn.h>  // For dlsym
+#  include <dlfcn.h>  // For dlopen, dlsym
 
 #  include "sanitizer_allocator.h"
 #  include "sanitizer_atomic.h"
@@ -38,18 +38,24 @@ struct HsaFunctions {
 
 static HsaFunctions hsa_amd;
 
+// ROCr handle
+static void* hsa_runtime_handle = nullptr;
+// Mutex to protect the ROCr handle
+static StaticSpinMutex hsa_runtime_init_mu;
+
+// Default ROCr library path
+static const char kDefaultHsaRuntimePath[] = "libhsa-runtime64.so";
+
 // Always align to page boundary to match current ROCr behavior
 static const size_t kPageSize_ = 4096;
 
 static atomic_uint8_t amdgpu_runtime_shutdown{0};
 static atomic_uint8_t amdgpu_event_registered{0};
+static atomic_uint8_t hsa_amd_symbols_loaded{0};
 
-#  define LOAD_HSA_FUNC_WITH_ERROR_CHECK(func, name, success)         \
-    func = (decltype(func))dlsym(RTLD_NEXT, name);                    \
-    if (!func) {                                                      \
-      VReport(2, "Amdgpu Init: Failed to load " #name " function\n"); \
-      success = false;                                                \
-    }
+static bool HsaSymbolsLoaded() {
+  return atomic_load(&hsa_amd_symbols_loaded, memory_order_acquire) != 0;
+}
 
 bool AmdgpuDeviceAllocator::IsRuntimeShutdown() {
   return static_cast<bool>(
@@ -89,25 +95,70 @@ void AmdgpuDeviceAllocator::NoteDeviceAllocatorFailure(
   }
 }
 
-bool AmdgpuDeviceAllocator::Init() {
+// Init(false): no-op during __asan_init (no dlopen, no dlsym).
+// Init(true): from asan_hsa_init() after REAL(hsa_init); ROCr may be up while
+// this still fails (hsa_init can succeed with an unloaded device backend).
+// Bind hsa_amd_* via dlopen(RTLD_NOLOAD) + dlsym(handle) — not REAL() here
+// and not RTLD_NEXT/DEFAULT (those resolve ASan interceptors and recurse).
+bool AmdgpuDeviceAllocator::Init(bool allow_dlopen) {
+  SpinMutexLock l(&hsa_runtime_init_mu);
+  if (HsaSymbolsLoaded())
+    return true;
+
+  // Never dlopen during __asan_init.
+  if (!allow_dlopen)
+    return false;
+
+  if (!hsa_runtime_handle) {
+    const char* path = GetEnv("SANITIZER_HSA_RUNTIME_PATH");
+    if (!path || !path[0])
+      path = kDefaultHsaRuntimePath;
+    // Prefer first `RTLD_NOLOAD` when ROCr is already mapped(after successful
+    // REAL(hsa_init)). If RTLD_NOLOAD fails, try `RTLD_NOW` (when ROCr is not
+    // loaded).
+    hsa_runtime_handle = dlopen(path, RTLD_LAZY | RTLD_NOLOAD);
+    if (!hsa_runtime_handle)
+      hsa_runtime_handle = dlopen(path, RTLD_NOW);
+    if (!hsa_runtime_handle) {
+      const char* err = dlerror();
+      VReport(2, "Amdgpu Init: dlopen(%s) failed: %s\n", path,
+              err ? err : "unknown error");
+      return false;
+    }
+  }
+
+  struct HsaSymbolEntry {
+    const char* name;
+    void** slot;
+  };
+  // HSA Symbol Entries Table
+  const HsaSymbolEntry kSymbols[] = {
+      {"hsa_amd_memory_pool_allocate", (void**)&hsa_amd.memory_pool_allocate},
+      {"hsa_amd_memory_pool_free", (void**)&hsa_amd.memory_pool_free},
+      {"hsa_amd_pointer_info", (void**)&hsa_amd.pointer_info},
+      {"hsa_amd_vmem_address_reserve_align",
+       (void**)&hsa_amd.vmem_address_reserve_align},
+      {"hsa_amd_vmem_address_free", (void**)&hsa_amd.vmem_address_free},
+      {"hsa_amd_register_system_event_handler",
+       (void**)&hsa_amd.register_system_event_handler},
+  };
+
   bool success = true;
-  LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.memory_pool_allocate,
-                                 "hsa_amd_memory_pool_allocate", success);
-  LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.memory_pool_free,
-                                 "hsa_amd_memory_pool_free", success);
-  LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.pointer_info, "hsa_amd_pointer_info",
-                                 success);
-  LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.vmem_address_reserve_align,
-                                 "hsa_amd_vmem_address_reserve_align", success);
-  LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.vmem_address_free,
-                                 "hsa_amd_vmem_address_free", success);
-  LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.register_system_event_handler,
-                                 "hsa_amd_register_system_event_handler",
-                                 success);
+  for (uptr i = 0; i < ARRAY_SIZE(kSymbols); ++i) {
+    void* sym = dlsym(hsa_runtime_handle, kSymbols[i].name);
+    if (!sym) {
+      VReport(2, "Amdgpu Init: Failed to load %s from ROCr handle\n",
+              kSymbols[i].name);
+      success = false;
+    }
+    *kSymbols[i].slot = sym;
+  }
   if (!success) {
+    internal_memset(&hsa_amd, 0, sizeof(hsa_amd));
     VReport(1, "Amdgpu Init: Failed to load AMDGPU runtime functions\n");
     return false;
   }
+  atomic_store(&hsa_amd_symbols_loaded, 1, memory_order_release);
   return true;
 }
 
@@ -123,6 +174,11 @@ void* AmdgpuDeviceAllocator::Allocate(uptr size, uptr alignment,
             "%zu alignment %zu\n",
             size, alignment);
     aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_INVALID_RUNTIME_STATE);
+    return nullptr;
+  }
+
+  if (!HsaSymbolsLoaded()) {
+    aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_NOT_INITIALIZED);
     return nullptr;
   }
 
@@ -258,12 +314,26 @@ void AmdgpuDeviceAllocator::RegisterSystemEventHandlers() {
 
 uptr AmdgpuDeviceAllocator::GetPageSize() { return kPageSize_; }
 
+// File-scope singleton: function-local static would emit __cxa_guard_* calls
+// that are unavailable when this TU is linked into standalone runtimes.
+static VmemGpuReserveTracker vmem_gpu_reserve_tracker;
+
 VmemGpuReserveTracker& VmemGpuReserveTracker::Get() {
-  static VmemGpuReserveTracker tracker;
-  return tracker;
+  return vmem_gpu_reserve_tracker;
+}
+
+void VmemGpuReserveTracker::EnsureInited() {
+  if (atomic_load(&inited_, memory_order_acquire))
+    return;
+  SpinMutexLock l(&mu_);
+  if (atomic_load(&inited_, memory_order_relaxed))
+    return;
+  reservations_.Initialize(0);
+  atomic_store(&inited_, 1, memory_order_release);
 }
 
 void VmemGpuReserveTracker::OnReserve(uptr ptr, uptr size) {
+  EnsureInited();
   SpinMutexLock l(&mu_);
   VmemGpuReservation entry;
   entry.ptr = ptr;
@@ -274,6 +344,7 @@ void VmemGpuReserveTracker::OnReserve(uptr ptr, uptr size) {
 
 VmemGpuReserveTracker::FreeResult VmemGpuReserveTracker::CheckFree(uptr ptr,
                                                                    uptr size) {
+  EnsureInited();
   SpinMutexLock l(&mu_);
   for (uptr i = 0; i < reservations_.size(); ++i) {
     const VmemGpuReservation& r = reservations_[i];
@@ -289,6 +360,7 @@ VmemGpuReserveTracker::FreeResult VmemGpuReserveTracker::CheckFree(uptr ptr,
 }
 
 void VmemGpuReserveTracker::MarkFreed(uptr ptr, uptr size) {
+  EnsureInited();
   SpinMutexLock l(&mu_);
   for (uptr i = 0; i < reservations_.size(); ++i) {
     VmemGpuReservation& r = reservations_[i];
