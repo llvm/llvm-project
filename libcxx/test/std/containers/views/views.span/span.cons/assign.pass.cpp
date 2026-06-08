@@ -33,7 +33,7 @@ constexpr int carr3[] = {7, 8};
 int arr[]             = {5, 6, 7, 9};
 std::string strs[]    = {"ABC", "DEF", "GHI"};
 
-int main() {
+int main(int, char**) {
   //  constexpr dynamically sized assignment
   {
     //  On systems where 'ptrdiff_t' is a synonym for 'int',

@@ -80,7 +80,7 @@ static_assert(!std::is_convertible_v<BorrowedContiguousSizedRange&, std::span<ch
 static_assert(std::is_convertible_v<const BorrowedContiguousSizedRange&, std::span<const char>>);
 static_assert(!std::is_convertible_v<const BorrowedContiguousSizedRange&, std::span<const char, 3>>);
 
-int main() {
+int main(int, char**) {
   test();
   static_assert(test());
 

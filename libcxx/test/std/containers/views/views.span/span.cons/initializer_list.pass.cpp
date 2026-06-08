@@ -59,7 +59,7 @@ bool test_P2447R4_annex_c_examples() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   assert(test());
   static_assert(test());
 

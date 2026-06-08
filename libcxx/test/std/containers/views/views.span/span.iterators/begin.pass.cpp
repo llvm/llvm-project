@@ -51,7 +51,7 @@ bool operator==(A, A) { return true; }
 constexpr int iArr1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 int iArr2[]           = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
-int main() {
+int main(int, char**) {
   static_assert(testConstexprSpan(std::span<int>()));
   static_assert(testConstexprSpan(std::span<long>()));
   static_assert(testConstexprSpan(std::span<double>()));

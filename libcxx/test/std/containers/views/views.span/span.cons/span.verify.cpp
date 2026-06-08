@@ -108,7 +108,7 @@ void checkCV() {
   }
 }
 
-int main() {
+int main(int, char**) {
   std::span<int> sp;
   std::span<int, 0> sp0;
 

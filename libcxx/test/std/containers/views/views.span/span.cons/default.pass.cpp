@@ -57,7 +57,7 @@ void testRuntimeSpan() {
 
 struct A {};
 
-int main() {
+int main(int, char**) {
   static_assert(testConstexprSpan<int>());
   static_assert(testConstexprSpan<long>());
   static_assert(testConstexprSpan<double>());

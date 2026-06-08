@@ -114,7 +114,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   static_assert(test());
   test();
 

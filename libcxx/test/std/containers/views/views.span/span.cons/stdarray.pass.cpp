@@ -93,7 +93,7 @@ constexpr bool testConstructors() {
 
 struct A {};
 
-int main() {
+int main(int, char**) {
   assert(testConstructors<int>());
   assert(testConstructors<long>());
   assert(testConstructors<double>());

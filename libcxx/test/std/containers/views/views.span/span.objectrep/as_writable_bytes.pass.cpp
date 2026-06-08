@@ -97,7 +97,7 @@ void test_constraints() {
   static_assert(!hasAsWritableBytes<const volatile std::string, 0>);
 }
 
-int main() {
+int main(int, char**) {
   test_constraints();
 
   testRuntimeSpan(std::span<int>());
