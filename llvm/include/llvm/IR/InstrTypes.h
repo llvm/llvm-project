@@ -2353,6 +2353,12 @@ public:
     return make_range(bundle_op_info_begin(), bundle_op_info_end());
   }
 
+  auto operand_bundles() const {
+    return map_range(bundle_op_infos(), [this](BundleOpInfo BOI) {
+      return operandBundleFromBundleOpInfo(BOI);
+    });
+  }
+
   /// Populate the BundleOpInfo instances and the Use& vector from \p
   /// Bundles.  Return the op_iterator pointing to the Use& one past the last
   /// last bundle operand use.

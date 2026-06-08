@@ -1296,3 +1296,39 @@ loop.latch:
 exit:
   ret void
 }
+
+; This reduction is simplifiable to a constant. Make sure we don't crash
+; assuming every reduction has a corresponding VPReductionPHIRecipe.
+define void @simplifiable_reduction(ptr %p) {
+; CHECK-LABEL: define void @simplifiable_reduction(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP87:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %rdx = phi i32 [ 1, %entry ], [ %rdx.next, %loop ]
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx.next = and i32 0, %rdx
+  store i32 %rdx.next, ptr %p
+  %iv.next = add i16 %iv, 1
+  %ec = icmp eq i16 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

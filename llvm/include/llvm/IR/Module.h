@@ -32,7 +32,6 @@
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
@@ -579,34 +578,10 @@ public:
   // Use global_size() to get the total number of global variables.
   // Use globals() to get the range of all global variables.
 
-  std::optional<GlobalValue::GUID> getGUID(const Value *V) const {
-    const auto It = ValueToGUIDMap.find(V);
-    if (It == ValueToGUIDMap.end())
-      return std::nullopt;
-
-    return It->getSecond();
-  }
-
-  void insertGUID(const Value *V, GlobalValue::GUID GUID) {
-    const auto [It, WasInserted] = ValueToGUIDMap.insert({V, GUID});
-
-    (void)It, (void)WasInserted;
-#ifndef NDEBUG
-    if (!WasInserted) {
-      assert((It->second == GUID) && "insertGUID called with different value");
-    }
-#endif
-  }
-
 private:
-  /// A mapping directly from Value to GUID. Populated from bitcode
-  /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
-  /// don't load metadata.
-  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
-
-  /// @}
-  /// @name Direct access to the globals list, functions list, and symbol table
-  /// @{
+/// @}
+/// @name Direct access to the globals list, functions list, and symbol table
+/// @{
 
   /// Get the Module's list of global variables (constant).
   const GlobalListType   &getGlobalList() const       { return GlobalList; }
@@ -1037,6 +1012,10 @@ public:
   /// Get/set the width in memory of the stack protector guard value.
   std::optional<unsigned> getStackProtectorGuardValueWidth() const;
   void setStackProtectorGuardValueWidth(unsigned Width);
+
+  // Get/set flag indicating whether to emit a __stack_protector_loc section.
+  bool hasStackProtectorGuardRecord() const;
+  void setStackProtectorGuardRecord(bool Flag);
 
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;
