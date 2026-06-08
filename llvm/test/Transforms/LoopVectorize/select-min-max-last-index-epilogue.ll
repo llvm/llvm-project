@@ -84,14 +84,14 @@ define i64 @test_vectorize_select_umax_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[CMP_N23:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N23]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL24:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX25:%.*]] = phi i64 [ [[RDX_SELECT22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX26:%.*]] = phi i64 [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP8]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX22:%.*]] = phi i64 [ [[RDX_SELECT22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX23:%.*]] = phi i64 [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP8]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[BC_RESUME_VAL24]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX25]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX26]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX22]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX23]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV2]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[MIN_VAL]], [[L]]
@@ -208,14 +208,14 @@ define i64 @test_vectorize_select_umax_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[CMP_N23:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N23]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL24:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX25:%.*]] = phi i64 [ [[RDX_SELECT22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX26:%.*]] = phi i64 [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP8]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX22:%.*]] = phi i64 [ [[RDX_SELECT22]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX23:%.*]] = phi i64 [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP8]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[BC_RESUME_VAL24]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX25]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX26]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX22]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX23]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV2]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[L]], [[MIN_VAL]]
@@ -333,14 +333,14 @@ define i32 @test_vectorize_select_smax_idx(i32 %n, i32 %val) {
 ; CHECK-NEXT:    [[CMP_N27:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC8]]
 ; CHECK-NEXT:    br i1 [[CMP_N27]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL28:%.*]] = phi i32 [ [[N_VEC8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX29:%.*]] = phi i32 [ [[TMP15]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX30:%.*]] = phi i32 [ [[RDX_SELECT26]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[RDX_SELECT5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX25:%.*]] = phi i32 [ [[TMP15]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX26:%.*]] = phi i32 [ [[RDX_SELECT26]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[RDX_SELECT5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL28]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_SMAX:%.*]] = phi i32 [ [[BC_MERGE_RDX29]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SMAX:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = phi i32 [ [[BC_MERGE_RDX30]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_SMAX:%.*]] = phi i32 [ [[BC_MERGE_RDX25]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SMAX:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = phi i32 [ [[BC_MERGE_RDX26]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[VAL]], [[RDX_SMAX]]
 ; CHECK-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[RDX_SELECT]], i32 [[IV]]
 ; CHECK-NEXT:    [[SMAX]] = tail call i32 @llvm.smax.i32(i32 [[VAL]], i32 [[RDX_SMAX]])
