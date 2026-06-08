@@ -108,8 +108,8 @@ jobs:
         run: |
           cmake -B build/gcc -S runtimes -G Ninja \
             -DLLVM_ENABLE_RUNTIMES=libc \
-            -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc${{ gcc_ver }} \
-            -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++${{ gcc_ver }} \
+            -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc${{ matrix.gcc_ver }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++${{ matrix.gcc_ver }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
             -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
