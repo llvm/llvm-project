@@ -8677,19 +8677,6 @@ int8_t test_vqshlb_s8(int8_t a, int8_t b) {
   return vqshlb_s8(a, b);
 }
 
-// CHECK-LABEL: define dso_local i16 @test_vqshlh_s16(
-// CHECK-SAME: i16 noundef [[A:%.*]], i16 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
-// CHECK-NEXT:    [[VQSHLH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[VQSHLH_S16_I]], i64 0
-// CHECK-NEXT:    ret i16 [[TMP2]]
-//
-int16_t test_vqshlh_s16(int16_t a, int16_t b) {
-  return vqshlh_s16(a, b);
-}
-
 // CHECK-LABEL: define dso_local i32 @test_vqshls_s32(
 // CHECK-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -8721,19 +8708,6 @@ int64_t test_vqshld_s64(int64_t a, int64_t b) {
 //
 uint8_t test_vqshlb_u8(uint8_t a, int8_t b) {
   return vqshlb_u8(a, b);
-}
-
-// CHECK-LABEL: define dso_local i16 @test_vqshlh_u16(
-// CHECK-SAME: i16 noundef [[A:%.*]], i16 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
-// CHECK-NEXT:    [[VQSHLH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[VQSHLH_U16_I]], i64 0
-// CHECK-NEXT:    ret i16 [[TMP2]]
-//
-uint16_t test_vqshlh_u16(uint16_t a, int16_t b) {
-  return vqshlh_u16(a, b);
 }
 
 // CHECK-LABEL: define dso_local i32 @test_vqshls_u32(
@@ -14241,18 +14215,6 @@ int8_t test_vqshlb_n_s8(int8_t a) {
   return (int8_t)vqshlb_n_s8(a, 7);
 }
 
-// CHECK-LABEL: define dso_local i16 @test_vqshlh_n_s16(
-// CHECK-SAME: i16 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
-// CHECK-NEXT:    [[VQSHLH_N_S16:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 poison, i16 poison, i16 poison>)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHLH_N_S16]], i64 0
-// CHECK-NEXT:    ret i16 [[TMP1]]
-//
-int16_t test_vqshlh_n_s16(int16_t a) {
-  return (int16_t)vqshlh_n_s16(a, 15);
-}
-
 // CHECK-LABEL: define dso_local i32 @test_vqshls_n_s32(
 // CHECK-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -14445,18 +14407,6 @@ int64x1_t test_vqshl_n_s64(int64x1_t a) {
 //
 uint8_t test_vqshlb_n_u8(uint8_t a) {
   return (uint8_t)vqshlb_n_u8(a, 7);
-}
-
-// CHECK-LABEL: define dso_local i16 @test_vqshlh_n_u16(
-// CHECK-SAME: i16 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
-// CHECK-NEXT:    [[VQSHLH_N_U16:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 poison, i16 poison, i16 poison>)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHLH_N_U16]], i64 0
-// CHECK-NEXT:    ret i16 [[TMP1]]
-//
-uint16_t test_vqshlh_n_u16(uint16_t a) {
-  return (uint16_t)vqshlh_n_u16(a, 15);
 }
 
 // CHECK-LABEL: define dso_local i32 @test_vqshls_n_u32(
