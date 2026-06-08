@@ -153,6 +153,30 @@ Classes that are related to a debug target include:
 - ABI for function calling in process being debugged
 - Execution context batons
 
+## Platform
+
+Platform classes are spread around the codebase, with the base `Platform` class
+in `Target`. Platforms provide functionality for managing the execution
+environment of targets. This environment may be the host machine, a remote
+machine, or a simulated environment that the platform launches on behalf of the
+user.
+
+`lldb-server` includes a "platform mode" which is not a `Platform` in itself.
+This mode implements a protocol used by many `Platform`s that manage a remote
+environment. See {doc}`/use/remote` for an example of how the `Platform`s in
+LLDB work together with `lldb-server`'s "platform mode".
+
+`Platform` features include:
+
+- Providing details about the environent, such as operating system
+  version.
+- Moving files to and from the environment.
+- Finding processes in the environment.
+- Setting up new debug servers to debug existing or new processes in the
+  environment.
+- Connecting LLDB to these new debug servers. In other words, making them into
+  a `Target`.
+
 ## Utility
 
 This module contains the lowest layers of LLDB. A lot of these classes don't
