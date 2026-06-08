@@ -31,10 +31,24 @@ EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
   EJitPassBuilder::registerModuleAnalyses(MAM_);
   EJitPassBuilder::crossRegisterProxies(LAM_, FAM_, CGAM_, MAM_);
 
-  // Pre-build the L1 pipeline — always runs, so cache it.
+  // Pre-build cached pass pipelines.
+  // L1: SCCP + ADCE + SimplifyCFG (always runs).
   L1FPM_.addPass(SCCPPass());
   L1FPM_.addPass(ADCEPass());
   L1FPM_.addPass(SimplifyCFGPass());
+
+  // L2: SimplifyCFG cleanup after inlining.
+  L2FPM_.addPass(SimplifyCFGPass());
+
+  // L3: LoopSimplify + FullUnroll + Promote (Mem2Reg) + SimplifyCFG.
+  L3FPM_.addPass(LoopSimplifyPass());
+  {
+    LoopPassManager LPM;
+    LPM.addPass(LoopFullUnrollPass());
+    L3FPM_.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+  }
+  L3FPM_.addPass(PromotePass());
+  L3FPM_.addPass(SimplifyCFGPass());
 }
 
 void EJitOptimizer::clearAnalyses() {
@@ -132,13 +146,9 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
     MPM.addPass(AlwaysInlinerPass());
     MPM.run(M, MAM_);
 
-    {
-      FunctionPassManager FPM;
-      FPM.addPass(SimplifyCFGPass());
-      for (Function &F : M.functions())
-        if (!F.isDeclaration())
-          FPM.run(F, FAM_);
-    }
+    for (Function &F : M.functions())
+      if (!F.isDeclaration())
+        L2FPM_.run(F, FAM_);
 
     runStructFieldPass(M);
     runInstCombine(M);
@@ -147,18 +157,9 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
   // L3: Unroll small loops with may_const-dependent bodies, then clean up
   // + re-run StructFieldPass for loads exposed by unrolling.
   if (static_cast<int>(level) >= 3) {
-    FunctionPassManager FPM3;
-    FPM3.addPass(LoopSimplifyPass());
-    {
-      LoopPassManager LPM;
-      LPM.addPass(LoopFullUnrollPass());
-      FPM3.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
-    }
-    FPM3.addPass(PromotePass());
-    FPM3.addPass(SimplifyCFGPass());
     for (Function &F : M.functions())
       if (!F.isDeclaration())
-        FPM3.run(F, FAM_);
+        L3FPM_.run(F, FAM_);
 
     runStructFieldPass(M);
     runInstCombine(M);
