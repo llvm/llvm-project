@@ -7,12 +7,12 @@ define void @callee(ptr byval([50 x i8]) %p) {
 
 define void @main() {
   %alloc = alloca [50 x i8]
-  call void @callee(ptr %alloc)
+  call void @callee(ptr byval([50 x i8]) %alloc)
   ret void
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %alloc = alloca [50 x i8], align 1 => ptr 0x8 [alloc]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @callee(ptr %alloc) at @main <stdin>:10
+; CHECK-NEXT: #0   call void @callee(ptr byval([50 x i8]) %alloc) at @main <stdin>:10
 ; CHECK-NEXT: Error: Insufficient stack space for byval pointer argument.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

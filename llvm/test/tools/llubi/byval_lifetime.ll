@@ -7,7 +7,7 @@ define ptr @identity(ptr byval(i32) %p) {
 
 define void @main() {
   %var = alloca i32
-  %p = call ptr @identity(ptr %var)
+  %p = call ptr @identity(ptr byval(i32) %var)
   store i32 0, ptr %p
 
   ret void
@@ -18,7 +18,7 @@ define void @main() {
 ; CHECK-NEXT:   ptr %p = ptr 0xC [p]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: identity
-; CHECK-NEXT:   %p = call ptr @identity(ptr %var) => ptr 0xC [p]
+; CHECK-NEXT:   %p = call ptr @identity(ptr byval(i32) %var) => ptr 0xC [p]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   store i32 0, ptr %p, align 4 at @main <stdin>:11
 ; CHECK-NEXT: Immediate UB detected: Try to access a dead memory object at address 0xc.

@@ -6,11 +6,11 @@ define void @callee(ptr byval(i32) %p) {
 }
 
 define void @main() {
-  call void @callee(ptr poison)
+  call void @callee(ptr byval(i32) poison)
   ret void
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @callee(ptr poison) at @main <stdin>:9
+; CHECK-NEXT: #0   call void @callee(ptr byval(i32) poison) at @main <stdin>:9
 ; CHECK-NEXT: Immediate UB detected: Invalid poison byval pointer argument.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

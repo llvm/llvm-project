@@ -20,7 +20,7 @@ define void @callee(ptr byval(%struct) %p) {
 @g = global [12 x i8] zeroinitializer
 
 define void @main() {
-  call void @callee(ptr @g)
+  call void @callee(ptr byval(%struct) @g)
   ret void
 }
 ; CHECK: Entering function: main
@@ -36,6 +36,6 @@ define void @main() {
 ; CHECK-NEXT:   %undef2_padding2 = load i8, ptr %p_padding2, align 1 => i8 -18
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: callee
-; CHECK-NEXT:   call void @callee(ptr @g)
+; CHECK-NEXT:   call void @callee(ptr byval(%struct) @g)
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

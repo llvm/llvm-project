@@ -6,7 +6,7 @@ define void @write(ptr byval(i32) %p) {
   ret void
 }
 
-define void @write_callsite_byval(ptr %p) {
+define void @write_callsite_align(ptr byval(i32) %p) {
   store i32 2, ptr %p
   ret void
 }
@@ -19,11 +19,11 @@ define void @write_underalign(ptr byval(i32) align 1 %p) {
 define void @main() {
   %var = alloca i32
   store i32 0, ptr %var
-  call void @write(ptr %var)
+  call void @write(ptr byval(i32) %var)
   %v1 = load i32, ptr %var
-  call void @write_callsite_byval(ptr byval(i32) %var)
+  call void @write_callsite_align(ptr byval(i32) align 8 %var)
   %v2 = load i32, ptr %var
-  call void @write_underalign(ptr %var)
+  call void @write_underalign(ptr byval(i32) %var)
   %v3 = load i32, ptr %var
 
   ret void
@@ -36,21 +36,21 @@ define void @main() {
 ; CHECK-NEXT:   store i32 1, ptr %p, align 4
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: write
-; CHECK-NEXT:   call void @write(ptr %var)
+; CHECK-NEXT:   call void @write(ptr byval(i32) %var)
 ; CHECK-NEXT:   %v1 = load i32, ptr %var, align 4 => i32 0
-; CHECK-NEXT: Entering function: write_callsite_byval
+; CHECK-NEXT: Entering function: write_callsite_align
 ; CHECK-NEXT:   ptr %p = ptr 0x10 [p]
 ; CHECK-NEXT:   store i32 2, ptr %p, align 4
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: Exiting function: write_callsite_byval
-; CHECK-NEXT:   call void @write_callsite_byval(ptr byval(i32) %var)
+; CHECK-NEXT: Exiting function: write_callsite_align
+; CHECK-NEXT:   call void @write_callsite_align(ptr byval(i32) align 8 %var)
 ; CHECK-NEXT:   %v2 = load i32, ptr %var, align 4 => i32 0
 ; CHECK-NEXT: Entering function: write_underalign
 ; CHECK-NEXT:   ptr %p = ptr 0x14 [p]
 ; CHECK-NEXT:   store i32 3, ptr %p, align 1
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: write_underalign
-; CHECK-NEXT:   call void @write_underalign(ptr %var)
+; CHECK-NEXT:   call void @write_underalign(ptr byval(i32) %var)
 ; CHECK-NEXT:   %v3 = load i32, ptr %var, align 4 => i32 0
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

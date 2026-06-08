@@ -65,7 +65,7 @@ struct Frame {
   Function *ResolvedCallee = nullptr;
   SmallVector<AnyValue> CalleeArgs;
   // Temporary memory objects created via pointer arguments with byval.
-  // They are belong to the caller.
+  // They belong to the caller.
   SmallVector<IntrusiveRefCntPtr<MemoryObject>> CalleeByValArgs;
   AnyValue CalleeRetVal;
 
