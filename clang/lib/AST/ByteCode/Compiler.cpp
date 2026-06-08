@@ -472,7 +472,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     // FIXME: I think the discard is wrong since the int->ptr cast might cause a
     // diagnostic.
     PrimType T = classifyPrim(IntType);
-    if (!this->emitGetIntPtr(T, E->getType().getTypePtr(), E))
+    uint64_t Val = Ctx.getASTContext().getTargetNullPointerValue(E->getType());
+    if (!this->emitGetIntPtr(T, E->getType().getTypePtr(), Val, E))
       return false;
 
     QualType PtrType = E->getType();
@@ -490,9 +491,28 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_UserDefinedConversion:
-  case CK_AddressSpaceConversion:
   case CK_CPointerToObjCPointerCast:
     return this->delegate(SubExpr);
+
+  case CK_AddressSpaceConversion: {
+    if (E->containsErrors())
+      return false;
+
+    if (!this->visit(SubExpr))
+      return false;
+
+    uint64_t Val;
+    if (E->getType()->isPointerType())
+      Val = Ctx.getASTContext().getTargetNullPointerValue(E->getType());
+    else
+      Val = 0;
+
+    if (!this->emitCastAddressSpace(Val, E->getType().getTypePtr(), E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
+  }
 
   case CK_BitCast: {
     if (E->containsErrors())

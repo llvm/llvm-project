@@ -47,6 +47,7 @@ struct BlockPointer {
 struct IntPointer {
   const Type *Ty;
   uint64_t Value;
+  bool IsNull = false;
 
   std::optional<IntPointer> atOffset(const Context &Ctx, unsigned Offset) const;
   IntPointer baseCast(const Context &Ctx, unsigned BaseOffset) const;
@@ -112,15 +113,17 @@ private:
   static constexpr unsigned RootPtrMark = ~0u;
 
 public:
-  Pointer() : StorageKind(Storage::Int), Int{nullptr, 0} {}
+  Pointer() : StorageKind(Storage::Int), Int{nullptr, 0, true} {}
   Pointer(IntPointer &&IntPtr)
       : StorageKind(Storage::Int), Int(std::move(IntPtr)) {}
   Pointer(Block *B);
   Pointer(Block *B, uint64_t BaseAndOffset);
   Pointer(const Pointer &P);
   Pointer(Pointer &&P);
-  Pointer(uint64_t Address, const Type *Ty, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Int), Int{Ty, Address} {}
+  Pointer(uint64_t Address, const Type *Ty, uint64_t Offset = 0,
+          std::optional<bool> IsNull = std::nullopt)
+      : Offset(Offset), StorageKind(Storage::Int),
+        Int{Ty, Address, IsNull.value_or(Address == 0)} {}
   Pointer(const Function *F, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Fn), Fn{F} {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
@@ -276,7 +279,7 @@ public:
   bool isZero() const {
     switch (StorageKind) {
     case Storage::Int:
-      return Int.Value == 0 && Offset == 0;
+      return Int.IsNull;
     case Storage::Block:
       return BS.Pointee == nullptr;
     case Storage::Fn:
