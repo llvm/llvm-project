@@ -135,6 +135,10 @@ public:
     return BBInfo[MBB->getNumber()].Offset;
   }
 
+  unsigned getFunctionSize() const {
+    return BBInfo[MF.getNumBlockIDs() - 1].postOffset();
+  }
+
   void adjustBBOffsetsAfter(MachineBasicBlock *MBB);
 
   void adjustBBSize(MachineBasicBlock *MBB, int Size) {

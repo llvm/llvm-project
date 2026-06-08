@@ -511,6 +511,36 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
   LLVM_DEBUG(dbgs() << '\n'; dumpBBs());
 
+  if (auto Estimate = AFI->getEstimatedFunctionSizeInBytes()) {
+    auto RealSize = BBUtils->getFunctionSize();
+    if (RealSize > *Estimate) {
+      LLVM_DEBUG({
+        dbgs() << "ARMConstantIslandsPass output for " << mf.getName()
+               << " with sizes:\n";
+        for (MachineBasicBlock &MBB : mf) {
+          unsigned Offset = BBUtils->getOffsetOf(&MBB);
+          unsigned End = BBUtils->getBBInfo()[MBB.getNumber()].postOffset();
+          dbgs() << printMBBReference(MBB) << ": // offset "
+                 << Twine::utohexstr(Offset) << "\n";
+          for (MachineInstr &MI : MBB) {
+            unsigned InstSize = TII->getInstSizeInBytes(MI);
+            LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(Offset) << " +"
+                              << InstSize << ": " << MI);
+            Offset += InstSize;
+          }
+          if (Offset < End) {
+            LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(Offset) << " +"
+                              << (End - Offset) << ": extra\n");
+          }
+        }
+      });
+      report_fatal_error(
+          Twine("Underestimated size of function ") + mf.getName() +
+          ": estimate = " + Twine(*Estimate) +
+          ", size after ARMConstantIslandsPass = " + Twine(RealSize));
+    }
+  }
+
   BBUtils->clear();
   WaterList.clear();
   CPUsers.clear();
