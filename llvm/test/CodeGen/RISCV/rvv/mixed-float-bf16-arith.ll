@@ -4,24 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvfh,+experimental-zvfbfa \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 
-declare <vscale x 1 x half> @llvm.riscv.vfadd.nxv1f16.nxv1f16(
-  <vscale x 1 x half>,
-  <vscale x 1 x half>,
-  <vscale x 1 x half>,
-  iXLen, iXLen);
-
-declare <vscale x 1 x i32> @llvm.riscv.vadd.nxv1i32.nxv1i32(
-  <vscale x 1 x i32>,
-  <vscale x 1 x i32>,
-  <vscale x 1 x i32>,
-  iXLen);
-
-declare <vscale x 1 x bfloat> @llvm.riscv.vfadd.nxv1bf16.nxv1bf16(
-  <vscale x 1 x bfloat>,
-  <vscale x 1 x bfloat>,
-  <vscale x 1 x bfloat>,
-  iXLen, iXLen);
-
 define <vscale x 1 x bfloat> @test_half_bf16(<vscale x 1 x bfloat> %0, <vscale x 1 x bfloat> %1, iXLen %2, <vscale x 1 x half> %3, <vscale x 1 x half> %4, ptr %ptr) nounwind {
 ; CHECK-LABEL: test_half_bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -183,4 +165,27 @@ entry:
   store <vscale x 1 x i16> %b, ptr %ptr
 
   ret <vscale x 1 x bfloat> %a
+}
+
+define <8 x i64> @test_bf16_i64(<8 x i64> %v, <8 x bfloat> %v2, ptr %p) {
+; CHECK-LABEL: test_bf16_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    vsetvli zero, zero, e16alt, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa5, v12
+; CHECK-NEXT:    fmv.w.x fa4, zero
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vadd.vv v12, v16, v16
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    vadd.vv v8, v8, v12
+; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fsh fa5, 0(a0)
+; CHECK-NEXT:    ret
+  %vp2 = add <8 x i64> %v, <i64 poison, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
+  %sum2 = fadd <8 x bfloat> zeroinitializer, %v2
+  %s0 = extractelement <8 x bfloat> %sum2, i64 0
+  store bfloat %s0, ptr %p
+  ret <8 x i64> %vp2
 }

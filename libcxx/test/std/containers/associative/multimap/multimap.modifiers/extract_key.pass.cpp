@@ -53,8 +53,20 @@ bool test() {
     test(m, std::begin(keys), std::end(keys));
   }
 
-  // Counter_base::gConstructed is static
-  if (!TEST_IS_CONSTANT_EVALUATED) {
+  { // Check that the first element is returned
+    std::multimap<int, int> m = {{1, 1}, {1, 2}, {1, 3}};
+    auto ptr                  = std::addressof(m.begin()->first);
+    auto res                  = m.extract(1);
+    assert(std::addressof(res.key()) == ptr);
+  }
+
+  { // Check that no element is returned if there is no match
+    std::multimap<int, int> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
+    auto res                  = m.extract(0);
+    assert(!res);
+  }
+
+  {
     std::multimap<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     {
       Counter<int> keys[] = {1, 2, 3, 4, 5, 6};

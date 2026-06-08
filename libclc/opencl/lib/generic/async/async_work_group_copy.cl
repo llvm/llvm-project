@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/async/async_work_group_copy.h>
-#include <clc/opencl/async/async_work_group_strided_copy.h>
+#include "clc/opencl/opencl-base.h"
 
-#define __CLC_BODY <async_work_group_copy.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "async_work_group_copy.inc"
+#include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <async_work_group_copy.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "async_work_group_copy.inc"
+#include "clc/math/gentype.inc"

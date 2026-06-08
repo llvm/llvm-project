@@ -23,11 +23,13 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContextList.h"
+#include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBTrace.h"
 #include "lldb/Breakpoint/BreakpointID.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/Debugger.h"
@@ -39,6 +41,8 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -50,6 +54,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -59,6 +64,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -128,6 +134,12 @@ SBTarget SBTarget::GetTargetFromEvent(const SBEvent &event) {
   return Target::TargetEventData::GetTargetFromEvent(event.get());
 }
 
+SBTarget SBTarget::GetCreatedTargetFromEvent(const SBEvent &event) {
+  LLDB_INSTRUMENT_VA(event);
+
+  return Target::TargetEventData::GetCreatedTargetFromEvent(event.get());
+}
+
 uint32_t SBTarget::GetNumModulesFromEvent(const SBEvent &event) {
   LLDB_INSTRUMENT_VA(event);
 
@@ -148,7 +160,7 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Target::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Target::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 bool SBTarget::IsValid() const {
@@ -323,6 +335,9 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
 
     if (getenv("LLDB_LAUNCH_FLAG_DISABLE_ASLR"))
       launch_flags |= eLaunchFlagDisableASLR;
+
+    if (getenv("LLDB_LAUNCH_FLAG_USE_PIPES"))
+      launch_flags |= eLaunchFlagUsePipes;
 
     StateType state = eStateInvalid;
     process_sp = target_sp->GetProcessSP();
@@ -664,6 +679,48 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
   }
 
   return bytes_read;
+}
+
+uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
+                                         const char *description,
+                                         SBStructuredData &args_data,
+                                         SBError &error) {
+  if (!class_name || class_name[0] == '\0') {
+    error.SetErrorString("empty class name");
+    return LLDB_INVALID_INDEX64;
+  }
+
+  if (TargetSP target_sp = GetSP()) {
+    StructuredDataImpl impl;
+    args_data.CopyImpl(impl);
+    StructuredData::ObjectSP object_sp = impl.GetObjectSP();
+    StructuredData::DictionarySP args_dict(
+        new StructuredData::Dictionary(object_sp));
+    if (!args_dict->IsValid()) {
+      error.SetErrorString("args data is not a dictionary");
+      return LLDB_INVALID_INDEX64;
+    }
+
+    llvm::Expected<lldb::user_id_t> id_or_err =
+        target_sp->AddBreakpointResolverOverride(
+            class_name, args_dict,
+            description ? description : "<No Description>");
+    if (id_or_err)
+      return *id_or_err;
+    error.SetErrorString(llvm::toString(id_or_err.takeError()).c_str());
+    return LLDB_INVALID_INDEX64;
+
+  } else {
+    error.SetErrorString("invalid SBTarget.");
+    return LLDB_INVALID_INDEX64;
+  }
+}
+
+bool SBTarget::RemoveBreakpointOverride(uint64_t id) {
+  if (TargetSP target_sp = GetSP()) {
+    return target_sp->RemoveBreakpointResolverOverride(id);
+  }
+  return false;
 }
 
 SBBreakpoint SBTarget::BreakpointCreateByLocation(const char *file,
@@ -1571,7 +1628,7 @@ SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
   return sb_module;
 }
 
-SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) {
+SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) const {
   LLDB_INSTRUMENT_VA(this, sb_module_spec);
 
   SBModule sb_module;
@@ -1604,12 +1661,25 @@ const char *SBTarget::GetTriple() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    std::string triple(target_sp->GetArchitecture().GetTriple().str());
+    const std::string &triple = target_sp->GetArchitecture().GetTriple().str();
     // Unique the string so we don't run into ownership issues since the const
     // strings put the string into the string pool once and the strings never
     // comes out
-    ConstString const_triple(triple.c_str());
+    ConstString const_triple(triple);
     return const_triple.GetCString();
+  }
+  return nullptr;
+}
+
+const char *SBTarget::GetArchName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP()) {
+    llvm::StringRef arch_name =
+        target_sp->GetArchitecture().GetTriple().getArchName();
+    ConstString const_arch_name(arch_name);
+
+    return const_arch_name.GetCString();
   }
   return nullptr;
 }
@@ -1618,8 +1688,7 @@ const char *SBTarget::GetABIName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    std::string abi_name(target_sp->GetABIName().str());
-    ConstString const_name(abi_name.c_str());
+    ConstString const_name(target_sp->GetABIName());
     return const_name.GetCString();
   }
   return nullptr;
@@ -1629,7 +1698,7 @@ const char *SBTarget::GetLabel() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetLabel().data()).AsCString();
+    return ConstString(target_sp->GetLabel()).AsCString(nullptr);
   return nullptr;
 }
 
@@ -1639,6 +1708,14 @@ lldb::user_id_t SBTarget::GetGloballyUniqueID() const {
   if (TargetSP target_sp = GetSP())
     return target_sp->GetGloballyUniqueID();
   return LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID;
+}
+
+const char *SBTarget::GetTargetSessionName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return ConstString(target_sp->GetTargetSessionName()).AsCString(nullptr);
+  return nullptr;
 }
 
 SBError SBTarget::SetLabel(const char *label) {
@@ -1670,17 +1747,13 @@ uint32_t SBTarget::GetMaximumOpcodeByteSize() const {
 uint32_t SBTarget::GetDataByteSize() {
   LLDB_INSTRUMENT_VA(this);
 
-  if (TargetSP target_sp = GetSP())
-    return target_sp->GetArchitecture().GetDataByteSize();
-  return 0;
+  return 1;
 }
 
 uint32_t SBTarget::GetCodeByteSize() {
   LLDB_INSTRUMENT_VA(this);
 
-  if (TargetSP target_sp = GetSP())
-    return target_sp->GetArchitecture().GetCodeByteSize();
-  return 0;
+  return 1;
 }
 
 uint32_t SBTarget::GetMaximumNumberOfChildrenToDisplay() const {
@@ -2407,4 +2480,82 @@ lldb::SBMutex SBTarget::GetAPIMutex() const {
   if (TargetSP target_sp = GetSP())
     return lldb::SBMutex(target_sp);
   return lldb::SBMutex();
+}
+
+uint32_t
+SBTarget::RegisterScriptedFrameProvider(const char *class_name,
+                                        lldb::SBStructuredData args_dict,
+                                        lldb::SBError &error) {
+  LLDB_INSTRUMENT_VA(this, class_name, args_dict, error);
+
+  TargetSP target_sp = GetSP();
+  if (!target_sp) {
+    error.SetErrorString("invalid target");
+    return 0;
+  }
+
+  if (!class_name || !class_name[0]) {
+    error.SetErrorString("invalid class name");
+    return 0;
+  }
+
+  // Extract the dictionary from SBStructuredData.
+  StructuredData::DictionarySP dict_sp;
+  if (args_dict.IsValid() && args_dict.m_impl_up) {
+    StructuredData::ObjectSP obj_sp = args_dict.m_impl_up->GetObjectSP();
+    if (obj_sp && obj_sp->GetType() != lldb::eStructuredDataTypeDictionary) {
+      error.SetErrorString("SBStructuredData argument isn't a dictionary");
+      return 0;
+    }
+    dict_sp = std::make_shared<StructuredData::Dictionary>(obj_sp);
+  }
+
+  // Create the ScriptedMetadata.
+  ScriptedMetadataSP metadata_sp =
+      std::make_shared<ScriptedMetadata>(class_name, dict_sp);
+
+  // Create the interface for calling static methods.
+  ScriptedFrameProviderInterfaceSP interface_sp =
+      target_sp->GetDebugger()
+          .GetScriptInterpreter()
+          ->CreateScriptedFrameProviderInterface();
+
+  // Create a descriptor (applies to all threads by default).
+  ScriptedFrameProviderDescriptor descriptor(metadata_sp);
+  descriptor.interface_sp = interface_sp;
+
+  llvm::Expected<uint32_t> descriptor_id_or_err =
+      target_sp->AddScriptedFrameProviderDescriptor(descriptor);
+  if (!descriptor_id_or_err) {
+    error.SetErrorString(
+        llvm::toString(descriptor_id_or_err.takeError()).c_str());
+    return 0;
+  }
+
+  // Register the descriptor with the target.
+  return *descriptor_id_or_err;
+}
+
+lldb::SBError SBTarget::RemoveScriptedFrameProvider(uint32_t provider_id) {
+  LLDB_INSTRUMENT_VA(this, provider_id);
+
+  SBError error;
+  TargetSP target_sp = GetSP();
+  if (!target_sp) {
+    error.SetErrorString("invalid target");
+    return error;
+  }
+
+  if (!provider_id) {
+    error.SetErrorString("invalid provider id");
+    return error;
+  }
+
+  if (!target_sp->RemoveScriptedFrameProviderDescriptor(provider_id)) {
+    error.SetErrorStringWithFormat("no frame provider named '%u' found",
+                                   provider_id);
+    return error;
+  }
+
+  return {};
 }

@@ -922,18 +922,8 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
 
   if (CnVal == 7) {
     switch (CmVal) {
-    default: return false;
-    // MLBI aliases
-    case 0: {
-      const AArch64MLBI::MLBI *MLBI =
-          AArch64MLBI::lookupMLBIByEncoding(Encoding);
-      if (!MLBI || !MLBI->haveFeatures(STI.getFeatureBits()))
-        return false;
-
-      NeedsReg = MLBI->NeedsReg;
-      Ins = "mlbi\t";
-      Name = std::string(MLBI->Name);
-    } break;
+    default:
+      return false;
     // Maybe IC, maybe Prediction Restriction
     case 1:
       switch (Op1Val) {
@@ -1021,10 +1011,10 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     if (!TLBI || !TLBI->haveFeatures(STI.getFeatureBits()))
       return false;
 
-    NeedsReg = TLBI->NeedsReg;
+    NeedsReg = TLBI->RegUse == REG_REQUIRED;
     if (STI.hasFeature(AArch64::FeatureAll) ||
         STI.hasFeature(AArch64::FeatureTLBID))
-      OptionalReg = TLBI->OptionalReg;
+      OptionalReg = TLBI->RegUse == REG_OPTIONAL;
     Ins = "tlbi\t";
     Name = std::string(TLBI->Name);
   } else if (CnVal == 12) {
@@ -1034,7 +1024,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       if (!GIC || !GIC->haveFeatures(STI.getFeatureBits()))
         return false;
 
-      NeedsReg = true;
+      NeedsReg = GIC->NeedsReg;
       Ins = "gic\t";
       Name = std::string(GIC->Name);
     } else {
@@ -1047,6 +1037,18 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       Ins = "gsb\t";
       Name = std::string(GSB->Name);
     }
+  } else if (CnVal == 10) {
+    // PLBI aliases
+    const AArch64PLBI::PLBI *PLBI = AArch64PLBI::lookupPLBIByEncoding(Encoding);
+    if (!PLBI || !PLBI->haveFeatures(STI.getFeatureBits()))
+      return false;
+
+    NeedsReg = PLBI->RegUse == REG_REQUIRED;
+    if (STI.hasFeature(AArch64::FeatureAll) ||
+        STI.hasFeature(AArch64::FeatureTLBID))
+      OptionalReg = PLBI->RegUse == REG_OPTIONAL;
+    Ins = "plbi\t";
+    Name = std::string(PLBI->Name);
   } else
     return false;
 
@@ -1151,12 +1153,6 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
   if (CnVal == 8 || CnVal == 9) {
     // TLBIP aliases
 
-    if (CnVal == 9) {
-      if (!STI.hasFeature(AArch64::FeatureXS))
-        return false;
-      Encoding &= ~(1 << 7);
-    }
-
     const AArch64TLBIP::TLBIP *TLBIP =
         AArch64TLBIP::lookupTLBIPByEncoding(Encoding);
     if (!TLBIP || !TLBIP->haveFeatures(STI.getFeatureBits()))
@@ -1164,8 +1160,6 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
 
     Ins = "tlbip\t";
     Name = std::string(TLBIP->Name);
-    if (CnVal == 9)
-      Name += "nXS";
   } else
     return false;
 
@@ -1608,6 +1602,19 @@ void AArch64InstPrinter::printCMHPriorityHintOp(const MCInst *MI,
       AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(priorityhint_op);
   if (PHint)
     O << PHint->Name;
+  else
+    markup(O, Markup::Immediate) << '#' << formatImm(priorityhint_op);
+}
+
+void AArch64InstPrinter::printTIndexHintOp(const MCInst *MI, unsigned OpNum,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  unsigned tindexhintop = MI->getOperand(OpNum).getImm();
+  auto TIndex = AArch64TIndexHint::lookupTIndexByEncoding(tindexhintop);
+  if (TIndex)
+    O << TIndex->Name;
+  else
+    markup(O, Markup::Immediate) << '#' << formatImm(tindexhintop);
 }
 
 void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,

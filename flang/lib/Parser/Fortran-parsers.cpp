@@ -167,7 +167,8 @@ TYPE_CONTEXT_PARSER("type spec"_en_US,
 // R703 declaration-type-spec ->
 //        intrinsic-type-spec | TYPE ( intrinsic-type-spec ) |
 //        TYPE ( derived-type-spec ) | CLASS ( derived-type-spec ) |
-//        CLASS ( * ) | TYPE ( * )
+//        CLASS ( * ) | TYPE ( * ) |
+//        TYPEOF ( data-ref ) | CLASSOF ( data-ref )
 // N.B. It is critical to distribute "parenthesized()" over the alternatives
 // for TYPE (...), rather than putting the alternatives within it, which
 // would fail on "TYPE(real_derived)" with a misrecognition of "real" as an
@@ -176,6 +177,12 @@ TYPE_CONTEXT_PARSER("type spec"_en_US,
 // type (BYTE or DOUBLECOMPLEX), not the extension intrinsic type.
 TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
     construct<DeclarationTypeSpec>(intrinsicTypeSpec) ||
+        "TYPEOF" >>
+            parenthesized(construct<DeclarationTypeSpec>(
+                construct<DeclarationTypeSpec::TypeOf>(indirect(dataRef)))) ||
+        "CLASSOF" >>
+            parenthesized(construct<DeclarationTypeSpec>(
+                construct<DeclarationTypeSpec::ClassOf>(indirect(dataRef)))) ||
         "TYPE" >>
             (parenthesized(construct<DeclarationTypeSpec>(
                  !"DOUBLECOMPLEX"_tok >> !"BYTE"_tok >> intrinsicTypeSpec)) ||
@@ -700,7 +707,8 @@ TYPE_PARSER(
 //        CODIMENSION lbracket coarray-spec rbracket | CONTIGUOUS |
 //        DIMENSION ( array-spec ) | EXTERNAL | INTENT ( intent-spec ) |
 //        INTRINSIC | language-binding-spec | OPTIONAL | PARAMETER | POINTER |
-//        PROTECTED | SAVE | TARGET | VALUE | VOLATILE |
+//        PROTECTED | RANK ( scalar-int-constant-expr ) | SAVE | TARGET |
+//        VALUE | VOLATILE |
 //        CUDA-data-attr
 TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(allocatable) ||
@@ -714,6 +722,8 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(languageBindingSpec) || construct<AttrSpec>(optional) ||
     construct<AttrSpec>(construct<Parameter>("PARAMETER"_tok)) ||
     construct<AttrSpec>(pointer) || construct<AttrSpec>(protectedAttr) ||
+    construct<AttrSpec>("RANK" >>
+        construct<RankClause>(parenthesized(scalarIntConstantExpr))) ||
     construct<AttrSpec>(save) ||
     construct<AttrSpec>(construct<Target>("TARGET"_tok)) ||
     construct<AttrSpec>(construct<Value>("VALUE"_tok)) ||
@@ -729,7 +739,8 @@ TYPE_PARSER("CONSTANT" >> pure(common::CUDADataAttr::Constant) ||
     "PINNED" >> pure(common::CUDADataAttr::Pinned) ||
     "SHARED" >> pure(common::CUDADataAttr::Shared) ||
     "TEXTURE" >> pure(common::CUDADataAttr::Texture) ||
-    "UNIFIED" >> pure(common::CUDADataAttr::Unified))
+    "UNIFIED" >> pure(common::CUDADataAttr::Unified) ||
+    "VALUE" >> pure(common::CUDADataAttr::Value))
 
 // R804 object-name -> name
 constexpr auto objectName{name};
@@ -1295,8 +1306,11 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // Directives, extensions, and deprecated statements
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
+// !DIR$ VECTOR VECTORLENGTH ({FIXED|SCALABLE|<num>|<num>,FIXED|<num>,SCALABLE})
 // !DIR$ name[=value] [, name[=value]]...
 // !DIR$ UNROLL [n]
+// !DIR$ PREFETCH designator[, designator]...
+// !DIR$ IVDEP
 // !DIR$ <anything else>
 constexpr auto ignore_tkr{
     "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
@@ -1309,8 +1323,19 @@ constexpr auto assumeAligned{"ASSUME_ALIGNED" >>
         indirect(designator), ":"_tok >> digitString64))};
 constexpr auto vectorAlways{
     "VECTOR ALWAYS" >> construct<CompilerDirective::VectorAlways>()};
+constexpr auto vectorLengthKind{
+    "FIXED" >> pure(CompilerDirective::VectorLength::Kind::Fixed) ||
+    "SCALABLE" >> pure(CompilerDirective::VectorLength::Kind::Scalable)};
+constexpr auto vectorLength{"VECTOR VECTORLENGTH" >>
+    parenthesized(construct<CompilerDirective::VectorLength>(
+                      digitString64, ","_tok >> vectorLengthKind) ||
+        construct<CompilerDirective::VectorLength>(pure(0), vectorLengthKind) ||
+        construct<CompilerDirective::VectorLength>(
+            digitString64, pure(CompilerDirective::VectorLength::Kind::Auto)))};
 constexpr auto unroll{
     "UNROLL" >> construct<CompilerDirective::Unroll>(maybe(digitString64))};
+constexpr auto prefetch{"PREFETCH" >>
+    construct<CompilerDirective::Prefetch>(nonemptyList(indirect(designator)))};
 constexpr auto unrollAndJam{"UNROLL_AND_JAM" >>
     construct<CompilerDirective::UnrollAndJam>(maybe(digitString64))};
 constexpr auto novector{"NOVECTOR" >> construct<CompilerDirective::NoVector>()};
@@ -1321,20 +1346,29 @@ constexpr auto forceinlineDir{
     "FORCEINLINE" >> construct<CompilerDirective::ForceInline>()};
 constexpr auto noinlineDir{
     "NOINLINE" >> construct<CompilerDirective::NoInline>()};
+constexpr auto inlinealwaysDir{
+    "INLINEALWAYS" >> construct<CompilerDirective::InlineAlways>(maybe(name))};
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
-TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
+constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
+constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
+TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
                 construct<CompilerDirective>(vectorAlways) ||
+                construct<CompilerDirective>(vectorLength) ||
                 construct<CompilerDirective>(unrollAndJam) ||
                 construct<CompilerDirective>(unroll) ||
+                construct<CompilerDirective>(prefetch) ||
                 construct<CompilerDirective>(novector) ||
                 construct<CompilerDirective>(nounrollAndJam) ||
                 construct<CompilerDirective>(nounroll) ||
                 construct<CompilerDirective>(noinlineDir) ||
                 construct<CompilerDirective>(forceinlineDir) ||
+                construct<CompilerDirective>(inlinealwaysDir) ||
                 construct<CompilerDirective>(inlineDir) ||
+                construct<CompilerDirective>(simd) ||
+                construct<CompilerDirective>(ivdep) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /

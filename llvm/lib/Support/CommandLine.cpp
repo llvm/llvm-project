@@ -146,6 +146,7 @@ static inline bool isPrefixedOrGrouping(const Option *O) {
          O->getFormattingFlag() == cl::AlwaysPrefix;
 }
 
+using OptionsMapTy = DenseMap<StringRef, Option *>;
 
 namespace {
 
@@ -276,10 +277,11 @@ public:
       OptionNames.push_back(O->ArgStr);
 
     SubCommand &Sub = *SC;
-    auto End = Sub.OptionsMap.end();
     for (auto Name : OptionNames) {
       auto I = Sub.OptionsMap.find(Name);
-      if (I != End && I->getValue() == O)
+      // Re-query end() each iteration: a prior erase invalidates iterators
+      // (including a cached end()) under backward-shift deletion.
+      if (I != Sub.OptionsMap.end() && I->second == O)
         Sub.OptionsMap.erase(I);
     }
 
@@ -374,7 +376,7 @@ public:
           O->hasArgStr())
         addOption(O, sub);
       else
-        addLiteralOption(*O, sub, E.first());
+        addLiteralOption(*O, sub, E.first);
     }
   }
 
@@ -588,7 +590,7 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
 /// (after an equal sign) return that as well.  This assumes that leading dashes
 /// have already been stripped.
 static Option *LookupNearestOption(StringRef Arg,
-                                   const StringMap<Option *> &OptionsMap,
+                                   const OptionsMapTy &OptionsMap,
                                    std::string &NearestString) {
   // Reject all dashes.
   if (Arg.empty())
@@ -602,10 +604,7 @@ static Option *LookupNearestOption(StringRef Arg,
   // Find the closest match.
   Option *Best = nullptr;
   unsigned BestDistance = 0;
-  for (StringMap<Option *>::const_iterator it = OptionsMap.begin(),
-                                           ie = OptionsMap.end();
-       it != ie; ++it) {
-    Option *O = it->second;
+  for (const auto &[_, O] : OptionsMap) {
     // Do not suggest really hidden options (not shown in any help).
     if (O->getOptionHiddenFlag() == ReallyHidden)
       continue;
@@ -737,9 +736,9 @@ bool llvm::cl::ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
 //
 static Option *getOptionPred(StringRef Name, size_t &Length,
                              bool (*Pred)(const Option *),
-                             const StringMap<Option *> &OptionsMap) {
-  StringMap<Option *>::const_iterator OMI = OptionsMap.find(Name);
-  if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
+                             const OptionsMapTy &OptionsMap) {
+  auto OMI = OptionsMap.find(Name);
+  if (OMI != OptionsMap.end() && !Pred(OMI->second))
     OMI = OptionsMap.end();
 
   // Loop while we haven't found an option and Name still has at least two
@@ -748,7 +747,7 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   while (OMI == OptionsMap.end() && Name.size() > 1) {
     Name = Name.drop_back();
     OMI = OptionsMap.find(Name);
-    if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
+    if (OMI != OptionsMap.end() && !Pred(OMI->second))
       OMI = OptionsMap.end();
   }
 
@@ -763,10 +762,9 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
 /// with at least one '-') does not fully match an available option.  Check to
 /// see if this is a prefix or grouped option.  If so, split arg into output an
 /// Arg/Value pair and return the Option to parse it with.
-static Option *
-HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
-                              bool &ErrorParsing,
-                              const StringMap<Option *> &OptionsMap) {
+static Option *HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
+                                             bool &ErrorParsing,
+                                             const OptionsMapTy &OptionsMap) {
   if (Arg.size() == 1)
     return nullptr;
 
@@ -842,9 +840,10 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
                                 SmallVectorImpl<const char *> &NewArgv,
                                 bool MarkEOLs) {
   SmallString<128> Token;
+  bool InToken = false;
   for (size_t I = 0, E = Src.size(); I != E; ++I) {
     // Consume runs of whitespace.
-    if (Token.empty()) {
+    if (!InToken) {
       while (I != E && isWhitespace(Src[I])) {
         // Mark the end of lines in response files.
         if (MarkEOLs && Src[I] == '\n')
@@ -853,6 +852,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
       }
       if (I == E)
         break;
+      InToken = true;
     }
 
     char C = Src[I];
@@ -881,12 +881,12 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
 
     // End the token if this is whitespace.
     if (isWhitespace(C)) {
-      if (!Token.empty())
-        NewArgv.push_back(Saver.save(Token.str()).data());
+      NewArgv.push_back(Saver.save(Token.str()).data());
       // Mark the end of lines in response files.
       if (MarkEOLs && C == '\n')
         NewArgv.push_back(nullptr);
       Token.clear();
+      InToken = false;
       continue;
     }
 
@@ -895,7 +895,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
   }
 
   // Append the last token after hitting EOF with no whitespace.
-  if (!Token.empty())
+  if (InToken)
     NewArgv.push_back(Saver.save(Token.str()).data());
 }
 
@@ -1495,8 +1495,14 @@ void CommandLineParser::ResetAllOptionOccurrences() {
   // Options might be reset twice (they can be reference in both OptionsMap
   // and one of the other members), but that does not harm.
   for (auto *SC : RegisteredSubCommands) {
+    // reset() removes default options from OptionsMap (via removeArgument), so
+    // collect the options first to avoid invalidating the map iterator.
+    SmallVector<Option *, 0> Opts;
+    Opts.reserve(SC->OptionsMap.size());
     for (auto &O : SC->OptionsMap)
-      O.second->reset();
+      Opts.push_back(O.second);
+    for (Option *O : Opts)
+      O->reset();
     for (Option *O : SC->PositionalOpts)
       O->reset();
     for (Option *O : SC->SinkOpts)
@@ -2300,13 +2306,12 @@ static int SubNameCompare(const std::pair<const char *, SubCommand *> *LHS,
 }
 
 // Copy Options into a vector so we can sort them as we like.
-static void sortOpts(StringMap<Option *> &OptMap,
+static void sortOpts(OptionsMapTy &OptMap,
                      SmallVectorImpl<std::pair<const char *, Option *>> &Opts,
                      bool ShowHidden) {
   SmallPtrSet<Option *, 32> OptionSet; // Duplicate option detection.
 
-  for (StringMap<Option *>::iterator I = OptMap.begin(), E = OptMap.end();
-       I != E; ++I) {
+  for (auto I = OptMap.begin(), E = OptMap.end(); I != E; ++I) {
     // Ignore really-hidden options.
     if (I->second->getOptionHiddenFlag() == ReallyHidden)
       continue;
@@ -2320,7 +2325,7 @@ static void sortOpts(StringMap<Option *> &OptMap,
       continue;
 
     Opts.push_back(
-        std::pair<const char *, Option *>(I->getKey().data(), I->second));
+        std::pair<const char *, Option *>(I->first.data(), I->second));
   }
 
   // Sort the options list alphabetically.
@@ -2560,7 +2565,7 @@ public:
 namespace {
 class VersionPrinter {
 public:
-  void print(std::vector<VersionPrinterTy> ExtraPrinters = {}) {
+  void print(const std::vector<VersionPrinterTy> &ExtraPrinters) {
     raw_ostream &OS = outs();
 #ifdef PACKAGE_VENDOR
     OS << PACKAGE_VENDOR << " ";
@@ -2822,7 +2827,7 @@ void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
   CommonOptions->ExtraVersionPrinters.push_back(func);
 }
 
-StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
+OptionsMapTy &cl::getRegisteredOptions(SubCommand &Sub) {
   initCommonOptions();
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;

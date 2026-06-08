@@ -1,6 +1,6 @@
 # REQUIRES: system-darwin
 #
-# RUN: %clangxx_host -x objective-c -g %S/Inputs/verbose_trap.m -o %t.out
+# RUN: %clang_host -g %S/Inputs/verbose_trap.m -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 
 run

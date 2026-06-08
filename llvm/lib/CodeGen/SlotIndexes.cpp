@@ -35,9 +35,7 @@ SlotIndexesPrinterPass::run(MachineFunction &MF,
 }
 char SlotIndexesWrapperPass::ID = 0;
 
-SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {
-  initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {}
 
 SlotIndexes::~SlotIndexes() {
   // The indexList's nodes are all allocated in the BumpPtrAllocator.
@@ -176,6 +174,7 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   IndexList::iterator startItr = std::prev(curItr);
   unsigned index = startItr->getIndex();
+  unsigned BeginIndex = index;
   do {
     curItr->setIndex(index += Space);
     ++curItr;
@@ -184,6 +183,14 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   LLVM_DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex()
                     << '-' << index << " ***\n");
+
+  // If we repack more than 20% of a function, add spacing in between the
+  // instructions so that future renumberings are able to catch up
+  // without also renumbering so much.
+  if (index - BeginIndex >
+      (getLastIndex().getIndex() - getZeroIndex().getIndex()) / 5)
+    packIndexes();
+
   ++NumLocalRenum;
 }
 

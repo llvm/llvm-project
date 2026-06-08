@@ -10,27 +10,27 @@
 
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator==(const std::map<Key, T, Compare, Alloc>& lhs,
-//                 const std::map<Key, T, Compare, Alloc>& rhs);
+//                 const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator!=(const std::map<Key, T, Compare, Alloc>& lhs,
-//                 const std::map<Key, T, Compare, Alloc>& rhs);
+//                 const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator<(const std::map<Key, T, Compare, Alloc>& lhs,
-//                const std::map<Key, T, Compare, Alloc>& rhs);
+//                const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator>(const std::map<Key, T, Compare, Alloc>& lhs,
-//                const std::map<Key, T, Compare, Alloc>& rhs);
+//                const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator<=(const std::map<Key, T, Compare, Alloc>& lhs,
-//                 const std::map<Key, T, Compare, Alloc>& rhs);
+//                 const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator>=(const std::map<Key, T, Compare, Alloc>& lhs,
-//                 const std::map<Key, T, Compare, Alloc>& rhs);
+//                 const std::map<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
 
 #include <map>
 #include <cassert>

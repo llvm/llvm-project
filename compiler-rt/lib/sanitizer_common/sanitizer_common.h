@@ -387,8 +387,8 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
                         const void *unwind_context);
 
 // Alternative signal stack (POSIX-only).
-void SetAlternateSignalStack();
-void UnsetAlternateSignalStack();
+void* SetAlternateSignalStack();
+void UnsetAlternateSignalStack(void* altstack_base);
 
 bool IsSignalHandlerFromSanitizer(int signum);
 bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
@@ -485,6 +485,13 @@ inline constexpr bool IsAligned(uptr a, uptr alignment) {
 inline uptr Log2(uptr x) {
   CHECK(IsPowerOfTwo(x));
   return LeastSignificantSetBitIndex(x);
+}
+
+inline bool IntervalsAreSeparate(uptr start1, uptr end1, uptr start2,
+                                 uptr end2) {
+  CHECK_LE(start1, end1);
+  CHECK_LE(start2, end2);
+  return (end1 < start2) || (end2 < start1);
 }
 
 // Don't use std::min, std::max or std::swap, to minimize dependency
@@ -899,7 +906,14 @@ class LoadedModule {
 class ListOfModules {
  public:
   ListOfModules() : initialized(false) {}
-  ~ListOfModules() { clear(); }
+  ~ListOfModules() {
+    clear();
+    if (initialized)
+      modules_.Destroy();
+  }
+  ListOfModules(const ListOfModules&) = delete;
+  ListOfModules& operator=(const ListOfModules&) = delete;
+
   void init();
   void fallbackInit();  // Uses fallback init if available, otherwise clears
   const LoadedModule *begin() const { return modules_.begin(); }
@@ -1078,7 +1092,9 @@ struct StackDepotStats {
 // indicate that sanitizer allocator should not attempt to release memory to OS.
 const s32 kReleaseToOSIntervalNever = -1;
 
-void CheckNoDeepBind(const char *filename, int flag);
+// Platform hook invoked before dlopen. Performs platform-specific dlopen flag
+// checks (e.g. RTLD_DEEPBIND on Linux).
+void OnDlOpen(const char* filename, int flag);
 
 // Returns the requested amount of random data (up to 256 bytes) that can then
 // be used to seed a PRNG. Defaults to blocking like the underlying syscall.
@@ -1092,6 +1108,12 @@ inline u32 GetNumberOfCPUsCached() {
     NumberOfCPUsCached = GetNumberOfCPUs();
   return NumberOfCPUsCached;
 }
+
+inline u32 Rand(u32* state) {  // ANSI C linear congruential PRNG.
+  return (*state = *state * 1103515245 + 12345) >> 16;
+}
+
+inline u32 RandN(u32* state, u32 n) { return Rand(state) % n; }  // [0, n)
 
 }  // namespace __sanitizer
 

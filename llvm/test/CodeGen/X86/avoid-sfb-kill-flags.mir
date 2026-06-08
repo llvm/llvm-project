@@ -1,4 +1,5 @@
-# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=x86-avoid-SFB | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=x86-avoid-sfb | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -passes=x86-avoid-sfb | FileCheck %s
 --- |
   ; ModuleID = '../test/CodeGen/X86/avoid-sfb-mir.ll'
   source_filename = "../test/CodeGen/X86/avoid-sfb-mir.ll"

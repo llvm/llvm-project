@@ -40,10 +40,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
-template <class _OutIt, class _CharT>
-  requires output_iterator<_OutIt, const _CharT&>
-class basic_format_context;
-
 #  if _LIBCPP_HAS_LOCALIZATION
 /**
  * Helper to create a basic_format_context.
@@ -71,26 +67,27 @@ using wformat_context = basic_format_context< back_insert_iterator<__format::__o
 #  endif
 
 template <class _OutIt, class _CharT>
-  requires output_iterator<_OutIt, const _CharT&>
-class _LIBCPP_PREFERRED_NAME(format_context)
-    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context)) basic_format_context {
+class _LIBCPP_PREFERRED_NAME(format_context) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context))
+    basic_format_context {
 public:
   using iterator  = _OutIt;
   using char_type = _CharT;
   template <class _Tp>
   using formatter_type = formatter<_Tp, _CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
+  static_assert(output_iterator<_OutIt, const _CharT&>, "[format.context]/p3 requires OutIt to be an output_iterator");
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
     return __args_.get(__id);
   }
 #  if _LIBCPP_HAS_LOCALIZATION
-  _LIBCPP_HIDE_FROM_ABI std::locale locale() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::locale locale() {
     if (!__loc_)
       __loc_ = std::locale{};
     return *__loc_;
   }
 #  endif
-  _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
   _LIBCPP_HIDE_FROM_ABI void advance_to(iterator __it) { __out_it_ = std::move(__it); }
 
 private:

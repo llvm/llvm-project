@@ -6,9 +6,9 @@ define amdgpu_kernel void @foo() {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s1
-; CHECK-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v0
-; CHECK-NEXT:    flat_store_b64 v[0:1], v[2:3]
+; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s1
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    flat_store_b64 v[1:2], v[0:1]
 ; CHECK-NEXT:    s_endpgm
 entry:
   br label %bb1
@@ -17,7 +17,7 @@ bb0:
   br label %bb1
 
 bb1:
-  %dst = phi ptr [ null, %bb0 ], [ addrspacecast (ptr addrspace(3) null to ptr), %entry ]
+  %dst = phi ptr [ null, %bb0 ], [ addrspacecast (ptr addrspace(3) zeroinitializer to ptr), %entry ]
   store i64 0, ptr %dst, align 16
   ret void
 }

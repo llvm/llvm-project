@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_stat_macros.h"
 #include "src/sys/stat/mkdirat.h"
 #include "src/unistd/rmdir.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"

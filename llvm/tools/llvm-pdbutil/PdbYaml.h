@@ -18,9 +18,11 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
 #include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
+#include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -38,6 +40,24 @@ struct MSFHeaders {
   std::vector<uint32_t> DirectoryBlocks;
   uint32_t NumStreams = 0;
   uint64_t FileSize = 0;
+};
+
+struct CoffSectionHeader {
+  CoffSectionHeader();
+  CoffSectionHeader(const object::coff_section &Section);
+
+  object::coff_section toCoffSection() const;
+
+  StringRef Name;
+  uint32_t VirtualSize = 0;
+  uint32_t VirtualAddress = 0;
+  uint32_t SizeOfRawData = 0;
+  uint32_t PointerToRawData = 0;
+  uint32_t PointerToRelocations = 0;
+  uint32_t PointerToLinenumbers = 0;
+  uint16_t NumberOfRelocations = 0;
+  uint16_t NumberOfLinenumbers = 0;
+  uint32_t Characteristics = 0;
 };
 
 struct StreamBlockList {
@@ -82,11 +102,16 @@ struct PdbDbiStream {
 
   std::vector<PdbDbiModuleInfo> ModInfos;
   COFF::header FakeHeader;
+  std::vector<CoffSectionHeader> SectionHeaders;
 };
 
 struct PdbTpiStream {
   PdbRaw_TpiVer Version = PdbTpiV80;
   std::vector<CodeViewYAML::LeafRecord> Records;
+};
+
+struct PdbDXContainerStream {
+  DXContainerYAML::Object DXC;
 };
 
 struct PdbPublicsStream {
@@ -103,6 +128,7 @@ struct PdbObject {
   std::optional<PdbDbiStream> DbiStream;
   std::optional<PdbTpiStream> TpiStream;
   std::optional<PdbTpiStream> IpiStream;
+  std::optional<PdbDXContainerStream> DXContainerStream;
   std::optional<PdbPublicsStream> PublicsStream;
 
   std::optional<std::vector<StringRef>> StringTable;
@@ -113,6 +139,7 @@ struct PdbObject {
 }
 }
 
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::CoffSectionHeader)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbObject)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::MSFHeaders)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(msf::SuperBlock)
@@ -124,5 +151,6 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbPublicsStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::NamedStreamMapping)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbModiStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiModuleInfo)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDXContainerStream)
 
 #endif // LLVM_TOOLS_LLVMPDBDUMP_PDBYAML_H

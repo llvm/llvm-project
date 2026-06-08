@@ -29,6 +29,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -82,7 +83,7 @@ struct DbgValueDef {
   bool operator==(DbgValueDef Other) const { return agreesWith(Other); }
   bool operator!=(DbgValueDef Other) const { return !agreesWith(Other); }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 };
 
 class DbgSSABlock;
@@ -108,7 +109,7 @@ public:
     IncomingValues.push_back({BB, DV});
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const DbgValueDef &DV) {
@@ -138,7 +139,7 @@ public:
     return *this;
   }
 
-  DbgSSABlock *operator*();
+  LLVM_ABI DbgSSABlock *operator*();
 };
 
 /// Thin wrapper around a block successor iterator.
@@ -159,7 +160,7 @@ public:
     return *this;
   }
 
-  DbgSSABlock *operator*();
+  LLVM_ABI DbgSSABlock *operator*();
 };
 
 class DbgSSABlock {
@@ -230,7 +231,7 @@ private:
 public:
   /// If InsertedPHIs is specified, it will be filled
   /// in with all PHI Nodes created by rewriting.
-  explicit DebugSSAUpdater(
+  LLVM_ABI explicit DebugSSAUpdater(
       SmallVectorImpl<DbgSSAPhi *> *InsertedPHIs = nullptr);
   DebugSSAUpdater(const DebugSSAUpdater &) = delete;
   DebugSSAUpdater &operator=(const DebugSSAUpdater &) = delete;
@@ -249,7 +250,7 @@ public:
     BlockMap.clear();
   }
 
-  void initialize();
+  LLVM_ABI void initialize();
 
   /// For a given BB, create a wrapper block for it. Stores it in the
   /// DebugSSAUpdater block map.
@@ -264,19 +265,19 @@ public:
 
   /// Indicate that a rewritten value is available in the specified block
   /// with the specified value.
-  void addAvailableValue(DbgSSABlock *BB, DbgValueDef DV);
+  LLVM_ABI void addAvailableValue(DbgSSABlock *BB, DbgValueDef DV);
 
   /// Return true if the DebugSSAUpdater already has a value for the specified
   /// block.
-  bool hasValueForBlock(DbgSSABlock *BB) const;
+  LLVM_ABI bool hasValueForBlock(DbgSSABlock *BB) const;
 
   /// Return the value for the specified block if the DebugSSAUpdater has one,
   /// otherwise return nullptr.
-  DbgValueDef findValueForBlock(DbgSSABlock *BB) const;
+  LLVM_ABI DbgValueDef findValueForBlock(DbgSSABlock *BB) const;
 
   /// Construct SSA form, materializing a value that is live at the end
   /// of the specified block.
-  DbgValueDef getValueAtEndOfBlock(DbgSSABlock *BB);
+  LLVM_ABI DbgValueDef getValueAtEndOfBlock(DbgSSABlock *BB);
 
   /// Construct SSA form, materializing a value that is live in the
   /// middle of the specified block.
@@ -298,7 +299,7 @@ public:
   /// their respective blocks.  However, the use of X happens in the *middle* of
   /// a block.  Because of this, we need to insert a new PHI node in SomeBB to
   /// merge the appropriate values, and this value isn't live out of the block.
-  DbgValueDef getValueInMiddleOfBlock(DbgSSABlock *BB);
+  LLVM_ABI DbgValueDef getValueInMiddleOfBlock(DbgSSABlock *BB);
 
 private:
   DbgValueDef getValueAtEndOfBlockInternal(DbgSSABlock *BB);
@@ -323,7 +324,7 @@ class SSAValueNameMap {
 
 public:
   using ValueID = uint64_t;
-  ValueID addValue(Value *V);
+  LLVM_ABI ValueID addValue(Value *V);
   std::string getName(ValueID ID) { return ValueIDToNameMap[ID]; }
 
 private:
@@ -342,7 +343,7 @@ class DbgValueRangeTable {
   DenseMap<DebugVariableAggregate, DbgValueDef> OrigSingleLocVariableValueTable;
 
 public:
-  void addVariable(Function *F, DebugVariableAggregate DVA);
+  LLVM_ABI_FOR_TEST void addVariable(Function *F, DebugVariableAggregate DVA);
   bool hasVariableEntry(DebugVariableAggregate DVA) const {
     return OrigVariableValueRangeTable.contains(DVA) ||
            OrigSingleLocVariableValueTable.contains(DVA);
@@ -357,7 +358,7 @@ public:
     return OrigSingleLocVariableValueTable[DVA];
   }
 
-  void printValues(DebugVariableAggregate DVA, raw_ostream &OS);
+  LLVM_ABI void printValues(DebugVariableAggregate DVA, raw_ostream &OS);
 };
 
 } // end namespace llvm

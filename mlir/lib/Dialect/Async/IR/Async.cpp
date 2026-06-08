@@ -55,13 +55,17 @@ void ExecuteOp::getSuccessorRegions(RegionBranchPoint point,
   if (!point.isParent() &&
       point.getTerminatorPredecessorOrNull()->getParentRegion() ==
           &getBodyRegion()) {
-    regions.push_back(RegionSuccessor(getOperation(), getBodyResults()));
+    regions.push_back(RegionSuccessor::parent());
     return;
   }
 
   // Otherwise the successor is the body region.
-  regions.push_back(
-      RegionSuccessor(&getBodyRegion(), getBodyRegion().getArguments()));
+  regions.push_back(RegionSuccessor(&getBodyRegion()));
+}
+
+ValueRange ExecuteOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getBodyResults())
+                              : ValueRange(getBodyRegion().getArguments());
 }
 
 void ExecuteOp::build(OpBuilder &builder, OperationState &result,
@@ -80,7 +84,7 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
 
   // First result is always a token, and then `resultTypes` wrapped into
   // `async.value`.
-  result.addTypes({TokenType::get(result.getContext())});
+  result.addTypes({async::TokenType::get(result.getContext())});
   for (Type type : resultTypes)
     result.addTypes(ValueType::get(type));
 
@@ -135,7 +139,7 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
   // Sizes of parsed variadic operands, will be updated below after parsing.
   int32_t numDependencies = 0;
 
-  auto tokenTy = TokenType::get(ctx);
+  auto tokenTy = async::TokenType::get(ctx);
 
   // Parse dependency tokens.
   if (succeeded(parser.parseOptionalLSquare())) {
@@ -276,7 +280,7 @@ LogicalResult AwaitOp::verify() {
   Type argType = getOperand().getType();
 
   // Awaiting on a token does not have any results.
-  if (llvm::isa<TokenType>(argType) && !getResultTypes().empty())
+  if (llvm::isa<async::TokenType>(argType) && !getResultTypes().empty())
     return emitOpError("awaiting on a token must have empty result");
 
   // Awaiting on a value unwraps the async value type.
@@ -341,12 +345,12 @@ LogicalResult FuncOp::verify() {
 
   for (unsigned i = 0, e = resultTypes.size(); i != e; ++i) {
     auto type = resultTypes[i];
-    if (!llvm::isa<TokenType>(type) && !llvm::isa<ValueType>(type))
+    if (!llvm::isa<async::TokenType>(type) && !llvm::isa<ValueType>(type))
       return emitOpError() << "result type must be async value type or async "
                               "token type, but got "
                            << type;
     // We only allow AsyncToken appear as the first return value
-    if (llvm::isa<TokenType>(type) && i != 0) {
+    if (llvm::isa<async::TokenType>(type) && i != 0) {
       return emitOpError()
              << " results' (optional) async token type is expected "
                 "to appear as the 1st return value, but got "

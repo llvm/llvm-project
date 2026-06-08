@@ -154,13 +154,12 @@ AnalysisDeclContext *CallEvent::getCalleeAnalysisDeclContext() const {
     return nullptr;
 
   AnalysisDeclContext *ADC =
-      LCtx->getAnalysisDeclContext()->getManager()->getContext(D);
+      SF->getAnalysisDeclContext()->getManager()->getContext(D);
 
   return ADC;
 }
 
-const StackFrameContext *
-CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
+const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   AnalysisDeclContext *ADC = getCalleeAnalysisDeclContext();
   if (!ADC)
     return nullptr;
@@ -174,7 +173,7 @@ CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   // instead of doing this reverse lookup, we would be able to build the stack
   // frame for non-expression-based calls, and also we wouldn't need the reverse
   // lookup.
-  CFGStmtMap *Map = LCtx->getAnalysisDeclContext()->getCFGStmtMap();
+  const CFGStmtMap *Map = SF->getAnalysisDeclContext()->getCFGStmtMap();
   const CFGBlock *B = Map->getBlock(E);
   assert(B);
 
@@ -186,19 +185,19 @@ CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
         break;
   assert(Idx < Sz);
 
-  return ADC->getManager()->getStackFrame(ADC, LCtx, E, B, BlockCount, Idx);
+  return ADC->getStackFrame(SF, nullptr, E, B, BlockCount, Idx);
 }
 
 const ParamVarRegion
 *CallEvent::getParameterLocation(unsigned Index, unsigned BlockCount) const {
-  const StackFrameContext *SFC = getCalleeStackFrame(BlockCount);
+  const StackFrame *SF = getCalleeStackFrame(BlockCount);
   // We cannot construct a VarRegion without a stack frame.
-  if (!SFC)
+  if (!SF)
     return nullptr;
 
   const ParamVarRegion *PVR =
-    State->getStateManager().getRegionManager().getParamVarRegion(
-        getOriginExpr(), Index, SFC);
+      State->getStateManager().getRegionManager().getParamVarRegion(
+          getOriginExpr(), Index, SF);
   return PVR;
 }
 
@@ -229,6 +228,14 @@ static void findPtrToConstParams(llvm::SmallSet<unsigned, 4> &PreserveArgs,
   }
 }
 
+static const MemRegion *getThisRegionBaseOrNull(const CallEvent &Call) {
+  if (const auto *CtorCall = dyn_cast<CXXConstructorCall>(&Call)) {
+    if (const MemRegion *R = CtorCall->getCXXThisVal().getAsRegion())
+      return R->getBaseRegion();
+  }
+  return nullptr;
+}
+
 ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
                                              ProgramStateRef State) const {
   // Don't invalidate anything if the callee is marked pure/const.
@@ -246,14 +253,26 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   if (!argumentsMayEscape())
     findPtrToConstParams(PreserveArgs, *this);
 
+  // We should not preserve the contents of the region pointed by "this" when
+  // constructing the object, even if an argument refers to it.
+  const auto *ThisRegionBaseOrNull = getThisRegionBaseOrNull(*this);
+
   for (unsigned Idx = 0, Count = getNumArgs(); Idx != Count; ++Idx) {
     // Mark this region for invalidation.  We batch invalidate regions
     // below for efficiency.
-    if (PreserveArgs.count(Idx))
-      if (const MemRegion *MR = getArgSVal(Idx).getAsRegion())
-        ETraits.setTrait(MR->getBaseRegion(),
-                        RegionAndSymbolInvalidationTraits::TK_PreserveContents);
-        // TODO: Factor this out + handle the lower level const pointers.
+    if (PreserveArgs.count(Idx)) {
+      if (const MemRegion *ArgBaseR = getArgSVal(Idx).getAsRegion()) {
+        ArgBaseR = ArgBaseR->getBaseRegion();
+
+        // Preserve the contents of the pointee of the argument - except if it
+        // refers to the object under construction (ctor call).
+        if (ArgBaseR != ThisRegionBaseOrNull) {
+          ETraits.setTrait(
+              ArgBaseR, RegionAndSymbolInvalidationTraits::TK_PreserveContents);
+          // TODO: Factor this out + handle the lower level const pointers.
+        }
+      }
+    }
 
     ValuesToInvalidate.push_back(getArgSVal(Idx));
 
@@ -277,7 +296,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
   return State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                  BlockCount, getLocationContext(),
+                                  BlockCount, getStackFrame(),
                                   /*CausedByPointerEscape*/ true,
                                   /*Symbols=*/nullptr, this, &ETraits);
 }
@@ -287,8 +306,8 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 
   if (const Expr *E = getOriginExpr()) {
     if (IsPreVisit)
-      return PreStmt(E, getLocationContext(), Tag);
-    return PostStmt(E, getLocationContext(), Tag);
+      return PreStmt(E, getStackFrame(), Tag);
+    return PostStmt(E, getStackFrame(), Tag);
   }
 
   const Decl *D = getDecl();
@@ -298,8 +317,8 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 
   SourceLocation Loc = getSourceRange().getBegin();
   if (IsPreVisit)
-    return PreImplicitCall(D, Loc, getLocationContext(), ElemRef, Tag);
-  return PostImplicitCall(D, Loc, getLocationContext(), ElemRef, Tag);
+    return PreImplicitCall(D, Loc, getStackFrame(), ElemRef, Tag);
+  return PostImplicitCall(D, Loc, getStackFrame(), ElemRef, Tag);
 }
 
 SVal CallEvent::getArgSVal(unsigned Index) const {
@@ -456,11 +475,11 @@ static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
   return SVB.evalCast(ArgVal, Param->getType(), ArgExpr->getType());
 }
 
-static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
+static void addParameterValuesToBindings(const StackFrame *CalleeSF,
                                          CallEvent::BindingsTy &Bindings,
                                          SValBuilder &SVB,
                                          const CallEvent &Call,
-                                         ArrayRef<ParmVarDecl*> parameters) {
+                                         ArrayRef<ParmVarDecl *> parameters) {
   MemRegionManager &MRMgr = SVB.getRegionManager();
 
   // If the function has fewer parameters than the call has arguments, we simply
@@ -490,7 +509,7 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
     ArgVal = castArgToParamTypeIfNeeded(Call, Idx, ArgVal, SVB);
 
     Loc ParamLoc = SVB.makeLoc(
-        MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeCtx));
+        MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeSF));
     Bindings.push_back(
         std::make_pair(ParamLoc, processArgument(ArgVal, ArgExpr, *I, SVB)));
   }
@@ -499,7 +518,7 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
 }
 
 const ConstructionContext *CallEvent::getConstructionContext() const {
-  const StackFrameContext *StackFrame = getCalleeStackFrame(0);
+  const StackFrame *StackFrame = getCalleeStackFrame(0);
   if (!StackFrame)
     return nullptr;
 
@@ -516,16 +535,12 @@ const ConstructionContext *CallEvent::getConstructionContext() const {
 }
 
 const CallEventRef<> CallEvent::getCaller() const {
-  const auto *CallLocationContext = this->getLocationContext();
-  if (!CallLocationContext || CallLocationContext->inTopFrame())
-    return nullptr;
-
-  const auto *CallStackFrameContext = CallLocationContext->getStackFrame();
-  if (!CallStackFrameContext)
+  const auto *CallSF = this->getStackFrame();
+  if (!CallSF || CallSF->inTopFrame())
     return nullptr;
 
   CallEventManager &CEMgr = State->getStateManager().getCallEventManager();
-  return CEMgr.getCaller(CallStackFrameContext, State);
+  return CEMgr.getCaller(CallSF, State);
 }
 
 bool CallEvent::isCalledFromSystemHeader() const {
@@ -542,9 +557,11 @@ std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
 
   EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
+  unsigned NumVisitedCall =
+      Engine.getNumVisited(getStackFrame(), getCFGElementRef().getParent());
   SVal RetVal = Engine.computeObjectUnderConstruction(
-      getOriginExpr(), getState(), &Engine.getBuilderContext(),
-      getLocationContext(), CC, CallOpts);
+      getOriginExpr(), getState(), NumVisitedCall, getStackFrame(), CC,
+      CallOpts);
   return RetVal;
 }
 
@@ -563,8 +580,7 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   // Note that the AnalysisDeclContext will have the FunctionDecl with
   // the definition (if one exists).
   AnalysisDeclContext *AD =
-    getLocationContext()->getAnalysisDeclContext()->
-    getManager()->getContext(FD);
+      getStackFrame()->getAnalysisDeclContext()->getManager()->getContext(FD);
   bool IsAutosynthesized;
   Stmt* Body = AD->getBody(IsAutosynthesized);
   LLVM_DEBUG({
@@ -601,7 +617,9 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   if (!CTUDeclOrError) {
     handleAllErrors(CTUDeclOrError.takeError(),
                     [&](const cross_tu::IndexError &IE) {
-                      CTUCtx.emitCrossTUDiagnostics(IE);
+                      auto Loc = getOriginExpr() ? getOriginExpr()->getExprLoc()
+                                                 : FD->getLocation();
+                      CTUCtx.emitCrossTUDiagnostics(IE, Loc);
                     });
     return {};
   }
@@ -609,13 +627,11 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   return RuntimeDefinition(*CTUDeclOrError, /*Foreign=*/true);
 }
 
-void AnyFunctionCall::getInitialStackFrameContents(
-                                        const StackFrameContext *CalleeCtx,
-                                        BindingsTy &Bindings) const {
-  const auto *D = cast<FunctionDecl>(CalleeCtx->getDecl());
+void AnyFunctionCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
+                                                   BindingsTy &Bindings) const {
+  const auto *D = cast<FunctionDecl>(CalleeSF->getDecl());
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
-  addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
-                               D->parameters());
+  addParameterValuesToBindings(CalleeSF, Bindings, SVB, *this, D->parameters());
 }
 
 bool AnyFunctionCall::argumentsMayEscape() const {
@@ -668,12 +684,12 @@ bool AnyFunctionCall::argumentsMayEscape() const {
   // - Many CF containers allow objects to escape through custom
   //   allocators/deallocators upon container construction. (PR12101)
   if (FName.starts_with("CF") || FName.starts_with("CG")) {
-    return StrInStrNoCase(FName, "InsertValue")  != StringRef::npos ||
-           StrInStrNoCase(FName, "AddValue")     != StringRef::npos ||
-           StrInStrNoCase(FName, "SetValue")     != StringRef::npos ||
-           StrInStrNoCase(FName, "WithData")     != StringRef::npos ||
-           StrInStrNoCase(FName, "AppendValue")  != StringRef::npos ||
-           StrInStrNoCase(FName, "SetAttribute") != StringRef::npos;
+    return FName.contains_insensitive("InsertValue") ||
+           FName.contains_insensitive("AddValue") ||
+           FName.contains_insensitive("SetValue") ||
+           FName.contains_insensitive("WithData") ||
+           FName.contains_insensitive("AppendValue") ||
+           FName.contains_insensitive("SetAttribute");
   }
 
   return false;
@@ -823,10 +839,9 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   return RuntimeDefinition(Definition, /*DispatchRegion=*/nullptr);
 }
 
-void CXXInstanceCall::getInitialStackFrameContents(
-                                            const StackFrameContext *CalleeCtx,
-                                            BindingsTy &Bindings) const {
-  AnyFunctionCall::getInitialStackFrameContents(CalleeCtx, Bindings);
+void CXXInstanceCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
+                                                   BindingsTy &Bindings) const {
+  AnyFunctionCall::getInitialStackFrameContents(CalleeSF, Bindings);
 
   // Handle the binding of 'this' in the new stack frame.
   SVal ThisVal = getCXXThisVal();
@@ -834,8 +849,8 @@ void CXXInstanceCall::getInitialStackFrameContents(
     ProgramStateManager &StateMgr = getState()->getStateManager();
     SValBuilder &SVB = StateMgr.getSValBuilder();
 
-    const auto *MD = cast<CXXMethodDecl>(CalleeCtx->getDecl());
-    Loc ThisLoc = SVB.getCXXThis(MD, CalleeCtx);
+    const auto *MD = cast<CXXMethodDecl>(CalleeSF->getDecl());
+    Loc ThisLoc = SVB.getCXXThis(MD, CalleeSF);
 
     // If we devirtualized to a different member function, we need to make sure
     // we have the proper layering of CXXBaseObjectRegions.
@@ -906,12 +921,12 @@ void BlockCall::getExtraInvalidatedValues(ValueList &Values,
     Values.push_back(loc::MemRegionVal(R));
 }
 
-void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+void BlockCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
                                              BindingsTy &Bindings) const {
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
   ArrayRef<ParmVarDecl*> Params;
   if (isConversionFromLambda()) {
-    auto *LambdaOperatorDecl = cast<CXXMethodDecl>(CalleeCtx->getDecl());
+    auto *LambdaOperatorDecl = cast<CXXMethodDecl>(CalleeSF->getDecl());
     Params = LambdaOperatorDecl->parameters();
 
     // For blocks converted from a C++ lambda, the callee declaration is the
@@ -919,14 +934,13 @@ void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
     // the lambda captured by the block.
     const VarRegion *CapturedLambdaRegion = getRegionStoringCapturedLambda();
     SVal ThisVal = loc::MemRegionVal(CapturedLambdaRegion);
-    Loc ThisLoc = SVB.getCXXThis(LambdaOperatorDecl, CalleeCtx);
+    Loc ThisLoc = SVB.getCXXThis(LambdaOperatorDecl, CalleeSF);
     Bindings.push_back(std::make_pair(ThisLoc, ThisVal));
   } else {
-    Params = cast<BlockDecl>(CalleeCtx->getDecl())->parameters();
+    Params = cast<BlockDecl>(CalleeSF->getDecl())->parameters();
   }
 
-  addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
-                               Params);
+  addParameterValuesToBindings(CalleeSF, Bindings, SVB, *this, Params);
 }
 
 SVal AnyCXXConstructorCall::getCXXThisVal() const {
@@ -953,25 +967,23 @@ void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
 }
 
 void AnyCXXConstructorCall::getInitialStackFrameContents(
-                                             const StackFrameContext *CalleeCtx,
-                                             BindingsTy &Bindings) const {
-  AnyFunctionCall::getInitialStackFrameContents(CalleeCtx, Bindings);
+    const StackFrame *CalleeSF, BindingsTy &Bindings) const {
+  AnyFunctionCall::getInitialStackFrameContents(CalleeSF, Bindings);
 
   SVal ThisVal = getCXXThisVal();
   if (!ThisVal.isUnknown()) {
     SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
-    const auto *MD = cast<CXXMethodDecl>(CalleeCtx->getDecl());
-    Loc ThisLoc = SVB.getCXXThis(MD, CalleeCtx);
+    const auto *MD = cast<CXXMethodDecl>(CalleeSF->getDecl());
+    Loc ThisLoc = SVB.getCXXThis(MD, CalleeSF);
     Bindings.push_back(std::make_pair(ThisLoc, ThisVal));
   }
 }
 
-const StackFrameContext *
-CXXInheritedConstructorCall::getInheritingStackFrame() const {
-  const StackFrameContext *SFC = getLocationContext()->getStackFrame();
-  while (isa<CXXInheritedCtorInitExpr>(SFC->getCallSite()))
-    SFC = SFC->getParent()->getStackFrame();
-  return SFC;
+const StackFrame *CXXInheritedConstructorCall::getInheritingStackFrame() const {
+  const StackFrame *SF = getStackFrame();
+  while (isa<CXXInheritedCtorInitExpr>(SF->getCallSite()))
+    SF = SF->getParent();
+  return SF;
 }
 
 SVal CXXDestructorCall::getCXXThisVal() const {
@@ -1032,7 +1044,7 @@ SVal ObjCMethodCall::getReceiverSVal() const {
   // An instance message with no expression means we are sending to super.
   // In this case the object reference is the same as 'self'.
   assert(getOriginExpr()->getReceiverKind() == ObjCMessageExpr::SuperInstance);
-  SVal SelfVal = getState()->getSelfSVal(getLocationContext());
+  SVal SelfVal = getState()->getSelfSVal(getStackFrame());
   assert(SelfVal.isValid() && "Calling super but not in ObjC method");
   return SelfVal;
 }
@@ -1046,7 +1058,7 @@ bool ObjCMethodCall::isReceiverSelfOrSuper() const {
     return false;
 
   SVal RecVal = getSVal(getOriginExpr()->getInstanceReceiver());
-  SVal SelfVal = getState()->getSelfSVal(getLocationContext());
+  SVal SelfVal = getState()->getSelfSVal(getStackFrame());
 
   return (RecVal == SelfVal);
 }
@@ -1085,7 +1097,7 @@ getSyntacticFromForPseudoObjectExpr(const PseudoObjectExpr *POE) {
 ObjCMessageKind ObjCMethodCall::getMessageKind() const {
   if (!Data) {
     // Find the parent, ignoring implicit casts.
-    const ParentMap &PM = getLocationContext()->getParentMap();
+    const ParentMap &PM = getStackFrame()->getParentMap();
     const Stmt *S = PM.getParentIgnoreParenCasts(getOriginExpr());
 
     // Check if parent is a PseudoObjectExpr.
@@ -1226,15 +1238,6 @@ template <> struct DenseMapInfo<PrivateMethodKey> {
   using InterfaceInfo = DenseMapInfo<const ObjCInterfaceDecl *>;
   using SelectorInfo = DenseMapInfo<Selector>;
 
-  static inline PrivateMethodKey getEmptyKey() {
-    return {InterfaceInfo::getEmptyKey(), SelectorInfo::getEmptyKey(), false};
-  }
-
-  static inline PrivateMethodKey getTombstoneKey() {
-    return {InterfaceInfo::getTombstoneKey(), SelectorInfo::getTombstoneKey(),
-            true};
-  }
-
   static unsigned getHashValue(const PrivateMethodKey &Key) {
     return llvm::hash_combine(
         llvm::hash_code(InterfaceInfo::getHashValue(Key.Interface)),
@@ -1328,7 +1331,7 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
         // instance (not class).
         if (ReceiverT->isObjCClass()) {
 
-          SVal SelfVal = getState()->getSelfSVal(getLocationContext());
+          SVal SelfVal = getState()->getSelfSVal(getStackFrame());
           // For [self classMethod], return compiler visible declaration.
           if (Receiver == SelfVal.getAsRegion()) {
             return RuntimeDefinition(findDefiningRedecl(E->getMethodDecl()));
@@ -1398,19 +1401,17 @@ bool ObjCMethodCall::argumentsMayEscape() const {
   return CallEvent::argumentsMayEscape();
 }
 
-void ObjCMethodCall::getInitialStackFrameContents(
-                                             const StackFrameContext *CalleeCtx,
-                                             BindingsTy &Bindings) const {
-  const auto *D = cast<ObjCMethodDecl>(CalleeCtx->getDecl());
+void ObjCMethodCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
+                                                  BindingsTy &Bindings) const {
+  const auto *D = cast<ObjCMethodDecl>(CalleeSF->getDecl());
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
-  addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
-                               D->parameters());
+  addParameterValuesToBindings(CalleeSF, Bindings, SVB, *this, D->parameters());
 
   SVal SelfVal = getReceiverSVal();
   if (!SelfVal.isUnknown()) {
-    const VarDecl *SelfD = CalleeCtx->getAnalysisDeclContext()->getSelfDecl();
+    const VarDecl *SelfD = CalleeSF->getAnalysisDeclContext()->getSelfDecl();
     MemRegionManager &MRMgr = SVB.getRegionManager();
-    Loc SelfLoc = SVB.makeLoc(MRMgr.getVarRegion(SelfD, CalleeCtx));
+    Loc SelfLoc = SVB.makeLoc(MRMgr.getVarRegion(SelfD, CalleeSF));
     Bindings.push_back(std::make_pair(SelfLoc, SelfVal));
   }
 }
@@ -1424,71 +1425,68 @@ CallEventManager::CallEventManager(llvm::BumpPtrAllocator &alloc)
 
 CallEventRef<>
 CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
-                                const LocationContext *LCtx,
+                                const StackFrame *SF,
                                 CFGBlock::ConstCFGElementRef ElemRef) {
   if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(CE))
-    return create<CXXMemberCall>(MCE, State, LCtx, ElemRef);
+    return create<CXXMemberCall>(MCE, State, SF, ElemRef);
 
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
     if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee)) {
       if (MD->isImplicitObjectMemberFunction())
-        return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
+        return create<CXXMemberOperatorCall>(OpCE, State, SF, ElemRef);
       if (MD->isStatic())
-        return create<CXXStaticOperatorCall>(OpCE, State, LCtx, ElemRef);
+        return create<CXXStaticOperatorCall>(OpCE, State, SF, ElemRef);
     }
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {
-    return create<BlockCall>(CE, State, LCtx, ElemRef);
+    return create<BlockCall>(CE, State, SF, ElemRef);
   }
 
   // Otherwise, it's a normal function call, static member function call, or
   // something we can't reason about.
-  return create<SimpleFunctionCall>(CE, State, LCtx, ElemRef);
+  return create<SimpleFunctionCall>(CE, State, SF, ElemRef);
 }
 
-CallEventRef<>
-CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
-                            ProgramStateRef State) {
-  const LocationContext *ParentCtx = CalleeCtx->getParent();
-  const LocationContext *CallerCtx = ParentCtx->getStackFrame();
-  CFGBlock::ConstCFGElementRef ElemRef = {CalleeCtx->getCallSiteBlock(),
-                                          CalleeCtx->getIndex()};
-  assert(CallerCtx && "This should not be used for top-level stack frames");
+CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
+                                           ProgramStateRef State) {
+  const StackFrame *ParentSF = CalleeSF->getParent();
+  const StackFrame *CallerSF = ParentSF;
+  CFGBlock::ConstCFGElementRef ElemRef = {CalleeSF->getCallSiteBlock(),
+                                          CalleeSF->getIndex()};
+  assert(CallerSF && "This should not be used for top-level stack frames");
 
-  const Stmt *CallSite = CalleeCtx->getCallSite();
+  const Expr *CallSite = CalleeSF->getCallSite();
 
   if (CallSite) {
-    if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx, ElemRef))
+    if (CallEventRef<> Out = getCall(CallSite, State, CallerSF, ElemRef))
       return Out;
 
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
-    const auto *Ctor = cast<CXXMethodDecl>(CalleeCtx->getDecl());
-    Loc ThisPtr = SVB.getCXXThis(Ctor, CalleeCtx);
+    const auto *Ctor = cast<CXXMethodDecl>(CalleeSF->getDecl());
+    Loc ThisPtr = SVB.getCXXThis(Ctor, CalleeSF);
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
-      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx,
+      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerSF,
                                    ElemRef);
-    else if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
+    if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
       return getCXXInheritedConstructorCall(CIE, ThisVal.getAsRegion(), State,
-                                            CallerCtx, ElemRef);
-    else {
-      // All other cases are handled by getCall.
-      llvm_unreachable("This is not an inlineable statement");
-    }
+                                            CallerSF, ElemRef);
+    // All other cases are handled by getCall.
+    llvm_unreachable("This is not an inlineable statement");
   }
 
   // Fall back to the CFG. The only thing we haven't handled yet is
   // destructors, though this could change in the future.
-  const CFGBlock *B = CalleeCtx->getCallSiteBlock();
-  CFGElement E = (*B)[CalleeCtx->getIndex()];
+  const CFGBlock *B = CalleeSF->getCallSiteBlock();
+  CFGElement E = (*B)[CalleeSF->getIndex()];
   assert((E.getAs<CFGImplicitDtor>() || E.getAs<CFGTemporaryDtor>()) &&
          "All other CFG elements should have exprs");
 
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  const auto *Dtor = cast<CXXDestructorDecl>(CalleeCtx->getDecl());
-  Loc ThisPtr = SVB.getCXXThis(Dtor, CalleeCtx);
+  const auto *Dtor = cast<CXXDestructorDecl>(CalleeSF->getDecl());
+  Loc ThisPtr = SVB.getCXXThis(Dtor, CalleeSF);
   SVal ThisVal = State->getSVal(ThisPtr);
 
   const Stmt *Trigger;
@@ -1502,20 +1500,20 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
 
   return getCXXDestructorCall(Dtor, Trigger, ThisVal.getAsRegion(),
                               E.getAs<CFGBaseDtor>().has_value(), State,
-                              CallerCtx, ElemRef);
+                              CallerSF, ElemRef);
 }
 
 CallEventRef<> CallEventManager::getCall(const Stmt *S, ProgramStateRef State,
-                                         const LocationContext *LC,
+                                         const StackFrame *SF,
                                          CFGBlock::ConstCFGElementRef ElemRef) {
   if (const auto *CE = dyn_cast<CallExpr>(S)) {
-    return getSimpleCall(CE, State, LC, ElemRef);
+    return getSimpleCall(CE, State, SF, ElemRef);
   } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
-    return getCXXAllocatorCall(NE, State, LC, ElemRef);
+    return getCXXAllocatorCall(NE, State, SF, ElemRef);
   } else if (const auto *DE = dyn_cast<CXXDeleteExpr>(S)) {
-    return getCXXDeallocatorCall(DE, State, LC, ElemRef);
+    return getCXXDeallocatorCall(DE, State, SF, ElemRef);
   } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(S)) {
-    return getObjCMethodCall(ME, State, LC, ElemRef);
+    return getObjCMethodCall(ME, State, SF, ElemRef);
   } else {
     return nullptr;
   }

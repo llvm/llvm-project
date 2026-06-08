@@ -219,6 +219,12 @@ public:
     return getPopSize(Inst) == 0 ? false : true;
   }
 
+  bool isEpilogue(const BinaryBasicBlock &BB) const override {
+    return ::llvm::any_of(BB, [&](const MCInst &Instr) {
+      return isLeave(Instr) || isPop(Instr);
+    });
+  }
+
   bool isTerminateBranch(const MCInst &Inst) const override {
     return Inst.getOpcode() == X86::ENDBR32 || Inst.getOpcode() == X86::ENDBR64;
   }
@@ -819,6 +825,12 @@ public:
     Regs.set(X86::R13);
     Regs.set(X86::R14);
     Regs.set(X86::R15);
+  }
+
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector FP = getAliases(X86::RBP);
+    FP.flip();
+    Regs &= FP;
   }
 
   void getClassicGPRegs(BitVector &Regs) const override {
@@ -1432,7 +1444,7 @@ public:
     assert(Offset + I.DataSize <= ConstantData.size() &&
            "invalid offset for given constant data");
     int64_t ImmVal =
-        DataExtractor(ConstantData, true, 8).getSigned(&Offset, I.DataSize);
+        DataExtractor(ConstantData, true).getSigned(&Offset, I.DataSize);
 
     // Compute the new opcode.
     unsigned NewOpcode = 0;
@@ -2794,8 +2806,10 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  void
+  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
+                         const MCSymbol *TBB, MCContext *Ctx,
+                         DataflowInfoManager *DIM = nullptr) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
@@ -3117,7 +3131,7 @@ public:
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
-                                                     int CallSiteID,
+                                                     size_t CallSiteID,
                                                      MCContext *Ctx) override {
     // Check if the target address expression used in the original indirect call
     // uses the stack pointer, which we are going to clobber.

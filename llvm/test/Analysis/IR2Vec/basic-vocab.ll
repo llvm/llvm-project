@@ -18,10 +18,10 @@ entry:
   ret float %add
 }
 
-; INCORRECT-VOCAB1-CHECK: error: Error reading vocabulary: Missing 'Opcodes' section in vocabulary file
+; INCORRECT-VOCAB1-CHECK: LLVM ERROR: error reading vocabulary: Missing 'Opcodes' section in vocabulary file
 
-; INCORRECT-VOCAB2-CHECK: error: Error reading vocabulary: Missing 'Types' section in vocabulary file
+; INCORRECT-VOCAB2-CHECK: LLVM ERROR: error reading vocabulary: Missing 'Types' section in vocabulary file
 
-; INCORRECT-VOCAB3-CHECK: error: Error reading vocabulary: Missing 'Arguments' section in vocabulary file
+; INCORRECT-VOCAB3-CHECK: LLVM ERROR: error reading vocabulary: Missing 'Arguments' section in vocabulary file
 
-; INCORRECT-VOCAB4-CHECK: error: Error reading vocabulary: Vocabulary sections have different dimensions
+; INCORRECT-VOCAB4-CHECK: LLVM ERROR: error reading vocabulary: Vocabulary sections have different dimensions

@@ -38,7 +38,7 @@ end
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = cancellation point
 !PARSE-TREE: | OmpClauseList -> OmpClause -> CancellationConstructType -> OmpCancellationConstructTypeClause
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = parallel
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f01
   type :: t
@@ -54,10 +54,10 @@ end
 !UNPARSE: !$OMP DECLARE_MAPPER(t::v) MAP(v%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareMapperDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare mapper
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
-!PARSE-TREE: | | string = 't.omp.default.mapper'
+!PARSE-TREE: | | string = 't_omp_default_mapper'
 !PARSE-TREE: | | TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
 !PARSE-TREE: | | Name = 'v'
@@ -66,7 +66,7 @@ end
 !PARSE-TREE: | | | DataRef -> Name = 'v'
 !PARSE-TREE: | | | Name = 'x'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f02
   type :: t
@@ -82,7 +82,7 @@ end
 !UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x = omp_out%x + omp_in%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
@@ -107,7 +107,7 @@ end
 !PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_in'
 !PARSE-TREE: | | | | | | | | Name = 'x'
 !PARSE-TREE: | OmpClauseList ->
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f03
   !$omp declare_simd
@@ -117,10 +117,10 @@ end
 !UNPARSE: !$OMP DECLARE_SIMD
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareSimdDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | OmpClauseList ->
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f04
   !$omp declare_target
@@ -130,10 +130,10 @@ end
 !UNPARSE: !$OMP DECLARE_TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
 !PARSE-TREE: | OmpClauseList ->
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f05
   implicit none
@@ -164,7 +164,7 @@ end
 !PARSE-TREE: | | | | OmpTraitProperty -> Scalar -> Expr = '.true._4'
 !PARSE-TREE: | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f06
   implicit none
@@ -217,7 +217,7 @@ end
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'i'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f08
   implicit none
@@ -237,7 +237,7 @@ end
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = From
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'i'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f09
   implicit none
@@ -256,4 +256,4 @@ end
 !PARSE-TREE: | OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'i'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

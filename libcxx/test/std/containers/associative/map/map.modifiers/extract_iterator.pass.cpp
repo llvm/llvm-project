@@ -30,7 +30,6 @@ TEST_CONSTEXPR_CXX26 bool test(Container& c) {
     typename Container::node_type t = c.extract(first++);
     --sz;
     if (!TEST_IS_CONSTANT_EVALUATED) {
-      // FIXME: CWG1514: key() is not `constexpr`
       assert(t.key() == key_value);
       t.key() = some_key;
       assert(t.key() == some_key);
@@ -50,13 +49,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
     test(m);
   }
 
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    std::map<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
-    assert(Counter_base::gConstructed == 12);
-    test(m);
-    assert(Counter_base::gConstructed == 0);
-  }
-
   {
     using min_alloc_map = std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>;
     min_alloc_map m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
@@ -66,6 +58,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
+  {
+    std::map<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
+    assert(Counter_base::gConstructed == 12);
+    test(m);
+    assert(Counter_base::gConstructed == 0);
+  }
+
   test();
 #if TEST_STD_VER >= 26
   static_assert(test());

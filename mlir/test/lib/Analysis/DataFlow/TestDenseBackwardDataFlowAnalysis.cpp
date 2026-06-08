@@ -51,6 +51,8 @@ public:
 
 class NextAccessAnalysis : public DenseBackwardDataFlowAnalysis<NextAccess> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(NextAccessAnalysis)
+
   NextAccessAnalysis(DataFlowSolver &solver, SymbolTableCollection &symbolTable,
                      bool assumeFuncReads = false)
       : DenseBackwardDataFlowAnalysis(solver, symbolTable),
@@ -373,7 +375,7 @@ struct TestNextAccessPass
       SmallVector<RegionSuccessor> regionSuccessors;
       iface.getSuccessorRegions(RegionBranchPoint::parent(), regionSuccessors);
       for (const RegionSuccessor &successor : regionSuccessors) {
-        if (!successor.getSuccessor() || successor.getSuccessor()->empty())
+        if (successor.isParent() || successor.getSuccessor()->empty())
           continue;
         Block &successorBlock = successor.getSuccessor()->front();
         ProgramPoint *successorPoint =

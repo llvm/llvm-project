@@ -32,6 +32,7 @@ static_library("Support") {
     "Unix",
     "Windows",
     "//third-party/siphash/include",
+    "//libc",
   ]
   sources = [
     "AArch64AttributeParser.cpp",
@@ -102,6 +103,7 @@ static_library("Support") {
     "InitLLVM.cpp",
     "InstructionCost.cpp",
     "IntEqClasses.cpp",
+    "IntegerInclusiveInterval.cpp",
     "IntervalMap.cpp",
     "JSON.cpp",
     "Jobserver.cpp",
@@ -175,6 +177,7 @@ static_library("Support") {
     "VirtualOutputConfig.cpp",
     "VirtualOutputError.cpp",
     "VirtualOutputFile.cpp",
+    "Win64EH.cpp",
     "WithColor.cpp",
     "YAMLParser.cpp",
     "YAMLTraits.cpp",
@@ -190,6 +193,7 @@ static_library("Support") {
     "regfree.c",
     "regstrlcpy.c",
     "xxhash.cpp",
+    "zOSLibFunctions.cpp",
 
     # System
     "Atomic.cpp",

@@ -74,7 +74,7 @@ TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
 
   // Create a cycle that references G0.
   MDNode *N0; // !0 = !{!1}
-  MDNode *N1; // !1 = !{!0, i8* @G0}
+  MDNode *N1; // !1 = !{!0, ptr @G0}
   {
     auto T0 = MDTuple::getTemporary(Context, nullptr);
     Metadata *Ops1[] = {T0.get(), ConstantAsMetadata::get(G0.get())};
@@ -451,6 +451,10 @@ TEST(ValueMapperTest, mapValuePtrAuth) {
       PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "Storage0");
   std::unique_ptr<GlobalVariable> Storage1 = std::make_unique<GlobalVariable>(
       PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "Storage1");
+  std::unique_ptr<GlobalVariable> DS0 = std::make_unique<GlobalVariable>(
+      PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "DS0");
+  std::unique_ptr<GlobalVariable> DS1 = std::make_unique<GlobalVariable>(
+      PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "DS1");
 
   ConstantInt *ConstKey = ConstantInt::get(Int32Ty, 1);
   ConstantInt *ConstDisc = ConstantInt::get(Int64Ty, 1234);
@@ -458,11 +462,12 @@ TEST(ValueMapperTest, mapValuePtrAuth) {
   ValueToValueMapTy VM;
   VM[Var0.get()] = Var1.get();
   VM[Storage0.get()] = Storage1.get();
+  VM[DS0.get()] = DS1.get();
 
-  ConstantPtrAuth *Value =
-      ConstantPtrAuth::get(Var0.get(), ConstKey, ConstDisc, Storage0.get());
-  ConstantPtrAuth *MappedValue =
-      ConstantPtrAuth::get(Var1.get(), ConstKey, ConstDisc, Storage1.get());
+  ConstantPtrAuth *Value = ConstantPtrAuth::get(Var0.get(), ConstKey, ConstDisc,
+                                                Storage0.get(), DS0.get());
+  ConstantPtrAuth *MappedValue = ConstantPtrAuth::get(
+      Var1.get(), ConstKey, ConstDisc, Storage1.get(), DS1.get());
 
   EXPECT_EQ(ValueMapper(VM).mapValue(*Value), MappedValue);
 }

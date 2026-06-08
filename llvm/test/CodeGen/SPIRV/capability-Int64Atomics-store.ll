@@ -7,13 +7,14 @@
 ;; }
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability Int64Atomics
 
-define spir_func void @foo(i64 addrspace(4)* %object, i64 %desired) {
+define spir_func void @foo(ptr addrspace(4) %object, i64 %desired) {
 entry:
-  tail call spir_func void @_Z12atomic_storePVU3AS4U7_Atomicll(i64 addrspace(4)* %object, i64 %desired)
+  tail call spir_func void @_Z12atomic_storePVU3AS4U7_Atomicll(ptr addrspace(4) %object, i64 %desired)
   ret void
 }
 
-declare spir_func void @_Z12atomic_storePVU3AS4U7_Atomicll(i64 addrspace(4)*, i64)
+declare spir_func void @_Z12atomic_storePVU3AS4U7_Atomicll(ptr addrspace(4), i64)

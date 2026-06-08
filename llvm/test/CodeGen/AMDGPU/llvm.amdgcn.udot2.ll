@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX906
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-SDAG
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -global-isel < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-GISEL
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -global-isel -new-reg-bank-select < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-GISEL
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 < %s | FileCheck %s --check-prefixes=GCN,GFX10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck %s --check-prefixes=GCN,GFX10
 

@@ -67,6 +67,8 @@ static bool VerifyMemoryMapping(MemoryMappingLayout* mapping) {
   InternalMmapVector<LoadedModule::AddressRange> segments;
   for (uptr i = 0; i < modules.size(); ++i) {
     for (auto& range : modules[i].ranges()) {
+      if (range.beg == range.end)
+        continue;
       segments.push_back(range);
     }
   }
@@ -100,6 +102,8 @@ static bool VerifyMemoryMapping(MemoryMappingLayout* mapping) {
       }
     }
   }
+
+  for (auto& m : modules) m.clear();
 
   mapping->Reset();
   return well_formed;
@@ -172,7 +176,7 @@ void MemoryMappingLayout::Reset() {
 // The dyld load address should be unchanged throughout process execution,
 // and it is expensive to compute once many libraries have been loaded,
 // so cache it here and do not reset.
-static mach_header *dyld_hdr = 0;
+static const mach_header* dyld_hdr = 0;
 static const char kDyldPath[] = "/usr/lib/dyld";
 static const int kDyldImageIdx = -1;
 
@@ -240,13 +244,17 @@ extern intptr_t _dyld_get_image_slide(const struct mach_header* mh);
 extern int dyld_shared_cache_iterate_text(
     const uuid_t cacheUuid,
     void (^callback)(const dyld_shared_cache_dylib_text_info *info));
+SANITIZER_WEAK_IMPORT const struct mach_header* _dyld_get_dyld_header(void);
 }  // extern "C"
 
-static mach_header *GetDyldImageHeaderViaSharedCache() {
+static const mach_header* GetDyldImageHeaderViaSharedCache() {
   uuid_t uuid;
   bool hasCache = _dyld_get_shared_cache_uuid(uuid);
   if (!hasCache)
     return nullptr;
+
+  if (&_dyld_get_dyld_header != nullptr)
+    return _dyld_get_dyld_header();
 
   size_t cacheLength;
   __block uptr cacheStart = (uptr)_dyld_get_shared_cache_range(&cacheLength);
@@ -305,7 +313,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
   layout_data->current_load_cmd_count--;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
-    if (strncmp(sc->segname, "__LINKEDIT", sizeof("__LINKEDIT")) == 0) {
+    if (internal_strcmp(sc->segname, "__LINKEDIT") == 0) {
       // The LINKEDIT sections are for internal linker use, and may alias
       // with the LINKEDIT section for other modules. (If we included them,
       // our memory map would contain overlappping sections.)
@@ -331,6 +339,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
       seg_data->base_virt_addr = base_virt_addr;
       internal_strncpy(seg_data->name, sc->segname,
                        ARRAY_SIZE(seg_data->name));
+      seg_data->name[ARRAY_SIZE(seg_data->name) - 1] = 0;
     }
 
     // Return the initial protection.
@@ -344,6 +353,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
                             ? kDyldPath
                             : _dyld_get_image_name(layout_data->current_image);
       internal_strncpy(segment->filename, src, segment->filename_size);
+      segment->filename[segment->filename_size - 1] = 0;
     }
     segment->arch = layout_data->current_arch;
     internal_memcpy(segment->uuid, layout_data->current_uuid, kModuleUUIDSize);

@@ -17,14 +17,14 @@ include "RISCV.td"
 include "RISCVCombine.td"
 
 def simm12Plus1 : ImmLeaf<XLenVT, [{
-    return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+    return Imm >= -2047 && Imm <= 2048;}]>;
 def simm12Plus1i32 : ImmLeaf<i32, [{
-    return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+    return Imm >= -2047 && Imm <= 2048;}]>;
 
 // FIXME: This doesn't check that the G_CONSTANT we're deriving the immediate
 // from is only used once
 def simm12Minus1Nonzero : ImmLeaf<XLenVT, [{
-  return (Imm >= -2049 && Imm < 0) || (Imm > 0 && Imm <= 2046);}]>;
+  return Imm >= -2049 && Imm <= 2046 && Imm != 0;}]>;
 
 def simm12Minus1NonzeroNonNeg1 : ImmLeaf<XLenVT, [{
   return (Imm >= -2049 && Imm < -1) || (Imm > 0 && Imm <= 2046);}]>;
@@ -32,7 +32,7 @@ def simm12Minus1NonzeroNonNeg1 : ImmLeaf<XLenVT, [{
 // Return an immediate value plus 1.
 def ImmPlus1 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() + 1, SDLoc(N),
-                                   N->getValuePtrVTpe(0));}]>;
+                                   N->getValueType(0));}]>;
 def GIImmPlus1 :
   GICustomOperandRenderer<"renderImmPlus1">,
   GISDNodeXFormEquiv<ImmPlus1>;

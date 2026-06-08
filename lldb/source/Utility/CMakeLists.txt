@@ -38,19 +38,20 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   DataEncoder.cpp
   DataExtractor.cpp
   Diagnostics.cpp
-  DiagnosticsRendering.cpp
   Environment.cpp
   ErrorMessages.cpp
   Event.cpp
   FileSpec.cpp
   FileSpecList.cpp
   GDBRemote.cpp
+  AcceleratorGDBRemotePackets.cpp
   IOObject.cpp
   LLDBAssert.cpp
   LLDBLog.cpp
   Listener.cpp
   Log.cpp
   NameMatches.cpp
+  Policy.cpp
   ProcessInfo.cpp
   RealpathPrefixes.cpp
   RegisterValue.cpp
@@ -64,7 +65,6 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   StreamString.cpp
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
-  StringLexer.cpp
   StringList.cpp
   StructuredData.cpp
   TildeExpressionResolver.cpp
@@ -77,7 +77,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   UserID.cpp
   UserIDResolver.cpp
   VASprintf.cpp
-  VMRange.cpp
+  VirtualDataExtractor.cpp
   XcodeSDK.cpp
   ZipFile.cpp
 

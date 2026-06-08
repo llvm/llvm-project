@@ -631,8 +631,7 @@ define void @v8i16_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vseq.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.b $vr1, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a0
@@ -649,8 +648,7 @@ define void @v4i32_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vseq.w $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.b $vr1, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a0
@@ -667,8 +665,7 @@ define void @v2i64_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vseq.d $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.b $vr1, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a0

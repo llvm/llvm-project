@@ -23,8 +23,8 @@ define void @test1(i8 %x, ptr %ptr) {
 ; CHECK-NEXT:    br label [[WHILE_COND192:%.*]]
 ; CHECK:       while.cond192:
 ; CHECK-NEXT:    switch i8 [[X:%.*]], label [[WHILE_BODY205:%.*]] [
-; CHECK-NEXT:      i8 59, label [[WHILE_COND215_PREHEADER:%.*]]
-; CHECK-NEXT:      i8 10, label [[IF_END224_LOOPEXIT1:%.*]]
+; CHECK-NEXT:    i8 59, label [[WHILE_COND215_PREHEADER:%.*]]
+; CHECK-NEXT:    i8 10, label [[IF_END224_LOOPEXIT1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       while.cond215.preheader:
 ; CHECK-NEXT:    br label [[WHILE_COND215:%.*]]
@@ -103,8 +103,8 @@ define void @test2(i16 %x)  {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    switch i16 [[X:%.*]], label [[RETURN_LOOPEXIT1:%.*]] [
-; CHECK-NEXT:      i16 41, label [[FOR_END:%.*]]
-; CHECK-NEXT:      i16 43, label [[FOR_COND]]
+; CHECK-NEXT:    i16 41, label [[FOR_END:%.*]]
+; CHECK-NEXT:    i16 43, label [[FOR_COND]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[I_0_LCSSA2:%.*]] = phi i32 [ 0, [[FOR_COND]] ]
@@ -336,7 +336,6 @@ if.end1824:                                       ; preds = %for.end1326
 define void @test5(ptr %header, i32 %conv, i8 %n) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV:%.*]], 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
@@ -359,6 +358,7 @@ define void @test5(ptr %header, i32 %conv, i8 %n) {
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[WHILE_COND_PREHEADER:%.*]]
 ; CHECK:       while.cond.preheader:
 ; CHECK-NEXT:    [[ADD85_LCSSA:%.*]] = phi i32 [ [[ADD85]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV:%.*]], 2
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[POS_8:%.*]] = phi i32 [ [[INC114:%.*]], [[WHILE_BODY:%.*]] ], [ [[ADD85_LCSSA]], [[WHILE_COND_PREHEADER]] ]
@@ -427,8 +427,8 @@ define void @test6(i8 %x) {
 ; CHECK-NEXT:    br label [[WHILE_COND192:%.*]]
 ; CHECK:       while.cond192:
 ; CHECK-NEXT:    switch i8 [[X:%.*]], label [[WHILE_BODY205:%.*]] [
-; CHECK-NEXT:      i8 59, label [[WHILE_COND215_PREHEADER:%.*]]
-; CHECK-NEXT:      i8 10, label [[IF_END224:%.*]]
+; CHECK-NEXT:    i8 59, label [[WHILE_COND215_PREHEADER:%.*]]
+; CHECK-NEXT:    i8 10, label [[IF_END224:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       while.cond215.preheader:
 ; CHECK-NEXT:    [[I_7_LCSSA:%.*]] = phi i32 [ 0, [[WHILE_COND192]] ]

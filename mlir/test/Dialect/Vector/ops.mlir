@@ -1160,3 +1160,17 @@ func.func @step() {
   %1 = vector.step : vector<[4]xindex>
   return
 }
+
+// CHECK-LABEL: func @scatter_tensor(
+//  CHECK-SAME: %[[BASE:.*]]: tensor<16x16xf32>, %[[V:.*]]: vector<16xi32>,
+//  CHECK-SAME: %[[MASK:.*]]: vector<16xi1>, %[[VALUE:.*]]: vector<16xf32>) -> tensor<16x16xf32>
+func.func @scatter_tensor(%base: tensor<16x16xf32>, %v: vector<16xi32>, 
+                          %mask: vector<16xi1>, %value: vector<16xf32>) -> tensor<16x16xf32> {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[RESULT:.*]] = vector.scatter %[[BASE]][%[[C0]], %[[C0]]] [%[[V]]], %[[MASK]], %[[VALUE]]
+  %0 = vector.scatter %base[%c0, %c0] [%v], %mask, %value
+      : tensor<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> -> tensor<16x16xf32>
+  // CHECK: return %[[RESULT]] : tensor<16x16xf32>
+  return %0 : tensor<16x16xf32>
+}

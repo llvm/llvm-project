@@ -99,6 +99,7 @@ RegistryMaps::RegistryMaps() {
   //
   // Other:
   // equalsNode
+  // declaresSameEntityAsNode
 
   registerMatcher("mapAnyOf",
                   std::make_unique<internal::MapAnyOfBuilderDescriptor>());
@@ -138,6 +139,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(argumentCountAtLeast);
   REGISTER_MATCHER(arraySubscriptExpr);
   REGISTER_MATCHER(arrayType);
+  REGISTER_MATCHER(arrayTypeLoc);
   REGISTER_MATCHER(asString);
   REGISTER_MATCHER(asmStmt);
   REGISTER_MATCHER(atomicExpr);
@@ -268,6 +270,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(functionProtoType);
   REGISTER_MATCHER(functionTemplateDecl);
   REGISTER_MATCHER(functionType);
+  REGISTER_MATCHER(functionTypeLoc);
   REGISTER_MATCHER(genericSelectionExpr);
   REGISTER_MATCHER(gnuNullExpr);
   REGISTER_MATCHER(gotoStmt);
@@ -527,8 +530,13 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(objcTryStmt);
   REGISTER_MATCHER(ofClass);
   REGISTER_MATCHER(ofKind);
+  REGISTER_MATCHER(ompCountsClause);
   REGISTER_MATCHER(ompDefaultClause);
+  REGISTER_MATCHER(ompFromClause);
+  REGISTER_MATCHER(ompToClause);
   REGISTER_MATCHER(ompExecutableDirective);
+  REGISTER_MATCHER(ompSplitDirective);
+  REGISTER_MATCHER(ompTargetUpdateDirective);
   REGISTER_MATCHER(on);
   REGISTER_MATCHER(onImplicitObjectArgument);
   REGISTER_MATCHER(opaqueValueExpr);

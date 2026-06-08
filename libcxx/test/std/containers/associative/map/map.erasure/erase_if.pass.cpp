@@ -11,7 +11,7 @@
 
 // template <class Key, class T, class Compare, class Allocator, class Predicate>
 //   typename map<Key, T, Compare, Allocator>::size_type
-//   erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
+//   constexpr erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
 
 #include <map>
 
@@ -78,7 +78,7 @@ bool test_upper() {
 }
 
 int main(int, char**) {
-  assert(test_upper());
+  test_upper();
 
 #if TEST_STD_VER >= 26
 #  ifndef TEST_COMPILER_GCC

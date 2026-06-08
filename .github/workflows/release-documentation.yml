@@ -26,6 +26,9 @@ on:
         required: false
         type: boolean
     secrets:
+      LLVMBOT_WWW_RELEASES_PUSH:
+        description: "Secret used to push changes to llvmbot www-releases fork."
+        required: false
       WWW_RELEASES_TOKEN:
         description: "Secret used to create a PR with the documentation changes."
         required: false
@@ -33,15 +36,23 @@ on:
 jobs:
   release-documentation:
     name: Build and Upload Release Documentation
+    environment: release
     runs-on: ubuntu-24.04
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Validate Input
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
 
       - name: Setup Python env
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -54,23 +65,24 @@ jobs:
               python3-github \
               ninja-build \
               texlive-font-utils
-          pip3 install --user -r ./llvm/docs/requirements.txt
+          pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 
       - name: Build Documentation
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
+          ./llvm/utils/release/build-docs.sh -release "$INPUTS_RELEASE_VERSION" -no-doxygen
 
       - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-notes
           path: docs-build/html-export/
 
       - name: Clone www-releases
         if: env.upload
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main
@@ -81,15 +93,17 @@ jobs:
       - name: Upload Release Notes
         if: env.upload
         env:
+          PUSH_TOKEN: ${{ secrets.LLVMBOT_WWW_RELEASES_PUSH }}
           GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          mkdir -p www-releases/${{ inputs.release-version }}
-          mv ./docs-build/html-export/* www-releases/${{ inputs.release-version }}
+          mkdir -p www-releases/$INPUTS_RELEASE_VERSION
+          mv ./docs-build/html-export/* www-releases/$INPUTS_RELEASE_VERSION
           cd www-releases
-          git checkout -b ${{ inputs.release-version }}
-          git add ${{ inputs.release-version }}
+          git checkout -b $INPUTS_RELEASE_VERSION
+          git add $INPUTS_RELEASE_VERSION
           git config user.email "llvmbot@llvm.org"
           git config user.name "llvmbot"
-          git commit -a -m "Add ${{ inputs.release-version }} documentation"
-          git push --force  "https://$GH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
-          gh pr create -f -B main -H ${{ inputs.release-version }} -R llvmbot/www-releases
+          git commit -a -m "Add $INPUTS_RELEASE_VERSION documentation"
+          git push --force  "https://$PUSH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/$INPUTS_RELEASE_VERSION
+          gh pr create -f -B main -H llvmbot:$INPUTS_RELEASE_VERSION

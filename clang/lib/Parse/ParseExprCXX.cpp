@@ -108,7 +108,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
     const IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration,
-    bool Disambiguation) {
+    bool Disambiguation, bool IsAddressOfOperand, bool IsInDeclarationContext) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -237,7 +237,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // completion token follows the '::'.
         Actions.CodeCompletion().CodeCompleteQualifiedId(
             getCurScope(), SS, EnteringContext, InUsingDeclaration,
-            ObjectType.get(), SavedType.get(SS.getBeginLoc()));
+            IsAddressOfOperand, IsInDeclarationContext, ObjectType.get(),
+            SavedType.get(SS.getBeginLoc()));
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion
         // token will cause assertion in
@@ -286,8 +287,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // we already annotated the template-id.
         if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType,
                                        TemplateName)) {
-          TPA.Commit();
-          break;
+          TPA.Revert();
+          return true;
         }
 
         if (TemplateName.getKind() != UnqualifiedIdKind::IK_OperatorFunctionId &&
@@ -295,8 +296,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
           Diag(TemplateName.getSourceRange().getBegin(),
                diag::err_id_after_template_in_nested_name_spec)
             << TemplateName.getSourceRange();
-          TPA.Commit();
-          break;
+          TPA.Revert();
+          return true;
         }
       } else {
         TPA.Revert();
@@ -565,8 +566,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 }
 
 ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
-                                           bool isAddressOfOperand,
-                                           Token &Replacement) {
+                                           bool isAddressOfOperand) {
   ExprResult E;
 
   // We may have already annotated this id-expression.
@@ -619,8 +619,7 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
 
     E = Actions.ActOnIdExpression(
         getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false,
-        &Replacement);
+        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false);
     break;
   }
 
@@ -666,15 +665,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
                                  /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false);
 
-  Token Replacement;
-  ExprResult Result =
-      tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
-  if (Result.isUnset()) {
-    // If the ExprResult is valid but null, then typo correction suggested a
-    // keyword replacement that needs to be reparsed.
-    UnconsumeToken(Replacement);
-    Result = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
-  }
+  ExprResult Result = tryParseCXXIdExpression(SS, isAddressOfOperand);
   assert(!Result.isUnset() && "Typo correction suggested a keyword replacement "
                               "for a previous keyword suggestion");
   return Result;
@@ -1224,6 +1215,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                                    Scope::FunctionPrototypeScope);
 
   Actions.PushLambdaScope();
+  SourceLocation DeclLoc = Tok.getLocation();
+
   Actions.ActOnLambdaExpressionAfterIntroducer(Intro, getCurScope());
 
   ParsedAttributes Attributes(AttrFactory);
@@ -1308,7 +1301,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   TypeResult TrailingReturnType;
   SourceLocation TrailingReturnTypeLoc;
   SourceLocation LParenLoc, RParenLoc;
-  SourceLocation DeclEndLoc;
+  SourceLocation DeclEndLoc = DeclLoc;
   bool HasParentheses = false;
   bool HasSpecifiers = false;
   SourceLocation MutableLoc;
@@ -1415,6 +1408,11 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       ConsumeToken();
     }
 
+    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
+    // above.
+    if (HasParentheses)
+      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
+
     SourceLocation FunLocalRangeEnd = DeclEndLoc;
 
     // Parse trailing-return-type[opt].
@@ -1442,11 +1440,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       /*DeclsInPrototype=*/{}, LParenLoc, FunLocalRangeEnd, D,
                       TrailingReturnType, TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
-
-    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
-    // above.
-    if (HasParentheses)
-      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
 
     if (HasParentheses && Tok.is(tok::kw_requires))
       ParseTrailingRequiresClause(D);
@@ -1872,25 +1865,11 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   return DG;
 }
 
-Sema::ConditionResult
-Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
-                          Sema::ConditionKind CK, bool MissingOK,
-                          ForRangeInfo *FRI, bool EnterForConditionScope) {
-  // Helper to ensure we always enter a continue/break scope if requested.
-  struct ForConditionScopeRAII {
-    Scope *S;
-    void enter(bool IsConditionVariable) {
-      if (S) {
-        S->AddFlags(Scope::BreakScope | Scope::ContinueScope);
-        S->setIsConditionVarScope(IsConditionVariable);
-      }
-    }
-    ~ForConditionScopeRAII() {
-      if (S)
-        S->setIsConditionVarScope(false);
-    }
-  } ForConditionScope{EnterForConditionScope ? getCurScope() : nullptr};
-
+Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
+                                                SourceLocation Loc,
+                                                Sema::ConditionKind CK,
+                                                bool MissingOK,
+                                                ForRangeInfo *FRI) {
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
 
@@ -1914,9 +1893,6 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   // Determine what kind of thing we have.
   switch (isCXXConditionDeclarationOrInitStatement(InitStmt, FRI)) {
   case ConditionOrInitStatement::Expression: {
-    // If this is a for loop, we're entering its condition.
-    ForConditionScope.enter(/*IsConditionVariable=*/false);
-
     ProhibitAttributes(attrs);
 
     // We can have an empty expression here.
@@ -1989,9 +1965,6 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   case ConditionOrInitStatement::Error:
     break;
   }
-
-  // If this is a for loop, we're entering its condition.
-  ForConditionScope.enter(/*IsConditionVariable=*/true);
 
   // type-specifier-seq
   DeclSpec DS(AttrFactory);
@@ -2200,6 +2173,7 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
 
   // GNU typeof support.
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
     ParseTypeofSpecifier(DS);
     DS.Finish(Actions, Policy);
     return;

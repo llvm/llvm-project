@@ -30,9 +30,25 @@ add_entrypoint_object(
     inet_aton.h
   DEPENDS
     libc.include.arpa_inet
-    libc.include.llvm-libc-types.in_addr
+    libc.hdr.types.struct_in_addr
     libc.src.__support.common
-    libc.src.__support.str_to_integer
+    libc.src.__support.CPP.optional
+    libc.src.__support.net.address
+)
+
+add_entrypoint_object(
+  inet_addr
+  SRCS
+    inet_addr.cpp
+  HDRS
+    inet_addr.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.hdr.netinet_in_macros
+    libc.hdr.types.in_addr_t
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.net.address
 )
 
 add_entrypoint_object(

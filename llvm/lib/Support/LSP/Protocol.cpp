@@ -335,6 +335,8 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
   // We deliberately don't fail if we can't parse individual fields.
   O.map("capabilities", Result.capabilities);
   O.map("trace", Result.trace);
+  O.map("rootUri", Result.rootUri);
+  O.map("rootPath", Result.rootPath);
   mapOptOrNull(Value, "clientInfo", Result.clientInfo, Path);
 
   return true;
@@ -500,6 +502,16 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
                          llvm::json::Path Path) {
   llvm::json::ObjectMapper O(Value, Path);
   return O && O.map("textDocument", Result.textDocument);
+}
+
+//===----------------------------------------------------------------------===//
+// DidSaveTextDocumentParams
+//===----------------------------------------------------------------------===//
+
+bool llvm::lsp::fromJSON(const llvm::json::Value &Params,
+                         DidSaveTextDocumentParams &R, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1036,4 +1048,22 @@ llvm::json::Value llvm::lsp::toJSON(const CodeAction &Value) {
   if (Value.edit)
     CodeAction["edit"] = *Value.edit;
   return std::move(CodeAction);
+}
+
+//===----------------------------------------------------------------------===//
+// ShowMessageParams
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value llvm::lsp::toJSON(const ShowMessageParams &Params) {
+  auto Out = llvm::json::Object{
+      {"type", static_cast<int>(Params.type)},
+      {"message", Params.message},
+  };
+  if (Params.actions)
+    Out["actions"] = *Params.actions;
+  return Out;
+}
+
+llvm::json::Value llvm::lsp::toJSON(const MessageActionItem &Params) {
+  return llvm::json::Object{{"title", Params.title}};
 }

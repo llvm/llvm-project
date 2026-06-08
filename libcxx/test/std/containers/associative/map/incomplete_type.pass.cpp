@@ -15,6 +15,7 @@
 
 #include <cassert>
 
+#include "min_allocator.h"
 #include "test_macros.h"
 
 struct A {

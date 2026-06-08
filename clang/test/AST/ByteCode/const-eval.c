@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=both,ref      -triple x86_64-linux %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
-// RUN: %clang_cc1 -fsyntax-only -verify=both,expected -triple x86_64-linux %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=both,ref      -triple x86_64-linux            %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
+// RUN: %clang_cc1 -fsyntax-only -verify=both,expected -triple x86_64-linux            %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast -fexperimental-new-constant-interpreter -DNEW_INTERP
 // RUN: %clang_cc1 -fsyntax-only -verify=both,ref      -triple powerpc64-ibm-aix-xcoff %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
 // RUN: %clang_cc1 -fsyntax-only -verify=both,expected -triple powerpc64-ibm-aix-xcoff %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast -fexperimental-new-constant-interpreter -DNEW_INTERP
 
@@ -173,6 +173,23 @@ _Static_assert(A > B, "");
 int * GH149500_p = &(*(int *)0x400);
 static const void *GH149500_q = &(*(const struct sysrq_key_op *)0);
 
+
+void f0(void) { static intptr_t l0 = (unsigned)(intptr_t) f0;} // both-error {{initializer element is not a compile-time constant}}
+
 #else
 #error :(
 #endif
+
+struct ToUnion_X { int a; };
+union ToUnion_U { struct ToUnion_X x; double y; int z : 3; };
+_Static_assert(((union ToUnion_U)(struct ToUnion_X){67}).x.a == 67, "");
+_Static_assert(((union ToUnion_U)1.0).y == 1.0, "");
+_Static_assert(((union ToUnion_U)9).z == 1, "");
+
+struct S s; // both-error {{tentative definition has type 'struct S' that is never completed}} \
+            // both-note {{forward declaration of 'struct S'}}
+int foo[2 * ((long)&s + 42i) == 2]; // both-error {{variable length array declaration not allowed at file scope}}
+
+struct FD fd; // both-error {{tentative definition has type 'struct FD' that is never completed}} \
+              // both-note {{forward declaration of 'struct FD'}}
+EVAL_EXPR(55, &fd < (struct FD *)((int *)&fd + 42)) // both-error {{not an integer constant expression}}

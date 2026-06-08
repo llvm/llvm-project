@@ -145,8 +145,8 @@ DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
-DbgLabelRecord::DbgLabelRecord(MDNode *Label, MDNode *DL)
-    : DbgRecord(LabelKind, DebugLoc(DL)), Label(Label) {
+DbgLabelRecord::DbgLabelRecord(MDNode *Label)
+    : DbgRecord(LabelKind, DebugLoc()), Label(Label) {
   assert(Label && "Unexpected nullptr");
   assert((isa<DILabel>(Label) || Label->isTemporary()) &&
          "Label type must be or resolve to a DILabel");
@@ -156,26 +156,25 @@ DbgLabelRecord::DbgLabelRecord(DILabel *Label, DebugLoc DL)
   assert(Label && "Unexpected nullptr");
 }
 
-DbgLabelRecord *DbgLabelRecord::createUnresolvedDbgLabelRecord(MDNode *Label,
-                                                               MDNode *DL) {
-  return new DbgLabelRecord(Label, DL);
+DbgLabelRecord *DbgLabelRecord::createUnresolvedDbgLabelRecord(MDNode *Label) {
+  return new DbgLabelRecord(Label);
 }
 
 DbgVariableRecord::DbgVariableRecord(DbgVariableRecord::LocationType Type,
                                      Metadata *Val, MDNode *Variable,
                                      MDNode *Expression, MDNode *AssignID,
                                      Metadata *Address,
-                                     MDNode *AddressExpression, MDNode *DI)
-    : DbgRecord(ValueKind, DebugLoc(DI)),
+                                     MDNode *AddressExpression)
+    : DbgRecord(ValueKind, DebugLoc()),
       DebugValueUser({Val, Address, AssignID}), Type(Type), Variable(Variable),
       Expression(Expression), AddressExpression(AddressExpression) {}
 
 DbgVariableRecord *DbgVariableRecord::createUnresolvedDbgVariableRecord(
     DbgVariableRecord::LocationType Type, Metadata *Val, MDNode *Variable,
     MDNode *Expression, MDNode *AssignID, Metadata *Address,
-    MDNode *AddressExpression, MDNode *DI) {
+    MDNode *AddressExpression) {
   return new DbgVariableRecord(Type, Val, Variable, Expression, AssignID,
-                               Address, AddressExpression, DI);
+                               Address, AddressExpression);
 }
 
 DbgVariableRecord *
@@ -209,6 +208,22 @@ DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
   auto *NewDVRDeclare = createDVRDeclare(Address, DV, Expr, DI);
   NewDVRDeclare->insertBefore(&InsertBefore);
   return NewDVRDeclare;
+}
+
+DbgVariableRecord *
+DbgVariableRecord::createDVRDeclareValue(Value *Address, DILocalVariable *DV,
+                                         DIExpression *Expr,
+                                         const DILocation *DI) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DI,
+                               LocationType::DeclareValue);
+}
+
+DbgVariableRecord *DbgVariableRecord::createDVRDeclareValue(
+    Value *Address, DILocalVariable *DV, DIExpression *Expr,
+    const DILocation *DI, DbgVariableRecord &InsertBefore) {
+  auto *NewDVRCoro = createDVRDeclareValue(Address, DV, Expr, DI);
+  NewDVRCoro->insertBefore(&InsertBefore);
+  return NewDVRCoro;
 }
 
 DbgVariableRecord *DbgVariableRecord::createDVRAssign(
@@ -427,6 +442,10 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   case DbgVariableRecord::LocationType::End:
   case DbgVariableRecord::LocationType::Any:
     llvm_unreachable("Invalid LocationType");
+    break;
+  case DbgVariableRecord::LocationType::DeclareValue:
+    llvm_unreachable(
+        "#dbg_declare_value should never be converted to an intrinsic");
   }
 
   // Create the intrinsic from this DbgVariableRecord's information, optionally

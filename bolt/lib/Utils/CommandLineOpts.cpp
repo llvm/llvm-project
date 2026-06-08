@@ -216,10 +216,23 @@ cl::opt<bool> HotText(
         "will put hot code into 2M pages. This requires relocation."),
     cl::ZeroOrMore, cl::cat(BoltCategory));
 
+cl::opt<bool> Hugify(
+    "hugify",
+    cl::desc("Automatically put hot code on 2MB page(s) (hugify) at runtime. "
+             "No manual call to hugify is needed in the binary (which is what "
+             "--hot-text relies on)."),
+    cl::cat(BoltOptCategory));
+
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
+
+cl::opt<bool> LargeCodeModel(
+    "large-code-model",
+    cl::desc("use large code model for exception handling encodings. "
+             "Auto-detected by the presence of .ltext sections otherwise."),
+    cl::cat(BoltCategory));
 
 cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
                    cl::cat(BoltCategory));
@@ -230,20 +243,29 @@ OutputFilename("o",
   cl::Optional,
   cl::cat(BoltOutputCategory));
 
-cl::opt<std::string> PerfData("perfdata", cl::desc("<data file>"), cl::Optional,
-                              cl::cat(AggregatorCategory),
-                              cl::sub(cl::SubCommand::getAll()));
+cl::list<std::string> PerfData("perfdata", cl::CommaSeparated,
+                               cl::desc("<data file>"),
+                               cl::cat(AggregatorCategory),
+                               cl::sub(cl::SubCommand::getAll()));
 
-static cl::alias
-PerfDataA("p",
-  cl::desc("alias for -perfdata"),
-  cl::aliasopt(PerfData),
-  cl::cat(AggregatorCategory));
+static cl::alias PerfDataA("p", cl::CommaSeparated,
+                           cl::desc("alias for -perfdata"),
+                           cl::aliasopt(PerfData), cl::cat(AggregatorCategory));
 
 cl::opt<bool> PrintCacheMetrics(
     "print-cache-metrics",
     cl::desc("calculate and print various metrics for instruction cache"),
     cl::cat(BoltOptCategory));
+
+cl::list<std::string> PrintOnly("print-only", cl::CommaSeparated,
+                                cl::desc("list of functions to print"),
+                                cl::value_desc("func1,func2,func3,..."),
+                                cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<std::string>
+    PrintOnlyFile("print-only-file",
+                  cl::desc("file with list of functions to print"), cl::Hidden,
+                  cl::cat(BoltCategory));
 
 cl::opt<bool> PrintSections("print-sections",
                             cl::desc("print all registered sections"),
@@ -255,7 +277,10 @@ cl::opt<ProfileFormatKind> ProfileFormat(
         "format to dump profile output in aggregation mode, default is fdata"),
     cl::init(PF_Fdata),
     cl::values(clEnumValN(PF_Fdata, "fdata", "offset-based plaintext format"),
-               clEnumValN(PF_YAML, "yaml", "dense YAML representation")),
+               clEnumValN(PF_YAML, "yaml", "dense YAML representation"),
+               clEnumValN(PF_PreAgg, "preagg", "pre-aggregated profile format"),
+               clEnumValN(PF_PerfScript, "perfscript",
+                          "perfscript profile format")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<std::string> SaveProfile("w",
@@ -297,6 +322,12 @@ cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
+
+cl::opt<bool> LivenessAnalysis(
+    "liveness-analysis",
+    cl::desc("use liveness analysis in FixupBranches and LongJmpPass"
+             "(needed for branch inversion on AArch64)"),
+    cl::init(false), cl::cat(BoltCategory));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

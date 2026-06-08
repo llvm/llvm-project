@@ -6,12 +6,12 @@
 void test_float16_builtins(void) {
   volatile _Float16 res;
 
-  // CHECK: store volatile half 0xH7C00, ptr %res, align 2
+  // CHECK: store volatile half +inf, ptr %res, align 2
   res = __builtin_huge_valf16();
-  // CHECK: store volatile half 0xH7C00, ptr %res, align 2
+  // CHECK: store volatile half +inf, ptr %res, align 2
   res = __builtin_inff16();
-  // CHECK: store volatile half 0xH7E00, ptr %res, align 2
+  // CHECK: store volatile half +qnan, ptr %res, align 2
   res = __builtin_nanf16("");
-  // CHECK: store volatile half 0xH7D00, ptr %res, align 2
+  // CHECK: store volatile half +snan(0x100), ptr %res, align 2
   res = __builtin_nansf16("");
 }

@@ -12,8 +12,11 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/Location.h"
 
-#include "clang/AST/StmtVisitor.h"
+#include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -183,6 +186,18 @@ const EHPersonality &EHPersonality::get(CIRGenFunction &cgf) {
   return get(cgf.cgm, dyn_cast_or_null<FunctionDecl>(fg));
 }
 
+static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
+                                        const EHPersonality &personality) {
+  // Create the personality function type: i32 (...)
+  mlir::Type i32Ty = cgm.getBuilder().getI32Type();
+  auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
+
+  cir::FuncOp personalityFn = cgm.createRuntimeFunction(
+      funcTy, personality.personalityFn, {}, /*isLocal=*/true);
+
+  return personalityFn.getSymName();
+}
+
 void CIRGenFunction::emitCXXThrowExpr(const CXXThrowExpr *e) {
   const llvm::Triple &triple = getTarget().getTriple();
   if (cgm.getLangOpts().OpenMPIsTargetDevice &&
@@ -230,13 +245,251 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
   assert(!cir::MissingFeatures::ehCleanupScope());
 }
 
-mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
-  if (s.getTryBlock()->body_empty())
-    return mlir::LogicalResult::success();
+void CIRGenFunction::addCatchHandlerAttr(
+    const CXXCatchStmt *catchStmt, SmallVector<mlir::Attribute> &handlerAttrs) {
+  mlir::Location catchLoc = getLoc(catchStmt->getBeginLoc());
 
+  if (catchStmt->getExceptionDecl()) {
+    // FIXME: Dropping the reference type on the type into makes it
+    // impossible to correctly implement catch-by-reference
+    // semantics for pointers.  Unfortunately, this is what all
+    // existing compilers do, and it's not clear that the standard
+    // personality routine is capable of doing this right.  See C++ DR 388:
+    //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#388
+    Qualifiers caughtTypeQuals;
+    QualType caughtType = cgm.getASTContext().getUnqualifiedArrayType(
+        catchStmt->getCaughtType().getNonReferenceType(), caughtTypeQuals);
+    if (caughtType->isObjCObjectPointerType()) {
+      cgm.errorNYI("addCatchHandlerAttr: caughtType ObjCObjectPointerType");
+      return;
+    }
+
+    CatchTypeInfo typeInfo = cgm.getCXXABI().getAddrOfCXXCatchHandlerType(
+        catchLoc, caughtType, catchStmt->getCaughtType());
+    handlerAttrs.push_back(typeInfo.rtti);
+  } else {
+    // No exception decl indicates '...', a catch-all.
+    handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
+  }
+}
+
+namespace {
+struct CallEndCatch final : EHScopeStack::Cleanup {
+  CallEndCatch(mlir::Value catchToken) : catchToken(catchToken) {}
+  mlir::Value catchToken;
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    cir::EndCatchOp::create(cgf.getBuilder(), *cgf.currSrcLoc, catchToken);
+    cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
+  }
+};
+} // namespace
+
+static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Value ehToken,
+                                  mlir::Type exnPtrTy) {
+  auto catchTokenTy = cir::CatchTokenType::get(cgf.getBuilder().getContext());
+  auto beginCatch = cir::BeginCatchOp::create(cgf.getBuilder(),
+                                              cgf.getBuilder().getUnknownLoc(),
+                                              catchTokenTy, exnPtrTy, ehToken);
+
+  cgf.ehStack.pushCleanup<CallEndCatch>(NormalAndEHCleanup,
+                                        beginCatch.getCatchToken());
+
+  return beginCatch.getExnPtr();
+}
+
+/// Get or create the catch-init copy thunk for \p catchParam.
+///
+/// The copy thunk has signature `void(T*, T*)` (where `T` is the catch
+/// parameter type) and contains the normal aggregate emission of the catch
+/// parameter's init expression.
+///
+/// The thunk name is keyed off the catch parameter's canonical type mangled
+/// name, so a single translation unit emits at most one thunk per catch type.
+static cir::FuncOp getOrCreateCopyThunk(CIRGenFunction &cgf,
+                                        const VarDecl &catchParam,
+                                        cir::PointerType paramAddrType,
+                                        mlir::Location loc) {
+  CIRGenModule &cgm = cgf.cgm;
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::ModuleOp mod = cgm.getModule();
+
+  const Expr *copyExpr = catchParam.getInit();
+  assert(copyExpr && "non-trivial copy expects a copy expression");
+
+  llvm::SmallString<128> thunkName;
+  llvm::raw_svector_ostream thunkNameStream(thunkName);
+  thunkNameStream << "__clang_cir_catch_copy_";
+  cgm.getCXXABI().getMangleContext().mangleCanonicalTypeName(
+      catchParam.getType(), thunkNameStream);
+
+  if (cir::FuncOp existing = cgm.lookupFuncOp(thunkName))
+    return existing;
+
+  mlir::Type voidTy = cir::VoidType::get(builder.getContext());
+  auto thunkTy = cir::FuncType::get({paramAddrType, paramAddrType}, voidTy,
+                                    /*isVarArg=*/false);
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(mod.getBody());
+  cir::FuncOp thunk = cir::FuncOp::create(builder, loc, thunkName, thunkTy);
+  cgm.insertGlobalSymbol(thunk);
+  thunk.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
+  thunk.setGlobalVisibility(cir::VisibilityKind::Hidden);
+  thunk->setAttr(cir::CIRDialect::getCatchCopyThunkAttrName(),
+                 builder.getUnitAttr());
+
+  mlir::Block *entry = thunk.addEntryBlock();
+  builder.setInsertionPointToStart(entry);
+
+  // Use a fresh CIRGenFunction to drive the body emission. We need just enough
+  // state for emitAggExpr / emitCXXConstructorCall to compute the call-site
+  // argument attributes; the helper has no AST decl, no exception scopes, and
+  // no return value, so we bypass the full startFunction/finishFunction
+  // machinery.
+  CIRGenFunction subCgf(cgm, builder);
+  subCgf.curFn = thunk;
+
+  // Some emission paths (e.g. materializing temporaries for default args via
+  // emitAnyExprToTemp) need both a current source location and a lexical
+  // scope to anchor allocas. Since we bypass startFunction, install both
+  // explicitly for the lifetime of the thunk's body emission.
+  CIRGenFunction::SourceLocRAIIObject thunkLoc(subCgf, loc);
+  CIRGenFunction::LexicalScope thunkScope(subCgf, loc, entry);
+
+  // Bind the OpaqueValueExpr at the source position of the catch parameter's
+  // copy expression to an LValue at the thunk's `src` block argument.
+  LValue srcLV = subCgf.makeNaturalAlignAddrLValue(entry->getArgument(1),
+                                                   catchParam.getType());
+  CIRGenFunction::OpaqueValueMapping opaqueValue(
+      subCgf, OpaqueValueExpr::findInCopyConstruct(copyExpr), srcLV);
+
+  // Drive the construction into the helper's `dest` block argument via the
+  // normal aggregate-emission machinery so that `ExprWithCleanups`,
+  // converting/inheriting constructors, and any future copy-construction
+  // shapes flow through unchanged.
+  Address destAddr = subCgf.makeNaturalAddressForPointer(
+      entry->getArgument(0), catchParam.getType(), clang::CharUnits::Zero());
+  subCgf.emitAggExpr(
+      copyExpr, AggValueSlot::forAddr(
+                    destAddr, Qualifiers(), AggValueSlot::IsNotDestructed,
+                    AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap));
+
+  cir::ReturnOp::create(builder, loc);
+  return thunk;
+}
+
+/// A "special initializer" callback for initializing a catch
+/// parameter during catch initialization.
+static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+                           mlir::Value ehToken, const VarDecl &catchParam,
+                           SourceLocation loc) {
+  CanQualType catchType =
+      cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
+  cir::InitCatchKind kind;
+  bool shouldInitFromExnDirectly;
+
+  // If we're catching by reference, we can just cast the object
+  // pointer to the appropriate pointer.
+  if (isa<ReferenceType>(catchType)) {
+    QualType caughtType = cast<ReferenceType>(catchType)->getPointeeType();
+    if (const PointerType *ptr = dyn_cast<PointerType>(caughtType)) {
+      shouldInitFromExnDirectly = !ptr->getPointeeType()->isRecordType();
+    }
+    kind = cir::InitCatchKind::Reference;
+  } else {
+    cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
+    if (tek == cir::TEK_Aggregate) {
+      assert(isa<RecordType>(catchType) && "unexpected catch type!");
+      const Expr *copyExpr = catchParam.getInit();
+      kind = !copyExpr ? cir::InitCatchKind::TrivialCopy
+                       : cir::InitCatchKind::NonTrivialCopy;
+    } else {
+      // Scalars and complexes.
+      if (catchType->hasPointerRepresentation()) {
+        switch (catchType.getQualifiers().getObjCLifetime()) {
+        case Qualifiers::OCL_Weak:
+        case Qualifiers::OCL_Strong:
+          kind = cir::InitCatchKind::Objc;
+          break;
+
+        case Qualifiers::OCL_ExplicitNone:
+        case Qualifiers::OCL_Autoreleasing:
+        case Qualifiers::OCL_None:
+          kind = cir::InitCatchKind::Pointer;
+          break;
+        }
+      } else {
+        kind = cir::InitCatchKind::Scalar;
+      }
+    }
+  }
+
+  CIRGenFunction::AutoVarEmission var = cgf.emitAutoVarAlloca(catchParam);
+  Address paramAddr = var.getAllocatedAddress();
+  mlir::Location mloc = cgf.getLoc(loc);
+
+  if (kind == cir::InitCatchKind::NonTrivialCopy ||
+      (kind == cir::InitCatchKind::Reference && shouldInitFromExnDirectly)) {
+    // Sanitizer-checked construction (UBSan vptr/derived-class checks, etc.)
+    // would require additional adornments that cir.construct_catch_param does
+    // not yet carry.
+    assert(!cir::MissingFeatures::sanitizers());
+
+    mlir::FlatSymbolRefAttr copyFun{};
+    if (kind == cir::InitCatchKind::NonTrivialCopy) {
+      auto paramAddrType =
+          mlir::cast<cir::PointerType>(paramAddr.getPointer().getType());
+      cir::FuncOp thunk =
+          getOrCreateCopyThunk(cgf, catchParam, paramAddrType, mloc);
+      copyFun = mlir::FlatSymbolRefAttr::get(thunk.getSymNameAttr());
+    }
+
+    cir::ConstructCatchParamOp::create(builder, mloc, ehToken,
+                                       paramAddr.getPointer(), kind, copyFun);
+  }
+
+  mlir::Value exnPtr = callBeginCatch(cgf, ehToken, builder.getVoidPtrTy());
+  cir::InitCatchParamOp::create(builder, mloc, exnPtr, paramAddr.getPointer(),
+                                kind);
+  cgf.emitAutoVarCleanups(var);
+}
+
+/// Begins a catch statement by initializing the catch variable and
+/// calling __cxa_begin_catch.
+void CIRGenFunction::emitBeginCatch(const CXXCatchStmt *catchStmt,
+                                    mlir::Value ehToken) {
+  // We have to be very careful with the ordering of cleanups here:
+  //   C++ [except.throw]p4:
+  //     The destruction [of the exception temporary] occurs
+  //     immediately after the destruction of the object declared in
+  //     the exception-declaration in the handler.
+  //
+  // So the precise ordering is:
+  //   1.  Construct catch variable.
+  //   2.  begin_catch
+  //   3.  Enter CallEndCatch cleanup
+  //   4.  Enter dtor cleanup
+  //
+  VarDecl *catchParam = catchStmt->getExceptionDecl();
+  if (!catchParam) {
+    callBeginCatch(*this, ehToken, builder.getVoidPtrTy());
+    return;
+  }
+
+  // Emit the local. Make sure the alloca's superseed the current scope, since
+  // these are going to be consumed by `cir.catch`, which is not within the
+  // current scope.
+  initCatchParam(*this, builder, ehToken, *catchParam,
+                 catchStmt->getBeginLoc());
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
+                               cxxTryBodyEmitter &bodyCallback) {
   mlir::Location loc = getLoc(s.getSourceRange());
-  // Create a scope to hold try local storage for catch params.
 
+  // Create a scope to hold try local storage for catch params.
   mlir::OpBuilder::InsertPoint scopeIP;
   cir::ScopeOp::create(
       builder, loc,
@@ -244,143 +497,178 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
         scopeIP = builder.saveInsertionPoint();
       });
 
+  // Set personality function if not already set
+  auto funcOp = mlir::cast<cir::FuncOp>(curFn);
+  if (!funcOp.getPersonality())
+    funcOp.setPersonality(getPersonalityFn(cgm, EHPersonality::get(*this)));
+
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.restoreInsertionPoint(scopeIP);
-  mlir::LogicalResult result = emitCXXTryStmtUnderScope(s);
-  cir::YieldOp::create(builder, loc);
-  return result;
-}
 
-mlir::LogicalResult
-CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &s) {
   const llvm::Triple &t = getTarget().getTriple();
-  // If we encounter a try statement on in an OpenMP target region offloaded to
-  // a GPU, we treat it as a basic block.
+  // If we encounter a try statement on in an OpenMP target region offloaded
+  // to a GPU, we treat it as a basic block.
   const bool isTargetDevice =
       (cgm.getLangOpts().OpenMPIsTargetDevice && (t.isNVPTX() || t.isAMDGCN()));
   if (isTargetDevice) {
-    cgm.errorNYI(
-        "emitCXXTryStmtUnderScope: OpenMP target region offloaded to GPU");
+    cgm.errorNYI("emitCXXTryStmt: OpenMP target region offloaded to GPU");
     return mlir::success();
   }
 
-  unsigned numHandlers = s.getNumHandlers();
   mlir::Location tryLoc = getLoc(s.getBeginLoc());
-  mlir::OpBuilder::InsertPoint beginInsertTryBody;
+  SmallVector<mlir::Attribute> handlerAttrs;
 
-  bool hasCatchAll = false;
-  for (unsigned i = 0; i != numHandlers; ++i) {
-    hasCatchAll |= s.getHandler(i)->getExceptionDecl() == nullptr;
-    if (hasCatchAll)
-      break;
+  CIRGenFunction::LexicalScope tryBodyScope{*this, tryLoc,
+                                            builder.getInsertionBlock()};
+
+  if (getLangOpts().EHAsynch) {
+    cgm.errorNYI("enterCXXTryStmt: EHAsynch");
+    return mlir::failure();
   }
 
-  // Create the scope to represent only the C/C++ `try {}` part. However,
-  // don't populate right away. Create regions for the catch handlers,
-  // but don't emit the handler bodies yet. For now, only make sure the
-  // scope returns the exception information.
+  // Create the try operation.
+  mlir::LogicalResult tryRes = mlir::success();
   auto tryOp = cir::TryOp::create(
       builder, tryLoc,
       /*tryBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        beginInsertTryBody = builder.saveInsertionPoint();
+        // Create a RunCleanupsScope that allows us to apply any cleanups that
+        // are created for statements within the try body before exiting the
+        // try body.
+        RunCleanupsScope tryBodyCleanups(*this);
+        if (bodyCallback(*this).failed())
+          tryRes = mlir::failure();
+        tryBodyCleanups.forceCleanup();
+        if (!builder.getBlock()->mightHaveTerminator() ||
+            !builder.getBlock()->getTerminator())
+          cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc,
           mlir::OperationState &result) {
         mlir::OpBuilder::InsertionGuard guard(b);
-
-        // We create an extra region for an unwind catch handler in case the
-        // catch-all handler doesn't exists
-        unsigned numRegionsToCreate =
-            hasCatchAll ? numHandlers : numHandlers + 1;
-
-        for (unsigned i = 0; i != numRegionsToCreate; ++i) {
+        bool hasCatchAll = false;
+        unsigned numHandlers = s.getNumHandlers();
+        mlir::Type ehTokenTy = cir::EhTokenType::get(&getMLIRContext());
+        for (unsigned i = 0; i != numHandlers; ++i) {
+          const CXXCatchStmt *catchStmt = s.getHandler(i);
+          if (!catchStmt->getExceptionDecl())
+            hasCatchAll = true;
           mlir::Region *region = result.addRegion();
-          builder.createBlock(region);
+          builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
+          addCatchHandlerAttr(catchStmt, handlerAttrs);
+        }
+        if (!hasCatchAll) {
+          // Create unwind region.
+          mlir::Region *region = result.addRegion();
+          mlir::Block *unwindBlock =
+              builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
+          cir::ResumeOp::create(builder, loc, unwindBlock->getArgument(0));
+          handlerAttrs.push_back(cir::UnwindAttr::get(&getMLIRContext()));
         }
       });
 
-  // Finally emit the body for try/catch.
-  {
-    mlir::Location loc = tryOp.getLoc();
+  if (tryRes.failed())
+    return mlir::failure();
+
+  // Add final array of clauses into TryOp.
+  tryOp.setHandlerTypesAttr(
+      mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
+
+  // Emit the catch handler bodies. This has to be done after the try op is
+  // created and in place so that we can find the insertion point for the
+  // catch parameter alloca.
+  unsigned numHandlers = s.getNumHandlers();
+  for (unsigned i = 0; i != numHandlers; ++i) {
+    const CXXCatchStmt *catchStmt = s.getHandler(i);
+    mlir::Region *handler = &tryOp.getHandlerRegions()[i];
+    mlir::Location handlerLoc = getLoc(catchStmt->getCatchLoc());
+
     mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(beginInsertTryBody);
-    CIRGenFunction::LexicalScope tryScope{*this, loc,
-                                          builder.getInsertionBlock()};
+    builder.setInsertionPointToStart(&handler->front());
 
-    tryScope.setAsTry(tryOp);
+    // Get the !cir.eh_token block argument from the handler region.
+    mlir::Value ehToken = handler->front().getArgument(0);
 
-    // Attach the basic blocks for the catch regions.
-    enterCXXTryStmt(s, tryOp);
+    // Enter a cleanup scope, including the catch variable and the
+    // end-catch.
+    RunCleanupsScope handlerScope(*this);
 
-    // Emit the body for the `try {}` part.
-    {
+    // Initialize the catch variable.
+    // TODO(cir): Move this out of CXXABI.
+    assert(!cir::MissingFeatures::currentFuncletPad());
+    emitBeginCatch(catchStmt, ehToken);
+
+    // Emit the PGO counter increment.
+    assert(!cir::MissingFeatures::incrementProfileCounter());
+
+    // Perform the body of the catch.
+    [[maybe_unused]] mlir::LogicalResult emitResult =
+        emitStmt(catchStmt->getHandlerBlock(), /*useCurrentScope=*/true);
+    assert(emitResult.succeeded() && "failed to emit catch handler block");
+
+    // [except.handle]p11:
+    //   The currently handled exception is rethrown if control
+    //   reaches the end of a handler of the function-try-block of a
+    //   constructor or destructor.
+
+    // TODO(cir): Handle implicit rethrow?
+
+    // Fall out through the catch cleanups.
+    handlerScope.forceCleanup();
+
+    mlir::Block *block = &handler->getBlocks().back();
+    if (block->empty() ||
+        !block->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
       mlir::OpBuilder::InsertionGuard guard(builder);
-      CIRGenFunction::LexicalScope tryBodyScope{*this, loc,
-                                                builder.getInsertionBlock()};
-      if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
-        return mlir::failure();
+      builder.setInsertionPointToEnd(block);
+      builder.createYield(handlerLoc);
     }
-
-    // Emit catch clauses.
-    exitCXXTryStmt(s);
   }
 
   return mlir::success();
 }
 
-void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
-                                     bool isFnTryBlock) {
-  unsigned numHandlers = s.getNumHandlers();
-  EHCatchScope *catchScope = ehStack.pushCatch(numHandlers);
-  for (unsigned i = 0; i != numHandlers; ++i) {
-    const CXXCatchStmt *catchStmt = s.getHandler(i);
-    if (catchStmt->getExceptionDecl()) {
-      cgm.errorNYI("enterCXXTryStmt: CatchStmt with ExceptionDecl");
-      return;
-    }
+mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
+  if (s.getTryBlock()->body_empty())
+    return mlir::LogicalResult::success();
 
-    // No exception decl indicates '...', a catch-all.
-    mlir::Region *handler = &tryOp.getHandlerRegions()[i];
-    catchScope->setHandler(i, cgm.getCXXABI().getCatchAllTypeInfo(), handler);
+  struct simpleTryBodyEmitter final : cxxTryBodyEmitter {
+    const clang::CXXTryStmt &s;
+    simpleTryBodyEmitter(const clang::CXXTryStmt &s) : s(s) {}
 
-    // Under async exceptions, catch(...) needs to catch HW exception too
-    // Mark scope with SehTryBegin as a SEH __try scope
-    if (getLangOpts().EHAsynch) {
-      cgm.errorNYI("enterCXXTryStmt: EHAsynch");
-      return;
+    mlir::LogicalResult operator()(CIRGenFunction &cgf) override {
+      return cgf.emitStmt(s.getTryBlock(), /*useCurrentScope=*/true);
     }
-  }
+    ~simpleTryBodyEmitter() override = default;
+  };
+
+  simpleTryBodyEmitter emitter{s};
+
+  return emitCXXTryStmt(s, emitter);
 }
 
-void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
-  unsigned numHandlers = s.getNumHandlers();
-  EHCatchScope &catchScope = cast<EHCatchScope>(*ehStack.begin());
-  assert(catchScope.getNumHandlers() == numHandlers);
-  cir::TryOp tryOp = curLexScope->getTry();
-
-  // If the catch was not required, bail out now.
-  if (!catchScope.mayThrow()) {
-    catchScope.clearHandlerBlocks();
-    ehStack.popCatch();
-
-    // Drop all basic block from all catch regions.
-    SmallVector<mlir::Block *> eraseBlocks;
-    for (mlir::Region &handlerRegion : tryOp.getHandlerRegions()) {
-      if (handlerRegion.empty())
-        continue;
-
-      for (mlir::Block &b : handlerRegion.getBlocks())
-        eraseBlocks.push_back(&b);
-    }
-
-    for (mlir::Block *b : eraseBlocks)
-      b->erase();
-
-    tryOp.setHandlerTypesAttr({});
-    return;
+// in classic codegen this function is mapping to `isInvokeDest` previously
+// and currently it's mapping to the conditions that performs early returns in
+// `getInvokeDestImpl`, in CIR we need the condition to know if the EH scope
+// may throw exception or now.
+bool CIRGenFunction::isCatchOrCleanupRequired() {
+  // If exceptions are disabled/ignored and SEH is not in use, then there is
+  // no invoke destination. SEH "works" even if exceptions are off. In
+  // practice, this means that C++ destructors and other EH cleanups don't
+  // run, which is consistent with MSVC's behavior, except in the presence of
+  // -EHa
+  const LangOptions &lo = cgm.getLangOpts();
+  if (!lo.Exceptions || lo.IgnoreExceptions) {
+    if (!lo.Borland && !lo.MicrosoftExt)
+      return false;
+    cgm.errorNYI("isInvokeDest: no exceptions or ignore exception");
+    return false;
   }
 
-  cgm.errorNYI("exitCXXTryStmt: Required catch");
+  // CUDA device code doesn't have exceptions.
+  if (lo.CUDA && lo.CUDAIsDevice)
+    return false;
+
+  return ehStack.requiresCatchOrCleanup();
 }

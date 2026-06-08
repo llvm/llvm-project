@@ -82,6 +82,14 @@ class CommandLineCompletionTestCase(TestBase):
             f"{command} ptr_container->Mem", f"{command} ptr_container->MemberVar"
         )
 
+    def test_frame_variable_direct_ivar(self):
+        """Test that 'frame variable' completes members of 'this' directly."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "Bar")
+        self.completions_contain("frame variable ", ["t", "temp"])
+        self.complete_from_to("frame variable te", "frame variable temp")
+        self.complete_from_to("frame variable t.", "frame variable t.x")
+
     def test_process_attach_dash_dash_con(self):
         """Test that 'process attach --con' completes to 'process attach --continue '."""
         self.complete_from_to("process attach --con", "process attach --continue ")
@@ -96,6 +104,7 @@ class CommandLineCompletionTestCase(TestBase):
         )
         self.complete_from_to("process load Makef", "process load Makefile")
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     @skipUnlessPlatform(["linux"])
     def test_process_unload(self):
         """Test the completion for "process unload <index>" """
@@ -139,6 +148,12 @@ class CommandLineCompletionTestCase(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
         num_matches = interp.HandleCompletion(input, len(input), 0, -1, match_strings)
+        if match_strings.GetSize() > 0:
+            self.assertEqual(match_strings[0], match_strings.GetStringAtIndex(0))
+            self.assertEqual(
+                match_strings[-1],
+                match_strings.GetStringAtIndex(match_strings.GetSize() - 1),
+            )
         found_needle = False
         for match in match_strings:
             if needle in match:
@@ -910,6 +925,7 @@ class CommandLineCompletionTestCase(TestBase):
         """Test completing a subcommand of an ambiguous command"""
         self.complete_from_to("settings s ta", [])
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     def test_shlib_name(self):
         self.build()
         error = lldb.SBError()

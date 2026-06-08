@@ -10,7 +10,7 @@
 
 // class map
 
-//       iterator find(const key_type& k); // constexpr since C++26
+//       iterator find(const key_type& k);       // constexpr since C++26
 // const_iterator find(const key_type& k) const; // constexpr since C++26
 
 #include <map>
@@ -223,6 +223,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(r == std::next(m.begin(), 8));
   }
 #endif
+
   return true;
 }
 

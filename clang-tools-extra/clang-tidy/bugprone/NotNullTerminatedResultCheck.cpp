@@ -19,24 +19,24 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-constexpr llvm::StringLiteral FunctionExprName = "FunctionExpr";
-constexpr llvm::StringLiteral CastExprName = "CastExpr";
-constexpr llvm::StringLiteral UnknownDestName = "UnknownDest";
-constexpr llvm::StringLiteral DestArrayTyName = "DestArrayTy";
-constexpr llvm::StringLiteral DestVarDeclName = "DestVarDecl";
-constexpr llvm::StringLiteral DestMallocExprName = "DestMalloc";
-constexpr llvm::StringLiteral DestExprName = "DestExpr";
-constexpr llvm::StringLiteral SrcVarDeclName = "SrcVarDecl";
-constexpr llvm::StringLiteral SrcExprName = "SrcExpr";
-constexpr llvm::StringLiteral LengthExprName = "LengthExpr";
-constexpr llvm::StringLiteral WrongLengthExprName = "WrongLength";
-constexpr llvm::StringLiteral UnknownLengthName = "UnknownLength";
-
-enum class LengthHandleKind { Increase, Decrease };
+constexpr StringRef FunctionExprName = "FunctionExpr";
+constexpr StringRef CastExprName = "CastExpr";
+constexpr StringRef UnknownDestName = "UnknownDest";
+constexpr StringRef DestArrayTyName = "DestArrayTy";
+constexpr StringRef DestVarDeclName = "DestVarDecl";
+constexpr StringRef DestMallocExprName = "DestMalloc";
+constexpr StringRef DestExprName = "DestExpr";
+constexpr StringRef SrcVarDeclName = "SrcVarDecl";
+constexpr StringRef SrcExprName = "SrcExpr";
+constexpr StringRef LengthExprName = "LengthExpr";
+constexpr StringRef WrongLengthExprName = "WrongLength";
+constexpr StringRef UnknownLengthName = "UnknownLength";
 
 namespace {
-static Preprocessor *PP;
+enum class LengthHandleKind { Increase, Decrease };
 } // namespace
+
+static Preprocessor *PP;
 
 // Returns the expression of destination's capacity which is part of a
 // 'VariableArrayType', 'ConstantArrayTypeLoc' or an argument of a 'malloc()'
@@ -297,15 +297,10 @@ static void lengthExprHandle(const Expr *LengthExpr,
   LengthExpr = LengthExpr->IgnoreParenImpCasts();
 
   // See whether we work with a macro.
-  bool IsMacroDefinition = false;
   const StringRef LengthExprStr = exprToStr(LengthExpr, Result);
-  Preprocessor::macro_iterator It = PP->macro_begin();
-  while (It != PP->macro_end() && !IsMacroDefinition) {
-    if (It->first->getName() == LengthExprStr)
-      IsMacroDefinition = true;
-
-    ++It;
-  }
+  const bool IsMacroDefinition = llvm::any_of(PP->macros(), [=](const auto &M) {
+    return M.first->getName() == LengthExprStr;
+  });
 
   // Try to obtain an 'IntegerLiteral' and adjust it.
   if (!IsMacroDefinition) {
@@ -679,7 +674,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                 std::optional<unsigned> SourcePos, unsigned LengthPos,
                 bool WithIncrease)
         : Name(Name), DestinationPos(DestinationPos), SourcePos(SourcePos),
-          LengthPos(LengthPos), WithIncrease(WithIncrease) {};
+          LengthPos(LengthPos), WithIncrease(WithIncrease) {}
 
     StringRef Name;
     std::optional<unsigned> DestinationPos;
@@ -796,25 +791,21 @@ void NotNullTerminatedResultCheck::check(
 
   if (WantToUseSafeFunctions && PP->isMacroDefined("__STDC_LIB_EXT1__")) {
     std::optional<bool> AreSafeFunctionsWanted;
-
-    Preprocessor::macro_iterator It = PP->macro_begin();
-    while (It != PP->macro_end() && !AreSafeFunctionsWanted) {
-      if (It->first->getName() == "__STDC_WANT_LIB_EXT1__") {
-        const auto *MI = PP->getMacroInfo(It->first);
-        // PP->getMacroInfo() returns nullptr if macro has no definition.
-        if (MI) {
-          const auto &T = MI->tokens().back();
-          if (T.isLiteral() && T.getLiteralData()) {
-            const StringRef ValueStr =
-                StringRef(T.getLiteralData(), T.getLength());
-            llvm::APInt IntValue;
-            ValueStr.getAsInteger(10, IntValue);
-            AreSafeFunctionsWanted = IntValue.getZExtValue();
-          }
-        }
+    for (const auto &M : PP->macros()) {
+      if (M.first->getName() != "__STDC_WANT_LIB_EXT1__")
+        continue;
+      const auto *MI = PP->getMacroInfo(M.first);
+      // PP->getMacroInfo() returns nullptr if macro has no definition.
+      if (!MI)
+        continue;
+      const auto &T = MI->tokens().back();
+      if (T.isLiteral() && T.getLiteralData()) {
+        const StringRef ValueStr(T.getLiteralData(), T.getLength());
+        llvm::APInt IntValue;
+        ValueStr.getAsInteger(10, IntValue);
+        AreSafeFunctionsWanted = IntValue.getZExtValue();
+        break;
       }
-
-      ++It;
     }
 
     if (AreSafeFunctionsWanted)

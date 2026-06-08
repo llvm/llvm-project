@@ -2398,6 +2398,30 @@ void MachOObjectFile::getRelocationTypeName(
         res = Table[RType];
       break;
     }
+    case Triple::riscv32: {
+      static const char *const Table[] = {
+          "RISCV_RELOC_UNSIGNED", "RISCV_RELOC_SUBTRACTOR",
+          "RISCV_RELOC_BRANCH21", "RISCV_RELOC_HI20",
+          "RISCV_RELOC_LO12",     "RISCV_RELOC_GOT_HI20",
+          "RISCV_RELOC_GOT_LO12", "RISCV_RELOC_POINTER_TO_GOT",
+          "RISCV_RELOC_ADDEND",
+      };
+
+      if (RType >= std::size(Table))
+        res = "Unknown";
+      else
+        res = Table[RType];
+      Result.append(res.begin(), res.end());
+      if ((RType == MachO::RISCV_RELOC_HI20 ||
+           RType == MachO::RISCV_RELOC_GOT_HI20 ||
+           RType == MachO::RISCV_RELOC_LO12 ||
+           RType == MachO::RISCV_RELOC_GOT_LO12) &&
+          getAnyRelocationPCRel(getRelocation(Rel))) {
+        StringRef PCRel("(pcrel)");
+        Result.append(PCRel.begin(), PCRel.end());
+      }
+      return;
+    }
     case Triple::UnknownArch:
       res = "Unknown";
       break;
@@ -2690,6 +2714,8 @@ StringRef MachOObjectFile::getFileFormatName() const {
       return "Mach-O arm64 (ILP32)";
     case MachO::CPU_TYPE_POWERPC:
       return "Mach-O 32-bit ppc";
+    case MachO::CPU_TYPE_RISCV:
+      return "Mach-O 32-bit RISC-V";
     default:
       return "Mach-O 32-bit unknown";
     }
@@ -2723,6 +2749,8 @@ Triple::ArchType MachOObjectFile::getArch(uint32_t CPUType, uint32_t CPUSubType)
     return Triple::ppc;
   case MachO::CPU_TYPE_POWERPC64:
     return Triple::ppc64;
+  case MachO::CPU_TYPE_RISCV:
+    return Triple::riscv32;
   default:
     return Triple::UnknownArch;
   }
@@ -2811,6 +2839,24 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       if (ArchFlag)
         *ArchFlag = "armv7s";
       return Triple("armv7s-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m23";
+      if (ArchFlag)
+        *ArchFlag = "armv8m.base";
+      return Triple("thumbv8m-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m33";
+      if (ArchFlag)
+        *ArchFlag = "armv8m.main";
+      return Triple("thumbv8m-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m52";
+      if (ArchFlag)
+        *ArchFlag = "armv8.1m.main";
+      return Triple("thumbv8m-apple-darwin");
     default:
       return Triple();
     }
@@ -2860,6 +2906,15 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
     default:
       return Triple();
     }
+  case MachO::CPU_TYPE_RISCV:
+    switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
+    case MachO::CPU_SUBTYPE_RISCV_ALL:
+      if (ArchFlag)
+        *ArchFlag = "riscv32";
+      return Triple("riscv32-apple-macho");
+    default:
+      return Triple();
+    }
   default:
     return Triple();
   }
@@ -2875,24 +2930,11 @@ bool MachOObjectFile::isValidArch(StringRef ArchFlag) {
 }
 
 ArrayRef<StringRef> MachOObjectFile::getValidArchs() {
-  static const std::array<StringRef, 18> ValidArchs = {{
-      "i386",
-      "x86_64",
-      "x86_64h",
-      "armv4t",
-      "arm",
-      "armv5e",
-      "armv6",
-      "armv6m",
-      "armv7",
-      "armv7em",
-      "armv7k",
-      "armv7m",
-      "armv7s",
-      "arm64",
-      "arm64e",
-      "arm64_32",
-      "ppc",
+  static const std::array<StringRef, 21> ValidArchs = {{
+      "i386",          "x86_64", "x86_64h", "armv4t",      "arm",
+      "armv5e",        "armv6",  "armv6m",  "armv7",       "armv7em",
+      "armv7k",        "armv7m", "armv7s",  "armv8m.base", "armv8m.main",
+      "armv8.1m.main", "arm64",  "arm64e",  "arm64_32",    "ppc",
       "ppc64",
   }};
 
@@ -5318,7 +5360,7 @@ bool MachOObjectFile::is64Bit() const {
 
 void MachOObjectFile::ReadULEB128s(uint64_t Index,
                                    SmallVectorImpl<uint64_t> &Out) const {
-  DataExtractor extractor(ObjectFile::getData(), true, 0);
+  DataExtractor extractor(ObjectFile::getData(), true);
 
   uint64_t offset = Index;
   uint64_t data = 0;

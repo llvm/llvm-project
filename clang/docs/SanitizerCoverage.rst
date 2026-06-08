@@ -201,6 +201,22 @@ With ``-fsanitize-coverage=trace-pc`` the compiler will insert
 ``__sanitizer_cov_trace_pc()`` on every edge.
 With an additional ``...=trace-pc,indirect-calls`` flag
 ``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
+
+With ``-fsanitize-coverage=trace-pc-entry-exit`` the compiler will insert
+``__sanitizer_cov_trace_pc_entry()`` on function entry, and insert
+``__sanitizer_cov_trace_pc_exit()`` on function return;
+``-fsanitize-coverage=trace-pc`` or ``-fsanitize-coverage=trace-pc-guard`` must
+still be passed to instrument all basic blocks.
+
+With the combination ``-fsanitize-coverage=trace-pc-entry-exit,trace-pc``,
+``__sanitizer_cov_trace_pc()`` will be omitted in the entry basic block because
+the block is already covered by ``__sanitizer_cov_trace_pc_entry()``, which can
+be used to both record that the function has been entered and record coverage of
+the entry basic block.
+However, with ``-fsanitize-coverage=trace-pc-entry-exit,trace-pc-guard``, both
+callbacks are called for the entry block because
+``__sanitizer_cov_trace_pc_entry()`` does not provide a `guard_variable`.
+
 These callbacks are not implemented in the Sanitizer run-time and should be defined
 by the user.
 This mechanism is used for fuzzing the Linux kernel
@@ -563,18 +579,39 @@ Sancov matches these files using module names and binaries file names.
 
 .. code-block:: console
 
-    USAGE: sancov [options] <action> (<binary file>|<.sancov file>)...
+    USAGE: sancov [options] <action> <binary files...> <.sancov files...> <.symcov files...>
 
-    Action (required)
-      -print                    - Print coverage addresses
-      -covered-functions        - Print all covered functions.
-      -not-covered-functions    - Print all not covered functions.
-      -symbolize                - Symbolizes the report.
+    Action (required):
+      -covered-functions     Print all covered funcions.
+      -diff                  Compute difference between two sancov files (A - B) and write to the new output sancov file
+      -html-report           REMOVED. Use -symbolize & coverage-report-server.py.
+      -merge                 Merges reports.
+      -not-covered-functions Print all not covered funcions.
+      -print-coverage-pcs    Print coverage instrumentation points addresses.
+      -print-coverage-stats  Print coverage statistics.
+      -print                 Print coverage addresses
+      -symbolize             Produces a symbolized JSON report from binary report.
+      -union                 Compute union of multiple sancov files and write to the new output sancov file
 
-    Options
-      -blocklist=<string>         - Blocklist file (sanitizer blocklist format).
-      -demangle                   - Print demangled function name.
-      -strip_path_prefix=<string> - Strip this prefix from file paths in reports
+    Generic Options:
+      -help    Display this help
+      -h       Alias for --help
+      -version Display the version
+      -v       Alias for --version
+
+    OPTIONS:
+      -demangle=0          Alias for --no-demangle
+      -demangle            Demangle function names
+      -ignorelist=<string> Ignorelist file (sanitizer ignorelist format)
+      -no-demangle         Do not demangle function names
+      -no-skip-dead-files  List dead source files in reports
+      -output=<string>     Output file for diff and union actions
+      -skip-dead-files=0   Alias for --no-skip-dead-files
+      -skip-dead-files     Do not list dead source files in reports
+      -strip_path_prefix=<string>
+                          Strip this prefix from files paths in reports
+      -use_default_ignorelist=0
+                          Alias for --no-use_default_ignore_list
 
 
 Coverage Reports

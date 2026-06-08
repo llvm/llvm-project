@@ -71,8 +71,8 @@ public:
   };
 
   BPFAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+               const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 };
@@ -172,7 +172,7 @@ public:
       break;
     case Register:
       OS << "<register x";
-      OS << getReg() << ">";
+      OS << getReg().id() << ">";
       break;
     case Token:
       OS << "'" << getToken() << "'";

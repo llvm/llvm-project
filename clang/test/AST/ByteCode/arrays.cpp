@@ -731,6 +731,10 @@ namespace ZeroSizeTypes {
                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
 
+  constexpr int k2 = p1 - p1; // both-error {{constexpr variable 'k2' must be initialized by a constant expression}} \
+                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
+                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
+
   int arr[5][0];
   constexpr int f() { // both-error {{never produces a constant expression}}
     return &arr[3] - &arr[0]; // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
@@ -830,4 +834,24 @@ namespace MultiDimConstructExpr {
   };
   constexpr b d;
   static_assert(d.m[2][1].p == &d.m[2][1]);
+}
+
+namespace MultiDimArrayInitLoop {
+  struct S {
+    float x[2][2];
+  };
+  struct T {
+    S y;
+  };
+
+  constexpr S s = {1};
+  constexpr T t = {s};
+}
+
+namespace ErroneousArraySubscriptExpr {
+  constexpr int &foo(int *arr, size_t idx) { return arr[idx]; } // both-error {{unknown type name 'size_t'}}
+  void bar() {
+    int val[] = {1, 2, 3, 4};
+    foo(val, 2) = 42;
+  }
 }

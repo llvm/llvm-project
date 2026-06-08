@@ -20,46 +20,94 @@ void Fact::dump(llvm::raw_ostream &OS, const LoanManager &,
 void IssueFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
                      const OriginManager &OM) const {
   OS << "Issue (";
-  LM.getLoan(getLoanID()).dump(OS);
+  LM.getLoan(getLoanID())->dump(OS);
   OS << ", ToOrigin: ";
   OM.dump(getOriginID(), OS);
   OS << ")\n";
 }
 
 void ExpireFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
-                      const OriginManager &) const {
+                      const OriginManager &OM) const {
   OS << "Expire (";
-  LM.getLoan(getLoanID()).dump(OS);
+  getAccessPath().dump(OS);
+  if (auto OID = getOriginID()) {
+    OS << ", Origin: ";
+    OM.dump(*OID, OS);
+  }
   OS << ")\n";
 }
 
 void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                           const OriginManager &OM) const {
-  OS << "OriginFlow (Dest: ";
+  OS << "OriginFlow: \n";
+  OS << "\tDest: ";
   OM.dump(getDestOriginID(), OS);
-  OS << ", Src: ";
+  OS << "\n";
+  OS << "\tSrc:  ";
   OM.dump(getSrcOriginID(), OS);
   OS << (getKillDest() ? "" : ", Merge");
+  OS << "\n";
+}
+
+void MovedOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM) const {
+  OS << "MovedOrigins (";
+  OM.dump(getMovedOrigin(), OS);
   OS << ")\n";
 }
 
-void ReturnOfOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                              const OriginManager &OM) const {
-  OS << "ReturnOfOrigin (";
-  OM.dump(getReturnedOriginID(), OS);
-  OS << ")\n";
+void ReturnEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                            const OriginManager &OM) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Return)\n";
+}
+
+void FieldEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Field)\n";
+}
+
+void GlobalEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                            const OriginManager &OM) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Global)\n";
 }
 
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                    const OriginManager &OM) const {
   OS << "Use (";
-  OM.dump(getUsedOrigin(), OS);
+  size_t NumUsedOrigins = getUsedOrigins()->getLength();
+  size_t I = 0;
+  for (const OriginList *Cur = getUsedOrigins(); Cur;
+       Cur = Cur->peelOuterOrigin(), ++I) {
+    OM.dump(Cur->getOuterOriginID(), OS);
+    if (I < NumUsedOrigins - 1)
+      OS << ", ";
+  }
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
+}
+
+void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                                const OriginManager &OM) const {
+  OS << "InvalidateOrigin (";
+  OM.dump(getInvalidatedOrigin(), OS);
+  OS << ")\n";
 }
 
 void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                          const OriginManager &) const {
   OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
+}
+
+void KillOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                          const OriginManager &OM) const {
+  OS << "KillOrigin (";
+  OM.dump(getKilledOrigin(), OS);
+  OS << ")\n";
 }
 
 llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
@@ -68,8 +116,7 @@ llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
     for (const Fact *F : BlockFacts) {
       if (const auto *TPF = F->getAs<TestPointFact>()) {
         StringRef PointName = TPF->getAnnotation();
-        assert(AnnotationToPointMap.find(PointName) ==
-                   AnnotationToPointMap.end() &&
+        assert(!AnnotationToPointMap.contains(PointName) &&
                "more than one test points with the same name");
         AnnotationToPointMap[PointName] = F;
       }
@@ -94,6 +141,16 @@ void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
     }
     llvm::dbgs() << "  End of Block\n";
   }
+}
+
+llvm::ArrayRef<const Fact *>
+FactManager::getBlockContaining(ProgramPoint P) const {
+  for (const auto &BlockToFactsVec : BlockToFacts) {
+    for (const Fact *F : BlockToFactsVec)
+      if (F == P)
+        return BlockToFactsVec;
+  }
+  return {};
 }
 
 } // namespace clang::lifetimes::internal

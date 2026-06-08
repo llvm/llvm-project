@@ -1,12 +1,12 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes=loop-vectorize -mattr=+sve -force-vector-width=4 -debug-only=loop-vectorize \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S -disable-output 2>&1 | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail -S -disable-output 2>&1 | FileCheck %s
 target triple = "aarch64-linux-gnu"
 
-define dso_local void @loop_sve_i1(ptr nocapture %ptr, i64 %N) {
+define void @loop_sve_i1(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_sve_i1'
-; CHECK: LV: Found an estimated cost of Invalid for VF vscale x 4 For instruction:   %0 = load i1, ptr %arrayidx, align 16
-; CHECK: LV: Found an estimated cost of Invalid for VF vscale x 4 For instruction:   store i1 %add, ptr %arrayidx, align 16
+; CHECK: Cost of Invalid for VF vscale x 4: REPLICATE ir<%0> = load ir<%arrayidx>
+; CHECK: Cost of Invalid for VF vscale x 4: REPLICATE store ir<%add>, ir<%arrayidx>
 entry:
   br label %for.body
 

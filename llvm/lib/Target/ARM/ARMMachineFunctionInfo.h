@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <utility>
 
 namespace llvm {
 
@@ -253,7 +252,7 @@ public:
   }
 
   unsigned getOriginalCPIdx(unsigned CloneIdx) const {
-    DenseMap<unsigned, unsigned>::const_iterator I = CPEClones.find(CloneIdx);
+    auto I = CPEClones.find(CloneIdx);
     if (I != CPEClones.end())
       return I->second;
     else

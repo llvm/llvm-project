@@ -177,7 +177,7 @@ add_libc_test(
 
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
     LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
-  list(APPEND strfrom_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+  libc_set_definition(strfrom_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 
 add_header_library(
@@ -388,6 +388,68 @@ add_libc_test(
     libc.src.stdlib.memalignment
 )
 
+add_libc_test(
+  mbtowc_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mbtowc_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.mbtowc
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mblen_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mblen_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.mblen
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mbstowcs_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mbstowcs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.mbstowcs
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  wctomb_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    wctomb_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.wctomb
+    libc.hdr.types.wchar_t
+)
+
+add_libc_test(
+  wcstombs_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    wcstombs_test.cpp
+  DEPENDS
+    libc.src.stdlib.wcstombs
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.hdr.types.wchar_t
+)
+
 if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
@@ -398,6 +460,19 @@ if(LLVM_LIBC_FULL_BUILD)
       libc-stdlib-tests
     SRCS
       _Exit_test.cpp
+    DEPENDS
+      libc.src.__support.OSUtil.osutil
+      libc.src.stdlib._Exit
+  )
+
+  add_libc_test(
+    exit_test
+    # The EXPECT_EXITS test is only availible for unit tests.
+    UNIT_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      exit_test.cpp
     DEPENDS
       libc.src.stdlib._Exit
       libc.src.stdlib.exit

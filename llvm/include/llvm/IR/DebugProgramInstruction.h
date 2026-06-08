@@ -240,7 +240,7 @@ class DbgLabelRecord : public DbgRecord {
   /// This constructor intentionally left private, so that it is only called via
   /// "createUnresolvedDbgLabelRecord", which clearly expresses that it is for
   /// parsing only.
-  DbgLabelRecord(MDNode *Label, MDNode *DL);
+  DbgLabelRecord(MDNode *Label);
 
 public:
   LLVM_ABI DbgLabelRecord(DILabel *Label, DebugLoc DL);
@@ -249,8 +249,7 @@ public:
   /// MDNodes. Trying to access the resulting DbgLabelRecord's fields before
   /// they are resolved, or if they resolve to the wrong type, will result in a
   /// crash.
-  LLVM_ABI static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label,
-                                                                 MDNode *DL);
+  LLVM_ABI static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label);
 
   LLVM_ABI DbgLabelRecord *clone() const;
   LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
@@ -282,6 +281,7 @@ public:
     Declare,
     Value,
     Assign,
+    DeclareValue,
 
     End, ///< Marks the end of the concrete types.
     Any, ///< To indicate all LocationTypes in searches.
@@ -322,7 +322,7 @@ private:
   /// depending on which Type is passed.
   DbgVariableRecord(LocationType Type, Metadata *Val, MDNode *Variable,
                     MDNode *Expression, MDNode *AssignID, Metadata *Address,
-                    MDNode *AddressExpression, MDNode *DI);
+                    MDNode *AddressExpression);
 
 public:
   /// Used to create DbgVariableRecords during parsing, where some metadata
@@ -332,11 +332,9 @@ public:
   /// for all types of DbgVariableRecords for simplicity while parsing, but
   /// asserts if any necessary fields are empty or unused fields are not empty,
   /// i.e. if the #dbg_assign fields are used for a non-dbg-assign type.
-  LLVM_ABI static DbgVariableRecord *
-  createUnresolvedDbgVariableRecord(LocationType Type, Metadata *Val,
-                                    MDNode *Variable, MDNode *Expression,
-                                    MDNode *AssignID, Metadata *Address,
-                                    MDNode *AddressExpression, MDNode *DI);
+  LLVM_ABI static DbgVariableRecord *createUnresolvedDbgVariableRecord(
+      LocationType Type, Metadata *Val, MDNode *Variable, MDNode *Expression,
+      MDNode *AssignID, Metadata *Address, MDNode *AddressExpression);
 
   LLVM_ABI static DbgVariableRecord *
   createDVRAssign(Value *Val, DILocalVariable *Variable,
@@ -363,6 +361,13 @@ public:
   LLVM_ABI static DbgVariableRecord *
   createDVRDeclare(Value *Address, DILocalVariable *DV, DIExpression *Expr,
                    const DILocation *DI, DbgVariableRecord &InsertBefore);
+
+  LLVM_ABI static DbgVariableRecord *
+  createDVRDeclareValue(Value *Address, DILocalVariable *DV, DIExpression *Expr,
+                        const DILocation *DI);
+  LLVM_ABI static DbgVariableRecord *
+  createDVRDeclareValue(Value *Address, DILocalVariable *DV, DIExpression *Expr,
+                        const DILocation *DI, DbgVariableRecord &InsertBefore);
 
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
@@ -414,6 +419,7 @@ public:
 
   bool isDbgDeclare() const { return Type == LocationType::Declare; }
   bool isDbgValue() const { return Type == LocationType::Value; }
+  bool isDbgDeclareValue() const { return Type == LocationType::DeclareValue; }
 
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
@@ -439,12 +445,16 @@ public:
   bool hasValidLocation() const { return getVariableLocationOp(0) != nullptr; }
 
   /// Does this describe the address of a local variable. True for dbg.addr
-  /// and dbg.declare, but not dbg.value, which describes its value.
+  /// and dbg.declare, but not dbg.value or dbg.declare_value, which describes
+  /// its value.
   bool isAddressOfVariable() const { return Type == LocationType::Declare; }
 
   /// Determine if this describes the value of a local variable. It is false for
-  /// dbg.declare, but true for dbg.value, which describes its value.
-  bool isValueOfVariable() const { return Type == LocationType::Value; }
+  /// dbg.declare, but true for dbg.value and dbg.declare_value, which describes
+  /// its value.
+  bool isValueOfVariable() const {
+    return Type == LocationType::Value || Type == LocationType::DeclareValue;
+  }
 
   LocationType getType() const { return Type; }
 

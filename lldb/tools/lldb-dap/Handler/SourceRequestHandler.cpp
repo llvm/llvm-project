@@ -31,13 +31,14 @@ llvm::Expected<protocol::SourceResponseBody>
 SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
 
   uint32_t source_ref =
-      args.source->sourceReference.value_or(args.sourceReference);
+      args.source ? args.source->sourceReference.value_or(args.sourceReference)
+                  : args.sourceReference;
   const std::optional<lldb::addr_t> source_addr_opt =
       dap.GetSourceReferenceAddress(source_ref);
 
   if (!source_addr_opt)
     return llvm::make_error<DAPError>(
-        llvm::formatv("Unknown source reference {}", source_ref));
+        llvm::formatv("unknown source reference {}", source_ref));
 
   lldb::SBAddress address(*source_addr_opt, dap.target);
   if (!address.IsValid())

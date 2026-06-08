@@ -14,11 +14,13 @@
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/Support/Compiler.h"
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {
@@ -31,6 +33,10 @@ public:
     return m_object_instance_sp;
   }
 
+  const std::optional<ScriptedMetadata> &GetScriptedMetadata() const {
+    return m_scripted_metadata;
+  }
+
   struct AbstractMethodRequirement {
     llvm::StringLiteral name;
     size_t min_arg_count = 0;
@@ -38,6 +44,10 @@ public:
 
   virtual llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const = 0;
+
+  virtual llvm::Expected<FileSpec> GetScriptedModulePath() {
+    return llvm::make_error<UnimplementedError>();
+  }
 
   llvm::SmallVector<llvm::StringLiteral> const GetAbstractMethods() const {
     llvm::SmallVector<llvm::StringLiteral> abstract_methods;
@@ -92,6 +102,7 @@ public:
 
 protected:
   StructuredData::GenericSP m_object_instance_sp;
+  std::optional<ScriptedMetadata> m_scripted_metadata;
 };
 } // namespace lldb_private
 #endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H

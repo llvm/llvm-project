@@ -12,7 +12,7 @@
 
 // class map
 
-//       iterator upper_bound(const key_type& k); // constexpr since C++26
+//       iterator upper_bound(const key_type& k);       // constexpr since C++26
 // const_iterator upper_bound(const key_type& k) const; // constexpr since C++26
 //
 //   The member function templates find, count, lower_bound, upper_bound, and

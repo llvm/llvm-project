@@ -9,6 +9,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -117,7 +118,12 @@ private:
     }
   }
 
-  CacheInitializer(Ranges &R) : Result(R) {}
+  CacheInitializer(Ranges &R) : Result(R) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldWalkTypesOfTypeLocs = false;
+    ShouldVisitImplicitCode = false;
+    ShouldVisitLambdaBody = true;
+  }
   Ranges &Result;
 };
 
@@ -160,6 +166,35 @@ bool BugSuppression::isSuppressed(const BugReport &R) {
          isSuppressed(UniqueingLocation, DeclWithIssue, {});
 }
 
+// For template specializations, returns the primary template definition or
+// partial specialization that was used to instantiate the specialization.
+// This ensures suppression attributes on templates apply to their
+// specializations.
+//
+// For example, given:
+//   template <typename T> class [[clang::suppress]] Wrapper { ... };
+//   Wrapper<int> w; // instantiates ClassTemplateSpecializationDecl
+//
+// When analyzing code in Wrapper<int>, this function maps the specialization
+// back to the primary template definition, allowing us to find the suppression
+// attribute.
+//
+// The function handles specializations (and partial specializations) of
+// class templates.
+// For any other decl, it returns the input unchanged.
+static const Decl *
+preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
+  const auto *RD = dyn_cast<CXXRecordDecl>(D);
+  if (!RD)
+    return D;
+  if (const CXXRecordDecl *Pattern = RD->getTemplateInstantiationPattern())
+    RD = Pattern;
+  RD = RD->getDefinitionOrSelf();
+  if (const auto *CTD = RD->getDescribedClassTemplate())
+    return CTD;
+  return RD;
+}
+
 bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
                                   const Decl *DeclWithIssue,
                                   DiagnosticIdentifierList Hashtags) {
@@ -177,6 +212,17 @@ bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
     // declaration that isn't TranslationUnitDecl, because we should respect
     // attributes on the entire declaration chain.
     while (true) {
+
+      // Template specializations (e.g., Wrapper<int>) should inherit
+      // suppression attributes from their primary template or partial
+      // specialization. Transform specializations to their template definitions
+      // before checking for suppressions or walking up the lexical parent
+      // chain.
+      // Simply taking the lexical parent of template specializations might land
+      // us in a completely different namespace.
+      DeclWithIssue =
+          preferTemplateDefinitionForTemplateSpecializations(DeclWithIssue);
+
       // Use the "lexical" parent. Eg., if the attribute is on a class, suppress
       // warnings in inline methods but not in out-of-line methods.
       const Decl *Parent =

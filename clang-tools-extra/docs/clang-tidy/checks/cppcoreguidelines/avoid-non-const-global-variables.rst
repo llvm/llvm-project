@@ -6,7 +6,7 @@ cppcoreguidelines-avoid-non-const-global-variables
 Finds non-const global variables as described in `I.2
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#i2-avoid-non-const-global-variables>`_
 of C++ Core Guidelines.
-As `R.6 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rr-global>`_
+As `R.6 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rr-global>`_
 of C++ Core Guidelines is a duplicate of rule `I.2
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#i2-avoid-non-const-global-variables>`_
 it also covers that rule.
@@ -54,3 +54,8 @@ Options
 
    When set to `true`, non-const global variables with thread-local storage
    duration will not generate a warning. The default value is `false`.
+
+.. option:: IgnoreMacros
+
+   When set to `true`, non-const global variables defined in macros will not
+   generate a warning. The default value is `false`.

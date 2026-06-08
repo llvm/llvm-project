@@ -16,6 +16,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -25,6 +26,8 @@ namespace llvm {
 
 class AArch64SelectionDAGTest : public testing::Test {
 protected:
+  const TargetSubtargetInfo *STI;
+
   static void SetUpTestCase() {
     LLVMInitializeAArch64TargetInfo();
     LLVMInitializeAArch64Target();
@@ -55,15 +58,15 @@ protected:
 
     MachineModuleInfo MMI(TM.get());
 
-    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
+    STI = TM->getSubtargetImpl(*F);
+    MF = std::make_unique<MachineFunction>(*F, *TM, *STI, MMI.getContext(), 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr);
+    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+              MMI, nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
@@ -103,7 +106,7 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBitsSVE_ZERO_EXTEND_VECTOR_INREG) {
   auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2, true);
   auto InVec = DAG->getConstant(0, Loc, InVecVT);
   auto Op = DAG->getNode(ISD::ZERO_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
-  auto DemandedElts = APInt(2, 3);
+  auto DemandedElts = APInt(1, 1);
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
 
   // We don't know anything for SVE at the moment.
@@ -146,7 +149,7 @@ TEST_F(AArch64SelectionDAGTest,
   auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2, /*IsScalable=*/true);
   auto InVec = DAG->getConstant(1, Loc, InVecVT);
   auto Op = DAG->getNode(ISD::SIGN_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
-  auto DemandedElts = APInt(2, 3);
+  auto DemandedElts = APInt(1, 1);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 1u);
 }
 
@@ -158,6 +161,20 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_EXTRACT_SUBVECTOR) {
   auto Vec = DAG->getConstant(1, Loc, VecVT);
   auto ZeroIdx = DAG->getConstant(0, Loc, IdxVT);
   auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, VecVT, Vec, ZeroIdx);
+  auto DemandedElts = APInt(3, 7);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 7u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_EXTRACT_SUBVECTOR) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto ScalableVecVT =
+      EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/true);
+  auto FixedVecVT = EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/false);
+  auto IdxVT = EVT::getIntegerVT(Context, 64);
+  auto Vec = DAG->getConstant(1, Loc, ScalableVecVT);
+  auto ZeroIdx = DAG->getConstant(0, Loc, IdxVT);
+  auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, FixedVecVT, Vec, ZeroIdx);
   auto DemandedElts = APInt(3, 7);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 7u);
 }
@@ -336,8 +353,59 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ADDC) {
   EXPECT_EQ(DAG->ComputeNumSignBits(Op), 2u);
 }
 
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ABDS) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = MVT::v8i8;
+
+  auto N0 = DAG->getConstant(0x00, Loc, IntVT);
+  auto V0 = DAG->getConstant(0x00, Loc, VecVT);
+  auto Nsign1 = DAG->getConstant(0x55, Loc, IntVT);
+
+  auto UnknownScalar = DAG->getUNDEF(IntVT);
+  auto UnknownVec = DAG->getUNDEF(VecVT);
+
+  // AssertSext to i4 guarantees 5 sign bits in i8
+  // Op5Sig = sssss???
+  auto Op5Sig = DAG->getNode(ISD::AssertSext, Loc, IntVT, UnknownScalar,
+                             DAG->getValueType(MVT::i4));
+
+  // Vec5Sig = sssss??? per element
+  auto Vec5Sig = DAG->getNode(ISD::AssertSext, Loc, VecVT, UnknownVec,
+                              DAG->getValueType(MVT::i4));
+
+  // LHS early out
+  // Nsign1 = 01010101
+  // N0     = 00000000
+  auto OpLhsEo = DAG->getNode(ISD::ABDS, Loc, IntVT, Nsign1, N0);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpLhsEo), 1u);
+
+  // Normal scalar case
+  // Op5Sig = sssss???
+  // N0     = 00000000
+  auto OpScalar = DAG->getNode(ISD::ABDS, Loc, IntVT, Op5Sig, N0);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpScalar), 4u);
+
+  // Normal vector case
+  // Vec5Sig = sssss???
+  // V0      = 00000000
+  auto OpVec = DAG->getNode(ISD::ABDS, Loc, VecVT, Vec5Sig, V0);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpVec), 4u);
+
+  // RHS early out
+  // N0     = 00000000
+  // Nsign1 = 01010101
+  auto OpRhsEo = DAG->getNode(ISD::ABDS, Loc, IntVT, N0, Nsign1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpRhsEo), 1u);
+
+  // Zero case
+  // N0 = 00000000
+  auto OpZero = DAG->getNode(ISD::ABDS, Loc, IntVT, N0, N0);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpZero), 8u);
+}
+
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -356,7 +424,7 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsNEON) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
@@ -382,7 +450,7 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsNEON) {
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsSVE) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
@@ -654,6 +722,24 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
   EXPECT_EQ(Known.One, APInt(8, 0x1));
 }
 
+// Test that we can compute the known bits of a subvector extract
+// from a scalable vector, which requires this knowledge to be known
+// for all elements of the scalable source vector.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBitsSVE_EXTRACT_SUBVECTOR) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto ScalableVecVT =
+      EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/true);
+  auto FixedVecVT = EVT::getVectorVT(Context, IntVT, 16, /*IsScalable=*/false);
+  auto IdxVT = EVT::getIntegerVT(Context, 64);
+  auto Vec = DAG->getConstant(1, Loc, ScalableVecVT);
+  auto ZeroIdx = DAG->getConstant(0, Loc, IdxVT);
+  auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, FixedVecVT, Vec, ZeroIdx);
+  KnownBits Known = DAG->computeKnownBits(Op);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xFE));
+  EXPECT_EQ(Known.One, APInt(8, 0x1));
+}
+
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
 TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_USUBO_CARRY) {
   SDLoc Loc;
@@ -783,8 +869,164 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VSHL) {
   EXPECT_EQ(Known.One, APInt(8, 0x80));
 }
 
+// Piggy-backing on the AArch64 tests to verify
+// SelectionDAG::KnownToBeAPowerOfTwo.
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Constants) {
+  SDLoc Loc;
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Cst0));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Cst0, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Cst4));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(CstBig));
+
+  auto VecVT = MVT::v2i16;
+  auto Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  auto Vec44 = DAG->getBuildVector(VecVT, Loc, {Cst4, Cst4});
+  auto Vec4Big = DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig});
+  auto Vec0Big = DAG->getBuildVector(VecVT, Loc, {Cst0, CstBig});
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec04));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec04, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec44));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec44, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec4Big));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec4Big, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec0Big));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec0Big, /*OrZero=*/true));
+
+  APInt DemandLo(2, 1);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec04, DemandLo));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec04, DemandLo, /*OrZero=*/true));
+
+  APInt DemandHi(2, 2);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec04, DemandHi));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec04, DemandHi, /*OrZero=*/true));
+
+  auto SplatVT = MVT::nxv2i16;
+  auto Splat0 = DAG->getSplat(SplatVT, Loc, Cst0);
+  auto Splat4 = DAG->getSplat(SplatVT, Loc, Cst4);
+  auto SplatBig = DAG->getSplat(SplatVT, Loc, CstBig);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Splat0));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat4, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat4));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat4, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SplatBig));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SplatBig, /*OrZero=*/true));
+}
+
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_SHL) {
+  SDLoc Loc;
+  SDValue Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  SDValue Cst1 = DAG->getConstant(1, Loc, MVT::i32);
+  SDValue Cst3 = DAG->getConstant(3, Loc, MVT::i32);
+  SDValue Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  SDValue Cst16 = DAG->getConstant(16, Loc, MVT::i32);
+
+  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                     Register::index2VirtReg(1), MVT::i32);
+  SDValue ShlConst1 = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cst1, Cond);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1, /*OrZero=*/true));
+
+  SDValue And16 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cond, Cst16);
+  SDValue ShlMaybeZero = DAG->getNode(ISD::SHL, Loc, MVT::i32, And16, Cst1);
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlMaybeZero));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlMaybeZero, /*OrZero=*/true));
+
+  SDValue ShlUnknown = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cond, Cst1);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlUnknown));
+
+  SDValue Neg3 = DAG->getNode(ISD::SUB, Loc, MVT::i32, Cst0, Cst3);
+  SDValue AndPow2 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cst3, Neg3);
+  SDValue ShlPow2 = DAG->getNode(ISD::SHL, Loc, MVT::i32, AndPow2, Cst1);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlPow2));
+
+  MVT::SimpleValueType VecVT = MVT::v2i32;
+  SDValue Vec13 = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst3});
+  SDValue Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  SDValue VecShift = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst1});
+  SDValue VecShl13 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec13, VecShift);
+  SDValue VecShl04 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec04, VecShift);
+
+  APInt DemandLo(2, 1);
+  APInt DemandHi(2, 2);
+  APInt DemandAll(2, 3);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandLo));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandHi));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandAll));
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandAll));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandAll, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandHi));
+}
+
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
+  SDLoc Loc;
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  auto Cst3 = DAG->getConstant(3, Loc, MVT::i32);
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
+
+  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                  Register::index2VirtReg(1), MVT::i1);
+  auto Select40 = DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, Cst0);
+  auto Select43 = DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, Cst3);
+  auto Select4Big =
+      DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, CstBig);
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Select40));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Select40, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Select43));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Select4Big));
+
+  auto VecVT = MVT::v2i16;
+  auto Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  auto Vec44 = DAG->getBuildVector(VecVT, Loc, {Cst4, Cst4});
+  auto Vec4Big = DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig});
+  auto Vec0Big = DAG->getBuildVector(VecVT, Loc, {Cst0, CstBig});
+
+  auto VecCond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                     Register::index2VirtReg(2), MVT::v2i1);
+  auto VSelect0444 =
+      DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec04, Vec44);
+  auto VSelect4444 =
+      DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec44, Vec44);
+  auto VSelect040Big =
+      DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec04, Vec0Big);
+  auto VSelect444Big =
+      DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec44, Vec4Big);
+
+  APInt DemandLo(2, 1);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VSelect0444, DemandLo));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(VSelect0444, DemandLo, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VSelect444Big, DemandLo));
+
+  APInt DemandHi(2, 2);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VSelect444Big, DemandHi));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(VSelect444Big, DemandHi, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VSelect0444, DemandHi));
+
+  APInt DemandAll(2, 3);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VSelect0444, DemandAll));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VSelect040Big, DemandAll));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VSelect444Big, DemandAll));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VSelect4444, DemandAll));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(VSelect040Big, DemandAll, /*OrZero=*/true));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(VSelect444Big, DemandAll, /*OrZero=*/true));
+}
+
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -804,7 +1046,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_ADD_of_BUILD_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -828,7 +1070,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_ADD_of_BUILD_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -844,7 +1086,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -864,7 +1106,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_BUILD_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -880,7 +1122,7 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_BUILD_VECTOR) {
 
 TEST_F(AArch64SelectionDAGTest,
        getSplatSourceVector_Fixed_ADD_of_BUILD_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -898,7 +1140,7 @@ TEST_F(AArch64SelectionDAGTest,
 }
 
 TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_SPLAT_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -914,7 +1156,7 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_SPLAT_VECTOR) {
 
 TEST_F(AArch64SelectionDAGTest,
        getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTOR) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
@@ -932,7 +1174,7 @@ TEST_F(AArch64SelectionDAGTest,
 }
 
 TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
-  TargetLowering TL(*TM);
+  TargetLowering TL(*TM, *STI);
 
   SDLoc Loc;
   unsigned NumElts = 16;
@@ -1245,6 +1487,285 @@ TEST_F(AArch64SelectionDAGTest,
   KnownBits KnownAVGCEILS = DAG->computeKnownBits(AVGCEILS);
   EXPECT_EQ(KnownAVGCEILS.Zero, Zeroes);
   EXPECT_EQ(KnownAVGCEILS.One, Ones);
+}
+
+// Piggy-backing on the AArch64 tests to verify
+// SelectionDAG::KnownNeverZero.
+TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Constants) {
+  SDLoc Loc;
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
+  EXPECT_FALSE(DAG->isKnownNeverZero(Cst0));
+  EXPECT_TRUE(DAG->isKnownNeverZero(Cst4));
+  EXPECT_TRUE(DAG->isKnownNeverZero(CstBig));
+
+  auto VecVT = MVT::v2i16;
+  auto Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  auto Vec44 = DAG->getBuildVector(VecVT, Loc, {Cst4, Cst4});
+  auto Vec4Big = DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig});
+  auto Vec0Big = DAG->getBuildVector(VecVT, Loc, {Cst0, CstBig});
+  EXPECT_FALSE(DAG->isKnownNeverZero(Vec04));
+  EXPECT_TRUE(DAG->isKnownNeverZero(Vec44));
+  EXPECT_FALSE(DAG->isKnownNeverZero(Vec4Big));
+  EXPECT_FALSE(DAG->isKnownNeverZero(Vec0Big));
+
+  APInt DemandLo(2, 1);
+  EXPECT_FALSE(DAG->isKnownNeverZero(Vec04, DemandLo));
+
+  APInt DemandHi(2, 2);
+  EXPECT_TRUE(DAG->isKnownNeverZero(Vec04, DemandHi));
+
+  auto SplatVT = MVT::nxv2i16;
+  auto Splat0 = DAG->getSplat(SplatVT, Loc, Cst0);
+  auto Splat4 = DAG->getSplat(SplatVT, Loc, Cst4);
+  auto SplatBig = DAG->getSplat(SplatVT, Loc, CstBig);
+  EXPECT_FALSE(DAG->isKnownNeverZero(Splat0));
+  EXPECT_TRUE(DAG->isKnownNeverZero(Splat4));
+  EXPECT_FALSE(DAG->isKnownNeverZero(SplatBig));
+}
+
+TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
+  SDLoc Loc;
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  auto Cst3 = DAG->getConstant(3, Loc, MVT::i32);
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
+
+  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                  Register::index2VirtReg(1), MVT::i1);
+  auto Select40 = DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, Cst0);
+  auto Select43 = DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, Cst3);
+  auto Select4Big =
+      DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, CstBig);
+
+  EXPECT_FALSE(DAG->isKnownNeverZero(Select40));
+  EXPECT_FALSE(DAG->isKnownNeverZero(Select40));
+  EXPECT_TRUE(DAG->isKnownNeverZero(Select43));
+  EXPECT_TRUE(DAG->isKnownNeverZero(Select4Big));
+
+  auto VecVT = MVT::v2i16;
+  auto Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  auto Vec44 = DAG->getBuildVector(VecVT, Loc, {Cst4, Cst4});
+  auto Vec4Big = DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig});
+  auto Vec0Big = DAG->getBuildVector(VecVT, Loc, {Cst0, CstBig});
+
+  auto VecCond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                     Register::index2VirtReg(2), MVT::v2i1);
+  auto VSelect0444 =
+      DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec04, Vec44);
+  auto VSelect4444 =
+      DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec44, Vec44);
+  auto VSelect040Big =
+      DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec04, Vec0Big);
+  auto VSelect444Big =
+      DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec44, Vec4Big);
+
+  APInt DemandLo(2, 1);
+  EXPECT_FALSE(DAG->isKnownNeverZero(VSelect0444, DemandLo));
+  EXPECT_TRUE(DAG->isKnownNeverZero(VSelect444Big, DemandLo));
+
+  APInt DemandHi(2, 2);
+  EXPECT_FALSE(DAG->isKnownNeverZero(VSelect444Big, DemandHi));
+  EXPECT_TRUE(DAG->isKnownNeverZero(VSelect0444, DemandHi));
+
+  APInt DemandAll(2, 3);
+  EXPECT_FALSE(DAG->isKnownNeverZero(VSelect0444, DemandAll));
+  EXPECT_FALSE(DAG->isKnownNeverZero(VSelect040Big, DemandAll));
+  EXPECT_FALSE(DAG->isKnownNeverZero(VSelect444Big, DemandAll));
+  EXPECT_TRUE(DAG->isKnownNeverZero(VSelect4444, DemandAll));
+}
+
+TEST_F(AArch64SelectionDAGTest, KnownFPClass_Bitcast) {
+  SDLoc Loc;
+  SDValue Cond = DAG->getRegister(1, MVT::i1);
+
+  SDValue ConstZeroI32 = DAG->getConstant(0x0000'0000, Loc, MVT::i32);
+  SDValue ConstFiniteI32 = DAG->getConstant(0xbfff'ffff, Loc, MVT::i32);
+  SDValue AlwaysFiniteI32 =
+      DAG->getSelect(Loc, MVT::i32, Cond, ConstZeroI32, ConstFiniteI32);
+  SDValue AlwaysFiniteF32 = DAG->getBitcast(MVT::f32, AlwaysFiniteI32);
+  KnownFPClass AlwaysFiniteFPClass =
+      DAG->computeKnownFPClass(AlwaysFiniteF32, fcAllFlags);
+  EXPECT_TRUE(AlwaysFiniteFPClass.isKnownNeverInfOrNaN());
+
+  SDValue ConstNegInfI32 = DAG->getConstant(0xff80'0000, Loc, MVT::i32);
+  SDValue NeverNaNI32 =
+      DAG->getSelect(Loc, MVT::i32, Cond, ConstZeroI32, ConstNegInfI32);
+  SDValue NeverNaNF32 = DAG->getBitcast(MVT::f32, NeverNaNI32);
+  KnownFPClass NeverNaNFPClass =
+      DAG->computeKnownFPClass(NeverNaNF32, fcAllFlags);
+  EXPECT_FALSE(NeverNaNFPClass.isKnownNeverInfinity());
+  EXPECT_TRUE(NeverNaNFPClass.isKnownNeverNaN());
+
+  SDValue ConstPosNaNI32 = DAG->getConstant(0x7f80'0001, Loc, MVT::i32);
+  SDValue MaybeNaNI32 =
+      DAG->getSelect(Loc, MVT::i32, Cond, ConstPosNaNI32, ConstNegInfI32);
+  SDValue MaybeNaNF32 = DAG->getBitcast(MVT::f32, MaybeNaNI32);
+  KnownFPClass MaybeNaNFPClass =
+      DAG->computeKnownFPClass(MaybeNaNF32, fcAllFlags);
+  EXPECT_FALSE(MaybeNaNFPClass.isKnownNeverNaN());
+  EXPECT_FALSE(MaybeNaNFPClass.isKnownAlwaysNaN());
+
+  SDValue ConstNegNaNI32 = DAG->getConstant(0xffff'ffff, Loc, MVT::i32);
+  SDValue AlwaysNaNI32 =
+      DAG->getSelect(Loc, MVT::i32, Cond, ConstPosNaNI32, ConstNegNaNI32);
+  SDValue AlwaysNaNF32 = DAG->getBitcast(MVT::f32, AlwaysNaNI32);
+  KnownFPClass AlwaysNaNFPClass =
+      DAG->computeKnownFPClass(AlwaysNaNF32, fcAllFlags);
+  EXPECT_TRUE(AlwaysNaNFPClass.isKnownAlwaysNaN());
+
+  SDValue AlwaysFiniteSplat = DAG->getSplat(MVT::v2i32, Loc, AlwaysFiniteI32);
+  SDValue AlwaysFiniteV2F32 = DAG->getBitcast(MVT::v2f32, AlwaysFiniteSplat);
+  KnownFPClass AlwaysFiniteV2FPClass =
+      DAG->computeKnownFPClass(AlwaysFiniteV2F32, fcAllFlags);
+  EXPECT_TRUE(AlwaysFiniteV2FPClass.isKnownNeverInfOrNaN());
+
+  SDValue UpperAlwaysNaN =
+      DAG->getBuildVector(MVT::v2i32, Loc, {NeverNaNI32, AlwaysNaNI32});
+  SDValue UpperAlwaysNaNV2F32 = DAG->getBitcast(MVT::v2f32, UpperAlwaysNaN);
+  KnownFPClass UpperAlwaysNaNFullFPClass =
+      DAG->computeKnownFPClass(UpperAlwaysNaNV2F32, fcAllFlags);
+  EXPECT_FALSE(UpperAlwaysNaNFullFPClass.isKnownNeverNaN());
+  APInt DemandLo(2, 1);
+  KnownFPClass UpperAlwaysNaNLoFPClass =
+      DAG->computeKnownFPClass(UpperAlwaysNaNV2F32, DemandLo, fcAllFlags);
+  EXPECT_TRUE(UpperAlwaysNaNLoFPClass.isKnownNeverNaN());
+  APInt DemandHi(2, 2);
+  KnownFPClass UpperAlwaysNaNHiFPClass =
+      DAG->computeKnownFPClass(UpperAlwaysNaNV2F32, DemandHi, fcAllFlags);
+  EXPECT_TRUE(UpperAlwaysNaNHiFPClass.isKnownAlwaysNaN());
+
+  SDValue UpperAlwaysNaNAsF64 = DAG->getBitcast(MVT::f64, UpperAlwaysNaN);
+  KnownFPClass UpperAlwaysNaNAsF64FPClass =
+      DAG->computeKnownFPClass(UpperAlwaysNaNAsF64, fcAllFlags);
+  EXPECT_FALSE(UpperAlwaysNaNAsF64FPClass.isKnownNeverNaN());
+  EXPECT_FALSE(UpperAlwaysNaNAsF64FPClass.isKnownAlwaysNaN());
+}
+
+// tests for SelectionDAG::computeKnownFPClass
+TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_ConstantScalar) {
+  SDLoc Loc;
+
+  SDValue PosZero = DAG->getConstantFP(APFloat::getZero(APFloat::IEEEsingle()),
+                                       Loc, MVT::f32);
+  KnownFPClass Known = DAG->computeKnownFPClass(PosZero, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcPosZero);
+  EXPECT_TRUE(Known.SignBit.has_value());
+  EXPECT_FALSE(*Known.SignBit);
+
+  SDValue NegZero = DAG->getConstantFP(
+      APFloat::getZero(APFloat::IEEEsingle(), true), Loc, MVT::f32);
+  Known = DAG->computeKnownFPClass(NegZero, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcNegZero);
+  EXPECT_TRUE(Known.SignBit.has_value());
+  EXPECT_TRUE(*Known.SignBit);
+
+  SDValue PosInf =
+      DAG->getConstantFP(APFloat::getInf(APFloat::IEEEsingle()), Loc, MVT::f32);
+  Known = DAG->computeKnownFPClass(PosInf, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcPosInf);
+  EXPECT_TRUE(Known.SignBit.has_value());
+  EXPECT_FALSE(*Known.SignBit);
+
+  SDValue QNaN = DAG->getConstantFP(APFloat::getQNaN(APFloat::IEEEsingle()),
+                                    Loc, MVT::f32);
+  Known = DAG->computeKnownFPClass(QNaN, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcQNan);
+
+  SDValue One = DAG->getConstantFP(1.0, Loc, MVT::f32);
+  Known = DAG->computeKnownFPClass(One, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcPosNormal);
+  EXPECT_TRUE(Known.SignBit.has_value());
+  EXPECT_FALSE(*Known.SignBit);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_BuildVector) {
+  SDLoc Loc;
+
+  SDValue PosOne = DAG->getConstantFP(1.0, Loc, MVT::f32);
+  SDValue PosTwo = DAG->getConstantFP(2.0, Loc, MVT::f32);
+  SDValue NegOne = DAG->getConstantFP(-1.0, Loc, MVT::f32);
+
+  EVT VecVT = MVT::v2f32;
+
+  SDValue VecPosPos = DAG->getBuildVector(VecVT, Loc, {PosOne, PosTwo});
+  KnownFPClass Known = DAG->computeKnownFPClass(VecPosPos, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcPosNormal);
+  EXPECT_TRUE(Known.SignBit.has_value());
+  EXPECT_FALSE(*Known.SignBit);
+
+  SDValue VecPosNeg = DAG->getBuildVector(VecVT, Loc, {PosOne, NegOne});
+  Known = DAG->computeKnownFPClass(VecPosNeg, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcPosNormal | fcNegNormal);
+  EXPECT_FALSE(Known.SignBit.has_value());
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_DemandedElts) {
+  SDLoc Loc;
+
+  SDValue PosOne = DAG->getConstantFP(1.0, Loc, MVT::f32);
+  SDValue NegOne = DAG->getConstantFP(-1.0, Loc, MVT::f32);
+  EVT VecVT = MVT::v2f32;
+  SDValue Vec = DAG->getBuildVector(VecVT, Loc, {PosOne, NegOne});
+
+  APInt DemandLo(2, 1);
+  KnownFPClass Known = DAG->computeKnownFPClass(Vec, DemandLo, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcPosNormal);
+  EXPECT_TRUE(Known.SignBit.has_value());
+  EXPECT_FALSE(*Known.SignBit);
+
+  APInt DemandHi(2, 2);
+  Known = DAG->computeKnownFPClass(Vec, DemandHi, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcNegNormal);
+  EXPECT_TRUE(Known.SignBit.has_value());
+  EXPECT_TRUE(*Known.SignBit);
+
+  APInt DemandAll(2, 3);
+  Known = DAG->computeKnownFPClass(Vec, DemandAll, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcPosNormal | fcNegNormal);
+  EXPECT_FALSE(Known.SignBit.has_value());
+
+  APInt DemandNone(2, 0);
+  Known = DAG->computeKnownFPClass(Vec, DemandNone, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcAllFlags);
+  EXPECT_FALSE(Known.SignBit.has_value());
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_MaxDepth) {
+  SDLoc Loc;
+
+  SDValue PosOne = DAG->getConstantFP(1.0, Loc, MVT::f32);
+  SDValue PosTwo = DAG->getConstantFP(2.0, Loc, MVT::f32);
+  EVT VecVT = MVT::v2f32;
+  SDValue Vec = DAG->getBuildVector(VecVT, Loc, {PosOne, PosTwo});
+
+  // At depth 0, BUILD_VECTOR of constants is fully analyzed.
+  KnownFPClass Known = DAG->computeKnownFPClass(Vec, fcAllFlags, /*Depth=*/0);
+  EXPECT_EQ(Known.KnownFPClasses, fcPosNormal);
+
+  // At MaxRecursionDepth, the non-constant node bails out as unknown.
+  Known = DAG->computeKnownFPClass(Vec, fcAllFlags,
+                                   SelectionDAG::MaxRecursionDepth);
+  EXPECT_EQ(Known.KnownFPClasses, fcAllFlags);
+  EXPECT_FALSE(Known.SignBit.has_value());
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_UndefAndPoison) {
+  SDLoc Loc;
+
+  // UNDEF is unknown — could be any FP class.
+  SDValue Undef = DAG->getUNDEF(MVT::f32);
+  KnownFPClass Known = DAG->computeKnownFPClass(Undef, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcAllFlags);
+  EXPECT_FALSE(Known.SignBit.has_value());
+
+  // POISON is fcNone — can be assumed to never be observed.
+  SDValue Poison = DAG->getPOISON(MVT::f32);
+  Known = DAG->computeKnownFPClass(Poison, fcAllFlags);
+  EXPECT_EQ(Known.KnownFPClasses, fcNone);
+  EXPECT_TRUE(Known.SignBit.has_value());
+  EXPECT_FALSE(*Known.SignBit);
 }
 
 } // end namespace llvm

@@ -372,8 +372,17 @@ func.func @alloca_unlimited_polymorphic_box() {
   %1 = fir.alloca !fir.class<!fir.array<?xnone>>
   %2 = fir.alloca !fir.box<none>
   %3 = fir.alloca !fir.box<!fir.array<?xnone>>
+  // Add real uses so allocas are not trivially dead.
+  fir.call @__use_class_none(%0) : (!fir.ref<!fir.class<none>>) -> ()
+  fir.call @__use_class_array(%1) : (!fir.ref<!fir.class<!fir.array<?xnone>>>) -> ()
+  fir.call @__use_box_none(%2) : (!fir.ref<!fir.box<none>>) -> ()
+  fir.call @__use_box_array(%3) : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> ()
   return
 }
+func.func private @__use_class_none(!fir.ref<!fir.class<none>>) -> ()
+func.func private @__use_class_array(!fir.ref<!fir.class<!fir.array<?xnone>>>) -> ()
+func.func private @__use_box_none(!fir.ref<!fir.box<none>>) -> ()
+func.func private @__use_box_array(!fir.ref<!fir.box<!fir.array<?xnone>>>) -> ()
 // Note: allocmem of fir.box are not possible (fir::HeapType::verify does not
 // accept box types), so there is no equivalent of
 // alloca_unlimited_polymorphic_box for allocmem.

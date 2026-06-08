@@ -179,6 +179,7 @@ static SmallVector<Value> unpackOperandVector(ImplicitLocOpBuilder &b,
   Type f64Ty = b.getF64Type();
   Type f32Ty = b.getF32Type();
   Type i64Ty = b.getI64Type();
+  Type bf16x2Ty = VectorType::get(2, b.getBF16Type());
   Type i8x4Ty = VectorType::get(4, b.getI8Type());
   Type i4x8Ty = VectorType::get(8, b.getIntegerType(4));
   Type f32x1Ty = VectorType::get(1, f32Ty);
@@ -191,6 +192,8 @@ static SmallVector<Value> unpackOperandVector(ImplicitLocOpBuilder &b,
     // scalar types.
     if (arrayTy.getElementType() == i8x4Ty ||
         arrayTy.getElementType() == i4x8Ty ||
+        (arrayTy.getElementType() == bf16x2Ty &&
+         operandPtxType == NVVM::MMATypes::bf16) ||
         (arrayTy.getElementType() == f32x1Ty &&
          operandPtxType == NVVM::MMATypes::tf32)) {
       result.push_back(LLVM::BitcastOp::create(b, i32Ty, toUse));
@@ -320,6 +323,8 @@ static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
     return NVVM::MMATypes::s4;
   if (elType.isF16())
     return NVVM::MMATypes::f16;
+  if (elType.isBF16())
+    return NVVM::MMATypes::bf16;
   if (elType.isF64())
     return NVVM::MMATypes::f64;
   if (elType.isF32())
@@ -401,19 +406,8 @@ struct ConvertNVGPUToNVVMPass
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext(), options);
     IRRewriter rewriter(&getContext());
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) -> unsigned {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
-          case gpu::AddressSpace::Workgroup:
-            return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
-          case gpu::AddressSpace::Private:
-            return 0;
-          }
-          llvm_unreachable("unknown address space enum value");
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
-        });
+    nvgpu::populateCommonGPUTypeAndAttributeConversions(converter);
+
     /// device-side async tokens cannot be materialized in nvvm. We just
     /// convert them to a dummy i32 type in order to easily drop them during
     /// conversion.
@@ -863,9 +857,7 @@ struct NVGPUMBarrierArriveLowering
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
-    Type tokenType = getTypeConverter()->convertType(
-        nvgpu::MBarrierTokenType::get(op->getContext()));
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, tokenType, barrier);
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier);
     return success();
   }
 };
@@ -922,15 +914,12 @@ struct NVGPUMBarrierArriveExpectTxLowering
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
     Value txcount = truncToI32(b, adaptor.getTxcount());
-
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxSharedOp>(
-          op, barrier, txcount, adaptor.getPredicate());
-      return success();
-    }
-
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(
-        op, barrier, txcount, adaptor.getPredicate());
+    NVVM::MBarrierArriveExpectTxOp::create(
+        rewriter, op->getLoc(), barrier, txcount, // barrier and txcount
+        NVVM::MemScopeKind::CTA,                  // default scope is CTA
+        false,                                    // relaxed-semantics is false
+        adaptor.getPredicate());
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -949,13 +938,6 @@ struct NVGPUMBarrierTryWaitParityLowering
     Value ticks = truncToI32(b, adaptor.getTicks());
     Value phase =
         LLVM::ZExtOp::create(b, b.getI32Type(), adaptor.getPhaseParity());
-
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParitySharedOp>(
-          op, barrier, phase, ticks);
-      return success();
-    }
-
     rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParityOp>(op, barrier,
                                                                phase, ticks);
     return success();
@@ -1728,6 +1710,28 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
   }
 };
 } // namespace
+
+void mlir::nvgpu::populateCommonGPUTypeAndAttributeConversions(
+    TypeConverter &typeConverter) {
+  // NVVM uses alloca in the default address space to represent private
+  // memory allocations, so drop private annotations. NVVM uses address
+  // space 3 for shared memory. NVVM uses the default address space to
+  // represent global memory.
+  populateGpuMemorySpaceAttributeConversions(
+      typeConverter, [](gpu::AddressSpace space) -> unsigned {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
+        case gpu::AddressSpace::Workgroup:
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
+        case gpu::AddressSpace::Private:
+          return 0;
+        case gpu::AddressSpace::Constant:
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Constant);
+        }
+        llvm_unreachable("unknown address space enum value");
+      });
+}
 
 void mlir::populateNVGPUToNVVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {

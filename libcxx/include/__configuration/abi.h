@@ -52,20 +52,12 @@
 #if _LIBCPP_ABI_VERSION >= 2
 // TODO: Move the description of the remaining ABI flags to ABIGuarantees.rst or remove them.
 
-// Override the default return value of exception::what() for bad_function_call::what()
-// with a string that is specific to bad_function_call (see http://wg21.link/LWG2233).
-// This is an ABI break on platforms that sign and authenticate vtable function pointers
-// because it changes the mangling of the virtual function located in the vtable, which
-// changes how it gets signed.
-#  define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // According to the Standard, `bitset::operator[] const` returns bool
 #  define _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
 
 // These flags are documented in ABIGuarantees.rst
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-#  define _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
-#  define _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
-#  define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
+#  define _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 #  define _LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
 #  define _LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
 #  define _LIBCPP_ABI_FIX_CITYHASH_IMPLEMENTATION
@@ -83,19 +75,9 @@
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+#  define _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
 
 #elif _LIBCPP_ABI_VERSION == 1
-#  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
-// Enable compiling copies of now inline methods into the dylib to support
-// applications compiled against older libraries. This is unnecessary with
-// COFF dllexport semantics, since dllexport forces a non-inline definition
-// of inline functions to be emitted anyway. Our own non-inline copy would
-// conflict with the dllexport-emitted copy, so we disable it. For XCOFF,
-// the linker will take issue with the symbols in the shared object if the
-// weak inline methods get visibility (such as from -fvisibility-inlines-hidden),
-// so disable it.
-#    define _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
-#  endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
 #  if defined(__FreeBSD__)

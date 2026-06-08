@@ -8,7 +8,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GFX10-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-NEXT:    image_sample v[0:1], v[0:1], s[0:7], s[0:3] dmask:0x3 dim:SQ_RSRC_IMG_2D
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_clause 0x1
@@ -21,7 +21,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GFX10-NEXT:    s_buffer_load_dword s24, s[0:3], 0x5c
 ; GFX10-NEXT:    s_buffer_load_dword s28, s[0:3], 0x7c
 ; GFX10-NEXT:    s_buffer_load_dword s29, s[0:3], 0xc0
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_nop 0
 ; GFX10-NEXT:    s_buffer_load_dwordx4 s[0:3], s[0:3], 0x40
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -439,7 +439,7 @@ declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) #3
 ; Function Attrs: nounwind readnone willreturn
 declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg) #3
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
 attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #2 = { nounwind readnone speculatable willreturn }
 attributes #3 = { nounwind readonly willreturn }

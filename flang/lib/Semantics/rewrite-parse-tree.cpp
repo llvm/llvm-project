@@ -9,6 +9,7 @@
 #include "rewrite-parse-tree.h"
 
 #include "flang/Common/indirection.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -61,6 +62,7 @@ public:
   void Post(parser::IfConstruct &);
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
+  void Post(parser::AccObjectList &);
 
   // Name resolution yet implemented:
   // TODO: Can some/all of these now be enabled?
@@ -104,7 +106,7 @@ void RewriteMutator::Post(parser::Name &name) {
 }
 
 static bool ReturnsDataPointer(const Symbol &symbol) {
-  if (const Symbol * funcRes{FindFunctionResult(symbol)}) {
+  if (const Symbol *funcRes{FindFunctionResult(symbol)}) {
     return IsPointer(*funcRes) && !IsProcedure(*funcRes);
   } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
     for (auto ref : generic->specificProcs()) {
@@ -117,7 +119,7 @@ static bool ReturnsDataPointer(const Symbol &symbol) {
 }
 
 static bool LoopConstructIsSIMD(parser::OpenMPLoopConstruct *ompLoop) {
-  return llvm::omp::allSimdSet.test(ompLoop->BeginDir().DirName().v);
+  return llvm::omp::allSimdSet.test(ompLoop->BeginDir().DirId());
 }
 
 // Remove non-SIMD OpenMPConstructs once they are parsed.
@@ -130,9 +132,9 @@ void RewriteMutator::OpenMPSimdOnly(parser::SpecificationPart &specPart) {
       if (auto *ompDecl{std::get_if<
               common::Indirection<parser::OpenMPDeclarativeConstruct>>(
               &specConstr->u)}) {
-        if (std::holds_alternative<parser::OpenMPThreadprivate>(
+        if (std::holds_alternative<parser::OmpThreadprivateDirective>(
                 ompDecl->value().u) ||
-            std::holds_alternative<parser::OpenMPDeclareMapperConstruct>(
+            std::holds_alternative<parser::OmpDeclareMapperDirective>(
                 ompDecl->value().u)) {
           it = list.erase(it);
           continue;
@@ -195,20 +197,24 @@ void RewriteMutator::OpenMPSimdOnly(
             ++it;
             continue;
           }
-          auto &nest =
-              std::get<std::optional<parser::NestedConstruct>>(ompLoop->t);
-
-          if (auto *doConstruct =
-                  std::get_if<parser::DoConstruct>(&nest.value())) {
-            auto &loopBody = std::get<parser::Block>(doConstruct->t);
-            // We can only remove some constructs from a loop when it's _not_ a
-            // OpenMP simd loop
-            OpenMPSimdOnly(loopBody, /*isNonSimdLoopBody=*/true);
-            auto newDoConstruct = std::move(*doConstruct);
-            auto newLoop = parser::ExecutionPartConstruct{
-                parser::ExecutableConstruct{std::move(newDoConstruct)}};
+          std::list<parser::ExecutionPartConstruct> doList;
+          for (auto &construct : std::get<parser::Block>(ompLoop->t)) {
+            if (auto *doConstruct = const_cast<parser::DoConstruct *>(
+                    parser::omp::GetDoConstruct(construct))) {
+              auto &loopBody = std::get<parser::Block>(doConstruct->t);
+              // We can only remove some constructs from a loop when it's _not_
+              // a OpenMP simd loop
+              OpenMPSimdOnly(const_cast<parser::Block &>(loopBody),
+                  /*isNonSimdLoopBody=*/true);
+              auto newLoop = parser::ExecutionPartConstruct{
+                  parser::ExecutableConstruct{std::move(*doConstruct)}};
+              doList.insert(doList.end(), std::move(newLoop));
+            }
+          }
+          if (!doList.empty()) {
             it = block.erase(it);
-            block.insert(it, std::move(newLoop));
+            for (auto &newLoop : doList)
+              block.insert(it, std::move(newLoop));
             continue;
           }
         } else if (auto *ompCon{std::get_if<parser::OpenMPSectionsConstruct>(
@@ -217,8 +223,7 @@ void RewriteMutator::OpenMPSimdOnly(
               std::get<std::list<parser::OpenMPConstruct>>(ompCon->t);
           auto insertPos = std::next(it);
           for (auto &sectionCon : sections) {
-            auto &section =
-                std::get<parser::OpenMPSectionConstruct>(sectionCon.u);
+            auto &section = std::get<parser::OmpSectionDirective>(sectionCon.u);
             auto &innerBlock = std::get<parser::Block>(section.t);
             block.splice(insertPos, innerBlock);
           }
@@ -252,8 +257,8 @@ void RewriteMutator::FixMisparsedStmtFuncs(
     if (auto *stmt{std::get_if<
             parser::Statement<common::Indirection<parser::StmtFunctionStmt>>>(
             &it->u)}) {
-      if (const Symbol *
-          symbol{std::get<parser::Name>(stmt->statement.value().t).symbol}) {
+      if (const Symbol *symbol{
+              std::get<parser::Name>(stmt->statement.value().t).symbol}) {
         const Symbol &ultimate{symbol->GetUltimate()};
         convert =
             ultimate.has<ObjectEntityDetails>() || ReturnsDataPointer(ultimate);
@@ -386,13 +391,12 @@ bool RewriteMutator::Pre(parser::OpenMPLoopConstruct &ompLoop) {
     // If we're looking at a non-simd OpenMP loop, we need to explicitly
     // call OpenMPSimdOnly on the nested loop block while indicating where
     // the block comes from.
-    auto &nest = std::get<std::optional<parser::NestedConstruct>>(ompLoop.t);
-    if (!nest.has_value()) {
-      return true;
-    }
-    if (auto *doConstruct = std::get_if<parser::DoConstruct>(&*nest)) {
-      auto &innerBlock = std::get<parser::Block>(doConstruct->t);
-      OpenMPSimdOnly(innerBlock, /*isNonSimdLoopBody=*/true);
+    for (auto &construct : std::get<parser::Block>(ompLoop.t)) {
+      if (auto *doConstruct = parser::omp::GetDoConstruct(construct)) {
+        auto &innerBlock = std::get<parser::Block>(doConstruct->t);
+        OpenMPSimdOnly(const_cast<parser::Block &>(innerBlock),
+            /*isNonSimdLoopBody=*/true);
+      }
     }
   }
   return true;
@@ -457,7 +461,7 @@ template <typename READ_OR_WRITE>
 void FixMisparsedUntaggedNamelistName(READ_OR_WRITE &x) {
   if (x.iounit && x.format &&
       std::holds_alternative<parser::Expr>(x.format->u)) {
-    if (const parser::Name * name{parser::Unwrap<parser::Name>(x.format)}) {
+    if (const parser::Name *name{parser::Unwrap<parser::Name>(x.format)}) {
       if (name->symbol && name->symbol->GetUltimate().has<NamelistDetails>()) {
         x.controls.emplace_front(parser::IoControlSpec{std::move(*name)});
         x.format.reset();
@@ -490,6 +494,15 @@ void RewriteMutator::Post(parser::ReadStmt &x) {
 
 void RewriteMutator::Post(parser::WriteStmt &x) {
   FixMisparsedUntaggedNamelistName(x);
+}
+
+// Erase AccObjects recorded in the context by resolve-directives as same-kind
+// data-sharing duplicates. Cross-kind duplicates remain hard errors and never
+// reach this pass.
+void RewriteMutator::Post(parser::AccObjectList &x) {
+  x.v.remove_if([this](const parser::AccObject &o) {
+    return context_.IsAccObjectDuplicate(&o);
+  });
 }
 
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {

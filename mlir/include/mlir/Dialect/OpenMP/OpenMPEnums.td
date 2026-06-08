@@ -40,13 +40,15 @@ class OpenMP_EnumAttr<EnumAttrInfo enumInfo, string name>
 // capture_clause enum.
 //===----------------------------------------------------------------------===//
 
-def CaptureClauseTo : I32EnumAttrCase<"to", 0>;
-def CaptureClauseLink : I32EnumAttrCase<"link", 1>;
-def CaptureClauseEnter : I32EnumAttrCase<"enter", 2>;
+def CaptureClauseNone : I32EnumAttrCase<"none", 0>;
+def CaptureClauseTo : I32EnumAttrCase<"to", 1>;
+def CaptureClauseLink : I32EnumAttrCase<"link", 2>;
+def CaptureClauseEnter : I32EnumAttrCase<"enter", 3>;
 
 def DeclareTargetCaptureClause : OpenMP_I32EnumAttr<
     "DeclareTargetCaptureClause",
     "capture clause", [
+      CaptureClauseNone,
       CaptureClauseTo,
       CaptureClauseLink,
       CaptureClauseEnter
@@ -121,11 +123,11 @@ def ClauseMapFlagsPresent : I32BitEnumAttrCaseBit<"present", 10>;
 def ClauseMapFlagsOMPXHold : I32BitEnumAttrCaseBit<"ompx_hold", 11>;
 def ClauseMapFlagsAttach : I32BitEnumAttrCaseBit<"attach", 12>;
 def ClauseMapFlagsAttachAlways : I32BitEnumAttrCaseBit<"attach_always", 13>;
-def ClauseMapFlagsAttachNone : I32BitEnumAttrCaseBit<"attach_none", 14>;
+def ClauseMapFlagsAttachNever : I32BitEnumAttrCaseBit<"attach_never", 14>;
 def ClauseMapFlagsAttachAuto : I32BitEnumAttrCaseBit<"attach_auto", 15>;
 def ClauseMapFlagsRefPtr : I32BitEnumAttrCaseBit<"ref_ptr", 16>;
 def ClauseMapFlagsRefPtee : I32BitEnumAttrCaseBit<"ref_ptee", 17>;
-def ClauseMapFlagsRefPtrPtee : I32BitEnumAttrCaseBit<"ref_ptr_ptee", 18>;
+def ClauseMapFlagsIsDevicePtr : I32BitEnumAttrCaseBit<"is_device_ptr", 18>;
 
 def ClauseMapFlags : OpenMP_BitEnumAttr<
     "ClauseMapFlags",
@@ -145,11 +147,11 @@ def ClauseMapFlags : OpenMP_BitEnumAttr<
       ClauseMapFlagsOMPXHold,
       ClauseMapFlagsAttach,
       ClauseMapFlagsAttachAlways,
-      ClauseMapFlagsAttachNone,
+      ClauseMapFlagsAttachNever,
       ClauseMapFlagsAttachAuto,
       ClauseMapFlagsRefPtr,
       ClauseMapFlagsRefPtee,
-      ClauseMapFlagsRefPtrPtee
+      ClauseMapFlagsIsDevicePtr
     ]>;
 
 def ClauseMapFlagsAttr : OpenMP_EnumAttr<ClauseMapFlags,
@@ -234,6 +236,22 @@ def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
                                     "order_mod">;
 
 //===----------------------------------------------------------------------===//
+// linear_modifier enum.
+//===----------------------------------------------------------------------===//
+
+def LinearModifierVal : I32EnumAttrCase<"val", 0>;
+def LinearModifierRef : I32EnumAttrCase<"ref", 1>;
+def LinearModifierUval : I32EnumAttrCase<"uval", 2>;
+
+def LinearModifier : OpenMP_I32EnumAttr<"LinearModifier", "linear modifier",
+                                        [LinearModifierVal, LinearModifierRef,
+                                         LinearModifierUval]>;
+
+def LinearModifierAttr : OpenMP_EnumAttr<LinearModifier, "linear_modifier"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
 // reduction_modifier enum.
 //===----------------------------------------------------------------------===//
 
@@ -277,31 +295,21 @@ def ScheduleModifier : OpenMP_I32EnumAttr<
 def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
 
 //===----------------------------------------------------------------------===//
-// target_region_flags enum.
+// target_exec_mode enum.
 //===----------------------------------------------------------------------===//
 
-def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
-def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
-def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
-def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
-def TargetRegionFlagsNoLoop : I32BitEnumAttrCaseBit<"no_loop", 3>;
+def TargetExecModeBare : I32EnumAttrCase<"bare", 0>;
+def TargetExecModeGeneric : I32EnumAttrCase<"generic", 1>;
+def TargetExecModeSpmd : I32EnumAttrCase<"spmd", 2>;
+def TargetExecModeSpmdNoLoop : I32EnumAttrCase<"no_loop", 3>;
 
-def TargetRegionFlags : OpenMP_BitEnumAttr<
-    "TargetRegionFlags",
-    "These flags describe properties of the target kernel. "
-    "TargetRegionFlagsGeneric - denotes generic kernel. "
-    "TargetRegionFlagsSpmd - denotes SPMD kernel. "
-    "TargetRegionFlagsNoLoop - denotes kernel where "
-    "num_teams * num_threads >= loop_trip_count. It allows the conversion "
-    "of loops into sequential code by ensuring that each team/thread "
-    "executes at most one iteration. "
-    "TargetRegionFlagsTripCount - checks if the loop trip count should be "
-    "calculated.", [
-      TargetRegionFlagsNone,
-      TargetRegionFlagsGeneric,
-      TargetRegionFlagsSpmd,
-      TargetRegionFlagsTripCount,
-      TargetRegionFlagsNoLoop
+def TargetExecMode : OpenMP_I32EnumAttr<
+    "TargetExecMode",
+    "target execution mode, mirroring the `OMPTgtExecModeFlags` LLVM enum", [
+      TargetExecModeBare,
+      TargetExecModeGeneric,
+      TargetExecModeSpmd,
+      TargetExecModeSpmdNoLoop,
     ]>;
 
 //===----------------------------------------------------------------------===//
@@ -324,6 +332,44 @@ def VariableCaptureKind : OpenMP_I32EnumAttr<
 
 def VariableCaptureKindAttr : OpenMP_EnumAttr<VariableCaptureKind,
                                               "variable_capture_kind"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
+// access_group_modifier enum.
+//===----------------------------------------------------------------------===//
+
+def AccessGroupCGroup : I32EnumAttrCase<"cgroup", 0>;
+
+def AccessGroupModifier : OpenMP_I32EnumAttr<
+    "AccessGroupModifier",
+    "access group modifier", [
+      AccessGroupCGroup
+    ]>;
+
+def AccessGroupModifierAttr : OpenMP_EnumAttr<AccessGroupModifier,
+                                            "access_group_modifier"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
+// fallback_modifier enum.
+//===----------------------------------------------------------------------===//
+
+def FallbackAbort : I32EnumAttrCase<"abort", 0>;
+def FallbackNull : I32EnumAttrCase<"null", 1>;
+def FallbackDefaultMem : I32EnumAttrCase<"default_mem", 2>;
+
+def FallbackModifier : OpenMP_I32EnumAttr<
+    "FallbackModifier",
+    "fallback modifier", [
+      FallbackAbort,
+      FallbackNull,
+      FallbackDefaultMem
+    ]>;
+
+def FallbackModifierAttr : OpenMP_EnumAttr<FallbackModifier,
+                                            "fallback_modifier"> {
   let assemblyFormat = "`(` $value `)`";
 }
 

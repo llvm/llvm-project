@@ -3,9 +3,9 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-; CHECK: error: couldn't allocate input reg for constraint 'Upa'
-; CHECK: error: couldn't allocate input reg for constraint 'r'
-; CHECK: error: couldn't allocate output register for constraint 'w'
+; CHECK: error: could not allocate input reg for constraint 'Upa'
+; CHECK: error: could not allocate input reg for constraint 'r'
+; CHECK: error: could not allocate output register for constraint 'w'
 ; CHECK: error: unknown token in expression
 
 define <vscale x 16 x i1> @foo1(ptr %in) {

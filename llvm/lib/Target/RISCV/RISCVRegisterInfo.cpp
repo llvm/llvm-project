@@ -120,6 +120,56 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 }
 
+const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForOperand(
+    const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
+  const RISCVSubtarget &STI = MRI.getMF().getSubtarget<RISCVSubtarget>();
+
+  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
+  if (const RegisterBank *RB = dyn_cast<const RegisterBank *>(RCOrRB))
+    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB,
+                                    STI.is64Bit());
+
+  if (const auto *RC = dyn_cast<const TargetRegisterClass *>(RCOrRB)) {
+    return getAllocatableClass(RC);
+  }
+
+  return nullptr;
+}
+
+const TargetRegisterClass *
+RISCVRegisterInfo::getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
+                                            bool Is64Bit) const {
+  if (RB.getID() == RISCV::GPRBRegBankID) {
+    if (Ty.getSizeInBits() <= 32 || (Is64Bit && Ty.getSizeInBits() == 64))
+      return &RISCV::GPRRegClass;
+  }
+
+  if (RB.getID() == RISCV::FPRBRegBankID) {
+    if (Ty.getSizeInBits() == 16)
+      return &RISCV::FPR16RegClass;
+    if (Ty.getSizeInBits() == 32)
+      return &RISCV::FPR32RegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &RISCV::FPR64RegClass;
+  }
+
+  if (RB.getID() == RISCV::VRBRegBankID) {
+    if (Ty.getSizeInBits().getKnownMinValue() <= 64)
+      return &RISCV::VRRegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 128)
+      return &RISCV::VRM2RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 256)
+      return &RISCV::VRM4RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 512)
+      return &RISCV::VRM8RegClass;
+  }
+
+  return nullptr;
+}
+
 BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved(getNumRegs());
@@ -127,12 +177,16 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
     // Mark any GPRs requested to be reserved as such
-    if (Subtarget.isRegisterReservedByUser(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (Subtarget.isRegisterReservedByUser(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
 
     // Mark all the registers defined as constant in TableGen as reserved.
-    if (isConstantPhysReg(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (isConstantPhysReg(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
   }
 
   // Use markSuperRegs to ensure any register aliases are also reserved
@@ -220,8 +274,12 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
       if (!isInt<32>(FixedOffset)) {
-        reportFatalUsageError(
-            "Frame size outside of the signed 32-bit range not supported");
+        // This check might also need to be updated to 64bit.
+        // However mulImm() still assumes 32bit. For now only support fixed
+        // 64bit frame offsets, since scalable offsets would require the number
+        // of spilled registers to exceed 2^31, which is unlikely.
+        reportFatalUsageError("Scalable frame size outside of the signed "
+                              "32-bit range not supported");
       }
       Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
     }
@@ -511,6 +569,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  bool Is64Bit = MF.getSubtarget<RISCVSubtarget>().is64Bit();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -521,9 +580,9 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
-  if (!isInt<32>(Offset.getFixed())) {
-    reportFatalUsageError(
-        "Frame offsets outside of the signed 32-bit range not supported");
+  if (!Is64Bit && !isInt<32>(Offset.getFixed())) {
+    reportFatalUsageError("Frame offsets outside of the signed 32-bit range "
+                          "not supported on RV32");
   }
 
   if (!IsRVVSpill) {
@@ -547,9 +606,11 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // MIPS Prefetch instructions require the offset to be 9 bits encoded.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else if ((Opc == RISCV::PseudoRV32ZdinxLD ||
-                Opc == RISCV::PseudoRV32ZdinxSD) &&
+                Opc == RISCV::PseudoRV32ZdinxSD ||
+                Opc == RISCV::PseudoLD_RV32_OPT ||
+                Opc == RISCV::PseudoSD_RV32_OPT) &&
                Lo12 >= 2044) {
-      // This instruction will be split into 2 instructions. The second
+      // This instruction will/might be split into 2 instructions. The second
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
@@ -864,6 +925,46 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+  // Handle RegPairEven/RegPairOdd hints for Zilsd register pairs
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(VirtReg);
+  unsigned HintType = Hint.first;
+  Register Partner = Hint.second;
+
+  MCRegister TargetReg;
+  if (HintType == RISCVRI::RegPairEven || HintType == RISCVRI::RegPairOdd) {
+    // Check if we want the even or odd register of a consecutive pair
+    bool WantOdd = (HintType == RISCVRI::RegPairOdd);
+
+    // First priority: Check if partner is already allocated
+    if (Partner.isVirtual() && VRM && VRM->hasPhys(Partner)) {
+      MCRegister PartnerPhys = VRM->getPhys(Partner);
+      // Calculate the exact register we need for consecutive pairing
+      TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
+
+      // Verify it's valid and available
+      if (RISCV::GPRRegClass.contains(TargetReg) &&
+          is_contained(Order, TargetReg))
+        Hints.push_back(TargetReg.id());
+    }
+
+    // Second priority: Try to find consecutive register pairs in the allocation
+    // order
+    for (MCPhysReg PhysReg : Order) {
+      // Don't add the hint if we already added above.
+      if (TargetReg == PhysReg)
+        continue;
+
+      unsigned RegNum = getEncodingValue(PhysReg);
+      // Check if this register matches the even/odd requirement
+      bool IsOdd = (RegNum % 2 != 0);
+
+      // Don't provide hints that are paired to a reserved register.
+      MCRegister Paired = PhysReg + (IsOdd ? -1 : 1);
+      if (WantOdd == IsOdd && !MRI->isReserved(Paired))
+        Hints.push_back(PhysReg);
+    }
+  }
+
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
@@ -923,13 +1024,16 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     case RISCV::ADDIW:
       return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
     case RISCV::MUL:
+      // c.mul
+      NeedGPRC = true;
+      return Subtarget.hasStdExtZcb();
     case RISCV::SEXT_B:
     case RISCV::SEXT_H:
     case RISCV::ZEXT_H_RV32:
     case RISCV::ZEXT_H_RV64:
-      // c.mul, c.sext.b, c.sext.h, c.zext.h
+      // c.sext.b, c.sext.h, c.zext.h
       NeedGPRC = true;
-      return Subtarget.hasStdExtZcb();
+      return Subtarget.hasStdExtZcb() && Subtarget.hasStdExtZbb();
     case RISCV::ADD_UW:
       // c.zext.w
       NeedGPRC = true;
@@ -940,6 +1044,13 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       NeedGPRC = true;
       return Subtarget.hasStdExtZcb() && MI.getOperand(2).isImm() &&
              MI.getOperand(2).getImm() == -1;
+    case RISCV::QC_EXTU:
+      return MI.getOperand(2).getImm() >= 6 && MI.getOperand(3).getImm() == 0;
+    case RISCV::BSETI:
+    case RISCV::BEXTI:
+      // qc.c.bseti, qc.c.bexti
+      NeedGPRC = true;
+      return Subtarget.hasVendorXqcibm() && MI.getOperand(2).getImm() != 0;
     }
   };
 
@@ -1003,6 +1114,35 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       Hints.push_back(OrderReg);
 
   return BaseImplRetVal;
+}
+
+void RISCVRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
+                                           MachineFunction &MF) const {
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(Reg);
+
+  // Handle RegPairEven/RegPairOdd hints for Zilsd register pairs
+  if ((Hint.first == RISCVRI::RegPairOdd ||
+       Hint.first == RISCVRI::RegPairEven) &&
+      Hint.second.isVirtual()) {
+    // If 'Reg' is one of the even/odd register pair and it's now changed
+    // (e.g. coalesced) into a different register, the other register of the
+    // pair allocation hint must be updated to reflect the relationship change.
+    Register Partner = Hint.second;
+    std::pair<unsigned, Register> PartnerHint =
+        MRI->getRegAllocationHint(Partner);
+
+    // Make sure partner still points to us
+    if (PartnerHint.second == Reg) {
+      // Update partner to point to NewReg instead of Reg
+      MRI->setRegAllocationHint(Partner, PartnerHint.first, NewReg);
+
+      // If NewReg is virtual, set up the reciprocal hint
+      // NewReg takes over Reg's role, so it gets the SAME hint type as Reg
+      if (NewReg.isVirtual())
+        MRI->setRegAllocationHint(NewReg, Hint.first, Partner);
+    }
+  }
 }
 
 Register

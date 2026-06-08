@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -839,10 +840,14 @@ TEST(ToolChainTest, ConfigInexistentInclude) {
     ASSERT_TRUE(C);
     ASSERT_TRUE(C->containsError());
     EXPECT_EQ(1U, DiagConsumer->Errors.size());
-    EXPECT_STRCASEEQ("cannot read configuration file '" USERCONFIG
-                     "': cannot not open file '" UNEXISTENT
-                     "': no such file or directory",
-                     DiagConsumer->Errors[0].c_str());
+    // Expected path style in diagnostics depends on
+    // LLVM_WINDOWS_PREFER_FORWARD_SLASH. Construct the expected string
+    // dynamically to match the native path style.
+    std::string ExpectedError =
+        "cannot read configuration file '" +
+        llvm::sys::path::native(USERCONFIG) + "': cannot not open file '" +
+        llvm::sys::path::native(UNEXISTENT) + "': no such file or directory";
+    EXPECT_STRCASEEQ(ExpectedError.c_str(), DiagConsumer->Errors[0].c_str());
   }
 
 #undef USERCONFIG
@@ -885,9 +890,14 @@ TEST(ToolChainTest, ConfigRecursiveInclude) {
     ASSERT_TRUE(C);
     ASSERT_TRUE(C->containsError());
     EXPECT_EQ(1U, DiagConsumer->Errors.size());
-    EXPECT_STREQ("cannot read configuration file '" USERCONFIG
-                 "': recursive expansion of: '" INCLUDED1 "'",
-                 DiagConsumer->Errors[0].c_str());
+    // Expected path style in diagnostics depends on
+    // LLVM_WINDOWS_PREFER_FORWARD_SLASH. Construct the expected string
+    // dynamically to match the native path style.
+    std::string ExpectedError = "cannot read configuration file '" +
+                                llvm::sys::path::native(USERCONFIG) +
+                                "': recursive expansion of: '" +
+                                llvm::sys::path::native(INCLUDED1) + "'";
+    EXPECT_STRCASEEQ(ExpectedError.c_str(), DiagConsumer->Errors[0].c_str());
   }
 
 #undef USERCONFIG
@@ -915,12 +925,12 @@ TEST(ToolChainTest, NestedConfigFile) {
   FS->addFile("/home/test/bin/platform.cfg", 0,
               llvm::MemoryBuffer::getMemBuffer("--sysroot=/platform-bin\n"));
 
-  SmallString<128> ClangExecutable("/home/test/bin/clang");
-  FS->makeAbsolute(ClangExecutable);
+  SmallString<128> DriverExecutable("/home/test/bin/clang");
+  FS->makeAbsolute(DriverExecutable);
 
   // User file is absent - use system definitions.
   {
-    Driver TheDriver(ClangExecutable, "arm-linux-gnueabi", Diags,
+    Driver TheDriver(DriverExecutable, "arm-linux-gnueabi", Diags,
                      "clang LLVM compiler", FS);
     std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
         {"/home/test/bin/clang", "--config", "root.cfg",
@@ -934,7 +944,7 @@ TEST(ToolChainTest, NestedConfigFile) {
   FS->addFile("/home/test/sdk/platform.cfg", 0,
               llvm::MemoryBuffer::getMemBuffer("--sysroot=/platform-user\n"));
   {
-    Driver TheDriver(ClangExecutable, "arm-linux-gnueabi", Diags,
+    Driver TheDriver(DriverExecutable, "arm-linux-gnueabi", Diags,
                      "clang LLVM compiler", FS);
     std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
         {"/home/test/bin/clang", "--config", "root.cfg",

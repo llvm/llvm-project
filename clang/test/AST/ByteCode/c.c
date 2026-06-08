@@ -235,8 +235,7 @@ int castViaInt[*(int*)(unsigned long)"test"]; // ref-error {{variable length arr
                                               // expected-error {{variable length array}} \
                                               // pedantic-expected-error {{variable length array}}
 
-const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}} \
-                                              // pedantic-expected-note {{this conversion is not allowed in a constant expression}}
+const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}}
 _Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 'funcp == (void *)0'}} \
                                        // pedantic-warning {{expression is not an integer constant expression}}
 _Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \
@@ -386,4 +385,92 @@ void foo2(void*);
 void bar2(void) {
   int a[2][3][4][5]; // all-note {{array 'a' declared here}}
   foo2(&a[0][4]); // all-warning {{array index 4 is past the end of the array}}
+}
+
+void plainComplex(void) {
+  _Complex cd; // all-warning {{_Complex double}}
+  cd = *(_Complex *)&(struct { double r, i; }){0.0, 0.0}; // all-warning {{_Complex double}}
+}
+
+/// This test results in an ImplicitValueInitExpr with DiscardResult set.
+struct M{
+  char c;
+};
+typedef struct S64 {
+  struct M m;
+  char a[64];
+} I64;
+
+_Static_assert((((I64){}, 1)), ""); // all-warning {{left operand of comma operator has no effect}} \
+                                    // pedantic-warning {{use of an empty initializer is a C23 extension}} \
+                                    // pedantic-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+
+#define V(N) __attribute__((vector_size(N)))
+#define C2 (VC2){0, 1}
+char func_(void);
+typedef V(2) char VC2;
+void CopyArrayToFnPtr(void) { *(VC2 *)func_ = C2; }
+
+_Complex double returnsComplex(); // pedantic-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+void callReturnsComplex(void) {
+  _Complex double c;
+  c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
+}
+
+int complexMul[2 * (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+                                               // pedantic-warning {{imaginary constants are a C2y extension}} \
+                                               // all-warning {{variable length array folded to constant array as an extension}}
+
+int complexDiv[2 / (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+                                               // pedantic-warning {{imaginary constants are a C2y extension}} \
+                                               // all-warning {{variable length array folded to constant array as an extension}}
+
+
+
+int i = 0;
+void intPtrCmp1(void) { &i + 1 == 2; } // all-warning {{comparison between pointer and integer}} \
+                                       // all-warning {{equality comparison result unused}}
+void intPtrCmp2(void) { 2 == &i + 1; } // all-warning {{comparison between pointer and integer}} \
+                                       // all-warning {{equality comparison result unused}}
+
+/// evaluateStrlen on a non-block pointer.
+char *strcpy(char *restrict s1, const char *restrict s2);
+void strcpy_fn(char *x) {
+  strcpy(x, (char*)&strcpy_fn);
+}
+
+/// strcpy on a non-integer pointer.
+void strcpyDouble(void) {
+  char buf[1];
+  const double test_buf[] = {'4', '2'};
+  __builtin_strcpy(buf, test_buf + 1); // all-error {{incompatible pointer types}}
+}
+
+int *iptr;
+void ignoredConditional(void) { *iptr = (((_Complex double)1.0 ? 2 : 3), a); } // all-warning {{left operand of comma operator has no effect}}
+
+float r  = (float) (intptr_t) &r; // all-error {{initializer element is not a compile-time constant}}
+
+void labelAndNull(void) { int bar = &*(void *)0 - &&baz; } // all-error {{use of undeclared label 'baz'}} \\
+                                                           // pedantic-warning {{use of GNU address-of-label extension}} \
+                                                           // pedantic-warning {{arithmetic on pointers to void is a GNU extension}}
+
+void nonNumberRem(void) { *((int *)0) = (long)foo % 42; } // all-warning {{indirection of non-volatile null pointer will be deleted, not trap}} \
+                                                          // all-note {{consider using __builtin_trap() or qualifying pointer with 'volatile'}}
+
+struct Oops {
+  int a; // all-note {{previous declaration is here}}
+  double a; // all-error {{duplicate member 'a'}}
+};
+void evaluatevalue(void) {
+  const struct Oops s = {0, 0.};
+  *(int *)(&s.a) = 42; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+}
+
+void AddrLabelDiffSub(void) {
+  _Static_assert((long)&&bar - (long)&&baz - 42 == foo, ""); // all-warning {{comparison between pointer and integer ('long' and 'int (*)()')}} \
+                                                             // all-error {{not an integral constant expression}} \
+                                                             // all-error {{use of undeclared label 'bar'}} \
+                                                             // all-error {{use of undeclared label 'baz'}} \
+                                                             // pedantic-warning 2{{use of GNU address-of-label extension}}
 }

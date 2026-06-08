@@ -44,6 +44,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <stack>
 
 using namespace lld;
 using namespace llvm::opt;
@@ -351,6 +352,12 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-functionpadmin:" + v);
   }
 
+  if (auto *a = args.getLastArg(OPT_native_def)) {
+    StringRef v = a->getValue();
+    if (!v.empty())
+      add("-defarm64native:" + v);
+  }
+
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
     add("-WX");
   else
@@ -451,6 +458,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-machine:arm64ec");
     else if (s == "arm64xpe")
       add("-machine:arm64x");
+    else if (s == "mipspe")
+      add("-machine:mips");
     else
       error("unknown parameter: -m" + s);
   }
@@ -516,6 +525,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-thinlto-object-suffix-replace:" + StringRef(arg->getValue()));
   if (auto *arg = args.getLastArg(OPT_thinlto_prefix_replace_eq))
     add("-thinlto-prefix-replace:" + StringRef(arg->getValue()));
+  if (args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false))
+    add("-fat-lto-objects");
+  else
+    add("-fat-lto-objects:no");
 
   for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
     add("-mllvm:-" + StringRef(a->getValue()));
@@ -564,13 +577,22 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   StringRef prefix = "";
   bool isStatic = false;
+  struct PushPopState {
+    StringRef prefix;
+    bool isStatic;
+  };
+  std::stack<PushPopState, std::vector<PushPopState>> pushPopStates;
   for (auto *a : args) {
     switch (a->getOption().getID()) {
     case OPT_INPUT:
-      if (StringRef(a->getValue()).ends_with_insensitive(".def"))
+      if (StringRef(a->getValue()).ends_with_insensitive(".def")) {
         add("-def:" + StringRef(a->getValue()));
-      else
+        if (args.getLastArgValue(OPT_m) == "arm64xpe" &&
+            !args.hasArg(OPT_native_def))
+          add("-defarm64native:" + StringRef(a->getValue()));
+      } else {
         add(prefix + StringRef(a->getValue()));
+      }
       break;
     case OPT_l:
       add(prefix +
@@ -587,6 +609,18 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       break;
     case OPT_Bdynamic:
       isStatic = false;
+      break;
+    case OPT_push_state:
+      pushPopStates.push({prefix, isStatic});
+      break;
+    case OPT_pop_state:
+      if (pushPopStates.empty()) {
+        error("unbalanced --push-state/--pop-state");
+        break;
+      }
+      prefix = pushPopStates.top().prefix;
+      isStatic = pushPopStates.top().isStatic;
+      pushPopStates.pop();
       break;
     }
   }

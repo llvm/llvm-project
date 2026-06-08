@@ -17,7 +17,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr30, $sgpr31, $sgpr34, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $sgpr39, $sgpr40, $sgpr41, $sgpr42, $sgpr43, $sgpr44, $sgpr45, $sgpr46, $sgpr47, $vgpr0, $vgpr1, $vgpr31, $vgpr40, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAITCNT 0
+  ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
   ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR killed undef $vgpr8_vgpr9_vgpr10_vgpr11, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 :: (store (s128) into %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

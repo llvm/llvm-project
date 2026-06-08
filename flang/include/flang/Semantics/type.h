@@ -301,11 +301,15 @@ public:
   void CookParameters(evaluate::FoldingContext &);
   // Evaluates type parameter expressions.
   void EvaluateParameters(SemanticsContext &);
+  void ReevaluateParameters(SemanticsContext &);
   void AddParamValue(SourceName, ParamValue &&);
   // Creates a Scope for the type and populates it with component
   // instantiations that have been specialized with actual type parameter
   // values, which are cooked &/or evaluated if necessary.
   void Instantiate(Scope &containingScope);
+  // Reset instantiation state so a copy can receive a fresh component scope
+  // (e.g. OpenACC use_device with CUDA Fortran component paths).
+  void PrepareForScopeClone();
 
   ParamValue *FindParameter(SourceName);
   const ParamValue *FindParameter(SourceName target) const {

@@ -630,23 +630,5 @@ COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
   return GSym;
 }
 
-Symbol *GetImageBaseSymbol::operator()(LinkGraph &G) {
-  if (ImageBase)
-    return *ImageBase;
-
-  auto IBN = G.intern(ImageBaseName);
-  ImageBase = G.findExternalSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-  ImageBase = G.findAbsoluteSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-  ImageBase = G.findDefinedSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-
-  return nullptr;
-}
-
 } // namespace jitlink
 } // namespace llvm

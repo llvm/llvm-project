@@ -91,7 +91,7 @@ define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
   ret void
 }
 
-define amdgpu_kernel void @permlane64_nonuniform(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @permlane64_nonuniform(ptr addrspace(1) %out) {
 ; CHECK-LABEL: permlane64_nonuniform:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
@@ -104,12 +104,12 @@ define amdgpu_kernel void @permlane64_nonuniform(i32 addrspace(1)* %out) {
 ; CHECK-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tid)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
-define amdgpu_kernel void @permlane64_nonuniform_expression(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @permlane64_nonuniform_expression(ptr addrspace(1) %out) {
 ; CHECK-LABEL: permlane64_nonuniform_expression:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
@@ -124,8 +124,8 @@ define amdgpu_kernel void @permlane64_nonuniform_expression(i32 addrspace(1)* %o
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid2 = add i32 %tid, 1
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tid2)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 

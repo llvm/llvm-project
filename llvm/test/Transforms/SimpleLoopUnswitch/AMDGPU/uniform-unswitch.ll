@@ -20,7 +20,7 @@
 
 define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) {
 ; CHECK-LABEL: define amdgpu_kernel void @uniform_unswitch(
-; CHECK-SAME: ptr writeonly captures(none) [[OUT:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) [[OUT:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT_GLOBAL:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N]], 0
@@ -35,13 +35,13 @@ define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) 
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I_07]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr addrspace(1) [[OUT_GLOBAL]], i64 [[TMP0]]
 ; CHECK-NEXT:    store i32 [[I_07]], ptr addrspace(1) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -69,9 +69,12 @@ if.then:                                          ; preds = %for.body
 for.inc:                                          ; preds = %for.body, %if.then
   %inc = add nuw nsw i32 %i.07, 1
   %exitcond = icmp eq i32 %inc, %n
-  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
+  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !0
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.unroll.disable"}

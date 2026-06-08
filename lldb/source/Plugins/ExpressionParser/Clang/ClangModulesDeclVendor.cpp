@@ -8,8 +8,10 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -19,6 +21,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 
@@ -67,13 +70,13 @@ private:
       IDAndDiagnostic;
   std::vector<IDAndDiagnostic> m_diagnostics;
   std::unique_ptr<clang::DiagnosticOptions> m_diag_opts;
+  /// Output string filled by m_os. Will be reused for different diagnostics.
+  std::string m_output;
+  /// Output stream of m_diag_printer.
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
   /// The DiagnosticPrinter used for creating the full diagnostic messages
   /// that are stored in m_diagnostics.
   std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
-  /// Output stream of m_diag_printer.
-  std::unique_ptr<llvm::raw_string_ostream> m_os;
-  /// Output string filled by m_os. Will be reused for different diagnostics.
-  std::string m_output;
   /// A Progress with explicitly managed lifetime.
   std::unique_ptr<Progress> m_current_progress_up;
   std::vector<std::string> m_module_build_stack;
@@ -211,6 +214,14 @@ bool StoringDiagnosticConsumer::HandleModuleRemark(
     LLDB_LOG(log, "Finished building Clang module {0}", module_name);
     return true;
   }
+  case clang::diag::remark_module_import: {
+    const auto &module_name = info.getArgStdStr(0);
+    const auto &module_path = info.getArgStdStr(1);
+    LLDB_LOG(log, "Importing Clang module {0} from {1}", module_name,
+             module_path);
+    return true;
+  }
+
   default:
     return false;
   }
@@ -327,7 +338,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
         return llvm::createStringError("couldn't find modulemap file in %s",
                                        module.search_path.GetCString());
 
-      if (HS.parseAndLoadModuleMapFile(*file, is_system))
+      if (HS.parseAndLoadModuleMapFile(*file, is_system,
+                                       /*ImplicitlyDiscovered=*/false))
         return llvm::createStringError(
             "failed to parse and load modulemap file in %s",
             module.search_path.GetCString());
@@ -335,8 +347,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
   }
 
   if (!HS.lookupModule(module.path.front().GetStringRef()))
-    return llvm::createStringError("header search couldn't locate module '%s'",
-                                   module.path.front().AsCString());
+    return llvm::createStringErrorV(
+        "header search couldn't locate module '{0}'", module.path.front());
 
   llvm::SmallVector<clang::IdentifierLoc, 4> clang_path;
 
@@ -365,9 +377,9 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     lldb_private::StreamString error_stream;
     diagnostic_consumer->DumpDiagnostics(error_stream);
 
-    return llvm::createStringError(llvm::formatv(
-        "couldn't load top-level module {0}:\n{1}",
-        module.path.front().GetStringRef(), error_stream.GetString()));
+    return llvm::createStringErrorV("couldn't load top-level module {0}:\n{1}",
+                                    module.path.front().GetStringRef(),
+                                    error_stream.GetString());
   }
 
   clang::Module *submodule = top_level_module;
@@ -378,10 +390,10 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
       lldb_private::StreamString error_stream;
       diagnostic_consumer->DumpDiagnostics(error_stream);
 
-      return llvm::createStringError(llvm::formatv(
+      return llvm::createStringErrorV(
           "couldn't load submodule '{0}' of module '{1}':\n{2}",
           component.GetStringRef(), submodule->getFullModuleName(),
-          error_stream.GetString()));
+          error_stream.GetString());
     }
 
     submodule = found;
@@ -407,9 +419,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     return llvm::Error::success();
   }
 
-  return llvm::createStringError(
-      llvm::formatv("unknown error while loading module {0}\n",
-                    module.path.front().GetStringRef()));
+  return llvm::createStringErrorV("unknown error while loading module {0}\n",
+                                  module.path.front().GetStringRef());
 }
 
 bool ClangModulesDeclVendor::LanguageSupportsClangModules(
@@ -502,22 +513,17 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
         ->ReadDefinedMacros();
   }
 
-  for (clang::Preprocessor::macro_iterator
-           mi = m_compiler_instance->getPreprocessor().macro_begin(),
-           me = m_compiler_instance->getPreprocessor().macro_end();
-       mi != me; ++mi) {
+  for (const auto &m : m_compiler_instance->getPreprocessor().macros()) {
     const clang::IdentifierInfo *ii = nullptr;
 
-    {
-      if (clang::IdentifierInfoLookup *lookup =
-              m_compiler_instance->getPreprocessor()
-                  .getIdentifierTable()
-                  .getExternalIdentifierLookup()) {
-        lookup->get(mi->first->getName());
-      }
-      if (!ii)
-        ii = mi->first;
+    if (clang::IdentifierInfoLookup *lookup =
+            m_compiler_instance->getPreprocessor()
+                .getIdentifierTable()
+                .getExternalIdentifierLookup()) {
+      lookup->get(m.first->getName());
     }
+    if (!ii)
+      ii = m.first;
 
     ssize_t found_priority = -1;
     clang::MacroInfo *macro_info = nullptr;
@@ -551,7 +557,7 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
     if (macro_info) {
       std::string macro_expansion = "#define ";
-      llvm::StringRef macro_identifier = mi->first->getName();
+      llvm::StringRef macro_identifier = m.first->getName();
       macro_expansion.append(macro_identifier.str());
 
       {
@@ -680,6 +686,7 @@ ClangModulesDeclVendor::Create(Target &target) {
       "-fmodules-validate-system-headers",
       "-Werror=non-modular-include-in-framework-module",
       "-Xclang=-fincremental-extensions",
+      "-Rmodule-import",
       "-Rmodule-build"};
 
   target.GetPlatform()->AddClangModuleCompilationOptions(

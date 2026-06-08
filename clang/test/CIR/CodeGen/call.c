@@ -118,19 +118,39 @@ int f12(void) {
 
 // CIR-LABEL: cir.func{{.*}} @f12() -> !s32i{{.*}} {
 // CIR:         %[[A:.+]] = cir.const #cir.int<1> : !s32i
-// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) side_effect(pure) : (!s32i) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) side_effect(pure) : (!s32i {llvm.noundef}) -> !s32i
 // CIR-NEXT:    %[[B:.+]] = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) side_effect(const) : (!s32i) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) side_effect(const) : (!s32i {llvm.noundef}) -> !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @f12(){{.*}}
-// LLVM:         %{{.+}} = call i32 @f10(i32 1) #[[ATTR0:.+]]
-// LLVM-NEXT:    %{{.+}} = call i32 @f11(i32 2) #[[ATTR1:.+]]
+// LLVM:         %{{.+}} = call i32 @f10(i32 noundef 1) #[[ATTR0:.+]]
+// LLVM-NEXT:    %{{.+}} = call i32 @f11(i32 noundef 2) #[[ATTR1:.+]]
 
 // OGCG-LABEL: define{{.*}} i32 @f12()
 // OGCG:         %{{.+}} = call i32 @f10(i32 noundef 1) #[[ATTR0:.+]]
 // OGCG-NEXT:    %{{.+}} = call i32 @f11(i32 noundef 2) #[[ATTR1:.+]]
 
-// LLVM: attributes #[[ATTR0]] = { nounwind willreturn memory(read, errnomem: none) }
+void f13(void) {
+  _Atomic(void(*)(void)) fp;
+  fp();
+}
+// CIR-LABEL: cir.func{{.*}} @f13()
+// CIR: %[[FP_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.func<()>>, !cir.ptr<!cir.ptr<!cir.func<()>>>, ["fp"]
+// CIR: %[[LOAD_FP:.*]] = cir.load align(8) atomic(seq_cst) %[[FP_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<()>>>, !cir.ptr<!cir.func<()>>
+// CIR: cir.call %[[LOAD_FP]]() : (!cir.ptr<!cir.func<()>>) -> ()
+
+// LLVM-LABEL: define{{.*}} void @f13()
+// LLVM: %[[FP_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[LOAD_FP:.*]] = load atomic ptr, ptr %[[FP_ALLOCA]] seq_cst, align 8
+// LLVM: call void %[[LOAD_FP]]()
+
+// OGCG-LABEL: define{{.*}} void @f13() 
+// OGCG: %[[FP_ALLOCA:.*]] = alloca ptr
+// OGCG: %[[LOAD_FP:.*]] = load atomic ptr, ptr %[[FP_ALLOCA]] seq_cst, align 8
+// OGCG: call void %[[LOAD_FP]]()
+
+
+// LLVM: attributes #[[ATTR0]] = { nounwind willreturn memory(read) }
 // LLVM: attributes #[[ATTR1]] = { nounwind willreturn memory(none) }
 
 // OGCG: attributes #[[ATTR0]] = { nounwind willreturn memory(read) }

@@ -141,7 +141,7 @@ products.
 Maintainers are those volunteers; they are regular contributors who volunteer
 to take on additional community responsibilities beyond code contributions.
 Community members can find active and inactive maintainers for a project in the
-``Maintainers.rst`` file at the root directory of the individual project.
+``Maintainers.md`` file at the root directory of the individual project.
 
 Maintainers are volunteering to take on the following shared responsibilities
 within an area of a project:
@@ -191,25 +191,26 @@ the same project vouches for their ability to perform the responsibilities and
 there are no explicit objections raised by the community.
 
 *To step down as a maintainer*, you can move your name to the "inactive
-maintainers" section of the ``Maintainers.rst`` file for the project, or remove
-your name entirely; no PR review is necessary. Additionally, any maintainer who
-has not been actively performing their responsibilities over an extended period
-of time can be moved to the "inactive maintainers" section by another active
-maintainer within that project with agreement from one other active maintainer
-within that project. If there is only one active maintainer for a project,
-please post on Discourse to solicit wider community feedback about the removal
-and future direction for the project. However, please discuss the situation
-with the inactive maintainer before such removal to avoid accidental
-miscommunications. If the inactive maintainer is unreachable, no discussion
-with them is required. Stepping down or being removed as a maintainer is normal
-and does not prevent someone from resuming their activities as a maintainer in
-the future.
+maintainers" section of the ``Maintainers.md`` file for
+the project, or remove your name entirely; no PR review is necessary.
+Additionally, any maintainer who has not been actively performing their
+responsibilities over an extended period of time can be moved to the "inactive
+maintainers" section by another active maintainer within that project with
+agreement from one other active maintainer within that project. If there is
+only one active maintainer for a project, please post on Discourse to solicit
+wider community feedback about the removal and future direction for the project.
+However, please discuss the situation with the inactive maintainer before such
+removal to avoid accidental miscommunications. If the inactive maintainer is
+unreachable, no discussion with them is required. Stepping down or being removed
+as a maintainer is normal and does not prevent someone from resuming their
+activities as a maintainer in the future.
 
 *To resume activities as a maintainer*, you can post a PR moving your name from
-the "inactive maintainers" section of the ``Maintainers.rst`` file to the
-active maintainers list. Because the volunteer was already previously accepted,
-they will be re-accepted so long as at least one maintainer in the same project
-approves the PR and there are no explicit objections raised by the community.
+the "inactive maintainers" section of the ``Maintainers.md``
+file to the active maintainers list. Because the volunteer
+was already previously accepted, they will be re-accepted so long as at least
+one maintainer in the same project approves the PR and there are no explicit
+objections raised by the community.
 
 .. _include a testcase:
 
@@ -365,17 +366,13 @@ Below are some guidelines about the format of the message itself:
 
 * Separate the commit message into title and body separated by a blank line.
 
-* If you're not the original author, ensure the 'Author' property of the commit is
-  set to the original author and the 'Committer' property is set to yourself.
-  You can use a command similar to
-  ``git commit --amend --author="John Doe <jdoe@llvm.org>"`` to correct the
-  author property if it is incorrect. See `Attribution of Changes`_ for more
-  information including the method we used for attribution before the project
-  migrated to git.
-
-  In the rare situation where there are multiple authors, please use the `git
+* In the situation where there are multiple authors, or in the rare situation
+  you are submitting a change for someone else (e.g., after putting an old
+  patch from someone else through review yourself),  please use the `git
   tag 'Co-authored-by:' to list the additional authors
   <https://github.blog/2018-01-29-commit-together-with-co-authors/>`_.
+  See `Attribution of Changes`_ for more information including the method we
+  used for attribution before the project migrated to git.
 
 * The title should be concise. Because all commits are emailed to the list with
   the first line as the subject, long titles are frowned upon.  Short titles
@@ -526,7 +523,10 @@ Most commonly these reviewers will provide the necessary approval, but approvals
 from other LLVM committers are also acceptable. Those reviewing the application are
 confirming that you have indeed had three patches committed, and that based on interactions
 on those reviews and elsewhere in the LLVM community they have no concern about you
-adhering to our Developer Policy and Code of Conduct.
+adhering to our Developer Policy and Code of Conduct. Reviewers should clearly state their
+reasoning for accepting or rejecting the request, and finish with a clear statement such
+as "I approve of this request", "LGTM", or "I do not approve of this request".
+
 
 If approved, a GitHub invitation will be sent to your
 GitHub account. In case you don't get notification from GitHub, go to
@@ -593,11 +593,6 @@ having this ability would help that work.
 Proposing Major Changes (RFCs)
 ------------------------------
 
-LLVM is a large community with many stakeholders, and before landing any major
-change, it is important to discuss the design of a change publicly with the
-community. This is done by posting a Request For Comments (RFC) on the `LLVM
-Discourse forums`_.
-
 The design of LLVM is carefully controlled to ensure that all the pieces fit
 together well and are as consistent as possible. If you plan to make a major
 change to the way LLVM works or want to add a major new extension, it is a good
@@ -606,45 +601,13 @@ significant effort in an implementation. Prototype implementations, however, can
 often be helpful in making design discussions more concrete by demonstrating
 what is possible.
 
-These are some suggestions for how to get a major change accepted:
+LLVM is a large community with many stakeholders, and before landing any major
+change, it is important to discuss the design of a change publicly with the
+community. This is done by posting a Request For Comments (RFC) on the `LLVM
+Discourse forums`_. See the :doc:`RFC process <RFCProcess>` documentation for
+more details.
 
-* Make it targeted, and avoid touching components irrelevant to the task.
-
-* Explain how the change improves LLVM for other stakeholders rather than
-  focusing on your specific use case.
-
-* As discussion evolves, periodically summarize the current state of the
-  discussion and clearly separate points where consensus seems to emerge from
-  those where further discussion is necessary.
-
-* Compilers are foundational infrastructure, so there is a high quality bar,
-  and the burden of proof is on the proposer. If reviewers repeatedly ask for
-  an unreasonable amount of evidence or data, proposal authors can escalate to
-  the area team to resolve disagreements.
-
-After posting a major proposal, it is common to receive lots of conflicting
-feedback from different parties, or no feedback at all, leaving authors without
-clear next steps. As a community, we are aiming for `"rough consensus"
-<https://en.wikipedia.org/wiki/Rough_consensus>`_, similar in spirit to what is
-described in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
-This requires considering and addressing all of the objections to the RFC, and
-confirming that we can all live with the tradeoffs embodied in the proposal.
-
-The LLVM Area Teams (defined in `LP0004
-<https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_)
-are responsible for facilitating project decision making. In cases where there
-isn't obvious agreement, area teams should step in to restate their perceived
-consensus. In cases of deeper disagreement, area teams should try to identify
-the next steps for the proposal, such as gathering more data, changing the
-proposal, or rejecting it outright. They can also act as moderators by
-scheduling calls for participants to speak directly to resolve disagreements,
-subject to normal :ref:`Code of Conduct <LLVM Community Code of Conduct>`
-guidelines.
-
-Once the design of the new feature is finalized, the work itself should be done
-as a series of `incremental changes`_, not as a long-term development branch.
-
-.. _incremental changes:
+.. _incremental-changes:
 
 Incremental Development
 -----------------------
@@ -752,23 +715,23 @@ Attribution of Changes
 ----------------------
 
 When contributors submit a patch to an LLVM project, other developers with
-commit access may commit it for the author once appropriate (based on the
-progression of code review, etc.). When doing so, it is important to retain
-correct attribution of contributions to their contributors. However, we do not
-want the source code to be littered with random attributions "this code written
-by J. Random Hacker" (this is noisy and distracting). In practice, the revision
-control system keeps a perfect history of who changed what, and the CREDITS.txt
-file describes higher-level contributions. If you commit a patch for someone
-else, please follow the attribution of changes in the simple manner as outlined
-by the `commit messages`_ section. Overall, please do not add contributor names
-to the source code.
+commit access may merge the PR for the author (based on the
+progression of code review, etc.). GitHub will automatically ensure that
+authorship is preserved, and one does not need to take any further action. We
+do not want the source code to be littered with random attributions "this code
+written by J. Random Hacker" (this is noisy and distracting). In practice, the
+revision control system keeps a perfect history of who changed what, and the
+CREDITS.txt file describes higher-level contributions. If you need to adjust
+authorship for any reason, please follow the attribution of changes in the
+simple manner as outlined by the `commit messages`_ section. Overall, please do
+not add contributor names to the source code.
 
 Also, don't commit patches authored by others unless they have submitted the
 patch to the project or you have been authorized to submit them on their behalf
 (you work together and your company authorized you to contribute the patches,
-etc.). The author should first submit them to the relevant project's commit
-list, development list, or LLVM bug tracker component. If someone sends you
-a patch privately, encourage them to submit it to the appropriate list first.
+etc.). The author should first submit them as a GitHub issue, to the relevant
+category on Discourse, or ideally as a GitHub Pull Request. If someone sends you
+a patch privately, encourage them to submit it as a GitHub PR first.
 
 Our previous version control system (subversion) did not distinguish between the
 author and the committer like git does. As such, older commits used a different
@@ -827,6 +790,9 @@ for llvm users and not imposing a big burden on llvm developers:
   it is to drop it. That is not very user friendly and a bit more effort is
   expected, but no promises are made.
 
+* Legacy bitcode may have degraded performance when compared to
+  the compiled output with the legacy compiler.
+
 C API Changes
 -------------
 
@@ -874,6 +840,7 @@ will only be done through the following process:
       library features LLVM should use; avoid miscompiles in particular compiler
       versions, etc).
     - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+    - See the :doc:`RFC process <RFCProcess>` documentation for more details.
 
   * Once the RFC reaches consensus, update the CMake toolchain version checks as
     well as the :doc:`getting started<GettingStarted>` guide.  This provides a
@@ -990,7 +957,7 @@ The differences between both classes are:
 The basic rules for a back-end to be upstreamed in **experimental** mode are:
 
 * Every target must have at least one :ref:`maintainer<maintainers>`. The
-  `Maintainers.rst` file has to be updated as part of the first merge. These
+  `Maintainers.md` file has to be updated as part of the first merge. These
   maintainers make sure that changes to the target get reviewed and steers the
   overall effort.
 
@@ -1062,7 +1029,8 @@ Those wishing to add a new target to LLVM must follow the procedure below:
    your target and how it follows all the requirements and what work has been
    done and will need to be done to accommodate the official target requirements.
    Make sure to expose any and all controversial issues, changes needed in the
-   base code, table gen, etc.
+   base code, table gen, etc. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 3. Once the response is positive, the LLVM community can start reviewing the
    actual patches (but they can be prepared before, to support the RFC). Create
    a sequence of N patches, numbered '1/N' to 'N/N' (make sure N is an actual
@@ -1113,7 +1081,8 @@ components to a high bar similar to "official targets", they:
    clear path to resolving them.
  * Must be proposed through the LLVM RFC process, and have its addition approved
    by the LLVM community - this ultimately mediates the resolution of the
-   "should" concerns above.
+   "should" concerns above. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 
 If you have a project that you think would make sense to add to the LLVM
 monorepo, please start an RFC topic on the `LLVM Discourse forums`_ to kick off
@@ -1157,7 +1126,8 @@ criteria:
    suggested wording below).
  * Must be proposed through the LLVM RFC process, and have its addition
    approved by the LLVM community - this ultimately mediates the resolution of
-   the "should" concerns above.
+   the "should" concerns above. See the :doc:`RFC process <RFCProcess>`
+   documentation for more details.
 
 That said, the project need not have any code to get started, and need not have
 an established community at all!  Furthermore, incubating projects may pass
@@ -1510,23 +1480,4 @@ permission.
 AI generated contributions
 --------------------------
 
-Artificial intelligence systems raise many questions around copyright that have
-yet to be answered. Our policy on AI tools is guided by our copyright policy:
-Contributors are responsible for ensuring that they have the right to contribute
-code under the terms of our license, typically meaning that either they, their
-employer, or their collaborators hold the copyright. Using AI tools to
-regenerate copyrighted material does not remove the copyright, and contributors
-are responsible for ensuring that such material does not appear in their
-contributions.
-
-As such, the LLVM policy is that contributors are permitted to use artificial
-intelligence tools to produce contributions, provided that they have the right
-to license that code under the project license. Contributions found to violate
-this policy will be removed just like any other offending contribution.
-
-While the LLVM project has a liberal policy on AI tool use, contributors are
-considered responsible for their contributions. We encourage contributors to
-review all generated code before sending it for review to verify its
-correctness and to understand it so that they can answer questions during code
-review. Reviewing and maintaining generated code that the original contributor
-does not understand is not a good use of limited project resources.
+This section has moved into a :doc:`separate policy document <AIToolPolicy>`.

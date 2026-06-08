@@ -4,6 +4,37 @@
 
 target triple = "aarch64-linux-gnu"
 
+define void @fdot_v4f32(ptr %accptr, ptr %aptr, ptr %bptr) {
+; SVE2-LABEL: fdot_v4f32:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    ldr q0, [x0]
+; SVE2-NEXT:    ldr q1, [x1]
+; SVE2-NEXT:    ldr q2, [x2]
+; SVE2-NEXT:    fmlalb z0.s, z1.h, z2.h
+; SVE2-NEXT:    fmlalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    str q0, [x0]
+; SVE2-NEXT:    ret
+;
+; SVE2P1-LABEL: fdot_v4f32:
+; SVE2P1:       // %bb.0: // %entry
+; SVE2P1-NEXT:    ldr q0, [x0]
+; SVE2P1-NEXT:    ldr q1, [x1]
+; SVE2P1-NEXT:    ldr q2, [x2]
+; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
+; SVE2P1-NEXT:    str q0, [x0]
+; SVE2P1-NEXT:    ret
+entry:
+  %acc = load <4 x float>, ptr %accptr
+  %a = load <8 x half>, ptr %aptr
+  %b = load <8 x half>, ptr %bptr
+  %a.wide = fpext <8 x half> %a to <8 x float>
+  %b.wide = fpext <8 x half> %b to <8 x float>
+  %mult = fmul <8 x float> %a.wide, %b.wide
+  %partial.reduce = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mult)
+  store <4 x float> %partial.reduce, ptr %accptr
+  ret void
+}
+
 define void @fdot_wide_v8f32(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(2,0) {
 ; SVE2-LABEL: fdot_wide_v8f32:
 ; SVE2:       // %bb.0: // %entry
@@ -177,23 +208,57 @@ entry:
 }
 
 define <4 x float> @fixed_fdot_wide(<4 x float> %acc, <8 x half> %a, <8 x half> %b) {
-; CHECK-LABEL: fixed_fdot_wide:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtl v3.4s, v1.4h
-; CHECK-NEXT:    fcvtl v4.4s, v2.4h
-; CHECK-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NEXT:    fcvtl2 v2.4s, v2.8h
-; CHECK-NEXT:    fmul v3.4s, v3.4s, v4.4s
-; CHECK-NEXT:    fmul v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ret
+; SVE2-LABEL: fixed_fdot_wide:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    fmlalb z0.s, z1.h, z2.h
+; SVE2-NEXT:    fmlalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE2-NEXT:    ret
+;
+; SVE2P1-LABEL: fixed_fdot_wide:
+; SVE2P1:       // %bb.0: // %entry
+; SVE2P1-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2P1-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2P1-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
+; SVE2P1-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE2P1-NEXT:    ret
 entry:
   %a.wide = fpext <8 x half> %a to <8 x float>
   %b.wide = fpext <8 x half> %b to <8 x float>
   %mult = fmul <8 x float> %a.wide, %b.wide
   %partial.reduce = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mult)
   ret <4 x float> %partial.reduce
+}
+
+define <2 x float> @fixed_fdot(<2 x float> %acc, <4 x half> %a, <4 x half> %b) {
+; SVE2-LABEL: fixed_fdot:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    fmlalb z0.s, z1.h, z2.h
+; SVE2-NEXT:    fmlalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; SVE2-NEXT:    ret
+;
+; SVE2P1-LABEL: fixed_fdot:
+; SVE2P1:       // %bb.0: // %entry
+; SVE2P1-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2P1-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2P1-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
+; SVE2P1-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; SVE2P1-NEXT:    ret
+entry:
+  %a.wide = fpext <4 x half> %a to <4 x float>
+  %b.wide = fpext <4 x half> %b to <4 x float>
+  %mult = fmul <4 x float> %a.wide, %b.wide
+  %partial.reduce = call <2 x float> @llvm.vector.partial.reduce.fadd(<2 x float> %acc, <4 x float> %mult)
+  ret <2 x float> %partial.reduce
 }
 
 define <8 x half> @partial_reduce_half(<8 x half> %acc, <16 x half> %a) {

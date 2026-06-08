@@ -24,6 +24,10 @@
 #    error "__cpp_lib_as_const should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_algorithms
 #    error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
 #  endif
@@ -76,6 +80,10 @@
 
 #  ifdef __cpp_lib_as_const
 #    error "__cpp_lib_as_const should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_algorithms
@@ -144,6 +152,10 @@
 #    error "__cpp_lib_as_const should have the value 201510L in c++17"
 #  endif
 
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_algorithms
 #    error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
 #  endif
@@ -208,6 +220,10 @@
 #  endif
 #  if __cpp_lib_as_const != 201510L
 #    error "__cpp_lib_as_const should have the value 201510L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -285,6 +301,10 @@
 #    error "__cpp_lib_as_const should have the value 201510L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_algorithms
 #    error "__cpp_lib_constexpr_algorithms should be defined in c++23"
 #  endif
@@ -331,17 +351,11 @@
 #    error "__cpp_lib_integer_sequence should have the value 201304L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_to_underlying
@@ -385,6 +399,13 @@
 #  endif
 #  if __cpp_lib_as_const != 201510L
 #    error "__cpp_lib_as_const should have the value 201510L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constant_wrapper
+#    error "__cpp_lib_constant_wrapper should be defined in c++26"
+#  endif
+#  if __cpp_lib_constant_wrapper != 202603L
+#    error "__cpp_lib_constant_wrapper should have the value 202603L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -432,21 +453,15 @@
 #  ifndef __cpp_lib_integer_sequence
 #    error "__cpp_lib_integer_sequence should be defined in c++26"
 #  endif
-#  if __cpp_lib_integer_sequence != 201304L
-#    error "__cpp_lib_integer_sequence should have the value 201304L in c++26"
+#  if __cpp_lib_integer_sequence != 202511L
+#    error "__cpp_lib_integer_sequence should have the value 202511L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_to_underlying

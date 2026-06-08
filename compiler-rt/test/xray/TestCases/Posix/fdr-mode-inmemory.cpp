@@ -2,12 +2,12 @@
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir
 // RUN: cd %t.dir
-// RUN: XRAY_OPTIONS="patch_premain=false xray_logfile_base=fdr-inmemory-test- \
+// RUN: env XRAY_OPTIONS="patch_premain=false xray_logfile_base=fdr-inmemory-test- \
 // RUN:     verbosity=1" \
-// RUN: XRAY_FDR_OPTIONS="no_file_flush=true func_duration_threshold_us=0" \
+// RUN: env XRAY_FDR_OPTIONS="no_file_flush=true func_duration_threshold_us=0" \
 // RUN:     %run %t 2>&1 | FileCheck %s
-// RUN: FILES=`find %t.dir -name 'fdr-inmemory-test-*' | wc -l`
-// RUN: [ $FILES -eq 0 ]
+// RUN: find %t.dir -name 'fdr-inmemory-test-*' | wc -l | tr -d '\n' > %t.file_count
+// RUN: %python -c "import sys; sys.exit(int(sys.argv[1]))" %{readfile:%t.file_count} 
 // RUN: rm -rf %t.dir
 //
 // REQUIRES: built-in-llvm-tree

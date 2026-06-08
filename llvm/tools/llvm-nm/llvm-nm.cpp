@@ -194,7 +194,6 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   errs() << ": " << Buf << "\n";
 }
 
@@ -213,7 +212,6 @@ static void error(llvm::Error E, StringRef FileName,
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   errs() << ": " << Buf << "\n";
 }
 
@@ -1404,7 +1402,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(Err), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (ExportsAdded) {
-      EOS.flush();
       const char *Q = ExportsNameBuffer.c_str();
       for (unsigned K = 0; K < ExportsAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1457,7 +1454,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(BErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (BindsAdded) {
-      BOS.flush();
       const char *Q = BindsNameBuffer.c_str();
       for (unsigned K = 0; K < BindsAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1516,7 +1512,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(LErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (LazysAdded) {
-      LOS.flush();
       const char *Q = LazysNameBuffer.c_str();
       for (unsigned K = 0; K < LazysAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1584,7 +1579,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(WErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (WeaksAdded) {
-      WOS.flush();
       const char *Q = WeaksNameBuffer.c_str();
       for (unsigned K = 0; K < WeaksAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1675,7 +1669,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       }
     }
     if (FunctionStartsAdded) {
-      FOS.flush();
       const char *Q = FunctionStartsNameBuffer.c_str();
       for (unsigned K = 0; K < FunctionStartsAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1832,17 +1825,20 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
         return false;
       }
 
-      // Don't drop format specifc symbols for ARM and AArch64 ELF targets, they
-      // are used to repesent mapping symbols and needed to honor the
-      // --special-syms option.
-      auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
-      bool HasMappingSymbol =
-          ELFObj && llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64,
-                                        ELF::EM_CSKY, ELF::EM_RISCV},
-                                       ELFObj->getEMachine());
-      if (!HasMappingSymbol && !DebugSyms &&
-          (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
-        continue;
+      // Drop format-specific symbols (STT_FILE, STT_SECTION, etc.) but
+      // retain mapping symbols (STT_NOTYPE such as $d, $x) on ARM, AArch64,
+      // CSKY, and RISC-V targets to honor the --special-syms option.
+      if (!DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific)) {
+        auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
+        bool IsMappingSymbol =
+            ELFObj &&
+            llvm::is_contained(
+                {ELF::EM_ARM, ELF::EM_AARCH64, ELF::EM_CSKY, ELF::EM_RISCV},
+                ELFObj->getEMachine()) &&
+            ELFSymbolRef(Sym).getELFType() == ELF::STT_NOTYPE;
+        if (!IsMappingSymbol)
+          continue;
+      }
       if (WithoutAliases && (*SymFlagsOrErr & SymbolRef::SF_Indirect))
         continue;
       // If a "-s segname sectname" option was specified and this is a Mach-O

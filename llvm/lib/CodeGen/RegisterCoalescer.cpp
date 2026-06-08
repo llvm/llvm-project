@@ -81,7 +81,7 @@ static cl::opt<bool> EnableJoining("join-liveintervals",
 
 static cl::opt<bool> UseTerminalRule("terminal-rule",
                                      cl::desc("Apply the terminal rule"),
-                                     cl::init(false), cl::Hidden);
+                                     cl::init(true), cl::Hidden);
 
 /// Temporary flag to test critical edge unsplitting.
 static cl::opt<bool> EnableJoinSplits(
@@ -392,9 +392,7 @@ class RegisterCoalescerLegacy : public MachineFunctionPass {
 public:
   static char ID; ///< Class identification, replacement for typeinfo
 
-  RegisterCoalescerLegacy() : MachineFunctionPass(ID) {
-    initializeRegisterCoalescerLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  RegisterCoalescerLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -432,9 +430,9 @@ INITIALIZE_PASS_END(RegisterCoalescerLegacy, "register-coalescer",
   } else if (MI->isSubregToReg()) {
     Dst = MI->getOperand(0).getReg();
     DstSub = tri.composeSubRegIndices(MI->getOperand(0).getSubReg(),
-                                      MI->getOperand(3).getImm());
-    Src = MI->getOperand(2).getReg();
-    SrcSub = MI->getOperand(2).getSubReg();
+                                      MI->getOperand(2).getImm());
+    Src = MI->getOperand(1).getReg();
+    SrcSub = MI->getOperand(1).getSubReg();
   } else
     return false;
   return true;
@@ -869,6 +867,14 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   if (!DefMI->isRegTiedToUseOperand(DefIdx, &UseOpIdx))
     return {false, false};
 
+  // If DefMI only defines the register partially, we can't replace uses of the
+  // full register with the new destination register after commuting it.
+  if (IntA.reg().isVirtual() &&
+      none_of(DefMI->all_defs(), [&](const MachineOperand &DefMO) {
+        return DefMO.getReg() == IntA.reg() && !DefMO.getSubReg();
+      }))
+    return {false, false};
+
   // FIXME: The code below tries to commute 'UseOpIdx' operand with some other
   // commutable operand which is expressed by 'CommuteAnyOperandIndex'value
   // passed to the method. That _other_ operand is chosen by
@@ -1282,22 +1288,6 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
   return true;
 }
 
-/// Returns true if @p MI defines the full vreg @p Reg, as opposed to just
-/// defining a subregister.
-static bool definesFullReg(const MachineInstr &MI, Register Reg) {
-  assert(!Reg.isPhysical() && "This code cannot handle physreg aliasing");
-
-  for (const MachineOperand &Op : MI.all_defs()) {
-    if (Op.getReg() != Reg)
-      continue;
-    // Return true if we define the full register or don't care about the value
-    // inside other subregisters.
-    if (Op.getSubReg() == 0 || Op.isUndef())
-      return true;
-  }
-  return false;
-}
-
 bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
                                          MachineInstr *CopyMI,
                                          bool &IsDefCopy) {
@@ -1329,8 +1319,6 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   if (!TII->isReMaterializable(*DefMI))
     return false;
 
-  if (!definesFullReg(*DefMI, SrcReg))
-    return false;
   bool SawStore = false;
   if (!DefMI->isSafeToMove(SawStore))
     return false;
@@ -1373,7 +1361,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   }
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
-  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI);
+  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
@@ -1896,19 +1884,27 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
   bool DstIsPhys = DstReg.isPhysical();
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
 
-  if (DstInt && DstInt->hasSubRanges() && DstReg != SrcReg) {
-    for (MachineOperand &MO : MRI->reg_operands(DstReg)) {
+  if (DstInt && DstReg != SrcReg) {
+    bool HasSubRanges = DstInt->hasSubRanges();
+    for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
       if (MO.isUndef())
         continue;
       unsigned SubReg = MO.getSubReg();
       if (SubReg == 0 && MO.isDef())
         continue;
 
-      MachineInstr &MI = *MO.getParent();
-      if (MI.isDebugInstr())
-        continue;
-      SlotIndex UseIdx = LIS->getInstructionIndex(MI).getRegSlot(true);
-      addUndefFlag(*DstInt, UseIdx, MO, SubReg);
+      SlotIndex UseIdx =
+          LIS->getInstructionIndex(*MO.getParent()).getRegSlot(true);
+      if (HasSubRanges) {
+        addUndefFlag(*DstInt, UseIdx, MO, SubReg);
+      } else if (MO.isUse() && SubReg == 0 && !DstInt->liveAt(UseIdx)) {
+        // A full-register use already referencing DstReg (not renamed from
+        // SrcReg) may have no reaching def after the join if its feeding COPY
+        // and erasable IMPLICIT_DEF were removed. Mark such uses undef; the
+        // SrcReg rename loop below only visits SrcReg operands and will miss
+        // these.
+        MO.setIsUndef(true);
+      }
     }
   }
 
@@ -3340,7 +3336,12 @@ void JoinVals::pruneValues(JoinVals &Other,
         // We can no longer trust the value mapping computed by
         // computeAssignment(), the value that was originally copied could have
         // been replaced.
-        LIS->pruneValue(LR, Def, &EndPoints);
+        Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
+        bool EraseImpDef =
+            OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
+        // If the source is an erasable IMPLICIT_DEF, the pruned endpoint is
+        // the next def boundary, not a real use — discard it.
+        LIS->pruneValue(LR, Def, EraseImpDef ? nullptr : &EndPoints);
         LLVM_DEBUG(dbgs() << "\t\tpruned all of " << printReg(Reg) << " at "
                           << Def << ": " << LR << '\n');
       }
@@ -3433,7 +3434,8 @@ void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
         LIS->pruneValue(S, Def, &EndPoints);
         DidPrune = true;
         // Mark value number as unused.
-        ValueOut->markUnused();
+        if (ValueOut->def == Def)
+          ValueOut->markUnused();
 
         if (V.Identical && S.Query(OtherDef).valueOutOrDead()) {
           // If V is identical to V.OtherVNI (and S was live at OtherDef),
@@ -4150,7 +4152,7 @@ bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
       continue;
     Register OtherSrcReg, OtherReg;
     unsigned OtherSrcSubReg = 0, OtherSubReg = 0;
-    if (!isMoveInstr(*TRI, &Copy, OtherSrcReg, OtherReg, OtherSrcSubReg,
+    if (!isMoveInstr(*TRI, &MI, OtherSrcReg, OtherReg, OtherSrcSubReg,
                      OtherSubReg))
       return false;
     if (OtherReg == SrcReg)

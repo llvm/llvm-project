@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/MacroBuilder.h"
@@ -17,7 +18,6 @@
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -498,6 +498,11 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__STDC_EMBED_EMPTY__",
                       llvm::itostr(static_cast<int>(EmbedResult::Empty)));
 
+  // We define this to '1' here to indicate that we only support '_Defer'
+  // as a keyword.
+  if (LangOpts.DeferTS)
+    Builder.defineMacro("__STDC_DEFER_TS25755__", "1");
+
   if (LangOpts.ObjC)
     Builder.defineMacro("__OBJC__");
 
@@ -616,7 +621,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
 /// Initialize the predefined C++ language feature test macros defined in
 /// ISO/IEC JTC1/SC22/WG21 (C++) SD-6: "SG10 Feature Test Recommendations".
 static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
-                                                 MacroBuilder &Builder) {
+                                                 MacroBuilder &Builder,
+                                                 const TargetInfo &TI) {
   // C++98 features.
   if (LangOpts.RTTI)
     Builder.defineMacro("__cpp_rtti", "199711L");
@@ -709,7 +715,12 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_consteval", "202211L");
     Builder.defineMacro("__cpp_constexpr_dynamic_alloc", "201907L");
     Builder.defineMacro("__cpp_constinit", "201907L");
-    Builder.defineMacro("__cpp_impl_coroutine", "201902L");
+
+    // Support for coroutines on 32-bit x86 Microsoft platforms is
+    // incomplete, do not advertise it.
+    if (!(TI.getCXXABI().isMicrosoft() && TI.getTriple().isX86_32()))
+      Builder.defineMacro("__cpp_impl_coroutine", "201902L");
+
     Builder.defineMacro("__cpp_designated_initializers", "201707L");
     Builder.defineMacro("__cpp_impl_three_way_comparison", "201907L");
     // Intentionally to set __cpp_modules to 1.
@@ -975,7 +986,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       Twine(TI.useSignedCharForObjCBool() ? "0" : "1"));
 
   if (LangOpts.CPlusPlus)
-    InitializeCPlusPlusFeatureTestMacros(LangOpts, Builder);
+    InitializeCPlusPlusFeatureTestMacros(LangOpts, Builder, TI);
 
   // darwin_constant_cfstrings controls this. This is also dependent
   // on other things like the runtime I believe.  This is set even for C code.
@@ -1504,6 +1515,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.Sanitize.has(SanitizerKind::AllocToken))
     Builder.defineMacro("__SANITIZE_ALLOC_TOKEN__");
 
+  if (LangOpts.PointerFieldProtectionABI)
+    Builder.defineMacro("__POINTER_FIELD_PROTECTION_ABI__");
+  if (LangOpts.PointerFieldProtectionTagged)
+    Builder.defineMacro("__POINTER_FIELD_PROTECTION_TAGGED__");
+
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {
     const llvm::Triple &Triple = TI.getTriple();
@@ -1636,5 +1652,12 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   if (FEOpts.DashX.isPreprocessed()) {
     PP.getDiagnostics().setSeverity(diag::ext_pp_gnu_line_directive,
                                     diag::Severity::Ignored, SourceLocation());
+
+    // Compiling with -xc++-cpp-output should suppress module directive
+    // recognition. __preprocessed_module can either get the directive treatment
+    // or be accepted directly by phase 7 in a module declaration. In the latter
+    // case, __preprocessed_module will work even if there are preprocessing
+    // tokens on the same line that precede it.
+    PP.markMainFileAsPreprocessedModuleFile();
   }
 }

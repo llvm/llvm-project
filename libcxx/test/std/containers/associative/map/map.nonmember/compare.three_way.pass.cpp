@@ -12,9 +12,9 @@
 // class map
 
 // template<class Key, class T, class Compare, class Allocator>
-//   synth-three-way-result<pair<const Key, T>>
+//   constexpr synth-three-way-result<pair<const Key, T>>
 //     operator<=>(const map<Key, T, Compare, Allocator>& x,
-//                 const map<Key, T, Compare, Allocator>& y);
+//                 const map<Key, T, Compare, Allocator>& y); // constexpr since C++26
 
 #include <cassert>
 #include <map>
@@ -23,8 +23,6 @@
 
 int main(int, char**) {
   assert(test_ordered_map_container_spaceship<std::map>());
-  // `std::map` is not constexpr before C++26
-
 #if TEST_STD_VER >= 26
   static_assert(test_ordered_map_container_spaceship<std::map>());
 #endif

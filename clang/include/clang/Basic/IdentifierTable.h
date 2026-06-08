@@ -77,10 +77,12 @@ enum TokenKey : unsigned {
   KEYNOZOS = 0x4000000,
   KEYHLSL = 0x8000000,
   KEYFIXEDPOINT = 0x10000000,
-  KEYMAX = KEYFIXEDPOINT, // The maximum key
+  KEYDEFERTS = 0x20000000,
+  KEYNOHLSL = 0x40000000,
+  KEYMAX = KEYNOHLSL, // The maximum key
   KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
-           ~KEYNOZOS // KEYNOMS18, KEYNOOPENCL, KEYNOZOS are excluded.
+  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL & ~KEYNOZOS &
+           ~KEYNOHLSL // KEYNOMS18, KEYNOOPENCL, KEYNOZOS, KEYNOHLSL excluded.
 };
 
 /// How a keyword is treated in the selected standard. This enum is ordered
@@ -230,6 +232,10 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsModulesImport : 1;
 
+  // True if this is the 'module' contextual keyword.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsModulesDecl : 1;
+
   // True if this is a mangled OpenMP variant name.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsMangledOpenMPVariantName : 1;
@@ -266,8 +272,9 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         IsCPPOperatorKeyword(false), NeedsHandleIdentifier(false),
         IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
         RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
-        IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
-        IsRestrictExpansion(false), IsFinal(false), IsKeywordInCpp(false) {}
+        IsModulesDecl(false), IsMangledOpenMPVariantName(false),
+        IsDeprecatedMacro(false), IsRestrictExpansion(false), IsFinal(false),
+        IsKeywordInCpp(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -568,12 +575,24 @@ public:
   }
 
   /// Determine whether this is the contextual keyword \c import.
-  bool isModulesImport() const { return IsModulesImport; }
+  bool isImportKeyword() const { return IsModulesImport; }
 
   /// Set whether this identifier is the contextual keyword \c import.
-  void setModulesImport(bool I) {
-    IsModulesImport = I;
-    if (I)
+  void setKeywordImport(bool Val) {
+    IsModulesImport = Val;
+    if (Val)
+      NeedsHandleIdentifier = true;
+    else
+      RecomputeNeedsHandleIdentifier();
+  }
+
+  /// Determine whether this is the contextual keyword \c module.
+  bool isModuleKeyword() const { return IsModulesDecl; }
+
+  /// Set whether this identifier is the contextual keyword \c module.
+  void setModuleKeyword(bool Val) {
+    IsModulesDecl = Val;
+    if (Val)
       NeedsHandleIdentifier = true;
     else
       RecomputeNeedsHandleIdentifier();
@@ -628,7 +647,7 @@ private:
   void RecomputeNeedsHandleIdentifier() {
     NeedsHandleIdentifier = isPoisoned() || hasMacroDefinition() ||
                             isExtensionToken() || isFutureCompatKeyword() ||
-                            isOutOfDate() || isModulesImport();
+                            isOutOfDate() || isImportKeyword();
   }
 };
 
@@ -796,10 +815,11 @@ public:
     // contents.
     II->Entry = &Entry;
 
-    // If this is the 'import' contextual keyword, mark it as such.
+    // If this is the 'import' or 'module' contextual keyword, mark it as such.
     if (Name == "import")
-      II->setModulesImport(true);
-
+      II->setKeywordImport(true);
+    else if (Name == "module")
+      II->setModuleKeyword(true);
     return *II;
   }
 
@@ -1165,14 +1185,6 @@ public:
     return getStringFormatFamilyImpl(*this);
   }
 
-  static Selector getEmptyMarker() {
-    return Selector(uintptr_t(-1));
-  }
-
-  static Selector getTombstoneMarker() {
-    return Selector(uintptr_t(-2));
-  }
-
   static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
 };
 
@@ -1253,14 +1265,6 @@ namespace llvm {
 /// DenseSets.
 template <>
 struct DenseMapInfo<clang::Selector> {
-  static clang::Selector getEmptyKey() {
-    return clang::Selector::getEmptyMarker();
-  }
-
-  static clang::Selector getTombstoneKey() {
-    return clang::Selector::getTombstoneMarker();
-  }
-
   static unsigned getHashValue(clang::Selector S);
 
   static bool isEqual(clang::Selector LHS, clang::Selector RHS) {

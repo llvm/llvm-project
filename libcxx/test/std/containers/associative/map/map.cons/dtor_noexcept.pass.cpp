@@ -8,12 +8,13 @@
 
 // <map>
 
-// ~map() // implied noexcept; // constexpr since C++26
+// ~map() // implied noexcept; constexpr since C++26
 
 // UNSUPPORTED: c++03
 
-#include <map>
 #include <cassert>
+#include <map>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "MoveOnly.h"

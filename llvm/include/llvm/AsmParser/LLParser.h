@@ -181,6 +181,15 @@ namespace llvm {
     /// Keeps track of source locations for Values, BasicBlocks, and Functions.
     AsmParserContext *ParserContext;
 
+    /// retainedNodes of these subprograms should be cleaned up from incorrectly
+    /// scoped local types.
+    SmallVector<DISubprogram *> NewDistinctSPs;
+
+    SmallVector<std::tuple<LocTy, DbgRecord *, TrackingMDNodeRef>>
+        PendingDbgRecords;
+    SmallVector<std::tuple<LocTy, Instruction *, TrackingMDNodeRef>>
+        PendingDbgInsts;
+
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
@@ -189,6 +198,18 @@ namespace llvm {
     bool SeenOldDbgInfoFormat = false;
 
     std::string SourceFileName;
+
+    FileLoc getTokLineColumnPos() {
+      if (ParserContext)
+        return Lex.getTokLineColumnPos();
+      return {0u, 0u};
+    }
+
+    FileLoc getPrevTokEndLineColumnPos() {
+      if (ParserContext)
+        return Lex.getPrevTokEndLineColumnPos();
+      return {0u, 0u};
+    }
 
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
@@ -318,11 +339,16 @@ namespace llvm {
     bool parseOptionalCallingConv(unsigned &CC);
     bool parseOptionalAlignment(MaybeAlign &Alignment,
                                 bool AllowParens = false);
+    bool parseOptionalPrefAlignment(MaybeAlign &Alignment);
     bool parseOptionalCodeModel(CodeModel::Model &model);
-    bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
+    bool parseOptionalAttrBytes(lltok::Kind AttrKind,
+                                std::optional<uint64_t> &Bytes,
+                                bool ErrorNoBytes = true);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();
+    std::optional<DenormalMode> parseDenormalFPEnvEntry();
+    std::optional<DenormalFPEnv> parseDenormalFPEnvAttr();
     unsigned parseNoFPClassAttr();
     bool parseScopeAndOrdering(bool IsAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
@@ -612,10 +638,12 @@ namespace llvm {
     struct ArgInfo {
       LocTy Loc;
       Type *Ty;
+      std::optional<FileLocRange> IdentLoc;
       AttributeSet Attrs;
       std::string Name;
-      ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N)
-          : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
+      ArgInfo(LocTy L, Type *ty, std::optional<FileLocRange> IdentLoc,
+              AttributeSet Attr, const std::string &N)
+          : Loc(L), Ty(ty), IdentLoc(IdentLoc), Attrs(Attr), Name(N) {}
     };
     bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
                            SmallVectorImpl<unsigned> &UnnamedArgNums,
@@ -678,7 +706,6 @@ namespace llvm {
 
     // Use-list order directives.
     bool parseUseListOrder(PerFunctionState *PFS = nullptr);
-    bool parseUseListOrderBB();
     bool parseUseListOrderIndexes(SmallVectorImpl<unsigned> &Indexes);
     bool sortUseListOrder(Value *V, ArrayRef<unsigned> Indexes, SMLoc Loc);
   };

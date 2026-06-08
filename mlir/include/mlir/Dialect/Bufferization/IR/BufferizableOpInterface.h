@@ -586,12 +586,14 @@ class BufferizationState {
 public:
   /// Get a reference to the collection of cached symbol tables.
   SymbolTableCollection &getSymbolTables();
+  /// Const overload so callers can reuse the cache from a const state.
+  SymbolTableCollection &getSymbolTables() const;
 
 private:
   /// The cached symbol tables.
   /// The user is expected to update / invalidate the cached symbol tables if
   /// the bufferized operation has the Symbol or SymbolTable traits.
-  SymbolTableCollection symbolTables;
+  mutable SymbolTableCollection symbolTables;
 };
 
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
@@ -657,23 +659,6 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
   replaceOpWithBufferizedValues(rewriter, op, newOp->getResults());
   return newOp;
 }
-
-/// Return a MemRefType to which the TensorType can be bufferized.
-///
-/// If possible, op bufferization implementations should not use this function
-/// and instead infer precise memref types for tensor results by themselves.
-///
-/// Unless a layout map was specified, `options.unknownTypeConverterFn`
-/// determines what kind of layout map will be used. For best composability
-/// (without copies), the fully dynamic layout map is used by default.
-///
-/// Note: Canonicalization patterns could clean up layout maps and infer more
-/// precise layout maps after bufferization. However, many possible
-/// canonicalizations are currently not implemented.
-BaseMemRefType getMemRefType(TensorType tensorType,
-                             const BufferizationOptions &options,
-                             MemRefLayoutAttrInterface layout = {},
-                             Attribute memorySpace = nullptr);
 
 /// Return a MemRef type with fully dynamic layout. If the given tensor type
 /// is unranked, return an unranked MemRef type.

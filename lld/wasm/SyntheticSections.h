@@ -102,50 +102,33 @@ protected:
  */
 template <typename T> struct ImportKey {
 public:
-  enum class State { Plain, Empty, Tombstone };
-
-public:
   T type;
   std::optional<StringRef> importModule;
   std::optional<StringRef> importName;
-  State state;
 
 public:
-  ImportKey(T type) : type(type), state(State::Plain) {}
-  ImportKey(T type, State state) : type(type), state(state) {}
+  ImportKey(T type) : type(type) {}
   ImportKey(T type, std::optional<StringRef> importModule,
             std::optional<StringRef> importName)
-      : type(type), importModule(importModule), importName(importName),
-        state(State::Plain) {}
+      : type(type), importModule(importModule), importName(importName) {}
 };
 
 template <typename T>
 inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
-  return lhs.state == rhs.state && lhs.importModule == rhs.importModule &&
+  return lhs.importModule == rhs.importModule &&
          lhs.importName == rhs.importName && lhs.type == rhs.type;
 }
 
-} // namespace wasm::lld
+} // namespace lld::wasm
 
 // `ImportKey<T>` can be used as a key in a `DenseMap` if `T` can be used as a
 // key in a `DenseMap`.
 namespace llvm {
 template <typename T> struct DenseMapInfo<lld::wasm::ImportKey<T>> {
-  static lld::wasm::ImportKey<T> getEmptyKey() {
-    typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
-    key.state = lld::wasm::ImportKey<T>::State::Empty;
-    return key;
-  }
-  static lld::wasm::ImportKey<T> getTombstoneKey() {
-    typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
-    key.state = lld::wasm::ImportKey<T>::State::Tombstone;
-    return key;
-  }
   static unsigned getHashValue(const lld::wasm::ImportKey<T> &key) {
     uintptr_t hash = hash_value(key.importModule);
     hash = hash_combine(hash, key.importName);
     hash = hash_combine(hash, llvm::DenseMapInfo<T>::getHashValue(key.type));
-    hash = hash_combine(hash, key.state);
     return hash;
   }
   static bool isEqual(const lld::wasm::ImportKey<T> &lhs,
@@ -324,8 +307,7 @@ public:
 
 class ElemSection : public SyntheticSection {
 public:
-  ElemSection()
-      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
+  ElemSection() : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
   bool isNeeded() const override { return indirectFunctions.size() > 0; };
   void writeBody() override;
   void addEntry(FunctionSymbol *sym);
@@ -373,7 +355,7 @@ public:
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "name"),
         segments(segments) {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return numNames() > 0;
   }
@@ -396,7 +378,7 @@ public:
   ProducersSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "producers") {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return fieldCount() > 0;
   }
@@ -417,7 +399,7 @@ public:
   TargetFeaturesSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "target_features") {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return features.size() > 0;
   }

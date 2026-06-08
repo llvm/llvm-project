@@ -53,7 +53,7 @@ public:
   /// block addresses or PredefinedExprs.
   ConstantEmitter(CIRGenFunction &cgf) : cgm(cgf.cgm), cgf(&cgf) {}
 
-  ConstantEmitter(CIRGenModule &cgm, CIRGenFunction *cgf = nullptr)
+  ConstantEmitter(CIRGenModule &cgm, const CIRGenFunction *cgf = nullptr)
       : cgm(cgm), cgf(cgf) {}
 
   ConstantEmitter(const ConstantEmitter &other) = delete;
@@ -61,9 +61,15 @@ public:
 
   ~ConstantEmitter();
 
+  bool isInConstantContext() const { return inConstantContext; }
+  void setInConstantContext(bool value) { inConstantContext = value; }
+
   /// Try to emit the initializer of the given declaration as an abstract
   /// constant.  If this succeeds, the emission must be finalized.
   mlir::Attribute tryEmitForInitializer(const VarDecl &d);
+  mlir::Attribute tryEmitForInitializer(const Expr *e, QualType destType);
+
+  mlir::Attribute emitForInitializer(const APValue &value, QualType destType);
 
   void finalize(cir::GlobalOp gv);
 
@@ -115,6 +121,8 @@ public:
   mlir::Attribute tryEmitPrivateForMemory(const Expr *e, QualType destTy);
   mlir::Attribute tryEmitPrivateForMemory(const APValue &value,
                                           QualType destTy);
+
+  mlir::Attribute tryEmitAbstract(const Expr *e, QualType destType);
 
 private:
 #ifndef NDEBUG
