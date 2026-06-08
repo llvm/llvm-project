@@ -298,8 +298,6 @@ template <typename T>
 struct DenseMapInfo<T, std::enable_if_t<mlir::detail::IsInterface<T>::value>> {
   using ValueTypeInfo = llvm::DenseMapInfo<typename T::ValueType>;
 
-  static T getEmptyKey() { return T(ValueTypeInfo::getEmptyKey(), nullptr); }
-
   static unsigned getHashValue(T val) {
     return ValueTypeInfo::getHashValue(val);
   }

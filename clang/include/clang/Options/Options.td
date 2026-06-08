@@ -2138,7 +2138,7 @@ defm objc_constant_literals : BoolFOption<"objc-constant-literals",
   LangOpts<"ObjCConstantLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant ObjC literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant ObjC literals">>;
 def fconstant_array_class_EQ : Joined<["-"], "fconstant-array-class=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<LangOpts<"ObjCConstantArrayClass">>;
@@ -3820,17 +3820,17 @@ defm constant_nsnumber_literals : BoolFOption<"constant-nsnumber-literals",
   LangOpts<"ConstantNSNumberLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSNumber literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSNumber literals">>;
 defm constant_nsarray_literals : BoolFOption<"constant-nsarray-literals",
   LangOpts<"ConstantNSArrayLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSArray literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSArray literals">>;
 defm constant_nsdictionary_literals : BoolFOption<"constant-nsdictionary-literals",
   LangOpts<"ConstantNSDictionaryLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSDictionary literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSDictionary literals">>;
 def fno_common : Flag<["-"], "fno-common">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;
@@ -5627,6 +5627,10 @@ def mvector_strict_align : Flag<["-"], "mvector-strict-align">, Group<m_Group>,
   HelpText<"Force all vector memory accesses to be aligned (RISC-V only)">;
 def mno_vector_strict_align : Flag<["-"], "mno-vector-strict-align">, Group<m_Group>,
   HelpText<"Allow vector memory accesses to be unaligned (RISC-V only)">;
+def mzilsd_word_align : Flag<["-"], "mzilsd-word-align">, Group<m_Group>,
+  HelpText<"Allow Zilsd/Zclsd memory accesses to be 4-byte aligned (RISC-V only)">;
+def mzilsd_strict_align : Flag<["-"], "mzilsd-strict-align">, Group<m_Group>,
+  HelpText<"Force all Zilsd/Zclsd memory accesses to be 8-byte aligned (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;

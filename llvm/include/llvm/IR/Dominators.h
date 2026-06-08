@@ -119,10 +119,6 @@ template <> struct DenseMapInfo<BasicBlockEdge> {
 
   LLVM_ABI static unsigned getHashValue(const BasicBlockEdge *V);
 
-  static inline BasicBlockEdge getEmptyKey() {
-    return BasicBlockEdge(BBInfo::getEmptyKey(), BBInfo::getEmptyKey());
-  }
-
   static unsigned getHashValue(const BasicBlockEdge &Edge) {
     return hash_combine(BBInfo::getHashValue(Edge.getStart()),
                         BBInfo::getHashValue(Edge.getEnd()));

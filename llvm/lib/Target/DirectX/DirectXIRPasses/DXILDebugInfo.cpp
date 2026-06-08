@@ -264,6 +264,23 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     Res.MDExtra.insert({NewCU, SubprogramsMD});
   }
 
+  for (const GlobalVariable &GV : M.globals()) {
+    SmallVector<DIGlobalVariableExpression *, 4> GVEs;
+    GV.getDebugInfo(GVEs);
+    for (DIGlobalVariableExpression *GVE : GVEs) {
+      if (GVE->getExpression()->getNumElements())
+        continue;
+      auto [It, Inserted] = Res.MDExtra.insert(
+          {GVE->getVariable(),
+           ValueAsMetadata::get(const_cast<GlobalVariable *>(&GV))});
+      if (!Inserted)
+        It->second = nullptr;
+    }
+  }
+
+  for (DIGlobalVariableExpression *GVE : DIF.global_variables())
+    Res.MDReplace.insert({GVE, GVE->getVariable()});
+
   for (DIType *T : DIF.types()) {
     if (auto *SR = dyn_cast<DISubrangeType>(T)) {
       DIType *BT = SR->getBaseType();
