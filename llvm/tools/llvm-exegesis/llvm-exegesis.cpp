@@ -668,8 +668,6 @@ static void analysisMain() {
   // Read benchmarks.
   const LLVMState State = ExitOnErr(
       LLVMState::Create(TripleAndCpu.LLVMTriple, TripleAndCpu.CpuName));
-  // Skip entries that fail to parse (e.g. unknown opcodes from bitrotted
-  // samples) with a warning rather than aborting the whole analysis.
   std::vector<Benchmark> Points = ExitOnFileError(
       BenchmarkFile, Benchmark::readYamls(State, *MemoryBuffer));
 
