@@ -1271,9 +1271,12 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     return;
   }
 
-  // Leave an island's own targets alone: a forwarder already converged into the
-  // dispatch ladder, or an unreachable target kept as a direct dead lane. Close
-  // the tail so the normal machinery does not redirect or structurize either.
+  // Leave an island's own forwarding targets alone: a forwarder converged into
+  // the dispatch ladder, or an unreachable target kept as a direct dead lane.
+  // The target kind check is required, not just the island-pred check: regions
+  // are structurized inner-first, so a subregion block can have an unsplit
+  // parent-region callbr as a predecessor while still being an ordinary block
+  // that must be structurized normally (handled below).
   bool HasIslandPred = llvm::any_of(
       predecessors(Entry), [](BasicBlock *Pred) { return isIsland(*Pred); });
   if (HasIslandPred &&
