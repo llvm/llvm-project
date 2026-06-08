@@ -6879,19 +6879,46 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
-  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
-  // UMUL_LOHI is supported.
-  const EVT WideSVT = MVT::i64;
+  // Allow scalar i16 to be widened to i32 for uncooperative divisors if i32
+  // MULHU or UMUL_LOHI is supported (shiftless MulHigh, prefer over i64 widen).
+  const bool HasWideI32MULHU =
+      VT == MVT::i16 &&
+      isOperationLegalOrCustom(ISD::MULHU, MVT::i32, IsAfterLegalization);
+  const bool HasWideI32UMUL_LOHI =
+      VT == MVT::i16 &&
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i32, IsAfterLegalization);
+  // Allow scalar i32 to be widened to i64 for uncooperative divisors if i64
+  // MULHU or UMUL_LOHI is supported (shiftless MulHigh).
   const bool HasWideMULHU =
-      VT == MVT::i32 &&
-      isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
+      HasWideI32MULHU ||
+      (VT == MVT::i32 &&
+       isOperationLegalOrCustom(ISD::MULHU, MVT::i64, IsAfterLegalization));
   const bool HasWideUMUL_LOHI =
-      VT == MVT::i32 &&
-      isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
+      HasWideI32UMUL_LOHI ||
+      (VT == MVT::i32 &&
+       isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i64, IsAfterLegalization));
   const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
+  // WideSVT: the doubled type for MulHigh multiplication.
+  // Use i32 for the i16->i32 case, i64 otherwise.
+  const EVT WideSVT =
+      (HasWideI32MULHU || HasWideI32UMUL_LOHI) ? MVT::i32 : MVT::i64;
+  // For narrow scalars (i8, i16), a fixup-free 64-bit magic may exist when
+  // i64 MUL is available: trunc(srl(mul(zext(x, 64), ceil(2^S/C)), S)).
+  // Skip this when i32 MulHigh is already preferred for i16.
+  const bool HasLegalI64Mul =
+      isOperationLegalOrCustom(ISD::MUL, MVT::i64, IsAfterLegalization);
+  const bool AllowNarrowWiden = EltBits <= 16 && !VT.isVector() &&
+                                !(HasWideI32MULHU || HasWideI32UMUL_LOHI) &&
+                                HasLegalI64Mul;
+  const IntegerBitWidth MaxBitWidth =
+      (HasWideI32MULHU || HasWideI32UMUL_LOHI) ? IntegerBitWidth::I32
+      : (AllowWiden || AllowNarrowWiden)       ? IntegerBitWidth::I64
+                                               : IntegerBitWidth::None;
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
-  bool UseWiden = false;
+  UnsignedDivisionByConstantWidening WideningKind =
+      UnsignedDivisionByConstantWidening::None;
+  SDValue SimpleWidenShift;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
@@ -6913,18 +6940,31 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
               /*AllowEvenDivisorOptimization=*/true,
-              /*AllowWidenOptimization=*/AllowWiden);
+              /*MaxBitWidth=*/MaxBitWidth);
 
-      if (magics.Widen) {
-        UseWiden = true;
-        MagicFactor = DAG.getConstant(magics.Magic, dl, WideSVT);
-      } else {
+      switch (magics.Widening) {
+      case UnsignedDivisionByConstantWidening::None:
         MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
+        break;
+      case UnsignedDivisionByConstantWidening::MulHigh:
+        WideningKind = UnsignedDivisionByConstantWidening::MulHigh;
+        MagicFactor = DAG.getConstant(magics.Magic, dl, WideSVT);
+        break;
+      case UnsignedDivisionByConstantWidening::FullMultiply:
+        WideningKind = UnsignedDivisionByConstantWidening::FullMultiply;
+        MagicFactor = DAG.getConstant(magics.Magic, dl, WideSVT);
+        // Simple wide magic (narrow types): explicit shift after multiply.
+        SimpleWidenShift =
+            DAG.getConstant(magics.PostShift, dl,
+                            getShiftAmountTy(WideSVT, DAG.getDataLayout()));
+        break;
       }
 
       assert(magics.PreShift < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
-      assert(magics.PostShift < Divisor.getBitWidth() &&
+      assert((magics.Widening !=
+                  UnsignedDivisionByConstantWidening::FullMultiply ||
+              magics.PostShift < magics.Magic.getBitWidth()) &&
              "We shouldn't generate an undefined shift!");
       assert((!magics.IsAdd || magics.PreShift == 0) &&
              "Unexpected pre-shift");
@@ -6936,7 +6976,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
           dl, SVT);
       UseNPQ |= magics.IsAdd;
       UsePreShift |= magics.PreShift != 0;
-      UsePostShift |= magics.PostShift != 0;
+      UsePostShift |=
+          magics.Widening == UnsignedDivisionByConstantWidening::None &&
+          magics.PostShift != 0;
     }
 
     PreShifts.push_back(PreShift);
@@ -6972,12 +7014,28 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     PostShift = PostShifts[0];
   }
 
-  if (UseWiden) {
-    // Compute: (WideSVT(x) * MagicFactor) >> WideSVTBits.
+  switch (WideningKind) {
+  case UnsignedDivisionByConstantWidening::None:
+    break;
+  case UnsignedDivisionByConstantWidening::FullMultiply: {
     SDValue WideN0 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideSVT, N0);
-
-    // Perform WideSVTxWideSVT -> 2*WideSVT multiplication and extract high
-    // WideSVT bits
+    Created.push_back(WideN0.getNode());
+    assert(EltBits <= 16 && !VT.isVector() &&
+           "FullMultiply widening is only expected for narrow scalars");
+    // Narrow scalar: trunc(srl(mul(zext(x, 64), ceil(2^S/C)), S)).
+    // divisor=1 never reaches here (handled above), so no IsOne select needed.
+    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideSVT, WideN0, MagicFactor);
+    Created.push_back(Mul.getNode());
+    SDValue Srl = DAG.getNode(ISD::SRL, dl, WideSVT, Mul, SimpleWidenShift);
+    Created.push_back(Srl.getNode());
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Srl);
+  }
+  case UnsignedDivisionByConstantWidening::MulHigh: {
+    SDValue WideN0 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideSVT, N0);
+    Created.push_back(WideN0.getNode());
+    assert((VT == MVT::i32 || VT == MVT::i16) &&
+           "MulHigh widening is only expected for i32 or i16");
+    // Extract the high half of the widened multiply (i16->i32 or i32->i64).
     SDValue High;
     if (HasWideMULHU) {
       High = DAG.getNode(ISD::MULHU, dl, WideSVT, WideN0, MagicFactor);
@@ -6988,9 +7046,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
                       WideN0, MagicFactor);
       High = LoHi.getValue(1);
     }
-
     Created.push_back(High.getNode());
     return DAG.getNode(ISD::TRUNCATE, dl, VT, High);
+  }
   }
 
   SDValue Q = N0;

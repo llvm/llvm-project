@@ -62,7 +62,7 @@ define i32 @udiv_by_19(i32 %x) nounwind {
 ; X86-LABEL: udiv_by_19:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl ${{-?[0-9]+}}, %edx # imm = 0xAF286BCB
+; X86-NEXT:    movl $-1356305461, %edx # imm = 0xAF286BCB
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    subl %edx, %ecx
@@ -96,7 +96,7 @@ define i32 @udiv_by_21(i32 %x) nounwind {
 ; X86-LABEL: udiv_by_21:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl ${{-?[0-9]+}}, %edx # imm = 0x86186187
+; X86-NEXT:    movl $-2045222521, %edx # imm = 0x86186187
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    subl %edx, %ecx
@@ -131,11 +131,72 @@ define i32 @udiv_by_3(i32 %x) nounwind {
 ;
 ; X86-LABEL: udiv_by_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl ${{-?[0-9]+}}, %eax # imm = 0xAAAAAAAB
+; X86-NEXT:    movl $-1431655765, %eax # imm = 0xAAAAAAAB
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    retl
   %div = udiv i32 %x, 3
   ret i32 %div
+}
+
+; Test i16 udiv optimization: shiftless 32x32->hi32 via UMUL_LOHI(i32).
+; On i386, this uses mull (4 instructions, down from the 8-instruction IsAdd GM sequence).
+; On x86-64, the UMUL_LOHI(i32) folds into imulq+shrq $32 (3 instructions).
+define i16 @udiv_i16_by_7(i16 %x) nounwind {
+; X64-LABEL: udiv_i16_by_7:
+; X64:       # %bb.0:
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    imulq $613572608, %rax, %rax # imm = 0x24926000
+; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    # kill: def $ax killed $ax killed $rax
+; X64-NEXT:    retq
+;
+; X64-BMI2-LABEL: udiv_i16_by_7:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movzwl %di, %eax
+; X64-BMI2-NEXT:    imulq $613572608, %rax, %rax # imm = 0x24926000
+; X64-BMI2-NEXT:    shrq $32, %rax
+; X64-BMI2-NEXT:    # kill: def $ax killed $ax killed $rax
+; X64-BMI2-NEXT:    retq
+;
+; X86-LABEL: udiv_i16_by_7:
+; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $613572608, %ecx # imm = 0x24926000
+; X86-NEXT:    mull %ecx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+  %div = udiv i16 %x, 7
+  ret i16 %div
+}
+
+; Test non-optimized i16 case: IsAdd=false divisor uses regular 32-bit MULHU.
+define i16 @udiv_i16_by_3(i16 %x) nounwind {
+; X64-LABEL: udiv_i16_by_3:
+; X64:       # %bb.0:
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    imull $43691, %eax, %eax # imm = 0xAAAB
+; X64-NEXT:    shrl $17, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; X64-BMI2-LABEL: udiv_i16_by_3:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movzwl %di, %eax
+; X64-BMI2-NEXT:    imull $43691, %eax, %eax # imm = 0xAAAB
+; X64-BMI2-NEXT:    shrl $17, %eax
+; X64-BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-BMI2-NEXT:    retq
+;
+; X86-LABEL: udiv_i16_by_3:
+; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    imull $43691, %eax, %eax # imm = 0xAAAB
+; X86-NEXT:    shrl $17, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+  %div = udiv i16 %x, 3
+  ret i16 %div
 }

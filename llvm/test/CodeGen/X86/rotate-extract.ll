@@ -240,15 +240,11 @@ define i8 @no_extract_udiv(i8 %i) nounwind {
 ; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    imull $171, %ecx, %eax
 ; X64-NEXT:    shrl $8, %eax
-; X64-NEXT:    imull $79, %ecx, %edx
-; X64-NEXT:    shrl $8, %edx
-; X64-NEXT:    subb %dl, %cl
-; X64-NEXT:    shrb %cl
-; X64-NEXT:    addb %dl, %cl
-; X64-NEXT:    shrb $5, %cl
+; X64-NEXT:    imull $335, %ecx, %ecx # imm = 0x14F
+; X64-NEXT:    shrl $14, %ecx
 ; X64-NEXT:    shlb $3, %al
+; X64-NEXT:    andb $-16, %al
 ; X64-NEXT:    orb %cl, %al
-; X64-NEXT:    andb $-9, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %lhs_div = udiv i8 %i, 3

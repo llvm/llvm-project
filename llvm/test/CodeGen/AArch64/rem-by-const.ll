@@ -66,14 +66,10 @@ entry:
 define i8 @ui8_7(i8 %a, i8 %b) {
 ; CHECK-SD-LABEL: ui8_7:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #37 // =0x25
+; CHECK-SD-NEXT:    mov w8, #293 // =0x125
 ; CHECK-SD-NEXT:    and w9, w0, #0xff
 ; CHECK-SD-NEXT:    mul w8, w9, w8
-; CHECK-SD-NEXT:    lsr w8, w8, #8
-; CHECK-SD-NEXT:    sub w9, w0, w8
-; CHECK-SD-NEXT:    and w9, w9, #0xfe
-; CHECK-SD-NEXT:    add w8, w8, w9, lsr #1
-; CHECK-SD-NEXT:    lsr w8, w8, #2
+; CHECK-SD-NEXT:    lsr w8, w8, #11
 ; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
 ; CHECK-SD-NEXT:    add w0, w0, w8
 ; CHECK-SD-NEXT:    ret
@@ -184,13 +180,11 @@ define i16 @ui16_7(i16 %a, i16 %b) {
 ; CHECK-SD-LABEL: ui16_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #9363 // =0x2493
-; CHECK-SD-NEXT:    and w9, w0, #0xffff
-; CHECK-SD-NEXT:    mul w8, w9, w8
-; CHECK-SD-NEXT:    lsr w8, w8, #16
-; CHECK-SD-NEXT:    sub w9, w0, w8
-; CHECK-SD-NEXT:    and w9, w9, #0xfffe
-; CHECK-SD-NEXT:    add w8, w8, w9, lsr #1
-; CHECK-SD-NEXT:    lsr w8, w8, #2
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    and x9, x0, #0xffff
+; CHECK-SD-NEXT:    movk w8, #1, lsl #16
+; CHECK-SD-NEXT:    umull x8, w9, w8
+; CHECK-SD-NEXT:    lsr x8, x8, #19
 ; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
 ; CHECK-SD-NEXT:    add w0, w0, w8
 ; CHECK-SD-NEXT:    ret

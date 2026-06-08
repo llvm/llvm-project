@@ -95,6 +95,13 @@ APInt MULHU(APInt X, APInt Y) {
   return (X.zext(WideBits) * Y.zext(WideBits)).lshr(Bits).trunc(Bits);
 }
 
+APInt WideMULHU(APInt X, APInt Y) {
+  assert(X.getBitWidth() == Y.getBitWidth() && "Expected matching widths");
+  unsigned Bits = X.getBitWidth();
+  unsigned WideBits = 2 * Bits;
+  return (X.zext(WideBits) * Y.zext(WideBits)).lshr(Bits).trunc(Bits);
+}
+
 APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
                                bool LZOptimization,
                                bool AllowEvenDivisorOptimization, bool ForceNPQ,
@@ -116,12 +123,25 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
 
   assert(Magics.PreShift < Divisor.getBitWidth() &&
          "We shouldn't generate an undefined shift!");
-  assert(Magics.PostShift < Divisor.getBitWidth() &&
+  assert((Magics.Widening != UnsignedDivisionByConstantWidening::FullMultiply ||
+          Magics.PostShift < Magics.Magic.getBitWidth()) &&
          "We shouldn't generate an undefined shift!");
   assert((!Magics.IsAdd || Magics.PreShift == 0) && "Unexpected pre-shift");
   unsigned PreShift = Magics.PreShift;
   unsigned PostShift = Magics.PostShift;
   bool UseNPQ = Magics.IsAdd;
+
+  if (Magics.Widening == UnsignedDivisionByConstantWidening::MulHigh) {
+    unsigned WideBits = Magics.Magic.getBitWidth();
+    APInt Q = WideMULHU(Numerator.zext(WideBits), Magics.Magic);
+    return Q.trunc(Bits);
+  }
+
+  if (Magics.Widening == UnsignedDivisionByConstantWidening::FullMultiply) {
+    unsigned WideBits = Magics.Magic.getBitWidth();
+    APInt Q = Numerator.zext(WideBits) * Magics.Magic;
+    return Q.lshr(PostShift).trunc(Bits);
+  }
 
   APInt NPQFactor =
       UseNPQ ? APInt::getSignedMinValue(Bits) : APInt::getZero(Bits);
@@ -184,6 +204,70 @@ TEST(UnsignedDivisionByConstantTest, Test) {
       });
     });
   }
+}
+
+TEST(UnsignedDivisionByConstantTest, WideningKinds) {
+  {
+    APInt Divisor(8, 7);
+    auto Magics = UnsignedDivisionByConstantInfo::get(
+        Divisor, /*LeadingZeros=*/0, /*AllowEvenDivisorOptimization=*/true,
+        IntegerBitWidth::I16);
+    EXPECT_EQ(Magics.Widening, UnsignedDivisionByConstantWidening::MulHigh);
+    EXPECT_EQ(Magics.Magic.getBitWidth(), 16u);
+    EXPECT_FALSE(Magics.IsAdd);
+    EXPECT_EQ(Magics.PostShift, 0u);
+  }
+
+  {
+    APInt Divisor(8, 7);
+    auto Magics = UnsignedDivisionByConstantInfo::get(
+        Divisor, /*LeadingZeros=*/0, /*AllowEvenDivisorOptimization=*/true,
+        IntegerBitWidth::I64);
+    EXPECT_EQ(Magics.Widening,
+              UnsignedDivisionByConstantWidening::FullMultiply);
+    EXPECT_EQ(Magics.Magic.getBitWidth(), 64u);
+    EXPECT_FALSE(Magics.IsAdd);
+    EXPECT_GT(Magics.PostShift, 0u);
+  }
+
+  {
+    APInt Divisor(32, 7);
+    auto Magics = UnsignedDivisionByConstantInfo::get(
+        Divisor, /*LeadingZeros=*/0, /*AllowEvenDivisorOptimization=*/true,
+        IntegerBitWidth::I64);
+    EXPECT_EQ(Magics.Widening, UnsignedDivisionByConstantWidening::MulHigh);
+    EXPECT_EQ(Magics.Magic.getBitWidth(), 64u);
+    EXPECT_FALSE(Magics.IsAdd);
+    EXPECT_EQ(Magics.PostShift, 0u);
+  }
+}
+
+TEST(UnsignedDivisionByConstantTest, WidenedMagicExecutesCorrectly) {
+  auto CheckAllNumerators = [](const APInt &Divisor,
+                               IntegerBitWidth MaxBitWidth,
+                               UnsignedDivisionByConstantWidening Widening) {
+    auto Magics = UnsignedDivisionByConstantInfo::get(
+        Divisor, /*LeadingZeros=*/0, /*AllowEvenDivisorOptimization=*/true,
+        MaxBitWidth);
+    ASSERT_EQ(Magics.Widening, Widening);
+    EnumerateAPInts(Divisor.getBitWidth(), [&](const APInt &Numerator) {
+      ASSERT_EQ(UnsignedDivideUsingMagic(Numerator, Divisor,
+                                         /*LZOptimization=*/false,
+                                         /*AllowEvenDivisorOptimization=*/true,
+                                         /*ForceNPQ=*/false, Magics),
+                Numerator.udiv(Divisor))
+          << " ... given the operation: udiv i" << Divisor.getBitWidth() << " "
+          << Numerator << ", " << Divisor << " with widening "
+          << static_cast<int>(Widening);
+    });
+  };
+
+  CheckAllNumerators(APInt(8, 7), IntegerBitWidth::I16,
+                     UnsignedDivisionByConstantWidening::MulHigh);
+  CheckAllNumerators(APInt(8, 7), IntegerBitWidth::I64,
+                     UnsignedDivisionByConstantWidening::FullMultiply);
+  CheckAllNumerators(APInt(16, 7), IntegerBitWidth::I64,
+                     UnsignedDivisionByConstantWidening::FullMultiply);
 }
 
 } // end anonymous namespace

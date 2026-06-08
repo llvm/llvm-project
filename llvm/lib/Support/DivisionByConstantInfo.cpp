@@ -14,6 +14,38 @@
 
 using namespace llvm;
 
+/// Find M = ceil(2^S / D) and S such that
+///   trunc(srl(mul(zext(x, W), M), S)) == udiv(x, D)
+/// for all x in [0, MaxX], where the multiply stays within W bits (no MULHU).
+///
+/// This gives a fixup-free alternative to the Hacker's Delight add-and-shift
+/// for narrow types (i8/i16) widened into a larger integer.  The HD algorithm
+/// in wide space produces MULHU-style magic (≈2^W/D), which overflows a plain
+/// W-bit multiply; this routine instead finds the smallest S ≥ ceil(log2(D))
+/// for which the product MaxX * ceil(2^S/D) fits in W bits and the rounding
+/// error is harmless.
+static bool findSimpleWideMagic(const APInt &D, const APInt &MaxX, unsigned W,
+                                APInt &Magic, unsigned &Shift) {
+  APInt DivW = D.zext(W);
+  APInt MaxW = MaxX.zext(W);
+  for (unsigned S = D.ceilLogBase2(); S < W; ++S) {
+    APInt TwoToS = APInt::getOneBitSet(W, S);
+    APInt M = APIntOps::RoundingUDiv(TwoToS, DivW, APInt::Rounding::UP);
+    bool Overflow = false;
+    (void)MaxW.umul_ov(M, Overflow);
+    if (Overflow)
+      break; // M grows monotonically; no larger S can succeed.
+    APInt Error = M * DivW - TwoToS;
+    APInt MaxError = MaxW.umul_ov(Error, Overflow);
+    if (Overflow || MaxError.uge(TwoToS))
+      continue;
+    Magic = M;
+    Shift = S;
+    return true;
+  }
+  return false;
+}
+
 /// Calculate the magic numbers required to implement a signed integer division
 /// by a constant as a sequence of multiplies, adds and shifts.  Requires that
 /// the divisor not be 0, 1, or -1.  Taken from "Hacker's Delight", Henry S.
@@ -73,14 +105,15 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
 UnsignedDivisionByConstantInfo
 UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
                                     bool AllowEvenDivisorOptimization,
-                                    bool AllowWidenOptimization) {
+                                    IntegerBitWidth MaxBitWidth) {
+  unsigned WideningBitWidth = static_cast<unsigned>(MaxBitWidth);
   assert(!D.isZero() && !D.isOne() && "Precondition violation.");
   assert(D.getBitWidth() > 1 && "Does not work at smaller bitwidths.");
 
   APInt Delta;
   struct UnsignedDivisionByConstantInfo Retval;
   Retval.IsAdd = false; // initialize "add" indicator
-  Retval.Widen = false; // initialize widen indicator
+  Retval.Widening = UnsignedDivisionByConstantWidening::None;
   APInt AllOnes =
       APInt::getLowBitsSet(D.getBitWidth(), D.getBitWidth() - LeadingZeros);
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
@@ -154,19 +187,32 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
   }
   Retval.PreShift = 0;
 
-  // For IsAdd case with AllowWidenOptimization, compute widened magic.
-  // This is for optimizing 32-bit division using 64-bit multiplication.
-  // The actual magic constant is 2^W + Magic ((W+1)-bit).
-  // We pre-shift it left by (W*2 - OriginalShift) to avoid runtime shift.
-  if (Retval.IsAdd && AllowWidenOptimization) {
+  if (Retval.IsAdd && WideningBitWidth) {
     unsigned W = D.getBitWidth();
-    unsigned OriginalShift = Retval.PostShift + W + 1;
-    // Since PostShift >= 1, shift amount is at most W-2, so W*2 bits suffice.
-    Retval.Magic = (APInt::getOneBitSet(W * 2, W) + Retval.Magic.zext(W * 2))
-                       .shl(W * 2 - OriginalShift);
-    Retval.IsAdd = false;
-    Retval.PostShift = 0;
-    Retval.Widen = true;
+    if (WideningBitWidth == W * 2) {
+      // MULHU-style widen: pre-shift the (W+1)-bit magic into a W*2-bit value
+      // so the high W bits of the wide multiply give the quotient directly.
+      unsigned OriginalShift = Retval.PostShift + W + 1;
+      // Since PostShift >= 1, shift amount is at most W-2, so W*2 bits suffice.
+      Retval.Magic = (APInt::getOneBitSet(W * 2, W) + Retval.Magic.zext(W * 2))
+                         .shl(W * 2 - OriginalShift);
+      Retval.IsAdd = false;
+      Retval.PostShift = 0;
+      Retval.Widening = UnsignedDivisionByConstantWidening::MulHigh;
+    } else if (WideningBitWidth > W * 2) {
+      // Simple wide magic: trunc(srl(mul(zext(x, W), ceil(2^S/D)), S)).
+      // The HD algorithm in wide space produces MULHU-style magic (≈2^W/D)
+      // whose full product overflows W bits; findSimpleWideMagic instead finds
+      // the smallest ceil(2^S/D) whose W-bit product with MaxX stays in bounds.
+      APInt Magic;
+      unsigned Shift;
+      if (findSimpleWideMagic(D, AllOnes, WideningBitWidth, Magic, Shift)) {
+        Retval.Magic = std::move(Magic);
+        Retval.PostShift = Shift;
+        Retval.IsAdd = false;
+        Retval.Widening = UnsignedDivisionByConstantWidening::FullMultiply;
+      }
+    }
   }
 
   return Retval;
