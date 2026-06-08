@@ -10,22 +10,21 @@
 #endif
 
 namespace std {
-namespace __lldb {
-
-#if LLDB_TEST_CASE == LLDB_TEST_VECTOR_WITHOUT_LAYOUT_DATA_MEMBER
+inline namespace __LegacyLayout {
 template <typename T> class vector {
 public:
   typedef T *pointer;
 
-  vector(pointer begin, size_t size)
-      : __begin_(begin), __end_(begin + size) {}
+  vector(pointer begin, size_t size) : __begin_(begin), __end_(begin + size) {}
 
 private:
   pointer __begin_;
   pointer __end_;
   // __cap_ and __alloc_ aren't used, so they've been removed for simplicity.
 };
-#elif LLDB_TEST_CASE == LLDB_TEST_VECTOR_WITH_POINTER_LAYOUT
+} // namespace __LegacyLayout
+
+inline namespace __PointerBasedLayout {
 template <typename T> struct __vector_layout {
   T *__begin_;
   T *__end_;
@@ -38,8 +37,9 @@ public:
 private:
   __vector_layout<T> __layout_;
 };
+} // namespace __PointerBasedLayout
 
-#elif LLDB_TEST_CASE == LLDB_TEST_VECTOR_WITH_SIZE_LAYOUT
+inline namespace __SizeBasedLayout {
 template <typename T> struct __vector_layout {
   T *__begin_;
   size_t __size_;
@@ -52,27 +52,28 @@ public:
 private:
   __vector_layout<T> __layout_;
 };
-
-#else
-#error LLDB_TEST_CASE defined out-of-range
-#undef LLDB_TEST_CASE
-#endif
-
-} // namespace __lldb
+} // namespace __SizeBasedLayout
 } // namespace std
 
 int main() {
-#ifdef LLDB_TEST_CASE
   int a1[] = {10};
-  std::__lldb::vector<int> v0(a1, 0);
-  std::__lldb::vector<int> v1(a1, 1);
-
   int a2[] = {-10, -20};
-  std::__lldb::vector<int> v2(a2, 2);
-
   int a3[] = {56, 10, 87};
-  std::__lldb::vector<int> v3(a3, 3);
 
-  return 0; // break here
-#endif
+  std::__LegacyLayout::vector<int> legacy_layout0(a1, 0);
+  std::__LegacyLayout::vector<int> legacy_layout1(a1, 1);
+  std::__LegacyLayout::vector<int> legacy_layout2(a2, 2);
+  std::__LegacyLayout::vector<int> legacy_layout3(a3, 3);
+
+  std::__PointerBasedLayout::vector<int> pointer_based_layout0(a1, 0);
+  std::__PointerBasedLayout::vector<int> pointer_based_layout1(a1, 1);
+  std::__PointerBasedLayout::vector<int> pointer_based_layout2(a2, 2);
+  std::__PointerBasedLayout::vector<int> pointer_based_layout3(a3, 3);
+
+  std::__SizeBasedLayout::vector<int> size_based_layout0(a1, 0);
+  std::__SizeBasedLayout::vector<int> size_based_layout1(a1, 1);
+  std::__SizeBasedLayout::vector<int> size_based_layout2(a2, 2);
+  std::__SizeBasedLayout::vector<int> size_based_layout3(a3, 3);
+
+  return 0;
 }
