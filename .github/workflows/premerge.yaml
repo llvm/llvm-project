@@ -176,7 +176,7 @@ jobs:
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of
           # these environment variables.
-          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; mkdir artifacts; SCCACHE_LOG=debug SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"$WINDOWS_PROJECTS\" \"$WINDOWS_CHECK_TARGETS\" \"$WINDOWS_RUNTIMES\" \"$WINDOWS_RUNTIMES_CHECK_TARGETS\""
+          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_NO_DAEMON=1; export SCCACHE_IDLE_TIMEOUT=0; mkdir artifacts; SCCACHE_LOG=debug SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"$WINDOWS_PROJECTS\" \"$WINDOWS_CHECK_TARGETS\" \"$WINDOWS_RUNTIMES\" \"$WINDOWS_RUNTIMES_CHECK_TARGETS\""
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not
