@@ -143,18 +143,42 @@ set(ASAN_DYNAMIC_CFLAGS ${ASAN_CFLAGS})
 append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec ASAN_DYNAMIC_CFLAGS)
 
+# We need to detect if the C++ library we are linking against supports exceptions.
+# If we are building libcxx in the same runtimes build, we can check LIBCXX_ENABLE_EXCEPTIONS.
+# Otherwise, we default to ON if the compiler supports it.
+if(DEFINED LIBCXX_ENABLE_EXCEPTIONS)
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ${LIBCXX_ENABLE_EXCEPTIONS})
+elseif(DEFINED LIBCXXABI_ENABLE_EXCEPTIONS)
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ${LIBCXXABI_ENABLE_EXCEPTIONS})
+else()
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ON)
+endif()
+
+option(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS
+  "Enable exceptions in ASan C++ runtime" ${ASAN_ENABLE_EXCEPTIONS_DEFAULT})
+
 # asan_new_delete.cpp throws std::bad_alloc, so the translation units that
 # build it need -fexceptions and access to <new> (drop -nostdinc++). Only
 # the C++ slices (RTAsan_cxx in the static build and RTAsan_dynamic_cxx in
 # the dynamic build) opt into these flags — the rest of the runtime keeps
 # -fno-exceptions / -nostdinc++.
-set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
-list(REMOVE_ITEM ASAN_CXX_CFLAGS -fno-exceptions -nostdinc++)
-append_list_if(COMPILER_RT_HAS_FEXCEPTIONS_FLAG -fexceptions ASAN_CXX_CFLAGS)
-set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
-list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions -nostdinc++)
-append_list_if(COMPILER_RT_HAS_FEXCEPTIONS_FLAG -fexceptions
-  ASAN_DYNAMIC_CXX_CFLAGS)
+if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND COMPILER_RT_HAS_FEXCEPTIONS_FLAG)
+  set(ASAN_USE_EXCEPTIONS TRUE)
+else()
+  set(ASAN_USE_EXCEPTIONS FALSE)
+endif()
+
+if(ASAN_USE_EXCEPTIONS)
+  set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
+  list(REMOVE_ITEM ASAN_CXX_CFLAGS -fno-exceptions -nostdinc++)
+  list(APPEND ASAN_CXX_CFLAGS -fexceptions)
+  set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
+  list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions -nostdinc++)
+  list(APPEND ASAN_DYNAMIC_CXX_CFLAGS -fexceptions)
+else()
+  set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
+  set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
+endif()
 
 # LLVM turns /OPT:ICF back on when LLVM_ENABLE_PDBs is set
 # we _REALLY_ need to turn it back off for ASAN, because the way
