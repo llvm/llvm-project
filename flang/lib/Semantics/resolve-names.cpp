@@ -1806,6 +1806,12 @@ public:
       }
     }
     for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      llvm::omp::Clause clauseId{clause.Id()};
+      // Only "enter" and "to" take an extended list item.
+      if (clauseId != llvm::omp::Clause::OMPC_enter &&
+          clauseId != llvm::omp::Clause::OMPC_to) {
+        continue;
+      }
       if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
         for (const parser::OmpObject &object : objects->v) {
           if (auto *name = parser::Unwrap<parser::Name>(object)) {
