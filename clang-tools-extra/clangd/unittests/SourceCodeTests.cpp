@@ -968,10 +968,57 @@ TEST(ApplyEditsTest, WrongRangeLength) {
   Change.range->end.line = 0;
   Change.range->end.character = 2;
   Change.rangeLength = 10;
+	
+  // when rangeLength doesn't match, just use computed range length.
+  EXPECT_THAT_ERROR(applyChange(Code, Change),
+                    llvm::Succeeded());
+}
+
+TEST(ApplyEditsTest, InvalidOffsetOfLine){
+  std::string Code = "0123456789\n";
+
+  TextDocumentContentChangeEvent Change;
+
+  // NOTE : just use range.start and end to emulate the computed range
+  //        length.
+
+  // computedRangeLength > rangeLength , expect error.
+  Change.range.emplace();
+  Change.range->start.line = 0;
+  Change.range->start.character = 0;
+  Change.range->end.line = 0;
+  Change.range->end.character = 5;
+  Change.rangeLength = 2;
 
   EXPECT_THAT_ERROR(applyChange(Code, Change),
-                    FailedWithMessage("Change's rangeLength (10) doesn't match "
-                                      "the computed range length (2)."));
+                    FailedWithMessage("Change's rangeLength (2) doesn't match "
+                                      "the computed range length (5)."));
+
+  // computedRangeLength < rangeLength ,use computed, expect success.
+  Change.range.emplace();
+  Change.range->start.line = 0;
+  Change.range->start.character = 0;
+  Change.range->end.line = 0;
+  Change.range->end.character = 3;
+  Change.rangeLength = 6;
+  Change.text = "SIX";
+
+  EXPECT_THAT_ERROR(applyChange(Code, Change),
+                    llvm::Succeeded());
+  EXPECT_EQ(Code, "SIX3456789\n");
+  
+  // computedRangeLength == rangeLength , expect success.
+  Change.range.emplace();
+  Change.range->start.line = 0;
+  Change.range->start.character = 0;
+  Change.range->end.line = 0;
+  Change.range->end.character = 3;
+  Change.rangeLength = 3;
+  Change.text = "THREE";
+
+  EXPECT_THAT_ERROR(applyChange(Code, Change),
+                    llvm::Succeeded());
+  EXPECT_EQ(Code, "THREE3456789\n");
 }
 
 // Test that we correct observed buggy edits from Neovim.
@@ -1055,9 +1102,11 @@ TEST(ApplyEditsTest, EndCharOutOfRange) {
   Change.range->end.character = 100;
   Change.text = "foo";
 
+  // OK to replace whole line.
   EXPECT_THAT_ERROR(
       applyChange(Code, Change),
-      FailedWithMessage("utf-16 offset 100 is invalid for line 0"));
+		    llvm::Succeeded());
+  EXPECT_EQ(Code, "foo\n");
 }
 
 TEST(ApplyEditsTest, StartLineOutOfRange) {

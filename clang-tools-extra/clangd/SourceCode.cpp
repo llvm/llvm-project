@@ -1132,8 +1132,9 @@ llvm::Error applyChange(std::string &Contents,
   if (!StartIndex)
     return StartIndex.takeError();
 
+  // End position may longer than current line .
   const Position &End = Change.range->end;
-  llvm::Expected<size_t> EndIndex = positionToOffset(Contents, End, false);
+  llvm::Expected<size_t> EndIndex = positionToOffset(Contents, End, true);
   inferFinalNewline(EndIndex, Contents, End);
   if (!EndIndex)
     return EndIndex.takeError();
@@ -1153,13 +1154,14 @@ llvm::Error applyChange(std::string &Contents,
   ssize_t ComputedRangeLength =
       lspLength(Contents.substr(*StartIndex, *EndIndex - *StartIndex));
 
-  if (Change.rangeLength && ComputedRangeLength != *Change.rangeLength)
+  // CoumputedRangeLength may less equal than rangeLength.
+  if (Change.rangeLength && ComputedRangeLength > *Change.rangeLength)
     return error(llvm::errc::invalid_argument,
                  "Change's rangeLength ({0}) doesn't match the "
                  "computed range length ({1}).",
                  *Change.rangeLength, ComputedRangeLength);
 
-  Contents.replace(*StartIndex, *EndIndex - *StartIndex, Change.text);
+  Contents.replace(*StartIndex, ComputedRangeLength, Change.text);
 
   return llvm::Error::success();
 }
