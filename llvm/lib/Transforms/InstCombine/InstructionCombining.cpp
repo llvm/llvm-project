@@ -163,6 +163,19 @@ extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 static cl::opt<unsigned> ShouldLowerDbgDeclare("instcombine-lower-dbg-declare",
                                                cl::Hidden, cl::init(true));
 
+InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
+    default;
+
+void InstCombiner::IRBuilderInstCombineInserter::InsertHelper(
+    Instruction *I, const Twine &Name, BasicBlock::iterator InsertPt) const {
+  IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
+  IC.Worklist.add(I);
+  if (auto *Assume = dyn_cast<AssumeInst>(I))
+    IC.AC.registerAssumption(Assume);
+  if (IC.AnnotationMetadataSource)
+    I->copyMetadata(*IC.AnnotationMetadataSource, LLVMContext::MD_annotation);
+}
+
 std::optional<Instruction *>
 InstCombiner::targetInstCombineIntrinsic(IntrinsicInst &II) {
   // Handle target specific intrinsics
@@ -5903,8 +5916,9 @@ bool InstCombinerImpl::run() {
 
     // Now that we have an instruction, try combining it to simplify it.
     Builder.SetInsertPoint(I);
-    Builder.CollectMetadataToCopy(
-        I, {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+    Builder.SetCurrentDebugLocation(I->getDebugLoc());
+    // Used by our IRBuilder inserter to copy annotation metadata.
+    AnnotationMetadataSource = I;
 
 #ifndef NDEBUG
     std::string OrigI;
@@ -6188,16 +6202,6 @@ static bool combineInstructionsOverFunction(
   bool VerifyFixpoint = Opts.VerifyFixpoint &&
                         !F.hasFnAttribute("instcombine-no-verify-fixpoint");
 
-  /// Builder - This is an IRBuilder that automatically inserts new
-  /// instructions into the worklist when they are created.
-  IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
-      F.getContext(), TargetFolder(DL),
-      IRBuilderCallbackInserter([&Worklist, &AC](Instruction *I) {
-        Worklist.add(I);
-        if (auto *Assume = dyn_cast<AssumeInst>(I))
-          AC.registerAssumption(Assume);
-      }));
-
   ReversePostOrderTraversal<BasicBlock *> RPOT(&F.front());
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
@@ -6221,8 +6225,8 @@ static bool combineInstructionsOverFunction(
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
 
-    InstCombinerImpl IC(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI,
-                        BPI, PSI, DL, RPOT);
+    InstCombinerImpl IC(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI,
+                        DL, RPOT);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();

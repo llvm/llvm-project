@@ -57154,19 +57154,20 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Strip TRUNCATE/ZERO_EXTEND/ANY_EXTEND wrappers and `and x, C` where C
-// preserves the low log2(BW) bits; these are transparent to BT/BTR/BTS/BTC,
-// which implicitly mask the bit index to log2(BW) bits.
+// Strip ext/trunc/mask wrappers that do not change a bit index interpreted
+// modulo BW. Don't peek below log2(BW) bits (e.g. through a zext from i1):
+// a narrower value no longer determines the bit index on its own.
 static SDValue peekThroughBitPosExtTrunc(SDValue V, unsigned BW) {
+  assert(V.getScalarValueSizeInBits() >= Log2_32(BW) &&
+         "bit position type must cover the whole index range");
   APInt LowBits =
       APInt::getLowBitsSet(V.getScalarValueSizeInBits(), Log2_32(BW));
   for (;;) {
     unsigned Op = V.getOpcode();
-    if (Op == ISD::TRUNCATE || Op == ISD::ZERO_EXTEND ||
-        Op == ISD::ANY_EXTEND) {
+    if ((Op == ISD::TRUNCATE || Op == ISD::ZERO_EXTEND ||
+         Op == ISD::ANY_EXTEND) &&
+        V.getOperand(0).getScalarValueSizeInBits() >= Log2_32(BW)) {
       V = V.getOperand(0);
-      assert(V.getScalarValueSizeInBits() >= Log2_32(BW) &&
-             "low bits constraint must survive width adjustment");
       LowBits = LowBits.zextOrTrunc(V.getScalarValueSizeInBits());
       continue;
     }
@@ -60551,6 +60552,27 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           Concat0 = Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0);
           Concat1 = Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1);
           return DAG.getVectorShuffle(VT, DL, Concat0, Concat1, NewMask);
+        }
+      }
+      // If we're concatenating 4 x 128-bit to 512-bit, see if we can
+      // concat either 2 x 128-bit pair instead.
+      // TODO: Can we do this generically?
+      if (!IsSplat && NumOps == 4 && VT.is512BitVector() &&
+          Subtarget.useAVX512Regs() &&
+          (EltSizeInBits >= 32 || Subtarget.useBWIRegs())) {
+        MVT HalfVT = VT.getHalfNumVectorElementsVT();
+        SDValue Concat0 = combineConcatVectorOps(DL, HalfVT, Ops.slice(0, 2),
+                                                 DAG, Subtarget, Depth + 1);
+        SDValue Concat1 = combineConcatVectorOps(DL, HalfVT, Ops.slice(2, 2),
+                                                 DAG, Subtarget, Depth + 1);
+        if (Concat0 || Concat1) {
+          Concat0 = Concat0 ? Concat0
+                            : DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                                          Ops.slice(0, 2));
+          Concat1 = Concat1 ? Concat1
+                            : DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                                          Ops.slice(2, 2));
+          return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Concat0, Concat1);
         }
       }
       break;

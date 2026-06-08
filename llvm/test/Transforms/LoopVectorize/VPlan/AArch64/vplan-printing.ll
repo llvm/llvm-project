@@ -70,7 +70,6 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) "target-features"="+neon,+do
 ; CHECK-NEXT: }
 ; CHECK: VPlan 'Final VPlan for VF={8,16},UF={1}' {
 ; CHECK-NEXT: Live-in ir<1024> = vector-trip-count
-; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT: Successor(s): vector.ph

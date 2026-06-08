@@ -1663,6 +1663,7 @@ TYPE_PARSER( //
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
     "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
                     maybe(Parser<OmpUpdateClause>{}))) ||
+    "WEAK" >> construct<OmpClause>(construct<OmpClause::Weak>()) ||
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
                   parenthesized(Parser<OmpWhenClause>{}))) ||
     "WRITE" >> construct<OmpClause>(construct<OmpClause::Write>()) ||
