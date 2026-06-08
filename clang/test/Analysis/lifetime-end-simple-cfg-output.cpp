@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-lifetime=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-lifetime=true,cfg-scopes=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 // Tests for lifetime-end CFG nodes.
@@ -11,9 +11,11 @@ void test_simple_variable() {
 // CHECK-NEXT:    Succs (1): B1
 // CHECK-EMPTY:
 // CHECK-NEXT: [B1]
-// CHECK-NEXT:    1: 0
-// CHECK-NEXT:    2: int i = 0;
-// CHECK-NEXT:    3: [B1.2] (Lifetime ends)
+// CHECK-NEXT:    1: CFGScopeBegin(i)
+// CHECK-NEXT:    2: 0
+// CHECK-NEXT:    3: int i = 0;
+// CHECK-NEXT:    4: [B1.3] (Lifetime ends)
+// CHECK-NEXT:    5: CFGScopeEnd(i)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK-EMPTY:
@@ -39,10 +41,12 @@ void test_nontrivial_dtor() {
 // CHECK-NEXT:    Succs (1): B1
 // CHECK-EMPTY:
 // CHECK-NEXT: [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, [B1.2], A)
-// CHECK-NEXT:    2: A a;
-// CHECK-NEXT:    3: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:    4: [B1.2] (Lifetime ends)
+// CHECK-NEXT:    1: CFGScopeBegin(a)
+// CHECK-NEXT:    2:  (CXXConstructExpr, [B1.3], A)
+// CHECK-NEXT:    3: A a;
+// CHECK-NEXT:    4: [B1.3].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B1.3] (Lifetime ends)
+// CHECK-NEXT:    6: CFGScopeEnd(a)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK-EMPTY:
@@ -62,18 +66,22 @@ void test_multiple_variables_nested_scopes() {
 // CHECK-NEXT:    Succs (1): B1
 // CHECK-EMPTY:
 // CHECK-NEXT: [B1]
-// CHECK-NEXT:    1: 0
-// CHECK-NEXT:    2: int a = 0;
-// CHECK-NEXT:    3: 0
-// CHECK-NEXT:    4: int b = 0;
-// CHECK-NEXT:    5: 0
-// CHECK-NEXT:    6: int c = 0;
+// CHECK-NEXT:    1: CFGScopeBegin(a)
+// CHECK-NEXT:    2: 0
+// CHECK-NEXT:    3: int a = 0;
+// CHECK-NEXT:    4: 0
+// CHECK-NEXT:    5: int b = 0;
+// CHECK-NEXT:    6: CFGScopeBegin(c)
 // CHECK-NEXT:    7: 0
-// CHECK-NEXT:    8: int d = 0;
-// CHECK-NEXT:    9: [B1.8] (Lifetime ends)
-// CHECK-NEXT:   10: [B1.6] (Lifetime ends)
-// CHECK-NEXT:   11: [B1.4] (Lifetime ends)
-// CHECK-NEXT:   12: [B1.2] (Lifetime ends)
+// CHECK-NEXT:    8: int c = 0;
+// CHECK-NEXT:    9: 0
+// CHECK-NEXT:   10: int d = 0;
+// CHECK-NEXT:   11: [B1.10] (Lifetime ends)
+// CHECK-NEXT:   12: [B1.8] (Lifetime ends)
+// CHECK-NEXT:   13: CFGScopeEnd(c)
+// CHECK-NEXT:   14: [B1.5] (Lifetime ends)
+// CHECK-NEXT:   15: [B1.3] (Lifetime ends)
+// CHECK-NEXT:   16: CFGScopeEnd(a)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK-EMPTY:
@@ -90,9 +98,11 @@ void test_local_static() {
 // CHECK-NEXT:    Succs (1): B3
 // CHECK-EMPTY:
 // CHECK-NEXT: [B1]
-// CHECK-NEXT:    1: 0
-// CHECK-NEXT:    2: int j = 0;
-// CHECK-NEXT:    3: [B1.2] (Lifetime ends)
+// CHECK-NEXT:    1: CFGScopeBegin(j)
+// CHECK-NEXT:    2: 0
+// CHECK-NEXT:    3: int j = 0;
+// CHECK-NEXT:    4: [B1.3] (Lifetime ends)
+// CHECK-NEXT:    5: CFGScopeEnd(j)
 // CHECK-NEXT:    Preds (2): B2 B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK-EMPTY:
@@ -126,13 +136,16 @@ void test_loop_body() {
 // CHECK-NEXT:    Succs (1): B4
 // CHECK-EMPTY:
 // CHECK-NEXT: [B2]
-// CHECK-NEXT:    1: [B3.2] (Lifetime ends)
+// CHECK-NEXT:    1: [B3.3] (Lifetime ends)
+// CHECK-NEXT:    2: CFGScopeEnd(i)
 // CHECK-NEXT:    Succs (1): B1
 // CHECK-EMPTY:
 // CHECK-NEXT: [B3]
-// CHECK-NEXT:    1: 0
-// CHECK-NEXT:    2: int i = 0;
-// CHECK-NEXT:    3: [B3.2] (Lifetime ends)
+// CHECK-NEXT:    1: CFGScopeBegin(i)
+// CHECK-NEXT:    2: 0
+// CHECK-NEXT:    3: int i = 0;
+// CHECK-NEXT:    4: [B3.3] (Lifetime ends)
+// CHECK-NEXT:    5: CFGScopeEnd(i)
 // CHECK-NEXT:    T: break;
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B0
@@ -155,11 +168,13 @@ void test_lifetime_extended_temporary() {
 // CHECK-NEXT:    Succs (1): B1
 // CHECK-EMPTY:
 // CHECK-NEXT: [B1]
-// CHECK-NEXT:    1: 42
-// CHECK-NEXT:    2: [B1.1] (ImplicitCastExpr, NoOp, const int)
-// CHECK-NEXT:    3: [B1.2]
-// CHECK-NEXT:    4: const int &r = 42;
-// CHECK-NEXT:    5: [B1.4] (Lifetime ends)
+// CHECK-NEXT:    1: CFGScopeBegin(r)
+// CHECK-NEXT:    2: 42
+// CHECK-NEXT:    3: [B1.2] (ImplicitCastExpr, NoOp, const int)
+// CHECK-NEXT:    4: [B1.3]
+// CHECK-NEXT:    5: const int &r = 42;
+// CHECK-NEXT:    6: [B1.5] (Lifetime ends)
+// CHECK-NEXT:    7: CFGScopeEnd(r)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK-EMPTY:
