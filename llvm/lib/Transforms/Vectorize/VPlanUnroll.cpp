@@ -179,7 +179,7 @@ void UnrollState::unrollWidenInductionByUF(
   VPIRFlags::WrapFlagsTy WrapFlags(false, false);
   if (auto *IntOrFPInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(IV)) {
     if (IntOrFPInd->hasFastMathFlags())
-      FMF = IntOrFPInd->getFastMathFlags();
+      FMF = IntOrFPInd->getFastMathFlagsOrNone();
     if (IntOrFPInd->hasNoWrapFlags())
       WrapFlags = IntOrFPInd->getNoWrapFlags();
   }
