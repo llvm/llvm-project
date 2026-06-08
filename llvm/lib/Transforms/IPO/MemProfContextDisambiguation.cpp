@@ -6208,8 +6208,8 @@ void MemProfContextDisambiguation::performICP(
     auto *CB = Info.CB;
     auto CallsiteIndex = Info.CallsiteInfoStartIndex;
     auto TotalCount = Info.TotalCount;
-    unsigned NumPromoted = 0;
     unsigned NumClones = 0;
+    SmallVector<InstrProfValueData, 8> RemainingCandidates;
 
     for (auto &Candidate : Info.CandidateProfileData) {
       auto &StackNode = AllCallsites[CallsiteIndex++];
@@ -6238,6 +6238,7 @@ void MemProfContextDisambiguation::performICP(
         // FIXME: See if we can use the new declaration importing support to
         // at least get the declarations imported for this case. Hot indirect
         // targets should have been imported normally, however.
+        RemainingCandidates.push_back(Candidate);
         continue;
       }
 
@@ -6251,6 +6252,7 @@ void MemProfContextDisambiguation::performICP(
                  << " with count of " << ore::NV("TotalCount", TotalCount)
                  << ": " << Reason;
         });
+        RemainingCandidates.push_back(Candidate);
         continue;
       }
 
@@ -6304,10 +6306,9 @@ void MemProfContextDisambiguation::performICP(
 
       // Update TotalCount (all clones should get same count above)
       TotalCount -= Candidate.Count;
-      NumPromoted++;
     }
     // Adjust the MD.prof metadata for all clones, now that we have the new
-    // TotalCount and the number promoted.
+    // TotalCount and the remaining candidates.
     CallBase *CBClone = CB;
     for (unsigned J = 0; J < NumClones; J++) {
       // If the VMap is empty, this clone was a duplicate of another and was
@@ -6322,9 +6323,8 @@ void MemProfContextDisambiguation::performICP(
       // If all promoted, we don't need the MD.prof metadata.
       // Otherwise we need update with the un-promoted records back.
       if (TotalCount != 0)
-        annotateValueSite(
-            M, *CBClone, ArrayRef(Info.CandidateProfileData).slice(NumPromoted),
-            TotalCount, IPVK_IndirectCallTarget, Info.NumCandidates);
+        annotateValueSite(M, *CBClone, RemainingCandidates, TotalCount,
+                          IPVK_IndirectCallTarget, Info.NumCandidates);
     }
   }
 }

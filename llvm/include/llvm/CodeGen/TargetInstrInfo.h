@@ -2417,11 +2417,6 @@ template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
   using RegInfo = DenseMapInfo<Register>;
   using SubRegInfo = DenseMapInfo<unsigned>;
 
-  static inline TargetInstrInfo::RegSubRegPair getEmptyKey() {
-    return TargetInstrInfo::RegSubRegPair(RegInfo::getEmptyKey(),
-                                          SubRegInfo::getEmptyKey());
-  }
-
   /// Reuse getHashValue implementation from
   /// std::pair<unsigned, unsigned>.
   static unsigned getHashValue(const TargetInstrInfo::RegSubRegPair &Val) {

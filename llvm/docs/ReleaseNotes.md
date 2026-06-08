@@ -241,6 +241,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Support for the experimental `XRivosVizip` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 * Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
+* Adds experimental assembler support for the 'Zvvmtls` and 'Zvvmttls` (RISC-V
+  Matrix Tile Load/Store) extensions.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
 * Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
 * `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
@@ -259,6 +261,15 @@ Makes programs 10x faster by doing Special New Thing.
 * `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
   in use. This matches the behaviour of Intel syntax and aids with
   compatibility when changing the default Clang syntax to the Intel syntax.
+
+* Implemented Win64 APX ABI callee-saved registers: R30 and R31 are now
+  treated as non-volatile in the Win64 calling convention when APX is
+  available, per the Microsoft x64 calling convention specification.
+
+* Functions using setjmp with Win64 APX ABI now reserve R30/R31 from
+  register allocation, as the unwinder cannot restore APX extended
+  registers across longjmp. A warning is emitted for large functions
+  where this reservation may impact performance.
 
 ### Changes to the OCaml bindings
 
@@ -287,6 +298,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Renamed G_CTTZ_ZERO_UNDEF to G_CTTZ_ZERO_POISON opcode to make it clear that
   a zero input results in poison.
+
+* GlobalISel's IRTranslator now supports the LLVM IR byte type (`bN`). Byte
+  values are translated as the equi-sized integer scalar (`sN`), `ConstantByte`
+  is materialised via `G_CONSTANT`, and `bitcast` between a byte type and a
+  pointer is lowered to `G_INTTOPTR` / `G_PTRTOINT` rather than the
+  verifier-illegal `G_BITCAST`.
 
 ### Changes to the Metadata Info
 

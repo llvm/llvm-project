@@ -3672,9 +3672,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
-        if ((1ULL << computeKnownBits(Ptr, II).countMinTrailingZeros()) <
-            *Alignment)
-          break;
+        if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
+            Log2_64(*Alignment))
+          continue;
         return CallBase::removeOperandBundleAt(II, Idx);
       }
 

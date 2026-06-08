@@ -4247,18 +4247,6 @@ void Verifier::verifyTailCCMustTailAttrs(const AttrBuilder &Attrs,
         Twine("byref attribute not allowed in ") + Context);
 }
 
-/// Two types are "congruent" if they are identical, or if they are both pointer
-/// types with different pointee types and the same address space.
-static bool isTypeCongruent(Type *L, Type *R) {
-  if (L == R)
-    return true;
-  PointerType *PL = dyn_cast<PointerType>(L);
-  PointerType *PR = dyn_cast<PointerType>(R);
-  if (!PL || !PR)
-    return false;
-  return PL->getAddressSpace() == PR->getAddressSpace();
-}
-
 static AttrBuilder getParameterABIAttributes(LLVMContext& C, unsigned I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet,  Attribute::ByVal,          Attribute::InAlloca,
@@ -4288,32 +4276,21 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   FunctionType *CalleeTy = CI.getFunctionType();
   Check(CallerTy->isVarArg() == CalleeTy->isVarArg(),
         "cannot guarantee tail call due to mismatched varargs", &CI);
-  Check(isTypeCongruent(CallerTy->getReturnType(), CalleeTy->getReturnType()),
+  Check(CallerTy->getReturnType() == CalleeTy->getReturnType(),
         "cannot guarantee tail call due to mismatched return types", &CI);
 
   // - The calling conventions of the caller and callee must match.
   Check(F->getCallingConv() == CI.getCallingConv(),
         "cannot guarantee tail call due to mismatched calling conv", &CI);
 
-  // - The call must immediately precede a :ref:`ret <i_ret>` instruction,
-  //   or a pointer bitcast followed by a ret instruction.
-  // - The ret instruction must return the (possibly bitcasted) value
-  //   produced by the call or void.
-  Value *RetVal = &CI;
+  // - The call must immediately precede a :ref:`ret <i_ret>` instruction.
+  // - The ret instruction must return the value produced by the call or void.
   Instruction *Next = CI.getNextNode();
-
-  // Handle the optional bitcast.
-  if (BitCastInst *BI = dyn_cast_or_null<BitCastInst>(Next)) {
-    Check(BI->getOperand(0) == RetVal,
-          "bitcast following musttail call must use the call", BI);
-    RetVal = BI;
-    Next = BI->getNextNode();
-  }
 
   // Check the return.
   ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
-  Check(Ret, "musttail call must precede a ret with an optional bitcast", &CI);
-  Check(!Ret->getReturnValue() || Ret->getReturnValue() == RetVal ||
+  Check(Ret, "musttail call must precede a ret", &CI);
+  Check(!Ret->getReturnValue() || Ret->getReturnValue() == &CI ||
             isa<UndefValue>(Ret->getReturnValue()),
         "musttail call result must be returned", Ret);
 
@@ -4342,16 +4319,14 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
     return;
   }
 
-  // - The caller and callee prototypes must match.  Pointer types of
-  //   parameters or return types may differ in pointee type, but not
-  //   address space.
+  // - The caller and callee prototypes must match.
   if (!CI.getIntrinsicID()) {
     Check(CallerTy->getNumParams() == CalleeTy->getNumParams(),
           "cannot guarantee tail call due to mismatched parameter counts", &CI);
     for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-      Check(
-          isTypeCongruent(CallerTy->getParamType(I), CalleeTy->getParamType(I)),
-          "cannot guarantee tail call due to mismatched parameter types", &CI);
+      Check(CallerTy->getParamType(I) == CalleeTy->getParamType(I),
+            "cannot guarantee tail call due to mismatched parameter types",
+            &CI);
     }
   }
 

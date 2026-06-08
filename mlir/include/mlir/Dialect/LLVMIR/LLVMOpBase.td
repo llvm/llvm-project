@@ -29,6 +29,12 @@ def LLVM_Type : DialectType<LLVM_Dialect,
                             CPred<"::mlir::LLVM::isCompatibleOuterType($_self)">,
                             "LLVM dialect-compatible type">;
 
+// Type constraint accepting LLVM metadata type.
+def LLVM_MetadataType : Type<
+  CPred<"::llvm::isa<::mlir::LLVM::LLVMMetadataType>($_self)">,
+  "LLVM metadata type">,
+  BuildableType<"::mlir::LLVM::LLVMMetadataType::get($_builder.getContext())">;
+
 // Type constraint accepting LLVM primitive types, i.e. all types except void
 // and function.
 def LLVM_PrimitiveType : Type<
