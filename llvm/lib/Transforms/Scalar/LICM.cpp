@@ -1107,10 +1107,9 @@ hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
   if (!CurLoop->isLoopInvariant(InsertedElt))
     return false;
 
-  std::optional<uint64_t> InsertIdx = getConstantInsertionIndex(Ins);
-  if (!InsertIdx)
+  std::optional<uint64_t> HoistIdx = getConstantInsertionIndex(Ins);
+  if (!HoistIdx)
     return false;
-  uint64_t HoistIdx = *InsertIdx;
 
   InsertElementInst *Inner = Ins;
   while (true) {
@@ -1126,7 +1125,7 @@ hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
 
     // Make sure not hoisting past insertions into the same lane
     std::optional<uint64_t> InsertIdx = getConstantInsertionIndex(InnerIns);
-    if (!InsertIdx || *InsertIdx == HoistIdx)
+    if (!InsertIdx || *InsertIdx == *HoistIdx)
       return false;
 
     // Instruction being hoisted past must only have one use
