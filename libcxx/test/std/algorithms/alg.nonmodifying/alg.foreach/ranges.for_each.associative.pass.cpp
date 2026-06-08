@@ -268,12 +268,10 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
     // FIXME: remove when multiset is made constexpr
     test_invoke_set_like<std::multiset>();
-
-    // FIXME: remove when multimap is made constexpr
-    test_invoke_map_like<std::multimap>();
   }
 
   test_invoke_map_like<std::map>();
+  test_invoke_map_like<std::multimap>();
 
   return true;
 }

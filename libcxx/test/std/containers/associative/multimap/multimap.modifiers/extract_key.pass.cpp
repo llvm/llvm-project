@@ -58,6 +58,7 @@ bool test() {
     auto ptr                  = std::addressof(m.begin()->first);
     auto res                  = m.extract(1);
     if (!TEST_IS_CONSTANT_EVALUATED) {
+      // CWG1514: key() is not `constexpr`
       assert(std::addressof(res.key()) == ptr);
     }
   }
