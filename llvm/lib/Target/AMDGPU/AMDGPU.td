@@ -1975,8 +1975,6 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureRequiresCOV6,
      FeatureRequiredExportPriority,
      FeatureDot5Insts,
-     FeatureWMMA256bInsts,
-   FeatureWavefrontSize32,
      FeatureDX10ClampAndIEEEMode])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
@@ -1986,8 +1984,6 @@ def FeatureISAVersion11_0_Common : FeatureSet<
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
      FeatureDot5Insts,
-     FeatureWMMA256bInsts,
-   FeatureWavefrontSize32,
      FeatureDX10ClampAndIEEEMode])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
@@ -2013,8 +2009,6 @@ def FeatureISAVersion11_5_Common : FeatureSet<
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
      FeatureDot5Insts,
-     FeatureWMMA256bInsts,
-   FeatureWavefrontSize32,
      FeatureDX10ClampAndIEEEMode])>;
 
 def FeatureISAVersion11_5_0 : FeatureSet<
@@ -2042,8 +2036,6 @@ def FeatureISAVersion11_7_Common : FeatureSet<
      FeatureFP8ConversionInsts,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
-   FeatureWMMA256bInsts,
-   FeatureWavefrontSize32,
      FeatureSWMMACGfx1200Insts,
      FeatureIEEEMinimumMaximumInsts,
      FeatureMinimum3Maximum3F32,
@@ -2079,8 +2071,6 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
    FeatureWMMA128bInsts,
-   FeatureWMMA256bInsts,
-   FeatureWavefrontSize32,
    FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
@@ -2127,7 +2117,6 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeaturePackedFP32Ops,
    FeatureDot7Insts,
    FeatureDot8Insts,
-   FeatureWavefrontSize32,
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
@@ -2829,7 +2818,6 @@ def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
 
 def isWave32 : Predicate<"Subtarget->isWave32()">,
-  AssemblerPredicate <(any_of FeatureWavefrontSize32,
                               FeatureAssemblerPermissiveWavesize)>;
 def isWave64 : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(any_of FeatureWavefrontSize64,
