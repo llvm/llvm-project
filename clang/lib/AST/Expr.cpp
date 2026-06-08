@@ -3622,7 +3622,7 @@ CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
     Into = ExprResult.Val.getInt();
     if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
       return false;
-    Into = Into.zext(BitsInSizeT);
+    Into = Into.extOrTrunc(BitsInSizeT);
     return true;
   };
 
