@@ -675,7 +675,7 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   SmallVector<ObjectAccess, 4> ObjectAccessPath;
 
   void emitObjectAccessPathNotes() {
-    for (auto Parent : ObjectAccessPath) {
+    for (auto Parent : llvm::reverse(ObjectAccessPath)) {
       if (auto *FD = Parent.dyn_cast<const FieldDecl *>()) {
         const CXXRecordDecl *ParentRD = cast<CXXRecordDecl>(FD->getParent());
         if (ParentRD->isLambda()) {
