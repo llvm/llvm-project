@@ -37,13 +37,14 @@ using namespace mlir;
 /// This pass turns unnecessary uses of automatically allocated memory slots
 /// into direct Value-based operations. For example, it will simplify storing a
 /// constant in a memory slot to immediately load it to a direct use of that
-/// constant. In other words, given a memory slot addressed by a non-aliased
-/// "pointer" Value, mem2reg removes all the uses of that pointer.
+/// constant. In other words, given a memory slot addressed by a "pointer" Value
+/// (which may be exposed through aliases), mem2reg removes all the uses of
+/// that pointer and its aliases.
 ///
 /// Within a block, this is done by following the chain of stores and loads of
-/// the slot and replacing the results of loads with the values previously
-/// stored. If a load happens before any other store, a poison value is used
-/// instead.
+/// the slot (or its aliases) and replacing the results of loads with the values
+/// previously stored. If a load happens before any other store, a poison value
+/// is used instead.
 ///
 /// Control flow can create situations where a load could be replaced by
 /// multiple possible stores depending on the control flow path taken. As a
@@ -71,14 +72,14 @@ using namespace mlir;
 /// - A first step computes the list of operations that transitively use the
 /// memory slot we would like to promote. The purpose of this phase is to
 /// identify which uses must be removed to promote the slot, either by rewiring
-/// the user or deleting it. Naturally, direct uses of the slot must be removed.
-/// Sometimes additional uses must also be removed: this is notably the case
-/// when a direct user of the slot cannot rewire its use and must delete itself,
-/// and thus must make its users no longer use it. If the allocation is used in
-/// nested regions, it is also ensured the region operations provide the right
-/// interface to analyze the values of the allocation at the edges of its
-/// regions. If any of those constraints cannot be satisfied, promotion cannot
-/// continue: this is decided at this step.
+/// the user or deleting it. Naturally, direct uses of the slot and its aliases
+/// must be removed. Sometimes additional uses must also be removed: this is
+/// notably the case when a direct user of the slot cannot rewire its use and
+/// must delete itself, and thus must make its users no longer use it. If the
+/// allocation is used in nested regions, it is also ensured the region
+/// operations provide the right interface to analyze the values of the
+/// allocation at the edges of its regions. If any of those constraints cannot
+/// be satisfied, promotion cannot continue: this is decided at this step.
 /// - A second step computes the list of blocks where a block argument will be
 /// needed ("merge points") without mutating the IR. These blocks are the blocks
 /// leading to a definition clash between two predecessors. Such blocks happen
@@ -89,35 +90,37 @@ using namespace mlir;
 /// do so aborts promotion at this step).
 ///
 /// At this point, promotion is guaranteed to happen, and the transformation
-/// phase can begin. For each region of the program, a two step process is
-/// carried out.
-/// - The first step of the per-region process computes the reaching definition
-/// of the memory slot at each blocking user. This is the core of the mem2reg
-/// algorithm, also known as load-store forwarding. This analyses loads and
-/// stores and propagates which value must be stored in the slot at each
-/// blocking user. This is achieved by doing a depth-first walk of the dominator
-/// tree of the function. This is sufficient because the reaching definition at
-/// the beginning of a block is either its new block argument if it is a merge
-/// block, or the definition reaching the end of its immediate dominator (parent
-/// in the dominator tree). We can therefore propagate this information down the
+/// phase can begin. The transformation is a three-step process.
+/// - The first step computes the reaching definition of the memory slot at
+/// each blocking user. This is the core of the mem2reg algorithm, also known
+/// as load-store forwarding. This analyses loads and stores and propagates
+/// which value must be stored in the slot at each blocking user. This is
+/// achieved by doing a depth-first walk of the dominator tree of the function.
+/// This is sufficient because the reaching definition at the beginning of a
+/// block is either its new block argument if it is a merge block, or the
+/// definition reaching the end of its immediate dominator (parent in the
+/// dominator tree). We can therefore propagate this information down the
 /// dominator tree to proceed with renaming within blocks. If at any point a
 /// region operation that contains a use of the allocation is encountered, the
-/// transformation process is triggered on the child regions of the encountered
-/// operation, to obtain the reaching definition at its end and carry on with
-/// the value forwarding.
-/// - The second step of the per-region process uses the reaching definition to
-/// remove blocking uses in topological order. Some reaching definitions may
-/// be values that will be removed or modified during the blocking use removal
-/// step (typically, in the case of a store that stores the result of a load).
-/// To properly handle such values, this step traverses the operations to modify
-/// in reverse topological order. This way, if a value that will disappear is
-/// used in place of reaching definition, the logic to make it disappear will be
-/// executed after the value has been used to replace an operation. For regions
-/// within a PromotableRegionOpInterface, in order to correctly handle cases
-/// where the finalization logic would use a reaching definition that will be
-/// replaced, the finalization logic must be called before the blocking use
-/// removal step, so that any use of a value that will be removed gets properly
-/// replaced.
+/// reaching definition computation is recursively triggered on the child
+/// regions of the encountered operation, to obtain the reaching definition at
+/// its end and carry on with the value forwarding.
+/// - The second step visits the values that will replace the memory slot for
+/// operations that requested it. This must happen before the removal of
+/// blocking uses, so that operations can safely inspect reaching definitions
+/// before they may be removed or modified.
+/// - The third step uses the reaching definition to remove blocking uses. Some
+/// reaching definitions may be values that will be removed or modified during
+/// the blocking use removal step (typically, in the case of a store that stores
+/// the result of a load). To properly handle such values, this step traverses
+/// the regions in post-order, and the operations to modify in reverse
+/// topological order. This way, if a value that will disappear is used in place
+/// of a reaching definition, the logic to make it disappear will be executed
+/// after the value has been used to replace an operation. For regions within a
+/// PromotableRegionOpInterface, this ensures that the finalization logic (run
+/// during the first step) and visitReplacedValues (run during the second step)
+/// happen before the blocking use removal step, so that any use of a value that
+/// will be removed gets properly replaced.
 ///
 /// For further reading, chapter three of SSA-based Compiler Design [1]
 /// showcases SSA construction for control-flow graphs, where mem2reg is an

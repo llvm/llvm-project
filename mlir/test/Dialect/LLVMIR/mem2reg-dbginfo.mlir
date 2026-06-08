@@ -167,3 +167,25 @@ llvm.func @dbg_declare_with_store_type_conversion(%val : f32) -> i32 {
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
+
+// CHECK-LABEL: llvm.func @nested_store_load_store_back
+// CHECK-NOT: = llvm.alloca
+// CHECK-NOT: llvm.intr.dbg.declare
+// CHECK-NOT: llvm.store
+// CHECK-NOT: llvm.load
+// CHECK: %[[CST:.*]] = llvm.mlir.constant({{.*}}) : f64
+// CHECK: scf.if
+// CHECK: llvm.intr.dbg.value #[[$VAR]] = %[[CST]] : f64
+// CHECK: llvm.return
+llvm.func @nested_store_load_store_back(%cdt1 : i1, %cdt2 : i1) {
+  %one = llvm.mlir.constant(1 : i32) : i32
+  %cst = llvm.mlir.constant(4.000000e+00 : f64) : f64
+  %p   = llvm.alloca %one x f64 : (i32) -> !llvm.ptr
+  llvm.intr.dbg.declare #di_local_variable = %p : !llvm.ptr
+  scf.if %cdt1 {
+   llvm.store %cst, %p : f64, !llvm.ptr
+   %v = llvm.load %p : !llvm.ptr -> f64
+   llvm.store %v, %p : f64, !llvm.ptr
+  }
+  llvm.return
+}
