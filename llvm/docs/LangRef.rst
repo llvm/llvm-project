@@ -3166,7 +3166,7 @@ The following attributes are currently accepted:
 
 ``"dereferenceable"(ptr %p, i64 %size)``
   Equivalent to :ref:`dereferenceable(%size) <attr_dereferenceable>` on ``%p``,
-  except that ``%size`` may also be zero, in which case the attribute doesn't
+  except that ``%size`` may also be zero, in which case the bundle doesn't
   imply ``nonnull``.
 
 ``"dereferenceable_or_null"(ptr %p, i64 %size)``
@@ -3176,7 +3176,7 @@ The following attributes are currently accepted:
 
 ``"ignore"(...)``
   Doesn't imply anything and is ignored. This is used to drop an assume where
-  modifying the ``llvm.assume`` call cannot be replaced or dropped.
+  the ``llvm.assume`` call cannot be replaced or dropped.
 
 ``"nonnull"(ptr %p)``
   Equivalent to :ref:`nonnull <attr_nonnull>` on ``%p``.
