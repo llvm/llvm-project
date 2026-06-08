@@ -64,6 +64,21 @@ struct ARMVectorIntrinsicInfo {
   }
 };
 
+struct ARMScalableVectorIntrinsicInfo {
+  unsigned BuiltinID;
+  unsigned LLVMIntrinsic;
+  uint64_t TypeModifier;
+
+  bool operator<(unsigned RHSBuiltinID) const {
+    return BuiltinID < RHSBuiltinID;
+  }
+  bool operator<(const ARMScalableVectorIntrinsicInfo &TE) const {
+    return BuiltinID < TE.BuiltinID;
+  }
+};
+
+static_assert(sizeof(ARMScalableVectorIntrinsicInfo) == 16);
+
 #define NEONMAP0(NameBase)                                                     \
   {#NameBase, NEON::BI__builtin_neon_##NameBase, 0, 0, 0}
 
