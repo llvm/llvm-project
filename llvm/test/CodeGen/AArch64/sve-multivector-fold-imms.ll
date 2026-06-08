@@ -16,8 +16,7 @@ define void @store_2x_vectors_offset_mul_vl(<vscale x 16 x i8> %zn0, <vscale x 1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
-  %mul_vl_14 = mul i64 %vscale, 224  ; #14, mul vl
-  %offset.addr = getelementptr i8, ptr %addr, i64 %mul_vl_14
+  %offset.addr = getelementptr <vscale x 16 x i8>, ptr %addr, i64 14
   call void @llvm.aarch64.sve.st1.pn.x2.nxv16i8(<vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, target("aarch64.svcount") %pn, ptr %offset.addr)
   ret void
 }
@@ -29,14 +28,13 @@ define void @store_4x_vectors_offset_mul_vl(<vscale x 16 x i8> %zn0, <vscale x 1
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    st1b { z0.b - z3.b }, pn8, [x0, #4, mul vl]
+; CHECK-NEXT:    st1b { z0.b - z3.b }, pn8, [x0, #28, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
-  %mul_vl_4 = mul i64 %vscale, 64  ; #4, mul vl
-  %offset.addr = getelementptr i8, ptr %addr, i64 %mul_vl_4
+  %offset.addr = getelementptr <vscale x 16 x i8>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st1.pn.x4.nxv16i8(<vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, target("aarch64.svcount") %pn, ptr %offset.addr)
   ret void
 }
@@ -54,8 +52,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @load_x2_vectors_offset_mul_vl
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
-  %mul_vl_-2 = mul i64 %vscale, -32  ; #-2, mul vl
-  %offset.addr = getelementptr i8, ptr %addr, i64 %mul_vl_-2
+  %offset.addr = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -2
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") %pn, ptr %offset.addr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
@@ -73,8 +70,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
-  %mul_vl_-4 = mul i64 %vscale, -64  ; #-4, mul vl
-  %offset.addr = getelementptr i8, ptr %addr, i64 %mul_vl_-4
+  %offset.addr = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -4
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %pn, ptr %offset.addr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
@@ -94,8 +90,7 @@ define void @store_2x_vectors_offset_mul_vl_nt(<vscale x 16 x i8> %zn0, <vscale 
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
-  %mul_vl_14 = mul i64 %vscale, 224  ; #14, mul vl
-  %offset.addr = getelementptr i8, ptr %addr, i64 %mul_vl_14
+  %offset.addr = getelementptr <vscale x 16 x i8>, ptr %addr, i64 14
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv16i8(<vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, target("aarch64.svcount") %pn, ptr %offset.addr)
   ret void
 }
@@ -107,14 +102,13 @@ define void @store_4x_vectors_offset_mul_vl_nt(<vscale x 16 x i8> %zn0, <vscale 
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
-; CHECK-NEXT:    stnt1b { z0.b - z3.b }, pn8, [x0, #4, mul vl]
+; CHECK-NEXT:    stnt1b { z0.b - z3.b }, pn8, [x0, #28, mul vl]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
-  %mul_vl_4 = mul i64 %vscale, 64  ; #4, mul vl
-  %offset.addr = getelementptr i8, ptr %addr, i64 %mul_vl_4
+  %offset.addr = getelementptr <vscale x 16 x i8>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv16i8(<vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, target("aarch64.svcount") %pn, ptr %offset.addr)
   ret void
 }
@@ -132,8 +126,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @load_x2_vectors_offset_mul_vl
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
-  %mul_vl_-2 = mul i64 %vscale, -32  ; #-2, mul vl
-  %offset.addr = getelementptr i8, ptr %addr, i64 %mul_vl_-2
+  %offset.addr = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -2
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") %pn, ptr %offset.addr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
@@ -151,8 +144,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
-  %mul_vl_-4 = mul i64 %vscale, -64  ; #-4, mul vl
-  %offset.addr = getelementptr i8, ptr %addr, i64 %mul_vl_-4
+  %offset.addr = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -4
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") %pn, ptr %offset.addr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }

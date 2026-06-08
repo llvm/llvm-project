@@ -7679,8 +7679,7 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
 
 /// Builds an integer vector type large enough to hold \p NumVec instances
 /// of \p VecVT.
-static EVT getPackedMultipleVectorType(LLVMContext &Ctx, EVT VecVT,
-                                       unsigned NumVec) {
+static EVT getMultipleVectorType(LLVMContext &Ctx, EVT VecVT, unsigned NumVec) {
   return EVT::getVectorVT(Ctx, VecVT.getScalarType().changeTypeToInteger(),
                           VecVT.getVectorElementCount() * NumVec);
 }
@@ -7761,20 +7760,20 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
         Ctx, Root->getOperand(6)->getValueType(0), /*NumVec=*/4);
   case Intrinsic::aarch64_sve_ld1_pn_x2:
   case Intrinsic::aarch64_sve_ldnt1_pn_x2:
-    return getPackedMultipleVectorType(Ctx, Root->getValueType(0),
-                                       /*NumVec=*/2);
+    return getMultipleVectorType(Ctx, Root->getValueType(0),
+                                 /*NumVec=*/2);
   case Intrinsic::aarch64_sve_ld1_pn_x4:
   case Intrinsic::aarch64_sve_ldnt1_pn_x4:
-    return getPackedMultipleVectorType(Ctx, Root->getValueType(0),
-                                       /*NumVec=*/4);
+    return getMultipleVectorType(Ctx, Root->getValueType(0),
+                                 /*NumVec=*/4);
   case Intrinsic::aarch64_sve_st1_pn_x2:
   case Intrinsic::aarch64_sve_stnt1_pn_x2:
-    return getPackedMultipleVectorType(Ctx, Root->getOperand(2).getValueType(),
-                                       /*NumVec=*/2);
+    return getMultipleVectorType(Ctx, Root->getOperand(2).getValueType(),
+                                 /*NumVec=*/2);
   case Intrinsic::aarch64_sve_st1_pn_x4:
   case Intrinsic::aarch64_sve_stnt1_pn_x4:
-    return getPackedMultipleVectorType(Ctx, Root->getOperand(2).getValueType(),
-                                       /*NumVec=*/4);
+    return getMultipleVectorType(Ctx, Root->getOperand(2).getValueType(),
+                                 /*NumVec=*/4);
   case Intrinsic::aarch64_sve_ld1udq:
   case Intrinsic::aarch64_sve_st1dq:
     return EVT(MVT::nxv1i64);
