@@ -434,7 +434,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
                  std::string("emitStmt: ") + s->getStmtClassName());
     return mlir::failure();
   case Stmt::CapturedStmtClass:
-    llvm_unreachable("CapturedStmt should be handled by the parent directive");
+    llvm_unreachable("CapturedStmt must be handled by the parent directive");
   }
 
   llvm_unreachable("Unexpected statement class");

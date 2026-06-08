@@ -72,8 +72,9 @@ void OpenMPClauseEmitter::emitNYI(OpenMPClauseList<NYIClauses...>,
   for (const OMPClause *c : clauses) {
     if ((isa<NYIClauses>(c) || ...)) {
       std::string msg =
-          ("OpenMP " + llvm::omp::getOpenMPDirectiveName(directive) + " " +
-           llvm::omp::getOpenMPClauseName(c->getClauseKind()) + " clause")
+          (llvm::Twine("OpenMP ") +
+           llvm::omp::getOpenMPDirectiveName(directive).upper() + " '" +
+           llvm::omp::getOpenMPClauseName(c->getClauseKind()) + "' clause")
               .str();
       cgm.errorNYI(c->getBeginLoc(), msg);
     } else if (!(isa<SupportedClauses>(c) || ...)) {

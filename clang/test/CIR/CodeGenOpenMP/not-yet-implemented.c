@@ -10,7 +10,7 @@ void do_things() {
   {}
 
   int i;
-  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP parallel if clause}}
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP PARALLEL 'if' clause}}
 #pragma omp parallel if(i)
   {}
 }

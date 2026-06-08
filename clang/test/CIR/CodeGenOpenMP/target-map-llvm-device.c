@@ -47,34 +47,53 @@ void target_map_multiple(int a, int b) {
 }
 
 // LLVM-LABEL: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_target_map_to_l
+// LLVM-SAME:  (ptr %[[ARG:[^,]+]], ptr
+// LLVM:         %[[SLOT:.*]] = addrspacecast ptr addrspace(5) %{{.*}} to ptr
+// LLVM:         store ptr %[[ARG]], ptr %[[SLOT]], align 8
 // LLVM:         call i32 @__kmpc_target_init(
 // LLVM:       user_code.entry:
-// LLVM:         %[[V:.*]] = load i32, ptr %{{.*}}, align 4
+// LLVM:         %[[PTR:.*]] = load ptr, ptr %[[SLOT]], align 8
+// LLVM:         %[[V:.*]] = load i32, ptr %[[PTR]], align 4
 // LLVM:         call void @use(i32 {{.*}} %[[V]])
 // LLVM:         call void @__kmpc_target_deinit()
 // LLVM:         ret void
 
 // LLVM-LABEL: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_target_map_from_l
+// LLVM-SAME:  (ptr %[[ARG:[^,]+]], ptr
+// LLVM:         %[[SLOT:.*]] = addrspacecast ptr addrspace(5) %{{.*}} to ptr
+// LLVM:         store ptr %[[ARG]], ptr %[[SLOT]], align 8
 // LLVM:         call i32 @__kmpc_target_init(
 // LLVM:       user_code.entry:
-// LLVM:         store i32 42, ptr %{{.*}}, align 4
+// LLVM:         %[[PTR:.*]] = load ptr, ptr %[[SLOT]], align 8
+// LLVM:         store i32 42, ptr %[[PTR]], align 4
 // LLVM:         call void @__kmpc_target_deinit()
 // LLVM:         ret void
 
 // LLVM-LABEL: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_target_map_tofrom_l
+// LLVM-SAME:  (ptr %[[ARG:[^,]+]], ptr
+// LLVM:         %[[SLOT:.*]] = addrspacecast ptr addrspace(5) %{{.*}} to ptr
+// LLVM:         store ptr %[[ARG]], ptr %[[SLOT]], align 8
 // LLVM:         call i32 @__kmpc_target_init(
 // LLVM:       user_code.entry:
-// LLVM:         %[[LD:.*]] = load i32, ptr %{{.*}}, align 4
+// LLVM:         %[[PTR:.*]] = load ptr, ptr %[[SLOT]], align 8
+// LLVM:         %[[LD:.*]] = load i32, ptr %[[PTR]], align 4
 // LLVM:         %[[ADD:.*]] = add nsw i32 %[[LD]], 1
-// LLVM:         store i32 %[[ADD]], ptr %{{.*}}, align 4
+// LLVM:         store i32 %[[ADD]], ptr %[[PTR]], align 4
 // LLVM:         call void @__kmpc_target_deinit()
 // LLVM:         ret void
 
 // LLVM-LABEL: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_target_map_multiple_l
+// LLVM-SAME:  (ptr %[[ARG_A:[^,]+]], ptr %[[ARG_B:[^,]+]], ptr
+// LLVM:         %[[SLOT_A:.*]] = addrspacecast ptr addrspace(5) %{{.*}} to ptr
+// LLVM:         store ptr %[[ARG_A]], ptr %[[SLOT_A]], align 8
+// LLVM:         %[[SLOT_B:.*]] = addrspacecast ptr addrspace(5) %{{.*}} to ptr
+// LLVM:         store ptr %[[ARG_B]], ptr %[[SLOT_B]], align 8
 // LLVM:         call i32 @__kmpc_target_init(
 // LLVM:       user_code.entry:
-// LLVM:         %[[A:.*]] = load i32, ptr %{{.*}}, align 4
-// LLVM:         store i32 %[[A]], ptr %{{.*}}, align 4
+// LLVM:         %[[PTR_A:.*]] = load ptr, ptr %[[SLOT_A]], align 8
+// LLVM:         %[[PTR_B:.*]] = load ptr, ptr %[[SLOT_B]], align 8
+// LLVM:         %[[A:.*]] = load i32, ptr %[[PTR_A]], align 4
+// LLVM:         store i32 %[[A]], ptr %[[PTR_B]], align 4
 // LLVM:         call void @__kmpc_target_deinit()
 // LLVM:         ret void
 
