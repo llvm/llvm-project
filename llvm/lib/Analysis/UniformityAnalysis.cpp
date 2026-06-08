@@ -81,7 +81,7 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
     switch (IU) {
     case ValueUniformity::AlwaysUniform:
       UniformValues.insert(&I);
-      addUniformOverride(I);
+      addUniformOverride(&I);
       continue;
     case ValueUniformity::NeverUniform:
       // Skip inserting -- divergent by definition. Add to Worklist directly

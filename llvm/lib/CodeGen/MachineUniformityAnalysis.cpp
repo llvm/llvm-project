@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
 
@@ -47,6 +48,25 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::markDefsDivergent(
 }
 
 template <>
+bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isAlwaysUniform(
+    const MachineInstr &Instr) const {
+  // An instruction is always uniform only if it has at least one virtual
+  // register def and every virtual def has been overridden uniform. Because
+  // overrides are tracked per def, a multi-def instruction with a mix of
+  // uniform and divergent outputs is not considered always uniform.
+  bool HasVirtualDef = false;
+  for (const MachineOperand &Op : Instr.all_defs()) {
+    Register Reg = Op.getReg();
+    if (!Reg.isVirtual())
+      continue;
+    HasVirtualDef = true;
+    if (!isAlwaysUniform(Reg))
+      return false;
+  }
+  return HasVirtualDef;
+}
+
+template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
   // Pre-populate UniformValues with all register defs. Physical register defs
   // are included because they are never analyzed for divergence (initialize
@@ -62,24 +82,51 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
     }
   }
 
-  const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
+  const TargetInstrInfo &InstrInfo = *F.getSubtarget().getInstrInfo();
+  const MachineRegisterInfo &MRI = F.getRegInfo();
+  const RegisterBankInfo &RBI = *F.getSubtarget().getRegBankInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 
   for (const MachineBasicBlock &MBB : F) {
     for (const MachineInstr &MI : MBB) {
-      ValueUniformity VU = InstrInfo.getValueUniformity(MI);
-
-      switch (VU) {
-      case ValueUniformity::AlwaysUniform:
-        addUniformOverride(MI);
-        break;
-      case ValueUniformity::NeverUniform:
-        markDivergent(MI);
-        break;
-      case ValueUniformity::Custom:
-        break;
-      case ValueUniformity::Default:
-        break;
+      // A terminator is a source of control divergence rather than a value;
+      // seed only the unconditionally divergent ones as divergent term blocks.
+      if (MI.isTerminator()) {
+        if (InstrInfo.isTerminatorDivergent(MI))
+          markDivergent(MI);
+        continue;
       }
+
+      // Seed divergence per def, so an instruction with several outputs (e.g.
+      // inline asm) can mix uniform and divergent results.
+      unsigned DefIdx = 0;
+      bool HasDivergentDef = false;
+      for (const MachineOperand &Op : MI.all_defs()) {
+        Register Reg = Op.getReg();
+        if (!Reg.isVirtual()) {
+          ++DefIdx;
+          continue;
+        }
+        switch (InstrInfo.getValueUniformity(MI, DefIdx++)) {
+        case ValueUniformity::AlwaysUniform:
+          addUniformOverride(Reg);
+          break;
+        case ValueUniformity::NeverUniform:
+          // Inherently uniform registers (e.g. SGPRs) stay uniform even when
+          // the def is reported as a divergence source.
+          if (!TRI.isUniformReg(MRI, RBI, Reg))
+            HasDivergentDef |= markDivergent(Reg);
+          break;
+        case ValueUniformity::Custom:
+          break;
+        case ValueUniformity::Default:
+          break;
+        }
+      }
+      // Queue the instruction once for propagation if any of its defs became
+      // divergent; the value-level markDivergent() does not touch the worklist.
+      if (HasDivergentDef)
+        Worklist.push_back(&MI);
     }
   }
 }

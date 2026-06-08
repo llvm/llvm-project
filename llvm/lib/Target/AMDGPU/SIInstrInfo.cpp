@@ -11003,29 +11003,39 @@ const MIRFormatter *SIInstrInfo::getMIRFormatter() const {
   return Formatter.get();
 }
 
-ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
+bool SIInstrInfo::isTerminatorDivergent(const MachineInstr &MI) const {
+  assert(MI.isTerminator());
+  return isNeverUniform(MI);
+}
+
+ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI,
+                                                unsigned DefIdx) const {
+  assert(!MI.isTerminator() &&
+         "use isTerminatorDivergent() to query terminator divergence");
+  assert(DefIdx < (unsigned)std::distance(MI.all_defs().begin(),
+                                          MI.all_defs().end()) &&
+         "DefIdx is out of range for this instruction's defs");
+  assert(std::next(MI.all_defs().begin(), DefIdx)->getReg().isVirtual() &&
+         "DefIdx must name a virtual register def, not a physical register");
 
   if (isNeverUniform(MI))
     return ValueUniformity::NeverUniform;
+
+  // Inline asm can define several registers with different reg classes, so the
+  // uniformity of each output is answered individually from its def reg class.
+  if (MI.isInlineAsm()) {
+    const MachineOperand &MO = *std::next(MI.all_defs().begin(), DefIdx);
+    const TargetRegisterClass *RC =
+        MI.getRegClassConstraint(MO.getOperandNo(), this, &RI);
+    return (!RC || !RI.isSGPRClass(RC)) ? ValueUniformity::NeverUniform
+                                        : ValueUniformity::Default;
+  }
 
   unsigned opcode = MI.getOpcode();
   if (opcode == AMDGPU::V_READLANE_B32 ||
       opcode == AMDGPU::V_READFIRSTLANE_B32 ||
       opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
     return ValueUniformity::AlwaysUniform;
-
-  // If any of defs is divergent, report as NeverUniform. isUniformReg will
-  // calculate in more detail for each def from its reg class, if available.
-  if (MI.isInlineAsm()) {
-    for (const MachineOperand &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isDef())
-        continue;
-      const TargetRegisterClass *RC =
-          MI.getRegClassConstraint(MO.getOperandNo(), this, &RI);
-      if (!RC || !RI.isSGPRClass(RC))
-        return ValueUniformity::NeverUniform;
-    }
-  }
 
   if (isCopyInstr(MI)) {
     const MachineOperand &srcOp = MI.getOperand(1);
@@ -11071,9 +11081,12 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
 
-  // FIXME: It's conceptually broken to report this for an instruction, and not
-  // a specific def operand. For inline asm in particular, there could be mixed
-  // uniform and divergent results.
+  // Fallback: the result is divergent if any source operand is divergent. This
+  // gives one whole-instruction verdict (DefIdx is unused), which is exact for
+  // the single-def instructions that reach here.
+  // TODO: For a true per-def answer, scan only the sources feeding MI's DefIdx
+  // def; that input->output mapping is opcode-specific, so it would need
+  // per-opcode handling (similar to the inline-asm case above).
   for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
     const MachineOperand &SrcOp = MI.getOperand(I);
     if (!SrcOp.isReg())
