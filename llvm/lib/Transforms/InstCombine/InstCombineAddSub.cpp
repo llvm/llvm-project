@@ -2492,7 +2492,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         match(&I, m_Sub(m_APInt(C1), m_c_Or(m_Value(X), m_APInt(C2)))) &&
         *C1 == *C2) {
       APInt NotC = ~(*C1);
-      if (NotC.isZero() || NotC.isPowerOf2()) {
+      if (NotC.isZero() || NotC.isSignMask()) {
         return BinaryOperator::CreateAnd(X,
                                          ConstantInt::get(I.getType(), NotC));
       }
