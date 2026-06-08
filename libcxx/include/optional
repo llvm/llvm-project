@@ -1339,7 +1339,7 @@ public:
   using __base::has_value;
   using __base::value;
 
-  template <class _Up = remove_cvref_t<_Tp>>
+  template <class _Up = std::remove_cv_t<_Tp>>
     requires(!std::is_array_v<_Tp> && std::is_object_v<_Tp>)
   [[nodiscard]] constexpr decay_t<_Tp> value_or(_Up&& __v) const {
     using _XTp = std::remove_cv_t<_Tp>;
