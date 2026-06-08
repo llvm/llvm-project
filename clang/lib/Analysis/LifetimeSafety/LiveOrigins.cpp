@@ -129,9 +129,9 @@ public:
   /// the origin since it overwrites the value.
   Lattice transfer(Lattice In, const UseFact &UF) {
     Lattice Out = In;
-    for (const OriginList *Cur = UF.getUsedOrigins(); Cur;
-         Cur = Cur->peelOuterOrigin()) {
-      OriginID OID = Cur->getOuterOriginID();
+    for (const OriginNode *Cur = UF.getUsedOrigins(); Cur;
+         Cur = Cur->getPointeeChild()) {
+      OriginID OID = Cur->getOriginID();
       // Write kills liveness.
       if (UF.isWritten()) {
         Out = Lattice(Factory.remove(Out.LiveOrigins, OID));
