@@ -309,10 +309,6 @@ void MCResourceInfo::gatherResourceInfo(
     }
   });
 
-  
-  
-  
-  
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
@@ -325,13 +321,15 @@ void MCResourceInfo::gatherResourceInfo(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       if (RIK == RIK_NumVGPR) {
         const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-        unsigned MaxAllowedVGPRs = ST.getMaxNumVectorRegs(MF.getFunction()).first;
+        unsigned MaxAllowedVGPRs =
+            ST.getMaxNumVectorRegs(MF.getFunction()).first;
         RegExpr = AMDGPUMCExpr::createMin(
             {MCConstantExpr::create(MaxAllowedVGPRs, OutContext), RegExpr},
             OutContext);
       } else if (RIK == RIK_NumAGPR) {
         const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-        unsigned MaxAllowedAGPRs = ST.getMaxNumVectorRegs(MF.getFunction()).second;
+        unsigned MaxAllowedAGPRs =
+            ST.getMaxNumVectorRegs(MF.getFunction()).second;
         RegExpr = AMDGPUMCExpr::createMin(
             {MCConstantExpr::create(MaxAllowedAGPRs, OutContext), RegExpr},
             OutContext);
