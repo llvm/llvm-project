@@ -768,12 +768,37 @@ TEST(StringMapCustomTest, RemoveIf) {
 }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(StringMapCustomTest, InsertInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  auto It = Map.find("a");
+  Map.try_emplace("b", 2);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
 TEST(StringMapCustomTest, EraseInvalidatesIterators) {
   StringMap<int> Map;
   Map["a"] = 1;
   Map["b"] = 2;
   auto It = Map.find("a");
   Map.erase(Map.find("b"));
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(StringMapCustomTest, ClearInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  auto It = Map.find("a");
+  Map.clear();
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(StringMapCustomTest, SwapInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  auto It = Map.find("a");
+  StringMap<int> Other;
+  Map.swap(Other);
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 #endif

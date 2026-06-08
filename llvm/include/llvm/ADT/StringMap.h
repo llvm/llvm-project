@@ -117,6 +117,8 @@ public:
   [[nodiscard]] LLVM_ABI static uint32_t hash(StringRef Key);
 
   void swap(StringMapImpl &Other) {
+    incrementEpoch();
+    Other.incrementEpoch();
     std::swap(TheTable, Other.TheTable);
     std::swap(NumBuckets, Other.NumBuckets);
     std::swap(NumItems, Other.NumItems);
@@ -327,6 +329,7 @@ public:
     if (Bucket && Bucket != getTombstoneVal())
       return false; // Already exists in map.
 
+    incrementEpoch();
     if (Bucket == getTombstoneVal())
       --NumTombstones;
     Bucket = KeyValue;
@@ -394,6 +397,7 @@ public:
     if (Bucket && Bucket != getTombstoneVal())
       return {iterator(this, TheTable + BucketNo), false}; // Already in map.
 
+    incrementEpoch();
     if (Bucket == getTombstoneVal())
       --NumTombstones;
     Bucket =
@@ -407,6 +411,7 @@ public:
 
   // clear - Empties out the StringMap
   void clear() {
+    incrementEpoch();
     if (empty())
       return;
 
