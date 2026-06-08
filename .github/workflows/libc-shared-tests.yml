@@ -53,26 +53,24 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
         include:
           - arch: aarch64
-            libc: libc6-dev-arm64-cross
-            libcpp: libstdc++6-arm64-cross
             target_triple: aarch64-linux-gnu
             gcc_arch: aarch64-linux-gnu
           - arch: riscv64
-            libc: libc6-dev-riscv64-cross
-            libcpp: libstdc++6-riscv64-cross
             target_triple: riscv64-linux-gnu
             gcc_arch: riscv64-linux-gnu
           - arch: ppc64le
-            libc: libc6-dev-ppc64el-cross
-            libcpp: libstdc++6-ppc64el-cross
             target_triple: powerpc64le-linux-gnu
             gcc_arch: powerpc64le-linux-gnu
+          - arch: armhf
+            target_triple: arm-linux-gnueabihf
+            gcc_arch: arm-linux-gnueabihf
+            gcc_ver: -12
 
     steps:
       - name: Checkout LLVM
@@ -110,8 +108,8 @@ jobs:
         run: |
           cmake -B build/gcc -S runtimes -G Ninja \
             -DLLVM_ENABLE_RUNTIMES=libc \
-            -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc \
-            -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
+            -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc${{ gcc_ver }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++${{ gcc_ver }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
             -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
