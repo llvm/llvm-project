@@ -154,6 +154,7 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
 
   if (const auto *VarD = dyn_cast<VarDecl>(VD);
       VarD && VarD->getType().isConstQualified() &&
+      (VarD->isConstexpr() || !VarD->getType()->isArrayType()) &&
       !VarD->getAnyInitializer()) {
     diagnoseMissingInitializer(S, OpPC, VD);
     return;
@@ -1725,7 +1726,9 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
-  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
+  const FunctionDecl *Definition;
+  if (!Func->getDecl()->getBody(Definition))
+    return;
   if (!Definition)
     return;
 

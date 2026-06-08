@@ -4717,18 +4717,17 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
         DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
     Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, WaveReduction,
                        Size, DAG.getTargetConstant(0, dl, MVT::i32));
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
+    Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
+                       Size);
     SDValue ScaledSize = Size;
     if (!HasFlatScratch) {
       ScaledSize =
           DAG.getNode(ISD::SHL, dl, VT, Size,
                       DAG.getConstant(WavefrontSizeLog2, dl, MVT::i32));
     }
-    NewSP =
-        DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
-    SDValue ReadFirstLaneID =
-        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
-    NewSP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
-                        NewSP);
+    NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize);
   }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
@@ -16280,7 +16279,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     unsigned BitWidth = FfbhSrc.getValueType().getScalarSizeInBits();
     if (Clamp >= BitWidth) {
       KnownBits Known = DAG.computeKnownBits(FfbhSrc);
-      if (Known.isNonZero() && !Known.isAllOnes())
+      if (Known.isNonZero() && Known.Zero.getBoolValue())
         return Op0;
     }
   }

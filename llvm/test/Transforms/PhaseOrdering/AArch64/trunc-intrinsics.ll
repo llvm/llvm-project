@@ -5,7 +5,7 @@ target triple = "arm64-apple-macosx"
 
 define void @mul3_clamp_u8_select(ptr noalias %out, ptr noalias %in) {
 ; CHECK-LABEL: define void @mul3_clamp_u8_select(
-; CHECK-SAME: ptr noalias writeonly captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias nofree writeonly captures(none) [[OUT:%.*]], ptr noalias nofree readonly captures(none) [[IN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

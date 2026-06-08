@@ -367,10 +367,11 @@ static bool sinkScalarOperands(VPlan &Plan) {
               dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
         // TODO: Handle converting to uniform recipes as separate transform,
         // then cloning should be sufficient here.
-        Instruction *I = SinkCandidate->getUnderlyingInstr();
-        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
-                                      nullptr /*Mask*/, *SinkCandidateRepR,
-                                      *SinkCandidateRepR);
+        Clone = VPBuilder::createSingleScalarOp(
+            SinkCandidateRepR->getOpcode(), SinkCandidate->operands(),
+            /*Mask=*/nullptr, *SinkCandidateRepR, *SinkCandidateRepR,
+            SinkCandidate->getDebugLoc(),
+            SinkCandidate->getUnderlyingInstr());
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -529,7 +530,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   // Replace predicated replicate recipe with a replicate recipe without a
   // mask but in the replicate region.
   auto *RecipeWithoutMask = new VPReplicateRecipe(
-      PredRecipe->getUnderlyingInstr(), drop_end(PredRecipe->operands()),
+      PredRecipe->getUnderlyingInstr(), PredRecipe->operandsWithoutMask(),
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
   auto *Pred =
@@ -903,9 +904,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
-                                          Def->operands(), /*IsUniform*/ true,
-                                          /*Mask*/ nullptr, /*Flags*/ *Def);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
+          /*Mask=*/nullptr, *Def, {}, DebugLoc::getUnknown(),
+          Def->getUnderlyingInstr());
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
     }
@@ -1686,7 +1688,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
     if (match(A, m_Broadcast(m_VPValue(X))))
       return Def->replaceAllUsesWith(X);
 
-    if (vputils::isSingleScalar(A))
+    if (isa<VPInstruction, VPReplicateRecipe>(A) && vputils::isSingleScalar(A))
       return Def->replaceAllUsesWith(A);
 
     if (Plan->hasScalarVFOnly())
@@ -1965,9 +1967,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(
-          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
-          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          getOpcodeOrIntrinsicID(RepOrWidenR)->second, RepOrWidenR->operands(),
+          /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
+          RepOrWidenR->getUnderlyingInstr());
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
@@ -2409,10 +2412,6 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
-  static bool isSentinel(const VPSingleDefRecipe *Def) {
-    return Def == getEmptyKey();
-  }
-
   /// If recipe \p R will lower to a GEP with a non-i8 source element type,
   /// return that source element type.
   static Type *getGEPSourceElementType(const VPSingleDefRecipe *R) {
@@ -2465,8 +2464,6 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 
   /// Check equality of underlying data of \p L and \p R.
   static bool isEqual(const VPSingleDefRecipe *L, const VPSingleDefRecipe *R) {
-    if (isSentinel(L) || isSentinel(R))
-      return L == R;
     if (L->getVPRecipeID() != R->getVPRecipeID() ||
         getOpcodeOrIntrinsicID(L) != getOpcodeOrIntrinsicID(R) ||
         getGEPSourceElementType(L) != getGEPSourceElementType(R) ||
@@ -2884,7 +2881,7 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                    {InLoopIncrement, TC, ALMMultiplier}, DL,
                                    "active.lane.mask.next");
-  LaneMaskPhi->addOperand(ALM);
+  LaneMaskPhi->addBackedgeValue(ALM);
 
   // Replace the original terminator with BranchOnCond. We have to invert the
   // mask here because a true condition means jumping to the exit block.
@@ -3349,12 +3346,12 @@ void VPlanTransforms::addExplicitVectorLength(
   auto *NextIter = Builder.createAdd(
       OpVPEVL, CurrentIteration, CanonicalIVIncrement->getDebugLoc(),
       "current.iteration.next", CanonicalIVIncrement->getNoWrapFlags());
-  CurrentIteration->addOperand(NextIter);
+  CurrentIteration->addBackedgeValue(NextIter);
 
   VPValue *NextAVL =
       Builder.createSub(AVLPhi, OpVPEVL, DebugLoc::getCompilerGenerated(),
                         "avl.next", {/*NUW=*/true, /*NSW=*/false});
-  AVLPhi->addOperand(NextAVL);
+  AVLPhi->addIncoming(NextAVL);
 
   fixupVFUsersForEVL(Plan, *VPEVL);
   removeDeadRecipes(Plan);
@@ -3835,7 +3832,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   auto *Next = Builder.createNaryOp(AddOp, {Prev, Inc}, Flags,
                                     WidenIVR->getDebugLoc(), "vec.ind.next");
 
-  WidePHI->addOperand(Next);
+  WidePHI->addIncoming(Next);
 
   WidenIVR->replaceAllUsesWith(WidePHI);
 }
@@ -3898,7 +3895,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R) {
 
   VPValue *InductionGEP =
       Builder.createPtrAdd(ScalarPtrPhi, Inc, DL, "ptr.ind");
-  ScalarPtrPhi->addOperand(InductionGEP);
+  ScalarPtrPhi->addIncoming(InductionGEP);
 }
 
 /// Expand a VPDerivedIVRecipe into executable recipes.
@@ -4537,7 +4534,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
             DebugLoc::getUnknown(), "early.exit.value");
       }
       ExitIRI->removeIncomingValueFor(EarlyExitingVPBB);
-      ExitIRI->addOperand(NewIncoming);
+      ExitIRI->addIncoming(NewIncoming);
     }
 
     EarlyExitingVPBB->getTerminator()->eraseFromParent();
@@ -5470,8 +5467,11 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
     if (!Expanded)
       continue;
     ExpSCEV->replaceAllUsesWith(Expanded);
+    // TripCount should not be used after expansion to VPInstructions. Reset to
+    // poison to avoid dangling references.
     if (Plan.getTripCount() == ExpSCEV)
-      Plan.resetTripCount(Expanded);
+      Plan.resetTripCount(
+          Plan.getOrAddLiveIn(PoisonValue::get(ExpSCEV->getScalarType())));
     ExpSCEV->eraseFromParent();
   }
 }
@@ -5625,10 +5625,13 @@ static bool isAlreadyNarrow(VPValue *VPV) {
   return RepR && RepR->isSingleScalar();
 }
 
-// Convert a wide recipe defining a VPValue \p V feeding an interleave group to
-// a narrow variant.
+// Convert the wide recipes defining the VPValues in \p Members feeding an
+// interleave group to a single narrow variant. The first member is reused as
+// the narrowed recipe.
 static VPValue *
-narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
+narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
+                        SmallPtrSetImpl<VPValue *> &NarrowedOps) {
+  VPValue *V = Members.front();
   auto *R = V->getDefiningRecipe();
   if (!R || NarrowedOps.contains(V))
     return V;
@@ -5637,11 +5640,15 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
     return V;
 
   if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
-    auto *WideMember0 = cast<VPSingleDefRecipe>(R);
-    for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
-      WideMember0->setOperand(
-          Idx,
-          narrowInterleaveGroupOp(WideMember0->getOperand(Idx), NarrowedOps));
+    auto *WideMember0 = cast<VPRecipeWithIRFlags>(R);
+    for (VPValue *Member : Members.drop_front())
+      WideMember0->intersectFlags(*cast<VPRecipeWithIRFlags>(Member));
+    for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx) {
+      SmallVector<VPValue *> OpsI;
+      for (VPValue *Member : Members)
+        OpsI.push_back(Member->getDefiningRecipe()->getOperand(Idx));
+      WideMember0->setOperand(Idx, narrowInterleaveGroupOp(OpsI, NarrowedOps));
+    }
     return V;
   }
 
@@ -5808,7 +5815,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   // Narrow operation tree rooted at store groups.
   for (auto *StoreGroup : StoreGroups) {
     VPValue *Res =
-        narrowInterleaveGroupOp(StoreGroup->getStoredValues()[0], NarrowedOps);
+        narrowInterleaveGroupOp(StoreGroup->getStoredValues(), NarrowedOps);
     auto *SI =
         cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
     auto *S = new VPWidenStoreRecipe(*SI, StoreGroup->getAddr(), Res, nullptr,
@@ -6957,9 +6964,9 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe = new VPReplicateRecipe(
-          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
-          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
+      auto *Recipe = VPBuilder::createSingleScalarOp(
+          VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr, *VPI,
+          *VPI, VPI->getDebugLoc(), I);
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();
