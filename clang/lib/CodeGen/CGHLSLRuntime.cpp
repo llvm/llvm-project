@@ -540,10 +540,10 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   llvm::Module &M = CGM.getModule();
   M.insertGlobalVariable(BufGV);
 
-  // Add the global variable to the module's used list so it does not get
-  // optimized away by GlobalOptPass before it reaches {DXIL|SPIRV}CBufferAccess
-  // pass.
-  llvm::appendToUsed(M, {BufGV});
+  // Add the global variable to the compiler used list so it does not
+  // get optimized away by GlobalOptPass before it reaches
+  // {DXIL|SPIRV}CBufferAccess pass.
+  llvm::appendToCompilerUsed(M, {BufGV});
 
   // Add globals for constant buffer elements and create metadata nodes
   emitBufferGlobalsAndMetadata(BufDecl, BufGV, OffsetInfo);
