@@ -63,6 +63,11 @@ static cl::opt<bool>
                      cl::desc("Enable the tile register allocation pass"),
                      cl::init(true), cl::Hidden);
 
+cl::opt<bool>
+    X86EnableSelectOpt("x86-select-opt", cl::Hidden,
+                       cl::desc("Enable select to branch optimizations"),
+                       cl::init(true));
+
 extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   // Register the target.
   RegisterTargetMachine<X86TargetMachine> X(getTheX86_32Target());
@@ -426,7 +431,11 @@ void X86PassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
 
-  if (TM->getOptLevel() != CodeGenOptLevel::None) {
+  if (TM->getOptLevel() != CodeGenOptLevel::None && X86EnableSelectOpt) {
+    addPass(createSelectOptimizePass());
+    addPass(createInterleavedAccessPass());
+    addPass(createX86PartialReductionLegacyPass());
+  } else if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInterleavedAccessPass());
     addPass(createX86PartialReductionLegacyPass());
   }

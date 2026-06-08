@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/KCFI.h"
+#include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -31,6 +32,7 @@
 using namespace llvm;
 
 extern cl::opt<bool> X86EnableMachineCombinerPass;
+extern cl::opt<bool> X86EnableSelectOpt;
 
 namespace {
 
@@ -74,6 +76,9 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   addFunctionPass(X86LowerAMXTypePass(&TM), PMW);
 
   Base::addIRPasses(PMW);
+
+  if (getOptLevel() != CodeGenOptLevel::None && X86EnableSelectOpt)
+    addFunctionPass(SelectOptimizePass(TM), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addFunctionPass(InterleavedAccessPass(TM), PMW);
