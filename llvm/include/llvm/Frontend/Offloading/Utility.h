@@ -91,10 +91,10 @@ LLVM_ABI StructType *getEntryTy(Module &M);
 LLVM_ABI StringRef getOffloadEntrySection(Module &M);
 
 /// \return The emitted global variable containing the offloading entry.
-LLVM_ABI GlobalVariable *emitOffloadingEntry(
-    Module &M, object::OffloadKind Kind, Constant *Addr, StringRef Name,
-    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr = nullptr,
-    GlobalValue::LinkageTypes Linkage = GlobalValue::WeakAnyLinkage);
+LLVM_ABI GlobalVariable *
+emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
+                    StringRef Name, uint64_t Size, uint32_t Flags,
+                    uint64_t Data, Constant *AuxAddr = nullptr);
 
 /// Create a constant struct initializer used to register this global at
 /// runtime.

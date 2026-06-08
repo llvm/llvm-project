@@ -4538,6 +4538,12 @@ Otherwise, when known, the specific type should be used. Each bit can be:
 
 Any bit width from 1 bit to 2\ :sup:`23`\ (about 8 million) can be specified.
 
+The per-bit semantics described above (poison and conditional pointer
+provenance preservation) are mid-end only. At the IR-to-MIR boundary both
+SelectionDAG and GlobalISel lower ``bN`` as the equi-sized integer scalar
+(``iN``/``sN``); backend passes do not see the byte type and do not preserve
+its bit-level semantics.
+
 :Syntax:
 
 ::
@@ -8628,6 +8634,10 @@ can be assumed to load or store the same
 value (but see the ``llvm.launder.invariant.group`` intrinsic which affects
 when two pointers are considered the same). Pointers returned by bitcast or
 getelementptr with only zero indices are considered the same.
+
+Note that the metadata value in invariant.group carries no semantic value.
+Because it must have no entries, all invariant.group annotations in a module
+reference the same uniqued empty node.
 
 Examples:
 

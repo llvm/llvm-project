@@ -3573,6 +3573,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_acosbf16",
+    hdrs = ["src/__support/math/acosbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_acosf",
     hdrs = ["src/__support/math/acosf.h"],
     deps = [
@@ -9637,6 +9652,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "acosbf16",
+    additional_deps = [":__support_math_acosbf16"],
+)
+
+libc_math_function(
     name = "acosf",
     additional_deps = [":__support_math_acosf"],
 )
@@ -14035,8 +14055,8 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
         ":__support_osutil_linux_syscall_wrappers_open",
+        ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
     ],

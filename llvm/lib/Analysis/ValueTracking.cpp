@@ -732,7 +732,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     CtxIter = AssumeBB->end();
   } else {
     // Same block case: check that Assume comes before CtxI.
-    if (!Assume->comesBefore(CtxI))
+    if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
   }
 
@@ -1631,6 +1631,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
       Known.Zero.setLowBits(C->countr_zero());
+
+    // shl X, sub(Y, xor(ctlz(X, true), BitWidth-1)) shifts X so that its MSB
+    // lands at bit Y, when BitWidth is a power of 2.
+    const APInt *YC;
+    Value *X = I->getOperand(0);
+    if (isPowerOf2_32(BitWidth) &&
+        match(I->getOperand(1),
+              m_Sub(m_APInt(YC), m_Xor(m_Ctlz(m_Specific(X), m_One()),
+                                       m_SpecificInt(BitWidth - 1)))) &&
+        YC->ult(BitWidth - 1)) {
+      unsigned Y = YC->getZExtValue();
+      Known.One.setBit(Y);
+      Known.Zero.setBitsFrom(Y + 1);
+    }
     break;
   }
   case Instruction::LShr: {
