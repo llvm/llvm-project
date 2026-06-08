@@ -77,7 +77,7 @@ public:
 
   BuiltinTypeDeclBuilder &
   addBufferHandles(ResourceClass RC, bool IsROV, bool RawBuffer,
-                   bool HasCounter, bool IsArrayed,
+                   bool HasCounter,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
   addTextureHandle(ResourceClass RC, bool IsROV, bool IsArrayed,

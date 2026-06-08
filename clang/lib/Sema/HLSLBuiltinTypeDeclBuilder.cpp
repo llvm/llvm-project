@@ -1033,12 +1033,13 @@ BuiltinTypeDeclBuilder::addMemberVariable(StringRef Name, QualType Type,
   return *this;
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addBufferHandles(
-    ResourceClass RC, bool IsROV, bool RawBuffer, bool HasCounter,
-    bool IsArrayed, AccessSpecifier Access) {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
+                                         bool RawBuffer, bool HasCounter,
+                                         AccessSpecifier Access) {
   QualType ElementTy = getHandleElementType();
-  addHandleMember(RC, ResourceDimension::Unknown, IsROV, RawBuffer, IsArrayed,
-                  ElementTy, Access);
+  addHandleMember(RC, ResourceDimension::Unknown, IsROV, RawBuffer,
+                  /*IsArrayed=*/false, ElementTy, Access);
   if (HasCounter)
     addCounterHandleMember(RC, IsROV, RawBuffer, ElementTy, Access);
   return *this;

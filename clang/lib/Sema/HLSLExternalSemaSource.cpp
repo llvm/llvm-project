@@ -234,7 +234,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, bool IsROV,
                                               bool RawBuffer, bool HasCounter) {
   return BuiltinTypeDeclBuilder(S, Decl)
-      .addBufferHandles(RC, IsROV, RawBuffer, HasCounter, /*IsArrayed=*/false)
+      .addBufferHandles(RC, IsROV, RawBuffer, HasCounter)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
