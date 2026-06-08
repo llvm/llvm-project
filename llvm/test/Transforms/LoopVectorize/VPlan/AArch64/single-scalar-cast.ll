@@ -23,7 +23,7 @@ define i16 @narrow_iv_cast_to_single_scalar(ptr %p, ptr %q) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%shr> = lshr vp<[[VP4]]>, ir<1>
-; CHECK-NEXT:      CLONE ir<%shr.ext> = zext ir<%shr>
+; CHECK-NEXT:      EMIT-SCALAR ir<%shr.ext> = zext ir<%shr> to i64
 ; CHECK-NEXT:      CLONE ir<%gep.p> = getelementptr ir<%p>, ir<%shr.ext>
 ; CHECK-NEXT:      CLONE ir<%l> = load ir<%gep.p>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -76,7 +76,7 @@ define void @sink_replicate_region_with_cast(ptr %dst, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%conv> = zext vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%conv> = zext vp<[[VP5]]> to i64
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%dst>, ir<%conv>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP6]]>
